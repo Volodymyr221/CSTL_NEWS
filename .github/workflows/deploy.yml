@@ -49,7 +49,7 @@ jobs:
 
       - name: Install dependencies and build
         run: |
-          npm ci
+          npm install
           node build.js
 
       - name: Commit bundle and push to main
