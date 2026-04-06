@@ -32,15 +32,14 @@ html, body {
   justify-content: center;
   z-index: 9999;
   transition: opacity 0.6s ease;
-  padding-bottom: 200px;
+  padding-bottom: 140px;
 }
 .splash-icon {
   width: 230px;
   height: 230px;
   margin-bottom: -90px;
   object-fit: contain;
-  filter: drop-shadow(0 6px 20px rgba(0,0,0,0.6));
-  animation: splashPop 0.5s ease-out;
+  animation: splashPop 0.5s ease-out, shadowSweep 3s ease-in-out forwards;
 }
 .splash-logo {
   font-size: 42px;
@@ -48,9 +47,8 @@ html, body {
   color: white;
   letter-spacing: 2px;
   font-family: Georgia, serif;
-  text-shadow: 0 3px 16px rgba(0,0,0,0.6);
   margin-top: 30px;
-  animation: splashFadeUp 0.5s ease-out 0.15s both;
+  animation: splashFadeUp 0.5s ease-out 0.15s both, textShadowSweep 3s ease-in-out forwards;
 }
 .splash-sub {
   color: rgba(255,255,255,0.7);
