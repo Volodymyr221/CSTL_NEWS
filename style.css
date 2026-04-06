@@ -34,8 +34,8 @@ html, body {
   transition: opacity 0.4s;
 }
 .splash-icon {
-  width: 180px;
-  height: 180px;
+  width: 200px;
+  height: 200px;
   margin-bottom: 4px;
   object-fit: contain;
   animation: splashPop 0.5s ease-out;
