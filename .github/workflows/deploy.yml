@@ -56,6 +56,7 @@ jobs:
         run: |
           git add bundle.js -f
           git diff --staged --quiet || git commit -m "build: bundle.js"
+          git pull --rebase origin main
           git push origin main
 
   deploy:
