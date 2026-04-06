@@ -33,6 +33,11 @@ html, body {
   z-index: 9999;
   transition: opacity 0.4s;
 }
+.splash-icon {
+  width: 96px;
+  height: 96px;
+  margin-bottom: 20px;
+}
 .splash-logo {
   font-size: 36px;
   font-weight: 900;
