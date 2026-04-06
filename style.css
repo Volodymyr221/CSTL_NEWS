@@ -34,9 +34,11 @@ html, body {
   transition: opacity 0.4s;
 }
 .splash-icon {
-  width: 160px;
-  height: 160px;
-  margin-bottom: 6px;
+  width: 180px;
+  height: 180px;
+  margin-bottom: 4px;
+  object-fit: contain;
+  animation: splashPop 0.5s ease-out;
 }
 .splash-logo {
   font-size: 36px;
