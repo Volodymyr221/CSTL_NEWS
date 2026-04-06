@@ -34,9 +34,9 @@ html, body {
   transition: opacity 0.4s;
 }
 .splash-icon {
-  width: 120px;
-  height: 120px;
-  margin-bottom: 20px;
+  width: 150px;
+  height: 150px;
+  margin-bottom: 12px;
 }
 .splash-logo {
   font-size: 36px;
@@ -436,7 +436,7 @@ html, body {
 }
 .form-textarea {
   resize: vertical;
-  min-height: 120px;
+  min-height: 150px;
   line-height: 1.5;
 }
 
