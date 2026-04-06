@@ -63,9 +63,9 @@ function init() {
     if (splash) {
       splash.style.opacity = '0';
       splash.style.transition = 'opacity 0.4s';
-      setTimeout(() => splash.style.display = 'none', 400);
+      setTimeout(() => splash.remove(), 600);
     }
-  }, 600);
+  }, 4500);
 }
 
 if (document.readyState === 'loading') {
