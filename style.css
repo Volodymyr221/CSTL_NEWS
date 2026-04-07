@@ -71,16 +71,16 @@ html, body {
 
 @keyframes shadowSweep {
   /* темна тінь + білий відблиск з боку світла (зверху) */
-  0%   { filter: drop-shadow( 18px 18px 17px rgba(0,0,0,0.92)) drop-shadow(-5px -5px 10px rgba(255,255,255,0.45)); }
-  50%  { filter: drop-shadow(  0px 10px 11px rgba(0,0,0,0.60)) drop-shadow( 0px  -4px  8px rgba(255,255,255,0.25)); }
-  100% { filter: drop-shadow(-18px 18px 17px rgba(0,0,0,0.92)) drop-shadow( 5px -5px 10px rgba(255,255,255,0.45)); }
+  0%   { filter: drop-shadow( 18px 18px 21px rgba(0,0,0,0.92)) drop-shadow(-5px -5px 10px rgba(255,255,255,0.45)); }
+  50%  { filter: drop-shadow(  0px 10px 14px rgba(0,0,0,0.60)) drop-shadow( 0px  -4px  8px rgba(255,255,255,0.25)); }
+  100% { filter: drop-shadow(-18px 18px 21px rgba(0,0,0,0.92)) drop-shadow( 5px -5px 10px rgba(255,255,255,0.45)); }
 }
 
 @keyframes textShadowSweep {
   /* темна тінь + білий відблиск зліва-зверху → справа-зверху */
-  0%   { text-shadow:  10px 10px 11px rgba(0,0,0,0.88), -4px -3px 8px rgba(255,255,255,0.35); }
-  50%  { text-shadow:   0px  5px  6px rgba(0,0,0,0.50),  0px -3px 5px rgba(255,255,255,0.18); }
-  100% { text-shadow: -10px 10px 11px rgba(0,0,0,0.88),  4px -3px 8px rgba(255,255,255,0.35); }
+  0%   { text-shadow:  10px 10px 13px rgba(0,0,0,0.88), -4px -3px 8px rgba(255,255,255,0.35); }
+  50%  { text-shadow:   0px  5px  8px rgba(0,0,0,0.50),  0px -3px 5px rgba(255,255,255,0.18); }
+  100% { text-shadow: -10px 10px 13px rgba(0,0,0,0.88),  4px -3px 8px rgba(255,255,255,0.35); }
 }
 
 /* ===== HEADER (шапка) ===== */
