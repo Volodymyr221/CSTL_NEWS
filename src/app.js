@@ -67,7 +67,6 @@ function init() {
     }
   }, 3000);
 }
-
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {
