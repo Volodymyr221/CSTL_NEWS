@@ -39,7 +39,7 @@ html, body {
   height: 230px;
   margin-bottom: -90px;
   object-fit: contain;
-  animation: splashPop 0.5s ease-out, shadowSweep 3s ease-in-out forwards;
+  animation: splashPop 0.5s ease-out, shadowSweep 3.5s ease-in-out forwards;
 }
 .splash-logo {
   font-size: 42px;
@@ -48,7 +48,7 @@ html, body {
   letter-spacing: 2px;
   font-family: Georgia, serif;
   margin-top: 30px;
-  animation: splashFadeUp 0.5s ease-out 0.15s both, textShadowSweep 3s ease-in-out forwards;
+  animation: splashFadeUp 0.5s ease-out 0.15s both, textShadowSweep 3.5s ease-in-out forwards;
 }
 .splash-sub {
   color: rgba(255,255,255,0.7);
@@ -79,18 +79,18 @@ html, body {
   Кінець: тінь лівіше і нижче (світло справа)
 */
 @keyframes shadowSweep {
-  0%   { filter: drop-shadow( 8px 8px 16px rgba(0,0,0,0.55)); }
-  50%  { filter: drop-shadow( 0px 6px 12px rgba(0,0,0,0.35)); }
-  100% { filter: drop-shadow(-8px 8px 16px rgba(0,0,0,0.55)); }
+  0%   { filter: drop-shadow( 18px 18px 28px rgba(0,0,0,0.85)); }
+  50%  { filter: drop-shadow(  0px 10px 18px rgba(0,0,0,0.50)); }
+  100% { filter: drop-shadow(-18px 18px 28px rgba(0,0,0,0.85)); }
 }
 
 /*
   textShadowSweep — та сама логіка але для тексту (text-shadow)
 */
 @keyframes textShadowSweep {
-  0%   { text-shadow:  5px 5px 10px rgba(0,0,0,0.45); }
-  50%  { text-shadow:  0px 3px  6px rgba(0,0,0,0.25); }
-  100% { text-shadow: -5px 5px 10px rgba(0,0,0,0.45); }
+  0%   { text-shadow:  10px 10px 18px rgba(0,0,0,0.75); }
+  50%  { text-shadow:   0px  5px 10px rgba(0,0,0,0.40); }
+  100% { text-shadow: -10px 10px 18px rgba(0,0,0,0.75); }
 }
 
 /* ===== HEADER (шапка) ===== */
