@@ -2,6 +2,7 @@
   "permissions": {
     "allow": [
       "Bash(node*)",
+      "Bash(npm*)",
       "Bash(git status*)",
       "Bash(git diff*)",
       "Bash(git log*)",
@@ -12,12 +13,14 @@
       "Bash(git pull*)",
       "Bash(git branch*)",
       "Bash(git checkout*)",
+      "Bash(git rev-parse*)",
       "Bash(date*)",
       "Bash(wc*)",
       "Bash(ls*)",
       "Bash(mkdir*)",
       "Bash(cat*)",
-      "Bash(echo*)"
+      "Bash(echo*)",
+      "Bash(chmod*)"
     ],
     "deny": [
       "Bash(git push --force*)",
@@ -27,6 +30,16 @@
     ]
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/session-start.sh"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
