@@ -32,7 +32,7 @@ html, body {
   justify-content: center;
   z-index: 9999;
   transition: opacity 0.6s ease;
-  padding-bottom: 140px;
+  padding-bottom: 150px;
 }
 .splash-icon {
   width: 230px;
@@ -55,6 +55,42 @@ html, body {
   font-size: 14px;
   margin-top: 8px;
   letter-spacing: 1px;
+}
+
+/* ===== SPLASH ANIMATIONS (анімації заставки) ===== */
+
+/* Поява лого: масштаб з маленького до нормального */
+@keyframes splashPop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+
+/* Поява тексту: вилітає знизу */
+@keyframes splashFadeUp {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/*
+  shadowSweep — тінь від лого (filter: drop-shadow)
+  Світло летить з лівого верхнього кута в правий верхній кут.
+  Початок: тінь правіше і нижче (світло зліва)
+  Середина: тінь рівно вниз (світло зверху посередині)
+  Кінець: тінь лівіше і нижче (світло справа)
+*/
+@keyframes shadowSweep {
+  0%   { filter: drop-shadow( 8px 8px 16px rgba(0,0,0,0.55)); }
+  50%  { filter: drop-shadow( 0px 6px 12px rgba(0,0,0,0.35)); }
+  100% { filter: drop-shadow(-8px 8px 16px rgba(0,0,0,0.55)); }
+}
+
+/*
+  textShadowSweep — та сама логіка але для тексту (text-shadow)
+*/
+@keyframes textShadowSweep {
+  0%   { text-shadow:  5px 5px 10px rgba(0,0,0,0.45); }
+  50%  { text-shadow:  0px 3px  6px rgba(0,0,0,0.25); }
+  100% { text-shadow: -5px 5px 10px rgba(0,0,0,0.45); }
 }
 
 /* ===== HEADER (шапка) ===== */
