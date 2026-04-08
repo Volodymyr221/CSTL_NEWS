@@ -1,7 +1,7 @@
 // sw.js — CSTL NEWS Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260407-2045';
+const CACHE_NAME = 'cstl-20260408-0929';
 
 const STATIC_ASSETS = [
   './',
@@ -43,7 +43,7 @@ self.addEventListener('fetch', e => {
 
   const url = new URL(e.request.url);
 
-  // Файли даних (data/*.json) — спочатку мережа, потім кеш (завжди свіжі дані)
+  // Файли даних (data/*.json) — спочатку мережа, потім кеш
   if (url.pathname.includes('/data/')) {
     e.respondWith(
       fetch(e.request)
