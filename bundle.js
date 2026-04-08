@@ -150,24 +150,40 @@
       el.innerHTML = '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
       return;
     }
-    el.innerHTML = articles.map((a) => `
-    <article class="news-card ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-img" src="${escapeHtml(a.image)}" alt="">` : ""}
-      <div class="news-card-body">
+    el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
+  }
+  function renderFeatured(a) {
+    const hasImage = !!a.image;
+    return `
+    <article class="news-card-featured ${hasImage ? "" : "no-image"}" onclick="openArticle(${a.id})">
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ""}
+      <div class="news-card-featured-overlay">
         <div class="news-card-meta">
           <span class="news-card-geo">${escapeHtml(a.geo)}</span>
           <span class="news-card-category">${escapeHtml(a.category)}</span>
           ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
         </div>
-        <h2 class="news-card-title">${escapeHtml(a.title)}</h2>
-        <p class="news-card-excerpt">${escapeHtml(a.excerpt)}</p>
-        <div class="news-card-footer">
-          <span class="news-card-source">${escapeHtml(a.source)}</span>
-          <span class="news-card-time">${formatTime(a.ts)}</span>
-        </div>
+        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
+        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
       </div>
     </article>
-  `).join("");
+  `;
+  }
+  function renderRow(a) {
+    return `
+    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ""}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">
+          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
+          <span class="news-card-category">${escapeHtml(a.category)}</span>
+          ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+        </div>
+        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
+        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
   }
   window.setGeoFilter = function(geo) {
     activeGeo = geo;
