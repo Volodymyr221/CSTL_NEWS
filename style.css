@@ -21,7 +21,7 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* ===== SPLASH (заставка) ===== */
+/* ===== SPLASH ===== */
 #splash {
   position: fixed;
   inset: 0;
@@ -87,7 +87,7 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  padding: 0 12px 0 16px;
   z-index: 100;
   overflow: hidden;
 }
@@ -101,10 +101,10 @@ html, body {
 }
 .header-logo span { color: var(--red); }
 .header-logo-img {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  max-width: 28px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  max-width: 40px;
   border-radius: 50%;
   object-fit: cover;
   flex-shrink: 0;
@@ -198,7 +198,7 @@ html, body {
 .news-card-source { font-size: 11px; color: var(--gray); font-weight: 500; }
 .news-card-time { font-size: 11px; color: var(--gray); }
 
-/* Мета (спільне для всіх карток) */
+/* Мета */
 .news-card-meta {
   display: flex;
   gap: 6px;
@@ -263,7 +263,6 @@ html, body {
 .news-card-featured .news-card-category { color: #ff8080; }
 .news-card-featured .exclusive-badge { background: rgba(196,30,58,0.90); }
 
-/* Fallback без фото */
 .news-card-featured.no-image { background: var(--white); border: 1px solid var(--border); }
 .news-card-featured.no-image .news-card-featured-overlay { position: static; background: none; padding: 14px; }
 .news-card-featured.no-image .news-card-featured-title { color: var(--black); font-size: 16px; }
