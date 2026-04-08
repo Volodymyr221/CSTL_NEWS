@@ -1,6 +1,6 @@
 # Стан сесії — CSTL NEWS
 
-**Оновлено:** 2026-04-07
+**Оновлено:** 2026-04-08
 
 ---
 
@@ -8,81 +8,82 @@
 
 | | |
 |--|--|
-| **URL** | https://vshevchukkk.github.io/CSTL_NEWS/ |
-| **Репозиторій** | https://github.com/VShevchukkk/CSTL_NEWS |
-| **Гілка** | `main` |
-| **Власник** | Вова Шевчук (VShevchukkk) |
+| **URL** | https://volodymyr221.github.io/CSTL_NEWS/ |
+| **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
+| **Робоча гілка** | `claude/start-session-gPmeZ` |
+| **Деплой** | автоматично з `main` через GitHub Actions |
+| **Власник** | Вова (Volodymyr221) |
 
 ---
 
 ## Поточний стан
 
-**MVP задеплоєно.** Анімація splash screen працює.
+**MVP задеплоєно і живий.** Останній кеш: `cstl-20260408-1230`.
 
-**Відома проблема:** Claude Code не може пушити напряму (git proxy 403) — поки не перепідключено GitHub під новим іменем `VShvchukkk`. Вова пушить вручну з Mac.
+**Важлива деталь:** CI (GitHub Actions — автоматичний деплой) перебудовує `bundle.js` зі source-файлів при кожному пуші. Щоб зміни в JS потрапили на сайт — обов'язково оновлювати `src/tabs/*.js`, а не тільки `bundle.js`.
 
 ---
 
 ## Що зроблено (хронологія)
 
+### Сесія 3 (08.04.2026)
+- **Анімація splash screen** зафіксована: `shadowSweep` + `textShadowSweep` (тінь від уявного світла), `splashPop`, `splashFadeUp`
+- **Редизайн вкладки "Новини":**
+  - Перша картка — featured (велика з фото-фоном або fallback без фото)
+  - Решта — row cards (горизонтальні рядкові картки)
+  - SVG-іконки у таб-барі (замість emoji)
+  - Тільки гео-фільтри (Всі/Олика/Волинь/Україна/Світ), тема — прибрана з UI
+  - `TOPIC_FILTERS` залишено як внутрішня константа (для майбутнього парсера)
+- **Шапка:** логотип `logo.png` замість версії, розмір 40px × 40px, `object-fit: cover`, круглий
+- **Виправлено проблему деплою:** CI перезаписував `bundle.js` зі старого `src/tabs/news.js`. Виправлено шляхом прямого пушу через MCP (GitHub API) всіх потрібних файлів на `main`
+- **Розміри тексту:** `.news-card-row-title` = 16px, `.news-card-featured-title` = 18px (no-image: 16px)
+- **Архітектурний план з Gemini** збережено в `docs/ARCHITECT-PLAN-with-Gemini.md`
+
 ### Сесія 2 (07.04.2026)
-- Додано анімацію splash screen: тінь від уявного світла (shadowSweep, textShadowSweep)
+- Анімація splash screen: тінь від уявного світла (shadowSweep, textShadowSweep)
 - Додано splashPop і splashFadeUp (@keyframes)
-- Контент заставки піднято на 10px (padding-bottom: 150px)
-- Кеш оновлено: cstl-20260407-1335
-- Виявлено: Claude Code не може пушити (403) через зміну нікнейму — потрібно перепідключити GitHub
+- Контент заставки піднято (padding-bottom: 150px)
 
 ### Сесія 1 (06-07.04.2026)
-- Обговорили концепцію проекту CSTL NEWS та екосистему Olyka Castle
-- Визначили технічний стек: Vanilla JS, GitHub Pages, esbuild, PWA
-- Визначили архітектуру: JSON файли як база даних, модульний src/
-- Побудували MVP: 17 файлів, 4 вкладки (Новини/Події/Автобуси/Подати)
-- Задеплоїли на GitHub Pages (старе посилання volodymyr221.github.io/CSTL_NEWS)
-- Налаштували VS Code на Mac Воваа
-- Клонували репозиторій на Desktop
-- Вова змінив нікнейм GitHub на VShevchukkk
-- Виявлено проблему з деплоєм після зміни нікнейму
+- Побудовано MVP: 4 вкладки, PWA, GitHub Actions
+- Задеплоєно на GitHub Pages
 
 ---
 
-## Відкриті задачі
+## Відкриті задачі (наступна сесія)
 
 | Пріоритет | Задача |
 |-----------|--------|
-| 🔴 Терміново | Перепідключити GitHub в Claude Code (claude.ai → Settings → GitHub) |
-| 🟡 Важливо | Перевірити що vshevchukkk.github.io/CSTL_NEWS працює |
-| 🟡 Важливо | Переглянути дизайн разом і покращити |
-| 🟢 Планується | Замінити тестові статті на реальний контент |
-| 🟢 Планується | Налаштувати push з VS Code (перший тест) |
+| 🔴 Перший | History API — кнопка "Назад" закриває модальне вікно |
+| 🔴 Перший | CSS анімації переходів між вкладками (0.2s opacity/transform) |
+| 🟡 Другий | Anonymous `deviceId` (UUID в localStorage) |
+| 🟡 Другий | Форма подачі через Web3Forms або EmailJS (замість mailto:) |
+| 🟡 Другий | Auto-Sync при відновленні мережі (подія `online`) |
+| 🟢 Третій | Погода у хедері (геолокація → координати Олики за замовчуванням) |
+| 🟢 Третій | "Запланувати поїздку" у вкладці Автобуси |
+| 🔵 Четвертий | Push-сповіщення при скасуванні рейсу |
+| 🔵 Четвертий | Модуль "Енерго-Варта" (графіки відключень Волиньобленерго) |
+| ⬜ Фон | Замінити тестовий контент на реальні новини/події |
+
+Повний план: `docs/ARCHITECT-PLAN-with-Gemini.md`
 
 ---
 
 ## Технічні деталі
 
-**Файл з помилкою:** `.github/workflows/deploy.yml`
+### CI / Деплой
+- Пуш у будь-яку гілку `claude/**` → CI мержить у `main` → ребілдить `bundle.js` → деплоїть
+- Пуш напряму в `main` → CI ребілдить `bundle.js` зі SOURCE ФАЙЛІВ на main
+- **Висновок:** при змінах JS завжди оновлювати `src/tabs/*.js`, а не тільки `bundle.js`
 
-**Суть помилки:** CI намагається push bundle.js в main, але main вже має новіші коміти → конфлікт
-
-**Фікс:** додати `git pull --rebase origin main` перед `git push origin main` в deploy.yml
-
-**Файл вже виправлено локально** (в /home/user/CSTL_NEWS на сервері Claude), але не запушено.
-
----
-
-## Як запустити локально (на комп'ютері)
-
+### Швидкий спосіб примусово задеплоїти
 ```bash
-cd ~/Desktop/CSTL_NEWS
-npm install        # встановити esbuild
-node build.js      # зібрати bundle.js
-# відкрити index.html в браузері
+git commit --allow-empty -m "ci: retrigger" && git push origin claude/start-session-gPmeZ
 ```
 
----
-
-## Важливі рішення прийняті
-
-1. **JSON файли замість localStorage** — статті в `data/articles.json`, не в браузері
-2. **GitHub Actions** — автодеплой при будь-якому push в main
-3. **Service Worker** — офлайн-кешування, різна стратегія для статичних файлів vs data/*.json
-4. **Firebase пізніше** — для push-сповіщень і акаунтів (Фаза 3, не зараз)
+### Локальна збірка
+```bash
+cd /home/user/CSTL_NEWS
+npm install
+node build.js
+```
