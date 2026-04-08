@@ -107,6 +107,7 @@ html, body {
   justify-content: space-between;
   padding: 0 16px;
   z-index: 100;
+  overflow: hidden;
 }
 .header-logo {
   font-size: 20px;
@@ -119,13 +120,14 @@ html, body {
   color: var(--red);
 }
 .header-logo-img {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  max-width: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  max-width: 28px;
   border-radius: 50%;
-  object-fit: contain;
+  object-fit: cover;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 /* ===== MAIN (основний контент) ===== */
@@ -676,8 +678,8 @@ html, body {
 }
 
 .tab-icon {
-  font-size: 20px;
-  line-height: 1;
+  width: 20px;
+  height: 20px;
 }
 .tab-label {
   font-size: 10px;
@@ -822,9 +824,3 @@ html, body {
   color: var(--gray);
 }
 
-/* ===== TAB ICONS (SVG іконки замість emoji) ===== */
-.tab-icon {
-  width: 22px;
-  height: 22px;
-  line-height: 1;
-}
