@@ -104,7 +104,9 @@
   // src/tabs/news.js
   var allArticles = [];
   var activeGeo = "\u0412\u0441\u0456";
+  var activeTopic = "\u0412\u0441\u0456";
   var GEO_FILTERS = ["\u0412\u0441\u0456", "\u041E\u043B\u0438\u043A\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430", "\u0421\u0432\u0456\u0442"];
+  var TOPIC_FILTERS = ["\u0412\u0441\u0456", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0411\u0456\u0437\u043D\u0435\u0441", "\u0421\u043F\u043E\u0440\u0442", "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0415\u043A\u043E\u043B\u043E\u0433\u0456\u044F"];
   async function initNews() {
     try {
       const res = await fetch("./data/articles.json");
@@ -113,6 +115,7 @@
       allArticles = [];
     }
     renderGeoFilters();
+    renderTopicFilters();
     renderNews();
   }
   function renderGeoFilters() {
@@ -123,8 +126,20 @@
     <button class="chip ${g === activeGeo ? "active" : ""}" onclick="setGeoFilter('${g}')">${g}</button>
   `).join("");
   }
+  function renderTopicFilters() {
+    const el = document.getElementById("topic-filters");
+    if (!el)
+      return;
+    el.innerHTML = TOPIC_FILTERS.map((t) => `
+    <button class="chip ${t === activeTopic ? "active" : ""}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
+  `).join("");
+  }
   function getFiltered() {
-    return allArticles.filter((a) => activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo);
+    return allArticles.filter((a) => {
+      const geoOk = activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo;
+      const topicOk = activeTopic === "\u0412\u0441\u0456" || a.category === activeTopic;
+      return geoOk && topicOk;
+    });
   }
   function renderNews() {
     const el = document.getElementById("news-list");
@@ -135,44 +150,33 @@
       el.innerHTML = '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
       return;
     }
-    el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
-  }
-  function renderFeatured(a) {
-    const hasImage = !!a.image;
-    return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}" onclick="openArticle(${a.id})">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ""}
-      <div class="news-card-featured-overlay">
+    el.innerHTML = articles.map((a) => `
+    <article class="news-card ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
+      ${a.image ? `<img class="news-card-img" src="${escapeHtml(a.image)}" alt="">` : ""}
+      <div class="news-card-body">
         <div class="news-card-meta">
           <span class="news-card-geo">${escapeHtml(a.geo)}</span>
           <span class="news-card-category">${escapeHtml(a.category)}</span>
           ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
         </div>
-        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
-        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function renderRow(a) {
-    return `
-    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ""}
-      <div class="news-card-row-body">
-        <div class="news-card-meta">
-          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
-          <span class="news-card-category">${escapeHtml(a.category)}</span>
-          ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+        <h2 class="news-card-title">${escapeHtml(a.title)}</h2>
+        <p class="news-card-excerpt">${escapeHtml(a.excerpt)}</p>
+        <div class="news-card-footer">
+          <span class="news-card-source">${escapeHtml(a.source)}</span>
+          <span class="news-card-time">${formatTime(a.ts)}</span>
         </div>
-        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
-        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
       </div>
     </article>
-  `;
+  `).join("");
   }
   window.setGeoFilter = function(geo) {
     activeGeo = geo;
     renderGeoFilters();
+    renderNews();
+  };
+  window.setTopicFilter = function(topic) {
+    activeTopic = topic;
+    renderTopicFilters();
     renderNews();
   };
   window.openArticle = function(id) {
@@ -340,7 +344,10 @@
     }
     const subject = encodeURIComponent("\u041F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u044F \u043D\u043E\u0432\u0438\u043D\u0438 \u2014 CSTL NEWS");
     const body = encodeURIComponent(
-      `\u0412\u0456\u0434: ${name || "\u0410\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}\n\u041A\u043E\u043D\u0442\u0430\u043A\u0442: ${contact || "\u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"}\n\n${text}`
+      `\u0412\u0456\u0434: ${name || "\u0410\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}
+\u041A\u043E\u043D\u0442\u0430\u043A\u0442: ${contact || "\u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"}
+
+${text}`
     );
     const submissions = JSON.parse(localStorage.getItem("cstl_submissions") || "[]");
     submissions.push({ name, contact, text, ts: Date.now() });
@@ -407,3 +414,4 @@
     init();
   }
 })();
+//# sourceMappingURL=bundle.js.map
