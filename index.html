@@ -13,38 +13,26 @@
 </head>
 <body>
 
-  <!-- Splash screen (заставка при завантаженні) -->
   <div id="splash">
     <img src="logo.png" class="splash-icon" alt="Olyka Castle">
     <div class="splash-logo">CSTL NEWS</div>
     <div class="splash-sub">Олика · Волинь · Україна</div>
   </div>
 
-  <!-- Шапка сайту -->
   <header class="app-header">
     <div class="header-logo">CSTL <span>NEWS</span></div>
     <img src="logo.png" class="header-logo-img" alt="Olyka Castle">
   </header>
 
-  <!-- Основний контент -->
   <main class="app-main">
 
-    <!-- Вкладка: Новини -->
     <div id="page-news" class="page active">
       <div class="filters-bar">
-        <div class="filters-row">
-          <div id="geo-filters" class="chips-row"></div>
-          <button class="topic-btn" id="topic-btn" onclick="toggleTopicDropdown()">
-            <span class="topic-btn-label">Тема</span>
-            <span class="topic-btn-arrow">▾</span>
-          </button>
-        </div>
-        <div id="topic-dropdown" class="topic-dropdown"></div>
+        <div id="geo-filters" class="chips-row"></div>
       </div>
       <div id="news-list" class="news-list"></div>
     </div>
 
-    <!-- Вкладка: Події -->
     <div id="page-events" class="page" style="display:none">
       <div class="tab-header">
         <h2 class="tab-title">Події</h2>
@@ -53,7 +41,6 @@
       <div id="events-list" class="events-list"></div>
     </div>
 
-    <!-- Вкладка: Автобуси -->
     <div id="page-buses" class="page" style="display:none">
       <div class="tab-header">
         <h2 class="tab-title">Автобуси</h2>
@@ -62,13 +49,11 @@
       <div id="buses-content"></div>
     </div>
 
-    <!-- Вкладка: Подати новину -->
     <div id="page-submit" class="page" style="display:none">
       <div class="tab-header">
         <h2 class="tab-title">Подати новину</h2>
         <p class="tab-subtitle">Маєш чим поділитись? Розкажи нам!</p>
       </div>
-
       <form id="submit-form" class="submit-form">
         <div class="form-group">
           <label class="form-label">Ім'я (необов'язково)</label>
@@ -91,7 +76,6 @@
 
   </main>
 
-  <!-- Модальне вікно статті -->
   <div id="article-modal" class="article-modal" onclick="if(event.target===this)closeArticleModal()">
     <div class="article-modal-inner">
       <button class="modal-close-btn" onclick="closeArticleModal()">✕</button>
@@ -99,7 +83,6 @@
     </div>
   </div>
 
-  <!-- Нижня навігація -->
   <nav class="tab-bar">
     <button class="tab-item active" data-tab="news" onclick="switchTab('news')">
       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -139,7 +122,6 @@
   </nav>
 
   <div id="cstl-toast" class="toast"></div>
-
   <script src="bundle.js"></script>
 </body>
 </html>
