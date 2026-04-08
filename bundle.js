@@ -127,20 +127,12 @@
   `).join("");
   }
   function renderTopicFilters() {
-    const dropdown = document.getElementById("topic-dropdown");
-    if (dropdown) {
-      dropdown.innerHTML = TOPIC_FILTERS.map((t) => `
-      <button class="chip ${t === activeTopic ? "active" : ""}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-    `).join("");
-    }
-    const btn = document.getElementById("topic-btn");
-    if (btn) {
-      const isActive = activeTopic !== "\u0412\u0441\u0456";
-      btn.classList.toggle("active", isActive);
-      const label = btn.querySelector(".topic-btn-label");
-      if (label)
-        label.textContent = isActive ? activeTopic : "\u0422\u0435\u043C\u0430";
-    }
+    const el = document.getElementById("topic-filters");
+    if (!el)
+      return;
+    el.innerHTML = TOPIC_FILTERS.map((t) => `
+    <button class="chip ${t === activeTopic ? "active" : ""}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
+  `).join("");
   }
   function getFiltered() {
     return allArticles.filter((a) => {
@@ -158,40 +150,24 @@
       el.innerHTML = '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
       return;
     }
-    el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
-  }
-  function renderFeatured(a) {
-    const hasImage = !!a.image;
-    return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}" onclick="openArticle(${a.id})">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ""}
-      <div class="news-card-featured-overlay">
+    el.innerHTML = articles.map((a) => `
+    <article class="news-card ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
+      ${a.image ? `<img class="news-card-img" src="${escapeHtml(a.image)}" alt="">` : ""}
+      <div class="news-card-body">
         <div class="news-card-meta">
           <span class="news-card-geo">${escapeHtml(a.geo)}</span>
           <span class="news-card-category">${escapeHtml(a.category)}</span>
           ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
         </div>
-        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
-        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function renderRow(a) {
-    return `
-    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ""}
-      <div class="news-card-row-body">
-        <div class="news-card-meta">
-          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
-          <span class="news-card-category">${escapeHtml(a.category)}</span>
-          ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+        <h2 class="news-card-title">${escapeHtml(a.title)}</h2>
+        <p class="news-card-excerpt">${escapeHtml(a.excerpt)}</p>
+        <div class="news-card-footer">
+          <span class="news-card-source">${escapeHtml(a.source)}</span>
+          <span class="news-card-time">${formatTime(a.ts)}</span>
         </div>
-        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
-        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
       </div>
     </article>
-  `;
+  `).join("");
   }
   window.setGeoFilter = function(geo) {
     activeGeo = geo;
@@ -200,24 +176,9 @@
   };
   window.setTopicFilter = function(topic) {
     activeTopic = topic;
-    const dropdown = document.getElementById("topic-dropdown");
-    if (dropdown)
-      dropdown.classList.remove("open");
     renderTopicFilters();
     renderNews();
   };
-  window.toggleTopicDropdown = function() {
-    const dropdown = document.getElementById("topic-dropdown");
-    if (dropdown)
-      dropdown.classList.toggle("open");
-  };
-  document.addEventListener("click", function(e) {
-    if (!e.target.closest("#topic-btn") && !e.target.closest("#topic-dropdown")) {
-      const dropdown = document.getElementById("topic-dropdown");
-      if (dropdown)
-        dropdown.classList.remove("open");
-    }
-  });
   window.openArticle = function(id) {
     const article = allArticles.find((a) => a.id === id);
     if (!article)
@@ -325,6 +286,7 @@
     <div class="buses-updated">
       \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(updatedAt)} \xB7 ${escapeHtml(source)}
     </div>
+
     <div class="route-tabs">
       ${routes.map((r) => `
         <button class="route-tab ${r.id === activeRouteId ? "active" : ""}"
@@ -333,6 +295,7 @@
         </button>
       `).join("")}
     </div>
+
     ${activeRoute ? `
       <div class="route-info">
         ${activeRoute.via ? `<div class="route-via">\u0447\u0435\u0440\u0435\u0437 ${escapeHtml(activeRoute.via)}</div>` : ""}
@@ -340,6 +303,7 @@
           \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0440\u0435\u0439\u0441: <strong>${getNextDeparture(activeRoute.departures)}</strong>
         </div>
       </div>
+
       <div class="departures-list">
         ${activeRoute.departures.map((dep) => {
       const [h, m] = dep.time.split(":").map(Number);
@@ -379,12 +343,17 @@
       return;
     }
     const subject = encodeURIComponent("\u041F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u044F \u043D\u043E\u0432\u0438\u043D\u0438 \u2014 CSTL NEWS");
-    const body = encodeURIComponent(`\u0412\u0456\u0434: ${name || "\u0410\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}\n\u041A\u043E\u043D\u0442\u0430\u043A\u0442: ${contact || "\u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"}\n\n${text}`);
+    const body = encodeURIComponent(
+      `\u0412\u0456\u0434: ${name || "\u0410\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}
+\u041A\u043E\u043D\u0442\u0430\u043A\u0442: ${contact || "\u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"}
+
+${text}`
+    );
     const submissions = JSON.parse(localStorage.getItem("cstl_submissions") || "[]");
     submissions.push({ name, contact, text, ts: Date.now() });
     localStorage.setItem("cstl_submissions", JSON.stringify(submissions));
     window.location.href = `mailto:cstlnews@gmail.com?subject=${subject}&body=${body}`;
-    showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0412\u0430\u0448\u0430 \u043D\u043E\u0432\u0438\u043D\u0430 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0430 \u0440\u0435\u0434\u0430\u043a\u0446\u0456\u0457.");
+    showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0412\u0430\u0448\u0430 \u043D\u043E\u0432\u0438\u043D\u0430 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0430 \u0440\u0435\u0434\u0430\u043A\u0446\u0456\u0457.");
     document.getElementById("submit-form").reset();
   }
 
@@ -445,3 +414,4 @@
     init();
   }
 })();
+//# sourceMappingURL=bundle.js.map
