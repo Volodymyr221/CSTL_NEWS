@@ -833,7 +833,7 @@ html, body {
 /* Анонс (перше речення) під заголовком */
 .news-card-featured-excerpt,
 .news-card-row-excerpt {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--gray);
   line-height: 1.45;
   margin-bottom: 6px;
