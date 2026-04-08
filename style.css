@@ -57,7 +57,7 @@ html, body {
   letter-spacing: 1px;
 }
 
-/* ===== SPLASH ANIMATIONS (анімації заставки) ===== */
+/* ===== SPLASH ANIMATIONS ===== */
 @keyframes splashPop {
   0%   { transform: scale(0.85); opacity: 0; }
   100% { transform: scale(1);    opacity: 1; }
@@ -77,12 +77,10 @@ html, body {
   100% { text-shadow: -10px 10px 13px rgba(0,0,0,0.88); }
 }
 
-/* ===== HEADER (шапка) ===== */
+/* ===== HEADER ===== */
 .app-header {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
+  top: 0; left: 0; right: 0;
   height: var(--header-h);
   background: var(--white);
   border-bottom: 1px solid var(--border);
@@ -91,6 +89,7 @@ html, body {
   justify-content: space-between;
   padding: 0 16px;
   z-index: 100;
+  overflow: hidden;
 }
 .header-logo {
   font-size: 20px;
@@ -100,32 +99,28 @@ html, body {
   letter-spacing: 1px;
   white-space: nowrap;
 }
-.header-logo span {
-  color: var(--red);
-}
+.header-logo span { color: var(--red); }
 .header-logo-img {
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  max-width: 32px;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  max-width: 28px;
   border-radius: 50%;
-  object-fit: contain;
+  object-fit: cover;
   flex-shrink: 0;
 }
 
-/* ===== MAIN (основний контент) ===== */
+/* ===== MAIN ===== */
 .app-main {
   padding-top: var(--header-h);
   padding-bottom: var(--tabbar-h);
   min-height: 100vh;
 }
-
-/* ===== PAGES (сторінки вкладок) ===== */
 .page {
   min-height: calc(100vh - var(--header-h) - var(--tabbar-h));
 }
 
-/* ===== FILTERS BAR (рядок фільтрів) ===== */
+/* ===== FILTERS ===== */
 .filters-bar {
   padding: 10px 16px 0;
   background: var(--white);
@@ -134,7 +129,6 @@ html, body {
   z-index: 50;
   border-bottom: 1px solid var(--border);
 }
-
 .chips-row {
   display: flex;
   gap: 6px;
@@ -143,8 +137,6 @@ html, body {
   scrollbar-width: none;
 }
 .chips-row::-webkit-scrollbar { display: none; }
-
-/* Chip (кнопка-фільтр) */
 .chip {
   flex-shrink: 0;
   padding: 5px 12px;
@@ -164,7 +156,7 @@ html, body {
   font-weight: 600;
 }
 
-/* ===== NEWS LIST (список новин) ===== */
+/* ===== NEWS LIST ===== */
 .news-list {
   padding: 12px 16px;
   display: flex;
@@ -172,7 +164,7 @@ html, body {
   gap: 12px;
 }
 
-/* Картка новини (стара — збережена для сумісності) */
+/* Стара картка (fallback) */
 .news-card {
   background: var(--white);
   border: 1px solid var(--border);
@@ -182,11 +174,31 @@ html, body {
   transition: box-shadow 0.15s;
 }
 .news-card:active { opacity: 0.85; }
-.news-card.exclusive {
-  border-color: var(--red);
-  border-width: 1.5px;
+.news-card.exclusive { border-color: var(--red); border-width: 1.5px; }
+.news-card-img { width: 100%; height: 180px; object-fit: cover; }
+.news-card-body { padding: 12px; }
+.news-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  margin-bottom: 6px;
+  color: var(--black);
 }
+.news-card-excerpt {
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+.news-card-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.news-card-source { font-size: 11px; color: var(--gray); font-weight: 500; }
+.news-card-time { font-size: 11px; color: var(--gray); }
 
+/* Мета (спільне для всіх карток) */
 .news-card-meta {
   display: flex;
   gap: 6px;
@@ -219,7 +231,7 @@ html, body {
   letter-spacing: 0.5px;
 }
 
-/* ===== FEATURED NEWS CARD (велика перша картка) ===== */
+/* ===== FEATURED CARD ===== */
 .news-card-featured {
   position: relative;
   border-radius: 12px;
@@ -227,7 +239,6 @@ html, body {
   cursor: pointer;
 }
 .news-card-featured:active { opacity: 0.9; }
-
 .news-card-featured-img {
   width: 100%;
   height: 220px;
@@ -236,9 +247,7 @@ html, body {
 }
 .news-card-featured-overlay {
   position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   padding: 48px 14px 14px;
   background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.80));
 }
@@ -249,30 +258,20 @@ html, body {
   line-height: 1.3;
   margin-bottom: 6px;
 }
-.news-card-featured-footer {
-  font-size: 11px;
-  color: rgba(255,255,255,0.70);
-}
+.news-card-featured-footer { font-size: 11px; color: rgba(255,255,255,0.70); }
 .news-card-featured .news-card-geo { color: rgba(255,255,255,0.80); }
 .news-card-featured .news-card-category { color: #ff8080; }
 .news-card-featured .exclusive-badge { background: rgba(196,30,58,0.90); }
 
-/* Без фото — fallback */
-.news-card-featured.no-image {
-  background: var(--white);
-  border: 1px solid var(--border);
-}
-.news-card-featured.no-image .news-card-featured-overlay {
-  position: static;
-  background: none;
-  padding: 14px;
-}
-.news-card-featured.no-image .news-card-featured-title { color: var(--black); font-size: 17px; }
+/* Fallback без фото */
+.news-card-featured.no-image { background: var(--white); border: 1px solid var(--border); }
+.news-card-featured.no-image .news-card-featured-overlay { position: static; background: none; padding: 14px; }
+.news-card-featured.no-image .news-card-featured-title { color: var(--black); font-size: 16px; }
 .news-card-featured.no-image .news-card-featured-footer { color: var(--gray); }
 .news-card-featured.no-image .news-card-geo { color: var(--gray); }
 .news-card-featured.no-image .news-card-category { color: var(--red); }
 
-/* ===== ROW NEWS CARD (горизонтальна картка) ===== */
+/* ===== ROW CARD ===== */
 .news-card-row {
   display: flex;
   gap: 12px;
@@ -286,10 +285,7 @@ html, body {
   transition: opacity 0.15s;
 }
 .news-card-row:active { opacity: 0.80; }
-.news-card-row.exclusive {
-  border-color: var(--red);
-  border-width: 1.5px;
-}
+.news-card-row.exclusive { border-color: var(--red); border-width: 1.5px; }
 .news-card-row-img {
   width: 88px;
   height: 80px;
@@ -299,7 +295,7 @@ html, body {
 }
 .news-card-row-body { flex: 1; min-width: 0; }
 .news-card-row-title {
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 700;
   line-height: 1.35;
   color: var(--black);
@@ -311,27 +307,14 @@ html, body {
 }
 .news-card-row-footer { font-size: 11px; color: var(--gray); }
 
-/* ===== TAB HEADER (заголовок вкладки) ===== */
-.tab-header {
-  padding: 20px 16px 12px;
-  border-bottom: 1px solid var(--border);
-}
+/* ===== TAB HEADER ===== */
+.tab-header { padding: 20px 16px 12px; border-bottom: 1px solid var(--border); }
 .tab-title { font-size: 22px; font-weight: 800; color: var(--black); }
 .tab-subtitle { font-size: 13px; color: var(--gray); margin-top: 2px; }
 
-/* ===== EVENTS LIST (список подій) ===== */
-.events-list {
-  padding: 12px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.event-card {
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-}
+/* ===== EVENTS ===== */
+.events-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.event-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
 .event-card-img { width: 100%; height: 160px; object-fit: cover; }
 .event-card-body { padding: 14px; }
 .event-card-date { font-size: 12px; color: var(--red); font-weight: 600; text-transform: capitalize; margin-bottom: 6px; }
@@ -339,7 +322,7 @@ html, body {
 .event-card-desc { font-size: 13px; color: var(--gray); line-height: 1.5; margin-bottom: 10px; }
 .event-card-location { font-size: 12px; color: var(--gray); font-weight: 500; }
 
-/* ===== BUSES (розклад автобусів) ===== */
+/* ===== BUSES ===== */
 .buses-updated { font-size: 11px; color: var(--gray); padding: 10px 16px; border-bottom: 1px solid var(--border); }
 .route-tabs { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; border-bottom: 2px solid var(--border); }
 .route-tabs::-webkit-scrollbar { display: none; }
@@ -378,7 +361,7 @@ html, body {
 .departure-status { font-size: 11px; color: var(--gray); text-align: right; }
 .departure-row:not(.past) .departure-status { color: #2d9e2d; font-weight: 600; }
 
-/* ===== SUBMIT FORM (форма подачі новини) ===== */
+/* ===== SUBMIT ===== */
 .submit-form { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
 .form-group { display: flex; flex-direction: column; gap: 6px; }
 .form-label { font-size: 13px; font-weight: 600; color: var(--black); }
@@ -410,7 +393,7 @@ html, body {
 .submit-btn:active { background: var(--red-dark); }
 .submit-note { font-size: 12px; color: var(--gray); text-align: center; font-style: italic; }
 
-/* ===== ARTICLE MODAL (вікно статті) ===== */
+/* ===== ARTICLE MODAL ===== */
 .article-modal {
   position: fixed;
   inset: 0;
@@ -454,12 +437,10 @@ html, body {
 .article-body { font-size: 16px; line-height: 1.7; color: var(--black); }
 .article-source-link { display: block; margin-top: 16px; color: var(--red); font-size: 14px; font-weight: 600; text-decoration: none; }
 
-/* ===== TAB BAR (нижня навігація) ===== */
+/* ===== TAB BAR ===== */
 .tab-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  bottom: 0; left: 0; right: 0;
   height: var(--tabbar-h);
   background: var(--white);
   border-top: 1px solid var(--border);
@@ -483,10 +464,10 @@ html, body {
   padding: 6px 0;
 }
 .tab-item.active { color: var(--red); }
-.tab-icon { width: 22px; height: 22px; }
+.tab-icon { width: 20px; height: 20px; }
 .tab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
 
-/* ===== TOAST (маленьке сповіщення) ===== */
+/* ===== TOAST ===== */
 .toast {
   position: fixed;
   bottom: calc(var(--tabbar-h) + 12px);
@@ -506,5 +487,5 @@ html, body {
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
 
-/* ===== EMPTY STATE (коли немає контенту) ===== */
+/* ===== EMPTY STATE ===== */
 .empty-state { text-align: center; padding: 48px 24px; color: var(--gray); font-size: 15px; }
