@@ -23,7 +23,7 @@
   <!-- Шапка сайту -->
   <header class="app-header">
     <div class="header-logo">CSTL <span>NEWS</span></div>
-    <div class="header-badge" id="deploy-version">v1 · 07.04 11:53</div>
+    <img src="logo.png" class="header-logo-img" alt="Olyka Castle">
   </header>
 
   <!-- Основний контент -->
@@ -32,8 +32,14 @@
     <!-- Вкладка: Новини -->
     <div id="page-news" class="page active">
       <div class="filters-bar">
-        <div id="geo-filters" class="chips-row"></div>
-        <div id="topic-filters" class="chips-row"></div>
+        <div class="filters-row">
+          <div id="geo-filters" class="chips-row"></div>
+          <button class="topic-btn" id="topic-btn" onclick="toggleTopicDropdown()">
+            <span class="topic-btn-label">Тема</span>
+            <span class="topic-btn-arrow">▾</span>
+          </button>
+        </div>
+        <div id="topic-dropdown" class="topic-dropdown"></div>
       </div>
       <div id="news-list" class="news-list"></div>
     </div>

@@ -118,9 +118,11 @@ html, body {
 .header-logo span {
   color: var(--red);
 }
-.header-badge {
-  font-size: 11px;
-  color: var(--gray);
+.header-logo-img {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  object-fit: contain;
 }
 
 /* ===== MAIN (основний контент) ===== */
@@ -145,14 +147,62 @@ html, body {
   border-bottom: 1px solid var(--border);
 }
 
+/* Рядок: гео-чіпи + кнопка теми */
+.filters-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
 .chips-row {
   display: flex;
+  flex: 1;
   gap: 6px;
   overflow-x: auto;
   padding-bottom: 10px;
   scrollbar-width: none;
 }
 .chips-row::-webkit-scrollbar { display: none; }
+
+/* Кнопка-дропдаун теми (вибір теми) */
+.topic-btn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px 10px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--black);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+  margin-bottom: 10px;
+  margin-left: 6px;
+  transition: all 0.15s;
+}
+.topic-btn.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
+}
+.topic-btn-arrow {
+  font-size: 9px;
+  opacity: 0.55;
+}
+
+/* Дропдаун з темами (прихований за замовчуванням) */
+.topic-dropdown {
+  display: none;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 0 10px;
+  border-top: 1px solid var(--border);
+}
+.topic-dropdown.open {
+  display: flex;
+}
 
 /* Chip (кнопка-фільтр) */
 .chip {

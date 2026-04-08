@@ -28,11 +28,21 @@ function renderGeoFilters() {
 }
 
 function renderTopicFilters() {
-  const el = document.getElementById('topic-filters');
-  if (!el) return;
-  el.innerHTML = TOPIC_FILTERS.map(t => `
-    <button class="chip ${t === activeTopic ? 'active' : ''}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-  `).join('');
+  // Оновлюємо вміст дропдауну
+  const dropdown = document.getElementById('topic-dropdown');
+  if (dropdown) {
+    dropdown.innerHTML = TOPIC_FILTERS.map(t => `
+      <button class="chip ${t === activeTopic ? 'active' : ''}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
+    `).join('');
+  }
+  // Оновлюємо текст і стан кнопки
+  const btn = document.getElementById('topic-btn');
+  if (btn) {
+    const isActive = activeTopic !== 'Всі';
+    btn.classList.toggle('active', isActive);
+    const label = btn.querySelector('.topic-btn-label');
+    if (label) label.textContent = isActive ? activeTopic : 'Тема';
+  }
 }
 
 function getFiltered() {
@@ -100,9 +110,25 @@ window.setGeoFilter = function(geo) {
 
 window.setTopicFilter = function(topic) {
   activeTopic = topic;
+  // Закрити дропдаун після вибору
+  const dropdown = document.getElementById('topic-dropdown');
+  if (dropdown) dropdown.classList.remove('open');
   renderTopicFilters();
   renderNews();
 };
+
+window.toggleTopicDropdown = function() {
+  const dropdown = document.getElementById('topic-dropdown');
+  if (dropdown) dropdown.classList.toggle('open');
+};
+
+// Закрити дропдаун при кліку поза ним
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('#topic-btn') && !e.target.closest('#topic-dropdown')) {
+    const dropdown = document.getElementById('topic-dropdown');
+    if (dropdown) dropdown.classList.remove('open');
+  }
+});
 
 window.openArticle = function(id) {
   const article = allArticles.find(a => a.id === id);

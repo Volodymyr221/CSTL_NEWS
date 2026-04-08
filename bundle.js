@@ -127,12 +127,20 @@
   `).join("");
   }
   function renderTopicFilters() {
-    const el = document.getElementById("topic-filters");
-    if (!el)
-      return;
-    el.innerHTML = TOPIC_FILTERS.map((t) => `
-    <button class="chip ${t === activeTopic ? "active" : ""}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-  `).join("");
+    const dropdown = document.getElementById("topic-dropdown");
+    if (dropdown) {
+      dropdown.innerHTML = TOPIC_FILTERS.map((t) => `
+      <button class="chip ${t === activeTopic ? "active" : ""}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
+    `).join("");
+    }
+    const btn = document.getElementById("topic-btn");
+    if (btn) {
+      const isActive = activeTopic !== "\u0412\u0441\u0456";
+      btn.classList.toggle("active", isActive);
+      const label = btn.querySelector(".topic-btn-label");
+      if (label)
+        label.textContent = isActive ? activeTopic : "\u0422\u0435\u043C\u0430";
+    }
   }
   function getFiltered() {
     return allArticles.filter((a) => {
@@ -192,9 +200,24 @@
   };
   window.setTopicFilter = function(topic) {
     activeTopic = topic;
+    const dropdown = document.getElementById("topic-dropdown");
+    if (dropdown)
+      dropdown.classList.remove("open");
     renderTopicFilters();
     renderNews();
   };
+  window.toggleTopicDropdown = function() {
+    const dropdown = document.getElementById("topic-dropdown");
+    if (dropdown)
+      dropdown.classList.toggle("open");
+  };
+  document.addEventListener("click", function(e) {
+    if (!e.target.closest("#topic-btn") && !e.target.closest("#topic-dropdown")) {
+      const dropdown = document.getElementById("topic-dropdown");
+      if (dropdown)
+        dropdown.classList.remove("open");
+    }
+  });
   window.openArticle = function(id) {
     const article = allArticles.find((a) => a.id === id);
     if (!article)
