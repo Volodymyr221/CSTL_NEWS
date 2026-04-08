@@ -2,10 +2,12 @@ import { formatTime, escapeHtml } from '../core/utils.js';
 
 let allArticles = [];
 let activeGeo = 'Всі';
-let activeTopic = 'Всі';
 
 const GEO_FILTERS = ['Всі', 'Олика', 'Волинь', 'Україна', 'Світ'];
-const TOPIC_FILTERS = ['Всі', 'Культура', 'Бізнес', 'Спорт', 'Технології', 'Здоров\'я', 'Екологія'];
+
+// Категорії для внутрішнього використання при парсингу новин.
+// Не відображаються як фільтри — тільки для розмітки статей.
+export const TOPIC_FILTERS = ['Культура', 'Бізнес', 'Спорт', 'Технології', 'Здоров\'я', 'Екологія', 'Політика', 'Суспільство'];
 
 export async function initNews() {
   try {
@@ -15,7 +17,6 @@ export async function initNews() {
     allArticles = [];
   }
   renderGeoFilters();
-  renderTopicFilters();
   renderNews();
 }
 
@@ -27,30 +28,8 @@ function renderGeoFilters() {
   `).join('');
 }
 
-function renderTopicFilters() {
-  // Оновлюємо вміст дропдауну
-  const dropdown = document.getElementById('topic-dropdown');
-  if (dropdown) {
-    dropdown.innerHTML = TOPIC_FILTERS.map(t => `
-      <button class="chip ${t === activeTopic ? 'active' : ''}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-    `).join('');
-  }
-  // Оновлюємо текст і стан кнопки
-  const btn = document.getElementById('topic-btn');
-  if (btn) {
-    const isActive = activeTopic !== 'Всі';
-    btn.classList.toggle('active', isActive);
-    const label = btn.querySelector('.topic-btn-label');
-    if (label) label.textContent = isActive ? activeTopic : 'Тема';
-  }
-}
-
 function getFiltered() {
-  return allArticles.filter(a => {
-    const geoOk = activeGeo === 'Всі' || a.geo === activeGeo;
-    const topicOk = activeTopic === 'Всі' || a.category === activeTopic;
-    return geoOk && topicOk;
-  });
+  return allArticles.filter(a => activeGeo === 'Всі' || a.geo === activeGeo);
 }
 
 export function renderNews() {
@@ -107,28 +86,6 @@ window.setGeoFilter = function(geo) {
   renderGeoFilters();
   renderNews();
 };
-
-window.setTopicFilter = function(topic) {
-  activeTopic = topic;
-  // Закрити дропдаун після вибору
-  const dropdown = document.getElementById('topic-dropdown');
-  if (dropdown) dropdown.classList.remove('open');
-  renderTopicFilters();
-  renderNews();
-};
-
-window.toggleTopicDropdown = function() {
-  const dropdown = document.getElementById('topic-dropdown');
-  if (dropdown) dropdown.classList.toggle('open');
-};
-
-// Закрити дропдаун при кліку поза ним
-document.addEventListener('click', function(e) {
-  if (!e.target.closest('#topic-btn') && !e.target.closest('#topic-dropdown')) {
-    const dropdown = document.getElementById('topic-dropdown');
-    if (dropdown) dropdown.classList.remove('open');
-  }
-});
 
 window.openArticle = function(id) {
   const article = allArticles.find(a => a.id === id);

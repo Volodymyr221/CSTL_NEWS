@@ -104,9 +104,7 @@
   // src/tabs/news.js
   var allArticles = [];
   var activeGeo = "\u0412\u0441\u0456";
-  var activeTopic = "\u0412\u0441\u0456";
   var GEO_FILTERS = ["\u0412\u0441\u0456", "\u041E\u043B\u0438\u043A\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430", "\u0421\u0432\u0456\u0442"];
-  var TOPIC_FILTERS = ["\u0412\u0441\u0456", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0411\u0456\u0437\u043D\u0435\u0441", "\u0421\u043F\u043E\u0440\u0442", "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457", "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F", "\u0415\u043A\u043E\u043B\u043E\u0433\u0456\u044F"];
   async function initNews() {
     try {
       const res = await fetch("./data/articles.json");
@@ -115,7 +113,6 @@
       allArticles = [];
     }
     renderGeoFilters();
-    renderTopicFilters();
     renderNews();
   }
   function renderGeoFilters() {
@@ -126,28 +123,8 @@
     <button class="chip ${g === activeGeo ? "active" : ""}" onclick="setGeoFilter('${g}')">${g}</button>
   `).join("");
   }
-  function renderTopicFilters() {
-    const dropdown = document.getElementById("topic-dropdown");
-    if (dropdown) {
-      dropdown.innerHTML = TOPIC_FILTERS.map((t) => `
-      <button class="chip ${t === activeTopic ? "active" : ""}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-    `).join("");
-    }
-    const btn = document.getElementById("topic-btn");
-    if (btn) {
-      const isActive = activeTopic !== "\u0412\u0441\u0456";
-      btn.classList.toggle("active", isActive);
-      const label = btn.querySelector(".topic-btn-label");
-      if (label)
-        label.textContent = isActive ? activeTopic : "\u0422\u0435\u043C\u0430";
-    }
-  }
   function getFiltered() {
-    return allArticles.filter((a) => {
-      const geoOk = activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo;
-      const topicOk = activeTopic === "\u0412\u0441\u0456" || a.category === activeTopic;
-      return geoOk && topicOk;
-    });
+    return allArticles.filter((a) => activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo);
   }
   function renderNews() {
     const el = document.getElementById("news-list");
@@ -198,26 +175,6 @@
     renderGeoFilters();
     renderNews();
   };
-  window.setTopicFilter = function(topic) {
-    activeTopic = topic;
-    const dropdown = document.getElementById("topic-dropdown");
-    if (dropdown)
-      dropdown.classList.remove("open");
-    renderTopicFilters();
-    renderNews();
-  };
-  window.toggleTopicDropdown = function() {
-    const dropdown = document.getElementById("topic-dropdown");
-    if (dropdown)
-      dropdown.classList.toggle("open");
-  };
-  document.addEventListener("click", function(e) {
-    if (!e.target.closest("#topic-btn") && !e.target.closest("#topic-dropdown")) {
-      const dropdown = document.getElementById("topic-dropdown");
-      if (dropdown)
-        dropdown.classList.remove("open");
-    }
-  });
   window.openArticle = function(id) {
     const article = allArticles.find((a) => a.id === id);
     if (!article)
