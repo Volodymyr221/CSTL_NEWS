@@ -2,10 +2,10 @@ import { formatTime, escapeHtml } from '../core/utils.js';
 
 let allArticles = [];
 let activeGeo = 'Всі';
-let activeTopic = 'Всі';
 
 const GEO_FILTERS = ['Всі', 'Олика', 'Волинь', 'Україна', 'Світ'];
-const TOPIC_FILTERS = ['Всі', 'Культура', 'Бізнес', 'Спорт', 'Технології', 'Здоров\'я', 'Екологія'];
+
+export const TOPIC_FILTERS = ['Культура', 'Бізнес', 'Спорт', 'Технології', 'Здоров’я', 'Екологія', 'Політика', 'Суспільство'];
 
 export async function initNews() {
   try {
@@ -15,7 +15,6 @@ export async function initNews() {
     allArticles = [];
   }
   renderGeoFilters();
-  renderTopicFilters();
   renderNews();
 }
 
@@ -27,20 +26,8 @@ function renderGeoFilters() {
   `).join('');
 }
 
-function renderTopicFilters() {
-  const el = document.getElementById('topic-filters');
-  if (!el) return;
-  el.innerHTML = TOPIC_FILTERS.map(t => `
-    <button class="chip ${t === activeTopic ? 'active' : ''}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-  `).join('');
-}
-
 function getFiltered() {
-  return allArticles.filter(a => {
-    const geoOk = activeGeo === 'Всі' || a.geo === activeGeo;
-    const topicOk = activeTopic === 'Всі' || a.category === activeTopic;
-    return geoOk && topicOk;
-  });
+  return allArticles.filter(a => activeGeo === 'Всі' || a.geo === activeGeo);
 }
 
 export function renderNews() {
@@ -54,35 +41,47 @@ export function renderNews() {
     return;
   }
 
-  el.innerHTML = articles.map(a => `
-    <article class="news-card ${a.exclusive ? 'exclusive' : ''}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-img" src="${escapeHtml(a.image)}" alt="">` : ''}
-      <div class="news-card-body">
+  el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
+}
+
+function renderFeatured(a) {
+  const hasImage = !!a.image;
+  return `
+    <article class="news-card-featured ${hasImage ? '' : 'no-image'}" onclick="openArticle(${a.id})">
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ''}
+      <div class="news-card-featured-overlay">
         <div class="news-card-meta">
           <span class="news-card-geo">${escapeHtml(a.geo)}</span>
           <span class="news-card-category">${escapeHtml(a.category)}</span>
           ${a.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
         </div>
-        <h2 class="news-card-title">${escapeHtml(a.title)}</h2>
-        <p class="news-card-excerpt">${escapeHtml(a.excerpt)}</p>
-        <div class="news-card-footer">
-          <span class="news-card-source">${escapeHtml(a.source)}</span>
-          <span class="news-card-time">${formatTime(a.ts)}</span>
-        </div>
+        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
+        <div class="news-card-featured-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
       </div>
     </article>
-  `).join('');
+  `;
+}
+
+function renderRow(a) {
+  return `
+    <article class="news-card-row ${a.exclusive ? 'exclusive' : ''}" onclick="openArticle(${a.id})">
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ''}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">
+          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
+          <span class="news-card-category">${escapeHtml(a.category)}</span>
+          ${a.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
+        </div>
+        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
+        <div class="news-card-row-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
 }
 
 window.setGeoFilter = function(geo) {
   activeGeo = geo;
   renderGeoFilters();
-  renderNews();
-};
-
-window.setTopicFilter = function(topic) {
-  activeTopic = topic;
-  renderTopicFilters();
   renderNews();
 };
 
