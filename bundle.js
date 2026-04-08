@@ -140,7 +140,7 @@
   function renderFeatured(a) {
     const hasImage = !!a.image;
     return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}" onclick="openArticle(${a.id})">
+    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" onclick="openArticle(${a.id})">
       ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ""}
       <div class="news-card-featured-overlay">
         <div class="news-card-meta">
@@ -149,6 +149,7 @@
           ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
         </div>
         <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
+        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
         <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
       </div>
     </article>
@@ -165,6 +166,7 @@
           ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
         </div>
         <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
+        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
         <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
       </div>
     </article>

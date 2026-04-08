@@ -824,3 +824,22 @@ html, body {
   color: var(--gray);
 }
 
+/* Червоний ободок для ексклюзивної featured-картки */
+.news-card-featured.no-image.exclusive {
+  border-color: var(--red);
+  border-width: 1.5px;
+}
+
+/* Анонс (перше речення) під заголовком */
+.news-card-featured-excerpt,
+.news-card-row-excerpt {
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.45;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
