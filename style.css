@@ -362,6 +362,19 @@ html, body {
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
+  cursor: pointer;
+}
+.event-card:active {
+  opacity: 0.75;
+}
+
+.event-category-tag {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 5px;
 }
 
 .event-card-img {
