@@ -39,24 +39,44 @@ export function renderNews() {
     return;
   }
 
-  el.innerHTML = articles.map(a => `
-    <article class="news-card ${a.exclusive ? 'exclusive' : ''}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-img" src="${escapeHtml(a.image)}" alt="">` : ''}
-      <div class="news-card-body">
+  el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
+}
+
+function renderFeatured(a) {
+  const hasImage = !!a.image;
+  return `
+    <article class="news-card-featured ${hasImage ? '' : 'no-image'}${a.exclusive ? ' exclusive' : ''}" onclick="openArticle(${a.id})">
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ''}
+      <div class="news-card-featured-overlay">
         <div class="news-card-meta">
           <span class="news-card-geo">${escapeHtml(a.geo)}</span>
           <span class="news-card-category">${escapeHtml(a.category)}</span>
           ${a.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
         </div>
-        <h2 class="news-card-title">${escapeHtml(a.title)}</h2>
-        <p class="news-card-excerpt">${escapeHtml(a.excerpt)}</p>
-        <div class="news-card-footer">
-          <span class="news-card-source">${escapeHtml(a.source)}</span>
-          <span class="news-card-time">${formatTime(a.ts)}</span>
-        </div>
+        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
+        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
+        <div class="news-card-featured-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
       </div>
     </article>
-  `).join('');
+  `;
+}
+
+function renderRow(a) {
+  return `
+    <article class="news-card-row ${a.exclusive ? 'exclusive' : ''}" onclick="openArticle(${a.id})">
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ''}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">
+          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
+          <span class="news-card-category">${escapeHtml(a.category)}</span>
+          ${a.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
+        </div>
+        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
+        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
+        <div class="news-card-row-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
 }
 
 window.setGeoFilter = function(geo) {

@@ -1,93 +1,76 @@
-// WMO weather codes → emoji
-function codeToIcon(code) {
-  if (code === 0)   return '☀️';
-  if (code <= 2)    return '🌤️';
-  if (code === 3)   return '☁️';
-  if (code <= 48)   return '🌫️';
-  if (code <= 55)   return '🌦️';
-  if (code <= 65)   return '🌧️';
-  if (code <= 77)   return '❄️';
-  if (code <= 82)   return '🌧️';
-  if (code >= 95)   return '⛈️';
-  return '🌡️';
-}
+import { bootApp } from './core/boot.js';
+import { initWeather } from './core/weather.js';
+import { initNews } from './tabs/news.js';
+import { initEvents } from './tabs/events.js';
+import { initBuses } from './tabs/buses.js';
+import { initSubmit } from './tabs/submit.js';
 
-const OLYKA = { lat: 50.7333, lon: 25.8167, name: 'Олика' };
+// Поточна активна вкладка
+let currentTab = 'news';
 
-async function getCoords() {
-  if (!navigator.geolocation) return OLYKA;
-  return new Promise(resolve => {
-    navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, name: '' }),
-      ()   => resolve(OLYKA),
-      { timeout: 5000, maximumAge: 600000 }
-    );
+// Переключення між вкладками з плавною анімацією
+window.switchTab = function(tab) {
+  if (tab === currentTab) return;
+
+  const oldPage = document.getElementById(`page-${currentTab}`);
+  const newPage = document.getElementById(`page-${tab}`);
+  if (!oldPage || !newPage) return;
+
+  // Плавний fade перехід
+  newPage.style.opacity = '0';
+  newPage.style.display = 'block';
+
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      oldPage.style.opacity = '0';
+      oldPage.style.transition = 'opacity 0.18s ease';
+      newPage.style.transition = 'opacity 0.22s ease';
+      newPage.style.opacity = '1';
+
+      setTimeout(() => {
+        oldPage.style.display = 'none';
+        oldPage.style.opacity = '';
+        oldPage.style.transition = '';
+        newPage.style.transition = '';
+      }, 220);
+    });
   });
+
+  // Оновлюємо активний стан таб-бару
+  document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
+  const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
+  if (activeTab) activeTab.classList.add('active');
+
+  currentTab = tab;
+};
+
+// Закрити модальне вікно статті
+window.closeArticleModal = function() {
+  const modal = document.getElementById('article-modal');
+  if (modal) modal.classList.remove('open');
+};
+
+// Ініціалізація при завантаженні сторінки
+function init() {
+  bootApp();
+  initWeather();
+  initNews();
+  initEvents();
+  initBuses();
+  initSubmit();
+
+  // Splash screen — прибираємо після завантаження
+  setTimeout(() => {
+    const splash = document.getElementById('splash');
+    if (splash) {
+      splash.style.opacity = '0';
+      splash.style.transition = 'opacity 0.4s';
+      setTimeout(() => splash.remove(), 600);
+    }
+  }, 3500);
 }
-
-async function initWeather() {
-  const tempEl = document.querySelector('.weather-temp');
-  const cityEl = document.querySelector('.weather-city');
-  try {
-    const { lat, lon, name } = await getCoords();
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
-    const res = await fetch(url);
-    const data = await res.json();
-    const temp = Math.round(data.current.temperature_2m);
-    const icon = codeToIcon(data.current.weather_code);
-    if (tempEl) tempEl.textContent = `${icon} ${temp}°`;
-    if (cityEl) cityEl.textContent = name || 'Олика';
-  } catch {
-    const widget = document.getElementById('weather-widget');
-    if (widget) widget.style.visibility = 'hidden';
-  }
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', init);
+} else {
+  init();
 }
-
-// Функція рендеру новин
-function renderNews() {
-    const container = document.getElementById('news-container');
-    const newsData = [
-        {
-            id: 1,
-            title: "Відреставровано вежу Олицького замку",
-            excerpt: "Завершено перший етап реставрації однієї з веж знаменитого Олицького замку.",
-            geo: "ОЛИКА",
-            category: "КУЛЬТУРА",
-            isExclusive: true,
-            source: "CSTL NEWS",
-            time: "4 квітня"
-        },
-        {
-            id: 2,
-            title: "Новий маршрут для туристів",
-            excerpt: "Туристичний маршрут поєднує кілька замків Волинської області.",
-            geo: "ВОЛИНЬ",
-            category: "КУЛЬТУРА",
-            isExclusive: false,
-            source: "Волинь 24",
-            time: "4 квітня"
-        }
-    ];
-
-    container.innerHTML = newsData.map(news => `
-        <div class="news-card ${news.isExclusive ? 'exclusive' : ''}">
-            <div class="news-card-body">
-                <div style="font-size: 10px; font-weight: 700; margin-bottom: 4px;">
-                    <span style="color: var(--gray)">${news.geo}</span> 
-                    <span style="color: var(--red); margin-left: 5px;">${news.category}</span>
-                </div>
-                <h3 class="news-card-title">${news.title}</h3>
-                <p class="news-card-excerpt">${news.excerpt}</p>
-                <div style="font-size: 11px; color: #999; margin-top: 8px;">
-                    ${news.source} • ${news.time}
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-// Запуск
-document.addEventListener('DOMContentLoaded', () => {
-    initWeather();
-    renderNews();
-});

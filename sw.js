@@ -1,7 +1,7 @@
 // sw.js — CSTL NEWS Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260409-1500';
+const CACHE_NAME = 'cstl-20260409-1600';
 
 const STATIC_ASSETS = [
   './',
@@ -23,7 +23,7 @@ self.addEventListener('install', e => {
         )
       ))
       .then(() => self.skipWaiting())
-  );  
+  );
 });
 
 // Активація: видаляємо старі версії кешу

@@ -1,54 +1,142 @@
 <!DOCTYPE html>
 <html lang="uk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>CSTL NEWS</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#C41E3A">
+  <meta name="description" content="CSTL NEWS — локальна медіа-платформа Олики та Волині">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="CSTL NEWS">
+  <title>CSTL NEWS</title>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header class="app-header">
-        <div class="header-logo">CSTL <span>NEWS</span></div>
-        <div class="header-badge" id="weather-widget">
-            <span class="weather-temp">☀️ --°</span>
-            <span class="weather-city">Олика</span>
+
+  <!-- Splash screen (заставка при завантаженні) -->
+  <div id="splash">
+    <img src="logo.png" class="splash-icon" alt="Olyka Castle">
+    <div class="splash-logo">CSTL NEWS</div>
+    <div class="splash-sub">Олика · Волинь · Україна</div>
+  </div>
+
+  <!-- Шапка сайту -->
+  <header class="app-header">
+    <div class="header-logo">CSTL <span>NEWS</span></div>
+    <div class="weather-widget" id="weather-widget">
+      <span class="weather-icon" id="weather-icon"></span>
+      <span class="weather-temp" id="weather-temp"></span>
+    </div>
+  </header>
+
+  <!-- Основний контент -->
+  <main class="app-main">
+
+    <!-- Вкладка: Новини -->
+    <div id="page-news" class="page active">
+      <div class="filters-bar">
+        <div id="geo-filters" class="chips-row"></div>
+      </div>
+      <div id="news-list" class="news-list"></div>
+    </div>
+
+    <!-- Вкладка: Події -->
+    <div id="page-events" class="page" style="display:none">
+      <div class="tab-header">
+        <h2 class="tab-title">Події</h2>
+        <p class="tab-subtitle">Афіша Олики та Волині</p>
+      </div>
+      <div id="events-list" class="events-list"></div>
+    </div>
+
+    <!-- Вкладка: Автобуси -->
+    <div id="page-buses" class="page" style="display:none">
+      <div class="tab-header">
+        <h2 class="tab-title">Автобуси</h2>
+        <p class="tab-subtitle">Маршрути через Олику</p>
+      </div>
+      <div id="buses-content"></div>
+    </div>
+
+    <!-- Вкладка: Подати новину -->
+    <div id="page-submit" class="page" style="display:none">
+      <div class="tab-header">
+        <h2 class="tab-title">Подати новину</h2>
+        <p class="tab-subtitle">Маєш чим поділитись? Розкажи нам!</p>
+      </div>
+
+      <form id="submit-form" class="submit-form">
+        <div class="form-group">
+          <label class="form-label">Ім'я (необов'язково)</label>
+          <input id="submit-name" class="form-input" type="text" placeholder="Ваше ім'я">
         </div>
-    </header>
-
-    <main class="app-content">
-        <div class="filters-bar">
-            <div class="chips-row">
-                <div class="chip active">Всі</div>
-                <div class="chip">Олика</div>
-                <div class="chip">Волинь</div>
-                <div class="chip">Україна</div>
-                <div class="chip">Світ</div>
-            </div>
+        <div class="form-group">
+          <label class="form-label">Контакт (необов'язково)</label>
+          <input id="submit-contact" class="form-input" type="text" placeholder="Телефон або Instagram">
         </div>
+        <div class="form-group">
+          <label class="form-label">Новина або посилання *</label>
+          <textarea id="submit-text" class="form-textarea"
+            placeholder="Опишіть що сталось або вставте посилання на джерело"
+            rows="5"></textarea>
+        </div>
+        <button type="submit" class="submit-btn">Надіслати до редакції</button>
+        <p class="submit-note">Ваша допомога допомагає нам рухатись в правильному напрямку!</p>
+      </form>
+    </div>
 
-        <div id="news-container" class="news-list">
-            </div>
-    </main>
+  </main>
 
-    <nav class="bottom-nav">
-        <a href="#" class="nav-item active">
-            <img src="icons/news.svg" alt="">
-            <span>Новини</span>
-        </a>
-        <a href="events.html" class="nav-item">
-            <img src="icons/events.svg" alt="">
-            <span>Події</span>
-        </a>
-        <a href="#" class="nav-item">
-            <img src="icons/bus.svg" alt="">
-            <span>Автобуси</span>
-        </a>
-        <a href="#" class="nav-item">
-            <img src="icons/submit.svg" alt="">
-            <span>Подати</span>
-        </a>
-    </nav>
+  <!-- Модальне вікно статті (відкривається при натисканні на новину) -->
+  <div id="article-modal" class="article-modal" onclick="if(event.target===this)closeArticleModal()">
+    <div class="article-modal-inner">
+      <button class="modal-close-btn" onclick="closeArticleModal()">✕</button>
+      <div id="article-modal-content" class="article-modal-content"></div>
+    </div>
+  </div>
 
-    <script src="src/app.js"></script>
+  <!-- Нижня навігація (tab bar) -->
+  <nav class="tab-bar">
+    <button class="tab-item active" data-tab="news" onclick="switchTab('news')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="16" rx="2"/>
+        <line x1="7" y1="9" x2="17" y2="9"/>
+        <line x1="7" y1="13" x2="14" y2="13"/>
+        <line x1="7" y1="17" x2="11" y2="17"/>
+      </svg>
+      <span class="tab-label">Новини</span>
+    </button>
+    <button class="tab-item" data-tab="events" onclick="switchTab('events')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <line x1="3" y1="10" x2="21" y2="10"/>
+        <line x1="8" y1="2" x2="8" y2="6"/>
+        <line x1="16" y1="2" x2="16" y2="6"/>
+      </svg>
+      <span class="tab-label">Події</span>
+    </button>
+    <button class="tab-item" data-tab="buses" onclick="switchTab('buses')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="2" y="5" width="20" height="13" rx="2"/>
+        <line x1="2" y1="10" x2="22" y2="10"/>
+        <line x1="7" y1="5" x2="7" y2="18"/>
+        <circle cx="6.5" cy="19.5" r="1.5"/>
+        <circle cx="17.5" cy="19.5" r="1.5"/>
+      </svg>
+      <span class="tab-label">Автобуси</span>
+    </button>
+    <button class="tab-item" data-tab="submit" onclick="switchTab('submit')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M12 20h9"/>
+        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+      </svg>
+      <span class="tab-label">Подати</span>
+    </button>
+  </nav>
+
+  <!-- Toast повідомлення (маленьке сповіщення знизу) -->
+  <div id="cstl-toast" class="toast"></div>
+
+  <script src="bundle.js"></script>
 </body>
 </html>
