@@ -65,7 +65,7 @@ function init() {
       splash.style.transition = 'opacity 0.4s';
       setTimeout(() => splash.remove(), 600);
     }
-  }, 3000);
+  }, 3500);
 }
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
