@@ -2,10 +2,8 @@ import { formatTime, escapeHtml } from '../core/utils.js';
 
 let allArticles = [];
 let activeGeo = 'Всі';
-let activeTopic = 'Всі';
 
 const GEO_FILTERS = ['Всі', 'Олика', 'Волинь', 'Україна', 'Світ'];
-const TOPIC_FILTERS = ['Всі', 'Культура', 'Бізнес', 'Спорт', 'Технології', 'Здоров\'я', 'Екологія'];
 
 export async function initNews() {
   try {
@@ -15,7 +13,6 @@ export async function initNews() {
     allArticles = [];
   }
   renderGeoFilters();
-  renderTopicFilters();
   renderNews();
 }
 
@@ -27,20 +24,8 @@ function renderGeoFilters() {
   `).join('');
 }
 
-function renderTopicFilters() {
-  const el = document.getElementById('topic-filters');
-  if (!el) return;
-  el.innerHTML = TOPIC_FILTERS.map(t => `
-    <button class="chip ${t === activeTopic ? 'active' : ''}" onclick="setTopicFilter('${escapeHtml(t)}')">${escapeHtml(t)}</button>
-  `).join('');
-}
-
 function getFiltered() {
-  return allArticles.filter(a => {
-    const geoOk = activeGeo === 'Всі' || a.geo === activeGeo;
-    const topicOk = activeTopic === 'Всі' || a.category === activeTopic;
-    return geoOk && topicOk;
-  });
+  return allArticles.filter(a => activeGeo === 'Всі' || a.geo === activeGeo);
 }
 
 export function renderNews() {
@@ -77,12 +62,6 @@ export function renderNews() {
 window.setGeoFilter = function(geo) {
   activeGeo = geo;
   renderGeoFilters();
-  renderNews();
-};
-
-window.setTopicFilter = function(topic) {
-  activeTopic = topic;
-  renderTopicFilters();
   renderNews();
 };
 

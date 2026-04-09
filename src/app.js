@@ -1,14 +1,46 @@
-// Дані про погоду
+// WMO weather codes → emoji
+function codeToIcon(code) {
+  if (code === 0)   return '☀️';
+  if (code <= 2)    return '🌤️';
+  if (code === 3)   return '☁️';
+  if (code <= 48)   return '🌫️';
+  if (code <= 55)   return '🌦️';
+  if (code <= 65)   return '🌧️';
+  if (code <= 77)   return '❄️';
+  if (code <= 82)   return '🌧️';
+  if (code >= 95)   return '⛈️';
+  return '🌡️';
+}
+
+const OLYKA = { lat: 50.7333, lon: 25.8167, name: 'Олика' };
+
+async function getCoords() {
+  if (!navigator.geolocation) return OLYKA;
+  return new Promise(resolve => {
+    navigator.geolocation.getCurrentPosition(
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, name: '' }),
+      ()   => resolve(OLYKA),
+      { timeout: 5000, maximumAge: 600000 }
+    );
+  });
+}
+
 async function initWeather() {
-    const tempElement = document.querySelector('.weather-temp');
-    try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=50.72&longitude=25.81&current_weather=true');
-        const data = await res.json();
-        const temp = Math.round(data.current_weather.temperature);
-        tempElement.innerHTML = `☀️ ${temp}°`;
-    } catch (e) {
-        tempElement.innerHTML = '☀️ +18°';
-    }
+  const tempEl = document.querySelector('.weather-temp');
+  const cityEl = document.querySelector('.weather-city');
+  try {
+    const { lat, lon, name } = await getCoords();
+    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+    const res = await fetch(url);
+    const data = await res.json();
+    const temp = Math.round(data.current.temperature_2m);
+    const icon = codeToIcon(data.current.weather_code);
+    if (tempEl) tempEl.textContent = `${icon} ${temp}°`;
+    if (cityEl) cityEl.textContent = name || 'Олика';
+  } catch {
+    const widget = document.getElementById('weather-widget');
+    if (widget) widget.style.visibility = 'hidden';
+  }
 }
 
 // Функція рендеру новин
