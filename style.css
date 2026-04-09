@@ -119,15 +119,19 @@ html, body {
 .header-logo span {
   color: var(--red);
 }
-.header-logo-img {
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  max-width: 28px;
-  border-radius: 50%;
-  object-fit: cover;
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 4px;
   flex-shrink: 0;
-  overflow: hidden;
+}
+.weather-icon { font-size: 20px; line-height: 1; }
+.weather-temp {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  letter-spacing: -0.3px;
+  min-width: 26px;
 }
 
 /* ===== MAIN (основний контент) ===== */

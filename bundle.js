@@ -71,6 +71,60 @@
     }
   }
 
+  // src/core/weather.js
+  var OLYKA = { lat: 50.7333, lon: 25.8167 };
+  function codeToIcon(code) {
+    if (code === 0)
+      return "\u2600\uFE0F";
+    if (code <= 2)
+      return "\u{1F324}\uFE0F";
+    if (code === 3)
+      return "\u2601\uFE0F";
+    if (code <= 48)
+      return "\u{1F32B}\uFE0F";
+    if (code <= 55)
+      return "\u{1F326}\uFE0F";
+    if (code <= 65)
+      return "\u{1F327}\uFE0F";
+    if (code <= 77)
+      return "\u2744\uFE0F";
+    if (code <= 82)
+      return "\u{1F327}\uFE0F";
+    if (code >= 95)
+      return "\u26C8\uFE0F";
+    return "\u{1F321}\uFE0F";
+  }
+  async function getCoords() {
+    if (!navigator.geolocation)
+      return OLYKA;
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+        () => resolve(OLYKA),
+        { timeout: 5e3, maximumAge: 6e5 }
+      );
+    });
+  }
+  async function initWeather() {
+    const iconEl = document.getElementById("weather-icon");
+    const tempEl = document.getElementById("weather-temp");
+    if (!iconEl || !tempEl)
+      return;
+    try {
+      const { lat, lon } = await getCoords();
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+      const res = await fetch(url);
+      const data = await res.json();
+      const temp = Math.round(data.current.temperature_2m);
+      iconEl.textContent = codeToIcon(data.current.weather_code);
+      tempEl.textContent = `${temp}\xB0`;
+    } catch {
+      const widget = document.getElementById("weather-widget");
+      if (widget)
+        widget.style.visibility = "hidden";
+    }
+  }
+
   // src/core/utils.js
   function formatTime(ts) {
     const diff = Date.now() - ts;
@@ -393,6 +447,7 @@ ${text}`
   };
   function init() {
     bootApp();
+    initWeather();
     initNews();
     initEvents();
     initBuses();

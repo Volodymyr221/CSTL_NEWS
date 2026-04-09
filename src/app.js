@@ -1,4 +1,5 @@
 import { bootApp } from './core/boot.js';
+import { initWeather } from './core/weather.js';
 import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses } from './tabs/buses.js';
@@ -52,6 +53,7 @@ window.closeArticleModal = function() {
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
+  initWeather();
   initNews();
   initEvents();
   initBuses();
