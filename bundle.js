@@ -1,14 +1,56 @@
 (() => {
   // src/app.js
+  function codeToIcon(code) {
+    if (code === 0)
+      return "\u2600\uFE0F";
+    if (code <= 2)
+      return "\u{1F324}\uFE0F";
+    if (code === 3)
+      return "\u2601\uFE0F";
+    if (code <= 48)
+      return "\u{1F32B}\uFE0F";
+    if (code <= 55)
+      return "\u{1F326}\uFE0F";
+    if (code <= 65)
+      return "\u{1F327}\uFE0F";
+    if (code <= 77)
+      return "\u2744\uFE0F";
+    if (code <= 82)
+      return "\u{1F327}\uFE0F";
+    if (code >= 95)
+      return "\u26C8\uFE0F";
+    return "\u{1F321}\uFE0F";
+  }
+  var OLYKA = { lat: 50.7333, lon: 25.8167, name: "\u041E\u043B\u0438\u043A\u0430" };
+  async function getCoords() {
+    if (!navigator.geolocation)
+      return OLYKA;
+    return new Promise((resolve) => {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, name: "" }),
+        () => resolve(OLYKA),
+        { timeout: 5e3, maximumAge: 6e5 }
+      );
+    });
+  }
   async function initWeather() {
-    const tempElement = document.querySelector(".weather-temp");
+    const tempEl = document.querySelector(".weather-temp");
+    const cityEl = document.querySelector(".weather-city");
     try {
-      const res = await fetch("https://api.open-meteo.com/v1/forecast?latitude=50.72&longitude=25.81&current_weather=true");
+      const { lat, lon, name } = await getCoords();
+      const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
+      const res = await fetch(url);
       const data = await res.json();
-      const temp = Math.round(data.current_weather.temperature);
-      tempElement.innerHTML = `\u2600\uFE0F ${temp}\xB0`;
-    } catch (e) {
-      tempElement.innerHTML = "\u2600\uFE0F +18\xB0";
+      const temp = Math.round(data.current.temperature_2m);
+      const icon = codeToIcon(data.current.weather_code);
+      if (tempEl)
+        tempEl.textContent = `${icon} ${temp}\xB0`;
+      if (cityEl)
+        cityEl.textContent = name || "\u041E\u043B\u0438\u043A\u0430";
+    } catch {
+      const widget = document.getElementById("weather-widget");
+      if (widget)
+        widget.style.visibility = "hidden";
     }
   }
   function renderNews() {
