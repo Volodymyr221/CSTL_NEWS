@@ -78,11 +78,22 @@
 - **Після змін архітектури** — оновити `docs/ARCHITECTURE.md`.
 - **При додаванні нових JS-файлів** — використовуй скіл `/new-file` (повний workflow там, включно з правильною папкою у `src/` та імпортом у `src/app.js`).
 
-### Деплой (публікація на сервер)
-- **При деплої КОДУ** (зміни у `src/`, `index.html`, `style.css`, `sw.js`) — змінити `CACHE_NAME` (назву кешу) у `sw.js` (формат: `cstl-YYYYMMDD-HHMM`). Використовуй `date` в терміналі щоб не вигадувати.
-  - **Виняток:** чисто документаційні зміни (тільки `*.md` файли або `.claude/` скіли) — `CACHE_NAME` **НЕ чіпати**, кеш PWA (Progressive Web App — додаток у браузері) цих файлів не торкається.
-- **bundle.js не комітити вручну** — він генерується автоматично GitHub Actions.
-- **Якщо деплой не спрацював:** `git commit --allow-empty -m "ci: retrigger" && git push origin main` (порожній коміт — просто заново запускає CI — автоматичний деплой).
+### Деплой (публікація на сервер — підхід А+)
+
+**Флоу:** пушиш у `main` → `.github/workflows/deploy.yml` автоматично:
+1. `npm install` (встановлює esbuild — збирач коду)
+2. `node build.js` (збирає `bundle.js` зі `src/`)
+3. `sed` замінює плейсхолдер лічильника версії у `index.html` на свіжий час Києва
+4. `actions/upload-pages-artifact@v3` (завантажує весь проект як artifact — пакунок файлів)
+5. `actions/deploy-pages@v4` (деплоїть artifact прямо на GitHub Pages)
+
+**Критична відмінність від старого підходу:** А+ **нічого не комітить у `main` з CI**. Попередній деплой намагався `git commit bundle.js + push main` і падав з non-fast-forward помилкою (баг B-01). А+ цю проблему повністю оминає — див. `docs/ARCHITECTURE.md` і закритий баг B-01 у `CSTL_BUGS.md`.
+
+- **При деплої КОДУ** (зміни у `src/`, `index.html`, `style.css`, `sw.js`) — міняти `CACHE_NAME` (назву кешу) у `sw.js` (формат: `cstl-YYYYMMDD-HHMM`). Використовуй `date` у терміналі щоб не вигадувати.
+  - **Виняток:** чисто документаційні зміни (тільки `*.md` файли або `.claude/` скіли) — `CACHE_NAME` **НЕ чіпати**.
+- **`bundle.js` лишається в git як робоча база (варіант Б)** — я комічу його руками при відновленні. CI перегенерує при кожному деплої свіжий у пам'яті, але не комічу назад.
+- **Якщо деплой не спрацював:** `git commit --allow-empty -m "ci: retrigger" && git push origin main` (порожній коміт — просто заново запускає CI).
+- **Лічильник версії** (маленький сірий текст внизу екрану, формат `v{N} · DD.MM HH:MM`) — якщо після пушу число не змінилось, деплой не пройшов.
 
 ### Що не можна змінювати без обговорення
 - Структуру `data/*.json` файлів без міграції (оновлення) існуючих даних
@@ -103,28 +114,34 @@
 
 | Файл | Відповідальність |
 |------|-----------------|
-| `index.html` | Весь UI. Один `<script src="bundle.js">` |
-| `style.css` | Всі стилі |
-| `sw.js` | Service Worker. **CACHE_NAME міняти при кожному деплої** |
-| `bundle.js` | Згенерований esbuild. **Не комітити** |
+| `index.html` | Весь UI. `<script src="bundle.js">`. Містить плейсхолдер лічильника версії `<div class="deploy-stamp">v1 · 01.01 00:00</div>` — CI його оновлює. |
+| `style.css` | Всі стилі. Включно з `.deploy-stamp` (маленький сірий лічильник знизу). |
+| `sw.js` | Service Worker. **`CACHE_NAME` міняти при кожному деплої коду.** `index.html` → network-first, інше → cache-first. |
+| `bundle.js` | Згенерований esbuild. **У git як робоча база** (варіант Б, див. Деплой). |
 | `build.js` | Конфіг esbuild (8 рядків) |
-| `package.json` | Одна залежність: esbuild |
-| `data/articles.json` | Масив статей |
+| `package.json` | Одна залежність: `esbuild` |
+| `logo.png` | Логотип для splash-заставки. У `STATIC_ASSETS` `sw.js`. |
+| `.github/workflows/deploy.yml` | GitHub Pages Deploy Action (варіант А+). Запускається на push у `main`. |
+| `data/articles.json` | Масив статей (змішаний: авто RSS + ручні ексклюзиви) |
+| `data/curated.json` | Ручні ексклюзиви Олики. Редагується через GitHub UI. Мерджиться з `articles.json` автоматикою. |
 | `data/events.json` | Масив подій |
 | `data/schedule.json` | Розклад автобусів |
 | `src/app.js` | Точка входу — імпортує всі модулі |
 | `src/core/boot.js` | PWA setup, Service Worker |
-| `src/core/utils.js` | formatTime, escapeHtml, showToast |
+| `src/core/utils.js` | `formatTime`, `escapeHtml`, `showToast`, `formatEventDate` |
+| `src/core/weather.js` | Віджет погоди у шапці (Open-Meteo API) |
 | `src/tabs/news.js` | Стрічка новин, фільтри |
 | `src/tabs/events.js` | Афіша подій |
 | `src/tabs/buses.js` | Розклад автобусів |
 | `src/tabs/submit.js` | Форма подачі новини |
 
-**Збірка:** `node build.js` → `src/app.js` → `bundle.js` (esbuild, IIFE формат)
+**Збірка локально:** `node build.js` → читає `src/app.js` → збирає `bundle.js` (esbuild, IIFE формат)
+
+**Збірка в CI:** те саме, але виконується на Ubuntu runner у GitHub Actions при кожному пуші в `main`.
 
 ---
 
-## Структура даних (articles.json)
+## Структура даних (articles.json / curated.json)
 
 ```javascript
 {
@@ -135,48 +152,73 @@
   "category": "Культура",        // тематична категорія
   "geo": "Олика",                // географія: Олика / Волинь / Україна / Світ
   "image": null,                 // URL фото або null
-  "source": "CSTL NEWS",        // джерело
+  "source": "CSTL NEWS",         // джерело
   "sourceUrl": null,             // посилання на оригінал
   "exclusive": true,             // ексклюзив від CSTL NEWS
-  "ts": 1743800000000           // timestamp (час публікації в мілісекундах)
+  "ts": 1743800000000            // timestamp (час публікації в мілісекундах)
 }
 ```
 
 ---
 
-## Система деплою
+## Система деплою (А+)
 
-**Флоу:** пушиш будь-яку гілку → `deploy.yml` збирає bundle.js → деплоїть на GitHub Pages
+**Флоу:** пушиш у `main` → `.github/workflows/deploy.yml` автоматично:
+1. `npm install` (встановлює esbuild)
+2. `node build.js` (збирає `bundle.js` зі `src/`)
+3. `sed` замінює плейсхолдер у `index.html` на `v{run_number} · DD.MM HH:MM` (час Києва)
+4. `actions/upload-pages-artifact@v3` (завантажує весь проект як artifact)
+5. `actions/deploy-pages@v4` (публікує artifact на GitHub Pages)
 
-**`deploy.yml` робить:**
-1. `npm install` — встановлює залежності
-2. `node build.js` — збирає bundle.js з src/
-3. Комітить bundle.js і пушить у main
-4. Деплоїть на GitHub Pages
+**URL сайту:** `https://volodymyr221.github.io/CSTL_NEWS/`
 
-**URL сайту:** `https://vshevchukkk.github.io/CSTL_NEWS/`
+**Лічильник версії** — маленький сірий текст внизу екрану над таб-баром. Формат: `v{N} · DD.MM HH:MM`. Якщо після пушу число не змінилось — деплой не пройшов.
+
+**Запуск тільки при пуші у `main`**, але можна вручну: `github.com/Volodymyr221/CSTL_NEWS/actions → Deploy CSTL NEWS → Run workflow`.
+
+**Вимога (одноразово):** у `Settings → Pages → Source` мусить стояти "GitHub Actions" (не "Deploy from a branch").
 
 ---
 
-## Фази розвитку проекту
+## Фази розвитку проекту (див. `docs/ROADMAP.md` для деталей)
 
-### Фаза 1 — MVP (зроблено ✓)
-- Стрічка новин з фільтрами (географія + тематика)
-- Афіша подій
-- Розклад автобусів
-- Форма подачі новини від читачів
-- PWA (встановлення на телефон)
-- GitHub Actions авто-деплой
+### Фаза 1 А+ — Аварійне відновлення 🟢 ЗАВЕРШЕНО
+- Відновлено `build.js`, `bundle.js`, новий `deploy.yml`
+- Додано лічильник версії
+- Оновлено `sw.js` (network-first для `index.html`, `logo.png` у precache)
 
-### Фаза 2 — Автоматизація (в планах)
-- RSS агрегатор (автоматично тягне новини з Волинських ЗМІ)
-- Парсинг розкладу автобусів з сайту Автостанції №1 Луцьк
+### Фаза 2 — Контент-фундамент 🔜 НАСТУПНА
+- Новини: гібрид (RSS-парсер + ручна публікація через `data/curated.json`)
+- Форма "Подати новину / оголошення" (замість `mailto:` → Web3Forms/Formspree)
+- Закриття багів аудиту (B-05…B-20)
 
-### Фаза 3 — Зростання (в планах)
-- Firebase (акаунти користувачів, push-сповіщення)
-- AI дайджест (щоранковий огляд)
-- Відстеження автобусних рейсів з сповіщеннями
+### Фаза 3 — Енерго-Варта (графіки світла)
+- Парсинг Волиньобленерго
+- Нова вкладка "Світло" з персоналізацією по району
 
-### Майбутнє
-- Свій домен (замість vshevchukkk.github.io)
-- Інші під-проекти Olyka Castle на платформі
+### Фаза 4 — Автобуси 2.0
+- Парсинг Автостанції №1 Луцьк
+- Урахування днів тижня (B-05)
+- Сповіщення про відміну рейсу (вимагає Firebase)
+
+### Фаза 5 — Комʼюніті і бізнес
+- Оголошення читачів (манікюр, перукарня, послуги)
+- Реклама місцевих магазинів
+- Акції та знижки
+
+### Фаза 6 — Firebase (акаунти і push)
+### Фаза 7 — Зрілість (власний домен, AI дайджест, Telegram-бот, QR-коди)
+
+---
+
+## Ключові документи
+
+- `docs/CONCEPT.md` — концепція і бренд
+- `docs/ARCHITECTURE.md` — технічна архітектура (А+ деплой, лічильник, кеш)
+- `docs/ROADMAP.md` — фази з пріоритетами
+- `docs/CONTENT_STRATEGY.md` — джерела новин, фільтри, ручна публікація
+- `docs/RULES.md` — правила роботи Claude
+- `docs/DESIGN_SYSTEM.md` — UI-патерни
+- `_ai-tools/SESSION_STATE.md` — поточний стан сесії
+- `_ai-tools/BACKLOG.md` — єдиний список задач
+- `CSTL_BUGS.md` — відомі баги

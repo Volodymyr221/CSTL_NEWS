@@ -18,8 +18,9 @@
 Під-проект екосистеми **Olyka Castle** (власник: Вова, GitHub: Volodymyr221).
 
 - Стек: ванільний JS, GitHub Pages, esbuild, PWA
-- Деплой: автоматичний через GitHub Actions при пуші в `main`
-- URL: `https://Volodymyr221.github.io/CSTL_NEWS/`
+- Деплой: автоматичний через GitHub Actions при пуші в `main` (підхід А+ через `actions/deploy-pages`)
+- URL: `https://volodymyr221.github.io/CSTL_NEWS/`
+- Лічильник версії внизу екрану: `v{N} · DD.MM HH:MM` — індикатор що останній деплой пройшов
 
 ---
 
