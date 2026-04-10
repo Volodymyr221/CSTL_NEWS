@@ -1,0 +1,65 @@
+name: Deploy CSTL NEWS to GitHub Pages
+
+# Запускається при пуші в main, або вручну через GitHub UI
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+# Дозволи: читати код, писати на Pages, OIDC для deploy-pages
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Тільки один деплой одночасно (нові пуші ставляться в чергу, не скасовуючи активний)
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build bundle.js (склеюємо src/ у один файл)
+        run: node build.js
+
+      - name: Update deploy version stamp (лічильник версії + час)
+        run: |
+          DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
+          BUILD_NUM="${{ github.run_number }}"
+          echo "Deploy version: v${BUILD_NUM} · ${DEPLOY_TIME}"
+          sed -i "s|v[0-9]\+ · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]|v${BUILD_NUM} · ${DEPLOY_TIME}|" index.html
+          echo "--- Показати оновлений рядок у index.html ---"
+          grep "deploy-stamp" index.html || true
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

@@ -506,3 +506,18 @@ html, body {
 
 /* ===== EMPTY STATE ===== */
 .empty-state { text-align: center; padding: 48px 24px; color: var(--gray); font-size: 15px; }
+
+/* ===== DEPLOY STAMP (лічильник версії і часу деплою) ===== */
+.deploy-stamp {
+  position: fixed;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: rgba(102, 102, 102, 0.4);
+  letter-spacing: 0.3px;
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 99;
+  user-select: none;
+}
