@@ -1,6 +1,6 @@
 # Стан сесії — CSTL NEWS
 
-**Оновлено:** 2026-04-07
+**Оновлено:** 2026-04-10
 
 ---
 
@@ -8,20 +8,24 @@
 
 | | |
 |--|--|
-| **URL** | https://vshevchukkk.github.io/CSTL_NEWS/ |
-| **Репозиторій** | https://github.com/VShevchukkk/CSTL_NEWS |
-| **Гілка** | `main` |
-| **Власник** | Вова Шевчук (VShevchukkk) |
+| **URL** | https://volodymyr221.github.io/CSTL_NEWS/ |
+| **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
+| **Гілка** | `claude/code-audit-review-wfuX7` |
+| **Власник** | Вова Шевчук (Volodymyr221) |
 
 ---
 
 ## Поточний стан
 
-**MVP задеплоєно.** Сайт відкривається на старому посиланні.
+**Сайт зараз зламаний** — в коміті `5763587 "Clean up: remove broken build workflows"` видалили `build.js`, `bundle.js` і `.github/workflows/deploy.yml`. Без `bundle.js` `index.html` нічого не підключає, жодна вкладка не працює.
 
-**Проблема:** після зміни нікнейму з `Volodymyr221` на `VShevchukkk` — нове посилання `vshevchukkk.github.io/CSTL_NEWS` не працює. Деплой падає з помилкою "non-fast-forward".
+**В процесі відновлення (Фаза 1 А+):**
+- [x] Відновлено `build.js` (з коміта `5763587^`) — крок 1 виконано
+- [ ] Відновити `bundle.js`
+- [ ] Написати новий `deploy.yml` через офіційний GitHub Pages Deploy Action (нічого не комітить у main, деплоїть як artifact)
+- [ ] Оновити `CACHE_NAME` і додати `logo.png` у `STATIC_ASSETS`
 
-**Фікс підготовлено** (git pull --rebase перед push в deploy.yml) але ще не запушено — потрібен токен.
+Коментар: попередня проблема B-01 ("non-fast-forward") виникала через те, що CI комітив `bundle.js` у main. А+ її оминає — CI збирає bundle у пам'яті і деплоїть артефактом, нічого не комітить.
 
 ---
 
