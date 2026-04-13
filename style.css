@@ -754,3 +754,134 @@ html, body {
   transition: background 0.15s;
 }
 .ev-cal-btn:active { background: var(--red-dark); }
+
+/* ===== BUSES v2 — Smart-Focus + картки рейсів ===== */
+
+/* Sticky-блок з таймером наступного рейсу */
+.bus-smart-focus {
+  padding: 14px 16px;
+  background: var(--gray-light);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+  min-height: 72px;
+}
+.bus-smart-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.bus-smart-timer {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.1;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bus-smart-timer.urgent { color: var(--red); }
+.bus-smart-hurry {
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--red);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 20px;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.75; }
+}
+.bus-smart-route { font-size: 13px; color: var(--gray); }
+.bus-smart-empty { font-size: 14px; color: var(--gray); padding: 8px 0; }
+
+/* Картка рейсу */
+.bus-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.bus-card.past { opacity: 0.35; }
+
+.bus-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Час відправлення — головний акцент */
+.bus-card-time {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--navy);
+  min-width: 78px;
+  letter-spacing: -1px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.bus-card.past .bus-card-time { color: var(--gray); }
+
+.bus-card-info { flex: 1; min-width: 0; }
+
+.bus-card-route {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 3px;
+}
+.bus-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--gray);
+  margin-bottom: 3px;
+}
+.bus-meta-sep { opacity: 0.4; }
+
+.bus-card-verified {
+  font-size: 10px;
+  color: var(--gray);
+  opacity: 0.6;
+}
+
+/* Кнопка дзвінка диспетчеру */
+.bus-call-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--red);
+  color: white;
+  border-radius: 50%;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.bus-call-btn:active { background: var(--red-dark); }
+.bus-card.past .bus-call-btn { display: none; }
+
+/* Кнопка "Поділитись рейсом" */
+.bus-share-btn {
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--gray);
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.bus-share-btn:active { background: var(--gray-light); }

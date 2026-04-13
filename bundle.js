@@ -438,87 +438,194 @@
   }
 
   // src/tabs/buses.js
-  var scheduleData = null;
-  var activeRouteId = null;
-  async function initBuses() {
-    try {
-      const res = await fetch("./data/schedule.json");
-      scheduleData = await res.json();
-    } catch (e) {
-      scheduleData = null;
-    }
-    renderBuses();
+  var busData = null;
+  var activeDirection = "from_olyka";
+  var timerInterval = null;
+  function isDayActive(days) {
+    const day = (/* @__PURE__ */ new Date()).getDay();
+    if (days === "\u0449\u043E\u0434\u043D\u044F")
+      return true;
+    if (days === "\u043F\u043D-\u0441\u0431")
+      return day >= 1 && day <= 6;
+    if (days === "\u043F\u043D-\u043F\u0442")
+      return day >= 1 && day <= 5;
+    return true;
   }
-  function getNextDeparture(departures) {
+  function toMinutes(timeStr) {
+    const [h, m] = timeStr.split(":").map(Number);
+    return h * 60 + m;
+  }
+  function minutesUntil(timeStr) {
     const now = /* @__PURE__ */ new Date();
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
-    for (const dep of departures) {
-      const [h, m] = dep.time.split(":").map(Number);
-      const depMinutes = h * 60 + m;
-      if (depMinutes > currentMinutes) {
-        const diff = depMinutes - currentMinutes;
-        if (diff < 60)
-          return `\u0447\u0435\u0440\u0435\u0437 ${diff} \u0445\u0432`;
-        return `\u0447\u0435\u0440\u0435\u0437 ${Math.floor(diff / 60)} \u0433\u043E\u0434 ${diff % 60} \u0445\u0432`;
-      }
-    }
-    return "\u0437\u0430\u0432\u0442\u0440\u0430";
+    const diff = toMinutes(timeStr) - (now.getHours() * 60 + now.getMinutes());
+    return diff > 0 ? diff : null;
   }
-  function renderBuses() {
+  function formatTimer(minutes) {
+    if (minutes < 60)
+      return `\u0447\u0435\u0440\u0435\u0437 ${minutes} \u0445\u0432`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
+  }
+  function findNextBus() {
+    if (!busData)
+      return null;
+    return busData.buses.filter((b) => b.direction === activeDirection && isDayActive(b.days)).sort((a, b) => toMinutes(a.time) - toMinutes(b.time)).find((b) => minutesUntil(b.time) !== null) || null;
+  }
+  function updateSmartFocus() {
+    const el = document.getElementById("bus-smart-focus");
+    if (!el)
+      return;
+    const next = findNextBus();
+    if (!next) {
+      el.innerHTML = `<div class="bus-smart-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
+      return;
+    }
+    const mins = minutesUntil(next.time);
+    const urgent = mins <= 10;
+    el.innerHTML = `
+    <div class="bus-smart-label">\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>
+    <div class="bus-smart-timer${urgent ? " urgent" : ""}">
+      ${escapeHtml(formatTimer(mins))}
+      ${urgent ? `<span class="bus-smart-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
+    </div>
+    <div class="bus-smart-route">${escapeHtml(next.time)} \xB7 ${escapeHtml(next.route)}</div>
+  `;
+  }
+  function renderList2() {
+    const el = document.getElementById("bus-list");
+    if (!el || !busData)
+      return;
+    const now = /* @__PURE__ */ new Date();
+    const nowMin = now.getHours() * 60 + now.getMinutes();
+    const buses = busData.buses.filter((b) => b.direction === activeDirection).sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+    if (!buses.length) {
+      el.innerHTML = '<div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0443 \u0446\u044C\u043E\u043C\u0443 \u043D\u0430\u043F\u0440\u044F\u043C\u043A\u0443 \u043D\u0435\u043C\u0430\u0454</div>';
+      return;
+    }
+    el.innerHTML = buses.map((b) => {
+      const past = toMinutes(b.time) < nowMin;
+      const noToday = !isDayActive(b.days);
+      const faded = past || noToday;
+      return `
+      <div class="bus-card${faded ? " past" : ""}">
+        <div class="bus-card-main">
+          <span class="bus-card-time">${escapeHtml(b.time)}</span>
+          <div class="bus-card-info">
+            <div class="bus-card-route">${escapeHtml(b.route)}</div>
+            <div class="bus-card-meta">
+              <span>${escapeHtml(b.price)}</span>
+              <span class="bus-meta-sep">\xB7</span>
+              <span>${escapeHtml(b.days)}</span>
+            </div>
+            <div class="bus-card-verified">\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0435\u043D\u043E: ${escapeHtml(busData.verifiedAt)}</div>
+          </div>
+          <a class="bus-call-btn" href="tel:${escapeHtml(busData.dispatcher.replace(/\s/g, ""))}"
+             title="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0434\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440\u0443" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0434\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440\u0443">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </a>
+        </div>
+        ${!faded ? `
+        <button class="bus-share-btn" data-time="${escapeHtml(b.time)}" data-route="${escapeHtml(b.route)}">
+          \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C \u0440\u0435\u0439\u0441\u043E\u043C
+        </button>` : ""}
+      </div>
+    `;
+    }).join("");
+    el.querySelectorAll(".bus-share-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const text = `\u0407\u0434\u0443 \u0440\u0435\u0439\u0441\u043E\u043C ${btn.dataset.route} \u043E ${btn.dataset.time} \u{1F68C}`;
+        if (navigator.share) {
+          navigator.share({ text });
+        } else {
+          navigator.clipboard.writeText(text).then(() => {
+            btn.textContent = "\u2713 \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E!";
+            setTimeout(() => {
+              btn.textContent = "\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C \u0440\u0435\u0439\u0441\u043E\u043C";
+            }, 2e3);
+          });
+        }
+      });
+    });
+  }
+  function renderTabs() {
+    const el = document.getElementById("bus-direction-tabs");
+    if (!el)
+      return;
+    const tabs = [
+      { id: "from_olyka", label: "\u0417 \u041E\u043B\u0438\u043A\u0438" },
+      { id: "to_olyka", label: "\u0412 \u041E\u043B\u0438\u043A\u0443" }
+    ];
+    el.innerHTML = tabs.map(
+      (t) => `<button class="route-tab${t.id === activeDirection ? " active" : ""}" data-dir="${t.id}">
+      ${t.label}
+    </button>`
+    ).join("");
+    el.querySelectorAll(".route-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeDirection = btn.dataset.dir;
+        renderTabs();
+        renderList2();
+        updateSmartFocus();
+      });
+    });
+  }
+  async function initBuses() {
     const el = document.getElementById("buses-content");
     if (!el)
       return;
-    if (!scheduleData) {
+    el.innerHTML = `
+    <div class="bus-smart-focus">
+      <div class="ev-skel-line w60" style="height:12px;margin-bottom:8px"></div>
+      <div class="ev-skel-line w40" style="height:32px;margin-bottom:6px"></div>
+      <div class="ev-skel-line w70" style="height:13px"></div>
+    </div>
+    <div class="route-tabs"></div>
+    <div class="departures-list">
+      ${Array(4).fill(`
+        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
+          <div style="display:flex;gap:12px;align-items:center">
+            <div class="ev-skel-line" style="width:72px;height:36px;border-radius:6px"></div>
+            <div style="flex:1">
+              <div class="ev-skel-line w80" style="height:14px;margin-bottom:6px"></div>
+              <div class="ev-skel-line w50" style="height:12px"></div>
+            </div>
+          </div>
+        </div>
+      `).join("")}
+    </div>
+  `;
+    try {
+      const res = await fetch("./data/schedule.json");
+      busData = await res.json();
+    } catch {
+      busData = null;
+    }
+    if (!busData) {
       el.innerHTML = '<div class="empty-state">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
       return;
     }
-    const { routes, updatedAt, source } = scheduleData;
-    if (!activeRouteId)
-      activeRouteId = routes[0]?.id;
-    const activeRoute = routes.find((r) => r.id === activeRouteId) || routes[0];
     el.innerHTML = `
+    <div id="bus-smart-focus" class="bus-smart-focus"></div>
+    <div class="route-tabs" id="bus-direction-tabs"></div>
+    <div id="bus-list" class="departures-list"></div>
     <div class="buses-updated">
-      \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(updatedAt)} \xB7 ${escapeHtml(source)}
+      \u0414\u0436\u0435\u0440\u0435\u043B\u043E: ${escapeHtml(busData.source)} \xB7 \u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440: ${escapeHtml(busData.dispatcher)}
     </div>
-
-    <div class="route-tabs">
-      ${routes.map((r) => `
-        <button class="route-tab ${r.id === activeRouteId ? "active" : ""}"
-                onclick="setActiveRoute('${r.id}')">
-          ${escapeHtml(r.name)}
-        </button>
-      `).join("")}
-    </div>
-
-    ${activeRoute ? `
-      <div class="route-info">
-        ${activeRoute.via ? `<div class="route-via">\u0447\u0435\u0440\u0435\u0437 ${escapeHtml(activeRoute.via)}</div>` : ""}
-        <div class="next-departure">
-          \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0440\u0435\u0439\u0441: <strong>${getNextDeparture(activeRoute.departures)}</strong>
-        </div>
-      </div>
-
-      <div class="departures-list">
-        ${activeRoute.departures.map((dep) => {
-      const [h, m] = dep.time.split(":").map(Number);
-      const now = /* @__PURE__ */ new Date();
-      const isPast = h * 60 + m < now.getHours() * 60 + now.getMinutes();
-      return `
-            <div class="departure-row ${isPast ? "past" : ""}">
-              <span class="departure-time">${escapeHtml(dep.time)}</span>
-              <span class="departure-days">${escapeHtml(dep.days)}</span>
-              <span class="departure-status">${isPast ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u0438\u0432\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F"}</span>
-            </div>
-          `;
-    }).join("")}
-      </div>
-    ` : ""}
   `;
+    renderTabs();
+    renderList2();
+    updateSmartFocus();
+    if (timerInterval)
+      clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      updateSmartFocus();
+      renderList2();
+    }, 6e4);
   }
-  window.setActiveRoute = function(routeId) {
-    activeRouteId = routeId;
-    renderBuses();
-  };
 
   // src/tabs/submit.js
   function initSubmit() {

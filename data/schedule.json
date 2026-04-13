@@ -1,43 +1,19 @@
 {
-  "updatedAt": "2026-04-05",
+  "verifiedAt": "13 квітня 2026, 18:00",
   "source": "Автостанція №1, Луцьк",
-  "routes": [
-    {
-      "id": "lutsk-olyka",
-      "name": "Луцьк → Олика",
-      "from": "Луцьк (Автостанція №1)",
-      "to": "Олика",
-      "departures": [
-        { "time": "07:15", "days": "щодня" },
-        { "time": "10:40", "days": "щодня" },
-        { "time": "13:30", "days": "щодня" },
-        { "time": "16:00", "days": "щодня" },
-        { "time": "18:20", "days": "пн-сб" }
-      ]
-    },
-    {
-      "id": "olyka-lutsk",
-      "name": "Олика → Луцьк",
-      "from": "Олика",
-      "to": "Луцьк (Автостанція №1)",
-      "departures": [
-        { "time": "08:30", "days": "щодня" },
-        { "time": "12:00", "days": "щодня" },
-        { "time": "15:10", "days": "щодня" },
-        { "time": "17:30", "days": "щодня" },
-        { "time": "19:45", "days": "пн-сб" }
-      ]
-    },
-    {
-      "id": "lutsk-lychany",
-      "name": "Луцьк → Личани (ч/з Олику)",
-      "from": "Луцьк (Автостанція №1)",
-      "to": "Личани",
-      "via": "Олика",
-      "departures": [
-        { "time": "09:00", "days": "щодня" },
-        { "time": "14:15", "days": "щодня" }
-      ]
-    }
+  "dispatcher": "0332 224 500",
+  "buses": [
+    { "id": 1,  "time": "07:15", "direction": "from_olyka", "route": "Олика → Луцьк",              "days": "щодня", "price": "65 грн" },
+    { "id": 2,  "time": "08:30", "direction": "to_olyka",   "route": "Луцьк → Олика",              "days": "щодня", "price": "65 грн" },
+    { "id": 3,  "time": "09:00", "direction": "to_olyka",   "route": "Луцьк → Личани (ч/з Олику)", "days": "щодня", "price": "70 грн" },
+    { "id": 4,  "time": "10:40", "direction": "to_olyka",   "route": "Луцьк → Олика",              "days": "щодня", "price": "65 грн" },
+    { "id": 5,  "time": "12:00", "direction": "from_olyka", "route": "Олика → Луцьк",              "days": "щодня", "price": "65 грн" },
+    { "id": 6,  "time": "13:30", "direction": "to_olyka",   "route": "Луцьк → Олика",              "days": "щодня", "price": "65 грн" },
+    { "id": 7,  "time": "14:15", "direction": "to_olyka",   "route": "Луцьк → Личани (ч/з Олику)", "days": "щодня", "price": "70 грн" },
+    { "id": 8,  "time": "15:10", "direction": "from_olyka", "route": "Олика → Луцьк",              "days": "щодня", "price": "65 грн" },
+    { "id": 9,  "time": "16:00", "direction": "to_olyka",   "route": "Луцьк → Олика",              "days": "щодня", "price": "65 грн" },
+    { "id": 10, "time": "17:30", "direction": "from_olyka", "route": "Олика → Луцьк",              "days": "щодня", "price": "65 грн" },
+    { "id": 11, "time": "18:20", "direction": "to_olyka",   "route": "Луцьк → Олика",              "days": "пн-сб", "price": "65 грн" },
+    { "id": 12, "time": "19:45", "direction": "from_olyka", "route": "Олика → Луцьк",              "days": "пн-сб", "price": "65 грн" }
   ]
 }
