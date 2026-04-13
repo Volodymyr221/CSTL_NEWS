@@ -581,6 +581,13 @@ html, body {
 }
 .ev-badge-dot { opacity: 0.7; }
 
+/* Бейдж всередині тіла картки (без фото) */
+.ev-card-badge--inline {
+  position: static;
+  display: inline-flex;
+  margin-bottom: 8px;
+}
+
 /* Тіло картки */
 .ev-card-body { padding: 14px; }
 

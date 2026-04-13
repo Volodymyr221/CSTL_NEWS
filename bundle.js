@@ -263,12 +263,12 @@
     "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
     "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309"
   };
-  var MONTHS_UK = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406", "\u0422\u0420\u0410", "\u0427\u0415\u0420", "\u041B\u0418\u041F", "\u0421\u0415\u0420", "\u0412\u0415\u0420", "\u0416\u041E\u0412", "\u041B\u0418\u0421", "\u0413\u0420\u0423"];
+  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
   var allEvents = [];
   var activeFilter = "\u0412\u0441\u0456";
-  function formatBadgeDate(dateStr) {
+  function formatFullDate(dateStr) {
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return `${d.getDate()} ${MONTHS_UK[d.getMonth()]}`;
+    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
   function catColor(category) {
     return CATEGORY_COLORS[category] || "#C41E3A";
@@ -301,18 +301,17 @@
   }
   function cardHtml(ev) {
     const bg = catColor(ev.category);
-    const cover = ev.image ? `<img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">` : `<div class="ev-card-img ev-card-img--ph"></div>`;
+    const coverBlock = ev.image ? `
+    <div class="ev-card-cover">
+      <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
+    </div>` : "";
     return `
     <div class="ev-card" data-id="${ev.id}">
-      <div class="ev-card-cover">
-        ${cover}
-        <div class="ev-card-badge" style="background:${bg}">
-          ${escapeHtml(formatBadgeDate(ev.date))}
-          <span class="ev-badge-dot">\xB7</span>
+      ${coverBlock}
+      <div class="ev-card-body">
+        <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
           ${escapeHtml(ev.category)}
         </div>
-      </div>
-      <div class="ev-card-body">
         <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
         <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
         <div class="ev-card-meta">
@@ -328,7 +327,7 @@
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
             </svg>
-            ${escapeHtml(ev.time)}
+            ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
           </span>
         </div>
       </div>
@@ -336,17 +335,16 @@
   }
   function openEventModal(ev) {
     const bg = catColor(ev.category);
-    const cover = ev.image ? `<img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">` : `<div class="ev-modal-img ev-modal-img--ph"></div>`;
-    document.getElementById("event-modal-content").innerHTML = `
+    const coverBlock = ev.image ? `
     <div class="ev-modal-cover">
-      ${cover}
-      <div class="ev-modal-badge" style="background:${bg}">
-        ${escapeHtml(formatBadgeDate(ev.date))}
-        <span class="ev-badge-dot">\xB7</span>
+      <img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">
+    </div>` : "";
+    document.getElementById("event-modal-content").innerHTML = `
+    ${coverBlock}
+    <div class="ev-modal-body">
+      <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
         ${escapeHtml(ev.category)}
       </div>
-    </div>
-    <div class="ev-modal-body">
       <h2 class="ev-modal-title">${escapeHtml(ev.title)}</h2>
       <div class="ev-modal-meta">
         <div class="ev-meta-item">
@@ -361,7 +359,7 @@
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
           </svg>
-          ${escapeHtml(ev.time)}, ${escapeHtml(formatBadgeDate(ev.date))}
+          ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
         </div>
       </div>
       <p class="ev-modal-desc">${escapeHtml(ev.description)}</p>

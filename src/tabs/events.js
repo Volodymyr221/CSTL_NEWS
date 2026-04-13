@@ -14,13 +14,22 @@ const CATEGORY_COLORS = {
 // Назви місяців для бейджу дати
 const MONTHS_UK = ['СІЧ','ЛЮТ','БЕР','КВІ','ТРА','ЧЕР','ЛИП','СЕР','ВЕР','ЖОВ','ЛИС','ГРУ'];
 
+// Назви місяців у родовому відмінку для повної дати
+const MONTHS_FULL = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+
 let allEvents = [];
 let activeFilter = 'Всі';
 
-// Форматує дату у вигляд "20 КВІ" для бейджу
+// Форматує дату у вигляд "20 КВІ" — більше не використовується в бейджі, лишається для сумісності
 function formatBadgeDate(dateStr) {
   const d = new Date(dateStr + 'T00:00:00');
   return `${d.getDate()} ${MONTHS_UK[d.getMonth()]}`;
+}
+
+// Форматує повну дату: "3 травня 2026"
+function formatFullDate(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00');
+  return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
 }
 
 // Повертає колір бейджу для категорії
@@ -60,22 +69,21 @@ function renderSkeleton(el) {
 
 // HTML-шаблон картки події
 function cardHtml(ev) {
-  const bg     = catColor(ev.category);
-  const cover  = ev.image
-    ? `<img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`
-    : `<div class="ev-card-img ev-card-img--ph"></div>`;
+  const bg = catColor(ev.category);
+
+  // Обкладинка рендериться тільки якщо є фото
+  const coverBlock = ev.image ? `
+    <div class="ev-card-cover">
+      <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
+    </div>` : '';
 
   return `
     <div class="ev-card" data-id="${ev.id}">
-      <div class="ev-card-cover">
-        ${cover}
-        <div class="ev-card-badge" style="background:${bg}">
-          ${escapeHtml(formatBadgeDate(ev.date))}
-          <span class="ev-badge-dot">·</span>
+      ${coverBlock}
+      <div class="ev-card-body">
+        <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
           ${escapeHtml(ev.category)}
         </div>
-      </div>
-      <div class="ev-card-body">
         <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
         <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
         <div class="ev-card-meta">
@@ -91,7 +99,7 @@ function cardHtml(ev) {
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
             </svg>
-            ${escapeHtml(ev.time)}
+            ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
           </span>
         </div>
       </div>
@@ -101,20 +109,18 @@ function cardHtml(ev) {
 // Відкриває модальне вікно з деталями події
 function openEventModal(ev) {
   const bg    = catColor(ev.category);
-  const cover = ev.image
-    ? `<img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">`
-    : `<div class="ev-modal-img ev-modal-img--ph"></div>`;
+  // Обкладинка в модалці — тільки якщо є фото
+  const coverBlock = ev.image ? `
+    <div class="ev-modal-cover">
+      <img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">
+    </div>` : '';
 
   document.getElementById('event-modal-content').innerHTML = `
-    <div class="ev-modal-cover">
-      ${cover}
-      <div class="ev-modal-badge" style="background:${bg}">
-        ${escapeHtml(formatBadgeDate(ev.date))}
-        <span class="ev-badge-dot">·</span>
+    ${coverBlock}
+    <div class="ev-modal-body">
+      <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
         ${escapeHtml(ev.category)}
       </div>
-    </div>
-    <div class="ev-modal-body">
       <h2 class="ev-modal-title">${escapeHtml(ev.title)}</h2>
       <div class="ev-modal-meta">
         <div class="ev-meta-item">
@@ -129,7 +135,7 @@ function openEventModal(ev) {
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
           </svg>
-          ${escapeHtml(ev.time)}, ${escapeHtml(formatBadgeDate(ev.date))}
+          ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
         </div>
       </div>
       <p class="ev-modal-desc">${escapeHtml(ev.description)}</p>
