@@ -440,6 +440,7 @@
   // src/tabs/buses.js
   var busData = null;
   var activeDirection = "from_olyka";
+  var activeStop = "\u0412\u0441\u0456";
   var timerInterval = null;
   function isDayActive(days) {
     const day = (/* @__PURE__ */ new Date()).getDay();
@@ -460,94 +461,99 @@
     const diff = toMinutes(timeStr) - (now.getHours() * 60 + now.getMinutes());
     return diff > 0 ? diff : null;
   }
-  function formatTimer(minutes) {
-    if (minutes < 60)
-      return `\u0447\u0435\u0440\u0435\u0437 ${minutes} \u0445\u0432`;
-    const h = Math.floor(minutes / 60);
-    const m = minutes % 60;
+  function formatTimer(mins) {
+    if (mins < 60)
+      return `\u0447\u0435\u0440\u0435\u0437 ${mins} \u0445\u0432`;
+    const h = Math.floor(mins / 60), m = mins % 60;
     return m > 0 ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
   }
-  function findNextBus() {
+  function getFiltered2() {
     if (!busData)
-      return null;
-    return busData.buses.filter((b) => b.direction === activeDirection && isDayActive(b.days)).sort((a, b) => toMinutes(a.time) - toMinutes(b.time)).find((b) => minutesUntil(b.time) !== null) || null;
+      return [];
+    return busData.buses.filter((b) => {
+      if (b.direction !== activeDirection)
+        return false;
+      if (activeStop !== "\u0412\u0441\u0456" && !b.stops.includes(activeStop))
+        return false;
+      return true;
+    }).sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
   }
-  function updateSmartFocus() {
-    const el = document.getElementById("bus-smart-focus");
+  function findNext() {
+    return getFiltered2().filter((b) => isDayActive(b.days)).find((b) => minutesUntil(b.time) !== null) || null;
+  }
+  function getStops() {
+    if (!busData)
+      return [];
+    const seen = /* @__PURE__ */ new Set();
+    busData.buses.filter((b) => b.direction === activeDirection).flatMap((b) => b.stops).forEach((s) => seen.add(s));
+    return [...seen];
+  }
+  function updateSmartRow() {
+    const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
-    const next = findNextBus();
+    const next = findNext();
     if (!next) {
-      el.innerHTML = `<div class="bus-smart-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
+      el.innerHTML = `<span class="bsr-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</span>`;
       return;
     }
     const mins = minutesUntil(next.time);
     const urgent = mins <= 10;
+    el.className = `bus-smart-row${urgent ? " urgent" : ""}`;
     el.innerHTML = `
-    <div class="bus-smart-label">\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>
-    <div class="bus-smart-timer${urgent ? " urgent" : ""}">
-      ${escapeHtml(formatTimer(mins))}
-      ${urgent ? `<span class="bus-smart-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
-    </div>
-    <div class="bus-smart-route">${escapeHtml(next.time)} \xB7 ${escapeHtml(next.route)}</div>
+    <span class="bsr-icon">\u25B6</span>
+    <span class="bsr-text">
+      \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(formatTimer(mins))}</strong> \u2014 ${escapeHtml(next.time)}, ${escapeHtml(next.route)}
+    </span>
+    ${urgent ? `<span class="bsr-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
   `;
   }
   function renderList2() {
     const el = document.getElementById("bus-list");
-    if (!el || !busData)
+    if (!el)
       return;
-    const now = /* @__PURE__ */ new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-    const buses = busData.buses.filter((b) => b.direction === activeDirection).sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+    const nowMin = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const next = findNext();
+    const buses = getFiltered2();
     if (!buses.length) {
-      el.innerHTML = '<div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0443 \u0446\u044C\u043E\u043C\u0443 \u043D\u0430\u043F\u0440\u044F\u043C\u043A\u0443 \u043D\u0435\u043C\u0430\u0454</div>';
+      el.innerHTML = '<div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0447\u0435\u0440\u0435\u0437 \u0446\u044E \u0437\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435\u043C\u0430\u0454</div>';
       return;
     }
     el.innerHTML = buses.map((b) => {
-      const past = toMinutes(b.time) < nowMin;
-      const noToday = !isDayActive(b.days);
-      const faded = past || noToday;
+      const past = toMinutes(b.time) < nowMin || !isDayActive(b.days);
+      const isNext = next && b.id === next.id;
       return `
-      <div class="bus-card${faded ? " past" : ""}">
-        <div class="bus-card-main">
-          <span class="bus-card-time">${escapeHtml(b.time)}</span>
-          <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(b.route)}</div>
-            <div class="bus-card-meta">
-              <span>${escapeHtml(b.price)}</span>
-              <span class="bus-meta-sep">\xB7</span>
-              <span>${escapeHtml(b.days)}</span>
-            </div>
-            <div class="bus-card-verified">\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0435\u043D\u043E: ${escapeHtml(busData.verifiedAt)}</div>
-          </div>
-          <a class="bus-call-btn" href="tel:${escapeHtml(busData.dispatcher.replace(/\s/g, ""))}"
-             title="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0434\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440\u0443" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0434\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440\u0443">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-            </svg>
-          </a>
+      <div class="brow${past ? " brow--past" : ""}${isNext ? " brow--next" : ""}">
+        <span class="brow-time">${escapeHtml(b.time)}</span>
+        <div class="brow-info">
+          <span class="brow-route">${escapeHtml(b.route)}</span>
+          <span class="brow-meta">${escapeHtml(b.days)} \xB7 ${escapeHtml(b.price)}</span>
         </div>
-        ${!faded ? `
-        <button class="bus-share-btn" data-time="${escapeHtml(b.time)}" data-route="${escapeHtml(b.route)}">
-          \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C \u0440\u0435\u0439\u0441\u043E\u043C
-        </button>` : ""}
-      </div>
-    `;
+        ${!past ? `
+        <a class="brow-call" href="tel:${escapeHtml(busData.dispatcher.replace(/\s/g, ""))}"
+           title="\u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440 ${escapeHtml(busData.dispatcher)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </a>` : ""}
+      </div>`;
     }).join("");
-    el.querySelectorAll(".bus-share-btn").forEach((btn) => {
+  }
+  function renderStopFilter() {
+    const el = document.getElementById("bus-stop-filter");
+    if (!el)
+      return;
+    const stops = ["\u0412\u0441\u0456", ...getStops()];
+    el.innerHTML = stops.map(
+      (s) => `<button class="chip${s === activeStop ? " active" : ""}" data-stop="${escapeHtml(s)}">${escapeHtml(s)}</button>`
+    ).join("");
+    el.querySelectorAll(".chip").forEach((btn) => {
       btn.addEventListener("click", () => {
-        const text = `\u0407\u0434\u0443 \u0440\u0435\u0439\u0441\u043E\u043C ${btn.dataset.route} \u043E ${btn.dataset.time} \u{1F68C}`;
-        if (navigator.share) {
-          navigator.share({ text });
-        } else {
-          navigator.clipboard.writeText(text).then(() => {
-            btn.textContent = "\u2713 \u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E!";
-            setTimeout(() => {
-              btn.textContent = "\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C \u0440\u0435\u0439\u0441\u043E\u043C";
-            }, 2e3);
-          });
-        }
+        activeStop = btn.dataset.stop;
+        renderStopFilter();
+        renderList2();
+        updateSmartRow();
       });
     });
   }
@@ -560,16 +566,16 @@
       { id: "to_olyka", label: "\u0412 \u041E\u043B\u0438\u043A\u0443" }
     ];
     el.innerHTML = tabs.map(
-      (t) => `<button class="route-tab${t.id === activeDirection ? " active" : ""}" data-dir="${t.id}">
-      ${t.label}
-    </button>`
+      (t) => `<button class="route-tab${t.id === activeDirection ? " active" : ""}" data-dir="${t.id}">${t.label}</button>`
     ).join("");
     el.querySelectorAll(".route-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeDirection = btn.dataset.dir;
+        activeStop = "\u0412\u0441\u0456";
         renderTabs();
+        renderStopFilter();
         renderList2();
-        updateSmartFocus();
+        updateSmartRow();
       });
     });
   }
@@ -577,27 +583,6 @@
     const el = document.getElementById("buses-content");
     if (!el)
       return;
-    el.innerHTML = `
-    <div class="bus-smart-focus">
-      <div class="ev-skel-line w60" style="height:12px;margin-bottom:8px"></div>
-      <div class="ev-skel-line w40" style="height:32px;margin-bottom:6px"></div>
-      <div class="ev-skel-line w70" style="height:13px"></div>
-    </div>
-    <div class="route-tabs"></div>
-    <div class="departures-list">
-      ${Array(4).fill(`
-        <div style="padding:14px 16px;border-bottom:1px solid var(--border)">
-          <div style="display:flex;gap:12px;align-items:center">
-            <div class="ev-skel-line" style="width:72px;height:36px;border-radius:6px"></div>
-            <div style="flex:1">
-              <div class="ev-skel-line w80" style="height:14px;margin-bottom:6px"></div>
-              <div class="ev-skel-line w50" style="height:12px"></div>
-            </div>
-          </div>
-        </div>
-      `).join("")}
-    </div>
-  `;
     try {
       const res = await fetch("./data/schedule.json");
       busData = await res.json();
@@ -609,20 +594,24 @@
       return;
     }
     el.innerHTML = `
-    <div id="bus-smart-focus" class="bus-smart-focus"></div>
     <div class="route-tabs" id="bus-direction-tabs"></div>
-    <div id="bus-list" class="departures-list"></div>
+    <div class="bus-stop-bar">
+      <div id="bus-stop-filter" class="chips-row"></div>
+    </div>
+    <div id="bus-smart-row" class="bus-smart-row"></div>
+    <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
-      \u0414\u0436\u0435\u0440\u0435\u043B\u043E: ${escapeHtml(busData.source)} \xB7 \u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440: ${escapeHtml(busData.dispatcher)}
+      ${escapeHtml(busData.source)} \xB7 \u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0435\u043D\u043E ${escapeHtml(busData.verifiedAt)} \xB7 \u{1F4DE} ${escapeHtml(busData.dispatcher)}
     </div>
   `;
     renderTabs();
+    renderStopFilter();
     renderList2();
-    updateSmartFocus();
+    updateSmartRow();
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
-      updateSmartFocus();
+      updateSmartRow();
       renderList2();
     }, 6e4);
   }

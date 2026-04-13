@@ -340,8 +340,16 @@ html, body {
 .event-card-desc { font-size: 13px; color: var(--gray); line-height: 1.5; margin-bottom: 10px; }
 .event-card-location { font-size: 12px; color: var(--gray); font-weight: 500; }
 
-/* ===== BUSES ===== */
-.buses-updated { font-size: 11px; color: var(--gray); padding: 10px 16px; border-bottom: 1px solid var(--border); }
+/* ===== BUSES v2 ===== */
+.buses-updated {
+  font-size: 11px;
+  color: var(--gray);
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+/* Таби напрямку */
 .route-tabs { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; border-bottom: 2px solid var(--border); }
 .route-tabs::-webkit-scrollbar { display: none; }
 .route-tab {
@@ -359,25 +367,107 @@ html, body {
   transition: all 0.15s;
 }
 .route-tab.active { color: var(--red); border-bottom-color: var(--red); }
-.route-info { padding: 12px 16px; background: var(--gray-light); border-bottom: 1px solid var(--border); }
-.route-via { font-size: 12px; color: var(--gray); margin-bottom: 4px; }
-.next-departure { font-size: 14px; color: var(--black); }
-.next-departure strong { color: var(--red); }
-.departures-list { padding: 8px 0; }
-.departure-row {
+
+/* Смуга фільтру зупинок */
+.bus-stop-bar {
+  padding: 8px 16px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--white);
+  position: sticky;
+  top: calc(var(--header-h) + 44px);
+  z-index: 49;
+}
+
+/* Smart-рядок наступного рейсу */
+.bus-smart-row {
   display: flex;
   align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--gray-light);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--black);
+  min-height: 40px;
+}
+.bus-smart-row.urgent { background: #fff5f5; }
+.bsr-icon { color: var(--navy); font-size: 11px; flex-shrink: 0; }
+.bsr-text { flex: 1; }
+.bsr-text strong { color: var(--navy); }
+.bus-smart-row.urgent .bsr-text strong { color: var(--red); }
+.bsr-hurry {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--red);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  animation: pulse 1s ease-in-out infinite;
+}
+.bsr-empty { color: var(--gray); font-size: 13px; }
+
+/* Список рейсів */
+.bus-list { padding: 0; }
+
+/* Рядок рейсу */
+.brow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   padding: 12px 16px;
   border-bottom: 1px solid var(--border);
-  gap: 12px;
   transition: opacity 0.15s;
 }
-.departure-row.past { opacity: 0.4; }
-.departure-time { font-size: 20px; font-weight: 700; color: var(--black); min-width: 56px; }
-.departure-row.past .departure-time { color: var(--gray); }
-.departure-days { font-size: 12px; color: var(--gray); flex: 1; }
-.departure-status { font-size: 11px; color: var(--gray); text-align: right; }
-.departure-row:not(.past) .departure-status { color: #2d9e2d; font-weight: 600; }
+.brow--past {
+  opacity: 0.35;
+}
+.brow--next {
+  border-left: 3px solid var(--navy);
+  background: #f7f9ff;
+  padding-left: 13px;
+}
+
+/* Час відправлення */
+.brow-time {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  min-width: 52px;
+  letter-spacing: -0.5px;
+  flex-shrink: 0;
+}
+.brow--past .brow-time { color: var(--gray); }
+
+/* Інфо маршруту */
+.brow-info { flex: 1; min-width: 0; }
+.brow-route {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 2px;
+}
+.brow-meta {
+  font-size: 11px;
+  color: var(--gray);
+}
+
+/* Кнопка дзвінка */
+.brow-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.brow-call:active { background: var(--red-dark); }
 
 /* ===== SUBMIT ===== */
 .submit-form { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
