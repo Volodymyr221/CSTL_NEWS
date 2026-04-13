@@ -7,7 +7,7 @@
     "time": "20:00",
     "location": "Олицький замок",
     "category": "Культура",
-    "image": null
+    "image": "./images/kino-castle.jpg"
   },
   {
     "id": 2,
@@ -27,7 +27,7 @@
     "time": "09:00",
     "location": "Стадіон «Олика», вул. Спортивна, 1",
     "category": "Спорт",
-    "image": null
+    "image": "./images/volleyball.jpg"
   },
   {
     "id": 4,
