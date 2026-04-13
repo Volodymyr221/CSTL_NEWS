@@ -40,11 +40,14 @@
       <div id="news-list" class="news-list"></div>
     </div>
 
-    <!-- Вкладка: Події -->
+    <!-- Вкладка: події -->
     <div id="page-events" class="page" style="display:none">
       <div class="tab-header">
         <h2 class="tab-title">Події</h2>
         <p class="tab-subtitle">Афіша Олики та Волині</p>
+      </div>
+      <div class="events-filters-bar">
+        <div id="events-filters" class="chips-row"></div>
       </div>
       <div id="events-list" class="events-list"></div>
     </div>
@@ -92,6 +95,14 @@
     <div class="article-modal-inner">
       <button class="modal-close-btn" onclick="closeArticleModal()">✕</button>
       <div id="article-modal-content" class="article-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Модальне вікно події -->
+  <div id="event-modal" class="event-modal" onclick="if(event.target===this)closeEventModal()">
+    <div class="event-modal-inner">
+      <button class="modal-close-btn" onclick="closeEventModal()">✕</button>
+      <div id="event-modal-content"></div>
     </div>
   </div>
 

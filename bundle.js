@@ -139,10 +139,6 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function formatEventDate(dateStr) {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", weekday: "long" });
-  }
   function showToast(msg, duration = 3e3) {
     let toast = document.getElementById("cstl-toast");
     if (!toast) {
@@ -260,39 +256,187 @@
   };
 
   // src/tabs/events.js
+  var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
+  var CATEGORY_COLORS = {
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#C41E3A",
+    "Kino_Castle": "#C41E3A",
+    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
+    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309"
+  };
+  var MONTHS_UK = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406", "\u0422\u0420\u0410", "\u0427\u0415\u0420", "\u041B\u0418\u041F", "\u0421\u0415\u0420", "\u0412\u0415\u0420", "\u0416\u041E\u0412", "\u041B\u0418\u0421", "\u0413\u0420\u0423"];
   var allEvents = [];
-  async function initEvents() {
-    try {
-      const res = await fetch("./data/events.json");
-      allEvents = await res.json();
-    } catch (e) {
-      allEvents = [];
-    }
-    renderEvents();
+  var activeFilter = "\u0412\u0441\u0456";
+  function formatBadgeDate(dateStr) {
+    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+    return `${d.getDate()} ${MONTHS_UK[d.getMonth()]}`;
   }
-  function renderEvents() {
+  function catColor(category) {
+    return CATEGORY_COLORS[category] || "#C41E3A";
+  }
+  function buildCalendarUrl(ev) {
+    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "00:00") + ":00");
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
+    const fmt = (dt) => dt.toISOString().replace(/[-:]/g, "").split(".")[0];
+    const params = new URLSearchParams({
+      action: "TEMPLATE",
+      text: ev.title,
+      dates: `${fmt(start)}/${fmt(end)}`,
+      details: ev.description || "",
+      location: ev.location || ""
+    });
+    return `https://calendar.google.com/calendar/render?${params}`;
+  }
+  function renderSkeleton(el) {
+    el.innerHTML = Array(3).fill(`
+    <div class="ev-skeleton">
+      <div class="ev-skel-img"></div>
+      <div class="ev-skel-body">
+        <div class="ev-skel-line w60"></div>
+        <div class="ev-skel-line w100"></div>
+        <div class="ev-skel-line w80"></div>
+        <div class="ev-skel-line w40"></div>
+      </div>
+    </div>
+  `).join("");
+  }
+  function cardHtml(ev) {
+    const bg = catColor(ev.category);
+    const cover = ev.image ? `<img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">` : `<div class="ev-card-img ev-card-img--ph"></div>`;
+    return `
+    <div class="ev-card" data-id="${ev.id}">
+      <div class="ev-card-cover">
+        ${cover}
+        <div class="ev-card-badge" style="background:${bg}">
+          ${escapeHtml(formatBadgeDate(ev.date))}
+          <span class="ev-badge-dot">\xB7</span>
+          ${escapeHtml(ev.category)}
+        </div>
+      </div>
+      <div class="ev-card-body">
+        <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
+        <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
+        <div class="ev-card-meta">
+          <span class="ev-meta-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+            ${escapeHtml(ev.location)}
+          </span>
+          <span class="ev-meta-item">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <polyline points="12 6 12 12 16 14"/>
+            </svg>
+            ${escapeHtml(ev.time)}
+          </span>
+        </div>
+      </div>
+    </div>`;
+  }
+  function openEventModal(ev) {
+    const bg = catColor(ev.category);
+    const cover = ev.image ? `<img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">` : `<div class="ev-modal-img ev-modal-img--ph"></div>`;
+    document.getElementById("event-modal-content").innerHTML = `
+    <div class="ev-modal-cover">
+      ${cover}
+      <div class="ev-modal-badge" style="background:${bg}">
+        ${escapeHtml(formatBadgeDate(ev.date))}
+        <span class="ev-badge-dot">\xB7</span>
+        ${escapeHtml(ev.category)}
+      </div>
+    </div>
+    <div class="ev-modal-body">
+      <h2 class="ev-modal-title">${escapeHtml(ev.title)}</h2>
+      <div class="ev-modal-meta">
+        <div class="ev-meta-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+          ${escapeHtml(ev.location)}
+        </div>
+        <div class="ev-meta-item">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          ${escapeHtml(ev.time)}, ${escapeHtml(formatBadgeDate(ev.date))}
+        </div>
+      </div>
+      <p class="ev-modal-desc">${escapeHtml(ev.description)}</p>
+      <a class="ev-cal-btn" href="${buildCalendarUrl(ev)}" target="_blank" rel="noopener">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+        </svg>
+        \u0414\u043E\u0434\u0430\u0442\u0438 \u0432 Google Calendar
+      </a>
+    </div>`;
+    document.getElementById("event-modal").classList.add("open");
+    document.body.style.overflow = "hidden";
+  }
+  window.closeEventModal = function() {
+    const m = document.getElementById("event-modal");
+    if (m) {
+      m.classList.remove("open");
+      document.body.style.overflow = "";
+    }
+  };
+  function renderFilters() {
+    const bar = document.getElementById("events-filters");
+    if (!bar)
+      return;
+    bar.innerHTML = CATEGORY_FILTERS.map(
+      (f) => `<button class="chip${f === activeFilter ? " active" : ""}" data-f="${escapeHtml(f)}">${escapeHtml(f)}</button>`
+    ).join("");
+    bar.querySelectorAll(".chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeFilter = btn.dataset.f;
+        renderFilters();
+        renderList();
+      });
+    });
+  }
+  function renderList() {
     const el = document.getElementById("events-list");
     if (!el)
       return;
     const now = /* @__PURE__ */ new Date();
-    const upcoming = allEvents.filter((e) => new Date(e.date) >= new Date(now.toDateString())).sort((a, b) => new Date(a.date) - new Date(b.date));
-    if (upcoming.length === 0) {
-      el.innerHTML = '<div class="empty-state">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+    now.setHours(0, 0, 0, 0);
+    const list = allEvents.filter((e) => {
+      const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
+      if (d < now)
+        return false;
+      return activeFilter === "\u0412\u0441\u0456" || e.category === activeFilter;
+    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+    if (!list.length) {
+      el.innerHTML = '<div class="empty-state">\u041F\u043E\u0434\u0456\u0439 \u0443 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
       return;
     }
-    el.innerHTML = upcoming.map((ev) => `
-    <div class="event-card">
-      ${ev.image ? `<img class="event-card-img" src="${escapeHtml(ev.image)}" alt="">` : ""}
-      <div class="event-card-body">
-        <div class="event-card-date">${formatEventDate(ev.date)} \xB7 ${escapeHtml(ev.time)}</div>
-        <h3 class="event-card-title">${escapeHtml(ev.title)}</h3>
-        <p class="event-card-desc">${escapeHtml(ev.description)}</p>
-        <div class="event-card-location">
-          <span class="location-icon">\u{1F4CD}</span> ${escapeHtml(ev.location)}
-        </div>
-      </div>
-    </div>
-  `).join("");
+    el.innerHTML = list.map(cardHtml).join("");
+    el.querySelectorAll(".ev-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const ev = allEvents.find((e) => e.id === Number(card.dataset.id));
+        if (ev)
+          openEventModal(ev);
+      });
+    });
+  }
+  async function initEvents() {
+    const el = document.getElementById("events-list");
+    if (el)
+      renderSkeleton(el);
+    try {
+      const res = await fetch("./data/events.json");
+      allEvents = await res.json();
+    } catch {
+      allEvents = [];
+    }
+    renderFilters();
+    renderList();
   }
 
   // src/tabs/buses.js
