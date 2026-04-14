@@ -16,6 +16,7 @@ const MONTHS_FULL = ['січня','лютого','березня','квітня'
 
 let allEvents = [];
 let activeFilter = 'Всі';
+let cardObserver = null; // IntersectionObserver для авто-згортання (auto-collapse)
 
 // Форматує повну дату: "3 травня 2026"
 function formatFullDate(dateStr) {
@@ -157,8 +158,22 @@ function renderList() {
 
   el.innerHTML = list.map(cardHtml).join('');
 
+  // Скидаємо попередній observer перед новим рендером
+  if (cardObserver) { cardObserver.disconnect(); cardObserver = null; }
+
+  // IntersectionObserver — авто-згортає картку коли вона повністю виходить за межі екрану
+  cardObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      if (!entry.isIntersecting && entry.target.classList.contains('expanded')) {
+        entry.target.classList.remove('expanded');
+      }
+    });
+  }, { threshold: 0 });
+
   // Акордеон (accordion) — розгортання картки при кліку
   el.querySelectorAll('.ev-card').forEach(card => {
+    cardObserver.observe(card);
+
     card.addEventListener('click', (e) => {
       // Клік на посилання календаря — не перехоплюємо
       if (e.target.closest('.ev-cal-btn')) return;

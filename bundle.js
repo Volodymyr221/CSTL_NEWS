@@ -266,6 +266,7 @@
   var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
   var allEvents = [];
   var activeFilter = "\u0412\u0441\u0456";
+  var cardObserver = null;
   function formatFullDate(dateStr) {
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
@@ -385,7 +386,19 @@
       return;
     }
     el.innerHTML = list.map(cardHtml).join("");
+    if (cardObserver) {
+      cardObserver.disconnect();
+      cardObserver = null;
+    }
+    cardObserver = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => {
+        if (!entry.isIntersecting && entry.target.classList.contains("expanded")) {
+          entry.target.classList.remove("expanded");
+        }
+      });
+    }, { threshold: 0 });
     el.querySelectorAll(".ev-card").forEach((card) => {
+      cardObserver.observe(card);
       card.addEventListener("click", (e) => {
         if (e.target.closest(".ev-cal-btn"))
           return;

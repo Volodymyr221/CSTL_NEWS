@@ -628,7 +628,7 @@ html, body {
 /* Картка події */
 .ev-card {
   background: var(--white);
-  border: 1.5px solid var(--cat-color, var(--border));
+  border: 1.5px solid color-mix(in srgb, var(--cat-color, var(--border)) 38%, white);
   border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
