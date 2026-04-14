@@ -198,7 +198,26 @@ function renderList() {
   cardObserver = new IntersectionObserver((entries) => {
     entries.forEach(entry => {
       if (!entry.isIntersecting && entry.target.classList.contains('expanded')) {
-        entry.target.classList.remove('expanded');
+        const card   = entry.target;
+        const rect   = card.getBoundingClientRect();
+        const detail = card.querySelector('.ev-card-detail');
+
+        if (rect.bottom <= 0) {
+          // Картка ВИЩЕ екрану — згортаємо миттєво без анімації,
+          // потім компенсуємо скрол щоб видимий контент не зрушився
+          const heightBefore = card.offsetHeight;
+          if (detail) detail.style.transition = 'none';
+          card.classList.remove('expanded');
+          const heightAfter = card.offsetHeight;
+          window.scrollBy(0, -(heightBefore - heightAfter));
+          // Повертаємо анімацію після перемальовки
+          requestAnimationFrame(() => requestAnimationFrame(() => {
+            if (detail) detail.style.transition = '';
+          }));
+        } else {
+          // Картка НИЖЧЕ екрану — звичайне анімоване згортання (нічого не зміщується)
+          card.classList.remove('expanded');
+        }
       }
     });
   }, { threshold: 0 });

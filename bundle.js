@@ -421,7 +421,23 @@
     cardObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (!entry.isIntersecting && entry.target.classList.contains("expanded")) {
-          entry.target.classList.remove("expanded");
+          const card = entry.target;
+          const rect = card.getBoundingClientRect();
+          const detail = card.querySelector(".ev-card-detail");
+          if (rect.bottom <= 0) {
+            const heightBefore = card.offsetHeight;
+            if (detail)
+              detail.style.transition = "none";
+            card.classList.remove("expanded");
+            const heightAfter = card.offsetHeight;
+            window.scrollBy(0, -(heightBefore - heightAfter));
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+              if (detail)
+                detail.style.transition = "";
+            }));
+          } else {
+            card.classList.remove("expanded");
+          }
         }
       });
     }, { threshold: 0 });
