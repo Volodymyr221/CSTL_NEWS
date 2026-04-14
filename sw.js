@@ -1,7 +1,7 @@
 // sw.js — CSTL NEWS Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260414-1800';
+const CACHE_NAME = 'cstl-20260414-2000';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -11,6 +11,7 @@ const STATIC_ASSETS = [
   './style.css',
   './bundle.js',
   './logo.png',
+  './manifest.json',
 ];
 
 // Встановлення: кешуємо статичні файли

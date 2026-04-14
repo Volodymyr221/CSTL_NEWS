@@ -10,7 +10,7 @@
   --border: #e5e5e5;
   --white: #ffffff;
   --header-h: 56px;
-  --tabbar-h: 64px;
+  --tabbar-h: 56px;  /* висота контентної зони таб-бару, без safe area */
   --navy: #1B2A4A;
 }
 
@@ -118,11 +118,12 @@ html, body {
 /* ===== MAIN ===== */
 .app-main {
   padding-top: var(--header-h);
-  padding-bottom: var(--tabbar-h);
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   min-height: 100vh;
+  min-height: 100svh; /* svh = small viewport height, стабільно на мобільних */
 }
 .page {
-  min-height: calc(100vh - var(--header-h) - var(--tabbar-h));
+  min-height: calc(100svh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
 }
 
 /* ===== FILTERS ===== */
@@ -549,13 +550,16 @@ html, body {
 .tab-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  height: var(--tabbar-h);
+  /* БЕЗ фіксованої висоти — висота = items + safe area знизу */
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--white);
   border-top: 1px solid var(--border);
   display: flex;
-  align-items: stretch;
-  z-index: 100;
-  padding-bottom: env(safe-area-inset-bottom);
+  align-items: flex-end; /* items притиснуті до низу, вище safe area */
+  z-index: 1000;
+  /* translateZ(0) — окремий GPU-шар, виправляє баг position:fixed в iOS PWA */
+  -webkit-transform: translateZ(0);
+  transform: translateZ(0);
 }
 .tab-item {
   flex: 1;
@@ -563,22 +567,23 @@ html, body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 2px;
+  gap: 3px;
+  height: var(--tabbar-h); /* фіксована висота ТІЛЬКИ на item, не на bar */
   background: none;
   border: none;
   cursor: pointer;
   color: var(--gray);
   transition: color 0.15s;
-  padding: 6px 0;
+  -webkit-tap-highlight-color: transparent;
 }
 .tab-item.active { color: var(--red); }
-.tab-icon { width: 20px; height: 20px; }
+.tab-icon { width: 22px; height: 22px; flex-shrink: 0; }
 .tab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
 
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: calc(var(--tabbar-h) + 12px);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--black);
