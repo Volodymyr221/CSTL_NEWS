@@ -109,11 +109,15 @@ function cardHtml(ev) {
 // Відкриває модальне вікно з деталями події
 function openEventModal(ev) {
   const bg    = catColor(ev.category);
-  // Обкладинка в модалці — тільки якщо є фото
+  // Кнопка закриття — поверх фото або у рядку якщо фото немає
   const coverBlock = ev.image ? `
     <div class="ev-modal-cover">
       <img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">
-    </div>` : '';
+      <button class="ev-modal-close ev-modal-close--over" onclick="closeEventModal()">✕</button>
+    </div>` : `
+    <div class="ev-modal-close-bar">
+      <button class="ev-modal-close" onclick="closeEventModal()">✕</button>
+    </div>`;
 
   document.getElementById('event-modal-content').innerHTML = `
     ${coverBlock}

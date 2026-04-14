@@ -338,7 +338,11 @@
     const coverBlock = ev.image ? `
     <div class="ev-modal-cover">
       <img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">
-    </div>` : "";
+      <button class="ev-modal-close ev-modal-close--over" onclick="closeEventModal()">\u2715</button>
+    </div>` : `
+    <div class="ev-modal-close-bar">
+      <button class="ev-modal-close" onclick="closeEventModal()">\u2715</button>
+    </div>`;
     document.getElementById("event-modal-content").innerHTML = `
     ${coverBlock}
     <div class="ev-modal-body">
