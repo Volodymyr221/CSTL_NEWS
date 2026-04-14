@@ -478,10 +478,25 @@
   }
 
   // src/tabs/buses.js
+  var PREFS_KEY = "bus_prefs";
   var busData = null;
   var activeDirection = "from_olyka";
   var activeStop = "\u0412\u0441\u0456";
+  var showAll = false;
   var timerInterval = null;
+  function savePrefs() {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ direction: activeDirection, stop: activeStop }));
+  }
+  function loadPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PREFS_KEY));
+      if (p?.direction)
+        activeDirection = p.direction;
+      if (p?.stop)
+        activeStop = p.stop;
+    } catch {
+    }
+  }
   function isDayActive(days) {
     const day = (/* @__PURE__ */ new Date()).getDay();
     if (days === "\u0449\u043E\u0434\u043D\u044F")
@@ -507,6 +522,15 @@
     const h = Math.floor(mins / 60), m = mins % 60;
     return m > 0 ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
   }
+  function calcArrival(timeStr, duration) {
+    if (!duration)
+      return null;
+    const [h, m] = timeStr.split(":").map(Number);
+    const total = h * 60 + m + duration;
+    const ah = Math.floor(total / 60) % 24;
+    const am = total % 60;
+    return `${String(ah).padStart(2, "0")}:${String(am).padStart(2, "0")}`;
+  }
   function getFiltered2() {
     if (!busData)
       return [];
@@ -517,6 +541,10 @@
         return false;
       return true;
     }).sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+  }
+  function isPast(b) {
+    const nowMin = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    return toMinutes(b.time) < nowMin || !isDayActive(b.days);
   }
   function findNext() {
     return getFiltered2().filter((b) => isDayActive(b.days)).find((b) => minutesUntil(b.time) !== null) || null;
@@ -539,11 +567,13 @@
     }
     const mins = minutesUntil(next.time);
     const urgent = mins <= 10;
+    const arrival = calcArrival(next.time, next.duration);
     el.className = `bus-smart-row${urgent ? " urgent" : ""}`;
     el.innerHTML = `
     <span class="bsr-icon">\u25B6</span>
     <span class="bsr-text">
-      \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(formatTimer(mins))}</strong> \u2014 ${escapeHtml(next.time)}, ${escapeHtml(next.route)}
+      \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(formatTimer(mins))}</strong> \u2014
+      ${escapeHtml(next.time)}${arrival ? ` \u2192 ${escapeHtml(arrival)}` : ""}, ${escapeHtml(next.route)}
     </span>
     ${urgent ? `<span class="bsr-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
   `;
@@ -552,19 +582,37 @@
     const el = document.getElementById("bus-list");
     if (!el)
       return;
-    const nowMin = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
     const next = findNext();
     const buses = getFiltered2();
+    const futureBuses = buses.filter((b) => !isPast(b));
+    const pastBuses = buses.filter((b) => isPast(b));
     if (!buses.length) {
       el.innerHTML = '<div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0447\u0435\u0440\u0435\u0437 \u0446\u044E \u0437\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435\u043C\u0430\u0454</div>';
       return;
     }
-    el.innerHTML = buses.map((b) => {
-      const past = toMinutes(b.time) < nowMin || !isDayActive(b.days);
+    const toRender = showAll ? buses : futureBuses;
+    if (!toRender.length) {
+      el.innerHTML = `
+      <div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>
+      <button class="bus-show-all" id="bus-show-all-btn">
+        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${buses.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
+      </button>`;
+      document.getElementById("bus-show-all-btn").addEventListener("click", () => {
+        showAll = true;
+        renderList2();
+      });
+      return;
+    }
+    const rowsHtml = toRender.map((b) => {
+      const past = isPast(b);
       const isNext = next && b.id === next.id;
+      const arrival = calcArrival(b.time, b.duration);
       return `
       <div class="brow${past ? " brow--past" : ""}${isNext ? " brow--next" : ""}">
-        <span class="brow-time">${escapeHtml(b.time)}</span>
+        <div class="brow-time-block">
+          <span class="brow-time">${escapeHtml(b.time)}</span>
+          ${arrival ? `<span class="brow-arrival">\u2192 ${escapeHtml(arrival)}</span>` : ""}
+        </div>
         <div class="brow-info">
           <span class="brow-route">${escapeHtml(b.route)}</span>
           <span class="brow-meta">${escapeHtml(b.days)} \xB7 ${escapeHtml(b.price)}</span>
@@ -579,18 +627,43 @@
         </a>` : ""}
       </div>`;
     }).join("");
+    let toggleHtml = "";
+    if (!showAll && pastBuses.length > 0) {
+      toggleHtml = `
+      <button class="bus-show-all" id="bus-show-all-btn">
+        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${buses.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
+      </button>`;
+    } else if (showAll) {
+      toggleHtml = `
+      <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
+        \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u0440\u0435\u0439\u0441\u0438 \u2191
+      </button>`;
+    }
+    el.innerHTML = rowsHtml + toggleHtml;
+    const btn = document.getElementById("bus-show-all-btn");
+    if (btn) {
+      btn.addEventListener("click", () => {
+        showAll = !showAll;
+        renderList2();
+      });
+    }
   }
   function renderStopFilter() {
     const el = document.getElementById("bus-stop-filter");
     if (!el)
       return;
     const stops = ["\u0412\u0441\u0456", ...getStops()];
+    if (activeStop !== "\u0412\u0441\u0456" && !getStops().includes(activeStop)) {
+      activeStop = "\u0412\u0441\u0456";
+    }
     el.innerHTML = stops.map(
       (s) => `<button class="chip${s === activeStop ? " active" : ""}" data-stop="${escapeHtml(s)}">${escapeHtml(s)}</button>`
     ).join("");
     el.querySelectorAll(".chip").forEach((btn) => {
       btn.addEventListener("click", () => {
         activeStop = btn.dataset.stop;
+        showAll = false;
+        savePrefs();
         renderStopFilter();
         renderList2();
         updateSmartRow();
@@ -612,6 +685,8 @@
       btn.addEventListener("click", () => {
         activeDirection = btn.dataset.dir;
         activeStop = "\u0412\u0441\u0456";
+        showAll = false;
+        savePrefs();
         renderTabs();
         renderStopFilter();
         renderList2();
@@ -623,6 +698,7 @@
     const el = document.getElementById("buses-content");
     if (!el)
       return;
+    loadPrefs();
     try {
       const res = await fetch("./data/schedule.json");
       busData = await res.json();

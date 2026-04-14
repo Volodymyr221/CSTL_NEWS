@@ -1,11 +1,26 @@
 import { escapeHtml } from '../core/utils.js';
 
-let busData        = null;
+const PREFS_KEY = 'bus_prefs';
+let busData         = null;
 let activeDirection = 'from_olyka';
 let activeStop      = 'Всі';
+let showAll         = false;
 let timerInterval   = null;
 
-// Перевіряє чи рейс їде сьогодні (виправлення B-05)
+// ── Персоналізація (localStorage — локальне сховище браузера) ──────
+function savePrefs() {
+  localStorage.setItem(PREFS_KEY, JSON.stringify({ direction: activeDirection, stop: activeStop }));
+}
+
+function loadPrefs() {
+  try {
+    const p = JSON.parse(localStorage.getItem(PREFS_KEY));
+    if (p?.direction) activeDirection = p.direction;
+    if (p?.stop)      activeStop      = p.stop;
+  } catch {}
+}
+
+// ── Логіка днів і часу ────────────────────────────────────────────
 function isDayActive(days) {
   const day = new Date().getDay();
   if (days === 'щодня') return true;
@@ -31,7 +46,17 @@ function formatTimer(mins) {
   return m > 0 ? `через ${h} год ${m} хв` : `через ${h} год`;
 }
 
-// Рейси з урахуванням напрямку і вибраної зупинки
+// Розраховує час прибуття з часу відправлення + тривалість у хвилинах
+function calcArrival(timeStr, duration) {
+  if (!duration) return null;
+  const [h, m] = timeStr.split(':').map(Number);
+  const total  = h * 60 + m + duration;
+  const ah     = Math.floor(total / 60) % 24;
+  const am     = total % 60;
+  return `${String(ah).padStart(2, '0')}:${String(am).padStart(2, '0')}`;
+}
+
+// ── Фільтрація ────────────────────────────────────────────────────
 function getFiltered() {
   if (!busData) return [];
   return busData.buses
@@ -43,12 +68,15 @@ function getFiltered() {
     .sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
 }
 
-// Наступний рейс (з фільтром)
+function isPast(b) {
+  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
+  return toMinutes(b.time) < nowMin || !isDayActive(b.days);
+}
+
 function findNext() {
   return getFiltered().filter(b => isDayActive(b.days)).find(b => minutesUntil(b.time) !== null) || null;
 }
 
-// Унікальні зупинки для активного напрямку (зберігаємо порядок першого рейсу)
 function getStops() {
   if (!busData) return [];
   const seen = new Set();
@@ -59,7 +87,7 @@ function getStops() {
   return [...seen];
 }
 
-// ── Smart-рядок ───────────────────────────────────────────────────
+// ── Smart-рядок наступного рейсу ──────────────────────────────────
 function updateSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
@@ -68,39 +96,63 @@ function updateSmartRow() {
     el.innerHTML = `<span class="bsr-empty">Рейсів сьогодні більше немає</span>`;
     return;
   }
-  const mins   = minutesUntil(next.time);
-  const urgent = mins <= 10;
-  el.className = `bus-smart-row${urgent ? ' urgent' : ''}`;
-  el.innerHTML = `
+  const mins    = minutesUntil(next.time);
+  const urgent  = mins <= 10;
+  const arrival = calcArrival(next.time, next.duration);
+  el.className  = `bus-smart-row${urgent ? ' urgent' : ''}`;
+  el.innerHTML  = `
     <span class="bsr-icon">▶</span>
     <span class="bsr-text">
-      Наступний <strong>${escapeHtml(formatTimer(mins))}</strong> — ${escapeHtml(next.time)}, ${escapeHtml(next.route)}
+      Наступний <strong>${escapeHtml(formatTimer(mins))}</strong> —
+      ${escapeHtml(next.time)}${arrival ? ` → ${escapeHtml(arrival)}` : ''}, ${escapeHtml(next.route)}
     </span>
     ${urgent ? `<span class="bsr-hurry">Поспішай!</span>` : ''}
   `;
 }
 
-// ── Список рейсів (компактні рядки) ──────────────────────────────
+// ── Список рейсів ─────────────────────────────────────────────────
 function renderList() {
   const el = document.getElementById('bus-list');
   if (!el) return;
 
-  const nowMin = new Date().getHours() * 60 + new Date().getMinutes();
-  const next   = findNext();
-  const buses  = getFiltered();
+  const next        = findNext();
+  const buses       = getFiltered();
+  const futureBuses = buses.filter(b => !isPast(b));
+  const pastBuses   = buses.filter(b => isPast(b));
 
   if (!buses.length) {
     el.innerHTML = '<div class="empty-state">Рейсів через цю зупинку немає</div>';
     return;
   }
 
-  el.innerHTML = buses.map(b => {
-    const past   = toMinutes(b.time) < nowMin || !isDayActive(b.days);
-    const isNext = next && b.id === next.id;
+  // В режимі "тільки майбутні" показуємо future-рейси.
+  // В режимі "всі" показуємо повний список у хронологічному порядку.
+  const toRender = showAll ? buses : futureBuses;
+
+  if (!toRender.length) {
+    el.innerHTML = `
+      <div class="empty-state">Рейсів сьогодні більше немає</div>
+      <button class="bus-show-all" id="bus-show-all-btn">
+        Показати всі ${buses.length} рейси за сьогодні ↓
+      </button>`;
+    document.getElementById('bus-show-all-btn').addEventListener('click', () => {
+      showAll = true;
+      renderList();
+    });
+    return;
+  }
+
+  const rowsHtml = toRender.map(b => {
+    const past    = isPast(b);
+    const isNext  = next && b.id === next.id;
+    const arrival = calcArrival(b.time, b.duration);
 
     return `
       <div class="brow${past ? ' brow--past' : ''}${isNext ? ' brow--next' : ''}">
-        <span class="brow-time">${escapeHtml(b.time)}</span>
+        <div class="brow-time-block">
+          <span class="brow-time">${escapeHtml(b.time)}</span>
+          ${arrival ? `<span class="brow-arrival">→ ${escapeHtml(arrival)}</span>` : ''}
+        </div>
         <div class="brow-info">
           <span class="brow-route">${escapeHtml(b.route)}</span>
           <span class="brow-meta">${escapeHtml(b.days)} · ${escapeHtml(b.price)}</span>
@@ -115,6 +167,30 @@ function renderList() {
         </a>` : ''}
       </div>`;
   }).join('');
+
+  // Кнопка перемикання "показати всі / сховати минулі"
+  let toggleHtml = '';
+  if (!showAll && pastBuses.length > 0) {
+    toggleHtml = `
+      <button class="bus-show-all" id="bus-show-all-btn">
+        Показати всі ${buses.length} рейси за сьогодні ↓
+      </button>`;
+  } else if (showAll) {
+    toggleHtml = `
+      <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
+        Сховати минулі рейси ↑
+      </button>`;
+  }
+
+  el.innerHTML = rowsHtml + toggleHtml;
+
+  const btn = document.getElementById('bus-show-all-btn');
+  if (btn) {
+    btn.addEventListener('click', () => {
+      showAll = !showAll;
+      renderList();
+    });
+  }
 }
 
 // ── Чіпи зупинок ─────────────────────────────────────────────────
@@ -122,12 +198,20 @@ function renderStopFilter() {
   const el = document.getElementById('bus-stop-filter');
   if (!el) return;
   const stops = ['Всі', ...getStops()];
+
+  // Перевіряємо що збережена зупинка є у поточному напрямку
+  if (activeStop !== 'Всі' && !getStops().includes(activeStop)) {
+    activeStop = 'Всі';
+  }
+
   el.innerHTML = stops.map(s =>
     `<button class="chip${s === activeStop ? ' active' : ''}" data-stop="${escapeHtml(s)}">${escapeHtml(s)}</button>`
   ).join('');
   el.querySelectorAll('.chip').forEach(btn => {
     btn.addEventListener('click', () => {
       activeStop = btn.dataset.stop;
+      showAll    = false;
+      savePrefs();
       renderStopFilter();
       renderList();
       updateSmartRow();
@@ -150,6 +234,8 @@ function renderTabs() {
     btn.addEventListener('click', () => {
       activeDirection = btn.dataset.dir;
       activeStop      = 'Всі';
+      showAll         = false;
+      savePrefs();
       renderTabs();
       renderStopFilter();
       renderList();
@@ -162,6 +248,8 @@ function renderTabs() {
 export async function initBuses() {
   const el = document.getElementById('buses-content');
   if (!el) return;
+
+  loadPrefs();
 
   try {
     const res = await fetch('./data/schedule.json');

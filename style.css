@@ -429,16 +429,31 @@ html, body {
   padding-left: 13px;
 }
 
+/* Блок часу: відправлення + прибуття (arrival) */
+.brow-time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+
 /* Час відправлення */
 .brow-time {
   font-size: 20px;
   font-weight: 700;
   color: var(--navy);
-  min-width: 52px;
   letter-spacing: -0.5px;
-  flex-shrink: 0;
+  line-height: 1.1;
 }
 .brow--past .brow-time { color: var(--gray); }
+
+/* Час прибуття */
+.brow-arrival {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 1px;
+}
 
 /* Інфо маршруту */
 .brow-info { flex: 1; min-width: 0; }
@@ -469,6 +484,24 @@ html, body {
   transition: background 0.15s;
 }
 .brow-call:active { background: var(--red-dark); }
+
+/* Кнопка "Показати всі рейси / Сховати минулі" */
+.bus-show-all {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--navy);
+  text-align: center;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.bus-show-all:active { background: var(--gray-light); }
+.bus-show-all--less { color: var(--gray); font-weight: 400; }
 
 /* ===== SUBMIT ===== */
 .submit-form { padding: 16px; display: flex; flex-direction: column; gap: 16px; }
