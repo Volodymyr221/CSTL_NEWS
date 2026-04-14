@@ -71,7 +71,7 @@ function cardHtml(ev) {
   const calUrl = buildCalendarUrl(ev);
 
   return `
-    <div class="ev-card" data-id="${ev.id}">
+    <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
       ${coverBlock}
       <div class="ev-card-body">
         <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">

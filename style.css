@@ -628,13 +628,17 @@ html, body {
 /* Картка події */
 .ev-card {
   background: var(--white);
-  border: 1px solid var(--border);
+  border: 1.5px solid var(--cat-color, var(--border));
   border-radius: 14px;
   overflow: hidden;
   cursor: pointer;
-  transition: opacity 0.15s;
+  transition: opacity 0.15s, background-color 0.3s;
 }
 .ev-card:active { opacity: 0.82; }
+/* Розгорнутий стан: легкий тонований фон */
+.ev-card.expanded { background: #f4f5f9; }
+/* Ховаємо стислий опис — повний показується в деталях */
+.ev-card.expanded .ev-card-desc { display: none; }
 
 /* Обкладинка 16:9 */
 .ev-card-cover {
@@ -758,7 +762,7 @@ html, body {
   margin-top: 10px;
   border-top: 1px solid var(--border);
   font-size: 13px;
-  color: var(--red);
+  color: var(--cat-color, var(--red));
   font-weight: 600;
   letter-spacing: 0.2px;
 }
