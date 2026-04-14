@@ -29,19 +29,53 @@ function catColor(category) {
   return CATEGORY_COLORS[category] || '#C41E3A';
 }
 
-// Генерує посилання Google Calendar з усіма полями події
-function buildCalendarUrl(ev) {
-  const start = new Date(ev.date + 'T' + (ev.time || '00:00') + ':00');
+// Генерує ICS-контент (iCalendar формат) для завантаження в рідний календар
+function buildIcsContent(ev) {
+  const pad = n => String(n).padStart(2, '0');
+  const start = new Date(ev.date + 'T' + (ev.time || '09:00') + ':00');
   const end   = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 години
-  const fmt   = dt => dt.toISOString().replace(/[-:]/g, '').split('.')[0];
-  const params = new URLSearchParams({
-    action:   'TEMPLATE',
-    text:     ev.title,
-    dates:    `${fmt(start)}/${fmt(end)}`,
-    details:  ev.description || '',
-    location: ev.location || '',
-  });
-  return `https://calendar.google.com/calendar/render?${params}`;
+  // Форматуємо як "floating time" — без Z, без таймзони — рідний Calendar використає локальний час
+  const fmt = d =>
+    `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}` +
+    `T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  // Екрануємо спецсимволи ICS
+  const esc = s => (s || '').replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//CSTL NEWS//UA',
+    'CALSCALE:GREGORIAN',
+    'METHOD:PUBLISH',
+    'BEGIN:VEVENT',
+    `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
+    `DTSTART:${fmt(start)}`,
+    `DTEND:${fmt(end)}`,
+    `SUMMARY:${esc(ev.title)}`,
+    `DESCRIPTION:${esc(ev.description)}`,
+    `LOCATION:${esc(ev.location)}`,
+    'BEGIN:VALARM',
+    'TRIGGER:-PT1H',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:Нагадування: ${esc(ev.title)}`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+}
+
+// Завантажує ICS-файл — відкриває рідний Calendar на iOS/Android
+function downloadIcs(ev) {
+  const ics  = buildIcsContent(ev);
+  const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+  const url  = URL.createObjectURL(blob);
+  const a    = document.createElement('a');
+  a.href     = url;
+  a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, '_') + '.ics';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1500);
 }
 
 // Скелетон (skeleton — сірі блоки що переливаються) під час завантаження
@@ -63,13 +97,10 @@ function renderSkeleton(el) {
 function cardHtml(ev) {
   const bg = catColor(ev.category);
 
-  // Обкладинка рендериться тільки якщо є фото
   const coverBlock = ev.image ? `
     <div class="ev-card-cover">
       <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
     </div>` : '';
-
-  const calUrl = buildCalendarUrl(ev);
 
   return `
     <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
@@ -104,15 +135,17 @@ function cardHtml(ev) {
       <div class="ev-card-detail">
         <div class="ev-detail-body">
           <p class="ev-detail-desc">${escapeHtml(ev.description)}</p>
-          <a class="ev-cal-btn" href="${calUrl}" target="_blank" rel="noopener">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <button class="ev-ics-btn" type="button" data-id="${ev.id}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2"/>
               <line x1="3" y1="10" x2="21" y2="10"/>
               <line x1="8" y1="2" x2="8" y2="6"/>
               <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="12" y1="14" x2="12" y2="18"/>
+              <line x1="10" y1="16" x2="14" y2="16"/>
             </svg>
-            Додати в Google Calendar
-          </a>
+            Створити нагадування
+          </button>
           <button class="ev-detail-close" type="button">Згорнути ↑</button>
         </div>
       </div>
@@ -170,23 +203,29 @@ function renderList() {
     });
   }, { threshold: 0 });
 
-  // Акордеон (accordion) — розгортання картки при кліку
   el.querySelectorAll('.ev-card').forEach(card => {
     cardObserver.observe(card);
 
     card.addEventListener('click', (e) => {
-      // Клік на посилання календаря — не перехоплюємо
-      if (e.target.closest('.ev-cal-btn')) return;
-
-      // Клік на кнопку "Згорнути" — закриваємо і прокручуємо до картки
+      // Клік на "Згорнути"
       if (e.target.closest('.ev-detail-close')) {
         card.classList.remove('expanded');
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         return;
       }
+      // Клік на кнопку нагадування — обробляється окремим listener нижче
+      if (e.target.closest('.ev-ics-btn')) return;
 
-      // Інакше — перемикаємо стан розгорнутості (toggle expanded state)
       card.classList.toggle('expanded');
+    });
+  });
+
+  // Окремий listener для кнопки нагадування — зупиняємо bubble щоб не закрити картку
+  el.querySelectorAll('.ev-ics-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ev = allEvents.find(ev => ev.id === Number(btn.dataset.id));
+      if (ev) downloadIcs(ev);
     });
   });
 }

@@ -797,24 +797,25 @@ html, body {
   margin: 14px 0 18px;
 }
 
-/* Кнопка "Додати в Google Calendar" */
-.ev-cal-btn {
+/* Кнопка "Створити нагадування" — завантажує .ics у рідний Calendar */
+.ev-ics-btn {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 7px;
   width: 100%;
-  padding: 14px;
+  padding: 11px 14px;
   background: var(--red);
   color: white;
-  border-radius: 12px;
-  font-size: 15px;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
   font-weight: 700;
-  text-decoration: none;
+  cursor: pointer;
   letter-spacing: 0.3px;
   transition: background 0.15s;
 }
-.ev-cal-btn:active { background: var(--red-dark); }
+.ev-ics-btn:active { background: var(--red-dark); }
 
 /* Кнопка "Згорнути" */
 .ev-detail-close {

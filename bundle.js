@@ -274,18 +274,45 @@
   function catColor(category) {
     return CATEGORY_COLORS[category] || "#C41E3A";
   }
-  function buildCalendarUrl(ev) {
-    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "00:00") + ":00");
+  function buildIcsContent(ev) {
+    const pad = (n) => String(n).padStart(2, "0");
+    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (dt) => dt.toISOString().replace(/[-:]/g, "").split(".")[0];
-    const params = new URLSearchParams({
-      action: "TEMPLATE",
-      text: ev.title,
-      dates: `${fmt(start)}/${fmt(end)}`,
-      details: ev.description || "",
-      location: ev.location || ""
-    });
-    return `https://calendar.google.com/calendar/render?${params}`;
+    const fmt = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CSTL NEWS//UA",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${esc(ev.title)}`,
+      `DESCRIPTION:${esc(ev.description)}`,
+      `LOCATION:${esc(ev.location)}`,
+      "BEGIN:VALARM",
+      "TRIGGER:-PT1H",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\r\n");
+  }
+  function downloadIcs(ev) {
+    const ics = buildIcsContent(ev);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
   function renderSkeleton(el) {
     el.innerHTML = Array(3).fill(`
@@ -306,7 +333,6 @@
     <div class="ev-card-cover">
       <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
     </div>` : "";
-    const calUrl = buildCalendarUrl(ev);
     return `
     <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
       ${coverBlock}
@@ -340,15 +366,17 @@
       <div class="ev-card-detail">
         <div class="ev-detail-body">
           <p class="ev-detail-desc">${escapeHtml(ev.description)}</p>
-          <a class="ev-cal-btn" href="${calUrl}" target="_blank" rel="noopener">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <button class="ev-ics-btn" type="button" data-id="${ev.id}">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <rect x="3" y="4" width="18" height="18" rx="2"/>
               <line x1="3" y1="10" x2="21" y2="10"/>
               <line x1="8" y1="2" x2="8" y2="6"/>
               <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="12" y1="14" x2="12" y2="18"/>
+              <line x1="10" y1="16" x2="14" y2="16"/>
             </svg>
-            \u0414\u043E\u0434\u0430\u0442\u0438 \u0432 Google Calendar
-          </a>
+            \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
+          </button>
           <button class="ev-detail-close" type="button">\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191</button>
         </div>
       </div>
@@ -400,14 +428,22 @@
     el.querySelectorAll(".ev-card").forEach((card) => {
       cardObserver.observe(card);
       card.addEventListener("click", (e) => {
-        if (e.target.closest(".ev-cal-btn"))
-          return;
         if (e.target.closest(".ev-detail-close")) {
           card.classList.remove("expanded");
           card.scrollIntoView({ behavior: "smooth", block: "nearest" });
           return;
         }
+        if (e.target.closest(".ev-ics-btn"))
+          return;
         card.classList.toggle("expanded");
+      });
+    });
+    el.querySelectorAll(".ev-ics-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const ev = allEvents.find((ev2) => ev2.id === Number(btn.dataset.id));
+        if (ev)
+          downloadIcs(ev);
       });
     });
   }
