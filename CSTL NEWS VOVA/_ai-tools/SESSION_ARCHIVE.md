@@ -5,6 +5,66 @@
 
 ---
 
+## Сесія 2026-04-14 — Події v3 + PWA таб-бар + Маніфест
+
+### Комміти сесії
+| Коміт | Що зроблено |
+|-------|-------------|
+| `b841029` | Events: замінити bottom-sheet модалку на акордеон-розгортання |
+| `3a72a4d` | sw: оновити CACHE_NAME після першої серії змін |
+| `094cc43` | Events: кольоровий ободок категорії, фон при розкритті, без дублювання опису |
+| `85af5ec` | sw: CACHE_NAME bump |
+| `e391d7a` | Events: м'якший ободок (color-mix) + авто-згортання (IntersectionObserver) |
+| `fd3748e` | Events: «Створити нагадування» — ICS Blob замість Google Calendar |
+| `562282e` | Events: усунути стрибок карточок при авто-згортанні (scrollBy компенсація) |
+| `a79d171` | PWA: виправити таб-бар + manifest.json + оновити іконки |
+| `4f81ad6` | fix: виправити шлях до іконок PWA (colon → папка icons/) |
+
+### Що зроблено (детально)
+
+#### 1. Модуль «Події» v3 — акордеон замість модалки
+- Видалено `.event-modal` bottom-sheet та весь його CSS (~130 рядків)
+- Клік по картці → картка розгортається вниз (`max-height` transition 0.38s)
+- У розгорнутому стані: повний опис, кнопка «Створити нагадування», «Згорнути ↑»
+- `IntersectionObserver` з `threshold: 0` — авто-згортає картку коли вона повністю виходить за межі viewport
+- При авто-згортанні ВИЩЕ екрану: `detail.style.transition = 'none'` → миттєве згортання → `window.scrollBy(0, -(heightBefore - heightAfter))` → видимий контент не зміщується → `requestAnimationFrame x2` повертає анімацію
+
+#### 2. UX-покращення карток подій
+- **Кольоровий ободок**: `border: 1.5px solid color-mix(in srgb, var(--cat-color) 38%, white)` → пастельний відтінок кольору категорії
+- **CSS-змінна `--cat-color`**: встановлюється inline `style="--cat-color:#C41E3A"` на картці, використовується в border і в підказці «Детальніше»
+- **Фон розгорнутої картки**: `background: #f4f5f9` з `transition: background-color 0.3s`
+- **Без дублювання**: `.ev-card.expanded .ev-card-desc { display: none }` — стислий опис ховається, повний видно в `.ev-detail-desc`
+
+#### 3. Кнопка «Створити нагадування»
+- Видалено `buildCalendarUrl()` і посилання на Google Calendar
+- Новий `buildIcsContent(ev)` → генерує ICS-рядок (VCALENDAR/VEVENT/VALARM за 1 год)
+- `downloadIcs(ev)` → `new Blob([ics], {type:'text/calendar'})` → `URL.createObjectURL` → програмний клік по `<a download="назва.ics">` → iOS відкриває рідний Calendar, Android — Google/Samsung Calendar
+- `e.stopPropagation()` у listener кнопки — не закриває акордеон при натисканні
+
+#### 4. PWA таб-бар — критичний баг виправлено
+- **Баг**: `height: 64px` + `padding-bottom: env(safe-area-inset-bottom)` → на iPhone X+ (safe area = 34px) для кнопок залишалось лише 30px → таб-бар зникав або був непомітний
+- **Фікс**: `height` прибрано з `.tab-bar`, `height: 56px` тепер на `.tab-item`, `.tab-bar` лише додає `padding-bottom: env(safe-area-inset-bottom, 0px)` → загальна висота бару = 56 + safe area
+- `align-items: flex-end` — кнопки притиснуті до низу вище safe area
+- `z-index: 1000` (було 100)
+- `-webkit-transform: translateZ(0)` — окремий GPU-шар, виправляє баг `position:fixed` в iOS PWA standalone mode
+- `--tabbar-h: 56px` (було 64px) — тепер позначає тільки висоту контентної зони
+- Оновлено: `.app-main`, `.page`, `.toast`, `.deploy-stamp` — всі включають `env(safe-area-inset-bottom, 0px)`
+
+#### 5. PWA маніфест і іконки
+- Новий `manifest.json`: `display:standalone`, `theme_color:#C41E3A`, `orientation:portrait-primary`, `lang:uk`, icons 192 і 512
+- `manifest.json` доданий у `STATIC_ASSETS` sw.js
+- `index.html`: `<link rel="manifest">` і `<link rel="apple-touch-icon" href="icons/icon-192.png">`
+- Нові іконки таб-бару: газета (новини) / календар з крапками (події) / автобус з розділювачами / паперовий літак (подати)
+- Папка `icons/` з кастомними іконками Вови
+- Баг-фікс: GitHub UI зберіг `icons:icon-192.png` замість `icons/icon-192.png` → виправлено через `git mv`
+
+### Стан на кінець сесії
+- `sw.js` CACHE_NAME: `cstl-20260414-2100`
+- Останній деплой: коміт `4f81ad6`
+- B-16 (manifest.json) — закрито
+
+---
+
 ## Сесія 2026-04-10 — Аудит + Фаза 1 А+
 
 ### Останні деплої (на момент закриття сесії)
