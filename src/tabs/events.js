@@ -11,20 +11,11 @@ const CATEGORY_COLORS = {
   'Благодійність': '#B45309',
 };
 
-// Назви місяців для бейджу дати
-const MONTHS_UK = ['СІЧ','ЛЮТ','БЕР','КВІ','ТРА','ЧЕР','ЛИП','СЕР','ВЕР','ЖОВ','ЛИС','ГРУ'];
-
 // Назви місяців у родовому відмінку для повної дати
 const MONTHS_FULL = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
 
 let allEvents = [];
 let activeFilter = 'Всі';
-
-// Форматує дату у вигляд "20 КВІ" — більше не використовується в бейджі, лишається для сумісності
-function formatBadgeDate(dateStr) {
-  const d = new Date(dateStr + 'T00:00:00');
-  return `${d.getDate()} ${MONTHS_UK[d.getMonth()]}`;
-}
 
 // Форматує повну дату: "3 травня 2026"
 function formatFullDate(dateStr) {
@@ -67,7 +58,7 @@ function renderSkeleton(el) {
   `).join('');
 }
 
-// HTML-шаблон картки події
+// HTML-шаблон картки події з розгортуваним детальним блоком
 function cardHtml(ev) {
   const bg = catColor(ev.category);
 
@@ -76,6 +67,8 @@ function cardHtml(ev) {
     <div class="ev-card-cover">
       <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
     </div>` : '';
+
+  const calUrl = buildCalendarUrl(ev);
 
   return `
     <div class="ev-card" data-id="${ev.id}">
@@ -102,67 +95,28 @@ function cardHtml(ev) {
             ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
           </span>
         </div>
+        <div class="ev-card-expand-hint">
+          <span class="ev-expand-label">Детальніше</span>
+          <span class="ev-expand-chevron">›</span>
+        </div>
+      </div>
+      <div class="ev-card-detail">
+        <div class="ev-detail-body">
+          <p class="ev-detail-desc">${escapeHtml(ev.description)}</p>
+          <a class="ev-cal-btn" href="${calUrl}" target="_blank" rel="noopener">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+            </svg>
+            Додати в Google Calendar
+          </a>
+          <button class="ev-detail-close" type="button">Згорнути ↑</button>
+        </div>
       </div>
     </div>`;
 }
-
-// Відкриває модальне вікно з деталями події
-function openEventModal(ev) {
-  const bg    = catColor(ev.category);
-  // Кнопка закриття — поверх фото або у рядку якщо фото немає
-  const coverBlock = ev.image ? `
-    <div class="ev-modal-cover">
-      <img class="ev-modal-img" src="${escapeHtml(ev.image)}" alt="">
-      <button class="ev-modal-close ev-modal-close--over" onclick="closeEventModal()">✕</button>
-    </div>` : `
-    <div class="ev-modal-close-bar">
-      <button class="ev-modal-close" onclick="closeEventModal()">✕</button>
-    </div>`;
-
-  document.getElementById('event-modal-content').innerHTML = `
-    ${coverBlock}
-    <div class="ev-modal-body">
-      <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
-        ${escapeHtml(ev.category)}
-      </div>
-      <h2 class="ev-modal-title">${escapeHtml(ev.title)}</h2>
-      <div class="ev-modal-meta">
-        <div class="ev-meta-item">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
-          ${escapeHtml(ev.location)}
-        </div>
-        <div class="ev-meta-item">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/>
-            <polyline points="12 6 12 12 16 14"/>
-          </svg>
-          ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
-        </div>
-      </div>
-      <p class="ev-modal-desc">${escapeHtml(ev.description)}</p>
-      <a class="ev-cal-btn" href="${buildCalendarUrl(ev)}" target="_blank" rel="noopener">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="3" y="4" width="18" height="18" rx="2"/>
-          <line x1="3" y1="10" x2="21" y2="10"/>
-          <line x1="8" y1="2" x2="8" y2="6"/>
-          <line x1="16" y1="2" x2="16" y2="6"/>
-        </svg>
-        Додати в Google Calendar
-      </a>
-    </div>`;
-
-  document.getElementById('event-modal').classList.add('open');
-  document.body.style.overflow = 'hidden';
-}
-
-// Глобальна функція закриття модалки (викликається через onclick у HTML)
-window.closeEventModal = function() {
-  const m = document.getElementById('event-modal');
-  if (m) { m.classList.remove('open'); document.body.style.overflow = ''; }
-};
 
 // Рендер чіпів фільтрів (filter chips)
 function renderFilters() {
@@ -202,10 +156,22 @@ function renderList() {
   }
 
   el.innerHTML = list.map(cardHtml).join('');
+
+  // Акордеон (accordion) — розгортання картки при кліку
   el.querySelectorAll('.ev-card').forEach(card => {
-    card.addEventListener('click', () => {
-      const ev = allEvents.find(e => e.id === Number(card.dataset.id));
-      if (ev) openEventModal(ev);
+    card.addEventListener('click', (e) => {
+      // Клік на посилання календаря — не перехоплюємо
+      if (e.target.closest('.ev-cal-btn')) return;
+
+      // Клік на кнопку "Згорнути" — закриваємо і прокручуємо до картки
+      if (e.target.closest('.ev-detail-close')) {
+        card.classList.remove('expanded');
+        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+
+      // Інакше — перемикаємо стан розгорнутості (toggle expanded state)
+      card.classList.toggle('expanded');
     });
   });
 }
