@@ -478,220 +478,319 @@
   }
 
   // src/tabs/buses.js
-  var PREFS_KEY = "bus_prefs";
+  var PREFS_KEY = "bus_prefs_v2";
   var busData = null;
-  var activeDirection = "from_olyka";
-  var activeStop = "\u0412\u0441\u0456";
+  var fromStop = "";
+  var toStop = "";
   var showAll = false;
   var timerInterval = null;
+  var expandedIds = /* @__PURE__ */ new Set();
   function savePrefs() {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ direction: activeDirection, stop: activeStop }));
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
   }
   function loadPrefs() {
     try {
       const p = JSON.parse(localStorage.getItem(PREFS_KEY));
-      if (p?.direction)
-        activeDirection = p.direction;
-      if (p?.stop)
-        activeStop = p.stop;
+      if (p?.from)
+        fromStop = p.from;
+      if (p?.to)
+        toStop = p.to;
     } catch {
     }
   }
-  function isDayActive(days) {
-    const day = (/* @__PURE__ */ new Date()).getDay();
-    if (days === "\u0449\u043E\u0434\u043D\u044F")
-      return true;
-    if (days === "\u043F\u043D-\u0441\u0431")
-      return day >= 1 && day <= 6;
-    if (days === "\u043F\u043D-\u043F\u0442")
-      return day >= 1 && day <= 5;
-    return true;
-  }
-  function toMinutes(timeStr) {
-    const [h, m] = timeStr.split(":").map(Number);
+  function toMinutes(hhmm) {
+    const [h, m] = hhmm.split(":").map(Number);
     return h * 60 + m;
   }
-  function minutesUntil(timeStr) {
+  function minsToHHMM(total) {
+    const h = Math.floor(total / 60) % 24;
+    const m = total % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+  function minutesUntil(hhmm) {
     const now = /* @__PURE__ */ new Date();
-    const diff = toMinutes(timeStr) - (now.getHours() * 60 + now.getMinutes());
+    const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
     return diff > 0 ? diff : null;
   }
-  function formatTimer(mins) {
+  function formatCountdown(mins) {
     if (mins < 60)
       return `\u0447\u0435\u0440\u0435\u0437 ${mins} \u0445\u0432`;
     const h = Math.floor(mins / 60), m = mins % 60;
-    return m > 0 ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
+    return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
   }
-  function calcArrival(timeStr, duration) {
-    if (!duration)
+  function isDayActive(days) {
+    const d = (/* @__PURE__ */ new Date()).getDay();
+    if (days === "\u0449\u043E\u0434\u043D\u044F")
+      return true;
+    if (days === "\u043F\u043D-\u0441\u0431")
+      return d >= 1 && d <= 6;
+    if (days === "\u043F\u043D-\u043F\u0442")
+      return d >= 1 && d <= 5;
+    return true;
+  }
+  function getStopMins(route, stopName) {
+    const stop = route.stops.find((s) => s.name === stopName);
+    if (!stop)
       return null;
-    const [h, m] = timeStr.split(":").map(Number);
-    const total = h * 60 + m + duration;
-    const ah = Math.floor(total / 60) % 24;
-    const am = total % 60;
-    return `${String(ah).padStart(2, "0")}:${String(am).padStart(2, "0")}`;
+    const totalKm = route.stops[route.stops.length - 1].km;
+    if (totalKm === 0)
+      return toMinutes(route.departure_time);
+    return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
   }
-  function getFiltered2() {
+  function getStopHHMM(route, stopName) {
+    const m = getStopMins(route, stopName);
+    return m !== null ? minsToHHMM(m) : null;
+  }
+  function getSegmentPrice(route, fromName, toName) {
+    const f = route.stops.find((s) => s.name === fromName);
+    const t = route.stops.find((s) => s.name === toName);
+    if (!f || !t)
+      return null;
+    return Math.abs(t.price_from_start - f.price_from_start).toFixed(2);
+  }
+  function getEffectiveFrom(route) {
+    if (fromStop && route.stops.some((s) => s.name === fromStop))
+      return fromStop;
+    return route.stops[0].name;
+  }
+  function getEffectiveTo(route) {
+    if (toStop && route.stops.some((s) => s.name === toStop))
+      return toStop;
+    return route.stops[route.stops.length - 1].name;
+  }
+  function matchesSearch(route) {
+    if (!isDayActive(route.days))
+      return false;
+    const stops = route.stops;
+    const fromIdx = fromStop ? stops.findIndex((s) => s.name === fromStop) : 0;
+    const toIdx = toStop ? stops.findIndex((s) => s.name === toStop) : stops.length - 1;
+    if (fromStop && fromIdx === -1)
+      return false;
+    if (toStop && toIdx === -1)
+      return false;
+    if (fromStop && toStop && fromIdx >= toIdx)
+      return false;
+    return true;
+  }
+  function isPastRoute(route) {
+    const m = getStopMins(route, getEffectiveFrom(route));
+    if (m === null)
+      return true;
+    const now = /* @__PURE__ */ new Date();
+    return m < now.getHours() * 60 + now.getMinutes();
+  }
+  function getFilteredRoutes() {
     if (!busData)
       return [];
-    return busData.buses.filter((b) => {
-      if (b.direction !== activeDirection)
-        return false;
-      if (activeStop !== "\u0412\u0441\u0456" && !b.stops.includes(activeStop))
-        return false;
-      return true;
-    }).sort((a, b) => toMinutes(a.time) - toMinutes(b.time));
+    return busData.routes.filter(matchesSearch).sort((a, b) => {
+      const aM = getStopMins(a, getEffectiveFrom(a)) || 0;
+      const bM = getStopMins(b, getEffectiveFrom(b)) || 0;
+      return aM - bM;
+    });
   }
-  function isPast(b) {
-    const nowMin = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
-    return toMinutes(b.time) < nowMin || !isDayActive(b.days);
+  function findNextRoute() {
+    return getFilteredRoutes().find((r) => !isPastRoute(r)) || null;
   }
-  function findNext() {
-    return getFiltered2().filter((b) => isDayActive(b.days)).find((b) => minutesUntil(b.time) !== null) || null;
-  }
-  function getStops() {
+  function getAllStops() {
     if (!busData)
       return [];
     const seen = /* @__PURE__ */ new Set();
-    busData.buses.filter((b) => b.direction === activeDirection).flatMap((b) => b.stops).forEach((s) => seen.add(s));
-    return [...seen];
+    busData.routes.forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
+    return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
   }
-  function updateSmartRow() {
+  function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
-    const next = findNext();
+    const next = findNextRoute();
     if (!next) {
       el.innerHTML = `<span class="bsr-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</span>`;
+      el.className = "bus-smart-row";
       return;
     }
-    const mins = minutesUntil(next.time);
-    const urgent = mins <= 10;
-    const arrival = calcArrival(next.time, next.duration);
+    const effFrom = getEffectiveFrom(next);
+    const fromTime = getStopHHMM(next, effFrom);
+    const mins = minutesUntil(fromTime);
+    const urgent = mins !== null && mins <= 10;
     el.className = `bus-smart-row${urgent ? " urgent" : ""}`;
     el.innerHTML = `
     <span class="bsr-icon">\u25B6</span>
     <span class="bsr-text">
-      \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(formatTimer(mins))}</strong> \u2014
-      ${escapeHtml(next.time)}${arrival ? ` \u2192 ${escapeHtml(arrival)}` : ""}, ${escapeHtml(next.route)}
+      \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : "\u0437\u0430\u0440\u0430\u0437")}</strong>
+      \u2014 ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
     </span>
     ${urgent ? `<span class="bsr-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
   `;
   }
-  function renderList2() {
+  function renderRouteList() {
     const el = document.getElementById("bus-list");
     if (!el)
       return;
-    const next = findNext();
-    const buses = getFiltered2();
-    const futureBuses = buses.filter((b) => !isPast(b));
-    const pastBuses = buses.filter((b) => isPast(b));
-    if (!buses.length) {
-      el.innerHTML = '<div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0447\u0435\u0440\u0435\u0437 \u0446\u044E \u0437\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435\u043C\u0430\u0454</div>';
+    const all = getFilteredRoutes();
+    const future = all.filter((r) => !isPastRoute(r));
+    const past = all.filter((r) => isPastRoute(r));
+    const toRender = showAll ? all : future;
+    if (!all.length) {
+      el.innerHTML = `<div class="empty-state">\u0417\u0430 \u0446\u0438\u043C \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u043E\u043C \u0440\u0435\u0439\u0441\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
       return;
     }
-    const toRender = showAll ? buses : futureBuses;
     if (!toRender.length) {
       el.innerHTML = `
       <div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>
       <button class="bus-show-all" id="bus-show-all-btn">
-        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${buses.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
+        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u2193
       </button>`;
       document.getElementById("bus-show-all-btn").addEventListener("click", () => {
         showAll = true;
-        renderList2();
+        renderRouteList();
       });
       return;
     }
-    const rowsHtml = toRender.map((b) => {
-      const past = isPast(b);
-      const isNext = next && b.id === next.id;
-      const arrival = calcArrival(b.time, b.duration);
+    const next = findNextRoute();
+    const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
+    const cards = toRender.map((route) => {
+      const past2 = isPastRoute(route);
+      const isNext = next && route.id === next.id;
+      const effFrom = getEffectiveFrom(route);
+      const effTo = getEffectiveTo(route);
+      const fromTime = getStopHHMM(route, effFrom);
+      const toTime = getStopHHMM(route, effTo);
+      const price = getSegmentPrice(route, effFrom, effTo);
+      const fromMins = getStopMins(route, effFrom) || 0;
+      const toMins = getStopMins(route, effTo) || 0;
+      const segDur = toMins - fromMins;
+      const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
+      const c = carrierInfo(route.carrier);
+      const expanded = expandedIds.has(route.id);
+      const basePrice = route.stops.find((s) => s.name === effFrom)?.price_from_start ?? 0;
+      const stopsHtml = route.stops.map((s) => {
+        const isFrom = s.name === effFrom;
+        const isTo = s.name === effTo;
+        const hl = isFrom || isTo;
+        const t = getStopHHMM(route, s.name);
+        const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
+        return `
+        <div class="bs-stop-row${hl ? " hl" : ""}">
+          <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
+          <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-price">${escapeHtml(seg)} \u0433\u0440\u043D</span>
+        </div>`;
+      }).join("");
+      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
+      const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       return `
-      <div class="brow${past ? " brow--past" : ""}${isNext ? " brow--next" : ""}">
-        <div class="brow-time-block">
-          <span class="brow-time">${escapeHtml(b.time)}</span>
-          ${arrival ? `<span class="brow-arrival">\u2192 ${escapeHtml(arrival)}</span>` : ""}
+      <div class="bus-card${past2 ? " past" : ""}${isNext ? " next" : ""}">
+        <div class="bus-card-main">
+          <div class="bs-time-block">
+            <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
+            <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
+          </div>
+          <div class="bus-card-info">
+            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
+            <div class="bus-card-meta">
+              <span>${escapeHtml(durStr)}</span>
+              <span class="bus-meta-sep">\xB7</span>
+              <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
+              <span class="bus-meta-sep">\xB7</span>
+              <span>${escapeHtml(c.name)}</span>
+            </div>
+            ${autoNote}
+          </div>
+          ${!past2 && route.status !== "cancelled" ? `
+          <a class="bus-call-btn" href="tel:${escapeHtml(c.phone.replace(/\s/g, ""))}"
+             title="\u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440 ${escapeHtml(c.phone)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                 stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+            </svg>
+          </a>` : ""}
         </div>
-        <div class="brow-info">
-          <span class="brow-route">${escapeHtml(b.route)}</span>
-          <span class="brow-meta">${escapeHtml(b.days)} \xB7 ${escapeHtml(b.price)}</span>
+        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
+          ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
+        </button>
+        <div class="bs-stops-body"${expanded ? "" : " hidden"}>
+          ${stopsHtml}
         </div>
-        ${!past ? `
-        <a class="brow-call" href="tel:${escapeHtml(busData.dispatcher.replace(/\s/g, ""))}"
-           title="\u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440 ${escapeHtml(busData.dispatcher)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-          </svg>
-        </a>` : ""}
       </div>`;
     }).join("");
     let toggleHtml = "";
-    if (!showAll && pastBuses.length > 0) {
+    if (!showAll && past.length > 0) {
       toggleHtml = `
       <button class="bus-show-all" id="bus-show-all-btn">
-        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${buses.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
+        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
       </button>`;
-    } else if (showAll) {
+    } else if (showAll && past.length > 0) {
       toggleHtml = `
       <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
-        \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u0440\u0435\u0439\u0441\u0438 \u2191
+        \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
       </button>`;
     }
-    el.innerHTML = rowsHtml + toggleHtml;
-    const btn = document.getElementById("bus-show-all-btn");
-    if (btn) {
+    el.innerHTML = cards + toggleHtml;
+    el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
-        showAll = !showAll;
-        renderList2();
-      });
-    }
-  }
-  function renderStopFilter() {
-    const el = document.getElementById("bus-stop-filter");
-    if (!el)
-      return;
-    const stops = ["\u0412\u0441\u0456", ...getStops()];
-    if (activeStop !== "\u0412\u0441\u0456" && !getStops().includes(activeStop)) {
-      activeStop = "\u0412\u0441\u0456";
-    }
-    el.innerHTML = stops.map(
-      (s) => `<button class="chip${s === activeStop ? " active" : ""}" data-stop="${escapeHtml(s)}">${escapeHtml(s)}</button>`
-    ).join("");
-    el.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeStop = btn.dataset.stop;
-        showAll = false;
-        savePrefs();
-        renderStopFilter();
-        renderList2();
-        updateSmartRow();
+        const id = btn.dataset.id;
+        if (expandedIds.has(id))
+          expandedIds.delete(id);
+        else
+          expandedIds.add(id);
+        renderRouteList();
       });
     });
+    const showAllBtn = document.getElementById("bus-show-all-btn");
+    if (showAllBtn) {
+      showAllBtn.addEventListener("click", () => {
+        showAll = !showAll;
+        renderRouteList();
+      });
+    }
   }
-  function renderTabs() {
-    const el = document.getElementById("bus-direction-tabs");
+  function renderSearchPanel() {
+    const el = document.getElementById("bus-search-panel");
     if (!el)
       return;
-    const tabs = [
-      { id: "from_olyka", label: "\u0417 \u041E\u043B\u0438\u043A\u0438" },
-      { id: "to_olyka", label: "\u0412 \u041E\u043B\u0438\u043A\u0443" }
-    ];
-    el.innerHTML = tabs.map(
-      (t) => `<button class="route-tab${t.id === activeDirection ? " active" : ""}" data-dir="${t.id}">${t.label}</button>`
-    ).join("");
-    el.querySelectorAll(".route-tab").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeDirection = btn.dataset.dir;
-        activeStop = "\u0412\u0441\u0456";
-        showAll = false;
-        savePrefs();
-        renderTabs();
-        renderStopFilter();
-        renderList2();
-        updateSmartRow();
-      });
+    const stops = getAllStops();
+    const opts = stops.map((s) => `<option value="${escapeHtml(s)}">`).join("");
+    el.innerHTML = `
+    <datalist id="bs-stops-list">${opts}</datalist>
+    <div class="bs-search-row">
+      <div class="bs-search-field">
+        <label class="bs-search-label" for="bs-from-input">\u0412\u0456\u0434</label>
+        <input class="bs-search-input" id="bs-from-input"
+               list="bs-stops-list" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438\u2026"
+               value="${escapeHtml(fromStop)}" autocomplete="off">
+      </div>
+      <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">\u21CC</button>
+      <div class="bs-search-field">
+        <label class="bs-search-label" for="bs-to-input">\u0414\u043E</label>
+        <input class="bs-search-input" id="bs-to-input"
+               list="bs-stops-list" placeholder="\u041A\u0443\u0434\u0438\u2026"
+               value="${escapeHtml(toStop)}" autocomplete="off">
+      </div>
+    </div>
+  `;
+    const fromInput = document.getElementById("bs-from-input");
+    const toInput = document.getElementById("bs-to-input");
+    const swapBtn = document.getElementById("bs-swap-btn");
+    function onSearchChange() {
+      fromStop = fromInput.value.trim();
+      toStop = toInput.value.trim();
+      showAll = false;
+      savePrefs();
+      renderSmartRow();
+      renderRouteList();
+    }
+    fromInput.addEventListener("change", onSearchChange);
+    fromInput.addEventListener("input", onSearchChange);
+    toInput.addEventListener("change", onSearchChange);
+    toInput.addEventListener("input", onSearchChange);
+    swapBtn.addEventListener("click", () => {
+      [fromStop, toStop] = [toStop, fromStop];
+      fromInput.value = fromStop;
+      toInput.value = toStop;
+      showAll = false;
+      savePrefs();
+      renderSmartRow();
+      renderRouteList();
     });
   }
   async function initBuses() {
@@ -701,6 +800,8 @@
     loadPrefs();
     try {
       const res = await fetch("./data/schedule.json");
+      if (!res.ok)
+        throw new Error(res.status);
       busData = await res.json();
     } catch {
       busData = null;
@@ -710,25 +811,21 @@
       return;
     }
     el.innerHTML = `
-    <div class="route-tabs" id="bus-direction-tabs"></div>
-    <div class="bus-stop-bar">
-      <div id="bus-stop-filter" class="chips-row"></div>
-    </div>
+    <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
-      ${escapeHtml(busData.source)} \xB7 \u041F\u0435\u0440\u0435\u0432\u0456\u0440\u0435\u043D\u043E ${escapeHtml(busData.verifiedAt)} \xB7 \u{1F4DE} ${escapeHtml(busData.dispatcher)}
+      ${escapeHtml(busData.source)} \xB7 ${escapeHtml(busData.verifiedAt)}
     </div>
   `;
-    renderTabs();
-    renderStopFilter();
-    renderList2();
-    updateSmartRow();
+    renderSearchPanel();
+    renderSmartRow();
+    renderRouteList();
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
-      updateSmartRow();
-      renderList2();
+      renderSmartRow();
+      renderRouteList();
     }, 6e4);
   }
 

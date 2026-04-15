@@ -1001,3 +1001,169 @@ html, body {
   transition: background 0.15s, color 0.15s;
 }
 .bus-share-btn:active { background: var(--gray-light); }
+
+/* ===== BUSES v3 — Пошук "Звідки → Куди" + акордеон зупинок ===== */
+
+/* Контейнер панелі пошуку */
+.bus-search {
+  padding: 10px 16px 12px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+}
+
+/* Рядок з двома полями і кнопкою swap */
+.bs-search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Одне поле "Від" або "До" */
+.bs-search-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bs-search-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bs-search-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--black);
+  background: var(--gray-light);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.bs-search-input:focus {
+  border-color: var(--navy);
+  background: var(--white);
+}
+.bs-search-input::placeholder { color: var(--gray); }
+
+/* Кнопка "⇌" — поміняти місцями (swap button) */
+.bs-swap-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  color: var(--navy);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 1px;
+}
+.bs-swap-btn:active { background: var(--gray-light); border-color: var(--navy); }
+
+/* Блок часу (відправлення + прибуття) */
+.bs-time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 72px;
+}
+
+/* Час прибуття під відправленням */
+.bs-arr {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 1px;
+}
+
+/* Підсвічування наступного рейсу */
+.bus-card.next {
+  border-left: 3px solid var(--navy);
+  background: #f7f9ff;
+  padding-left: 13px;
+}
+.bus-card.next .bus-card-main { padding-left: 0; }
+
+/* Кнопка "Всі зупинки ▾ / Сховати ▴" */
+.bs-toggle {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.bs-toggle:active { background: var(--gray-light); }
+
+/* Тіло акордеону (accordion body — список зупинок, прихований за замовчуванням) */
+.bs-stops-body {
+  background: var(--gray-light);
+  border-top: 1px solid var(--border);
+  padding: 4px 0 6px;
+}
+.bs-stops-body[hidden] { display: none; }
+
+/* Рядок однієї зупинки */
+.bs-stop-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 16px;
+  font-size: 12px;
+  color: var(--gray);
+}
+.bs-stop-row.hl {
+  background: var(--white);
+  font-weight: 700;
+  color: var(--black);
+}
+
+.bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
+.bs-stop-name  { flex: 1; }
+.bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; }
+
+/* Бейджики статусу (status badge — cancelled, delayed) */
+.bs-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 5px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.bs-status.cancelled { background: #fee2e2; color: var(--red); }
+.bs-status.delayed   { background: #fef3c7; color: #92400e; }
+
+/* Підказка "розрахований зворотний рейс" */
+.bs-autogen {
+  font-size: 10px;
+  color: var(--gray);
+  font-style: italic;
+  margin-top: 2px;
+}
