@@ -485,6 +485,7 @@
   var showAll = false;
   var timerInterval = null;
   var expandedIds = /* @__PURE__ */ new Set();
+  var activeField = null;
   function savePrefs() {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
   }
@@ -598,6 +599,86 @@
     busData.routes.forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
     return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
   }
+  function openDropdown(field) {
+    activeField = field;
+    const panel = document.getElementById("bus-search-panel");
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd || !panel)
+      return;
+    const rect = panel.getBoundingClientRect();
+    dd.style.top = rect.bottom + "px";
+    renderDropdownItems("");
+    dd.hidden = false;
+    const filterEl = document.getElementById("bs-dd-filter");
+    if (filterEl)
+      setTimeout(() => filterEl.focus(), 80);
+  }
+  function renderDropdownItems(query) {
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd)
+      return;
+    const all = getAllStops();
+    const q = query.trim().toLowerCase();
+    const filtered = q ? all.filter((s) => s.toLowerCase().includes(q)) : all;
+    const current = activeField === "from" ? fromStop : toStop;
+    const title = activeField === "from" ? "\u0417\u0432\u0456\u0434\u043A\u0438 \u0457\u0434\u0435\u0442\u0435?" : "\u041A\u0443\u0434\u0438 \u0457\u0434\u0435\u0442\u0435?";
+    const clearHtml = current ? `<button class="bs-dd-clear" id="bs-dd-clear">\u2715 \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0438\u0431\u0456\u0440 (${escapeHtml(current)})</button>` : "";
+    const itemsHtml = filtered.length ? filtered.map(
+      (s) => `<button class="bs-dd-item${s === current ? " sel" : ""}" data-stop="${escapeHtml(s)}">
+           ${escapeHtml(s)}
+         </button>`
+    ).join("") : `<div class="bs-dd-empty">\u0417\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
+    dd.innerHTML = `
+    <div class="bs-dd-head">
+      <span class="bs-dd-title">${escapeHtml(title)}</span>
+      <button class="bs-dd-x" id="bs-dd-x">\u2715</button>
+    </div>
+    <div class="bs-dd-search">
+      <input class="bs-dd-filter" id="bs-dd-filter"
+             placeholder="\u041F\u043E\u0448\u0443\u043A \u0437\u0443\u043F\u0438\u043D\u043A\u0438\u2026" value="${escapeHtml(query)}"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="bs-dd-list">
+      ${clearHtml}
+      ${itemsHtml}
+    </div>
+  `;
+    document.getElementById("bs-dd-filter")?.addEventListener("input", (e) => {
+      renderDropdownItems(e.target.value);
+    });
+    document.getElementById("bs-dd-x")?.addEventListener("click", closeDropdown);
+    document.getElementById("bs-dd-clear")?.addEventListener("click", () => {
+      selectStop("", activeField);
+    });
+    dd.querySelectorAll(".bs-dd-item").forEach((btn) => {
+      btn.addEventListener("mousedown", (e) => e.preventDefault());
+      btn.addEventListener("click", () => selectStop(btn.dataset.stop, activeField));
+    });
+  }
+  function closeDropdown() {
+    activeField = null;
+    const dd = document.getElementById("bs-dropdown");
+    if (dd)
+      dd.hidden = true;
+  }
+  function selectStop(stop, field) {
+    if (field === "from") {
+      fromStop = stop;
+      const inp = document.getElementById("bs-from-input");
+      if (inp)
+        inp.value = stop;
+    } else {
+      toStop = stop;
+      const inp = document.getElementById("bs-to-input");
+      if (inp)
+        inp.value = stop;
+    }
+    closeDropdown();
+    showAll = false;
+    savePrefs();
+    renderSmartRow();
+    renderRouteList();
+  }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
@@ -649,7 +730,7 @@
     const next = findNextRoute();
     const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
     const cards = toRender.map((route) => {
-      const past2 = isPastRoute(route);
+      const isPast = isPastRoute(route);
       const isNext = next && route.id === next.id;
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
@@ -679,7 +760,7 @@
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       return `
-      <div class="bus-card${past2 ? " past" : ""}${isNext ? " next" : ""}">
+      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
@@ -696,7 +777,7 @@
             </div>
             ${autoNote}
           </div>
-          ${!past2 && route.status !== "cancelled" ? `
+          ${!isPast && route.status !== "cancelled" ? `
           <a class="bus-call-btn" href="tel:${escapeHtml(c.phone.replace(/\s/g, ""))}"
              title="\u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440 ${escapeHtml(c.phone)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -748,45 +829,30 @@
     const el = document.getElementById("bus-search-panel");
     if (!el)
       return;
-    const stops = getAllStops();
-    const opts = stops.map((s) => `<option value="${escapeHtml(s)}">`).join("");
     el.innerHTML = `
-    <datalist id="bs-stops-list">${opts}</datalist>
     <div class="bs-search-row">
       <div class="bs-search-field">
         <label class="bs-search-label" for="bs-from-input">\u0412\u0456\u0434</label>
-        <input class="bs-search-input" id="bs-from-input"
-               list="bs-stops-list" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438\u2026"
-               value="${escapeHtml(fromStop)}" autocomplete="off">
+        <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
+               type="text" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438\u2026"
+               value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">\u21CC</button>
       <div class="bs-search-field">
         <label class="bs-search-label" for="bs-to-input">\u0414\u043E</label>
-        <input class="bs-search-input" id="bs-to-input"
-               list="bs-stops-list" placeholder="\u041A\u0443\u0434\u0438\u2026"
-               value="${escapeHtml(toStop)}" autocomplete="off">
+        <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
+               type="text" placeholder="\u041A\u0443\u0434\u0438\u2026"
+               value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
   `;
-    const fromInput = document.getElementById("bs-from-input");
-    const toInput = document.getElementById("bs-to-input");
-    const swapBtn = document.getElementById("bs-swap-btn");
-    function onSearchChange() {
-      fromStop = fromInput.value.trim();
-      toStop = toInput.value.trim();
-      showAll = false;
-      savePrefs();
-      renderSmartRow();
-      renderRouteList();
-    }
-    fromInput.addEventListener("change", onSearchChange);
-    fromInput.addEventListener("input", onSearchChange);
-    toInput.addEventListener("change", onSearchChange);
-    toInput.addEventListener("input", onSearchChange);
-    swapBtn.addEventListener("click", () => {
+    document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
+    document.getElementById("bs-to-input").addEventListener("click", () => openDropdown("to"));
+    document.getElementById("bs-swap-btn").addEventListener("click", () => {
       [fromStop, toStop] = [toStop, fromStop];
-      fromInput.value = fromStop;
-      toInput.value = toStop;
+      document.getElementById("bs-from-input").value = fromStop;
+      document.getElementById("bs-to-input").value = toStop;
+      closeDropdown();
       showAll = false;
       savePrefs();
       renderSmartRow();
@@ -798,6 +864,21 @@
     if (!el)
       return;
     loadPrefs();
+    if (!document.getElementById("bs-dropdown")) {
+      const dd = document.createElement("div");
+      dd.id = "bs-dropdown";
+      dd.className = "bs-dropdown";
+      dd.hidden = true;
+      document.body.appendChild(dd);
+    }
+    document.addEventListener("click", (e) => {
+      const dd = document.getElementById("bs-dropdown");
+      if (!dd || dd.hidden)
+        return;
+      if (!dd.contains(e.target) && e.target.id !== "bs-from-input" && e.target.id !== "bs-to-input") {
+        closeDropdown();
+      }
+    }, true);
     try {
       const res = await fetch("./data/schedule.json");
       if (!res.ok)

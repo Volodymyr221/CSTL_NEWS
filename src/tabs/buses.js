@@ -8,6 +8,7 @@ let toStop        = '';
 let showAll       = false;
 let timerInterval = null;
 let expandedIds   = new Set();
+let activeField   = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
 
 // ── Preferences (localStorage — збереження налаштувань у браузері) ────
 function savePrefs() {
@@ -47,7 +48,7 @@ function formatCountdown(mins) {
 }
 
 function isDayActive(days) {
-  const d = new Date().getDay(); // 0=нд, 1=пн … 6=сб
+  const d = new Date().getDay();
   if (days === 'щодня') return true;
   if (days === 'пн-сб') return d >= 1 && d <= 6;
   if (days === 'пн-пт') return d >= 1 && d <= 5;
@@ -55,8 +56,6 @@ function isDayActive(days) {
 }
 
 // ── Route calculations (розрахунок часу та ціни) ──────────────────────
-
-// Повертає хвилини від опівночі для зупинки у рейсі (пропорційно км)
 function getStopMins(route, stopName) {
   const stop = route.stops.find(s => s.name === stopName);
   if (!stop) return null;
@@ -65,13 +64,11 @@ function getStopMins(route, stopName) {
   return toMinutes(route.departure_time) + Math.round((stop.km / totalKm) * route.duration_min);
 }
 
-// Повертає "HH:MM" для зупинки
 function getStopHHMM(route, stopName) {
   const m = getStopMins(route, stopName);
   return m !== null ? minsToHHMM(m) : null;
 }
 
-// Ціна відрізку між двома зупинками
 function getSegmentPrice(route, fromName, toName) {
   const f = route.stops.find(s => s.name === fromName);
   const t = route.stops.find(s => s.name === toName);
@@ -79,13 +76,11 @@ function getSegmentPrice(route, fromName, toName) {
   return Math.abs(t.price_from_start - f.price_from_start).toFixed(2);
 }
 
-// "Звідки" для рейсу: вибрана зупинка або перша зупинка маршруту
 function getEffectiveFrom(route) {
   if (fromStop && route.stops.some(s => s.name === fromStop)) return fromStop;
   return route.stops[0].name;
 }
 
-// "Куди" для рейсу: вибрана зупинка або остання зупинка маршруту
 function getEffectiveTo(route) {
   if (toStop && route.stops.some(s => s.name === toStop)) return toStop;
   return route.stops[route.stops.length - 1].name;
@@ -125,12 +120,115 @@ function findNextRoute() {
   return getFilteredRoutes().find(r => !isPastRoute(r)) || null;
 }
 
-// Всі унікальні назви зупинок з усіх маршрутів (для автодоповнення)
 function getAllStops() {
   if (!busData) return [];
   const seen = new Set();
   busData.routes.forEach(r => r.stops.forEach(s => seen.add(s.name)));
   return [...seen].sort((a, b) => a.localeCompare(b, 'uk'));
+}
+
+// ── Dropdown (кастомний список вибору зупинки) ────────────────────────
+
+// Відкриває дропдаун для поля 'from' або 'to'
+function openDropdown(field) {
+  activeField = field;
+  const panel = document.getElementById('bus-search-panel');
+  const dd    = document.getElementById('bs-dropdown');
+  if (!dd || !panel) return;
+
+  // Позиціонуємо фіксовано під панеллю пошуку (fixed — прив'язка до екрана)
+  const rect  = panel.getBoundingClientRect();
+  dd.style.top = rect.bottom + 'px';
+
+  renderDropdownItems('');
+  dd.hidden = false;
+
+  // Фокус на поле фільтру
+  const filterEl = document.getElementById('bs-dd-filter');
+  if (filterEl) setTimeout(() => filterEl.focus(), 80);
+}
+
+// Промальовує вміст дропдауну (фільтрований список зупинок)
+function renderDropdownItems(query) {
+  const dd = document.getElementById('bs-dropdown');
+  if (!dd) return;
+
+  const all      = getAllStops();
+  const q        = query.trim().toLowerCase();
+  const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
+  const current  = activeField === 'from' ? fromStop : toStop;
+  const title    = activeField === 'from' ? 'Звідки їдете?' : 'Куди їдете?';
+
+  const clearHtml = current
+    ? `<button class="bs-dd-clear" id="bs-dd-clear">✕ Очистити вибір (${escapeHtml(current)})</button>`
+    : '';
+
+  const itemsHtml = filtered.length
+    ? filtered.map(s =>
+        `<button class="bs-dd-item${s === current ? ' sel' : ''}" data-stop="${escapeHtml(s)}">
+           ${escapeHtml(s)}
+         </button>`
+      ).join('')
+    : `<div class="bs-dd-empty">Зупинку не знайдено</div>`;
+
+  dd.innerHTML = `
+    <div class="bs-dd-head">
+      <span class="bs-dd-title">${escapeHtml(title)}</span>
+      <button class="bs-dd-x" id="bs-dd-x">✕</button>
+    </div>
+    <div class="bs-dd-search">
+      <input class="bs-dd-filter" id="bs-dd-filter"
+             placeholder="Пошук зупинки…" value="${escapeHtml(query)}"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="bs-dd-list">
+      ${clearHtml}
+      ${itemsHtml}
+    </div>
+  `;
+
+  // Фільтр при наборі
+  document.getElementById('bs-dd-filter')?.addEventListener('input', e => {
+    renderDropdownItems(e.target.value);
+  });
+
+  // Закрити ✕
+  document.getElementById('bs-dd-x')?.addEventListener('click', closeDropdown);
+
+  // Очистити вибір
+  document.getElementById('bs-dd-clear')?.addEventListener('click', () => {
+    selectStop('', activeField);
+  });
+
+  // Вибір зупинки
+  dd.querySelectorAll('.bs-dd-item').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault()); // не знімати фокус
+    btn.addEventListener('click', () => selectStop(btn.dataset.stop, activeField));
+  });
+}
+
+function closeDropdown() {
+  activeField = null;
+  const dd = document.getElementById('bs-dropdown');
+  if (dd) dd.hidden = true;
+}
+
+// Вибирає зупинку і закриває дропдаун
+function selectStop(stop, field) {
+  if (field === 'from') {
+    fromStop = stop;
+    const inp = document.getElementById('bs-from-input');
+    if (inp) inp.value = stop;
+  } else {
+    toStop = stop;
+    const inp = document.getElementById('bs-to-input');
+    if (inp) inp.value = stop;
+  }
+  closeDropdown();
+  showAll = false;
+  savePrefs();
+  renderSmartRow();
+  renderRouteList();
 }
 
 // ── Smart row (рядок "наступний автобус") ─────────────────────────────
@@ -190,7 +288,7 @@ function renderRouteList() {
   const carrierInfo = id => busData.carriers?.[id] || { name: id, phone: '0332 224 500' };
 
   const cards = toRender.map(route => {
-    const past    = isPastRoute(route);
+    const isPast  = isPastRoute(route);
     const isNext  = next && route.id === next.id;
     const effFrom = getEffectiveFrom(route);
     const effTo   = getEffectiveTo(route);
@@ -205,11 +303,8 @@ function renderRouteList() {
       : `${segDur} хв`;
     const c        = carrierInfo(route.carrier);
     const expanded = expandedIds.has(route.id);
-
-    // Базова ціна від ефективної початкової зупинки (для акордеону)
     const basePrice = route.stops.find(s => s.name === effFrom)?.price_from_start ?? 0;
 
-    // Акордеон зупинок (accordion — список зупинок маршруту)
     const stopsHtml = route.stops.map(s => {
       const isFrom = s.name === effFrom;
       const isTo   = s.name === effTo;
@@ -235,7 +330,7 @@ function renderRouteList() {
       : '';
 
     return `
-      <div class="bus-card${past ? ' past' : ''}${isNext ? ' next' : ''}">
+      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
@@ -252,7 +347,7 @@ function renderRouteList() {
             </div>
             ${autoNote}
           </div>
-          ${!past && route.status !== 'cancelled' ? `
+          ${!isPast && route.status !== 'cancelled' ? `
           <a class="bus-call-btn" href="tel:${escapeHtml(c.phone.replace(/\s/g, ''))}"
              title="Диспетчер ${escapeHtml(c.phone)}" aria-label="Зателефонувати">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -270,7 +365,6 @@ function renderRouteList() {
       </div>`;
   }).join('');
 
-  // Кнопка "показати всі / сховати минулі"
   let toggleHtml = '';
   if (!showAll && past.length > 0) {
     toggleHtml = `
@@ -286,7 +380,6 @@ function renderRouteList() {
 
   el.innerHTML = cards + toggleHtml;
 
-  // Обробники акордеону (toggle — розгортання/згортання зупинок)
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
@@ -310,50 +403,32 @@ function renderSearchPanel() {
   const el = document.getElementById('bus-search-panel');
   if (!el) return;
 
-  const stops = getAllStops();
-  const opts  = stops.map(s => `<option value="${escapeHtml(s)}">`).join('');
-
   el.innerHTML = `
-    <datalist id="bs-stops-list">${opts}</datalist>
     <div class="bs-search-row">
       <div class="bs-search-field">
         <label class="bs-search-label" for="bs-from-input">Від</label>
-        <input class="bs-search-input" id="bs-from-input"
-               list="bs-stops-list" placeholder="Звідки…"
-               value="${escapeHtml(fromStop)}" autocomplete="off">
+        <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
+               type="text" placeholder="Звідки…"
+               value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="Поміняти напрямок">⇌</button>
       <div class="bs-search-field">
         <label class="bs-search-label" for="bs-to-input">До</label>
-        <input class="bs-search-input" id="bs-to-input"
-               list="bs-stops-list" placeholder="Куди…"
-               value="${escapeHtml(toStop)}" autocomplete="off">
+        <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
+               type="text" placeholder="Куди…"
+               value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
   `;
 
-  const fromInput = document.getElementById('bs-from-input');
-  const toInput   = document.getElementById('bs-to-input');
-  const swapBtn   = document.getElementById('bs-swap-btn');
+  document.getElementById('bs-from-input').addEventListener('click', () => openDropdown('from'));
+  document.getElementById('bs-to-input').addEventListener('click',   () => openDropdown('to'));
 
-  function onSearchChange() {
-    fromStop = fromInput.value.trim();
-    toStop   = toInput.value.trim();
-    showAll  = false;
-    savePrefs();
-    renderSmartRow();
-    renderRouteList();
-  }
-
-  fromInput.addEventListener('change', onSearchChange);
-  fromInput.addEventListener('input',  onSearchChange);
-  toInput.addEventListener('change',   onSearchChange);
-  toInput.addEventListener('input',    onSearchChange);
-
-  swapBtn.addEventListener('click', () => {
+  document.getElementById('bs-swap-btn').addEventListener('click', () => {
     [fromStop, toStop] = [toStop, fromStop];
-    fromInput.value    = fromStop;
-    toInput.value      = toStop;
+    document.getElementById('bs-from-input').value = fromStop;
+    document.getElementById('bs-to-input').value   = toStop;
+    closeDropdown();
     showAll = false;
     savePrefs();
     renderSmartRow();
@@ -367,6 +442,26 @@ export async function initBuses() {
   if (!el) return;
 
   loadPrefs();
+
+  // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)
+  if (!document.getElementById('bs-dropdown')) {
+    const dd = document.createElement('div');
+    dd.id        = 'bs-dropdown';
+    dd.className = 'bs-dropdown';
+    dd.hidden    = true;
+    document.body.appendChild(dd);
+  }
+
+  // Закривати дропдаун при кліку поза ним
+  document.addEventListener('click', e => {
+    const dd = document.getElementById('bs-dropdown');
+    if (!dd || dd.hidden) return;
+    if (!dd.contains(e.target) &&
+        e.target.id !== 'bs-from-input' &&
+        e.target.id !== 'bs-to-input') {
+      closeDropdown();
+    }
+  }, true);
 
   try {
     const res = await fetch('./data/schedule.json');

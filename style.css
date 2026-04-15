@@ -1167,3 +1167,127 @@ html, body {
   font-style: italic;
   margin-top: 2px;
 }
+
+/* Курсор-рука для полів вибору зупинки (readonly — тільки читання, відкриває дропдаун) */
+.bs-search-input--tap { cursor: pointer; }
+.bs-search-input--tap:focus { outline: none; }
+
+/* ===== DROPDOWN — кастомний список вибору зупинки ===== */
+/* position:fixed — прив'язаний до екрана, не залежить від скролу */
+.bs-dropdown {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  background: var(--white);
+  max-height: 56vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.18);
+  border-bottom: 2px solid var(--border);
+}
+.bs-dropdown[hidden] { display: none; }
+
+/* Шапка: назва поля + кнопка ✕ */
+.bs-dd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.bs-dd-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--black);
+}
+.bs-dd-x {
+  width: 30px;
+  height: 30px;
+  background: var(--gray-light);
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--gray);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+/* Поле фільтру всередині дропдауну */
+.bs-dd-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--gray-light);
+}
+.bs-dd-filter {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  outline: none;
+  background: var(--white);
+  box-sizing: border-box;
+  color: var(--black);
+}
+.bs-dd-filter:focus { border-color: var(--navy); }
+
+/* Список зупинок — прокручується */
+.bs-dd-list {
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Кнопка однієї зупинки */
+.bs-dd-item {
+  display: block;
+  width: 100%;
+  padding: 15px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--black);
+  cursor: pointer;
+}
+.bs-dd-item.sel {
+  background: #eef2ff;
+  font-weight: 700;
+  color: var(--navy);
+}
+.bs-dd-item:active { background: var(--gray-light); }
+
+/* "Очистити вибір" */
+.bs-dd-clear {
+  display: block;
+  width: 100%;
+  padding: 13px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--red);
+  cursor: pointer;
+}
+.bs-dd-clear:active { background: #fff5f5; }
+
+/* "Зупинку не знайдено" */
+.bs-dd-empty {
+  padding: 24px 16px;
+  font-size: 14px;
+  color: var(--gray);
+  text-align: center;
+}
