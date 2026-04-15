@@ -403,6 +403,8 @@ function renderSearchPanel() {
   const el = document.getElementById('bus-search-panel');
   if (!el) return;
 
+  const hasFilter = fromStop || toStop;
+
   el.innerHTML = `
     <div class="bs-search-row">
       <div class="bs-search-field">
@@ -419,10 +421,24 @@ function renderSearchPanel() {
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
+    ${hasFilter ? `
+    <div class="bs-reset-row">
+      <button class="bs-reset-btn" id="bs-reset-btn">✕ Всі маршрути</button>
+    </div>` : ''}
   `;
 
   document.getElementById('bs-from-input').addEventListener('click', () => openDropdown('from'));
   document.getElementById('bs-to-input').addEventListener('click',   () => openDropdown('to'));
+
+  document.getElementById('bs-reset-btn')?.addEventListener('click', () => {
+    fromStop = '';
+    toStop   = '';
+    showAll  = false;
+    savePrefs();
+    renderSearchPanel();
+    renderSmartRow();
+    renderRouteList();
+  });
 
   document.getElementById('bs-swap-btn').addEventListener('click', () => {
     [fromStop, toStop] = [toStop, fromStop];

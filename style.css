@@ -1172,6 +1172,24 @@ html, body {
 .bs-search-input--tap { cursor: pointer; }
 .bs-search-input--tap:focus { outline: none; }
 
+/* Рядок кнопки "✕ Всі маршрути" (з'являється коли є активний фільтр) */
+.bs-reset-row {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+.bs-reset-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--red);
+  cursor: pointer;
+  padding: 2px 0;
+  letter-spacing: 0.1px;
+}
+
 /* ===== DROPDOWN — кастомний список вибору зупинки ===== */
 /* position:fixed — прив'язаний до екрана, не залежить від скролу */
 .bs-dropdown {
