@@ -910,7 +910,8 @@
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
-      ${escapeHtml(busData.source)} \xB7 ${escapeHtml(busData.verifiedAt)}
+      ${escapeHtml(busData.source)}<br>
+      \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
     </div>
   `;
     renderSearchPanel();

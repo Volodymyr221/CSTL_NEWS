@@ -497,7 +497,8 @@ export async function initBuses() {
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
-      ${escapeHtml(busData.source)} · ${escapeHtml(busData.verifiedAt)}
+      ${escapeHtml(busData.source)}<br>
+      Оновлено: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
     </div>
   `;
 
