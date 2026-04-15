@@ -1230,7 +1230,7 @@ html, body {
   padding: 9px 12px;
   border: 1.5px solid var(--border);
   border-radius: 8px;
-  font-size: 15px;
+  font-size: 16px; /* мін 16px — iOS не масштабує екран при фокусі */
   font-family: inherit;
   outline: none;
   background: var(--white);
