@@ -1,12 +1,12 @@
 {
-  "version": "2026-04-15",
+  "version": "2026-04-16",
   "verifiedAt": "15 квітня 2026",
   "verifiedTime": "17:00",
   "source": "VOPAS — Волинська АС-1 · Луцьк",
-  "note": "Зворотні рейси (auto_generated: true) розраховані: зупинка через 20 хв після прибуття на кінцеву. Час проміжних зупинок — пропорційно кілометражу. Ціни проміжних зупинок — приблизні.",
+  "note": "5 рейсів з офіційних квитків VOPAS + авто-зворотні. Час проміжних зупинок — пропорційно кілометражу.",
   "carriers": {
-    "yatsyshyn": { "name": "Яцишин В.М.", "phone": "0332 224 500" },
-    "chernyak":  { "name": "Черняк В.В.",  "phone": "0332 224 500" }
+    "yatsyshyn": { "name": "під.Яцишин М.М.", "phone": "0332 224 500" },
+    "chernyak":  { "name": "Черняк П.К.-43018 Волинська об", "phone": "0332 224 500" }
   },
   "routes": [
     {
@@ -21,19 +21,19 @@
       "auto_generated": false,
       "stops": [
         {"name": "Ківерці",    "km": 0,  "price_from_start": 0},
-        {"name": "Піддубці",   "km": 4,  "price_from_start": 15.00},
-        {"name": "Струмівка",  "km": 8,  "price_from_start": 30.00},
-        {"name": "Гараджа",    "km": 11, "price_from_start": 41.00},
-        {"name": "Звірів",     "km": 15, "price_from_start": 56.00},
-        {"name": "Арматнів",   "km": 19, "price_from_start": 71.00},
-        {"name": "Пальче",     "km": 23, "price_from_start": 86.00},
-        {"name": "Котів пов.", "km": 27, "price_from_start": 101.00},
-        {"name": "Дерно",      "km": 31, "price_from_start": 116.00},
-        {"name": "Одеради АЗ", "km": 34, "price_from_start": 127.30},
-        {"name": "Дідичі",     "km": 38, "price_from_start": 142.30},
+        {"name": "Піддубці",   "km": 20, "price_from_start": 132.00},
+        {"name": "Струмівка",  "km": 20, "price_from_start": 132.00},
+        {"name": "Гараджа",    "km": 20, "price_from_start": 132.00},
+        {"name": "Звірів",     "km": 21, "price_from_start": 132.00},
+        {"name": "Арматнів",   "km": 23, "price_from_start": 132.00},
+        {"name": "Пальче",     "km": 24, "price_from_start": 132.00},
+        {"name": "Котів пов.", "km": 28, "price_from_start": 132.00},
+        {"name": "Дерно",      "km": 32, "price_from_start": 132.00},
+        {"name": "Одеради АЗ", "km": 36, "price_from_start": 145.20},
+        {"name": "Дідичі",     "km": 38, "price_from_start": 152.90},
         {"name": "Олика",      "km": 42, "price_from_start": 157.30},
-        {"name": "Чемерин",    "km": 45, "price_from_start": 167.60},
-        {"name": "Жорнище",    "km": 48, "price_from_start": 177.80},
+        {"name": "Чемерин",    "km": 45, "price_from_start": 173.80},
+        {"name": "Жорнище",    "km": 49, "price_from_start": 181.50},
         {"name": "Носовичі",   "km": 51, "price_from_start": 188.10}
       ]
     },
@@ -48,13 +48,21 @@
       "duration_min": 85,
       "auto_generated": false,
       "stops": [
-        {"name": "Луцьк",    "km": 0,  "price_from_start": 0},
-        {"name": "Торчин",   "km": 18, "price_from_start": 71.10},
-        {"name": "Рожище",   "km": 25, "price_from_start": 98.75},
-        {"name": "Несвіч",   "km": 38, "price_from_start": 150.10},
-        {"name": "Олика",    "km": 44, "price_from_start": 173.80},
-        {"name": "Підгайці", "km": 48, "price_from_start": 182.00},
-        {"name": "Личани",   "km": 51, "price_from_start": 188.10}
+        {"name": "Луцьк",      "km": 0,  "price_from_start": 0},
+        {"name": "Струмівка",  "km": 10, "price_from_start": 110.00},
+        {"name": "Гараджа",    "km": 11, "price_from_start": 110.00},
+        {"name": "Піддубці",   "km": 14, "price_from_start": 132.00},
+        {"name": "Звірів",     "km": 20, "price_from_start": 132.00},
+        {"name": "Арматнів",   "km": 22, "price_from_start": 132.00},
+        {"name": "Пальче",     "km": 25, "price_from_start": 132.00},
+        {"name": "Хорлупи",    "km": 30, "price_from_start": 132.00},
+        {"name": "Покащів",    "km": 34, "price_from_start": 145.20},
+        {"name": "Одеради АЗ", "km": 36, "price_from_start": 145.20},
+        {"name": "Хромяків",   "km": 38, "price_from_start": 152.90},
+        {"name": "Дідичі",     "km": 41, "price_from_start": 159.50},
+        {"name": "Олика",      "km": 44, "price_from_start": 173.80},
+        {"name": "Мительно",   "km": 47, "price_from_start": 181.50},
+        {"name": "Личани",     "km": 51, "price_from_start": 188.10}
       ]
     },
     {
@@ -69,19 +77,19 @@
       "auto_generated": true,
       "stops": [
         {"name": "Носовичі",   "km": 0,  "price_from_start": 0},
-        {"name": "Жорнище",    "km": 3,  "price_from_start": 10.30},
-        {"name": "Чемерин",    "km": 6,  "price_from_start": 20.50},
+        {"name": "Жорнище",    "km": 2,  "price_from_start": 6.60},
+        {"name": "Чемерин",    "km": 6,  "price_from_start": 14.30},
         {"name": "Олика",      "km": 9,  "price_from_start": 30.80},
-        {"name": "Дідичі",     "km": 13, "price_from_start": 45.80},
-        {"name": "Одеради АЗ", "km": 17, "price_from_start": 60.80},
-        {"name": "Дерно",      "km": 20, "price_from_start": 72.10},
-        {"name": "Котів пов.", "km": 24, "price_from_start": 87.10},
-        {"name": "Пальче",     "km": 28, "price_from_start": 102.10},
-        {"name": "Арматнів",   "km": 32, "price_from_start": 117.10},
-        {"name": "Звірів",     "km": 36, "price_from_start": 132.10},
-        {"name": "Гараджа",    "km": 40, "price_from_start": 143.10},
-        {"name": "Струмівка",  "km": 43, "price_from_start": 158.10},
-        {"name": "Піддубці",   "km": 47, "price_from_start": 173.10},
+        {"name": "Дідичі",     "km": 13, "price_from_start": 35.20},
+        {"name": "Одеради АЗ", "km": 15, "price_from_start": 42.90},
+        {"name": "Дерно",      "km": 19, "price_from_start": 56.10},
+        {"name": "Котів пов.", "km": 23, "price_from_start": 56.10},
+        {"name": "Пальче",     "km": 27, "price_from_start": 56.10},
+        {"name": "Арматнів",   "km": 28, "price_from_start": 56.10},
+        {"name": "Звірів",     "km": 30, "price_from_start": 56.10},
+        {"name": "Гараджа",    "km": 31, "price_from_start": 56.10},
+        {"name": "Струмівка",  "km": 31, "price_from_start": 56.10},
+        {"name": "Піддубці",   "km": 31, "price_from_start": 56.10},
         {"name": "Ківерці",    "km": 51, "price_from_start": 188.10}
       ]
     },
@@ -96,13 +104,21 @@
       "duration_min": 85,
       "auto_generated": true,
       "stops": [
-        {"name": "Личани",   "km": 0,  "price_from_start": 0},
-        {"name": "Підгайці", "km": 3,  "price_from_start": 6.10},
-        {"name": "Олика",    "km": 7,  "price_from_start": 14.30},
-        {"name": "Несвіч",   "km": 13, "price_from_start": 38.00},
-        {"name": "Рожище",   "km": 26, "price_from_start": 89.35},
-        {"name": "Торчин",   "km": 33, "price_from_start": 117.00},
-        {"name": "Луцьк",    "km": 51, "price_from_start": 188.10}
+        {"name": "Личани",     "km": 0,  "price_from_start": 0},
+        {"name": "Мительно",   "km": 4,  "price_from_start": 6.60},
+        {"name": "Олика",      "km": 7,  "price_from_start": 14.30},
+        {"name": "Дідичі",     "km": 10, "price_from_start": 28.60},
+        {"name": "Хромяків",   "km": 13, "price_from_start": 35.20},
+        {"name": "Одеради АЗ", "km": 15, "price_from_start": 42.90},
+        {"name": "Покащів",    "km": 17, "price_from_start": 42.90},
+        {"name": "Хорлупи",    "km": 21, "price_from_start": 56.10},
+        {"name": "Пальче",     "km": 26, "price_from_start": 56.10},
+        {"name": "Арматнів",   "km": 29, "price_from_start": 56.10},
+        {"name": "Звірів",     "km": 31, "price_from_start": 56.10},
+        {"name": "Піддубці",   "km": 37, "price_from_start": 56.10},
+        {"name": "Гараджа",    "km": 40, "price_from_start": 78.10},
+        {"name": "Струмівка",  "km": 41, "price_from_start": 78.10},
+        {"name": "Луцьк",      "km": 51, "price_from_start": 188.10}
       ]
     },
     {
@@ -116,29 +132,19 @@
       "duration_min": 55,
       "auto_generated": false,
       "stops": [
-        {"name": "Луцьк",  "km": 0,  "price_from_start": 0},
-        {"name": "Торчин", "km": 18, "price_from_start": 54.00},
-        {"name": "Рожище", "km": 25, "price_from_start": 75.00},
-        {"name": "Несвіч", "km": 38, "price_from_start": 114.00},
-        {"name": "Олика",  "km": 44, "price_from_start": 132.00}
-      ]
-    },
-    {
-      "id": "lut_zho_kiv",
-      "name": "Луцьк → Жорнище (ч/з Ківерці)",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "10:05",
-      "arrival_time": "12:05",
-      "duration_min": 120,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",   "km": 0,  "price_from_start": 0},
-        {"name": "Ківерці", "km": 10, "price_from_start": 31.70},
-        {"name": "Покащів", "km": 22, "price_from_start": 69.70},
-        {"name": "Олика",   "km": 52, "price_from_start": 165.00},
-        {"name": "Жорнище", "km": 58, "price_from_start": 184.00}
+        {"name": "Луцьк",         "km": 0,  "price_from_start": 0},
+        {"name": "Струмівка",     "km": 10, "price_from_start": 33.00},
+        {"name": "Гараджа",       "km": 12, "price_from_start": 44.00},
+        {"name": "Піддубці",      "km": 16, "price_from_start": 55.00},
+        {"name": "Звірів",        "km": 21, "price_from_start": 60.50},
+        {"name": "Арматнів",      "km": 23, "price_from_start": 66.00},
+        {"name": "Пальче",        "km": 26, "price_from_start": 82.50},
+        {"name": "Котів пов.",    "km": 28, "price_from_start": 77.00},
+        {"name": "Дерно",         "km": 32, "price_from_start": 88.00},
+        {"name": "Хромяків",      "km": 37, "price_from_start": 104.50},
+        {"name": "Одеради",       "km": 38, "price_from_start": 110.00},
+        {"name": "Хромяків пов.", "km": 41, "price_from_start": 115.50},
+        {"name": "Олика",         "km": 44, "price_from_start": 132.00}
       ]
     },
     {
@@ -152,163 +158,19 @@
       "duration_min": 55,
       "auto_generated": true,
       "stops": [
-        {"name": "Олика",  "km": 0,  "price_from_start": 0},
-        {"name": "Несвіч", "km": 6,  "price_from_start": 18.00},
-        {"name": "Рожище", "km": 19, "price_from_start": 57.00},
-        {"name": "Торчин", "km": 26, "price_from_start": 78.00},
-        {"name": "Луцьк",  "km": 44, "price_from_start": 132.00}
-      ]
-    },
-    {
-      "id": "lut_lic_2",
-      "name": "Луцьк → Личани",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "10:30",
-      "arrival_time": "12:03",
-      "duration_min": 93,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",    "km": 0,  "price_from_start": 0},
-        {"name": "Торчин",   "km": 18, "price_from_start": 71.10},
-        {"name": "Рожище",   "km": 25, "price_from_start": 98.75},
-        {"name": "Несвіч",   "km": 38, "price_from_start": 150.10},
-        {"name": "Олика",    "km": 44, "price_from_start": 173.80},
-        {"name": "Підгайці", "km": 48, "price_from_start": 182.00},
-        {"name": "Личани",   "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "zho_lut_kiv",
-      "name": "Жорнище → Луцьк (ч/з Ківерці)",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "12:25",
-      "arrival_time": "14:25",
-      "duration_min": 120,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Жорнище", "km": 0,  "price_from_start": 0},
-        {"name": "Олика",   "km": 6,  "price_from_start": 19.00},
-        {"name": "Покащів", "km": 36, "price_from_start": 114.30},
-        {"name": "Ківерці", "km": 48, "price_from_start": 152.30},
-        {"name": "Луцьк",   "km": 58, "price_from_start": 184.00}
-      ]
-    },
-    {
-      "id": "lic_lut_2",
-      "name": "Личани → Луцьк",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "12:23",
-      "arrival_time": "13:56",
-      "duration_min": 93,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Личани",   "km": 0,  "price_from_start": 0},
-        {"name": "Підгайці", "km": 3,  "price_from_start": 6.10},
-        {"name": "Олика",    "km": 7,  "price_from_start": 14.30},
-        {"name": "Несвіч",   "km": 13, "price_from_start": 38.00},
-        {"name": "Рожище",   "km": 26, "price_from_start": 89.35},
-        {"name": "Торчин",   "km": 33, "price_from_start": 117.00},
-        {"name": "Луцьк",    "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "lut_lic_pok_1",
-      "name": "Луцьк → Личани (ч/з Покащів)",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "12:40",
-      "arrival_time": "14:10",
-      "duration_min": 90,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",    "km": 0,  "price_from_start": 0},
-        {"name": "Покащів",  "km": 22, "price_from_start": 86.90},
-        {"name": "Несвіч",   "km": 38, "price_from_start": 150.10},
-        {"name": "Олика",    "km": 44, "price_from_start": 173.80},
-        {"name": "Підгайці", "km": 48, "price_from_start": 182.00},
-        {"name": "Личани",   "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "lut_oly_2",
-      "name": "Луцьк → Олика",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "13:30",
-      "arrival_time": "14:42",
-      "duration_min": 72,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",  "km": 0,  "price_from_start": 0},
-        {"name": "Торчин", "km": 19, "price_from_start": 54.50},
-        {"name": "Рожище", "km": 27, "price_from_start": 77.50},
-        {"name": "Несвіч", "km": 40, "price_from_start": 115.00},
-        {"name": "Олика",  "km": 46, "price_from_start": 132.00}
-      ]
-    },
-    {
-      "id": "lut_lic_3",
-      "name": "Луцьк → Личани",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "14:10",
-      "arrival_time": "15:45",
-      "duration_min": 95,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",    "km": 0,  "price_from_start": 0},
-        {"name": "Торчин",   "km": 18, "price_from_start": 71.10},
-        {"name": "Рожище",   "km": 25, "price_from_start": 98.75},
-        {"name": "Несвіч",   "km": 38, "price_from_start": 150.10},
-        {"name": "Олика",    "km": 44, "price_from_start": 173.80},
-        {"name": "Підгайці", "km": 48, "price_from_start": 182.00},
-        {"name": "Личани",   "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "lic_lut_pok_1",
-      "name": "Личани → Луцьк (ч/з Покащів)",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "14:30",
-      "arrival_time": "16:00",
-      "duration_min": 90,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Личани",   "km": 0,  "price_from_start": 0},
-        {"name": "Підгайці", "km": 3,  "price_from_start": 6.10},
-        {"name": "Олика",    "km": 7,  "price_from_start": 14.30},
-        {"name": "Несвіч",   "km": 13, "price_from_start": 38.00},
-        {"name": "Покащів",  "km": 29, "price_from_start": 101.20},
-        {"name": "Луцьк",    "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "oly_lut_2",
-      "name": "Олика → Луцьк",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "15:02",
-      "arrival_time": "16:14",
-      "duration_min": 72,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Олика",  "km": 0,  "price_from_start": 0},
-        {"name": "Несвіч", "km": 6,  "price_from_start": 17.00},
-        {"name": "Рожище", "km": 19, "price_from_start": 54.50},
-        {"name": "Торчин", "km": 27, "price_from_start": 77.50},
-        {"name": "Луцьк",  "km": 46, "price_from_start": 132.00}
+        {"name": "Олика",         "km": 0,  "price_from_start": 0},
+        {"name": "Хромяків пов.", "km": 3,  "price_from_start": 16.50},
+        {"name": "Одеради",       "km": 6,  "price_from_start": 22.00},
+        {"name": "Хромяків",      "km": 7,  "price_from_start": 27.50},
+        {"name": "Дерно",         "km": 12, "price_from_start": 44.00},
+        {"name": "Котів пов.",    "km": 16, "price_from_start": 55.00},
+        {"name": "Пальче",        "km": 18, "price_from_start": 49.50},
+        {"name": "Арматнів",      "km": 21, "price_from_start": 66.00},
+        {"name": "Звірів",        "km": 23, "price_from_start": 71.50},
+        {"name": "Піддубці",      "km": 28, "price_from_start": 77.00},
+        {"name": "Гараджа",       "km": 32, "price_from_start": 88.00},
+        {"name": "Струмівка",     "km": 34, "price_from_start": 99.00},
+        {"name": "Луцьк",         "km": 44, "price_from_start": 132.00}
       ]
     },
     {
@@ -322,33 +184,22 @@
       "duration_min": 105,
       "auto_generated": false,
       "stops": [
-        {"name": "Луцьк",   "km": 0,  "price_from_start": 0},
-        {"name": "Торчин",  "km": 18, "price_from_start": 54.00},
-        {"name": "Рожище",  "km": 25, "price_from_start": 75.00},
-        {"name": "Несвіч",  "km": 38, "price_from_start": 114.00},
-        {"name": "Олика",   "km": 44, "price_from_start": 132.00},
-        {"name": "Чемерин", "km": 46, "price_from_start": 138.00},
-        {"name": "Жорнище", "km": 49, "price_from_start": 147.00}
-      ]
-    },
-    {
-      "id": "lic_lut_3",
-      "name": "Личани → Луцьк",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "16:05",
-      "arrival_time": "17:40",
-      "duration_min": 95,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Личани",   "km": 0,  "price_from_start": 0},
-        {"name": "Підгайці", "km": 3,  "price_from_start": 6.10},
-        {"name": "Олика",    "km": 7,  "price_from_start": 14.30},
-        {"name": "Несвіч",   "km": 13, "price_from_start": 38.00},
-        {"name": "Рожище",   "km": 26, "price_from_start": 89.35},
-        {"name": "Торчин",   "km": 33, "price_from_start": 117.00},
-        {"name": "Луцьк",    "km": 51, "price_from_start": 188.10}
+        {"name": "Луцьк",      "km": 0,  "price_from_start": 0},
+        {"name": "Струмівка",  "km": 10, "price_from_start": 33.00},
+        {"name": "Гараджа",    "km": 12, "price_from_start": 44.00},
+        {"name": "Піддубці",   "km": 16, "price_from_start": 55.00},
+        {"name": "Звірів",     "km": 21, "price_from_start": 60.50},
+        {"name": "Арматнів",   "km": 23, "price_from_start": 66.00},
+        {"name": "Пальче",     "km": 25, "price_from_start": 77.00},
+        {"name": "Хорлупи",    "km": 30, "price_from_start": 88.00},
+        {"name": "Покащів",    "km": 34, "price_from_start": 99.00},
+        {"name": "Одеради",    "km": 37, "price_from_start": 104.50},
+        {"name": "Хромяків",   "km": 38, "price_from_start": 110.00},
+        {"name": "Дідичі",     "km": 43, "price_from_start": 126.50},
+        {"name": "Олика",      "km": 44, "price_from_start": 132.00},
+        {"name": "Чемерин",    "km": 47, "price_from_start": 132.00},
+        {"name": "Носовичі",   "km": 51, "price_from_start": 154.00},
+        {"name": "Жорнище",    "km": 54, "price_from_start": 165.00}
       ]
     },
     {
@@ -362,50 +213,22 @@
       "duration_min": 105,
       "auto_generated": true,
       "stops": [
-        {"name": "Жорнище", "km": 0,  "price_from_start": 0},
-        {"name": "Чемерин", "km": 3,  "price_from_start": 9.00},
-        {"name": "Олика",   "km": 5,  "price_from_start": 15.00},
-        {"name": "Несвіч",  "km": 11, "price_from_start": 33.00},
-        {"name": "Рожище",  "km": 24, "price_from_start": 72.00},
-        {"name": "Торчин",  "km": 31, "price_from_start": 93.00},
-        {"name": "Луцьк",   "km": 49, "price_from_start": 147.00}
-      ]
-    },
-    {
-      "id": "lut_lic_pok_2",
-      "name": "Луцьк → Личани (ч/з Покащів)",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "18:00",
-      "arrival_time": "19:20",
-      "duration_min": 80,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",    "km": 0,  "price_from_start": 0},
-        {"name": "Покащів",  "km": 22, "price_from_start": 86.90},
-        {"name": "Несвіч",   "km": 38, "price_from_start": 150.10},
-        {"name": "Олика",    "km": 44, "price_from_start": 173.80},
-        {"name": "Підгайці", "km": 48, "price_from_start": 182.00},
-        {"name": "Личани",   "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "lut_oly_3",
-      "name": "Луцьк → Олика",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "18:30",
-      "arrival_time": "19:42",
-      "duration_min": 72,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",  "km": 0,  "price_from_start": 0},
-        {"name": "Торчин", "km": 19, "price_from_start": 54.50},
-        {"name": "Рожище", "km": 27, "price_from_start": 77.50},
-        {"name": "Несвіч", "km": 40, "price_from_start": 115.00},
-        {"name": "Олика",  "km": 46, "price_from_start": 132.00}
+        {"name": "Жорнище",    "km": 0,  "price_from_start": 0},
+        {"name": "Носовичі",   "km": 3,  "price_from_start": 11.00},
+        {"name": "Чемерин",    "km": 7,  "price_from_start": 33.00},
+        {"name": "Олика",      "km": 10, "price_from_start": 33.00},
+        {"name": "Дідичі",     "km": 11, "price_from_start": 38.50},
+        {"name": "Хромяків",   "km": 16, "price_from_start": 55.00},
+        {"name": "Одеради",    "km": 17, "price_from_start": 60.50},
+        {"name": "Покащів",    "km": 20, "price_from_start": 66.00},
+        {"name": "Хорлупи",    "km": 24, "price_from_start": 77.00},
+        {"name": "Пальче",     "km": 29, "price_from_start": 88.00},
+        {"name": "Арматнів",   "km": 31, "price_from_start": 99.00},
+        {"name": "Звірів",     "km": 33, "price_from_start": 104.50},
+        {"name": "Піддубці",   "km": 38, "price_from_start": 110.00},
+        {"name": "Гараджа",    "km": 42, "price_from_start": 121.00},
+        {"name": "Струмівка",  "km": 44, "price_from_start": 132.00},
+        {"name": "Луцьк",      "km": 54, "price_from_start": 165.00}
       ]
     },
     {
@@ -419,70 +242,19 @@
       "duration_min": 80,
       "auto_generated": false,
       "stops": [
-        {"name": "Луцьк",    "km": 0,  "price_from_start": 0},
-        {"name": "Торчин",   "km": 18, "price_from_start": 71.10},
-        {"name": "Рожище",   "km": 25, "price_from_start": 98.75},
-        {"name": "Несвіч",   "km": 38, "price_from_start": 150.10},
-        {"name": "Олика",    "km": 44, "price_from_start": 173.80},
-        {"name": "Підгайці", "km": 48, "price_from_start": 182.00},
-        {"name": "Личани",   "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "lic_lut_pok_2",
-      "name": "Личани → Луцьк (ч/з Покащів)",
-      "carrier": "yatsyshyn",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "19:40",
-      "arrival_time": "21:00",
-      "duration_min": 80,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Личани",   "km": 0,  "price_from_start": 0},
-        {"name": "Підгайці", "km": 3,  "price_from_start": 6.10},
-        {"name": "Олика",    "km": 7,  "price_from_start": 14.30},
-        {"name": "Несвіч",   "km": 13, "price_from_start": 38.00},
-        {"name": "Покащів",  "km": 29, "price_from_start": 101.20},
-        {"name": "Луцьк",    "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "oly_lut_3",
-      "name": "Олика → Луцьк",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "20:02",
-      "arrival_time": "21:14",
-      "duration_min": 72,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Олика",  "km": 0,  "price_from_start": 0},
-        {"name": "Несвіч", "km": 6,  "price_from_start": 17.00},
-        {"name": "Рожище", "km": 19, "price_from_start": 54.50},
-        {"name": "Торчин", "km": 27, "price_from_start": 77.50},
-        {"name": "Луцьк",  "km": 46, "price_from_start": 132.00}
-      ]
-    },
-    {
-      "id": "lut_zho_2",
-      "name": "Луцьк → Жорнище",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "20:05",
-      "arrival_time": "21:30",
-      "duration_min": 85,
-      "auto_generated": false,
-      "stops": [
-        {"name": "Луцьк",   "km": 0,  "price_from_start": 0},
-        {"name": "Торчин",  "km": 18, "price_from_start": 54.00},
-        {"name": "Рожище",  "km": 25, "price_from_start": 75.00},
-        {"name": "Несвіч",  "km": 38, "price_from_start": 114.00},
-        {"name": "Олика",   "km": 44, "price_from_start": 132.00},
-        {"name": "Чемерин", "km": 46, "price_from_start": 138.00},
-        {"name": "Жорнище", "km": 49, "price_from_start": 147.00}
+        {"name": "Луцьк",      "km": 0,  "price_from_start": 0},
+        {"name": "Гараджа",    "km": 20, "price_from_start": 132.00},
+        {"name": "Піддубці",   "km": 20, "price_from_start": 132.00},
+        {"name": "Звірів",     "km": 21, "price_from_start": 132.00},
+        {"name": "Арматнів",   "km": 23, "price_from_start": 132.00},
+        {"name": "Пальче",     "km": 26, "price_from_start": 132.00},
+        {"name": "Котів",      "km": 29, "price_from_start": 132.00},
+        {"name": "Дерно",      "km": 32, "price_from_start": 132.00},
+        {"name": "Хромяків",   "km": 37, "price_from_start": 145.20},
+        {"name": "Дідичі",     "km": 38, "price_from_start": 152.90},
+        {"name": "Олика",      "km": 44, "price_from_start": 173.80},
+        {"name": "Мительно",   "km": 47, "price_from_start": 181.50},
+        {"name": "Личани",     "km": 51, "price_from_start": 188.10}
       ]
     },
     {
@@ -496,33 +268,19 @@
       "duration_min": 80,
       "auto_generated": true,
       "stops": [
-        {"name": "Личани",   "km": 0,  "price_from_start": 0},
-        {"name": "Підгайці", "km": 3,  "price_from_start": 6.10},
-        {"name": "Олика",    "km": 7,  "price_from_start": 14.30},
-        {"name": "Несвіч",   "km": 13, "price_from_start": 38.00},
-        {"name": "Рожище",   "km": 26, "price_from_start": 89.35},
-        {"name": "Торчин",   "km": 33, "price_from_start": 117.00},
-        {"name": "Луцьк",    "km": 51, "price_from_start": 188.10}
-      ]
-    },
-    {
-      "id": "zho_lut_2",
-      "name": "Жорнище → Луцьк",
-      "carrier": "chernyak",
-      "days": "щодня",
-      "status": "scheduled",
-      "departure_time": "21:50",
-      "arrival_time": "23:15",
-      "duration_min": 85,
-      "auto_generated": true,
-      "stops": [
-        {"name": "Жорнище", "km": 0,  "price_from_start": 0},
-        {"name": "Чемерин", "km": 3,  "price_from_start": 9.00},
-        {"name": "Олика",   "km": 5,  "price_from_start": 15.00},
-        {"name": "Несвіч",  "km": 11, "price_from_start": 33.00},
-        {"name": "Рожище",  "km": 24, "price_from_start": 72.00},
-        {"name": "Торчин",  "km": 31, "price_from_start": 93.00},
-        {"name": "Луцьк",   "km": 49, "price_from_start": 147.00}
+        {"name": "Личани",     "km": 0,  "price_from_start": 0},
+        {"name": "Мительно",   "km": 4,  "price_from_start": 6.60},
+        {"name": "Олика",      "km": 7,  "price_from_start": 14.30},
+        {"name": "Дідичі",     "km": 13, "price_from_start": 35.20},
+        {"name": "Хромяків",   "km": 14, "price_from_start": 42.90},
+        {"name": "Дерно",      "km": 19, "price_from_start": 56.10},
+        {"name": "Котів",      "km": 22, "price_from_start": 56.10},
+        {"name": "Пальче",     "km": 25, "price_from_start": 56.10},
+        {"name": "Арматнів",   "km": 28, "price_from_start": 56.10},
+        {"name": "Звірів",     "km": 30, "price_from_start": 56.10},
+        {"name": "Піддубці",   "km": 31, "price_from_start": 56.10},
+        {"name": "Гараджа",    "km": 31, "price_from_start": 56.10},
+        {"name": "Луцьк",      "km": 51, "price_from_start": 188.10}
       ]
     }
   ]
