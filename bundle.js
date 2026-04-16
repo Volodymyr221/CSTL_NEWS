@@ -829,35 +829,285 @@
     }, 6e4);
   }
 
-  // src/tabs/submit.js
-  function initSubmit() {
-    const form = document.getElementById("submit-form");
-    if (!form)
-      return;
-    form.addEventListener("submit", handleSubmit);
+  // src/tabs/power.js
+  var powerData = null;
+  var selCity = null;
+  var selStreet = null;
+  var PREFS_KEY2 = "power_prefs_v2";
+  function pad(n) {
+    return String(n).padStart(2, "0");
   }
-  function handleSubmit(e) {
-    e.preventDefault();
-    const name = document.getElementById("submit-name").value.trim();
-    const contact = document.getElementById("submit-contact").value.trim();
-    const text = document.getElementById("submit-text").value.trim();
-    if (!text) {
-      showToast("\u041E\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u043E\u0432\u0438\u043D\u0443 \u0430\u0431\u043E \u0432\u0441\u0442\u0430\u0432\u0442\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F");
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  function savePrefs2() {
+    localStorage.setItem(PREFS_KEY2, JSON.stringify({
+      cityId: selCity?.id || null,
+      streetId: selStreet?.id || null
+    }));
+  }
+  function loadPrefs2() {
+    try {
+      return JSON.parse(localStorage.getItem(PREFS_KEY2) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function findCity(id) {
+    return powerData?.cities.find((c) => c.id === id) || null;
+  }
+  function findStreetInCity(city, streetId) {
+    return city?.streets.find((s) => s.id === streetId) || null;
+  }
+  function findQueue(id) {
+    return powerData?.queues.find((q) => q.id === id) || null;
+  }
+  function getTodaySchedule(queueId) {
+    const queue = findQueue(queueId);
+    if (!queue)
+      return null;
+    const key = todayKey();
+    return queue.schedule[key] || queue.schedule[Object.keys(queue.schedule)[0]] || null;
+  }
+  function generateICS(street, queue) {
+    const schedule = getTodaySchedule(queue.id);
+    if (!schedule)
+      return;
+    const d = /* @__PURE__ */ new Date();
+    const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const events = [];
+    let i = 0;
+    while (i < 24) {
+      if (schedule[i] === 0) {
+        const start = i;
+        while (i < 24 && schedule[i] === 0)
+          i++;
+        events.push(
+          `BEGIN:VEVENT\r
+DTSTART:${ymd}T${pad(start)}0000\r
+DTEND:${ymd}T${pad(i)}0000\r
+SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
+DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
+END:VEVENT`
+        );
+      } else {
+        i++;
+      }
+    }
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CSTL NEWS//Power Schedule//UK",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      ...events,
+      "END:VCALENDAR"
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vidklyuchennya-${d.getDate()}-${d.getMonth() + 1}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function renderCityOnboarding(container) {
+    container.innerHTML = `
+    <div class="pw-onboarding">
+      <div class="pw-onboarding-icon">\u26A1</div>
+      <h3 class="pw-onboarding-title">\u0413\u0440\u0430\u0444\u0456\u043A \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044C</h3>
+      <p class="pw-onboarding-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0430\u0448\u0435 \u0441\u0435\u043B\u043E \u0430\u0431\u043E \u043C\u0456\u0441\u0442\u043E</p>
+      <div class="pw-street-list">
+        ${powerData.cities.map(
+      (c) => `<button class="pw-street-btn" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`
+    ).join("")}
+      </div>
+    </div>
+  `;
+    container.querySelectorAll(".pw-street-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selCity = findCity(btn.dataset.id);
+        if (!selCity)
+          return;
+        if (selCity.streets.length === 1) {
+          selStreet = selCity.streets[0];
+          savePrefs2();
+          renderPowerPage();
+        } else {
+          savePrefs2();
+          renderPowerPage();
+        }
+      });
+    });
+  }
+  function renderStreetOnboarding(container) {
+    container.innerHTML = `
+    <div class="pw-onboarding">
+      <button class="pw-back-btn" id="pw-back-city">\u2190 ${escapeHtml(selCity.name)}</button>
+      <div class="pw-onboarding-icon">\u26A1</div>
+      <h3 class="pw-onboarding-title">\u0412\u0430\u0448\u0430 \u0432\u0443\u043B\u0438\u0446\u044F</h3>
+      <p class="pw-onboarding-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0443\u043B\u0438\u0446\u044E \u2014 \u0456 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0435<br>\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0456 \u043D\u0435 \u0431\u0443\u0434\u0435 \u0441\u0432\u0456\u0442\u043B\u0430</p>
+      <div class="pw-street-list">
+        ${selCity.streets.map(
+      (s) => `<button class="pw-street-btn" data-id="${escapeHtml(s.id)}">${escapeHtml(s.name)}</button>`
+    ).join("")}
+      </div>
+    </div>
+  `;
+    container.querySelector("#pw-back-city")?.addEventListener("click", () => {
+      selCity = null;
+      selStreet = null;
+      savePrefs2();
+      renderPowerPage();
+    });
+    container.querySelectorAll(".pw-street-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selStreet = findStreetInCity(selCity, btn.dataset.id);
+        savePrefs2();
+        renderPowerPage();
+      });
+    });
+  }
+  function renderTimeline(queue) {
+    const schedule = getTodaySchedule(queue.id);
+    if (!schedule)
+      return '<p class="pw-empty">\u0414\u0430\u043D\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456</p>';
+    const now = /* @__PURE__ */ new Date();
+    const curH = now.getHours();
+    const curM = now.getMinutes();
+    const rows = schedule.map((status, hour) => {
+      const isPast = hour < curH;
+      const isCurrent = hour === curH;
+      const blockCls = status === 1 ? "pw-block--on" : status === 0 ? "pw-block--off" : "pw-block--maybe";
+      const label = status === 1 ? "\u0404" : status === 0 ? "\u041D\u0435\u043C\u0430\u0454" : "?";
+      const nowMarker = isCurrent ? `
+      <div class="pw-now-marker" id="pw-now-marker">
+        <div class="pw-now-dot"></div>
+        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad(curH)}:${pad(curM)}</span>
+        <div class="pw-now-line-right"></div>
+      </div>` : "";
+      return `
+      ${nowMarker}
+      <div class="pw-row${isPast ? " pw-row--past" : ""}${isCurrent ? " pw-row--current" : ""}">
+        <span class="pw-time">${pad(hour)}:00</span>
+        <div class="pw-block ${blockCls}">
+          <span class="pw-block-label">${label}</span>
+        </div>
+      </div>`;
+    }).join("");
+    const dateStr = now.toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+    return `
+    <div class="pw-timeline">
+      <div class="pw-timeline-date">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456, ${dateStr}</div>
+      ${rows}
+    </div>`;
+  }
+  function renderPowerPage() {
+    const container = document.getElementById("power-content");
+    if (!container || !powerData)
+      return;
+    const upd = new Date(powerData._meta.last_updated);
+    const updStr = `${pad(upd.getHours())}:${pad(upd.getMinutes())}`;
+    const offlineBanner = !navigator.onLine ? `<div class="pw-offline-banner">\u26A1 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u0434\u0430\u043D\u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u043E ${updStr}</div>` : "";
+    if (!selCity) {
+      container.innerHTML = offlineBanner;
+      renderCityOnboarding(container);
       return;
     }
-    const subject = encodeURIComponent("\u041F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u044F \u043D\u043E\u0432\u0438\u043D\u0438 \u2014 CSTL NEWS");
-    const body = encodeURIComponent(
-      `\u0412\u0456\u0434: ${name || "\u0410\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}
-\u041A\u043E\u043D\u0442\u0430\u043A\u0442: ${contact || "\u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"}
+    if (!selStreet) {
+      container.innerHTML = offlineBanner;
+      renderStreetOnboarding(container);
+      return;
+    }
+    const queue = findQueue(selStreet.queue_id);
+    if (!queue) {
+      selStreet = null;
+      savePrefs2();
+      renderPowerPage();
+      return;
+    }
+    const schedule = getTodaySchedule(queue.id);
+    const curH = (/* @__PURE__ */ new Date()).getHours();
+    const curStatus = schedule ? schedule[curH] : null;
+    let nextH = null;
+    if (schedule) {
+      for (let h = curH + 1; h < 24; h++) {
+        if (schedule[h] !== curStatus) {
+          nextH = h;
+          break;
+        }
+      }
+    }
+    const statusText = curStatus === 1 ? "\u{1F7E2} \u0417\u0430\u0440\u0430\u0437 \u0454 \u0441\u0432\u0456\u0442\u043B\u043E" : curStatus === 0 ? "\u{1F534} \u0417\u0430\u0440\u0430\u0437 \u043D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u{1F7E1} \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
+    const statusCls = curStatus === 1 ? "pw-status--on" : curStatus === 0 ? "pw-status--off" : "pw-status--maybe";
+    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad(nextH)}:00` : "";
+    const locationLabel = selCity.streets.length === 1 ? escapeHtml(selCity.name) : `${escapeHtml(selCity.name)} \xB7 ${escapeHtml(selStreet.name)}`;
+    container.innerHTML = `
+    ${offlineBanner}
 
-${text}`
-    );
-    const submissions = JSON.parse(localStorage.getItem("cstl_submissions") || "[]");
-    submissions.push({ name, contact, text, ts: Date.now() });
-    localStorage.setItem("cstl_submissions", JSON.stringify(submissions));
-    window.location.href = `mailto:cstlnews@gmail.com?subject=${subject}&body=${body}`;
-    showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0412\u0430\u0448\u0430 \u043D\u043E\u0432\u0438\u043D\u0430 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0430 \u0440\u0435\u0434\u0430\u043A\u0446\u0456\u0457.");
-    document.getElementById("submit-form").reset();
+    <div class="pw-top-bar">
+      <button class="pw-street-btn-top" id="pw-change-location">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-loc"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span>${locationLabel}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-chev"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
+    </div>
+
+    <div class="pw-status-card ${statusCls}">
+      <div class="pw-status-main">${statusText}${nextTxt}</div>
+      <div class="pw-status-upd">\u0414\u0430\u043D\u0456 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u043D\u0430 ${updStr}</div>
+    </div>
+
+    ${renderTimeline(queue)}
+
+    <div class="pw-actions">
+      <button class="pw-ics-btn" id="pw-ics-btn">\u{1F4C5} \u0414\u043E\u0434\u0430\u0442\u0438 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440</button>
+    </div>
+
+    <div class="pw-footer-note">
+      \u0414\u0436\u0435\u0440\u0435\u043B\u043E: ${escapeHtml(powerData._meta.source)}<br>
+      <span class="pw-demo-note">\u26A0\uFE0F DEMO-\u0434\u0430\u043D\u0456 \u2014 \u043E\u043D\u043E\u0432\u0456\u0442\u044C \u0443 data/power.json</span>
+    </div>
+  `;
+    document.getElementById("pw-change-location")?.addEventListener("click", () => {
+      selCity = null;
+      selStreet = null;
+      savePrefs2();
+      renderPowerPage();
+    });
+    document.getElementById("pw-ics-btn")?.addEventListener("click", () => {
+      generateICS(selStreet, queue);
+    });
+    setTimeout(() => {
+      document.getElementById("pw-now-marker")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }
+  function initPower() {
+    fetch("./data/power.json").then((r) => r.json()).then((data) => {
+      powerData = data;
+      const prefs = loadPrefs2();
+      if (prefs.cityId) {
+        selCity = findCity(prefs.cityId);
+        if (selCity && prefs.streetId) {
+          selStreet = findStreetInCity(selCity, prefs.streetId);
+        }
+      }
+      renderPowerPage();
+    }).catch(() => {
+      const el = document.getElementById("power-content");
+      if (el)
+        el.innerHTML = '<p class="pw-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0434\u0430\u043D\u0456 \u26A1</p>';
+    });
+    window.addEventListener("online", () => {
+      if (powerData)
+        renderPowerPage();
+    });
+    window.addEventListener("offline", () => {
+      if (powerData)
+        renderPowerPage();
+    });
   }
 
   // src/app.js
