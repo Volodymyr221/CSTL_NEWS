@@ -527,6 +527,48 @@
       return toMinutes(route.departure_time);
     return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
   }
+  function getRouteState(route) {
+    const nowMins = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const depMins = toMinutes(route.departure_time);
+    const arrMins = depMins + route.duration_min;
+    if (nowMins < depMins)
+      return "future";
+    if (nowMins >= arrMins)
+      return "past";
+    return "enroute";
+  }
+  function getRouteProgress(route) {
+    const nowMins = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const depMins = toMinutes(route.departure_time);
+    if (nowMins <= depMins)
+      return 0;
+    return Math.min(1, (nowMins - depMins) / route.duration_min);
+  }
+  function getCurrentPosition(route) {
+    const nowMins = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const stops = route.stops;
+    for (let i = 0; i < stops.length - 1; i++) {
+      const currMins = getStopMins(route, stops[i].name);
+      const nextMins = getStopMins(route, stops[i + 1].name);
+      if (nowMins >= currMins && nowMins < nextMins) {
+        return {
+          prevStop: stops[i],
+          nextStop: stops[i + 1],
+          prevIdx: i,
+          nextIdx: i + 1,
+          minsToNext: nextMins - nowMins
+        };
+      }
+    }
+    return { prevStop: stops[stops.length - 1], nextStop: null, prevIdx: stops.length - 1, nextIdx: null, minsToNext: 0 };
+  }
+  function formatPosition(pos) {
+    if (!pos.nextStop)
+      return escapeHtml(pos.prevStop.name);
+    if (pos.minsToNext <= 2)
+      return `\u041F\u0456\u0434'\u0457\u0436\u0434\u0436\u0430\u0454 \u0434\u043E ${escapeHtml(pos.nextStop.name)}`;
+    return `\u0411\u0456\u043B\u044F ${escapeHtml(pos.prevStop.name)}`;
+  }
   function getStopHHMM(route, stopName) {
     const m = getStopMins(route, stopName);
     return m !== null ? minsToHHMM(m) : null;
@@ -562,13 +604,6 @@
       return false;
     return true;
   }
-  function isPastRoute(route) {
-    const m = getStopMins(route, getEffectiveFrom(route));
-    if (m === null)
-      return true;
-    const now = /* @__PURE__ */ new Date();
-    return m < now.getHours() * 60 + now.getMinutes();
-  }
   function getFilteredRoutes() {
     if (!busData)
       return [];
@@ -579,7 +614,7 @@
     });
   }
   function findNextRoute() {
-    return getFilteredRoutes().find((r) => !isPastRoute(r)) || null;
+    return getFilteredRoutes().find((r) => getRouteState(r) === "future") || null;
   }
   function getAllStops() {
     if (!busData)
@@ -672,6 +707,22 @@
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
+    const all = getFilteredRoutes();
+    const liveRoute = all.find((r) => getRouteState(r) === "enroute");
+    if (liveRoute) {
+      const pos = getCurrentPosition(liveRoute);
+      const posText = formatPosition(pos);
+      const etaText = pos.minsToNext > 0 ? ` \xB7 ${pos.minsToNext} \u0445\u0432 \u0434\u043E ${escapeHtml(pos.nextStop.name)}` : "";
+      el.className = "bus-smart-row enroute";
+      el.innerHTML = `
+      <span class="bsr-icon bsr-pulse"></span>
+      <span class="bsr-text">
+        <strong>\u0412 \u0434\u043E\u0440\u043E\u0437\u0456</strong> \u2014 ${escapeHtml(liveRoute.name)}<br>
+        <small>${posText}${etaText}</small>
+      </span>
+    `;
+      return;
+    }
     const next = findNextRoute();
     if (!next) {
       el.innerHTML = `<span class="bsr-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</span>`;
@@ -697,9 +748,11 @@
     if (!el)
       return;
     const all = getFilteredRoutes();
-    const future = all.filter((r) => !isPastRoute(r));
-    const past = all.filter((r) => isPastRoute(r));
-    const toRender = showAll ? all : future;
+    const enroute = all.filter((r) => getRouteState(r) === "enroute");
+    const future = all.filter((r) => getRouteState(r) === "future");
+    const past = all.filter((r) => getRouteState(r) === "past");
+    const active = [...enroute, ...future];
+    const toRender = showAll ? [...enroute, ...future, ...past] : active;
     if (!all.length) {
       el.innerHTML = `<div class="empty-state">\u0417\u0430 \u0446\u0438\u043C \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u043E\u043C \u0440\u0435\u0439\u0441\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
       return;
@@ -719,8 +772,10 @@
     const next = findNextRoute();
     const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
     const cards = toRender.map((route) => {
-      const isPast = isPastRoute(route);
-      const isNext = next && route.id === next.id;
+      const state = getRouteState(route);
+      const isPast = state === "past";
+      const isLive = state === "enroute";
+      const isNext = !isLive && next && route.id === next.id;
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
       const fromTime = getStopHHMM(route, effFrom);
@@ -731,25 +786,55 @@
       const segDur = toMins - fromMins;
       const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
       const c = carrierInfo(route.carrier);
-      const expanded = expandedIds.has(route.id);
+      const expanded = isLive || expandedIds.has(route.id);
       const basePrice = route.stops.find((s) => s.name === effFrom)?.price_from_start ?? 0;
-      const stopsHtml = route.stops.map((s) => {
+      const pos = isLive ? getCurrentPosition(route) : null;
+      const stopsHtml = route.stops.map((s, idx) => {
         const isFrom = s.name === effFrom;
         const isTo = s.name === effTo;
         const hl = isFrom || isTo;
         const t = getStopHHMM(route, s.name);
         const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
+        let rowCls = "bs-stop-row";
+        if (hl)
+          rowCls += " hl";
+        if (isLive && pos) {
+          if (idx < pos.prevIdx)
+            rowCls += " passed";
+          else if (idx === pos.prevIdx)
+            rowCls += " current";
+          else if (idx === pos.nextIdx)
+            rowCls += " upcoming";
+        }
+        const icon = isLive && pos && idx < pos.prevIdx ? "\u2713\u202F" : isLive && pos && idx === pos.nextIdx ? "\u25CF\u202F" : isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : "";
         return `
-        <div class="bs-stop-row${hl ? " hl" : ""}">
+        <div class="${rowCls}">
           <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
-          <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
           <span class="bs-stop-price">${escapeHtml(seg)} \u0433\u0440\u043D</span>
         </div>`;
       }).join("");
-      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
+      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : isLive ? `<span class="bs-status live">\u0412 \u0434\u043E\u0440\u043E\u0437\u0456</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
+      let progressHtml = "";
+      if (isLive) {
+        const pct = Math.round(getRouteProgress(route) * 100);
+        const posText = formatPosition(pos);
+        const etaText = pos.minsToNext > 0 ? `\u0434\u043E ${escapeHtml(pos.nextStop.name)} \xB7 ${pos.minsToNext} \u0445\u0432` : "";
+        progressHtml = `
+        <div class="bs-progress">
+          <div class="bs-progress-bar">
+            <div class="bs-progress-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="bs-progress-info">
+            <span class="bs-progress-pos">${posText}</span>
+            ${etaText ? `<span class="bs-progress-eta">${etaText}</span>` : ""}
+          </div>
+        </div>`;
+      }
+      const cardCls = `bus-card${isPast ? " past" : ""}${isLive ? " enroute" : ""}${isNext ? " next" : ""}`;
       return `
-      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
+      <div class="${cardCls}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
@@ -775,6 +860,7 @@
             </svg>
           </a>` : ""}
         </div>
+        ${progressHtml}
         <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
           ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
         </button>

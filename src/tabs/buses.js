@@ -64,6 +64,48 @@ function getStopMins(route, stopName) {
   return toMinutes(route.departure_time) + Math.round((stop.km / totalKm) * route.duration_min);
 }
 
+// Три стани рейсу: 'future' | 'enroute' | 'past'
+function getRouteState(route) {
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const depMins = toMinutes(route.departure_time);
+  const arrMins = depMins + route.duration_min;
+  if (nowMins < depMins) return 'future';
+  if (nowMins >= arrMins) return 'past';
+  return 'enroute';
+}
+
+function getRouteProgress(route) {
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const depMins = toMinutes(route.departure_time);
+  if (nowMins <= depMins) return 0;
+  return Math.min(1, (nowMins - depMins) / route.duration_min);
+}
+
+function getCurrentPosition(route) {
+  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const stops = route.stops;
+  for (let i = 0; i < stops.length - 1; i++) {
+    const currMins = getStopMins(route, stops[i].name);
+    const nextMins = getStopMins(route, stops[i + 1].name);
+    if (nowMins >= currMins && nowMins < nextMins) {
+      return {
+        prevStop: stops[i],
+        nextStop: stops[i + 1],
+        prevIdx: i,
+        nextIdx: i + 1,
+        minsToNext: nextMins - nowMins
+      };
+    }
+  }
+  return { prevStop: stops[stops.length - 1], nextStop: null, prevIdx: stops.length - 1, nextIdx: null, minsToNext: 0 };
+}
+
+function formatPosition(pos) {
+  if (!pos.nextStop) return escapeHtml(pos.prevStop.name);
+  if (pos.minsToNext <= 2) return `Під'їжджає до ${escapeHtml(pos.nextStop.name)}`;
+  return `Біля ${escapeHtml(pos.prevStop.name)}`;
+}
+
 function getStopHHMM(route, stopName) {
   const m = getStopMins(route, stopName);
   return m !== null ? minsToHHMM(m) : null;
@@ -99,10 +141,7 @@ function matchesSearch(route) {
 }
 
 function isPastRoute(route) {
-  const m = getStopMins(route, getEffectiveFrom(route));
-  if (m === null) return true;
-  const now = new Date();
-  return m < (now.getHours() * 60 + now.getMinutes());
+  return getRouteState(route) === 'past';
 }
 
 function getFilteredRoutes() {
@@ -117,7 +156,7 @@ function getFilteredRoutes() {
 }
 
 function findNextRoute() {
-  return getFilteredRoutes().find(r => !isPastRoute(r)) || null;
+  return getFilteredRoutes().find(r => getRouteState(r) === 'future') || null;
 }
 
 function getAllStops() {
@@ -235,6 +274,25 @@ function selectStop(stop, field) {
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
+
+  const all = getFilteredRoutes();
+  const liveRoute = all.find(r => getRouteState(r) === 'enroute');
+
+  if (liveRoute) {
+    const pos = getCurrentPosition(liveRoute);
+    const posText = formatPosition(pos);
+    const etaText = pos.minsToNext > 0 ? ` · ${pos.minsToNext} хв до ${escapeHtml(pos.nextStop.name)}` : '';
+    el.className = 'bus-smart-row enroute';
+    el.innerHTML = `
+      <span class="bsr-icon bsr-pulse"></span>
+      <span class="bsr-text">
+        <strong>В дорозі</strong> — ${escapeHtml(liveRoute.name)}<br>
+        <small>${posText}${etaText}</small>
+      </span>
+    `;
+    return;
+  }
+
   const next = findNextRoute();
   if (!next) {
     el.innerHTML = `<span class="bsr-empty">Рейсів сьогодні більше немає</span>`;
@@ -262,9 +320,11 @@ function renderRouteList() {
   if (!el) return;
 
   const all      = getFilteredRoutes();
-  const future   = all.filter(r => !isPastRoute(r));
-  const past     = all.filter(r => isPastRoute(r));
-  const toRender = showAll ? all : future;
+  const enroute  = all.filter(r => getRouteState(r) === 'enroute');
+  const future   = all.filter(r => getRouteState(r) === 'future');
+  const past     = all.filter(r => getRouteState(r) === 'past');
+  const active   = [...enroute, ...future];
+  const toRender = showAll ? [...enroute, ...future, ...past] : active;
 
   if (!all.length) {
     el.innerHTML = `<div class="empty-state">За цим маршрутом рейсів не знайдено</div>`;
@@ -288,33 +348,52 @@ function renderRouteList() {
   const carrierInfo = id => busData.carriers?.[id] || { name: id, phone: '0332 224 500' };
 
   const cards = toRender.map(route => {
-    const isPast  = isPastRoute(route);
-    const isNext  = next && route.id === next.id;
-    const effFrom = getEffectiveFrom(route);
-    const effTo   = getEffectiveTo(route);
-    const fromTime = getStopHHMM(route, effFrom);
-    const toTime   = getStopHHMM(route, effTo);
-    const price    = getSegmentPrice(route, effFrom, effTo);
-    const fromMins = getStopMins(route, effFrom) || 0;
-    const toMins   = getStopMins(route, effTo)   || 0;
-    const segDur   = toMins - fromMins;
-    const durStr   = segDur >= 60
+    const state     = getRouteState(route);
+    const isPast    = state === 'past';
+    const isLive    = state === 'enroute';
+    const isNext    = !isLive && next && route.id === next.id;
+    const effFrom   = getEffectiveFrom(route);
+    const effTo     = getEffectiveTo(route);
+    const fromTime  = getStopHHMM(route, effFrom);
+    const toTime    = getStopHHMM(route, effTo);
+    const price     = getSegmentPrice(route, effFrom, effTo);
+    const fromMins  = getStopMins(route, effFrom) || 0;
+    const toMins    = getStopMins(route, effTo)   || 0;
+    const segDur    = toMins - fromMins;
+    const durStr    = segDur >= 60
       ? `${Math.floor(segDur / 60)} год${segDur % 60 ? ' ' + (segDur % 60) + ' хв' : ''}`
       : `${segDur} хв`;
-    const c        = carrierInfo(route.carrier);
-    const expanded = expandedIds.has(route.id);
+    const c         = carrierInfo(route.carrier);
+    const expanded  = isLive || expandedIds.has(route.id);
     const basePrice = route.stops.find(s => s.name === effFrom)?.price_from_start ?? 0;
 
-    const stopsHtml = route.stops.map(s => {
+    const pos = isLive ? getCurrentPosition(route) : null;
+
+    const stopsHtml = route.stops.map((s, idx) => {
       const isFrom = s.name === effFrom;
       const isTo   = s.name === effTo;
       const hl     = isFrom || isTo;
       const t      = getStopHHMM(route, s.name);
       const seg    = Math.max(0, s.price_from_start - basePrice).toFixed(2);
+
+      let rowCls = 'bs-stop-row';
+      if (hl) rowCls += ' hl';
+      if (isLive && pos) {
+        if (idx < pos.prevIdx) rowCls += ' passed';
+        else if (idx === pos.prevIdx) rowCls += ' current';
+        else if (idx === pos.nextIdx) rowCls += ' upcoming';
+      }
+
+      const icon = isLive && pos && idx < pos.prevIdx ? '✓\u202f'
+                 : isLive && pos && idx === pos.nextIdx ? '●\u202f'
+                 : isFrom ? '▶\u202f'
+                 : isTo   ? '◀\u202f'
+                 : '';
+
       return `
-        <div class="bs-stop-row${hl ? ' hl' : ''}">
+        <div class="${rowCls}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
-          <span class="bs-stop-name">${isFrom ? '▶\u202f' : isTo ? '◀\u202f' : ''}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
           <span class="bs-stop-price">${escapeHtml(seg)} грн</span>
         </div>`;
     }).join('');
@@ -323,26 +402,47 @@ function renderRouteList() {
       ? `<span class="bs-status cancelled">Скасовано</span>`
       : route.status === 'delayed'
       ? `<span class="bs-status delayed">Затримка</span>`
+      : isLive
+      ? `<span class="bs-status live">В дорозі</span>`
       : '';
 
     const autoNote = route.auto_generated
       ? `<div class="bs-autogen">розрахований зворотний рейс</div>`
       : '';
 
+    let progressHtml = '';
+    if (isLive) {
+      const pct = Math.round(getRouteProgress(route) * 100);
+      const posText = formatPosition(pos);
+      const etaText = pos.minsToNext > 0 ? `до ${escapeHtml(pos.nextStop.name)} · ${pos.minsToNext} хв` : '';
+      progressHtml = `
+        <div class="bs-progress">
+          <div class="bs-progress-bar">
+            <div class="bs-progress-fill" style="width:${pct}%"></div>
+          </div>
+          <div class="bs-progress-info">
+            <span class="bs-progress-pos">${posText}</span>
+            ${etaText ? `<span class="bs-progress-eta">${etaText}</span>` : ''}
+          </div>
+        </div>`;
+    }
+
+    const cardCls = `bus-card${isPast ? ' past' : ''}${isLive ? ' enroute' : ''}${isNext ? ' next' : ''}`;
+
     return `
-      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}">
+      <div class="${cardCls}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
-            <span class="bs-arr">→\u202f${escapeHtml(toTime || '—')}</span>
+            <span class="bs-arr">\u2192\u202f${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
             <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
-              <span class="bus-meta-sep">·</span>
+              <span class="bus-meta-sep">\u00b7</span>
               <span>${escapeHtml(price || '—')} грн</span>
-              <span class="bus-meta-sep">·</span>
+              <span class="bus-meta-sep">\u00b7</span>
               <span>${escapeHtml(c.name)}</span>
             </div>
             ${autoNote}
@@ -356,6 +456,7 @@ function renderRouteList() {
             </svg>
           </a>` : ''}
         </div>
+        ${progressHtml}
         <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
           ${expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾'}
         </button>

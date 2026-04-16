@@ -1100,6 +1100,88 @@ html, body {
 }
 .bus-card.next .bus-card-main { padding-left: 0; }
 
+/* В дорозі (enroute) — зелена лінія + прогрес */
+.bus-card.enroute {
+  border-left: 3px solid #22c55e;
+  background: #f0fdf4;
+  padding-left: 13px;
+}
+.bus-card.enroute .bus-card-main { padding-left: 0; }
+.bs-status.live {
+  background: #22c55e;
+  color: white;
+  padding: 1px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  margin-left: 6px;
+  animation: bsPulse 2s ease-in-out infinite;
+}
+@keyframes bsPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+.bs-progress {
+  padding: 4px 16px 8px;
+  border-top: 1px solid var(--border);
+}
+.bs-progress-bar {
+  height: 4px;
+  background: #e5e5e5;
+  border-radius: 2px;
+  overflow: hidden;
+}
+.bs-progress-fill {
+  height: 100%;
+  background: #22c55e;
+  border-radius: 2px;
+  transition: width 0.5s ease;
+}
+.bs-progress-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin-top: 4px;
+  font-size: 11px;
+}
+.bs-progress-pos {
+  color: #16a34a;
+  font-weight: 600;
+}
+.bs-progress-eta {
+  color: var(--gray);
+}
+
+/* Зупинки в режимі «В дорозі» */
+.bus-card.enroute .bs-stop-row.passed {
+  opacity: 0.4;
+}
+.bus-card.enroute .bs-stop-row.current {
+  font-weight: 700;
+  color: var(--navy);
+  background: #f0fdf4;
+}
+.bus-card.enroute .bs-stop-row.upcoming {
+  font-weight: 600;
+  color: var(--navy);
+}
+
+/* Smart row: В дорозі */
+.bus-smart-row.enroute {
+  background: #f0fdf4;
+  border-bottom-color: #22c55e;
+}
+.bus-smart-row.enroute .bsr-text strong { color: #16a34a; }
+.bus-smart-row.enroute .bsr-text small { color: var(--gray); font-size: 11px; }
+.bsr-pulse {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  background: #22c55e;
+  border-radius: 50%;
+  animation: bsPulse 2s ease-in-out infinite;
+}
+
 /* Кнопка "Всі зупинки ▾ / Сховати ▴" */
 .bs-toggle {
   display: block;
