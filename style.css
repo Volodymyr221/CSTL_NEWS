@@ -540,7 +540,7 @@ html, body {
   position: fixed;
   inset: 0;
   background: rgba(0,0,0,0.5);
-  z-index: 1100;
+  z-index: 500;
   display: none;
   align-items: flex-end;
 }
@@ -1367,6 +1367,19 @@ html, body {
   background: #f0f4f8;
   border-color: #001F3F;
 }
+.pw-back-btn {
+  background: none;
+  border: none;
+  color: var(--primary, #001F3F);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 0 12px;
+  display: block;
+  text-align: left;
+  opacity: 0.7;
+}
+.pw-back-btn:active { opacity: 1; }
 
 /* ── Верхня панель з вулицею ── */
 .pw-top-bar {

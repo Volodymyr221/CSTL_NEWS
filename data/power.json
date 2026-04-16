@@ -4,8 +4,8 @@
     "last_updated": "2026-04-16T10:00:00+03:00",
     "source": "Волиньобленерго",
     "source_url": "https://www.voe.com.ua/disconnection/schedule",
-    "city": "Олика",
-    "note": "DEMO — замінити реальними даними з сайту Волиньобленерго. При міграції на Supabase: queues → таблиця 'queues', streets → таблиця 'streets', schedule всередині queues → таблиця 'schedules' (queue_id, date, hour, status)."
+    "city": "Олицька ОТГ",
+    "note": "DEMO — замінити реальними даними. При міграції на Supabase: cities → таблиця 'cities' (id, name), streets → таблиця 'streets' (id, name, city_id, queue_id), queues → таблиця 'queues' (id, name), schedule → таблиця 'schedules' (queue_id, date, hour, status). Звіти краудсорсингу → таблиця 'reports' (id, street_id, status, created_at)."
   },
   "queues": [
     {
@@ -30,15 +30,91 @@
       }
     }
   ],
-  "streets": [
-    {"id": "s1", "name": "вул. Замкова",       "queue_id": "q1"},
-    {"id": "s2", "name": "вул. Шевченка",      "queue_id": "q2"},
-    {"id": "s3", "name": "вул. Садова",        "queue_id": "q1"},
-    {"id": "s4", "name": "вул. Центральна",    "queue_id": "q3"},
-    {"id": "s5", "name": "вул. Рівненська",    "queue_id": "q2"},
-    {"id": "s6", "name": "вул. Незалежності",  "queue_id": "q1"},
-    {"id": "s7", "name": "вул. Франка",        "queue_id": "q3"},
-    {"id": "s8", "name": "пров. Зелений",      "queue_id": "q2"},
-    {"id": "s9", "name": "вул. Молодіжна",     "queue_id": "q1"}
+  "cities": [
+    {
+      "id": "derno",
+      "name": "Дерно",
+      "streets": [
+        {"id": "derno_1", "name": "все село", "queue_id": "q2"}
+      ]
+    },
+    {
+      "id": "didychi",
+      "name": "Дідичі",
+      "streets": [
+        {"id": "didychi_1", "name": "все село", "queue_id": "q1"}
+      ]
+    },
+    {
+      "id": "zalisochche",
+      "name": "Залісочче",
+      "streets": [
+        {"id": "zalisochche_1", "name": "все село", "queue_id": "q3"}
+      ]
+    },
+    {
+      "id": "zhornyshe",
+      "name": "Жорнище",
+      "streets": [
+        {"id": "zhornyshe_1", "name": "все село", "queue_id": "q1"}
+      ]
+    },
+    {
+      "id": "lychany",
+      "name": "Личани",
+      "streets": [
+        {"id": "lychany_1", "name": "все село", "queue_id": "q2"}
+      ]
+    },
+    {
+      "id": "mytelno",
+      "name": "Мительно",
+      "streets": [
+        {"id": "mytelno_1", "name": "все село", "queue_id": "q3"}
+      ]
+    },
+    {
+      "id": "nosovychi",
+      "name": "Носовичі",
+      "streets": [
+        {"id": "nosovychi_1", "name": "все село", "queue_id": "q1"}
+      ]
+    },
+    {
+      "id": "oderady",
+      "name": "Одеради",
+      "streets": [
+        {"id": "oderady_1", "name": "все село", "queue_id": "q2"}
+      ]
+    },
+    {
+      "id": "olyka",
+      "name": "Олика",
+      "streets": [
+        {"id": "s1", "name": "вул. Замкова",      "queue_id": "q1"},
+        {"id": "s2", "name": "вул. Шевченка",     "queue_id": "q2"},
+        {"id": "s3", "name": "вул. Садова",       "queue_id": "q1"},
+        {"id": "s4", "name": "вул. Центральна",   "queue_id": "q3"},
+        {"id": "s5", "name": "вул. Рівненська",   "queue_id": "q2"},
+        {"id": "s6", "name": "вул. Незалежності", "queue_id": "q1"},
+        {"id": "s7", "name": "вул. Франка",       "queue_id": "q3"},
+        {"id": "s8", "name": "пров. Зелений",     "queue_id": "q2"},
+        {"id": "s9", "name": "вул. Молодіжна",    "queue_id": "q1"}
+      ]
+    },
+    {
+      "id": "khromyakiv",
+      "name": "Хромяків",
+      "streets": [
+        {"id": "khromyakiv_1", "name": "все село", "queue_id": "q2"}
+      ]
+    },
+    {
+      "id": "chemeryn",
+      "name": "Чемерин",
+      "streets": [
+        {"id": "chemeryn_1", "name": "все село", "queue_id": "q3"}
+      ]
+    }
   ]
 }

@@ -2,18 +2,20 @@
 // Модуль «Світло» — графік відключень електроенергії
 //
 // Архітектура підготована під міграцію на Supabase (хмарна база даних):
-//   • powerData.queues   → таблиця `queues`    (id, name)
-//   • powerData.streets  → таблиця `streets`   (id, name, queue_id)
-//   • queue.schedule     → таблиця `schedules` (queue_id, date, hour INT, status INT)
-//   • Звіти користувачів → таблиця `reports`   (id, street_id, status, created_at) — Фаза Б
+//   • powerData.queues  → таблиця `queues`    (id, name)
+//   • powerData.cities  → таблиця `cities`    (id, name)
+//   •   city.streets    → таблиця `streets`   (id, name, city_id, queue_id)
+//   •   queue.schedule  → таблиця `schedules` (queue_id, date, hour INT, status INT)
+//   • Звіти користувачів → таблиця `reports`  (id, street_id, status, created_at) — Фаза Б
 //
 // При міграції: замінити fetch('./data/power.json') на Supabase client queries.
 
 import { escapeHtml } from '../core/utils.js';
 
 let powerData  = null;
+let selCity    = null; // { id, name, streets[] }
 let selStreet  = null; // { id, name, queue_id }
-const PREFS_KEY = 'power_prefs_v1';
+const PREFS_KEY = 'power_prefs_v2';
 
 // ── Хелпери (допоміжні функції) ──────────────────────────────────────────────
 
@@ -25,7 +27,10 @@ function todayKey() {
 }
 
 function savePrefs() {
-  localStorage.setItem(PREFS_KEY, JSON.stringify({ streetId: selStreet?.id || null }));
+  localStorage.setItem(PREFS_KEY, JSON.stringify({
+    cityId:   selCity?.id   || null,
+    streetId: selStreet?.id || null
+  }));
 }
 
 function loadPrefs() {
@@ -33,8 +38,12 @@ function loadPrefs() {
   catch { return {}; }
 }
 
-function findStreet(id) {
-  return powerData?.streets.find(s => s.id === id) || null;
+function findCity(id) {
+  return powerData?.cities.find(c => c.id === id) || null;
+}
+
+function findStreetInCity(city, streetId) {
+  return city?.streets.find(s => s.id === streetId) || null;
 }
 
 function findQueue(id) {
@@ -70,7 +79,7 @@ function generateICS(street, queue) {
         `DTSTART:${ymd}T${pad(start)}0000\r\n` +
         `DTEND:${ymd}T${pad(i)}0000\r\n` +
         `SUMMARY:⚡ Відключення — ${escapeHtml(street.name)}\r\n` +
-        `DESCRIPTION:${escapeHtml(queue.name)} · CSTL NEWS Олика\r\n` +
+        `DESCRIPTION:${escapeHtml(queue.name)} · CSTL NEWS Олицька ОТГ\r\n` +
         `END:VEVENT`
       );
     } else {
@@ -95,17 +104,17 @@ function generateICS(street, queue) {
   URL.revokeObjectURL(url);
 }
 
-// ── Рендер: вибір вулиці (onboarding) ────────────────────────────────────────
+// ── Рендер: вибір міста/села (перший крок) ───────────────────────────────────
 
-function renderOnboarding(container) {
+function renderCityOnboarding(container) {
   container.innerHTML = `
     <div class="pw-onboarding">
       <div class="pw-onboarding-icon">⚡</div>
-      <h3 class="pw-onboarding-title">Графік вашої вулиці</h3>
-      <p class="pw-onboarding-sub">Оберіть вулицю — і одразу побачите<br>коли буде і не буде світла</p>
+      <h3 class="pw-onboarding-title">Графік відключень</h3>
+      <p class="pw-onboarding-sub">Оберіть ваше село або місто</p>
       <div class="pw-street-list">
-        ${powerData.streets.map(s =>
-          `<button class="pw-street-btn" data-id="${escapeHtml(s.id)}">${escapeHtml(s.name)}</button>`
+        ${powerData.cities.map(c =>
+          `<button class="pw-street-btn" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`
         ).join('')}
       </div>
     </div>
@@ -113,7 +122,50 @@ function renderOnboarding(container) {
 
   container.querySelectorAll('.pw-street-btn').forEach(btn => {
     btn.addEventListener('click', () => {
-      selStreet = findStreet(btn.dataset.id);
+      selCity = findCity(btn.dataset.id);
+      if (!selCity) return;
+
+      // Якщо одна вулиця («все село») — автовибір, одразу на таймлайн
+      if (selCity.streets.length === 1) {
+        selStreet = selCity.streets[0];
+        savePrefs();
+        renderPowerPage();
+      } else {
+        // Декілька вулиць (тільки Олика) — показати список вулиць
+        savePrefs();
+        renderPowerPage();
+      }
+    });
+  });
+}
+
+// ── Рендер: вибір вулиці (другий крок, тільки для Олики) ─────────────────────
+
+function renderStreetOnboarding(container) {
+  container.innerHTML = `
+    <div class="pw-onboarding">
+      <button class="pw-back-btn" id="pw-back-city">← ${escapeHtml(selCity.name)}</button>
+      <div class="pw-onboarding-icon">⚡</div>
+      <h3 class="pw-onboarding-title">Ваша вулиця</h3>
+      <p class="pw-onboarding-sub">Оберіть вулицю — і побачите<br>коли буде і не буде світла</p>
+      <div class="pw-street-list">
+        ${selCity.streets.map(s =>
+          `<button class="pw-street-btn" data-id="${escapeHtml(s.id)}">${escapeHtml(s.name)}</button>`
+        ).join('')}
+      </div>
+    </div>
+  `;
+
+  container.querySelector('#pw-back-city')?.addEventListener('click', () => {
+    selCity   = null;
+    selStreet = null;
+    savePrefs();
+    renderPowerPage();
+  });
+
+  container.querySelectorAll('.pw-street-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selStreet = findStreetInCity(selCity, btn.dataset.id);
       savePrefs();
       renderPowerPage();
     });
@@ -131,12 +183,12 @@ function renderTimeline(queue) {
   const curM  = now.getMinutes();
 
   const rows = schedule.map((status, hour) => {
-    const isPast   = hour < curH;
+    const isPast    = hour < curH;
     const isCurrent = hour === curH;
-    const blockCls = status === 1 ? 'pw-block--on'
-                   : status === 0 ? 'pw-block--off'
-                   :                'pw-block--maybe';
-    const label    = status === 1 ? 'Є' : status === 0 ? 'Немає' : '?';
+    const blockCls  = status === 1 ? 'pw-block--on'
+                    : status === 0 ? 'pw-block--off'
+                    :                'pw-block--maybe';
+    const label     = status === 1 ? 'Є' : status === 0 ? 'Немає' : '?';
 
     const nowMarker = isCurrent ? `
       <div class="pw-now-marker" id="pw-now-marker">
@@ -177,18 +229,27 @@ function renderPowerPage() {
     ? `<div class="pw-offline-banner">⚡ Офлайн — дані завантажено о ${updStr}</div>`
     : '';
 
-  if (!selStreet) {
+  // Крок 1: не вибрано місто
+  if (!selCity) {
     container.innerHTML = offlineBanner;
-    renderOnboarding(container);
+    renderCityOnboarding(container);
     return;
   }
 
+  // Крок 2: місто є, вулиця — ні (і вулиць більше однієї)
+  if (!selStreet) {
+    container.innerHTML = offlineBanner;
+    renderStreetOnboarding(container);
+    return;
+  }
+
+  // Крок 3: все вибрано — таймлайн
   const queue = findQueue(selStreet.queue_id);
   if (!queue) { selStreet = null; savePrefs(); renderPowerPage(); return; }
 
-  const schedule    = getTodaySchedule(queue.id);
-  const curH        = new Date().getHours();
-  const curStatus   = schedule ? schedule[curH] : null;
+  const schedule  = getTodaySchedule(queue.id);
+  const curH      = new Date().getHours();
+  const curStatus = schedule ? schedule[curH] : null;
 
   // Наступна зміна статусу
   let nextH = null;
@@ -198,21 +259,26 @@ function renderPowerPage() {
     }
   }
 
-  const statusText  = curStatus === 1 ? '🟢 Зараз є світло'
-                    : curStatus === 0 ? '🔴 Зараз немає світла'
-                    : '🟡 Можливі перебої';
-  const statusCls   = curStatus === 1 ? 'pw-status--on'
-                    : curStatus === 0 ? 'pw-status--off'
-                    :                  'pw-status--maybe';
-  const nextTxt     = nextH !== null ? ` · до ${pad(nextH)}:00` : '';
+  const statusText = curStatus === 1 ? '🟢 Зараз є світло'
+                   : curStatus === 0 ? '🔴 Зараз немає світла'
+                   :                  '🟡 Можливі перебої';
+  const statusCls  = curStatus === 1 ? 'pw-status--on'
+                   : curStatus === 0 ? 'pw-status--off'
+                   :                  'pw-status--maybe';
+  const nextTxt    = nextH !== null ? ` · до ${pad(nextH)}:00` : '';
+
+  // Підпис вверху: «Дерно» або «Олика · вул. Замкова»
+  const locationLabel = selCity.streets.length === 1
+    ? escapeHtml(selCity.name)
+    : `${escapeHtml(selCity.name)} · ${escapeHtml(selStreet.name)}`;
 
   container.innerHTML = `
     ${offlineBanner}
 
     <div class="pw-top-bar">
-      <button class="pw-street-btn-top" id="pw-change-street">
+      <button class="pw-street-btn-top" id="pw-change-location">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-loc"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span>${escapeHtml(selStreet.name)}</span>
+        <span>${locationLabel}</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-chev"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
@@ -235,7 +301,8 @@ function renderPowerPage() {
     </div>
   `;
 
-  document.getElementById('pw-change-street')?.addEventListener('click', () => {
+  document.getElementById('pw-change-location')?.addEventListener('click', () => {
+    selCity   = null;
     selStreet = null;
     savePrefs();
     renderPowerPage();
@@ -259,7 +326,12 @@ export function initPower() {
     .then(data => {
       powerData = data;
       const prefs = loadPrefs();
-      if (prefs.streetId) selStreet = findStreet(prefs.streetId);
+      if (prefs.cityId) {
+        selCity = findCity(prefs.cityId);
+        if (selCity && prefs.streetId) {
+          selStreet = findStreetInCity(selCity, prefs.streetId);
+        }
+      }
       renderPowerPage();
     })
     .catch(() => {

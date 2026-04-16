@@ -916,8 +916,9 @@
 
   // src/tabs/power.js
   var powerData = null;
+  var selCity = null;
   var selStreet = null;
-  var PREFS_KEY2 = "power_prefs_v1";
+  var PREFS_KEY2 = "power_prefs_v2";
   function pad(n) {
     return String(n).padStart(2, "0");
   }
@@ -926,7 +927,10 @@
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
   function savePrefs2() {
-    localStorage.setItem(PREFS_KEY2, JSON.stringify({ streetId: selStreet?.id || null }));
+    localStorage.setItem(PREFS_KEY2, JSON.stringify({
+      cityId: selCity?.id || null,
+      streetId: selStreet?.id || null
+    }));
   }
   function loadPrefs2() {
     try {
@@ -935,8 +939,11 @@
       return {};
     }
   }
-  function findStreet(id) {
-    return powerData?.streets.find((s) => s.id === id) || null;
+  function findCity(id) {
+    return powerData?.cities.find((c) => c.id === id) || null;
+  }
+  function findStreetInCity(city, streetId) {
+    return city?.streets.find((s) => s.id === streetId) || null;
   }
   function findQueue(id) {
     return powerData?.queues.find((q) => q.id === id) || null;
@@ -966,7 +973,7 @@
 DTSTART:${ymd}T${pad(start)}0000\r
 DTEND:${ymd}T${pad(i)}0000\r
 SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
-DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u043A\u0430\r
+DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
 END:VEVENT`
         );
       } else {
@@ -990,22 +997,58 @@ END:VEVENT`
     a.click();
     URL.revokeObjectURL(url);
   }
-  function renderOnboarding(container) {
+  function renderCityOnboarding(container) {
     container.innerHTML = `
     <div class="pw-onboarding">
       <div class="pw-onboarding-icon">\u26A1</div>
-      <h3 class="pw-onboarding-title">\u0413\u0440\u0430\u0444\u0456\u043A \u0432\u0430\u0448\u043E\u0457 \u0432\u0443\u043B\u0438\u0446\u0456</h3>
-      <p class="pw-onboarding-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0443\u043B\u0438\u0446\u044E \u2014 \u0456 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0435<br>\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0456 \u043D\u0435 \u0431\u0443\u0434\u0435 \u0441\u0432\u0456\u0442\u043B\u0430</p>
+      <h3 class="pw-onboarding-title">\u0413\u0440\u0430\u0444\u0456\u043A \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u044C</h3>
+      <p class="pw-onboarding-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0430\u0448\u0435 \u0441\u0435\u043B\u043E \u0430\u0431\u043E \u043C\u0456\u0441\u0442\u043E</p>
       <div class="pw-street-list">
-        ${powerData.streets.map(
-      (s) => `<button class="pw-street-btn" data-id="${escapeHtml(s.id)}">${escapeHtml(s.name)}</button>`
+        ${powerData.cities.map(
+      (c) => `<button class="pw-street-btn" data-id="${escapeHtml(c.id)}">${escapeHtml(c.name)}</button>`
     ).join("")}
       </div>
     </div>
   `;
     container.querySelectorAll(".pw-street-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        selStreet = findStreet(btn.dataset.id);
+        selCity = findCity(btn.dataset.id);
+        if (!selCity)
+          return;
+        if (selCity.streets.length === 1) {
+          selStreet = selCity.streets[0];
+          savePrefs2();
+          renderPowerPage();
+        } else {
+          savePrefs2();
+          renderPowerPage();
+        }
+      });
+    });
+  }
+  function renderStreetOnboarding(container) {
+    container.innerHTML = `
+    <div class="pw-onboarding">
+      <button class="pw-back-btn" id="pw-back-city">\u2190 ${escapeHtml(selCity.name)}</button>
+      <div class="pw-onboarding-icon">\u26A1</div>
+      <h3 class="pw-onboarding-title">\u0412\u0430\u0448\u0430 \u0432\u0443\u043B\u0438\u0446\u044F</h3>
+      <p class="pw-onboarding-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0443\u043B\u0438\u0446\u044E \u2014 \u0456 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0435<br>\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0456 \u043D\u0435 \u0431\u0443\u0434\u0435 \u0441\u0432\u0456\u0442\u043B\u0430</p>
+      <div class="pw-street-list">
+        ${selCity.streets.map(
+      (s) => `<button class="pw-street-btn" data-id="${escapeHtml(s.id)}">${escapeHtml(s.name)}</button>`
+    ).join("")}
+      </div>
+    </div>
+  `;
+    container.querySelector("#pw-back-city")?.addEventListener("click", () => {
+      selCity = null;
+      selStreet = null;
+      savePrefs2();
+      renderPowerPage();
+    });
+    container.querySelectorAll(".pw-street-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selStreet = findStreetInCity(selCity, btn.dataset.id);
         savePrefs2();
         renderPowerPage();
       });
@@ -1052,9 +1095,14 @@ END:VEVENT`
     const upd = new Date(powerData._meta.last_updated);
     const updStr = `${pad(upd.getHours())}:${pad(upd.getMinutes())}`;
     const offlineBanner = !navigator.onLine ? `<div class="pw-offline-banner">\u26A1 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u0434\u0430\u043D\u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u043E ${updStr}</div>` : "";
+    if (!selCity) {
+      container.innerHTML = offlineBanner;
+      renderCityOnboarding(container);
+      return;
+    }
     if (!selStreet) {
       container.innerHTML = offlineBanner;
-      renderOnboarding(container);
+      renderStreetOnboarding(container);
       return;
     }
     const queue = findQueue(selStreet.queue_id);
@@ -1079,13 +1127,14 @@ END:VEVENT`
     const statusText = curStatus === 1 ? "\u{1F7E2} \u0417\u0430\u0440\u0430\u0437 \u0454 \u0441\u0432\u0456\u0442\u043B\u043E" : curStatus === 0 ? "\u{1F534} \u0417\u0430\u0440\u0430\u0437 \u043D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u{1F7E1} \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
     const statusCls = curStatus === 1 ? "pw-status--on" : curStatus === 0 ? "pw-status--off" : "pw-status--maybe";
     const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad(nextH)}:00` : "";
+    const locationLabel = selCity.streets.length === 1 ? escapeHtml(selCity.name) : `${escapeHtml(selCity.name)} \xB7 ${escapeHtml(selStreet.name)}`;
     container.innerHTML = `
     ${offlineBanner}
 
     <div class="pw-top-bar">
-      <button class="pw-street-btn-top" id="pw-change-street">
+      <button class="pw-street-btn-top" id="pw-change-location">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-loc"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span>${escapeHtml(selStreet.name)}</span>
+        <span>${locationLabel}</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-chev"><path d="M6 9l6 6 6-6"/></svg>
       </button>
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
@@ -1107,7 +1156,8 @@ END:VEVENT`
       <span class="pw-demo-note">\u26A0\uFE0F DEMO-\u0434\u0430\u043D\u0456 \u2014 \u043E\u043D\u043E\u0432\u0456\u0442\u044C \u0443 data/power.json</span>
     </div>
   `;
-    document.getElementById("pw-change-street")?.addEventListener("click", () => {
+    document.getElementById("pw-change-location")?.addEventListener("click", () => {
+      selCity = null;
       selStreet = null;
       savePrefs2();
       renderPowerPage();
@@ -1123,8 +1173,12 @@ END:VEVENT`
     fetch("./data/power.json").then((r) => r.json()).then((data) => {
       powerData = data;
       const prefs = loadPrefs2();
-      if (prefs.streetId)
-        selStreet = findStreet(prefs.streetId);
+      if (prefs.cityId) {
+        selCity = findCity(prefs.cityId);
+        if (selCity && prefs.streetId) {
+          selStreet = findStreetInCity(selCity, prefs.streetId);
+        }
+      }
       renderPowerPage();
     }).catch(() => {
       const el = document.getElementById("power-content");
