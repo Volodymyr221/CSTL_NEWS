@@ -139,17 +139,6 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function showToast(msg, duration = 3e3) {
-    let toast = document.getElementById("cstl-toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "cstl-toast";
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.classList.add("visible");
-    setTimeout(() => toast.classList.remove("visible"), duration);
-  }
 
   // src/tabs/news.js
   var allArticles = [];
@@ -275,10 +264,10 @@
     return CATEGORY_COLORS[category] || "#C41E3A";
   }
   function buildIcsContent(ev) {
-    const pad = (n) => String(n).padStart(2, "0");
+    const pad2 = (n) => String(n).padStart(2, "0");
     const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
     const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
     return [
       "BEGIN:VCALENDAR",
@@ -1152,7 +1141,7 @@ END:VEVENT`
     initNews();
     initEvents();
     initBuses();
-    initSubmit();
+    initPower();
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {
