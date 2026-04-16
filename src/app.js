@@ -3,7 +3,7 @@ import { initWeather } from './core/weather.js';
 import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses } from './tabs/buses.js';
-import { initSubmit } from './tabs/submit.js';
+import { initPower } from './tabs/power.js';
 
 // Поточна активна вкладка
 let currentTab = 'news';
@@ -57,7 +57,7 @@ function init() {
   initNews();
   initEvents();
   initBuses();
-  initSubmit();
+  initPower();
 
   // Splash screen — прибираємо після завантаження
   setTimeout(() => {

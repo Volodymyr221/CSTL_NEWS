@@ -1309,3 +1309,238 @@ html, body {
   color: var(--gray);
   text-align: center;
 }
+
+/* ============================================================
+   POWER MODULE — Модуль «Світло» (графік відключень)
+   Navy Blue  #001F3F = є світло
+   Burgundy   #800020 = немає світла
+   ============================================================ */
+
+/* Офлайн-банер */
+.pw-offline-banner {
+  background: #FFF8E1;
+  border-bottom: 1px solid #FFE082;
+  color: #795548;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ── Onboarding (вибір вулиці) ── */
+.pw-onboarding {
+  padding: 28px 20px 24px;
+  text-align: center;
+}
+.pw-onboarding-icon { font-size: 44px; margin-bottom: 12px; }
+.pw-onboarding-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--black);
+  margin: 0 0 8px;
+}
+.pw-onboarding-sub {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.5;
+  margin: 0 0 22px;
+}
+.pw-street-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pw-street-btn {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--black);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+.pw-street-btn:active {
+  background: #f0f4f8;
+  border-color: #001F3F;
+}
+
+/* ── Верхня панель з вулицею ── */
+.pw-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.pw-street-btn-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  color: #001F3F;
+}
+.pw-icon-loc  { width: 16px; height: 16px; color: #001F3F; flex-shrink: 0; }
+.pw-icon-chev { width: 16px; height: 16px; color: #001F3F; flex-shrink: 0; }
+.pw-queue-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray);
+  background: #f0f0f0;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* ── Картка поточного статусу ── */
+.pw-status-card {
+  margin: 12px 16px 4px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border-left: 4px solid transparent;
+}
+.pw-status--on    { background: #E8F0F8; border-color: #001F3F; }
+.pw-status--off   { background: #F8E8EA; border-color: #800020; }
+.pw-status--maybe { background: #FFF8E1; border-color: #F9A825; }
+.pw-status-main {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--black);
+}
+.pw-status-upd {
+  font-size: 12px;
+  color: var(--gray);
+  margin-top: 3px;
+}
+
+/* ── Таймлайн (вертикальна шкала 24 год) ── */
+.pw-timeline { padding: 8px 16px 8px; }
+.pw-timeline-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+/* Рядок години */
+.pw-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+.pw-row--past { opacity: 0.35; }
+
+.pw-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--black);
+  width: 42px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pw-block {
+  flex: 1;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+}
+.pw-block--on    { background: #001F3F; }
+.pw-block--off   { background: #800020; }
+.pw-block--maybe {
+  background: repeating-linear-gradient(
+    45deg, #ddd, #ddd 4px, #efefef 4px, #efefef 8px
+  );
+}
+.pw-block-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pw-block--maybe .pw-block-label { color: #888; }
+
+/* Маркер «ЗАРАЗ» */
+.pw-now-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+.pw-now-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+.pw-now-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+.pw-now-line-right {
+  flex: 1;
+  height: 1px;
+  background: var(--red);
+  opacity: 0.4;
+}
+
+/* ── Кнопки дій ── */
+.pw-actions {
+  padding: 12px 16px 8px;
+}
+.pw-ics-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.pw-ics-btn:active { background: #f5f5f5; }
+
+/* ── Футер модуля ── */
+.pw-footer-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray);
+  line-height: 1.6;
+  padding: 4px 16px 24px;
+}
+.pw-demo-note { color: #F9A825; font-weight: 600; }
+
+/* Порожній стан / помилка */
+.pw-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--gray);
+  font-size: 14px;
+}

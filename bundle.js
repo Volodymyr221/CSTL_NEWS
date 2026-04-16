@@ -139,17 +139,6 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
-  function showToast(msg, duration = 3e3) {
-    let toast = document.getElementById("cstl-toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "cstl-toast";
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.classList.add("visible");
-    setTimeout(() => toast.classList.remove("visible"), duration);
-  }
 
   // src/tabs/news.js
   var allArticles = [];
@@ -275,10 +264,10 @@
     return CATEGORY_COLORS[category] || "#C41E3A";
   }
   function buildIcsContent(ev) {
-    const pad = (n) => String(n).padStart(2, "0");
+    const pad2 = (n) => String(n).padStart(2, "0");
     const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
     const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
     return [
       "BEGIN:VCALENDAR",
@@ -925,35 +914,231 @@
     }, 6e4);
   }
 
-  // src/tabs/submit.js
-  function initSubmit() {
-    const form = document.getElementById("submit-form");
-    if (!form)
-      return;
-    form.addEventListener("submit", handleSubmit);
+  // src/tabs/power.js
+  var powerData = null;
+  var selStreet = null;
+  var PREFS_KEY2 = "power_prefs_v1";
+  function pad(n) {
+    return String(n).padStart(2, "0");
   }
-  function handleSubmit(e) {
-    e.preventDefault();
-    const name = document.getElementById("submit-name").value.trim();
-    const contact = document.getElementById("submit-contact").value.trim();
-    const text = document.getElementById("submit-text").value.trim();
-    if (!text) {
-      showToast("\u041E\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u043E\u0432\u0438\u043D\u0443 \u0430\u0431\u043E \u0432\u0441\u0442\u0430\u0432\u0442\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F");
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  function savePrefs2() {
+    localStorage.setItem(PREFS_KEY2, JSON.stringify({ streetId: selStreet?.id || null }));
+  }
+  function loadPrefs2() {
+    try {
+      return JSON.parse(localStorage.getItem(PREFS_KEY2) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function findStreet(id) {
+    return powerData?.streets.find((s) => s.id === id) || null;
+  }
+  function findQueue(id) {
+    return powerData?.queues.find((q) => q.id === id) || null;
+  }
+  function getTodaySchedule(queueId) {
+    const queue = findQueue(queueId);
+    if (!queue)
+      return null;
+    const key = todayKey();
+    return queue.schedule[key] || queue.schedule[Object.keys(queue.schedule)[0]] || null;
+  }
+  function generateICS(street, queue) {
+    const schedule = getTodaySchedule(queue.id);
+    if (!schedule)
+      return;
+    const d = /* @__PURE__ */ new Date();
+    const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const events = [];
+    let i = 0;
+    while (i < 24) {
+      if (schedule[i] === 0) {
+        const start = i;
+        while (i < 24 && schedule[i] === 0)
+          i++;
+        events.push(
+          `BEGIN:VEVENT\r
+DTSTART:${ymd}T${pad(start)}0000\r
+DTEND:${ymd}T${pad(i)}0000\r
+SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
+DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u043A\u0430\r
+END:VEVENT`
+        );
+      } else {
+        i++;
+      }
+    }
+    const ics = [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CSTL NEWS//Power Schedule//UK",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      ...events,
+      "END:VCALENDAR"
+    ].join("\r\n");
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `vidklyuchennya-${d.getDate()}-${d.getMonth() + 1}.ics`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+  function renderOnboarding(container) {
+    container.innerHTML = `
+    <div class="pw-onboarding">
+      <div class="pw-onboarding-icon">\u26A1</div>
+      <h3 class="pw-onboarding-title">\u0413\u0440\u0430\u0444\u0456\u043A \u0432\u0430\u0448\u043E\u0457 \u0432\u0443\u043B\u0438\u0446\u0456</h3>
+      <p class="pw-onboarding-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0432\u0443\u043B\u0438\u0446\u044E \u2014 \u0456 \u043E\u0434\u0440\u0430\u0437\u0443 \u043F\u043E\u0431\u0430\u0447\u0438\u0442\u0435<br>\u043A\u043E\u043B\u0438 \u0431\u0443\u0434\u0435 \u0456 \u043D\u0435 \u0431\u0443\u0434\u0435 \u0441\u0432\u0456\u0442\u043B\u0430</p>
+      <div class="pw-street-list">
+        ${powerData.streets.map(
+      (s) => `<button class="pw-street-btn" data-id="${escapeHtml(s.id)}">${escapeHtml(s.name)}</button>`
+    ).join("")}
+      </div>
+    </div>
+  `;
+    container.querySelectorAll(".pw-street-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        selStreet = findStreet(btn.dataset.id);
+        savePrefs2();
+        renderPowerPage();
+      });
+    });
+  }
+  function renderTimeline(queue) {
+    const schedule = getTodaySchedule(queue.id);
+    if (!schedule)
+      return '<p class="pw-empty">\u0414\u0430\u043D\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456</p>';
+    const now = /* @__PURE__ */ new Date();
+    const curH = now.getHours();
+    const curM = now.getMinutes();
+    const rows = schedule.map((status, hour) => {
+      const isPast = hour < curH;
+      const isCurrent = hour === curH;
+      const blockCls = status === 1 ? "pw-block--on" : status === 0 ? "pw-block--off" : "pw-block--maybe";
+      const label = status === 1 ? "\u0404" : status === 0 ? "\u041D\u0435\u043C\u0430\u0454" : "?";
+      const nowMarker = isCurrent ? `
+      <div class="pw-now-marker" id="pw-now-marker">
+        <div class="pw-now-dot"></div>
+        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad(curH)}:${pad(curM)}</span>
+        <div class="pw-now-line-right"></div>
+      </div>` : "";
+      return `
+      ${nowMarker}
+      <div class="pw-row${isPast ? " pw-row--past" : ""}${isCurrent ? " pw-row--current" : ""}">
+        <span class="pw-time">${pad(hour)}:00</span>
+        <div class="pw-block ${blockCls}">
+          <span class="pw-block-label">${label}</span>
+        </div>
+      </div>`;
+    }).join("");
+    const dateStr = now.toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+    return `
+    <div class="pw-timeline">
+      <div class="pw-timeline-date">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456, ${dateStr}</div>
+      ${rows}
+    </div>`;
+  }
+  function renderPowerPage() {
+    const container = document.getElementById("power-content");
+    if (!container || !powerData)
+      return;
+    const upd = new Date(powerData._meta.last_updated);
+    const updStr = `${pad(upd.getHours())}:${pad(upd.getMinutes())}`;
+    const offlineBanner = !navigator.onLine ? `<div class="pw-offline-banner">\u26A1 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u0434\u0430\u043D\u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u043E ${updStr}</div>` : "";
+    if (!selStreet) {
+      container.innerHTML = offlineBanner;
+      renderOnboarding(container);
       return;
     }
-    const subject = encodeURIComponent("\u041F\u0440\u043E\u043F\u043E\u0437\u0438\u0446\u0456\u044F \u043D\u043E\u0432\u0438\u043D\u0438 \u2014 CSTL NEWS");
-    const body = encodeURIComponent(
-      `\u0412\u0456\u0434: ${name || "\u0410\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}
-\u041A\u043E\u043D\u0442\u0430\u043A\u0442: ${contact || "\u043D\u0435 \u0432\u043A\u0430\u0437\u0430\u043D\u043E"}
+    const queue = findQueue(selStreet.queue_id);
+    if (!queue) {
+      selStreet = null;
+      savePrefs2();
+      renderPowerPage();
+      return;
+    }
+    const schedule = getTodaySchedule(queue.id);
+    const curH = (/* @__PURE__ */ new Date()).getHours();
+    const curStatus = schedule ? schedule[curH] : null;
+    let nextH = null;
+    if (schedule) {
+      for (let h = curH + 1; h < 24; h++) {
+        if (schedule[h] !== curStatus) {
+          nextH = h;
+          break;
+        }
+      }
+    }
+    const statusText = curStatus === 1 ? "\u{1F7E2} \u0417\u0430\u0440\u0430\u0437 \u0454 \u0441\u0432\u0456\u0442\u043B\u043E" : curStatus === 0 ? "\u{1F534} \u0417\u0430\u0440\u0430\u0437 \u043D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u{1F7E1} \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
+    const statusCls = curStatus === 1 ? "pw-status--on" : curStatus === 0 ? "pw-status--off" : "pw-status--maybe";
+    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad(nextH)}:00` : "";
+    container.innerHTML = `
+    ${offlineBanner}
 
-${text}`
-    );
-    const submissions = JSON.parse(localStorage.getItem("cstl_submissions") || "[]");
-    submissions.push({ name, contact, text, ts: Date.now() });
-    localStorage.setItem("cstl_submissions", JSON.stringify(submissions));
-    window.location.href = `mailto:cstlnews@gmail.com?subject=${subject}&body=${body}`;
-    showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0412\u0430\u0448\u0430 \u043D\u043E\u0432\u0438\u043D\u0430 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0430 \u0440\u0435\u0434\u0430\u043A\u0446\u0456\u0457.");
-    document.getElementById("submit-form").reset();
+    <div class="pw-top-bar">
+      <button class="pw-street-btn-top" id="pw-change-street">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-loc"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+        <span>${escapeHtml(selStreet.name)}</span>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-chev"><path d="M6 9l6 6 6-6"/></svg>
+      </button>
+      <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
+    </div>
+
+    <div class="pw-status-card ${statusCls}">
+      <div class="pw-status-main">${statusText}${nextTxt}</div>
+      <div class="pw-status-upd">\u0414\u0430\u043D\u0456 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u043D\u0430 ${updStr}</div>
+    </div>
+
+    ${renderTimeline(queue)}
+
+    <div class="pw-actions">
+      <button class="pw-ics-btn" id="pw-ics-btn">\u{1F4C5} \u0414\u043E\u0434\u0430\u0442\u0438 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440</button>
+    </div>
+
+    <div class="pw-footer-note">
+      \u0414\u0436\u0435\u0440\u0435\u043B\u043E: ${escapeHtml(powerData._meta.source)}<br>
+      <span class="pw-demo-note">\u26A0\uFE0F DEMO-\u0434\u0430\u043D\u0456 \u2014 \u043E\u043D\u043E\u0432\u0456\u0442\u044C \u0443 data/power.json</span>
+    </div>
+  `;
+    document.getElementById("pw-change-street")?.addEventListener("click", () => {
+      selStreet = null;
+      savePrefs2();
+      renderPowerPage();
+    });
+    document.getElementById("pw-ics-btn")?.addEventListener("click", () => {
+      generateICS(selStreet, queue);
+    });
+    setTimeout(() => {
+      document.getElementById("pw-now-marker")?.scrollIntoView({ behavior: "smooth", block: "center" });
+    }, 120);
+  }
+  function initPower() {
+    fetch("./data/power.json").then((r) => r.json()).then((data) => {
+      powerData = data;
+      const prefs = loadPrefs2();
+      if (prefs.streetId)
+        selStreet = findStreet(prefs.streetId);
+      renderPowerPage();
+    }).catch(() => {
+      const el = document.getElementById("power-content");
+      if (el)
+        el.innerHTML = '<p class="pw-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0434\u0430\u043D\u0456 \u26A1</p>';
+    });
+    window.addEventListener("online", () => {
+      if (powerData)
+        renderPowerPage();
+    });
+    window.addEventListener("offline", () => {
+      if (powerData)
+        renderPowerPage();
+    });
   }
 
   // src/app.js
@@ -998,7 +1183,7 @@ ${text}`
     initNews();
     initEvents();
     initBuses();
-    initSubmit();
+    initPower();
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {
