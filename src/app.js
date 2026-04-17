@@ -49,11 +49,62 @@ window.closeArticleModal = function() {
   const modal = document.getElementById('article-modal');
   if (modal) modal.classList.remove('open');
   document.body.style.overflow = '';
+  document.body.classList.remove('modal-open');
+  // Скидаємо inline стилі після свайпу
+  const inner = document.querySelector('.article-modal-inner');
+  if (inner) { inner.style.transform = ''; inner.style.transition = ''; inner.style.animation = ''; }
 };
+
+// Свайп вниз для закриття модалки
+function initModalSwipe() {
+  const inner = document.querySelector('.article-modal-inner');
+  if (!inner) return;
+  let startY = 0;
+  let swiping = false;
+
+  inner.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY;
+    swiping = false;
+  }, { passive: true });
+
+  inner.addEventListener('touchmove', e => {
+    const dy = e.touches[0].clientY - startY;
+    if (inner.scrollTop <= 0 && dy > 5) {
+      e.preventDefault();
+      swiping = true;
+      inner.style.animation = 'none';
+      inner.style.transition = 'none';
+      inner.style.transform = `translateY(${Math.max(0, dy)}px)`;
+    }
+  }, { passive: false });
+
+  inner.addEventListener('touchend', e => {
+    if (!swiping) return;
+    swiping = false;
+    const dy = e.changedTouches[0].clientY - startY;
+    if (dy > 80) {
+      inner.style.transition = 'transform 0.25s ease-in';
+      inner.style.transform = 'translateY(100%)';
+      setTimeout(window.closeArticleModal, 240);
+    } else {
+      inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+      inner.style.transform = 'translateY(0)';
+      setTimeout(() => { inner.style.transition = ''; inner.style.animation = ''; }, 300);
+    }
+  });
+
+  inner.addEventListener('touchcancel', () => {
+    swiping = false;
+    inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+    inner.style.transform = '';
+    setTimeout(() => { inner.style.transition = ''; inner.style.animation = ''; }, 300);
+  });
+}
 
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
+  initModalSwipe();
   initWeather();
   initNews();
   initEvents();

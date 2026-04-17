@@ -136,4 +136,5 @@ window.openArticle = function(id) {
 
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
+  document.body.classList.add('modal-open');
 };
