@@ -329,9 +329,8 @@
   async function fetchFullArticle(url, bodyEl, sourceName) {
     const PROXY = "https://api.allorigins.win/get?url=";
     try {
-      const res = await fetch(PROXY + encodeURIComponent(url), {
-        signal: AbortSignal.timeout(1e4)
-      });
+      const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(1e4) : void 0;
+      const res = await fetch(PROXY + encodeURIComponent(url), { signal });
       const { contents } = await res.json();
       const html = extractArticleHtml(contents, url);
       if (html && bodyEl) {
