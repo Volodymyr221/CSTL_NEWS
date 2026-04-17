@@ -268,7 +268,10 @@
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
     <div class="article-body">${bodyHtml}</div>
-    ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
+    <div class="article-source-row">
+      <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong> ${escapeHtml(article.source)}</span>
+      ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
+    </div>
   `;
     modal.classList.add("open");
     document.body.style.overflow = "hidden";

@@ -129,9 +129,12 @@ window.openArticle = function(id) {
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ''}
     <div class="article-body">${bodyHtml}</div>
-    ${article.sourceUrl
-      ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
-      : ''}
+    <div class="article-source-row">
+      <span class="article-source-author"><strong>Автор публікації:</strong> ${escapeHtml(article.source)}</span>
+      ${article.sourceUrl
+        ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
+        : ''}
+    </div>
   `;
 
   modal.classList.add('open');
