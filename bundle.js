@@ -503,6 +503,25 @@
     } catch {
     }
   }
+  function kyivNowMins() {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Kiev",
+      hour: "numeric",
+      minute: "numeric",
+      hour12: false
+    }).formatToParts(/* @__PURE__ */ new Date());
+    const h = +parts.find((p) => p.type === "hour").value;
+    const m = +parts.find((p) => p.type === "minute").value;
+    return h * 60 + m;
+  }
+  function kyivDayOfWeek() {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: "Europe/Kiev",
+      weekday: "long"
+    }).formatToParts(/* @__PURE__ */ new Date());
+    const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+    return names.indexOf(parts.find((p) => p.type === "weekday").value);
+  }
   function toMinutes(hhmm) {
     const [h, m] = hhmm.split(":").map(Number);
     return h * 60 + m;
@@ -513,8 +532,7 @@
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   }
   function minutesUntil(hhmm) {
-    const now = /* @__PURE__ */ new Date();
-    const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
+    const diff = toMinutes(hhmm) - kyivNowMins();
     return diff > 0 ? diff : null;
   }
   function formatCountdown(mins) {
@@ -524,7 +542,7 @@
     return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
   }
   function isDayActive(days) {
-    const d = (/* @__PURE__ */ new Date()).getDay();
+    const d = kyivDayOfWeek();
     if (days === "\u0449\u043E\u0434\u043D\u044F")
       return true;
     if (days === "\u043F\u043D-\u0441\u0431")
@@ -543,7 +561,7 @@
     return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
   }
   function getRouteState(route) {
-    const nowMins = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const nowMins = kyivNowMins();
     const depMins = toMinutes(route.departure_time);
     const arrMins = depMins + route.duration_min;
     if (nowMins < depMins)
@@ -553,14 +571,14 @@
     return "enroute";
   }
   function getRouteProgress(route) {
-    const nowMins = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const nowMins = kyivNowMins();
     const depMins = toMinutes(route.departure_time);
     if (nowMins <= depMins)
       return 0;
     return Math.min(1, (nowMins - depMins) / route.duration_min);
   }
   function getCurrentPosition(route) {
-    const nowMins = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const nowMins = kyivNowMins();
     const stops = route.stops;
     for (let i = 0; i < stops.length - 1; i++) {
       const currMins = getStopMins(route, stops[i].name);

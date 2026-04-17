@@ -24,6 +24,25 @@ function loadPrefs() {
 }
 
 // ── Time utils (утиліти для роботи з часом) ───────────────────────────
+
+// Розклад прив'язаний до Київського часу — користувачі з-за кордону теж бачать правильний статус.
+function kyivNowMins() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Kiev', hour: 'numeric', minute: 'numeric', hour12: false,
+  }).formatToParts(new Date());
+  const h = +parts.find(p => p.type === 'hour').value;
+  const m = +parts.find(p => p.type === 'minute').value;
+  return h * 60 + m;
+}
+
+function kyivDayOfWeek() {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Kiev', weekday: 'long',
+  }).formatToParts(new Date());
+  const names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  return names.indexOf(parts.find(p => p.type === 'weekday').value);
+}
+
 function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
@@ -36,8 +55,7 @@ function minsToHHMM(total) {
 }
 
 function minutesUntil(hhmm) {
-  const now  = new Date();
-  const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
+  const diff = toMinutes(hhmm) - kyivNowMins();
   return diff > 0 ? diff : null;
 }
 
@@ -48,7 +66,7 @@ function formatCountdown(mins) {
 }
 
 function isDayActive(days) {
-  const d = new Date().getDay();
+  const d = kyivDayOfWeek();
   if (days === 'щодня') return true;
   if (days === 'пн-сб') return d >= 1 && d <= 6;
   if (days === 'пн-пт') return d >= 1 && d <= 5;
@@ -66,7 +84,7 @@ function getStopMins(route, stopName) {
 
 // Три стани рейсу: 'future' | 'enroute' | 'past'
 function getRouteState(route) {
-  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMins = kyivNowMins();
   const depMins = toMinutes(route.departure_time);
   const arrMins = depMins + route.duration_min;
   if (nowMins < depMins) return 'future';
@@ -75,14 +93,14 @@ function getRouteState(route) {
 }
 
 function getRouteProgress(route) {
-  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMins = kyivNowMins();
   const depMins = toMinutes(route.departure_time);
   if (nowMins <= depMins) return 0;
   return Math.min(1, (nowMins - depMins) / route.duration_min);
 }
 
 function getCurrentPosition(route) {
-  const nowMins = new Date().getHours() * 60 + new Date().getMinutes();
+  const nowMins = kyivNowMins();
   const stops = route.stops;
   for (let i = 0; i < stops.length - 1; i++) {
     const currMins = getStopMins(route, stops[i].name);
