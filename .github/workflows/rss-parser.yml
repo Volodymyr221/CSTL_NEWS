@@ -11,10 +11,10 @@ permissions:
   pages: write
   id-token: write
 
-# Не конфліктуємо з deploy.yml (обидва деплоять на Pages)
+# Окрема черга від deploy.yml — не блокуємо один одного
 concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  group: "rss-parser"
+  cancel-in-progress: true
 
 jobs:
   parse-and-deploy:
