@@ -31,7 +31,6 @@
 | `docs/CONTENT_STRATEGY.md` | Джерела новин, фільтри, ручна публікація |
 | `docs/RULES.md` | Нагадати собі правила якщо забув |
 | `docs/DESIGN_SYSTEM.md` | UI патерни і помилки які вже були |
-| `docs/NEVERMIND_PATTERNS.md` | Коли переносиш логіку з NeverMind |
 | Конкретний файл з `src/` | Завжди перед змінами в цьому файлі |
 
 ---
@@ -40,8 +39,7 @@
 
 **CSTL NEWS** — це **кишеньковий щоденний інструмент жителя Олики**, який замінює хаос у 10 групах Viber одним преміальним PWA-додатком (Progressive Web App — веб-додаток що встановлюється з браузера без App Store). Під-проект екосистеми **Olyka Castle** (головний бренд Вови про містечко Олика, Волинська область).
 
-**4 вкладки MVP:** Новини · Події · Автобуси · Подати новину
-**Майбутні вкладки:** Світло (Енерго-Варта) · Оголошення · Акції магазинів
+**4 вкладки:** Новини · Події · Автобуси · Світло
 
 **Повний опис** — `docs/CONCEPT.md`.
 
@@ -54,18 +52,20 @@
 - **Комунікує коротко**, очікує коротких відповідей
 - **"Роби"** = сигнал починати код. Без "Роби" — тільки обговорення.
 - **Скріншоти** — основний спосіб показати проблему
-- Очікує **пояснення кожного англомовного терміну у дужках** (PWA, deploy, bundle.js, commit і т.д.)
+- Очікує **пояснення кожного англомовного терміну у дужках**
 - Повний профіль — `ВОВА_ПРОФІЛЬ.md`
 
 ---
 
-## 🚀 Поточний стан проекту (на 2026-04-10)
+## 🚀 Поточний стан проекту (на 2026-04-17)
 
-- **Фаза 1 А+ — ЗАВЕРШЕНА ✅** Сайт воскресіли після помилкового видалення `bundle.js`, `build.js`, `deploy.yml`. Новий чистий деплой через `actions/deploy-pages@v4`. Лічильник версії внизу екрану.
-- **Фаза 2 — наступна 🔜** Контент-фундамент: RSS-парсер новин, виправлення багів аудиту, форма "Подати новину" через Web3Forms/Formspree.
+- **Фаза 1 А+ — ЗАВЕРШЕНА ✅** Сайт живий, автодеплой, лічильник версії
+- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, 6 джерел, фільтри, cron щогодини
+- **Фаза 3 MVP (Світло) — ЗАВЕРШЕНА ✅** Таймлайн, 11 сіл ОТГ, DEMO дані
+- **Наступне 🔜** — Supabase для «Світло» (реальний розклад черг)
 
 **URL сайту:** https://volodymyr221.github.io/CSTL_NEWS/
-**Гілка розробки:** `main` (Вова попросив повну автоматизацію — працюємо прямо в main)
+**Гілка розробки:** `main`
 **Репозиторій:** https://github.com/Volodymyr221/CSTL_NEWS
 
 ---
@@ -82,18 +82,29 @@ git push origin main
 Ubuntu runner:
   1. npm install (esbuild)
   2. node build.js (src/ → bundle.js у пам'яті CI)
-  3. sed замінює плейсхолдер "v1 · 01.01 00:00" на "v{run_number} · DD.MM HH:MM"
-  4. actions/upload-pages-artifact@v3 (весь проект як artifact)
-  5. actions/deploy-pages@v4 (публікація на GitHub Pages)
+  3. sed замінює плейсхолдер на "v{run_number} · DD.MM HH:MM" (Київ)
+  4. actions/upload-pages-artifact@v3
+  5. actions/deploy-pages@v4
     ↓
 volodymyr221.github.io/CSTL_NEWS/ оновлюється через 1-3 хв
-    ↓
-Вова відкриває сайт, бачить свіжий штамп "v{N} · DD.MM HH:MM" внизу екрану
 ```
 
-**Лічильник версії** — критична фіча. Якщо після пушу номер не змінився — деплой не пройшов. Вова дивиться саме на нього.
+## 🔄 Як працює RSS-парсер
 
-**Вимога для роботи:** у `Settings → Pages → Source` встановлено "GitHub Actions" (не "Deploy from a branch"). Вже переключено ✅.
+```
+GitHub Actions cron (щогодини о :00)
+    ↓
+.github/workflows/rss-parser.yml
+    ↓
+python scripts/parse_rss.py
+  - парсить 6 джерел (Волинь × 3, Україна × 1, Світ × 2)
+  - фільтрує за NATIONAL_KEYWORDS / WORLD_KEYWORDS
+  - дедуплікує за URL + заголовком
+    ↓
+якщо є нові статті → git commit data/articles.json → git push main
+    ↓
+gh workflow run deploy.yml → сайт оновлюється
+```
 
 ---
 
@@ -102,74 +113,66 @@ volodymyr221.github.io/CSTL_NEWS/ оновлюється через 1-3 хв
 ```
 CSTL_NEWS/
 ├── index.html                    # UI + плейсхолдер лічильника версії
-├── style.css                     # Всі стилі + .deploy-stamp
-├── sw.js                         # Service Worker, CACHE_NAME міняти при деплої коду
+├── style.css                     # Всі стилі
+├── sw.js                         # Service Worker, CACHE_NAME: cstl-20260417-1145
 ├── build.js                      # esbuild конфіг (8 рядків)
-├── bundle.js                     # Згенерований, у git як робоча база (варіант Б)
-├── logo.png                      # Логотип splash-заставки
+├── bundle.js                     # Згенерований, у git як робоча база
+├── logo.png                      # Логотип
 ├── package.json                  # Одна залежність: esbuild
 │
 ├── .github/workflows/
-│   └── deploy.yml                # GitHub Pages Deploy Action (А+)
+│   ├── deploy.yml                # GitHub Pages Deploy (А+)
+│   └── rss-parser.yml            # RSS парсер — cron щогодини
+│
+├── scripts/
+│   └── parse_rss.py              # Python RSS парсер (6 джерел, фільтри, дедуплікація)
 │
 ├── data/
-│   ├── articles.json             # Масив статей (гібрид: авто RSS + ручні)
-│   ├── curated.json              # [ФАЗА 2.1] Ручні ексклюзиви Олики (ще не створено)
+│   ├── articles.json             # Статті (авто RSS + ручні ексклюзиви)
 │   ├── events.json               # Події афіші
-│   └── schedule.json             # Розклад автобусів
+│   ├── schedule.json             # Розклад автобусів (10 рейсів VOPAS)
+│   └── power.json                # Графік відключень (DEMO, 11 міст ОТГ)
 │
 ├── src/
 │   ├── app.js                    # Точка входу
 │   ├── core/
 │   │   ├── boot.js               # PWA + Service Worker init
-│   │   ├── utils.js              # formatTime, escapeHtml, showToast, formatEventDate
+│   │   ├── utils.js              # formatTime, escapeHtml, showToast
 │   │   └── weather.js            # Погода у шапці (Open-Meteo API)
 │   └── tabs/
-│       ├── news.js               # Стрічка новин + фільтри + модалка статті
-│       ├── events.js             # Афіша
-│       ├── buses.js              # Розклад
-│       └── submit.js             # Форма подачі
-│
-├── CLAUDE.md                     # Короткий контекст, вказує на CSTL NEWS VOVA/
+│       ├── news.js               # Новини + фільтри geo + модалка
+│       ├── events.js             # Афіша подій
+│       ├── buses.js              # Розклад + трекінг «В дорозі»
+│       └── power.js              # Графік відключень світла
 │
 └── CSTL NEWS VOVA/               # Документація і AI-інструменти
     ├── START_HERE.md             # Цей файл — точка входу
-    ├── CLAUDE.md                 # Повні правила, структура, деплой
+    ├── CLAUDE.md                 # Повні правила
     ├── ВОВА_ПРОФІЛЬ.md           # Хто такий Вова
-    ├── CSTL_BUGS.md              # Список багів B-01 … B-20
-    │
+    ├── CSTL_BUGS.md              # Список багів
     ├── _ai-tools/
     │   ├── SESSION_STATE.md      # Поточний стан сесії
-    │   └── BACKLOG.md            # Єдиний пріоритезований список задач
-    │
-    ├── docs/
-    │   ├── CONCEPT.md            # Ідея, бренд, цілі
-    │   ├── ROADMAP.md            # 7 фаз з пріоритетами
-    │   ├── ARCHITECTURE.md       # Технічна архітектура (А+, кеш, лічильник)
-    │   ├── CONTENT_STRATEGY.md   # Джерела новин, фільтри, публікація
-    │   ├── RULES.md              # Правила роботи
-    │   ├── DESIGN_SYSTEM.md      # UI патерни
-    │   └── NEVERMIND_PATTERNS.md # Патерни з NeverMind
-    │
-    └── .claude/commands/         # Слеш-команди (audit, deploy, fix, mockup, new-file, start, gemini)
+    │   ├── BACKLOG.md            # Єдиний список задач
+    │   └── SESSION_ARCHIVE.md    # Архів попередніх сесій
+    └── docs/
+        ├── CONCEPT.md, ROADMAP.md, ARCHITECTURE.md
+        ├── CONTENT_STRATEGY.md, RULES.md, DESIGN_SYSTEM.md
+        └── NEVERMIND_PATTERNS.md
 ```
 
 ---
 
 ## 💬 Перша репліка Claude після читання
 
-> "Прочитав. CSTL NEWS, гілка `main`, Фаза 1 завершена (сайт воскресіли, лічильник версії працює). Наступне — Фаза 2: [топ-3 задачі з BACKLOG.md]. Що робимо сьогодні?"
+> "Прочитав. CSTL NEWS, гілка `main`. Фаза 2.1 (RSS-парсер) завершена — 6 джерел, cron щогодини. Наступне — Supabase для «Світло». Що робимо сьогодні?"
 
 ---
 
-## ⚠️ Критично важливі правила (не забути!)
+## ⚠️ Критично важливі правила
 
 1. **БЕЗ "Роби" від Вови — код не чіпати.** Тільки обговорення.
-2. **ОДИН крок за раз.** Не дробити, але й не робити все одразу.
+2. **ОДИН крок за раз.**
 3. **Пояснення англомовних термінів у дужках** — у кожному повідомленні.
 4. **Читай код перед змінами** — ніколи "на пам'ять".
-5. **При деплої КОДУ** — міняй `CACHE_NAME` у `sw.js` (формат `cstl-YYYYMMDD-HHMM`). При зміні тільки `.md` файлів — НЕ чіпай.
+5. **При деплої КОДУ** — міняй `CACHE_NAME` у `sw.js`. При зміні тільки `.md` — НЕ чіпай.
 6. **Після КОЖНОЇ зміни** — оновлюй `_ai-tools/SESSION_STATE.md`.
-7. **Автокоміт активний** — stop-hook (`~/.claude/stop-hook-git-check.sh`) комітить за тебе наприкінці турна. Це **потрібна фіча** — страхує роботу на випадок ліміту API.
-
-Повні правила — `CSTL NEWS VOVA/CLAUDE.md` секція "ВСІ ПРАВИЛА".
