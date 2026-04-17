@@ -522,6 +522,22 @@
     const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
     return names.indexOf(parts.find((p) => p.type === "weekday").value);
   }
+  function kyivToLocal(hhmm) {
+    if (!hhmm)
+      return hhmm;
+    const localNow = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
+    const diff = localNow - kyivNowMins();
+    if (diff === 0)
+      return hhmm;
+    return minsToHHMM((toMinutes(hhmm) + diff + 1440) % 1440);
+  }
+  function localTzLabel() {
+    const off = -(/* @__PURE__ */ new Date()).getTimezoneOffset();
+    const sign = off >= 0 ? "+" : "\u2212";
+    const h = Math.floor(Math.abs(off) / 60);
+    const m = Math.abs(off) % 60;
+    return `UTC${sign}${h}${m ? ":" + String(m).padStart(2, "0") : ""}`;
+  }
   function toMinutes(hhmm) {
     const [h, m] = hhmm.split(":").map(Number);
     return h * 60 + m;
@@ -771,7 +787,7 @@
     <span class="bsr-icon">\u25B6</span>
     <span class="bsr-text">
       \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : "\u0437\u0430\u0440\u0430\u0437")}</strong>
-      \u2014 ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
+      \u2014 ${escapeHtml(kyivToLocal(fromTime))}, ${escapeHtml(next.name)}
     </span>
     ${urgent ? `<span class="bsr-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
   `;
@@ -811,8 +827,8 @@
       const isNext = !isLive && next && route.id === next.id;
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
-      const fromTime = getStopHHMM(route, effFrom);
-      const toTime = getStopHHMM(route, effTo);
+      const fromTime = kyivToLocal(getStopHHMM(route, effFrom));
+      const toTime = kyivToLocal(getStopHHMM(route, effTo));
       const price = getSegmentPrice(route, effFrom, effTo);
       const fromMins = getStopMins(route, effFrom) || 0;
       const toMins = getStopMins(route, effTo) || 0;
@@ -826,7 +842,7 @@
         const isFrom = s.name === effFrom;
         const isTo = s.name === effTo;
         const hl = isFrom || isTo;
-        const t = getStopHHMM(route, s.name);
+        const t = kyivToLocal(getStopHHMM(route, s.name));
         const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
         let rowCls = "bs-stop-row";
         if (hl)
@@ -1020,6 +1036,7 @@
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
       \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
+      ${kyivNowMins() !== (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes() ? `<br><span class="buses-tz">\u0427\u0430\u0441 \u043C\u0456\u0441\u0446\u0435\u0432\u0438\u0439 \xB7 ${escapeHtml(localTzLabel())}</span>` : ""}
     </div>
   `;
     renderSearchPanel();

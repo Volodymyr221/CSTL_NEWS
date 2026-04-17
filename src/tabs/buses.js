@@ -43,6 +43,24 @@ function kyivDayOfWeek() {
   return names.indexOf(parts.find(p => p.type === 'weekday').value);
 }
 
+// Конвертує Київський HH:MM у локальний час пристрою для відображення.
+// Розрахунки статусу (В дорозі / майбутній) завжди в Київському часі — не чіпати.
+function kyivToLocal(hhmm) {
+  if (!hhmm) return hhmm;
+  const localNow = new Date().getHours() * 60 + new Date().getMinutes();
+  const diff = localNow - kyivNowMins(); // від'ємне якщо за Заходом від Київа
+  if (diff === 0) return hhmm;
+  return minsToHHMM((toMinutes(hhmm) + diff + 1440) % 1440);
+}
+
+function localTzLabel() {
+  const off = -new Date().getTimezoneOffset(); // UTC+N: позитивне для Сходу
+  const sign = off >= 0 ? '+' : '−';
+  const h = Math.floor(Math.abs(off) / 60);
+  const m = Math.abs(off) % 60;
+  return `UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
+}
+
 function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
@@ -326,7 +344,7 @@ function renderSmartRow() {
     <span class="bsr-icon">▶</span>
     <span class="bsr-text">
       Наступний <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : 'зараз')}</strong>
-      — ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
+      — ${escapeHtml(kyivToLocal(fromTime))}, ${escapeHtml(next.name)}
     </span>
     ${urgent ? `<span class="bsr-hurry">Поспішай!</span>` : ''}
   `;
@@ -372,8 +390,8 @@ function renderRouteList() {
     const isNext    = !isLive && next && route.id === next.id;
     const effFrom   = getEffectiveFrom(route);
     const effTo     = getEffectiveTo(route);
-    const fromTime  = getStopHHMM(route, effFrom);
-    const toTime    = getStopHHMM(route, effTo);
+    const fromTime  = kyivToLocal(getStopHHMM(route, effFrom));
+    const toTime    = kyivToLocal(getStopHHMM(route, effTo));
     const price     = getSegmentPrice(route, effFrom, effTo);
     const fromMins  = getStopMins(route, effFrom) || 0;
     const toMins    = getStopMins(route, effTo)   || 0;
@@ -391,7 +409,7 @@ function renderRouteList() {
       const isFrom = s.name === effFrom;
       const isTo   = s.name === effTo;
       const hl     = isFrom || isTo;
-      const t      = getStopHHMM(route, s.name);
+      const t      = kyivToLocal(getStopHHMM(route, s.name));
       const seg    = Math.max(0, s.price_from_start - basePrice).toFixed(2);
 
       let rowCls = 'bs-stop-row';
@@ -618,6 +636,9 @@ export async function initBuses() {
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
       Оновлено: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
+      ${kyivNowMins() !== new Date().getHours() * 60 + new Date().getMinutes()
+        ? `<br><span class="buses-tz">Час місцевий · ${escapeHtml(localTzLabel())}</span>`
+        : ''}
     </div>
   `;
 

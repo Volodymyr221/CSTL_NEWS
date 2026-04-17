@@ -350,6 +350,11 @@ html, body {
   border-top: 1px solid var(--border);
   text-align: center;
 }
+.buses-tz {
+  font-size: 10px;
+  color: var(--gray);
+  opacity: 0.75;
+}
 
 /* Таби напрямку */
 .route-tabs { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; border-bottom: 2px solid var(--border); }
