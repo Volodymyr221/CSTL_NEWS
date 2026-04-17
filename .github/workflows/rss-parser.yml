@@ -1,0 +1,51 @@
+name: RSS Parser — оновлення новин
+
+# Запускається тричі на день або вручну через GitHub UI
+on:
+  schedule:
+    - cron: '0 5,11,17 * * *'   # 05:00, 11:00, 17:00 UTC = 08:00, 14:00, 20:00 Київ
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  parse-rss:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install feedparser
+        run: pip install feedparser
+
+      - name: Parse RSS feeds
+        run: python scripts/parse_rss.py
+
+      - name: Commit if changed
+        id: commit
+        run: |
+          git config user.name  "CSTL News Bot"
+          git config user.email "bot@cstl-news"
+          git add data/articles.json
+          if git diff --staged --quiet; then
+            echo "Нових статей немає — комміт не потрібен"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "auto(news): оновлення новин $(date -u +'%d.%m %H:%M UTC')"
+            git push origin main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Якщо є нові статті — запускаємо деплой
+      - name: Trigger deploy
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
