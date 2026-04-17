@@ -544,8 +544,9 @@ html, body {
 /* ===== ARTICLE MODAL ===== */
 .article-modal {
   position: fixed;
-  inset: 0;
-  background: rgba(0,0,0,0.5);
+  top: var(--header-h); /* починається під шапкою, не перекриває її */
+  left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.45);
   z-index: 1100;
   display: none;
   align-items: flex-end;
@@ -553,12 +554,23 @@ html, body {
 .article-modal.open { display: flex; }
 .article-modal-inner {
   background: var(--white);
-  border-radius: 20px 20px 0 0;
+  border-radius: 18px 18px 0 0;
+  border-top: 2.5px solid rgba(196, 30, 58, 0.55); /* тонкий матовий червоний ободок */
   width: 100%;
-  max-height: 90vh;
+  max-height: 100%; /* заповнює простір від шапки до низу */
   overflow-y: auto;
   position: relative;
   padding-bottom: env(safe-area-inset-bottom);
+}
+/* Червоний пілл-індикатор зверху — плавний перехід замість різкого краю */
+.article-modal-inner::before {
+  content: '';
+  display: block;
+  width: 36px;
+  height: 4px;
+  background: rgba(196, 30, 58, 0.35);
+  border-radius: 2px;
+  margin: 10px auto 0;
 }
 .modal-close-btn {
   position: sticky;
