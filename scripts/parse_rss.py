@@ -17,13 +17,18 @@ import feedparser
 
 SOURCES = [
     {
-        "url": "https://suspilne.media/rss/volyn.xml",
+        "url": "https://vo.suspilne.media/feed/",
         "name": "Суспільне Волинь",
         "geo": "Волинь",
     },
     {
-        "url": "https://volynpost.com/rss",
+        "url": "https://www.volynpost.com/rss.xml",
         "name": "Волинь Post",
+        "geo": "Волинь",
+    },
+    {
+        "url": "https://konkurent.ua/rss",
+        "name": "Конкурент",
         "geo": "Волинь",
     },
     {
@@ -151,11 +156,19 @@ def extract_image(entry) -> str | None:
     return None
 
 
-def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
-    feed = feedparser.parse(source["url"])
+USER_AGENT = "Mozilla/5.0 (compatible; CSTL-NEWS-Bot/1.0; +https://github.com/Volodymyr221/CSTL_NEWS)"
 
+
+def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+    feed = feedparser.parse(source["url"], agent=USER_AGENT)
+
+    status = getattr(feed, "status", 0)
+    if status in (403, 404, 410):
+        raise ValueError(f"HTTP {status}")
     if feed.bozo and not feed.entries:
         raise ValueError(f"Помилка парсингу: {feed.bozo_exception}")
+    if not feed.entries:
+        raise ValueError(f"Порожній фід (entries=0, status={status})")
 
     articles = []
     for entry in feed.entries[:20]:
