@@ -236,112 +236,14 @@
     ta.innerHTML = str || "";
     return ta.value;
   }
-  function extractArticleHtml(htmlStr, sourceUrl) {
-    const doc = new DOMParser().parseFromString(htmlStr, "text/html");
-    [
-      "script",
-      "style",
-      "iframe",
-      "form",
-      "button",
-      "input",
-      '[class*="advert"]',
-      '[class*="ad-"]',
-      '[id*="advert"]',
-      '[id*="google_ad"]',
-      '[class*="banner"]',
-      '[class*="social"]',
-      '[class*="share"]',
-      '[class*="related"]',
-      '[class*="recommend"]',
-      '[class*="comments"]',
-      '[class*="subscribe"]',
-      '[class*="newsletter"]',
-      "nav",
-      "footer",
-      ".sidebar",
-      "aside"
-    ].forEach((sel) => {
-      try {
-        doc.querySelectorAll(sel).forEach((el) => el.remove());
-      } catch {
-      }
-    });
-    let articleEl = null;
-    try {
-      const host = new URL(sourceUrl).hostname;
-      const map = {
-        "pravda.com.ua": ".post_text",
-        "ukrinform.ua": ".newsText",
-        "suspilne.media": '.article-body, [class*="article__content"]',
-        "volynpost.com": ".article-body, .node__content",
-        "konkurent.ua": '.article-text, [class*="article-body"]'
-      };
-      for (const [h, sel] of Object.entries(map)) {
-        if (host.includes(h)) {
-          articleEl = doc.querySelector(sel);
-          break;
-        }
-      }
-    } catch {
-    }
-    if (!articleEl) {
-      articleEl = doc.querySelector(
-        '[itemprop="articleBody"], article, [class*="article-body"], [class*="article__body"], [class*="post-content"], [class*="entry-content"]'
-      );
-    }
-    if (!articleEl)
-      return null;
-    const parts = [];
-    articleEl.querySelectorAll("p, h2, h3, h4, blockquote, figure, img").forEach((node) => {
-      const tag = node.tagName;
-      if (tag === "FIGURE" || tag === "IMG") {
-        const img = tag === "FIGURE" ? node.querySelector("img") : node;
-        if (!img)
-          return;
-        const src = img.getAttribute("src") || img.getAttribute("data-src") || img.getAttribute("data-lazy-src") || "";
-        if (!src || src.length < 10)
-          return;
-        const w = +(img.getAttribute("width") || 200);
-        const h = +(img.getAttribute("height") || 200);
-        if (w < 50 || h < 50)
-          return;
-        const alt = img.getAttribute("alt") || "";
-        const caption = tag === "FIGURE" ? node.querySelector("figcaption")?.textContent?.trim() || "" : "";
-        parts.push(
-          `<figure class="article-figure"><img class="article-img-inline" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy">` + (caption ? `<figcaption class="article-caption">${escapeHtml(caption)}</figcaption>` : "") + `</figure>`
-        );
-        return;
-      }
-      const text = node.textContent.trim();
-      if (!text || text.length < 5)
-        return;
-      if (tag === "H2" || tag === "H3" || tag === "H4") {
-        parts.push(`<h3 class="article-h3">${escapeHtml(text)}</h3>`);
-      } else if (tag === "BLOCKQUOTE") {
-        parts.push(`<blockquote class="article-quote">${escapeHtml(text)}</blockquote>`);
-      } else {
-        parts.push(`<p class="article-p">${escapeHtml(text)}</p>`);
-      }
-    });
-    return parts.length ? parts.join("") : null;
+  function renderArticleBody(content) {
+    const text = decodeEntities(content || "");
+    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+    if (!paragraphs.length)
+      return "";
+    return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
   }
-  async function fetchFullArticle(url, bodyEl, sourceName) {
-    const PROXY = "https://api.allorigins.win/get?url=";
-    try {
-      const signal = typeof AbortSignal?.timeout === "function" ? AbortSignal.timeout(1e4) : void 0;
-      const res = await fetch(PROXY + encodeURIComponent(url), { signal });
-      const { contents } = await res.json();
-      const html = extractArticleHtml(contents, url);
-      if (html && bodyEl) {
-        bodyEl.innerHTML = html + (sourceName ? `<p class="article-source-note">${escapeHtml(sourceName)}</p>` : "");
-        return;
-      }
-    } catch {
-    }
-    bodyEl?.querySelector(".article-loading")?.remove();
-  }
-  window.openArticle = async function(id) {
+  window.openArticle = function(id) {
     const article = allArticles.find((a) => a.id === id);
     if (!article)
       return;
@@ -350,7 +252,7 @@
     if (!modal || !modalContent)
       return;
     const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
-    const excerptText = decodeEntities(article.content || article.excerpt || "");
+    const bodyHtml = renderArticleBody(article.content || article.excerpt || "");
     modalContent.innerHTML = `
     <div class="article-modal-header">
       <div class="news-card-meta">
@@ -365,18 +267,11 @@
       </div>
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
-    <div id="article-body-content" class="article-body">
-      <p class="article-p">${escapeHtml(excerptText)}</p>
-      ${article.sourceUrl ? '<div class="article-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u043D\u043E\u0457 \u0441\u0442\u0430\u0442\u0442\u0456\u2026</div>' : ""}
-    </div>
+    <div class="article-body">${bodyHtml}</div>
     ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
   `;
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
-    if (article.sourceUrl) {
-      const bodyEl = document.getElementById("article-body-content");
-      await fetchFullArticle(article.sourceUrl, bodyEl, article.source);
-    }
   };
 
   // src/tabs/events.js

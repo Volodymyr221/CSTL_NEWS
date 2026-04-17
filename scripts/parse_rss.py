@@ -102,10 +102,27 @@ WORLD_KEYWORDS = [
 # ── Допоміжні функції ──────────────────────────────────────────────────────────
 
 def strip_html(text: str) -> str:
-    # Замінюємо теги пробілом (щоб слова не зливались) і декодуємо HTML entities
-    text = re.sub(r"<[^>]+>", " ", text or "")
-    text = re.sub(r"\s+", " ", text).strip()
-    return html.unescape(text)
+    # Параграфи/заголовки/списки → подвійний перенос (зберігає структуру тексту)
+    text = re.sub(r"</(p|div|li|h[1-6])>", "\n\n", text or "", flags=re.IGNORECASE)
+    text = re.sub(r"<br\s*/?>", "\n", text, flags=re.IGNORECASE)
+    # Решта тегів — пробілом щоб слова не зливались
+    text = re.sub(r"<[^>]+>", " ", text)
+    # Нормалізуємо пробіли (не чіпаємо переноси рядків)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return html.unescape(text.strip())
+
+
+def get_full_content(entry) -> str:
+    """Повний текст статті: спочатку content:encoded, потім summary як fallback."""
+    content_list = getattr(entry, "content", None)
+    if content_list:
+        best = max(content_list, key=lambda c: len(c.get("value", "")), default=None)
+        if best:
+            text = strip_html(best.get("value", ""))
+            if len(text) > 150:          # ігноруємо порожні/технічні блоки
+                return text[:8000]       # ліміт щоб не роздувати articles.json
+    return strip_html(entry.get("summary") or entry.get("description") or "")
 
 
 def normalize_title(title: str) -> str:
@@ -186,12 +203,15 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
         if norm in seen_titles:
             continue  # та сама новина з іншого джерела — пропускаємо
 
-        summary = strip_html(entry.get("summary") or entry.get("description") or "")[:500]
+        content = get_full_content(entry)
+        excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
+        if not excerpt:
+            excerpt = content[:400]
 
         published = entry.get("published_parsed") or entry.get("updated_parsed")
         ts = int(time.mktime(published) * 1000) if published else int(time.time() * 1000)
 
-        text = title + " " + summary
+        text = title + " " + excerpt
         geo = detect_geo(text, source["geo"])
 
         # Волинь і Олика — без фільтра (беремо все).
@@ -209,8 +229,8 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
 
         articles.append({
             "title": title,
-            "excerpt": summary,
-            "content": summary,
+            "excerpt": excerpt,
+            "content": content,
             "category": category,
             "geo": geo,
             "image": image,
