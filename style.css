@@ -551,7 +551,16 @@ html, body {
   display: none;
   align-items: flex-end;
 }
-.article-modal.open { display: flex; }
+.article-modal.open { display: flex; animation: modalFadeIn 0.3s ease forwards; }
+.article-modal.open .article-modal-inner { animation: modalSlideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+@keyframes modalFadeIn {
+  from { background: rgba(0,0,0,0); }
+  to   { background: rgba(0,0,0,0.45); }
+}
+@keyframes modalSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
 .article-modal-inner {
   background: var(--white);
   border-radius: 18px 18px 0 0;
