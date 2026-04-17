@@ -59,28 +59,48 @@ window.closeArticleModal = function() {
 function initModalSwipe() {
   const inner = document.querySelector('.article-modal-inner');
   if (!inner) return;
+  const handle = inner.querySelector('.modal-handle');
   let startY = 0;
-  let swiping = false;
+  let isSwiping = false;
+  let startedOnHandle = false;
+  let rafId = null;
+
+  const reset = () => {
+    inner.style.transition = '';
+    inner.style.transform = '';
+    inner.style.animation = '';
+  };
 
   inner.addEventListener('touchstart', e => {
+    startedOnHandle = handle && (e.target === handle || handle.contains(e.target));
+    if (!startedOnHandle) return;
+    // Зупиняємо будь-яку анімацію одразу — щоб палець одразу "підхопив" панель
+    inner.style.animation = 'none';
+    inner.style.transition = 'none';
+    inner.style.transform = 'translateY(0)';
     startY = e.touches[0].clientY;
-    swiping = false;
+    isSwiping = false;
   }, { passive: true });
 
   inner.addEventListener('touchmove', e => {
+    if (!startedOnHandle) return;
     const dy = e.touches[0].clientY - startY;
-    if (inner.scrollTop <= 0 && dy > 5) {
+    if (dy > 0) {
       e.preventDefault();
-      swiping = true;
-      inner.style.animation = 'none';
-      inner.style.transition = 'none';
-      inner.style.transform = `translateY(${Math.max(0, dy)}px)`;
+      isSwiping = true;
+      // requestAnimationFrame — плавне оновлення 60fps без ривків
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => {
+        inner.style.transform = `translateY(${dy}px)`;
+        rafId = null;
+      });
     }
   }, { passive: false });
 
   inner.addEventListener('touchend', e => {
-    if (!swiping) return;
-    swiping = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    if (!startedOnHandle || !isSwiping) { if (startedOnHandle) reset(); return; }
+    isSwiping = false;
     const dy = e.changedTouches[0].clientY - startY;
     if (dy > 80) {
       inner.style.transition = 'transform 0.25s ease-in';
@@ -89,15 +109,17 @@ function initModalSwipe() {
     } else {
       inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
       inner.style.transform = 'translateY(0)';
-      setTimeout(() => { inner.style.transition = ''; inner.style.animation = ''; }, 300);
+      setTimeout(reset, 300);
     }
   });
 
   inner.addEventListener('touchcancel', () => {
-    swiping = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
+    startedOnHandle = false;
+    isSwiping = false;
     inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-    inner.style.transform = '';
-    setTimeout(() => { inner.style.transition = ''; inner.style.animation = ''; }, 300);
+    inner.style.transform = 'translateY(0)';
+    setTimeout(reset, 300);
   });
 }
 

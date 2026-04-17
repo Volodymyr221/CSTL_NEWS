@@ -575,11 +575,21 @@ body.modal-open .app-header { filter: brightness(0.55); }
 }
 /* Ручка-пілл для свайпу */
 .modal-handle {
+  width: 80px;
+  height: 24px;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px auto 0;
+  cursor: grab;
+}
+.modal-handle::after {
+  content: '';
   width: 36px;
   height: 4px;
   background: var(--border);
   border-radius: 2px;
-  margin: 10px auto 2px;
 }
 .modal-close-btn {
   position: sticky;
