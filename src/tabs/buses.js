@@ -549,14 +549,12 @@ function renderSearchPanel() {
   el.innerHTML = `
     <div class="bs-search-row">
       <div class="bs-search-field">
-        <label class="bs-search-label" for="bs-from-input">Від</label>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
                type="text" placeholder="Звідки…"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="Поміняти напрямок">⇌</button>
       <div class="bs-search-field">
-        <label class="bs-search-label" for="bs-to-input">До</label>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
                type="text" placeholder="Куди…"
                value="${escapeHtml(toStop)}" readonly>
