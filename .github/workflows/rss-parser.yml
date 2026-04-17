@@ -8,10 +8,20 @@ on:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+# Не конфліктуємо з deploy.yml (обидва деплоять на Pages)
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  parse-rss:
+  parse-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
       - name: Checkout repo
@@ -28,14 +38,14 @@ jobs:
       - name: Parse RSS feeds
         run: python scripts/parse_rss.py
 
-      - name: Commit if changed
+      - name: Commit articles.json if changed
         id: commit
         run: |
           git config user.name  "CSTL News Bot"
           git config user.email "bot@cstl-news"
           git add data/articles.json
           if git diff --staged --quiet; then
-            echo "Нових статей немає — комміт не потрібен"
+            echo "Нових статей немає — деплой не потрібен"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "auto(news): оновлення новин $(date -u +'%d.%m %H:%M UTC')"
@@ -43,9 +53,35 @@ jobs:
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Якщо є нові статті — запускаємо деплой
-      - name: Trigger deploy
+      # Якщо є нові статті — збираємо і деплоїмо самостійно
+      - name: Setup Node.js
         if: steps.commit.outputs.changed == 'true'
-        run: gh workflow run deploy.yml --ref main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build bundle.js
+        if: steps.commit.outputs.changed == 'true'
+        run: npm install && node build.js
+
+      - name: Update deploy version stamp
+        if: steps.commit.outputs.changed == 'true'
+        run: |
+          DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
+          BUILD_NUM="${{ github.run_number }}"
+          sed -i "s|v[0-9]\+ · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]|v${BUILD_NUM} · ${DEPLOY_TIME}|" index.html
+
+      - name: Setup Pages
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        if: steps.commit.outputs.changed == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+
+      - name: Deploy to GitHub Pages
+        if: steps.commit.outputs.changed == 'true'
+        id: deployment
+        uses: actions/deploy-pages@v4
