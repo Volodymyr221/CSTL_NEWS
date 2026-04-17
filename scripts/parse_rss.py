@@ -2,7 +2,8 @@
 """CSTL NEWS — RSS парсер новин.
 
 Запуск: python scripts/parse_rss.py
-Записує data/articles.json з новими статтями (дедуплікація за sourceUrl).
+Записує data/articles.json з новими статтями.
+Дедуплікація: за sourceUrl + за нормалізованим заголовком (та сама новина з двох джерел — не дублюється).
 """
 
 import json
@@ -31,14 +32,9 @@ SOURCES = [
         "geo": "Волинь",
     },
     {
-        "url": "https://www.ukrinform.ua/rss/block-ukraine.xml",
-        "name": "Укрінформ",
+        "url": "https://www.pravda.com.ua/rss/view_news/",
+        "name": "Українська правда",
         "geo": "Україна",
-    },
-    {
-        "url": "https://www.ukrinform.ua/rss/block-world.xml",
-        "name": "Укрінформ",
-        "geo": "Світ",
     },
 ]
 
@@ -50,6 +46,14 @@ DATA_PATH = Path("data/articles.json")
 
 def strip_html(text: str) -> str:
     return re.sub(r"<[^>]+>", "", text or "").strip()
+
+
+def normalize_title(title: str) -> str:
+    """Нормалізований заголовок для порівняння між джерелами."""
+    t = title.lower()
+    t = re.sub(r"[^\w\s]", "", t)   # прибрати пунктуацію
+    t = re.sub(r"\s+", " ", t).strip()
+    return t
 
 
 def detect_geo(text: str, default_geo: str) -> str:
@@ -84,7 +88,7 @@ def extract_image(entry) -> str | None:
     return None
 
 
-def parse_source(source: dict, seen_urls: set) -> list:
+def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
     feed = feedparser.parse(source["url"])
 
     if feed.bozo and not feed.entries:
@@ -94,8 +98,13 @@ def parse_source(source: dict, seen_urls: set) -> list:
     for entry in feed.entries[:20]:
         title = strip_html(entry.get("title", "")).strip()
         link = (entry.get("link") or "").strip()
-        if not title or not link or link in seen_urls:
+        if not title or not link:
             continue
+        if link in seen_urls:
+            continue
+        norm = normalize_title(title)
+        if norm in seen_titles:
+            continue  # та сама новина з іншого джерела — пропускаємо
 
         summary = strip_html(entry.get("summary") or entry.get("description") or "")[:500]
 
@@ -120,6 +129,7 @@ def parse_source(source: dict, seen_urls: set) -> list:
             "ts": ts,
         })
         seen_urls.add(link)
+        seen_titles.add(norm)
 
     return articles
 
@@ -134,7 +144,8 @@ def main():
         except Exception as e:
             print(f"⚠ Помилка читання articles.json: {e}")
 
-    seen_urls = {a["sourceUrl"] for a in existing if a.get("sourceUrl")}
+    seen_urls   = {a["sourceUrl"] for a in existing if a.get("sourceUrl")}
+    seen_titles = {normalize_title(a["title"]) for a in existing if a.get("title")}
     next_id = max(
         (a["id"] for a in existing if isinstance(a.get("id"), int)),
         default=0,
@@ -143,7 +154,7 @@ def main():
     new_articles = []
     for source in SOURCES:
         try:
-            parsed = parse_source(source, seen_urls)
+            parsed = parse_source(source, seen_urls, seen_titles)
             for a in parsed:
                 a["id"] = next_id
                 next_id += 1
