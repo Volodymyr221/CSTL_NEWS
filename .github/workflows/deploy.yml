@@ -39,7 +39,7 @@ jobs:
       - name: Update deploy version stamp (лічильник версії + час)
         run: |
           DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
-          BUILD_NUM="${{ github.run_number }}"
+          BUILD_NUM=$(git rev-list --count HEAD)
           echo "Deploy version: v${BUILD_NUM} · ${DEPLOY_TIME}"
           sed -i "s|v[0-9]\+ · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]|v${BUILD_NUM} · ${DEPLOY_TIME}|" index.html
           echo "--- Показати оновлений рядок у index.html ---"

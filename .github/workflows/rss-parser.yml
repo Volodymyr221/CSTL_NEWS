@@ -68,7 +68,7 @@ jobs:
         if: steps.commit.outputs.changed == 'true'
         run: |
           DEPLOY_TIME=$(TZ='Europe/Kyiv' date '+%d.%m %H:%M')
-          BUILD_NUM="${{ github.run_number }}"
+          BUILD_NUM=$(git rev-list --count HEAD)
           sed -i "s|v[0-9]\+ · [0-9][0-9]\.[0-9][0-9] [0-9][0-9]:[0-9][0-9]|v${BUILD_NUM} · ${DEPLOY_TIME}|" index.html
 
       - name: Setup Pages
