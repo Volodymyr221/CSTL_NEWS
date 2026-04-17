@@ -48,6 +48,7 @@ window.switchTab = function(tab) {
 window.closeArticleModal = function() {
   const modal = document.getElementById('article-modal');
   if (modal) modal.classList.remove('open');
+  document.body.style.overflow = '';
 };
 
 // Ініціалізація при завантаженні сторінки

@@ -390,8 +390,11 @@ function renderRouteList() {
     const isNext    = !isLive && next && route.id === next.id;
     const effFrom   = getEffectiveFrom(route);
     const effTo     = getEffectiveTo(route);
-    const fromTime  = kyivToLocal(getStopHHMM(route, effFrom));
-    const toTime    = kyivToLocal(getStopHHMM(route, effTo));
+    const fromTimeKyiv = getStopHHMM(route, effFrom);
+    const toTimeKyiv   = getStopHHMM(route, effTo);
+    const fromTime  = kyivToLocal(fromTimeKyiv);
+    const toTime    = kyivToLocal(toTimeKyiv);
+    const isForeign = fromTime !== fromTimeKyiv;
     const price     = getSegmentPrice(route, effFrom, effTo);
     const fromMins  = getStopMins(route, effFrom) || 0;
     const toMins    = getStopMins(route, effTo)   || 0;
@@ -471,6 +474,7 @@ function renderRouteList() {
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
             <span class="bs-arr">\u2192\u202f${escapeHtml(toTime || '—')}</span>
+            ${isForeign ? `<span class="bs-kyiv-time">За Києвом ${escapeHtml(fromTimeKyiv || '—')}\u202f\u2192\u202f${escapeHtml(toTimeKyiv || '—')}</span>` : ''}
           </div>
           <div class="bus-card-info">
             <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>

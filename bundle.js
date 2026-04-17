@@ -231,7 +231,118 @@
     renderGeoFilters();
     renderNews();
   };
-  window.openArticle = function(id) {
+  function decodeEntities(str) {
+    const ta = document.createElement("textarea");
+    ta.innerHTML = str || "";
+    return ta.value;
+  }
+  function extractArticleHtml(htmlStr, sourceUrl) {
+    const doc = new DOMParser().parseFromString(htmlStr, "text/html");
+    [
+      "script",
+      "style",
+      "iframe",
+      "form",
+      "button",
+      "input",
+      '[class*="advert"]',
+      '[class*="ad-"]',
+      '[id*="advert"]',
+      '[id*="google_ad"]',
+      '[class*="banner"]',
+      '[class*="social"]',
+      '[class*="share"]',
+      '[class*="related"]',
+      '[class*="recommend"]',
+      '[class*="comments"]',
+      '[class*="subscribe"]',
+      '[class*="newsletter"]',
+      "nav",
+      "footer",
+      ".sidebar",
+      "aside"
+    ].forEach((sel) => {
+      try {
+        doc.querySelectorAll(sel).forEach((el) => el.remove());
+      } catch {
+      }
+    });
+    let articleEl = null;
+    try {
+      const host = new URL(sourceUrl).hostname;
+      const map = {
+        "pravda.com.ua": ".post_text",
+        "ukrinform.ua": ".newsText",
+        "suspilne.media": '.article-body, [class*="article__content"]',
+        "volynpost.com": ".article-body, .node__content",
+        "konkurent.ua": '.article-text, [class*="article-body"]'
+      };
+      for (const [h, sel] of Object.entries(map)) {
+        if (host.includes(h)) {
+          articleEl = doc.querySelector(sel);
+          break;
+        }
+      }
+    } catch {
+    }
+    if (!articleEl) {
+      articleEl = doc.querySelector(
+        '[itemprop="articleBody"], article, [class*="article-body"], [class*="article__body"], [class*="post-content"], [class*="entry-content"]'
+      );
+    }
+    if (!articleEl)
+      return null;
+    const parts = [];
+    articleEl.querySelectorAll("p, h2, h3, h4, blockquote, figure, img").forEach((node) => {
+      const tag = node.tagName;
+      if (tag === "FIGURE" || tag === "IMG") {
+        const img = tag === "FIGURE" ? node.querySelector("img") : node;
+        if (!img)
+          return;
+        const src = img.getAttribute("src") || img.getAttribute("data-src") || img.getAttribute("data-lazy-src") || "";
+        if (!src || src.length < 10)
+          return;
+        const w = +(img.getAttribute("width") || 200);
+        const h = +(img.getAttribute("height") || 200);
+        if (w < 50 || h < 50)
+          return;
+        const alt = img.getAttribute("alt") || "";
+        const caption = tag === "FIGURE" ? node.querySelector("figcaption")?.textContent?.trim() || "" : "";
+        parts.push(
+          `<figure class="article-figure"><img class="article-img-inline" src="${escapeHtml(src)}" alt="${escapeHtml(alt)}" loading="lazy">` + (caption ? `<figcaption class="article-caption">${escapeHtml(caption)}</figcaption>` : "") + `</figure>`
+        );
+        return;
+      }
+      const text = node.textContent.trim();
+      if (!text || text.length < 5)
+        return;
+      if (tag === "H2" || tag === "H3" || tag === "H4") {
+        parts.push(`<h3 class="article-h3">${escapeHtml(text)}</h3>`);
+      } else if (tag === "BLOCKQUOTE") {
+        parts.push(`<blockquote class="article-quote">${escapeHtml(text)}</blockquote>`);
+      } else {
+        parts.push(`<p class="article-p">${escapeHtml(text)}</p>`);
+      }
+    });
+    return parts.length ? parts.join("") : null;
+  }
+  async function fetchFullArticle(url, bodyEl, sourceName) {
+    const PROXY = "https://api.allorigins.win/get?url=";
+    try {
+      const res = await fetch(PROXY + encodeURIComponent(url), {
+        signal: AbortSignal.timeout(1e4)
+      });
+      const { contents } = await res.json();
+      const html = extractArticleHtml(contents, url);
+      if (html && bodyEl) {
+        bodyEl.innerHTML = html + (sourceName ? `<p class="article-source-note">${escapeHtml(sourceName)}</p>` : "");
+        return;
+      }
+    } catch {
+    }
+    bodyEl?.querySelector(".article-loading")?.remove();
+  }
+  window.openArticle = async function(id) {
     const article = allArticles.find((a) => a.id === id);
     if (!article)
       return;
@@ -239,6 +350,8 @@
     const modalContent = document.getElementById("article-modal-content");
     if (!modal || !modalContent)
       return;
+    const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
+    const excerptText = decodeEntities(article.content || article.excerpt || "");
     modalContent.innerHTML = `
     <div class="article-modal-header">
       <div class="news-card-meta">
@@ -248,15 +361,23 @@
       </div>
       <h1 class="article-title">${escapeHtml(article.title)}</h1>
       <div class="article-byline">
-        <span>${escapeHtml(article.source)}</span>
+        ${sourceHtml}
         <span>${formatTime(article.ts)}</span>
       </div>
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
-    <div class="article-body">${escapeHtml(article.content)}</div>
+    <div id="article-body-content" class="article-body">
+      <p class="article-p">${escapeHtml(excerptText)}</p>
+      ${article.sourceUrl ? '<div class="article-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u043D\u043E\u0457 \u0441\u0442\u0430\u0442\u0442\u0456\u2026</div>' : ""}
+    </div>
     ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
   `;
     modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    if (article.sourceUrl) {
+      const bodyEl = document.getElementById("article-body-content");
+      await fetchFullArticle(article.sourceUrl, bodyEl, article.source);
+    }
   };
 
   // src/tabs/events.js
@@ -827,8 +948,11 @@
       const isNext = !isLive && next && route.id === next.id;
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
-      const fromTime = kyivToLocal(getStopHHMM(route, effFrom));
-      const toTime = kyivToLocal(getStopHHMM(route, effTo));
+      const fromTimeKyiv = getStopHHMM(route, effFrom);
+      const toTimeKyiv = getStopHHMM(route, effTo);
+      const fromTime = kyivToLocal(fromTimeKyiv);
+      const toTime = kyivToLocal(toTimeKyiv);
+      const isForeign = fromTime !== fromTimeKyiv;
       const price = getSegmentPrice(route, effFrom, effTo);
       const fromMins = getStopMins(route, effFrom) || 0;
       const toMins = getStopMins(route, effTo) || 0;
@@ -888,6 +1012,7 @@
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
             <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
+            ${isForeign ? `<span class="bs-kyiv-time">\u0417\u0430 \u041A\u0438\u0454\u0432\u043E\u043C ${escapeHtml(fromTimeKyiv || "\u2014")}\u202F\u2192\u202F${escapeHtml(toTimeKyiv || "\u2014")}</span>` : ""}
           </div>
           <div class="bus-card-info">
             <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
@@ -1366,6 +1491,7 @@ END:VEVENT`
     const modal = document.getElementById("article-modal");
     if (modal)
       modal.classList.remove("open");
+    document.body.style.overflow = "";
   };
   function init() {
     bootApp();

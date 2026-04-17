@@ -581,8 +581,18 @@ html, body {
 .article-modal-header { margin-bottom: 16px; }
 .article-title { font-size: 22px; font-weight: 800; line-height: 1.3; margin: 8px 0; color: var(--black); }
 .article-byline { display: flex; gap: 12px; font-size: 12px; color: var(--gray); }
+.article-byline-link { color: var(--gray); text-decoration: none; font-size: 12px; }
+.article-byline-link:hover { text-decoration: underline; }
 .article-img { width: 100%; border-radius: 10px; margin-bottom: 16px; }
 .article-body { font-size: 16px; line-height: 1.7; color: var(--black); }
+.article-p { margin: 0 0 14px; }
+.article-h3 { font-size: 18px; font-weight: 700; margin: 20px 0 10px; }
+.article-quote { border-left: 3px solid var(--red); padding-left: 12px; color: var(--gray); margin: 16px 0; font-style: italic; }
+.article-figure { margin: 16px 0; }
+.article-img-inline { width: 100%; border-radius: 8px; }
+.article-caption { font-size: 12px; color: var(--gray); margin-top: 4px; }
+.article-loading { font-size: 13px; color: var(--gray); padding: 12px 0; }
+.article-source-note { font-size: 11px; color: var(--gray); margin-top: 24px; border-top: 1px solid var(--border); padding-top: 8px; }
 .article-source-link { display: block; margin-top: 16px; color: var(--red); font-size: 14px; font-weight: 600; text-decoration: none; }
 
 /* ===== TAB BAR ===== */
@@ -1096,6 +1106,15 @@ html, body {
   font-size: 11px;
   color: var(--gray);
   margin-top: 1px;
+}
+
+/* Для закордонних: підказка «За Києвом HH:MM → HH:MM» */
+.bs-kyiv-time {
+  font-size: 10px;
+  color: var(--gray);
+  opacity: 0.7;
+  margin-top: 2px;
+  white-space: nowrap;
 }
 
 /* Підсвічування наступного рейсу */

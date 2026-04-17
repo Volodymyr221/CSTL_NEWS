@@ -6,6 +6,7 @@
 Дедуплікація: за sourceUrl + за нормалізованим заголовком (та сама новина з двох джерел — не дублюється).
 """
 
+import html
 import json
 import re
 import time
@@ -101,7 +102,10 @@ WORLD_KEYWORDS = [
 # ── Допоміжні функції ──────────────────────────────────────────────────────────
 
 def strip_html(text: str) -> str:
-    return re.sub(r"<[^>]+>", "", text or "").strip()
+    # Замінюємо теги пробілом (щоб слова не зливались) і декодуємо HTML entities
+    text = re.sub(r"<[^>]+>", " ", text or "")
+    text = re.sub(r"\s+", " ", text).strip()
+    return html.unescape(text)
 
 
 def normalize_title(title: str) -> str:
