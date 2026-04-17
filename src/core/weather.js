@@ -16,14 +16,27 @@ function codeToIcon(code) {
 }
 
 async function getCoords() {
-  if (!navigator.geolocation) return OLYKA;
+  if (!navigator.geolocation) return { ...OLYKA, city: 'Олика' };
   return new Promise(resolve => {
     navigator.geolocation.getCurrentPosition(
-      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      ()  => resolve(OLYKA),
+      pos => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
+      ()  => resolve({ ...OLYKA, city: 'Олика' }),
       { timeout: 5000, maximumAge: 600000 }
     );
   });
+}
+
+async function getCityName(lat, lon) {
+  try {
+    const res = await fetch(
+      `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+      { headers: { 'Accept-Language': 'uk' } }
+    );
+    const data = await res.json();
+    return data.address?.city || data.address?.town || data.address?.village || 'Олика';
+  } catch {
+    return 'Олика';
+  }
 }
 
 export async function initWeather() {
@@ -32,12 +45,15 @@ export async function initWeather() {
   if (!iconEl || !tempEl) return;
 
   try {
-    const { lat, lon } = await getCoords();
-    const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`;
-    const res = await fetch(url);
-    const data = await res.json();
+    const { lat, lon, city: knownCity } = await getCoords();
+    const [weatherRes, cityName] = await Promise.all([
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`),
+      knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon),
+    ]);
+    const data = await weatherRes.json();
     const temp = Math.round(data.current.temperature_2m);
     iconEl.textContent = codeToIcon(data.current.weather_code);
+    document.getElementById('weather-city').textContent = cityName;
     tempEl.textContent = `${temp}°`;
   } catch {
     const widget = document.getElementById('weather-widget');

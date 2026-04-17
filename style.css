@@ -107,6 +107,7 @@ html, body {
   flex-shrink: 0;
 }
 .weather-icon { font-size: 20px; line-height: 1; }
+.weather-city { font-size: 12px; font-weight: 500; color: var(--gray); }
 .weather-temp {
   font-size: 14px;
   font-weight: 700;
