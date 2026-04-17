@@ -573,27 +573,11 @@ body.modal-open .app-header { filter: brightness(0.55); }
   position: relative;
   padding-bottom: env(safe-area-inset-bottom);
 }
-/* Ободок зверху — червоний градієнт з білим переливом по центру */
-.article-modal-inner::before {
-  content: '';
-  display: block;
-  height: 3px;
-  background: linear-gradient(90deg,
-    transparent 0%,
-    rgba(196,30,58,0.6) 15%,
-    #C41E3A 35%,
-    rgba(255,255,255,0.95) 50%,
-    #C41E3A 65%,
-    rgba(196,30,58,0.6) 85%,
-    transparent 100%
-  );
-  border-radius: 18px 18px 0 0;
-}
 /* Ручка-пілл для свайпу */
 .modal-handle {
   width: 36px;
   height: 4px;
-  background: rgba(196,30,58,0.25);
+  background: var(--border);
   border-radius: 2px;
   margin: 10px auto 2px;
 }
