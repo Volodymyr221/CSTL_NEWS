@@ -57,6 +57,12 @@ SOURCES = [
         "name": "Українська правда",
         "geo": "Світ",
     },
+    {
+        "url": "https://kivertsi.rayon.in.ua/tags/olika",
+        "name": "Район.Ківерці",
+        "geo": "Олика",
+        "type": "html",   # тег-сторінка без RSS — HTML-парсер
+    },
 ]
 
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
@@ -328,6 +334,14 @@ ARTICLE_SELECTORS: dict[str, list[str]] = {
         ".article_text",
         ".news_text",
     ],
+    "kivertsi.rayon.in.ua": [
+        ".material__body",
+        ".material-content",
+        ".article__body",
+        ".news-text",
+        ".post-content",
+        ".entry-content",
+    ],
 }
 
 # Загальні селектори — якщо сайт-специфічні не спрацювали
@@ -395,7 +409,155 @@ def fetch_full_article(url: str) -> str | None:
     return None
 
 
+def _parse_date_uk(text: str) -> int | None:
+    """Парсить українську дату з тексту → Unix timestamp (мс). Повертає None якщо не знайдено."""
+    # ISO: 2026-04-18T10:30:00 або 2026-04-18
+    m = re.search(r"(\d{4}-\d{2}-\d{2})(?:T(\d{2}:\d{2}))?", text)
+    if m:
+        try:
+            dt_str = m.group(1) + " " + (m.group(2) or "00:00")
+            import datetime as _dt
+            dt = _dt.datetime.strptime(dt_str, "%Y-%m-%d %H:%M")
+            return int(dt.timestamp() * 1000)
+        except ValueError:
+            pass
+    # Формат 18.04.2026
+    m = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})", text)
+    if m:
+        try:
+            import datetime as _dt
+            dt = _dt.datetime(int(m.group(3)), int(m.group(2)), int(m.group(1)))
+            return int(dt.timestamp() * 1000)
+        except ValueError:
+            pass
+    return None
+
+
+def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+    """Парсить HTML-сторінку тега/рубрики (для сайтів без RSS).
+
+    Очікує source["url"] = сторінка зі списком статей.
+    Усі статті позначаються geo = source["geo"].
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        req = urllib.request.Request(source["url"], headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "uk-UA,uk;q=0.9",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+    except Exception as e:
+        raise ValueError(f"Не вдалось завантажити {source['url']}: {e}")
+
+    base = "https://" + urllib.parse.urlparse(source["url"]).netloc
+    soup = BeautifulSoup(raw, "html.parser")
+
+    # ── Збираємо посилання на статті ────────────────────────────────────────
+    candidates: list[tuple[str, str, object]] = []  # (href, title, container)
+
+    # Спроба 1 — <article> теги
+    for art in soup.find_all("article")[:25]:
+        h = art.find(["h1", "h2", "h3"])
+        a = (h.find("a", href=True) if h else None) or art.find("a", href=True)
+        if h and a:
+            href = a["href"]
+            if not href.startswith("http"):
+                href = base + href
+            candidates.append((href, h.get_text(strip=True), art))
+
+    # Спроба 2 — типові класи Ukrainian news CMS
+    if not candidates:
+        for item in soup.select(
+            ".material-item, .news-item, .article-item, .post-item, "
+            ".list-item, .feed-item, .card"
+        )[:25]:
+            h = item.find(["h1", "h2", "h3"])
+            a = (h.find("a", href=True) if h else None) or item.find("a", href=True)
+            if h and a:
+                href = a["href"]
+                if not href.startswith("http"):
+                    href = base + href
+                candidates.append((href, h.get_text(strip=True), item))
+
+    # Спроба 3 — будь-яке посилання з заголовком поруч
+    if not candidates:
+        for a in soup.select("a[href]")[:40]:
+            href = a["href"]
+            title_text = a.get_text(strip=True)
+            if len(title_text) > 30 and ("/news/" in href or "/articles/" in href or "/post" in href):
+                if not href.startswith("http"):
+                    href = base + href
+                candidates.append((href, title_text, a.parent))
+
+    # ── Обробляємо кожну статтю ──────────────────────────────────────────────
+    articles = []
+    for href, raw_title, container in candidates[:15]:
+        title = strip_html(raw_title).strip()
+        if not title or not href:
+            continue
+        if href in seen_urls:
+            continue
+        norm = normalize_title(title)
+        if norm in seen_titles:
+            continue
+
+        # Excerpt з контейнера (якщо є)
+        exc_el = container.find(class_=re.compile(r"intro|excerpt|summary|preview|anons", re.I)) if hasattr(container, "find") else None
+        excerpt = exc_el.get_text(strip=True)[:400] if exc_el else ""
+
+        # Дата з контейнера
+        ts = int(time.time() * 1000)
+        date_el = container.find(["time", "span", "div"],
+                                  class_=re.compile(r"date|time|published", re.I)) if hasattr(container, "find") else None
+        if date_el:
+            raw_date = date_el.get("datetime", "") or date_el.get_text(strip=True)
+            parsed_ts = _parse_date_uk(raw_date)
+            if parsed_ts:
+                ts = parsed_ts
+
+        # Повний текст статті
+        content = fetch_full_article(href) or excerpt
+        if not excerpt:
+            excerpt = content[:400]
+
+        # Зображення — перший <img> у контейнері
+        image = None
+        img_el = container.find("img") if hasattr(container, "find") else None
+        if img_el:
+            src = img_el.get("src") or img_el.get("data-src", "")
+            if src and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                image = src if src.startswith("http") else base + src
+
+        category = detect_category(title + " " + excerpt)
+        entry_type = classify_entry(title, excerpt + " " + content)
+
+        articles.append({
+            "title": title,
+            "excerpt": excerpt,
+            "content": content,
+            "category": category,
+            "geo": source["geo"],   # завжди "Олика" для цього джерела
+            "image": image,
+            "source": source["name"],
+            "sourceUrl": href,
+            "exclusive": False,
+            "ts": ts,
+            "_type": entry_type,
+        })
+        seen_urls.add(href)
+        seen_titles.add(norm)
+
+    return articles
+
+
 def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+    # HTML-джерела (тег-сторінки без RSS) — окремий парсер
+    if source.get("type") == "html":
+        return parse_html_source(source, seen_urls, seen_titles)
+
     feed = feedparser.parse(source["url"], agent=USER_AGENT)
 
     status = getattr(feed, "status", 0)
