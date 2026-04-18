@@ -1,6 +1,6 @@
 # Стан сесії — CSTL NEWS
 
-**Оновлено:** 2026-04-19 (вечірня сесія) | **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
+**Оновлено:** 2026-04-18 (нічна сесія) | **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
 
@@ -38,7 +38,7 @@
 5. **Лічильник версії** — `sed` у `deploy.yml`, формат `v{N} · DD.MM HH:MM`
 6. **CACHE_NAME у `sw.js`** — оновлювати при КОЖНІЙ зміні статичних файлів. **Остання: `cstl-20260419-0001`**
 7. **Автобуси — зупинки з офіційних квитків VOPAS** — не вигадувати km/ціни
-8. **RSS-парсер** — cron кожні 10 хв, ліміт 15/джерело, MAX_ARTICLES=150
+8. **RSS-парсер** — cron кожні 10 хв, ліміт 15/джерело, MAX_ARTICLES=150, BROWSER_UA для fetch_full_article
 9. **Не чіпати зайвий код** — тільки те що явно обговорюється
 
 ---
@@ -60,7 +60,8 @@
 ### Логіка
 - **Дедуплікація:** за `sourceUrl` + нормалізований заголовок (між усіма джерелами)
 - **Повний текст:** `content:encoded` → якщо < 600 символів → `fetch_full_article()` зі сторінки
-- **`fetch_full_article()`** — CSS-селектори на домен + fallback на найбільший текстовий блок
+- **`fetch_full_article()`** — Chrome User-Agent (BROWSER_UA) + Referer: google.com, CSS-селектори на домен + fallback
+- **`strip_html()`** — прибирає «Читати повністю» / «Читати далі» / «Read more» з кінця тексту
 - **Класифікатор:** `classify_entry()` → `EVENT_KEYWORDS` + майбутня дата → `events.json` або `articles.json`
 - **Cron:** кожні 10 хв (`*/10 * * * *`)
 - **MAX_ARTICLES:** 150, **MAX_PER_SOURCE:** 15, **MAX_EVENTS:** 50
