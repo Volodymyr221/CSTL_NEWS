@@ -547,12 +547,20 @@ html, body {
 }
 .article-modal.open { display: flex; }
 .modal-handle {
+  width: 100%;
+  padding: 20px 0 12px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: grab;
+}
+.modal-handle::before {
+  content: '';
+  display: block;
   width: 40px;
   height: 4px;
   background: #d1d5db;
   border-radius: 2px;
-  margin: 12px auto 8px;
-  cursor: grab;
 }
 .article-modal-inner {
   background: var(--white);
