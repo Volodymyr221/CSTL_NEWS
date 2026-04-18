@@ -60,10 +60,10 @@
 ## 🚀 Поточний стан проекту (на 2026-04-18)
 
 - **Фаза 1 А+ — ЗАВЕРШЕНА ✅** Сайт живий, автодеплой, лічильник версії
-- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, 7 джерел, фільтри, cron кожні 30 хв
-- **Фаза 2 (Модалка) — ЗАВЕРШЕНА ✅** Повна стаття, свайп, анімація, футер з автором
+- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, **8 джерел** (+Район.Ківерці), фільтри, cron кожні 30 хв, `fetch_full_article()`, класифікатор новини/події
+- **Фаза 2 (Модалка) — ЗАВЕРШЕНА ✅** Повна стаття, чорне посилання, свайп, анімація, футер з автором
 - **Фаза 3 MVP (Світло) — ЗАВЕРШЕНА ✅** Таймлайн, 11 сіл ОТГ, DEMO дані
-- **Наступне 🔜** — Supabase для «Світло» (реальний розклад черг)
+- **Наступне 🔜** — 1) Перевірити повний текст Конкурент після парсера. 2) Cloudflare Worker (Вова деплоїть). 3) Supabase для «Світло»
 
 **URL сайту:** https://volodymyr221.github.io/CSTL_NEWS/
 **Гілка розробки:** `main`
@@ -115,7 +115,7 @@ gh workflow run deploy.yml → сайт оновлюється
 CSTL_NEWS/
 ├── index.html                    # UI + плейсхолдер лічильника версії
 ├── style.css                     # Всі стилі
-├── sw.js                         # Service Worker, CACHE_NAME: cstl-20260418-0302
+├── sw.js                         # Service Worker, CACHE_NAME: cstl-20260418-1545
 ├── build.js                      # esbuild конфіг (8 рядків)
 ├── bundle.js                     # Згенерований, у git як робоча база
 ├── logo.png                      # Логотип
@@ -125,8 +125,11 @@ CSTL_NEWS/
 │   ├── deploy.yml                # GitHub Pages Deploy (А+)
 │   └── rss-parser.yml            # RSS парсер — cron щогодини
 │
+├── cloudflare/
+│   └── worker.js                 # Proxy для olytska-gromada.gov.ua (потребує CF акаунту Вови)
 ├── scripts/
-│   └── parse_rss.py              # Python RSS парсер (6 джерел, фільтри, дедуплікація)
+│   ├── parse_rss.py              # Python RSS парсер (8 джерел, фільтри, fetch_full_article, класифікатор)
+│   └── test_worker.py            # Тест Cloudflare Worker
 │
 ├── data/
 │   ├── articles.json             # Статті (авто RSS + ручні ексклюзиви)
@@ -155,17 +158,21 @@ CSTL_NEWS/
     │   ├── SESSION_STATE.md      # Поточний стан сесії
     │   ├── BACKLOG.md            # Єдиний список задач
     │   └── SESSION_ARCHIVE.md    # Архів попередніх сесій
-    └── docs/
-        ├── CONCEPT.md, ROADMAP.md, ARCHITECTURE.md
-        ├── CONTENT_STRATEGY.md, RULES.md, DESIGN_SYSTEM.md
-        └── NEVERMIND_PATTERNS.md
+    ├── docs/
+    │   ├── CONCEPT.md, ROADMAP.md, ARCHITECTURE.md
+    │   ├── CONTENT_STRATEGY.md, RULES.md, DESIGN_SYSTEM.md
+    │   └── NEVERMIND_PATTERNS.md
+    └── .claude/
+        ├── settings.json         # Дозволи + хуки (JS syntax, контекст-моніторинг)
+        └── hooks/
+            └── context-warning.sh # ⚠️/🔴 при 800K/900K токенів сесії
 ```
 
 ---
 
 ## 💬 Перша репліка Claude після читання
 
-> "Прочитав. CSTL NEWS, гілка `main`. 4 вкладки. RSS-парсер — 7 джерел, cron кожні 30 хв. Модалка новин повністю готова — свайп, анімація, повна стаття, футер. Наступне — Supabase для «Світло». Що робимо сьогодні?"
+> "Прочитав. CSTL NEWS, гілка `main`. 4 вкладки. RSS-парсер — 8 джерел (+ Район.Ківерці), cron кожні 30 хв, fetch_full_article, класифікатор новини/події. Модалка: чорне посилання, повна стаття. Автобуси — без en-route (відкочено). Наступне: перевірити повний текст Конкурент, Cloudflare Worker, Supabase. Що робимо?"
 
 ---
 
