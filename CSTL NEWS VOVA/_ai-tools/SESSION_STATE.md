@@ -111,7 +111,7 @@
 
 ## 🔜 Що далі (пріоритети)
 
-1. **Перевірити логи парсера** — чи Суспільне/Укрінформ дають `✗` (мережева помилка чи `нічого нового`)
-2. **Cloudflare Worker** — Вова деплоїть `cloudflare/worker.js`, потім додаємо olytska-gromada.gov.ua
+1. **Cloudflare Worker для сайту громади** — `cloudflare/worker.js` вже готовий. Вова реєструється на cloudflare.com (безкоштовно) → Workers & Pages → Create Worker → вставляє код → деплоїть → дає URL типу `https://cstl-proxy.АКАУНТ.workers.dev` → Claude підключає до парсера. olytska-gromada.gov.ua блокує IP (403), BROWSER_UA не допоміг.
+2. **Перевірити логи парсера** — після фіксу BROWSER_UA (коміт `2517b58`): чи volynpost.com тепер дає повний текст? Дивись Actions → RSS Parser → крок "Parse RSS feeds" — якщо прогін займає 60+ сек = fetch_full_article спрацьовує.
 3. **Supabase** — реальний розклад відключень для «Світло»
 4. **Сторінка «Громади»** — дашборд (обговорено концептуально)
