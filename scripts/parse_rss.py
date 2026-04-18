@@ -316,6 +316,15 @@ ARTICLE_SELECTORS: dict[str, list[str]] = {
         ".article__text",
         ".post-text",
         ".content-text",
+        ".field-name-body .field-item",
+        ".field-item.even",
+        ".field-item",
+        ".node__content",
+        ".node-content",
+        ".view-content",
+        "[class*='article-body']",
+        "[class*='article-text']",
+        "[class*='post-body']",
     ],
     "suspilne.media": [
         ".article__body",
@@ -405,6 +414,19 @@ def fetch_full_article(url: str) -> str | None:
             text = re.sub(r"\n{3,}", "\n\n", text).strip()
             if len(text) > 300:
                 return text[:8000]
+
+    # Fallback: беремо блок з найбільшою кількістю тексту на сторінці
+    best_text = ""
+    for tag in soup.find_all(["div", "section", "article"]):
+        # Пропускаємо вкладені блоки (беремо тільки верхні контейнери)
+        if tag.find_parent(["div", "section", "article"]):
+            continue
+        t = tag.get_text(separator="\n", strip=True)
+        t = re.sub(r"\n{3,}", "\n\n", t).strip()
+        if len(t) > len(best_text):
+            best_text = t
+    if len(best_text) > 500:
+        return best_text[:8000]
 
     return None
 
