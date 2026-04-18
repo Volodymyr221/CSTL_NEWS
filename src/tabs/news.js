@@ -93,6 +93,22 @@ window.openArticle = function(id) {
   const modalContent = document.getElementById('article-modal-content');
   if (!modal || !modalContent) return;
 
+  // Беремо найдовший доступний текст
+  const rawText = (article.content && article.content.length > (article.excerpt || '').length)
+    ? article.content
+    : (article.excerpt || article.content || '');
+
+  // \n\n → HTML-параграфи (інакше текст зливається в суцільний рядок)
+  const bodyHtml = rawText
+    .split(/\n\n+/)
+    .map(p => p.trim().replace(/\n/g, ' '))
+    .filter(p => p.length > 0)
+    .map(p => `<p>${escapeHtml(p)}</p>`)
+    .join('');
+
+  // Якщо текст короткий — джерело не надає повний текст через RSS
+  const isShort = rawText.trim().length < 300;
+
   modalContent.innerHTML = `
     <div class="article-modal-header">
       <div class="news-card-meta">
@@ -107,8 +123,19 @@ window.openArticle = function(id) {
       </div>
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ''}
-    <div class="article-body">${escapeHtml(article.content)}</div>
-    ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>` : ''}
+    <div class="article-body">${bodyHtml}</div>
+    ${isShort && article.sourceUrl ? `
+      <div class="article-short-note">
+        Це джерело надає лише анонс через RSS.
+        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю на сайті →</a>
+      </div>
+    ` : ''}
+    <div class="article-source-row">
+      <span class="article-source-author"><strong>Автор публікації:</strong><br>${escapeHtml(article.source)}</span>
+      ${article.sourceUrl
+        ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
+        : ''}
+    </div>
   `;
 
   modal.classList.add('open');

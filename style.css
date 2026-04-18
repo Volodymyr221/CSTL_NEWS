@@ -578,7 +578,54 @@ html, body {
 .article-byline { display: flex; gap: 12px; font-size: 12px; color: var(--gray); }
 .article-img { width: 100%; border-radius: 10px; margin-bottom: 16px; }
 .article-body { font-size: 16px; line-height: 1.7; color: var(--black); }
-.article-source-link { display: block; margin-top: 16px; color: var(--red); font-size: 14px; font-weight: 600; text-decoration: none; }
+.article-body p { margin-bottom: 14px; }
+.article-body p:last-child { margin-bottom: 0; }
+
+/* Блок «анонс від RSS» — з'являється коли текст короткий */
+.article-short-note {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.5;
+}
+.article-short-link {
+  display: block;
+  margin-top: 8px;
+  color: var(--red);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* Підвал статті: «Автор публікації» зліва + «Читати оригінал» справа */
+.article-source-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  gap: 12px;
+}
+.article-source-author {
+  font-size: 11px;
+  color: var(--gray);
+  line-height: 1.5;
+}
+.article-source-author strong {
+  font-weight: 700;
+  color: var(--black);
+}
+.article-source-link {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
 
 /* ===== TAB BAR ===== */
 .tab-bar {
