@@ -1,9 +1,9 @@
 name: RSS Parser — оновлення новин
 
-# Запускається кожні 30 хвилин або вручну через GitHub UI
+# Запускається кожні 10 хвилин або вручну через GitHub UI
 on:
   schedule:
-    - cron: '*/30 * * * *'   # кожні 30 хвилин
+    - cron: '*/10 * * * *'   # кожні 10 хвилин
   workflow_dispatch:
 
 permissions:
