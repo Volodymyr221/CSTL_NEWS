@@ -156,7 +156,10 @@ def strip_html(text: str) -> str:
     # Нормалізуємо пробіли (не чіпаємо переноси рядків)
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{3,}", "\n\n", text)
-    return html.unescape(text.strip())
+    text = html.unescape(text.strip())
+    # Прибрати артефакти скороченого RSS: "Читати повністю", "Читати далі" тощо
+    text = re.sub(r"\s*(Читати повністю|Читати далі|Читати більше|Read more)\s*[»›→]?\s*$", "", text, flags=re.IGNORECASE).strip()
+    return text
 
 
 def get_full_content(entry) -> str:
@@ -301,6 +304,8 @@ def extract_event_data(title: str, text: str, ts: int) -> dict:
 
 
 USER_AGENT = "Mozilla/5.0 (compatible; CSTL-NEWS-Bot/1.0; +https://github.com/Volodymyr221/CSTL_NEWS)"
+# Для завантаження повного тексту статей — реалістичний Chrome UA щоб обійти базові блокування
+BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 # CSS-селектори блоку тексту статті для кожного домену
 ARTICLE_SELECTORS: dict[str, list[str]] = {
@@ -381,9 +386,11 @@ def fetch_full_article(url: str) -> str | None:
     """
     try:
         req = urllib.request.Request(url, headers={
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml",
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "uk-UA,uk;q=0.9",
+            "Referer": "https://www.google.com/",
+            "DNT": "1",
         })
         with urllib.request.urlopen(req, timeout=12) as r:
             raw = r.read()
@@ -466,9 +473,11 @@ def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
 
     try:
         req = urllib.request.Request(source["url"], headers={
-            "User-Agent": USER_AGENT,
-            "Accept": "text/html,application/xhtml+xml",
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
             "Accept-Language": "uk-UA,uk;q=0.9",
+            "Referer": "https://www.google.com/",
+            "DNT": "1",
         })
         with urllib.request.urlopen(req, timeout=15) as r:
             raw = r.read()
