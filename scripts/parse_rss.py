@@ -66,8 +66,9 @@ SOURCES = [
 ]
 
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
-MAX_ARTICLES = 100
-MAX_EVENTS   = 50
+MAX_ARTICLES     = 150
+MAX_PER_SOURCE   = 15   # не більше 15 статей з одного джерела за раз
+MAX_EVENTS       = 50
 DATA_PATH    = Path("data/articles.json")
 EVENTS_PATH  = Path("data/events.json")
 
@@ -516,7 +517,7 @@ def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
 
     # ── Обробляємо кожну статтю ──────────────────────────────────────────────
     articles = []
-    for href, raw_title, container in candidates[:15]:
+    for href, raw_title, container in candidates[:MAX_PER_SOURCE]:
         title = strip_html(raw_title).strip()
         if not title or not href:
             continue
@@ -592,6 +593,8 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
 
     articles = []
     for entry in feed.entries[:20]:
+        if len(articles) >= MAX_PER_SOURCE:
+            break
         title = strip_html(entry.get("title", "")).strip()
         link = (entry.get("link") or "").strip()
         if not title or not link:
