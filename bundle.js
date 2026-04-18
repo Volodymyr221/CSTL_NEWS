@@ -515,7 +515,6 @@
   var showAll = false;
   var timerInterval = null;
   var expandedIds = /* @__PURE__ */ new Set();
-  var collapsedLiveIds = /* @__PURE__ */ new Set();
   var activeField = null;
   function savePrefs() {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
@@ -530,41 +529,6 @@
     } catch {
     }
   }
-  function kyivNowMins() {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Europe/Kiev",
-      hour: "numeric",
-      minute: "numeric",
-      hour12: false
-    }).formatToParts(/* @__PURE__ */ new Date());
-    const h = +parts.find((p) => p.type === "hour").value;
-    const m = +parts.find((p) => p.type === "minute").value;
-    return h * 60 + m;
-  }
-  function kyivDayOfWeek() {
-    const parts = new Intl.DateTimeFormat("en-US", {
-      timeZone: "Europe/Kiev",
-      weekday: "long"
-    }).formatToParts(/* @__PURE__ */ new Date());
-    const names = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    return names.indexOf(parts.find((p) => p.type === "weekday").value);
-  }
-  function kyivToLocal(hhmm) {
-    if (!hhmm)
-      return hhmm;
-    const localNow = (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes();
-    const diff = localNow - kyivNowMins();
-    if (diff === 0)
-      return hhmm;
-    return minsToHHMM((toMinutes(hhmm) + diff + 1440) % 1440);
-  }
-  function localTzLabel() {
-    const off = -(/* @__PURE__ */ new Date()).getTimezoneOffset();
-    const sign = off >= 0 ? "+" : "\u2212";
-    const h = Math.floor(Math.abs(off) / 60);
-    const m = Math.abs(off) % 60;
-    return `UTC${sign}${h}${m ? ":" + String(m).padStart(2, "0") : ""}`;
-  }
   function toMinutes(hhmm) {
     const [h, m] = hhmm.split(":").map(Number);
     return h * 60 + m;
@@ -575,7 +539,8 @@
     return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
   }
   function minutesUntil(hhmm) {
-    const diff = toMinutes(hhmm) - kyivNowMins();
+    const now = /* @__PURE__ */ new Date();
+    const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
     return diff > 0 ? diff : null;
   }
   function formatCountdown(mins) {
@@ -585,7 +550,7 @@
     return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
   }
   function isDayActive(days) {
-    const d = kyivDayOfWeek();
+    const d = (/* @__PURE__ */ new Date()).getDay();
     if (days === "\u0449\u043E\u0434\u043D\u044F")
       return true;
     if (days === "\u043F\u043D-\u0441\u0431")
@@ -602,48 +567,6 @@
     if (totalKm === 0)
       return toMinutes(route.departure_time);
     return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
-  }
-  function getRouteState(route) {
-    const nowMins = kyivNowMins();
-    const depMins = toMinutes(route.departure_time);
-    const arrMins = depMins + route.duration_min;
-    if (nowMins < depMins)
-      return "future";
-    if (nowMins >= arrMins)
-      return "past";
-    return "enroute";
-  }
-  function getRouteProgress(route) {
-    const nowMins = kyivNowMins();
-    const depMins = toMinutes(route.departure_time);
-    if (nowMins <= depMins)
-      return 0;
-    return Math.min(1, (nowMins - depMins) / route.duration_min);
-  }
-  function getCurrentPosition(route) {
-    const nowMins = kyivNowMins();
-    const stops = route.stops;
-    for (let i = 0; i < stops.length - 1; i++) {
-      const currMins = getStopMins(route, stops[i].name);
-      const nextMins = getStopMins(route, stops[i + 1].name);
-      if (nowMins >= currMins && nowMins < nextMins) {
-        return {
-          prevStop: stops[i],
-          nextStop: stops[i + 1],
-          prevIdx: i,
-          nextIdx: i + 1,
-          minsToNext: nextMins - nowMins
-        };
-      }
-    }
-    return { prevStop: stops[stops.length - 1], nextStop: null, prevIdx: stops.length - 1, nextIdx: null, minsToNext: 0 };
-  }
-  function formatPosition(pos) {
-    if (!pos.nextStop)
-      return escapeHtml(pos.prevStop.name);
-    if (pos.minsToNext <= 2)
-      return `\u041F\u0456\u0434'\u0457\u0436\u0434\u0436\u0430\u0454 \u0434\u043E ${escapeHtml(pos.nextStop.name)}`;
-    return `\u0411\u0456\u043B\u044F ${escapeHtml(pos.prevStop.name)}`;
   }
   function getStopHHMM(route, stopName) {
     const m = getStopMins(route, stopName);
@@ -680,6 +603,13 @@
       return false;
     return true;
   }
+  function isPastRoute(route) {
+    const m = getStopMins(route, getEffectiveFrom(route));
+    if (m === null)
+      return true;
+    const now = /* @__PURE__ */ new Date();
+    return m < now.getHours() * 60 + now.getMinutes();
+  }
   function getFilteredRoutes() {
     if (!busData)
       return [];
@@ -690,7 +620,7 @@
     });
   }
   function findNextRoute() {
-    return getFilteredRoutes().find((r) => getRouteState(r) === "future") || null;
+    return getFilteredRoutes().find((r) => !isPastRoute(r)) || null;
   }
   function getAllStops() {
     if (!busData)
@@ -783,22 +713,6 @@
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
-    const all = getFilteredRoutes();
-    const liveRoute = all.find((r) => getRouteState(r) === "enroute");
-    if (liveRoute) {
-      const pos = getCurrentPosition(liveRoute);
-      const posText = formatPosition(pos);
-      const etaText = pos.minsToNext > 0 ? ` \xB7 ${pos.minsToNext} \u0445\u0432 \u0434\u043E ${escapeHtml(pos.nextStop.name)}` : "";
-      el.className = "bus-smart-row enroute";
-      el.innerHTML = `
-      <span class="bsr-icon bsr-pulse"></span>
-      <span class="bsr-text">
-        <strong>\u0412 \u0434\u043E\u0440\u043E\u0437\u0456</strong> \u2014 ${escapeHtml(liveRoute.name)}<br>
-        <small>${posText}${etaText}</small>
-      </span>
-    `;
-      return;
-    }
     const next = findNextRoute();
     if (!next) {
       el.innerHTML = `<span class="bsr-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</span>`;
@@ -814,7 +728,7 @@
     <span class="bsr-icon">\u25B6</span>
     <span class="bsr-text">
       \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : "\u0437\u0430\u0440\u0430\u0437")}</strong>
-      \u2014 ${escapeHtml(kyivToLocal(fromTime))}, ${escapeHtml(next.name)}
+      \u2014 ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
     </span>
     ${urgent ? `<span class="bsr-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
   `;
@@ -824,11 +738,9 @@
     if (!el)
       return;
     const all = getFilteredRoutes();
-    const enroute = all.filter((r) => getRouteState(r) === "enroute");
-    const future = all.filter((r) => getRouteState(r) === "future");
-    const past = all.filter((r) => getRouteState(r) === "past");
-    const active = [...enroute, ...future];
-    const toRender = showAll ? [...enroute, ...future, ...past] : active;
+    const future = all.filter((r) => !isPastRoute(r));
+    const past = all.filter((r) => isPastRoute(r));
+    const toRender = showAll ? all : future;
     if (!all.length) {
       el.innerHTML = `<div class="empty-state">\u0417\u0430 \u0446\u0438\u043C \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u043E\u043C \u0440\u0435\u0439\u0441\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
       return;
@@ -848,77 +760,41 @@
     const next = findNextRoute();
     const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
     const cards = toRender.map((route) => {
-      const state = getRouteState(route);
-      const isPast = state === "past";
-      const isLive = state === "enroute";
-      const isNext = !isLive && next && route.id === next.id;
+      const isPast = isPastRoute(route);
+      const isNext = next && route.id === next.id;
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
-      const fromTimeKyiv = getStopHHMM(route, effFrom);
-      const toTimeKyiv = getStopHHMM(route, effTo);
-      const fromTime = kyivToLocal(fromTimeKyiv);
-      const toTime = kyivToLocal(toTimeKyiv);
-      const isForeign = fromTime !== fromTimeKyiv;
+      const fromTime = getStopHHMM(route, effFrom);
+      const toTime = getStopHHMM(route, effTo);
       const price = getSegmentPrice(route, effFrom, effTo);
       const fromMins = getStopMins(route, effFrom) || 0;
       const toMins = getStopMins(route, effTo) || 0;
       const segDur = toMins - fromMins;
       const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
       const c = carrierInfo(route.carrier);
-      const expanded = isLive ? !collapsedLiveIds.has(route.id) : expandedIds.has(route.id);
+      const expanded = expandedIds.has(route.id);
       const basePrice = route.stops.find((s) => s.name === effFrom)?.price_from_start ?? 0;
-      const pos = isLive ? getCurrentPosition(route) : null;
-      const stopsHtml = route.stops.map((s, idx) => {
+      const stopsHtml = route.stops.map((s) => {
         const isFrom = s.name === effFrom;
         const isTo = s.name === effTo;
         const hl = isFrom || isTo;
-        const t = kyivToLocal(getStopHHMM(route, s.name));
+        const t = getStopHHMM(route, s.name);
         const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
-        let rowCls = "bs-stop-row";
-        if (hl)
-          rowCls += " hl";
-        if (isLive && pos) {
-          if (idx < pos.prevIdx)
-            rowCls += " passed";
-          else if (idx === pos.prevIdx)
-            rowCls += " current";
-          else if (idx === pos.nextIdx)
-            rowCls += " upcoming";
-        }
-        const icon = isLive && pos && idx < pos.prevIdx ? "\u2713\u202F" : isLive && pos && idx === pos.nextIdx ? "\u25CF\u202F" : isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : "";
         return `
-        <div class="${rowCls}">
+        <div class="bs-stop-row${hl ? " hl" : ""}">
           <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
-          <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
           <span class="bs-stop-price">${escapeHtml(seg)} \u0433\u0440\u043D</span>
         </div>`;
       }).join("");
-      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : isLive ? `<span class="bs-status live">\u0412 \u0434\u043E\u0440\u043E\u0437\u0456</span>` : "";
+      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
-      let progressHtml = "";
-      if (isLive) {
-        const pct = Math.round(getRouteProgress(route) * 100);
-        const posText = formatPosition(pos);
-        const etaText = pos.minsToNext > 0 ? `\u0434\u043E ${escapeHtml(pos.nextStop.name)} \xB7 ${pos.minsToNext} \u0445\u0432` : "";
-        progressHtml = `
-        <div class="bs-progress">
-          <div class="bs-progress-bar">
-            <div class="bs-progress-fill" style="width:${pct}%"></div>
-          </div>
-          <div class="bs-progress-info">
-            <span class="bs-progress-pos">${posText}</span>
-            ${etaText ? `<span class="bs-progress-eta">${etaText}</span>` : ""}
-          </div>
-        </div>`;
-      }
-      const cardCls = `bus-card${isPast ? " past" : ""}${isLive ? " enroute" : ""}${isNext ? " next" : ""}`;
       return `
-      <div class="${cardCls}">
+      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
             <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
-            ${isForeign ? `<span class="bs-kyiv-time">\u0417\u0430 \u041A\u0438\u0454\u0432\u043E\u043C ${escapeHtml(fromTimeKyiv || "\u2014")}\u202F\u2192\u202F${escapeHtml(toTimeKyiv || "\u2014")}</span>` : ""}
           </div>
           <div class="bus-card-info">
             <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
@@ -940,23 +816,12 @@
             </svg>
           </a>` : ""}
         </div>
-        ${progressHtml}
-        <button class="bs-toggle" data-id="${escapeHtml(route.id)}" data-live="${isLive}">
-          ${isLive ? expanded ? "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE" : expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
+        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
+          ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
         </button>
-        ${isLive && !expanded && pos ? `<div class="bs-stops-body bs-stops-mini">
-              ${[pos.prevStop, pos.nextStop].filter(Boolean).map((s, i) => {
-        const t = kyivToLocal(getStopHHMM(route, s.name));
-        const cls = i === 0 ? "bs-stop-row current" : "bs-stop-row upcoming";
-        const icon = i === 0 ? "\u25CF\u202F" : "\u25B8\u202F";
-        const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
-        return `<div class="${cls}">
-                  <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
-                  <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
-                  <span class="bs-stop-price">${escapeHtml(seg)} \u0433\u0440\u043D</span>
-                </div>`;
-      }).join("")}
-            </div>` : `<div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>`}
+        <div class="bs-stops-body"${expanded ? "" : " hidden"}>
+          ${stopsHtml}
+        </div>
       </div>`;
     }).join("");
     let toggleHtml = "";
@@ -975,17 +840,10 @@
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;
-        if (btn.dataset.live === "true") {
-          if (collapsedLiveIds.has(id))
-            collapsedLiveIds.delete(id);
-          else
-            collapsedLiveIds.add(id);
-        } else {
-          if (expandedIds.has(id))
-            expandedIds.delete(id);
-          else
-            expandedIds.add(id);
-        }
+        if (expandedIds.has(id))
+          expandedIds.delete(id);
+        else
+          expandedIds.add(id);
         renderRouteList();
       });
     });
@@ -1005,12 +863,14 @@
     el.innerHTML = `
     <div class="bs-search-row">
       <div class="bs-search-field">
+        <label class="bs-search-label" for="bs-from-input">\u0412\u0456\u0434</label>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
                type="text" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438\u2026"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">\u21CC</button>
       <div class="bs-search-field">
+        <label class="bs-search-label" for="bs-to-input">\u0414\u043E</label>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
                type="text" placeholder="\u041A\u0443\u0434\u0438\u2026"
                value="${escapeHtml(toStop)}" readonly>
@@ -1082,7 +942,6 @@
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
       \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
-      ${kyivNowMins() !== (/* @__PURE__ */ new Date()).getHours() * 60 + (/* @__PURE__ */ new Date()).getMinutes() ? `<br><span class="buses-tz">\u0427\u0430\u0441 \u043C\u0456\u0441\u0446\u0435\u0432\u0438\u0439 \xB7 ${escapeHtml(localTzLabel())}</span>` : ""}
     </div>
   `;
     renderSearchPanel();

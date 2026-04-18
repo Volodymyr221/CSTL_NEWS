@@ -7,8 +7,7 @@ let fromStop      = '';
 let toStop        = '';
 let showAll       = false;
 let timerInterval = null;
-let expandedIds      = new Set();
-let collapsedLiveIds = new Set(); // live рейси які користувач згорнув вручну
+let expandedIds   = new Set();
 let activeField   = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
 
 // ── Preferences (localStorage — збереження налаштувань у браузері) ────
@@ -25,43 +24,6 @@ function loadPrefs() {
 }
 
 // ── Time utils (утиліти для роботи з часом) ───────────────────────────
-
-// Розклад прив'язаний до Київського часу — користувачі з-за кордону теж бачать правильний статус.
-function kyivNowMins() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Kiev', hour: 'numeric', minute: 'numeric', hour12: false,
-  }).formatToParts(new Date());
-  const h = +parts.find(p => p.type === 'hour').value;
-  const m = +parts.find(p => p.type === 'minute').value;
-  return h * 60 + m;
-}
-
-function kyivDayOfWeek() {
-  const parts = new Intl.DateTimeFormat('en-US', {
-    timeZone: 'Europe/Kiev', weekday: 'long',
-  }).formatToParts(new Date());
-  const names = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-  return names.indexOf(parts.find(p => p.type === 'weekday').value);
-}
-
-// Конвертує Київський HH:MM у локальний час пристрою для відображення.
-// Розрахунки статусу (В дорозі / майбутній) завжди в Київському часі — не чіпати.
-function kyivToLocal(hhmm) {
-  if (!hhmm) return hhmm;
-  const localNow = new Date().getHours() * 60 + new Date().getMinutes();
-  const diff = localNow - kyivNowMins(); // від'ємне якщо за Заходом від Київа
-  if (diff === 0) return hhmm;
-  return minsToHHMM((toMinutes(hhmm) + diff + 1440) % 1440);
-}
-
-function localTzLabel() {
-  const off = -new Date().getTimezoneOffset(); // UTC+N: позитивне для Сходу
-  const sign = off >= 0 ? '+' : '−';
-  const h = Math.floor(Math.abs(off) / 60);
-  const m = Math.abs(off) % 60;
-  return `UTC${sign}${h}${m ? ':' + String(m).padStart(2, '0') : ''}`;
-}
-
 function toMinutes(hhmm) {
   const [h, m] = hhmm.split(':').map(Number);
   return h * 60 + m;
@@ -74,7 +36,8 @@ function minsToHHMM(total) {
 }
 
 function minutesUntil(hhmm) {
-  const diff = toMinutes(hhmm) - kyivNowMins();
+  const now  = new Date();
+  const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
   return diff > 0 ? diff : null;
 }
 
@@ -85,7 +48,7 @@ function formatCountdown(mins) {
 }
 
 function isDayActive(days) {
-  const d = kyivDayOfWeek();
+  const d = new Date().getDay();
   if (days === 'щодня') return true;
   if (days === 'пн-сб') return d >= 1 && d <= 6;
   if (days === 'пн-пт') return d >= 1 && d <= 5;
@@ -99,48 +62,6 @@ function getStopMins(route, stopName) {
   const totalKm = route.stops[route.stops.length - 1].km;
   if (totalKm === 0) return toMinutes(route.departure_time);
   return toMinutes(route.departure_time) + Math.round((stop.km / totalKm) * route.duration_min);
-}
-
-// Три стани рейсу: 'future' | 'enroute' | 'past'
-function getRouteState(route) {
-  const nowMins = kyivNowMins();
-  const depMins = toMinutes(route.departure_time);
-  const arrMins = depMins + route.duration_min;
-  if (nowMins < depMins) return 'future';
-  if (nowMins >= arrMins) return 'past';
-  return 'enroute';
-}
-
-function getRouteProgress(route) {
-  const nowMins = kyivNowMins();
-  const depMins = toMinutes(route.departure_time);
-  if (nowMins <= depMins) return 0;
-  return Math.min(1, (nowMins - depMins) / route.duration_min);
-}
-
-function getCurrentPosition(route) {
-  const nowMins = kyivNowMins();
-  const stops = route.stops;
-  for (let i = 0; i < stops.length - 1; i++) {
-    const currMins = getStopMins(route, stops[i].name);
-    const nextMins = getStopMins(route, stops[i + 1].name);
-    if (nowMins >= currMins && nowMins < nextMins) {
-      return {
-        prevStop: stops[i],
-        nextStop: stops[i + 1],
-        prevIdx: i,
-        nextIdx: i + 1,
-        minsToNext: nextMins - nowMins
-      };
-    }
-  }
-  return { prevStop: stops[stops.length - 1], nextStop: null, prevIdx: stops.length - 1, nextIdx: null, minsToNext: 0 };
-}
-
-function formatPosition(pos) {
-  if (!pos.nextStop) return escapeHtml(pos.prevStop.name);
-  if (pos.minsToNext <= 2) return `Під'їжджає до ${escapeHtml(pos.nextStop.name)}`;
-  return `Біля ${escapeHtml(pos.prevStop.name)}`;
 }
 
 function getStopHHMM(route, stopName) {
@@ -178,7 +99,10 @@ function matchesSearch(route) {
 }
 
 function isPastRoute(route) {
-  return getRouteState(route) === 'past';
+  const m = getStopMins(route, getEffectiveFrom(route));
+  if (m === null) return true;
+  const now = new Date();
+  return m < (now.getHours() * 60 + now.getMinutes());
 }
 
 function getFilteredRoutes() {
@@ -193,7 +117,7 @@ function getFilteredRoutes() {
 }
 
 function findNextRoute() {
-  return getFilteredRoutes().find(r => getRouteState(r) === 'future') || null;
+  return getFilteredRoutes().find(r => !isPastRoute(r)) || null;
 }
 
 function getAllStops() {
@@ -311,25 +235,6 @@ function selectStop(stop, field) {
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
-
-  const all = getFilteredRoutes();
-  const liveRoute = all.find(r => getRouteState(r) === 'enroute');
-
-  if (liveRoute) {
-    const pos = getCurrentPosition(liveRoute);
-    const posText = formatPosition(pos);
-    const etaText = pos.minsToNext > 0 ? ` · ${pos.minsToNext} хв до ${escapeHtml(pos.nextStop.name)}` : '';
-    el.className = 'bus-smart-row enroute';
-    el.innerHTML = `
-      <span class="bsr-icon bsr-pulse"></span>
-      <span class="bsr-text">
-        <strong>В дорозі</strong> — ${escapeHtml(liveRoute.name)}<br>
-        <small>${posText}${etaText}</small>
-      </span>
-    `;
-    return;
-  }
-
   const next = findNextRoute();
   if (!next) {
     el.innerHTML = `<span class="bsr-empty">Рейсів сьогодні більше немає</span>`;
@@ -345,7 +250,7 @@ function renderSmartRow() {
     <span class="bsr-icon">▶</span>
     <span class="bsr-text">
       Наступний <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : 'зараз')}</strong>
-      — ${escapeHtml(kyivToLocal(fromTime))}, ${escapeHtml(next.name)}
+      — ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
     </span>
     ${urgent ? `<span class="bsr-hurry">Поспішай!</span>` : ''}
   `;
@@ -357,11 +262,9 @@ function renderRouteList() {
   if (!el) return;
 
   const all      = getFilteredRoutes();
-  const enroute  = all.filter(r => getRouteState(r) === 'enroute');
-  const future   = all.filter(r => getRouteState(r) === 'future');
-  const past     = all.filter(r => getRouteState(r) === 'past');
-  const active   = [...enroute, ...future];
-  const toRender = showAll ? [...enroute, ...future, ...past] : active;
+  const future   = all.filter(r => !isPastRoute(r));
+  const past     = all.filter(r => isPastRoute(r));
+  const toRender = showAll ? all : future;
 
   if (!all.length) {
     el.innerHTML = `<div class="empty-state">За цим маршрутом рейсів не знайдено</div>`;
@@ -385,55 +288,33 @@ function renderRouteList() {
   const carrierInfo = id => busData.carriers?.[id] || { name: id, phone: '0332 224 500' };
 
   const cards = toRender.map(route => {
-    const state     = getRouteState(route);
-    const isPast    = state === 'past';
-    const isLive    = state === 'enroute';
-    const isNext    = !isLive && next && route.id === next.id;
-    const effFrom   = getEffectiveFrom(route);
-    const effTo     = getEffectiveTo(route);
-    const fromTimeKyiv = getStopHHMM(route, effFrom);
-    const toTimeKyiv   = getStopHHMM(route, effTo);
-    const fromTime  = kyivToLocal(fromTimeKyiv);
-    const toTime    = kyivToLocal(toTimeKyiv);
-    const isForeign = fromTime !== fromTimeKyiv;
-    const price     = getSegmentPrice(route, effFrom, effTo);
-    const fromMins  = getStopMins(route, effFrom) || 0;
-    const toMins    = getStopMins(route, effTo)   || 0;
-    const segDur    = toMins - fromMins;
-    const durStr    = segDur >= 60
+    const isPast  = isPastRoute(route);
+    const isNext  = next && route.id === next.id;
+    const effFrom = getEffectiveFrom(route);
+    const effTo   = getEffectiveTo(route);
+    const fromTime = getStopHHMM(route, effFrom);
+    const toTime   = getStopHHMM(route, effTo);
+    const price    = getSegmentPrice(route, effFrom, effTo);
+    const fromMins = getStopMins(route, effFrom) || 0;
+    const toMins   = getStopMins(route, effTo)   || 0;
+    const segDur   = toMins - fromMins;
+    const durStr   = segDur >= 60
       ? `${Math.floor(segDur / 60)} год${segDur % 60 ? ' ' + (segDur % 60) + ' хв' : ''}`
       : `${segDur} хв`;
-    const c         = carrierInfo(route.carrier);
-    const expanded  = isLive ? !collapsedLiveIds.has(route.id) : expandedIds.has(route.id);
+    const c        = carrierInfo(route.carrier);
+    const expanded = expandedIds.has(route.id);
     const basePrice = route.stops.find(s => s.name === effFrom)?.price_from_start ?? 0;
 
-    const pos = isLive ? getCurrentPosition(route) : null;
-
-    const stopsHtml = route.stops.map((s, idx) => {
+    const stopsHtml = route.stops.map(s => {
       const isFrom = s.name === effFrom;
       const isTo   = s.name === effTo;
       const hl     = isFrom || isTo;
-      const t      = kyivToLocal(getStopHHMM(route, s.name));
+      const t      = getStopHHMM(route, s.name);
       const seg    = Math.max(0, s.price_from_start - basePrice).toFixed(2);
-
-      let rowCls = 'bs-stop-row';
-      if (hl) rowCls += ' hl';
-      if (isLive && pos) {
-        if (idx < pos.prevIdx) rowCls += ' passed';
-        else if (idx === pos.prevIdx) rowCls += ' current';
-        else if (idx === pos.nextIdx) rowCls += ' upcoming';
-      }
-
-      const icon = isLive && pos && idx < pos.prevIdx ? '✓\u202f'
-                 : isLive && pos && idx === pos.nextIdx ? '●\u202f'
-                 : isFrom ? '▶\u202f'
-                 : isTo   ? '◀\u202f'
-                 : '';
-
       return `
-        <div class="${rowCls}">
+        <div class="bs-stop-row${hl ? ' hl' : ''}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
-          <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${isFrom ? '▶\u202f' : isTo ? '◀\u202f' : ''}${escapeHtml(s.name)}</span>
           <span class="bs-stop-price">${escapeHtml(seg)} грн</span>
         </div>`;
     }).join('');
@@ -442,48 +323,26 @@ function renderRouteList() {
       ? `<span class="bs-status cancelled">Скасовано</span>`
       : route.status === 'delayed'
       ? `<span class="bs-status delayed">Затримка</span>`
-      : isLive
-      ? `<span class="bs-status live">В дорозі</span>`
       : '';
 
     const autoNote = route.auto_generated
       ? `<div class="bs-autogen">розрахований зворотний рейс</div>`
       : '';
 
-    let progressHtml = '';
-    if (isLive) {
-      const pct = Math.round(getRouteProgress(route) * 100);
-      const posText = formatPosition(pos);
-      const etaText = pos.minsToNext > 0 ? `до ${escapeHtml(pos.nextStop.name)} · ${pos.minsToNext} хв` : '';
-      progressHtml = `
-        <div class="bs-progress">
-          <div class="bs-progress-bar">
-            <div class="bs-progress-fill" style="width:${pct}%"></div>
-          </div>
-          <div class="bs-progress-info">
-            <span class="bs-progress-pos">${posText}</span>
-            ${etaText ? `<span class="bs-progress-eta">${etaText}</span>` : ''}
-          </div>
-        </div>`;
-    }
-
-    const cardCls = `bus-card${isPast ? ' past' : ''}${isLive ? ' enroute' : ''}${isNext ? ' next' : ''}`;
-
     return `
-      <div class="${cardCls}">
+      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
-            <span class="bs-arr">\u2192\u202f${escapeHtml(toTime || '—')}</span>
-            ${isForeign ? `<span class="bs-kyiv-time">За Києвом ${escapeHtml(fromTimeKyiv || '—')}\u202f\u2192\u202f${escapeHtml(toTimeKyiv || '—')}</span>` : ''}
+            <span class="bs-arr">→\u202f${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
             <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
-              <span class="bus-meta-sep">\u00b7</span>
+              <span class="bus-meta-sep">·</span>
               <span>${escapeHtml(price || '—')} грн</span>
-              <span class="bus-meta-sep">\u00b7</span>
+              <span class="bus-meta-sep">·</span>
               <span>${escapeHtml(c.name)}</span>
             </div>
             ${autoNote}
@@ -497,28 +356,12 @@ function renderRouteList() {
             </svg>
           </a>` : ''}
         </div>
-        ${progressHtml}
-        <button class="bs-toggle" data-id="${escapeHtml(route.id)}" data-live="${isLive}">
-          ${isLive
-            ? (expanded ? 'Згорнути ▴' : 'Всі зупинки ▾')
-            : (expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾')}
+        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
+          ${expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾'}
         </button>
-        ${isLive && !expanded && pos
-          ? `<div class="bs-stops-body bs-stops-mini">
-              ${[pos.prevStop, pos.nextStop].filter(Boolean).map((s, i) => {
-                const t = kyivToLocal(getStopHHMM(route, s.name));
-                const cls = i === 0 ? 'bs-stop-row current' : 'bs-stop-row upcoming';
-                const icon = i === 0 ? '●\u202f' : '▸\u202f';
-                const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
-                return `<div class="${cls}">
-                  <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
-                  <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
-                  <span class="bs-stop-price">${escapeHtml(seg)} грн</span>
-                </div>`;
-              }).join('')}
-            </div>`
-          : `<div class="bs-stops-body"${expanded ? '' : ' hidden'}>${stopsHtml}</div>`
-        }
+        <div class="bs-stops-body"${expanded ? '' : ' hidden'}>
+          ${stopsHtml}
+        </div>
       </div>`;
   }).join('');
 
@@ -540,13 +383,8 @@ function renderRouteList() {
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
-      if (btn.dataset.live === 'true') {
-        if (collapsedLiveIds.has(id)) collapsedLiveIds.delete(id);
-        else collapsedLiveIds.add(id);
-      } else {
-        if (expandedIds.has(id)) expandedIds.delete(id);
-        else expandedIds.add(id);
-      }
+      if (expandedIds.has(id)) expandedIds.delete(id);
+      else expandedIds.add(id);
       renderRouteList();
     });
   });
@@ -570,12 +408,14 @@ function renderSearchPanel() {
   el.innerHTML = `
     <div class="bs-search-row">
       <div class="bs-search-field">
+        <label class="bs-search-label" for="bs-from-input">Від</label>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
                type="text" placeholder="Звідки…"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="Поміняти напрямок">⇌</button>
       <div class="bs-search-field">
+        <label class="bs-search-label" for="bs-to-input">До</label>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
                type="text" placeholder="Куди…"
                value="${escapeHtml(toStop)}" readonly>
@@ -659,9 +499,6 @@ export async function initBuses() {
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
       Оновлено: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
-      ${kyivNowMins() !== new Date().getHours() * 60 + new Date().getMinutes()
-        ? `<br><span class="buses-tz">Час місцевий · ${escapeHtml(localTzLabel())}</span>`
-        : ''}
     </div>
   `;
 
