@@ -106,9 +106,6 @@ window.openArticle = function(id) {
     .map(p => `<p>${escapeHtml(p)}</p>`)
     .join('');
 
-  // Якщо текст короткий — джерело не надає повний текст через RSS
-  const isShort = rawText.trim().length < 300;
-
   modalContent.innerHTML = `
     <div class="article-modal-header">
       <div class="news-card-meta">
@@ -124,10 +121,10 @@ window.openArticle = function(id) {
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ''}
     <div class="article-body">${bodyHtml}</div>
-    ${isShort && article.sourceUrl ? `
+    ${!article.exclusive && article.sourceUrl ? `
       <div class="article-short-note">
-        Це джерело надає лише анонс через RSS.
-        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю на сайті →</a>
+        Джерело надає лише анонс через RSS — повний текст на сайті видання.
+        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю →</a>
       </div>
     ` : ''}
     <div class="article-source-row">

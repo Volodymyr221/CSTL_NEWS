@@ -241,7 +241,6 @@
       return;
     const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
     const bodyHtml = rawText.split(/\n\n+/).map((p) => p.trim().replace(/\n/g, " ")).filter((p) => p.length > 0).map((p) => `<p>${escapeHtml(p)}</p>`).join("");
-    const isShort = rawText.trim().length < 300;
     modalContent.innerHTML = `
     <div class="article-modal-header">
       <div class="news-card-meta">
@@ -257,10 +256,10 @@
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
     <div class="article-body">${bodyHtml}</div>
-    ${isShort && article.sourceUrl ? `
+    ${!article.exclusive && article.sourceUrl ? `
       <div class="article-short-note">
-        \u0426\u0435 \u0434\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS.
-        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u2192</a>
+        \u0414\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS \u2014 \u043F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u0432\u0438\u0434\u0430\u043D\u043D\u044F.
+        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u2192</a>
       </div>
     ` : ""}
     <div class="article-source-row">
