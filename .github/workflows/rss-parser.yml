@@ -27,8 +27,8 @@ jobs:
         with:
           python-version: '3.12'
 
-      - name: Install feedparser
-        run: pip install feedparser
+      - name: Install dependencies
+        run: pip install feedparser beautifulsoup4
 
       - name: Parse RSS feeds
         run: python scripts/parse_rss.py

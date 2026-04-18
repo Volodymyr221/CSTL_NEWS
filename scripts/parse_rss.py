@@ -13,6 +13,8 @@ import html
 import json
 import re
 import time
+import urllib.parse
+import urllib.request
 from pathlib import Path
 
 import feedparser
@@ -293,6 +295,105 @@ def extract_event_data(title: str, text: str, ts: int) -> dict:
 
 USER_AGENT = "Mozilla/5.0 (compatible; CSTL-NEWS-Bot/1.0; +https://github.com/Volodymyr221/CSTL_NEWS)"
 
+# CSS-селектори блоку тексту статті для кожного домену
+ARTICLE_SELECTORS: dict[str, list[str]] = {
+    "volynpost.com": [
+        ".field-name-body .field-item",
+        ".field-item",
+        ".article-body",
+        ".node-content",
+        ".article__text",
+    ],
+    "konkurent.ua": [
+        ".article-text",
+        ".article__body",
+        ".article__text",
+        ".post-text",
+        ".content-text",
+    ],
+    "suspilne.media": [
+        ".article__body",
+        ".post__body",
+        ".article-content",
+        ".article__text",
+        ".news-item__text",
+    ],
+    "ukrinform.ua": [
+        ".newsText",
+        ".article-text",
+        ".article__body",
+    ],
+    "pravda.com.ua": [
+        ".post_text",
+        ".article_text",
+        ".news_text",
+    ],
+}
+
+# Загальні селектори — якщо сайт-специфічні не спрацювали
+_GENERIC_SELECTORS = [
+    "[itemprop='articleBody']",
+    ".article-body",
+    ".article-content",
+    ".article__body",
+    ".post-content",
+    ".entry-content",
+    ".content-text",
+    "article",
+]
+
+# Регулярний вираз для класів «шуму» (реклама, коментарі, навігація тощо)
+_NOISE_RE = re.compile(
+    r"(comment|social|share|related|sidebar|ad[s_-]|banner|recommend|widget|subscribe)",
+    re.I,
+)
+
+
+def fetch_full_article(url: str) -> str | None:
+    """Завантажує повний текст статті зі сторінки статті.
+
+    Викликається коли RSS дає лише анонс (<600 символів).
+    Повертає текст або None якщо не вдалося.
+    """
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": USER_AGENT,
+            "Accept": "text/html,application/xhtml+xml",
+            "Accept-Language": "uk-UA,uk;q=0.9",
+        })
+        with urllib.request.urlopen(req, timeout=12) as r:
+            raw = r.read()
+    except Exception:
+        return None
+
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return None
+
+    domain = re.sub(r"^www\.", "", urllib.parse.urlparse(url).netloc)
+    soup = BeautifulSoup(raw, "html.parser")
+
+    # Видаляємо шум: скрипти, реклами, навігацію, коментарі
+    for tag in soup.find_all(["script", "style", "nav", "header", "footer",
+                               "aside", "form", "iframe", "noscript"]):
+        tag.decompose()
+    for tag in soup.find_all(True):
+        cls = " ".join(tag.get("class") or [])
+        if _NOISE_RE.search(cls):
+            tag.decompose()
+
+    selectors = ARTICLE_SELECTORS.get(domain, []) + _GENERIC_SELECTORS
+    for sel in selectors:
+        el = soup.select_one(sel)
+        if el:
+            text = el.get_text(separator="\n", strip=True)
+            text = re.sub(r"\n{3,}", "\n\n", text).strip()
+            if len(text) > 300:
+                return text[:8000]
+
+    return None
+
 
 def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
     feed = feedparser.parse(source["url"], agent=USER_AGENT)
@@ -318,6 +419,12 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
             continue  # та сама новина з іншого джерела — пропускаємо
 
         content = get_full_content(entry)
+        # Якщо RSS дає лише анонс — дотягуємо повний текст зі сторінки статті
+        if len(content) < 600 and link:
+            full = fetch_full_article(link)
+            if full and len(full) > len(content):
+                content = full
+
         excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
         if not excerpt:
             excerpt = content[:400]
