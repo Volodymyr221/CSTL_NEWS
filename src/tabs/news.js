@@ -121,7 +121,7 @@ window.openArticle = function(id) {
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ''}
     <div class="article-body">${bodyHtml}</div>
-    ${!article.exclusive && article.sourceUrl ? `
+    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
       <div class="article-short-note">
         Джерело надає лише анонс через RSS — повний текст на сайті видання.
         <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю →</a>
