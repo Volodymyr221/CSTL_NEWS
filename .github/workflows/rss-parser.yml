@@ -9,6 +9,11 @@ on:
 permissions:
   contents: write
 
+# Окрема черга від deploy.yml — не блокуємо один одного
+concurrency:
+  group: "rss-parser"
+  cancel-in-progress: true
+
 jobs:
   parse-rss:
     runs-on: ubuntu-latest
@@ -28,22 +33,22 @@ jobs:
       - name: Parse RSS feeds
         run: python scripts/parse_rss.py
 
-      - name: Commit if changed
+      - name: Commit data files if changed
         id: commit
         run: |
           git config user.name  "CSTL News Bot"
           git config user.email "bot@cstl-news"
-          git add data/articles.json
+          git add data/articles.json data/events.json
           if git diff --staged --quiet; then
-            echo "Нових статей немає — комміт не потрібен"
+            echo "Нових матеріалів немає — деплой не потрібен"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
-            git commit -m "auto(news): оновлення новин $(date -u +'%d.%m %H:%M UTC')"
+            git commit -m "auto(news): оновлення новин та подій $(date -u +'%d.%m %H:%M UTC')"
             git push origin main
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
-      # Якщо є нові статті — запускаємо деплой
+      # Якщо є нові матеріали — запускаємо деплой
       - name: Trigger deploy
         if: steps.commit.outputs.changed == 'true'
         run: gh workflow run deploy.yml --ref main
