@@ -91,10 +91,7 @@ html, body {
   padding: 0 16px;
   z-index: 100;
   overflow: hidden;
-  transition: filter 0.3s ease;
 }
-/* Затемнення шапки коли відкрита модалка */
-body.modal-open .app-header { filter: brightness(0.55); }
 .header-logo {
   font-size: 20px;
   font-weight: 900;
@@ -353,11 +350,6 @@ body.modal-open .app-header { filter: brightness(0.55); }
   border-top: 1px solid var(--border);
   text-align: center;
 }
-.buses-tz {
-  font-size: 10px;
-  color: var(--gray);
-  opacity: 0.75;
-}
 
 /* Таби напрямку */
 .route-tabs { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; border-bottom: 2px solid var(--border); }
@@ -547,49 +539,21 @@ body.modal-open .app-header { filter: brightness(0.55); }
 /* ===== ARTICLE MODAL ===== */
 .article-modal {
   position: fixed;
-  top: var(--header-h); /* починається під шапкою, не перекриває її */
-  left: 0; right: 0; bottom: 0;
-  background: rgba(0,0,0,0.45);
+  inset: 0;
+  background: rgba(0,0,0,0.5);
   z-index: 1100;
   display: none;
   align-items: flex-end;
 }
-.article-modal.open { display: flex; animation: modalFadeIn 0.3s ease forwards; }
-.article-modal.open .article-modal-inner { animation: modalSlideUp 0.38s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
-@keyframes modalFadeIn {
-  from { background: rgba(0,0,0,0); }
-  to   { background: rgba(0,0,0,0.45); }
-}
-@keyframes modalSlideUp {
-  from { transform: translateY(100%); }
-  to   { transform: translateY(0); }
-}
+.article-modal.open { display: flex; }
 .article-modal-inner {
   background: var(--white);
-  border-radius: 18px 18px 0 0;
+  border-radius: 20px 20px 0 0;
   width: 100%;
-  max-height: 100%;
+  max-height: 90vh;
   overflow-y: auto;
   position: relative;
   padding-bottom: env(safe-area-inset-bottom);
-}
-/* Ручка-пілл для свайпу */
-.modal-handle {
-  width: 80px;
-  height: 24px;
-  background: transparent;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin: 4px auto 0;
-  cursor: grab;
-}
-.modal-handle::after {
-  content: '';
-  width: 36px;
-  height: 4px;
-  background: var(--border);
-  border-radius: 2px;
 }
 .modal-close-btn {
   position: sticky;
@@ -612,22 +576,56 @@ body.modal-open .app-header { filter: brightness(0.55); }
 .article-modal-header { margin-bottom: 16px; }
 .article-title { font-size: 22px; font-weight: 800; line-height: 1.3; margin: 8px 0; color: var(--black); }
 .article-byline { display: flex; gap: 12px; font-size: 12px; color: var(--gray); }
-.article-byline-link { color: var(--gray); text-decoration: none; font-size: 12px; }
-.article-byline-link:hover { text-decoration: underline; }
 .article-img { width: 100%; border-radius: 10px; margin-bottom: 16px; }
 .article-body { font-size: 16px; line-height: 1.7; color: var(--black); }
-.article-p { margin: 0 0 14px; }
-.article-h3 { font-size: 18px; font-weight: 700; margin: 20px 0 10px; }
-.article-quote { border-left: 3px solid var(--red); padding-left: 12px; color: var(--gray); margin: 16px 0; font-style: italic; }
-.article-figure { margin: 16px 0; }
-.article-img-inline { width: 100%; border-radius: 8px; }
-.article-caption { font-size: 12px; color: var(--gray); margin-top: 4px; }
-.article-loading { font-size: 13px; color: var(--gray); padding: 12px 0; }
-.article-source-note { font-size: 11px; color: var(--gray); margin-top: 24px; border-top: 1px solid var(--border); padding-top: 8px; }
-.article-source-row { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--border); gap: 12px; }
-.article-source-author { font-size: 11px; color: var(--gray); line-height: 1.4; font-weight: 700; }
-.article-source-author strong { font-weight: 700; color: var(--text); }
-.article-source-link { color: var(--red); font-size: 12px; font-weight: 700; text-decoration: none; white-space: nowrap; }
+.article-body p { margin-bottom: 14px; }
+.article-body p:last-child { margin-bottom: 0; }
+
+/* Блок «анонс від RSS» — з'являється коли текст короткий */
+.article-short-note {
+  margin-top: 20px;
+  padding: 14px 16px;
+  background: var(--gray-light);
+  border-radius: 10px;
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.5;
+}
+.article-short-link {
+  display: block;
+  margin-top: 8px;
+  color: var(--red);
+  font-weight: 700;
+  font-size: 14px;
+  text-decoration: none;
+}
+
+/* Підвал статті: «Автор публікації» зліва + «Читати оригінал» справа */
+.article-source-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 20px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  gap: 12px;
+}
+.article-source-author {
+  font-size: 11px;
+  color: var(--gray);
+  line-height: 1.5;
+}
+.article-source-author strong {
+  font-weight: 700;
+  color: var(--black);
+}
+.article-source-link {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
 
 /* ===== TAB BAR ===== */
 .tab-bar {
@@ -1142,15 +1140,6 @@ body.modal-open .app-header { filter: brightness(0.55); }
   margin-top: 1px;
 }
 
-/* Для закордонних: підказка «За Києвом HH:MM → HH:MM» */
-.bs-kyiv-time {
-  font-size: 10px;
-  color: var(--gray);
-  opacity: 0.7;
-  margin-top: 2px;
-  white-space: nowrap;
-}
-
 /* Підсвічування наступного рейсу */
 .bus-card.next {
   border-left: 3px solid var(--navy);
@@ -1158,88 +1147,6 @@ body.modal-open .app-header { filter: brightness(0.55); }
   padding-left: 13px;
 }
 .bus-card.next .bus-card-main { padding-left: 0; }
-
-/* В дорозі (enroute) — зелена лінія + прогрес */
-.bus-card.enroute {
-  border-left: 3px solid #22c55e;
-  background: #f0fdf4;
-  padding-left: 13px;
-}
-.bus-card.enroute .bus-card-main { padding-left: 0; }
-.bs-status.live {
-  background: #22c55e;
-  color: white;
-  padding: 1px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: 700;
-  margin-left: 6px;
-  animation: bsPulse 2s ease-in-out infinite;
-}
-@keyframes bsPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.6; }
-}
-.bs-progress {
-  padding: 4px 16px 8px;
-  border-top: 1px solid var(--border);
-}
-.bs-progress-bar {
-  height: 4px;
-  background: #e5e5e5;
-  border-radius: 2px;
-  overflow: hidden;
-}
-.bs-progress-fill {
-  height: 100%;
-  background: #22c55e;
-  border-radius: 2px;
-  transition: width 0.5s ease;
-}
-.bs-progress-info {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  margin-top: 4px;
-  font-size: 11px;
-}
-.bs-progress-pos {
-  color: #16a34a;
-  font-weight: 600;
-}
-.bs-progress-eta {
-  color: var(--gray);
-}
-
-/* Зупинки в режимі «В дорозі» */
-.bus-card.enroute .bs-stop-row.passed {
-  opacity: 0.4;
-}
-.bus-card.enroute .bs-stop-row.current {
-  font-weight: 700;
-  color: var(--navy);
-  background: #f0fdf4;
-}
-.bus-card.enroute .bs-stop-row.upcoming {
-  font-weight: 600;
-  color: var(--navy);
-}
-
-/* Smart row: В дорозі */
-.bus-smart-row.enroute {
-  background: #f0fdf4;
-  border-bottom-color: #22c55e;
-}
-.bus-smart-row.enroute .bsr-text strong { color: #16a34a; }
-.bus-smart-row.enroute .bsr-text small { color: var(--gray); font-size: 11px; }
-.bsr-pulse {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  background: #22c55e;
-  border-radius: 50%;
-  animation: bsPulse 2s ease-in-out infinite;
-}
 
 /* Кнопка "Всі зупинки ▾ / Сховати ▴" */
 .bs-toggle {
