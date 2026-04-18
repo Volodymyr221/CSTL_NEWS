@@ -1,7 +1,7 @@
 {
   "_meta": {
-    "version": "2026-04-16",
-    "last_updated": "2026-04-16T10:00:00+03:00",
+    "version": "2026-04-18",
+    "last_updated": "2026-04-18T10:00:00+03:00",
     "source": "Волиньобленерго",
     "source_url": "https://www.voe.com.ua/disconnection/schedule",
     "city": "Олицька ОТГ",
@@ -32,6 +32,13 @@
   ],
   "cities": [
     {
+      "id": "goryanivka",
+      "name": "Горянівка",
+      "streets": [
+        {"id": "goryanivka_1", "name": "все село", "queue_id": "q1"}
+      ]
+    },
+    {
       "id": "derno",
       "name": "Дерно",
       "streets": [
@@ -46,17 +53,24 @@
       ]
     },
     {
-      "id": "zalisochche",
-      "name": "Залісочче",
-      "streets": [
-        {"id": "zalisochche_1", "name": "все село", "queue_id": "q3"}
-      ]
-    },
-    {
       "id": "zhornyshe",
       "name": "Жорнище",
       "streets": [
         {"id": "zhornyshe_1", "name": "все село", "queue_id": "q1"}
+      ]
+    },
+    {
+      "id": "zalisoche",
+      "name": "Залісоче",
+      "streets": [
+        {"id": "zalisoche_1", "name": "все село", "queue_id": "q3"}
+      ]
+    },
+    {
+      "id": "kotiv",
+      "name": "Котів",
+      "streets": [
+        {"id": "kotiv_1", "name": "все село", "queue_id": "q2"}
       ]
     },
     {
@@ -67,10 +81,17 @@
       ]
     },
     {
-      "id": "mytelno",
-      "name": "Мительно",
+      "id": "metelne",
+      "name": "Метельне",
       "streets": [
-        {"id": "mytelno_1", "name": "все село", "queue_id": "q3"}
+        {"id": "metelne_1", "name": "все село", "queue_id": "q3"}
+      ]
+    },
+    {
+      "id": "moshchanytsia",
+      "name": "Мощаниця",
+      "streets": [
+        {"id": "moshchanytsia_1", "name": "все село", "queue_id": "q1"}
       ]
     },
     {
@@ -100,6 +121,27 @@
         {"id": "s7", "name": "вул. Франка",       "queue_id": "q3"},
         {"id": "s8", "name": "пров. Зелений",     "queue_id": "q2"},
         {"id": "s9", "name": "вул. Молодіжна",    "queue_id": "q1"}
+      ]
+    },
+    {
+      "id": "pokashchiv",
+      "name": "Покащів",
+      "streets": [
+        {"id": "pokashchiv_1", "name": "все село", "queue_id": "q3"}
+      ]
+    },
+    {
+      "id": "putyliv",
+      "name": "Путилівка",
+      "streets": [
+        {"id": "putyliv_1", "name": "все село", "queue_id": "q2"}
+      ]
+    },
+    {
+      "id": "stavok",
+      "name": "Ставок",
+      "streets": [
+        {"id": "stavok_1", "name": "все село", "queue_id": "q3"}
       ]
     },
     {

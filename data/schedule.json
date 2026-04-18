@@ -61,7 +61,7 @@
         {"name": "Хромяків",   "km": 38, "price_from_start": 152.90},
         {"name": "Дідичі",     "km": 41, "price_from_start": 159.50},
         {"name": "Олика",      "km": 44, "price_from_start": 173.80},
-        {"name": "Мительно",   "km": 47, "price_from_start": 181.50},
+        {"name": "Метельне",   "km": 47, "price_from_start": 181.50},
         {"name": "Личани",     "km": 51, "price_from_start": 188.10}
       ]
     },
@@ -105,7 +105,7 @@
       "auto_generated": true,
       "stops": [
         {"name": "Личани",     "km": 0,  "price_from_start": 0},
-        {"name": "Мительно",   "km": 4,  "price_from_start": 6.60},
+        {"name": "Метельне",   "km": 4,  "price_from_start": 6.60},
         {"name": "Олика",      "km": 7,  "price_from_start": 14.30},
         {"name": "Дідичі",     "km": 10, "price_from_start": 28.60},
         {"name": "Хромяків",   "km": 13, "price_from_start": 35.20},
@@ -253,7 +253,7 @@
         {"name": "Хромяків",   "km": 37, "price_from_start": 145.20},
         {"name": "Дідичі",     "km": 38, "price_from_start": 152.90},
         {"name": "Олика",      "km": 44, "price_from_start": 173.80},
-        {"name": "Мительно",   "km": 47, "price_from_start": 181.50},
+        {"name": "Метельне",   "km": 47, "price_from_start": 181.50},
         {"name": "Личани",     "km": 51, "price_from_start": 188.10}
       ]
     },
@@ -269,7 +269,7 @@
       "auto_generated": true,
       "stops": [
         {"name": "Личани",     "km": 0,  "price_from_start": 0},
-        {"name": "Мительно",   "km": 4,  "price_from_start": 6.60},
+        {"name": "Метельне",   "km": 4,  "price_from_start": 6.60},
         {"name": "Олика",      "km": 7,  "price_from_start": 14.30},
         {"name": "Дідичі",     "km": 13, "price_from_start": 35.20},
         {"name": "Хромяків",   "km": 14, "price_from_start": 42.90},
