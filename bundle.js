@@ -508,6 +508,7 @@
   var showAll = false;
   var timerInterval = null;
   var expandedIds = /* @__PURE__ */ new Set();
+  var collapsedLiveIds = /* @__PURE__ */ new Set();
   var activeField = null;
   function savePrefs() {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
@@ -857,7 +858,7 @@
       const segDur = toMins - fromMins;
       const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
       const c = carrierInfo(route.carrier);
-      const expanded = isLive || expandedIds.has(route.id);
+      const expanded = isLive ? !collapsedLiveIds.has(route.id) : expandedIds.has(route.id);
       const basePrice = route.stops.find((s) => s.name === effFrom)?.price_from_start ?? 0;
       const pos = isLive ? getCurrentPosition(route) : null;
       const stopsHtml = route.stops.map((s, idx) => {
@@ -933,12 +934,22 @@
           </a>` : ""}
         </div>
         ${progressHtml}
-        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-          ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
+        <button class="bs-toggle" data-id="${escapeHtml(route.id)}" data-live="${isLive}">
+          ${isLive ? expanded ? "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE" : expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
         </button>
-        <div class="bs-stops-body"${expanded ? "" : " hidden"}>
-          ${stopsHtml}
-        </div>
+        ${isLive && !expanded && pos ? `<div class="bs-stops-body bs-stops-mini">
+              ${[pos.prevStop, pos.nextStop].filter(Boolean).map((s, i) => {
+        const t = kyivToLocal(getStopHHMM(route, s.name));
+        const cls = i === 0 ? "bs-stop-row current" : "bs-stop-row upcoming";
+        const icon = i === 0 ? "\u25CF\u202F" : "\u25B8\u202F";
+        const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
+        return `<div class="${cls}">
+                  <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
+                  <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
+                  <span class="bs-stop-price">${escapeHtml(seg)} \u0433\u0440\u043D</span>
+                </div>`;
+      }).join("")}
+            </div>` : `<div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>`}
       </div>`;
     }).join("");
     let toggleHtml = "";
@@ -957,10 +968,17 @@
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;
-        if (expandedIds.has(id))
-          expandedIds.delete(id);
-        else
-          expandedIds.add(id);
+        if (btn.dataset.live === "true") {
+          if (collapsedLiveIds.has(id))
+            collapsedLiveIds.delete(id);
+          else
+            collapsedLiveIds.add(id);
+        } else {
+          if (expandedIds.has(id))
+            expandedIds.delete(id);
+          else
+            expandedIds.add(id);
+        }
         renderRouteList();
       });
     });

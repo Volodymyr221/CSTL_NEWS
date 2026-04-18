@@ -7,7 +7,8 @@ let fromStop      = '';
 let toStop        = '';
 let showAll       = false;
 let timerInterval = null;
-let expandedIds   = new Set();
+let expandedIds      = new Set();
+let collapsedLiveIds = new Set(); // live рейси які користувач згорнув вручну
 let activeField   = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
 
 // ── Preferences (localStorage — збереження налаштувань у браузері) ────
@@ -403,7 +404,7 @@ function renderRouteList() {
       ? `${Math.floor(segDur / 60)} год${segDur % 60 ? ' ' + (segDur % 60) + ' хв' : ''}`
       : `${segDur} хв`;
     const c         = carrierInfo(route.carrier);
-    const expanded  = isLive || expandedIds.has(route.id);
+    const expanded  = isLive ? !collapsedLiveIds.has(route.id) : expandedIds.has(route.id);
     const basePrice = route.stops.find(s => s.name === effFrom)?.price_from_start ?? 0;
 
     const pos = isLive ? getCurrentPosition(route) : null;
@@ -497,12 +498,27 @@ function renderRouteList() {
           </a>` : ''}
         </div>
         ${progressHtml}
-        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-          ${expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾'}
+        <button class="bs-toggle" data-id="${escapeHtml(route.id)}" data-live="${isLive}">
+          ${isLive
+            ? (expanded ? 'Згорнути ▴' : 'Всі зупинки ▾')
+            : (expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾')}
         </button>
-        <div class="bs-stops-body"${expanded ? '' : ' hidden'}>
-          ${stopsHtml}
-        </div>
+        ${isLive && !expanded && pos
+          ? `<div class="bs-stops-body bs-stops-mini">
+              ${[pos.prevStop, pos.nextStop].filter(Boolean).map((s, i) => {
+                const t = kyivToLocal(getStopHHMM(route, s.name));
+                const cls = i === 0 ? 'bs-stop-row current' : 'bs-stop-row upcoming';
+                const icon = i === 0 ? '●\u202f' : '▸\u202f';
+                const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
+                return `<div class="${cls}">
+                  <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
+                  <span class="bs-stop-name">${icon}${escapeHtml(s.name)}</span>
+                  <span class="bs-stop-price">${escapeHtml(seg)} грн</span>
+                </div>`;
+              }).join('')}
+            </div>`
+          : `<div class="bs-stops-body"${expanded ? '' : ' hidden'}>${stopsHtml}</div>`
+        }
       </div>`;
   }).join('');
 
@@ -524,8 +540,13 @@ function renderRouteList() {
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.id;
-      if (expandedIds.has(id)) expandedIds.delete(id);
-      else expandedIds.add(id);
+      if (btn.dataset.live === 'true') {
+        if (collapsedLiveIds.has(id)) collapsedLiveIds.delete(id);
+        else collapsedLiveIds.add(id);
+      } else {
+        if (expandedIds.has(id)) expandedIds.delete(id);
+        else expandedIds.add(id);
+      }
       renderRouteList();
     });
   });
