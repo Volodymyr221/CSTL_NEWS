@@ -131,10 +131,16 @@ html, body {
 .filters-bar {
   padding: 10px 16px 0;
   background: var(--white);
-  position: sticky;
+  position: fixed;
   top: var(--header-h);
-  z-index: 50;
+  left: 0;
+  right: 0;
+  z-index: 90;
   border-bottom: 1px solid var(--border);
+}
+/* Компенсація висоти фіксованих фільтрів щоб контент не ховався під ними */
+#page-news {
+  padding-top: 52px;
 }
 .chips-row {
   display: flex;
