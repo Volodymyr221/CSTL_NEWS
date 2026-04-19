@@ -37,7 +37,7 @@
 |---|--------|
 | ☐ | Підключити зовнішній cron-сервіс **cron-job.org** для точніших 30-хв запусків парсера (GitHub безкоштовний тариф затримує на 5-30+ хв). Треба: зареєструватись на cron-job.org → "Trigger GitHub Actions" via API |
 | ☐ | Знайти нові волинські RSS-джерела замість видалених **Суспільне Волинь** / **Укрінформ** (geo=Волинь недостатньо покрите — лише Волинь Post і Конкурент) |
-| ☐ | **Cloudflare Worker** + `olytska-gromada.gov.ua`: `cloudflare/worker.js` готовий. Вова реєструється → деплоїть Worker → дає URL → Claude підключає сайт громади до парсера |
+| ✅ | ~~**Cloudflare Worker** + `olytska-gromada.gov.ua`~~ — **DONE 2026-04-19**. Worker `cstl-proxy.volodymyrshevchuk19.workers.dev`. Парсер підключено (`/news/` + `/ogoloshennya-...`) |
 
 ### Фаза 2.3 — Форма «Подати новину»
 | ✓ | Задача | Баг |
@@ -108,3 +108,6 @@
 | 2026-04-19 | **RSS** — видалено 3 нероботоздатніх джерела: Суспільне Волинь (DNS-блок), Укрінформ Волинь/Світ (зламаний XML) | *(серія)* |
 | 2026-04-19 | **GitHub Actions** — `actions: write` у `rss-parser.yml` (фікс 403 при "Trigger deploy") | *(серія)* |
 | 2026-04-19 | **Модалка** — `modal-sticky-header` (рисочка + × + гео•категорія), `top: var(--header-h)`, 12px відступ | *(серія)* |
+| 2026-04-19 | **Cloudflare Worker** — `cstl-proxy.volodymyrshevchuk19.workers.dev`, код `cloudflare/worker.js` | `4d1d9ff` |
+| 2026-04-19 | **Олицька громада** — `parse_gromada_source()` + `gromada_url()`, `/news/` + `/ogoloshennya-...` | `72f79c9` |
+| 2026-04-19 | **Фільтри новин** — `position: fixed` (sticky не працював на iOS через `height:100%` на body) | `8921124` |
