@@ -50,7 +50,17 @@ SOURCES = [
         "geo": "Олика",
         "type": "html",   # тег-сторінка без RSS — HTML-парсер
     },
+    {
+        "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/novyny",
+        "name": "Олицька громада",
+        "geo": "Олика",
+        "type": "gromada",  # Joomla-сайт через Cloudflare Worker (проксі)
+    },
 ]
+
+# Cloudflare Worker (посередник між GitHub Actions і сайтом громади)
+GROMADA_PROXY = "https://cstl-proxy.volodymyrshevchuk19.workers.dev"
+GROMADA_BASE  = "https://olytska-gromada.gov.ua"
 
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
 MAX_ARTICLES     = 150
@@ -365,6 +375,14 @@ ARTICLE_SELECTORS: dict[str, list[str]] = {
         ".post-content",
         ".entry-content",
     ],
+    # Joomla gov.ua — повний текст через Worker (домен Worker = ключ)
+    "cstl-proxy.volodymyrshevchuk19.workers.dev": [
+        "[itemprop='articleBody']",
+        ".article-fulltext",
+        ".item-page .article-fulltext",
+        ".intro-text",
+        ".item-page",
+    ],
 }
 
 # Загальні селектори — якщо сайт-специфічні не спрацювали
@@ -593,7 +611,140 @@ def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
     return articles
 
 
+def gromada_url(path: str) -> str:
+    """Перетворює шлях сайту громади у URL через Cloudflare Worker (проксі)."""
+    if not path.startswith("/"):
+        path = "/" + path
+    return f"{GROMADA_PROXY}?path={urllib.parse.quote(path)}"
+
+
+def parse_gromada_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+    """Парсить сайт Олицької громади через Cloudflare Worker.
+
+    Сайт побудований на Joomla — типова платформа для держсайтів gov.ua.
+    Worker обходить IP-блокування GitHub Actions (Azure).
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        req = urllib.request.Request(source["url"], headers={
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,*/*",
+            "Accept-Language": "uk-UA,uk;q=0.9",
+        })
+        with urllib.request.urlopen(req, timeout=20) as r:
+            raw = r.read()
+    except Exception as e:
+        raise ValueError(f"Worker недоступний: {e}")
+
+    soup = BeautifulSoup(raw, "html.parser")
+    candidates: list[tuple[str, str, object]] = []
+
+    # Joomla: <article class="leading"> або <article class="item">
+    for art in soup.find_all("article")[:25]:
+        h = art.find(["h1", "h2", "h3"])
+        a = (h.find("a", href=True) if h else None) or art.find("a", href=True)
+        if h and a:
+            href = a["href"]
+            if not href.startswith("http"):
+                href = GROMADA_BASE + href
+            candidates.append((href, h.get_text(strip=True), art))
+
+    # Joomla: списки .items-row, .items-leading або подібні
+    if not candidates:
+        for item in soup.select(
+            ".items-row, .items-leading, .blog-item, .news-list-item, .catItemView"
+        )[:25]:
+            h = item.find(["h1", "h2", "h3"])
+            a = (h.find("a", href=True) if h else None) or item.find("a", href=True)
+            if h and a:
+                href = a["href"]
+                if not href.startswith("http"):
+                    href = GROMADA_BASE + href
+                candidates.append((href, h.get_text(strip=True), item))
+
+    # Загальний fallback — будь-які посилання що ведуть на статті
+    if not candidates:
+        for a in soup.select("a[href]")[:50]:
+            href = a["href"]
+            text = a.get_text(strip=True)
+            if len(text) > 25 and any(
+                p in href for p in ["/novyny/", "/news/", "/component/content/"]
+            ):
+                if not href.startswith("http"):
+                    href = GROMADA_BASE + href
+                candidates.append((href, text, a.parent))
+
+    articles = []
+    for href, raw_title, container in candidates[:MAX_PER_SOURCE]:
+        title = strip_html(raw_title).strip()
+        if not title or not href:
+            continue
+        if href in seen_urls:
+            continue
+        norm = normalize_title(title)
+        if norm in seen_titles:
+            continue
+
+        # Дата з контейнера
+        ts = int(time.time() * 1000)
+        date_el = (container.find(
+            ["time", "span", "dd", "div"],
+            class_=re.compile(r"date|time|published|create", re.I),
+        ) if hasattr(container, "find") else None)
+        if date_el:
+            raw_date = date_el.get("datetime", "") or date_el.get_text(strip=True)
+            parsed_ts = _parse_date_uk(raw_date)
+            if parsed_ts:
+                ts = parsed_ts
+
+        # Excerpt
+        exc_el = (container.find(
+            class_=re.compile(r"intro|excerpt|summary|description|anons", re.I),
+        ) if hasattr(container, "find") else None)
+        excerpt = exc_el.get_text(strip=True)[:400] if exc_el else ""
+
+        # Повний текст — завантажуємо статтю також через Worker
+        article_path = href.replace(GROMADA_BASE, "") or "/"
+        content = fetch_full_article(gromada_url(article_path)) or excerpt
+        if not excerpt:
+            excerpt = content[:400]
+
+        # Зображення
+        image = None
+        img_el = container.find("img") if hasattr(container, "find") else None
+        if img_el:
+            src = img_el.get("src") or img_el.get("data-src") or ""
+            if src and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                image = src if src.startswith("http") else GROMADA_BASE + src
+
+        category = detect_category(title + " " + excerpt)
+        entry_type = classify_entry(title, excerpt + " " + content)
+
+        articles.append({
+            "title": title,
+            "excerpt": excerpt,
+            "content": content,
+            "category": category,
+            "geo": "Олика",
+            "image": image,
+            "source": "Олицька громада",
+            "sourceUrl": href,  # оригінальний URL (без Worker) для дедуплікації
+            "exclusive": False,
+            "ts": ts,
+            "_type": entry_type,
+        })
+        seen_urls.add(href)
+        seen_titles.add(norm)
+
+    return articles
+
+
 def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+    # Сайт Олицької громади через Cloudflare Worker
+    if source.get("type") == "gromada":
+        return parse_gromada_source(source, seen_urls, seen_titles)
+
     # HTML-джерела (тег-сторінки без RSS) — окремий парсер
     if source.get("type") == "html":
         return parse_html_source(source, seen_urls, seen_titles)
