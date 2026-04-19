@@ -142,7 +142,7 @@ text = re.sub(r"\s*(Читати повністю|Читати далі|Чита
 
 ## 🔜 Що далі (пріоритети)
 
-1. **Cloudflare Worker для сайту громади** — `cloudflare/worker.js` вже готовий. Вова реєструється на cloudflare.com (безкоштовно) → Workers & Pages → Create Worker → вставляє код → деплоїть → дає URL типу `https://cstl-proxy.АКАУНТ.workers.dev` → Claude підключає до парсера. olytska-gromada.gov.ua блокує IP (403), BROWSER_UA не допоміг.
-2. **Перевірити логи парсера** — після фіксів NoneType + BROWSER_UA: Actions → RSS Parser → крок "Parse RSS feeds" — має бути `+N статей` замість `✗ NoneType` помилок.
+1. **Перевірити наступний запуск RSS парсера** — після фіксів (2026-04-19): "Parse RSS feeds" має бути ✅ зелений і показувати `+N статей`. "Trigger deploy" тепер має `actions: write` — має теж бути ✅.
+2. **Cloudflare Worker для сайту громади** — `cloudflare/worker.js` вже готовий. Вова реєструється на cloudflare.com → Workers & Pages → Create Worker → вставляє код → деплоїть → дає URL → Claude підключає до парсера.
 3. **Supabase** — реальний розклад відключень для «Світло»
 4. **Сторінка «Громади»** — дашборд (обговорено концептуально)
