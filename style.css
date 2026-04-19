@@ -545,6 +545,7 @@ html, body {
   z-index: 1100;
   display: none;
   align-items: flex-end;
+  padding-top: 8px;
 }
 .article-modal.open { display: flex; }
 .article-modal-inner {
