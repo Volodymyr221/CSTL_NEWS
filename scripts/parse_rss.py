@@ -54,7 +54,13 @@ SOURCES = [
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/novyny",
         "name": "Олицька громада",
         "geo": "Олика",
-        "type": "gromada",  # Joomla-сайт через Cloudflare Worker (проксі)
+        "type": "gromada",
+    },
+    {
+        "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/ogoloshennia",
+        "name": "Олицька громада",
+        "geo": "Олика",
+        "type": "gromada",
     },
 ]
 
