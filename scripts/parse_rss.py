@@ -166,11 +166,13 @@ def get_full_content(entry) -> str:
     """Повний текст статті: спочатку content:encoded, потім summary як fallback."""
     content_list = getattr(entry, "content", None)
     if content_list:
-        best = max(content_list, key=lambda c: len(c.get("value", "")), default=None)
-        if best:
-            text = strip_html(best.get("value", ""))
-            if len(text) > 150:          # ігноруємо порожні/технічні блоки
-                return text[:8000]       # ліміт щоб не роздувати articles.json
+        valid = [c for c in content_list if isinstance(c, dict)]
+        if valid:
+            best = max(valid, key=lambda c: len(c.get("value") or ""), default=None)
+            if best:
+                text = strip_html(best.get("value") or "")
+                if len(text) > 150:
+                    return text[:8000]
     return strip_html(entry.get("summary") or entry.get("description") or "")
 
 
@@ -215,12 +217,17 @@ def detect_category(text: str) -> str:
 def extract_image(entry) -> str | None:
     media = getattr(entry, "media_content", None)
     if media and isinstance(media, list):
-        url = media[0].get("url", "")
-        if any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
-            return url
+        for m in media:
+            if not isinstance(m, dict):
+                continue
+            url = m.get("url", "") or ""
+            if any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
+                return url
     enclosures = getattr(entry, "enclosures", None)
     if enclosures:
         for enc in enclosures:
+            if not isinstance(enc, dict):
+                continue
             if enc.get("type", "").startswith("image"):
                 return enc.get("href") or enc.get("url")
     return None
@@ -604,8 +611,11 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
     for entry in feed.entries[:20]:
         if len(articles) >= MAX_PER_SOURCE:
             break
-        title = strip_html(entry.get("title", "")).strip()
-        link = (entry.get("link") or "").strip()
+        try:
+            title = strip_html(entry.get("title", "")).strip()
+            link = (entry.get("link") or "").strip()
+        except Exception:
+            continue
         if not title or not link:
             continue
         if link in seen_urls:
@@ -614,52 +624,52 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
         if norm in seen_titles:
             continue  # та сама новина з іншого джерела — пропускаємо
 
-        content = get_full_content(entry)
-        # Якщо RSS дає лише анонс — дотягуємо повний текст зі сторінки статті
-        if len(content) < 600 and link:
-            full = fetch_full_article(link)
-            if full and len(full) > len(content):
-                content = full
+        try:
+            content = get_full_content(entry)
+            # Якщо RSS дає лише анонс — дотягуємо повний текст зі сторінки статті
+            if len(content) < 600 and link:
+                full = fetch_full_article(link)
+                if full and len(full) > len(content):
+                    content = full
 
-        excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
-        if not excerpt:
-            excerpt = content[:400]
+            excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
+            if not excerpt:
+                excerpt = content[:400]
 
-        published = entry.get("published_parsed") or entry.get("updated_parsed")
-        ts = int(time.mktime(published) * 1000) if published else int(time.time() * 1000)
+            published = entry.get("published_parsed") or entry.get("updated_parsed")
+            ts = int(time.mktime(published) * 1000) if published else int(time.time() * 1000)
 
-        text = title + " " + excerpt
-        geo = detect_geo(text, source["geo"])
+            text = title + " " + excerpt
+            geo = detect_geo(text, source["geo"])
 
-        # Волинь і Олика — без фільтра (беремо все).
-        # Україна — тільки загальнонаціональні новини.
-        # Світ — тільки геополітика, енергетика, економіка, великі події.
-        if source["geo"] == "Україна" and geo == "Україна":
-            if not is_nationally_relevant(text):
-                continue
-        if source["geo"] == "Світ" and geo == "Світ":
-            if not is_world_relevant(text):
-                continue
+            if source["geo"] == "Україна" and geo == "Україна":
+                if not is_nationally_relevant(text):
+                    continue
+            if source["geo"] == "Світ" and geo == "Світ":
+                if not is_world_relevant(text):
+                    continue
 
-        category = detect_category(text)
-        image = extract_image(entry)
-        entry_type = classify_entry(title, excerpt + " " + content)
+            category = detect_category(text)
+            image = extract_image(entry)
+            entry_type = classify_entry(title, excerpt + " " + content)
 
-        articles.append({
-            "title": title,
-            "excerpt": excerpt,
-            "content": content,
-            "category": category,
-            "geo": geo,
-            "image": image,
-            "source": source["name"],
-            "sourceUrl": link,
-            "exclusive": False,
-            "ts": ts,
-            "_type": entry_type,
-        })
-        seen_urls.add(link)
-        seen_titles.add(norm)
+            articles.append({
+                "title": title,
+                "excerpt": excerpt,
+                "content": content,
+                "category": category,
+                "geo": geo,
+                "image": image,
+                "source": source["name"],
+                "sourceUrl": link,
+                "exclusive": False,
+                "ts": ts,
+                "_type": entry_type,
+            })
+            seen_urls.add(link)
+            seen_titles.add(norm)
+        except Exception:
+            continue
 
     return articles
 
