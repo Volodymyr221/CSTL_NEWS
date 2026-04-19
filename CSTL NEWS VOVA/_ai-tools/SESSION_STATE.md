@@ -45,7 +45,7 @@
 
 ## 📰 RSS-парсер — поточний стан
 
-### Активні джерела (5 штук)
+### Активні джерела (6 штук)
 | Джерело | Geo | Тип | Статус |
 |---------|-----|-----|--------|
 | Волинь Post | Волинь | RSS | ✅ Працює, оновлюється повільно |
@@ -53,6 +53,7 @@
 | Українська правда | Україна | RSS | ✅ Активно поповнює |
 | Українська правда (Світ) | Світ | RSS | ✅ Активно поповнює |
 | Район.Ківерці /tags/olika | Олика | HTML | ✅ Чекає нових постів про Олику |
+| Олицька громада | Олика | gromada (Worker) | ✅ Додано 2026-04-19, Worker: cstl-proxy.volodymyrshevchuk19.workers.dev |
 
 ### Видалені джерела (нероботоздатні)
 | Джерело | Причина |
@@ -70,13 +71,14 @@
 - **MAX_ARTICLES:** 150, **MAX_PER_SOURCE:** 15, **MAX_EVENTS:** 50
 - **Traceback:** увімкнено (`traceback.print_exc()`) — помилки видно у повному лозі Actions
 
-### Що зроблено у сесії 2026-04-19
+### Що зроблено у сесії 2026-04-19 (продовження)
 1. `fetch_rss()` — ручне завантаження з BROWSER_UA замість feedparser HTTP
 2. `response_headers` передаються у `feedparser.parse()` — фікс кодування (Волинь Post/Конкурент)
 3. `isinstance(entry, dict)` — захист від None-записів
 4. `actions: write` у `rss-parser.yml` — фікс 403 при "Trigger deploy"
 5. `lxml` додано до pip install — надійніший XML парсер
 6. Видалено 3 нероботоздатних джерела
+7. **Олицька громада** — `parse_gromada_source()` через Cloudflare Worker (`cstl-proxy.volodymyrshevchuk19.workers.dev`), Joomla-парсер, `gromada_url()` трансформує URL статей через Worker
 
 ---
 
