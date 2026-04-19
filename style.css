@@ -539,16 +539,37 @@ html, body {
 /* ===== ARTICLE MODAL ===== */
 .article-modal {
   position: fixed;
-  inset: 0;
+  top: var(--header-h);
+  left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.5);
   z-index: 1100;
   display: none;
   align-items: flex-end;
 }
 .article-modal.open { display: flex; }
+.article-modal-inner {
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  width: 100%;
+  max-height: calc(100svh - var(--header-h));
+  overflow-y: auto;
+  position: relative;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+/* Sticky-шапка модалки: рисочка + кнопка × — залишаються зверху при скролі */
+.modal-sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--white);
+  border-radius: 20px 20px 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
 .modal-handle {
   width: 100%;
-  padding: 20px 0 12px;
+  padding: 12px 0 8px;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -562,20 +583,10 @@ html, body {
   background: #d1d5db;
   border-radius: 2px;
 }
-.article-modal-inner {
-  background: var(--white);
-  border-radius: 20px 20px 0 0;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  padding-bottom: env(safe-area-inset-bottom);
-}
 .modal-close-btn {
-  position: sticky;
-  top: 0;
-  float: right;
-  margin: 12px 12px 0 0;
+  position: absolute;
+  top: 8px;
+  right: 12px;
   background: var(--gray-light);
   border: none;
   border-radius: 50%;
