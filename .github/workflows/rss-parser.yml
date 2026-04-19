@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 # Окрема черга від deploy.yml — не блокуємо один одного
 concurrency:
