@@ -13,6 +13,8 @@ import html
 import json
 import re
 import time
+import traceback
+import urllib.error
 import urllib.parse
 import urllib.request
 from pathlib import Path
@@ -314,6 +316,19 @@ USER_AGENT = "Mozilla/5.0 (compatible; CSTL-NEWS-Bot/1.0; +https://github.com/Vo
 # Для завантаження повного тексту статей — реалістичний Chrome UA щоб обійти базові блокування
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+
+def fetch_rss(url: str) -> bytes:
+    """Завантажує RSS вручну з BROWSER_UA — обходить CDN-блокування по User-Agent."""
+    req = urllib.request.Request(url, headers={
+        "User-Agent": BROWSER_UA,
+        "Accept": "application/rss+xml, application/xml, text/xml, */*",
+        "Accept-Language": "uk-UA,uk;q=0.9",
+    })
+    with urllib.request.urlopen(req, timeout=15) as r:
+        if r.status in (403, 404, 410):
+            raise ValueError(f"HTTP {r.status}")
+        return r.read()
+
 # CSS-селектори блоку тексту статті для кожного домену
 ARTICLE_SELECTORS: dict[str, list[str]] = {
     "volynpost.com": [
@@ -597,20 +612,29 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
     if source.get("type") == "html":
         return parse_html_source(source, seen_urls, seen_titles)
 
-    feed = feedparser.parse(source["url"], agent=USER_AGENT)
+    try:
+        raw = fetch_rss(source["url"])
+    except urllib.error.HTTPError as e:
+        raise ValueError(f"HTTP {e.code}")
+    except Exception as e:
+        raise ValueError(f"Помилка завантаження: {e}")
 
-    status = getattr(feed, "status", 0)
-    if status in (403, 404, 410):
-        raise ValueError(f"HTTP {status}")
+    try:
+        feed = feedparser.parse(raw)
+    except Exception as e:
+        raise ValueError(f"feedparser: {e}")
+
     if feed.bozo and not feed.entries:
         raise ValueError(f"Помилка парсингу: {feed.bozo_exception}")
     if not feed.entries:
-        raise ValueError(f"Порожній фід (entries=0, status={status})")
+        raise ValueError("Порожній фід (entries=0)")
 
     articles = []
     for entry in feed.entries[:20]:
         if len(articles) >= MAX_PER_SOURCE:
             break
+        if not isinstance(entry, dict):
+            continue
         try:
             title = strip_html(entry.get("title", "")).strip()
             link = (entry.get("link") or "").strip()
@@ -754,6 +778,7 @@ def main():
             print(f"✓ {source['name']}: {', '.join(parts) if parts else 'нічого нового'}")
         except Exception as e:
             print(f"✗ {source['name']}: {e}")
+            traceback.print_exc()
 
     # Зберегти articles.json
     if new_articles:
