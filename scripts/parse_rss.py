@@ -25,11 +25,6 @@ import feedparser
 
 SOURCES = [
     {
-        "url": "https://vo.suspilne.media/feed/",
-        "name": "Суспільне Волинь",
-        "geo": "Волинь",
-    },
-    {
         "url": "https://www.volynpost.com/rss.xml",
         "name": "Волинь Post",
         "geo": "Волинь",
@@ -40,19 +35,9 @@ SOURCES = [
         "geo": "Волинь",
     },
     {
-        "url": "https://www.ukrinform.ua/rss/block-volyn.xml",
-        "name": "Укрінформ Волинь",
-        "geo": "Волинь",
-    },
-    {
         "url": "https://www.pravda.com.ua/rss/view_news/",
         "name": "Українська правда",
         "geo": "Україна",
-    },
-    {
-        "url": "https://www.ukrinform.ua/rss/block-world.xml",
-        "name": "Укрінформ Світ",
-        "geo": "Світ",
     },
     {
         "url": "https://www.pravda.com.ua/rss/view_world/",
