@@ -106,6 +106,7 @@ window.openArticle = function(id) {
 
   const modal = document.getElementById('article-modal');
   const modalContent = document.getElementById('article-modal-content');
+  const modalMetaTags = document.getElementById('modalMetaTags');
   if (!modal || !modalContent) return;
 
   const sourceHtml = article.sourceUrl
@@ -118,13 +119,17 @@ window.openArticle = function(id) {
     : (article.excerpt || article.content || '');
   const bodyHtml = renderArticleBody(rawText);
 
+  if (modalMetaTags) {
+    modalMetaTags.innerHTML = `
+      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
+      <span class="modal-meta-sep">•</span>
+      <span class="news-card-category">${escapeHtml(article.category)}</span>
+      ${article.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
+    `;
+  }
+
   modalContent.innerHTML = `
     <div class="article-modal-header">
-      <div class="news-card-meta">
-        <span class="news-card-geo">${escapeHtml(article.geo)}</span>
-        <span class="news-card-category">${escapeHtml(article.category)}</span>
-        ${article.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
-      </div>
       <h1 class="article-title">${escapeHtml(article.title)}</h1>
       <div class="article-byline">
         ${sourceHtml}

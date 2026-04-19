@@ -302,8 +302,8 @@ USER_AGENT = "Mozilla/5.0 (compatible; CSTL-NEWS-Bot/1.0; +https://github.com/Vo
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
 
-def fetch_rss(url: str) -> bytes:
-    """Завантажує RSS вручну з BROWSER_UA — обходить CDN-блокування по User-Agent."""
+def fetch_rss(url: str) -> tuple:
+    """Завантажує RSS з BROWSER_UA. Повертає (bytes, response_headers)."""
     req = urllib.request.Request(url, headers={
         "User-Agent": BROWSER_UA,
         "Accept": "application/rss+xml, application/xml, text/xml, */*",
@@ -312,7 +312,8 @@ def fetch_rss(url: str) -> bytes:
     with urllib.request.urlopen(req, timeout=15) as r:
         if r.status in (403, 404, 410):
             raise ValueError(f"HTTP {r.status}")
-        return r.read()
+        content_type = r.headers.get("content-type", "text/xml; charset=utf-8")
+        return r.read(), {"content-type": content_type}
 
 # CSS-селектори блоку тексту статті для кожного домену
 ARTICLE_SELECTORS: dict[str, list[str]] = {
@@ -598,14 +599,14 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
         return parse_html_source(source, seen_urls, seen_titles)
 
     try:
-        raw = fetch_rss(source["url"])
+        raw, response_headers = fetch_rss(source["url"])
     except urllib.error.HTTPError as e:
         raise ValueError(f"HTTP {e.code}")
     except Exception as e:
         raise ValueError(f"Помилка завантаження: {e}")
 
     try:
-        feed = feedparser.parse(raw)
+        feed = feedparser.parse(raw, response_headers=response_headers)
     except Exception as e:
         raise ValueError(f"feedparser: {e}")
 

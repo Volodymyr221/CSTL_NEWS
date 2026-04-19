@@ -50,9 +50,10 @@ window.closeArticleModal = function() {
   if (modal) modal.classList.remove('open');
   document.body.style.overflow = '';
   document.body.classList.remove('modal-open');
-  // Скидаємо inline стилі після свайпу
   const inner = document.querySelector('.article-modal-inner');
   if (inner) { inner.style.transform = ''; inner.style.transition = ''; inner.style.animation = ''; }
+  const metaTags = document.getElementById('modalMetaTags');
+  if (metaTags) metaTags.innerHTML = '';
 };
 
 // Свайп вниз для закриття модалки
