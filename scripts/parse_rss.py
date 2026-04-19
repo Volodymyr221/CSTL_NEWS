@@ -51,13 +51,13 @@ SOURCES = [
         "type": "html",   # тег-сторінка без RSS — HTML-парсер
     },
     {
-        "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/novyny",
+        "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/news/",
         "name": "Олицька громада",
         "geo": "Олика",
         "type": "gromada",
     },
     {
-        "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/ogoloshennia",
+        "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/ogoloshennya-11-12-45-18-02-2021/",
         "name": "Олицька громада",
         "geo": "Олика",
         "type": "gromada",
