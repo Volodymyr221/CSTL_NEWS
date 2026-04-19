@@ -552,7 +552,7 @@ html, body {
   background: var(--white);
   border-radius: 20px 20px 0 0;
   width: 100%;
-  max-height: calc(100svh - var(--header-h));
+  max-height: calc(100svh - var(--header-h) - 12px);
   overflow-y: auto;
   position: relative;
   padding-bottom: env(safe-area-inset-bottom);
