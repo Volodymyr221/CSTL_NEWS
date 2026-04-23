@@ -1,31 +1,5 @@
 [
   {
-    "id": 16,
-    "title": "22 квітня посли ЄС, окрім 90 млрд для України, спробують затвердити і нові санкції проти РФ",
-    "description": "До порядку денного засідання Комітету постійних представників (Coreper) 22 квітня, окрім кредиту на 90 млрд євро для України, внесли також 20-й пакет антиросійських санкцій.",
-    "date": "2026-04-22",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/b/814439/db966a425d9bc54613d967e0c03f2433.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/22/8031237/",
-    "auto": true
-  },
-  {
-    "id": 9,
-    "title": "Позика на 90 млрд євро для України: Каллас очікує позитивних новин у середу",
-    "description": "Кая Каллас очікує позитивних рішень щодо позики ЄС для України 22 квітня та просуває санкції проти Росії.",
-    "date": "2026-04-22",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/2/813771/d2b4623a729c091d50bcfc38f5cdf82e.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/21/8031086/",
-    "auto": true
-  },
-  {
     "id": 8,
     "title": "Наступний раунд переговорів між Ізраїлем та Ліваном відбудеться 23 квітня – ЗМІ",
     "description": "Посли Ізраїлю та Лівану проведуть переговори у Держдепі США 23 квітня за участі США.",
@@ -36,6 +10,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/8/813475/58ae5e109ab280b76e805e963938b85f.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/04/21/8031027/",
+    "auto": true
+  },
+  {
+    "id": 17,
+    "title": "Зеленський летить на Кіпр на неформальний саміт ЄС – джерела",
+    "description": "Володимир Зеленський вирушає на неформальний саміт ЄС на Кіпрі вперше особисто.",
+    "date": "2026-04-23",
+    "time": "17:00",
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/b/2/815299/b26b3b9996536afe6b3e9678e671c342.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/23/8031426/",
     "auto": true
   },
   {
