@@ -103,5 +103,18 @@
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/04/19/8030796/",
     "auto": true
+  },
+  {
+    "id": 23,
+    "title": "Зеленський прибув до Саудівської Аравії",
+    "description": "Президент Володимир Зеленський прибув до Саудівської Аравії, де зустрінеться зі спадкоємним принцом Мухаммадом бін Салманом Аль Саудом.",
+    "date": "2027-03-26",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/4/816347/94f2039575bc4566cb1f5634489d4043.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/24/8031663/",
+    "auto": true
   }
 ]
