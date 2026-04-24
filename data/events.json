@@ -1,57 +1,5 @@
 [
   {
-    "id": 20,
-    "title": "Завтра, 24 квітня, у Луцьку прощатимуться з воїном Святославом Юзефчуком",
-    "description": "Вічна пам’ять, честь та шана Герою!",
-    "date": "2026-04-23",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": null,
-    "source": "Волинь Post",
-    "sourceUrl": "http://www.volynpost.com/news/264864-zavtra-24-kvitnia-u-lucku-proschatymutsia-z-voinom-sviatoslavom-yuzefchukom",
-    "auto": true
-  },
-  {
-    "id": 19,
-    "title": "У ЄС розповіли про 20-й пакет санкцій проти Росії",
-    "description": "У четвер, 23 квітня, Європейський Союз затвердив 20-й пакет санкцій проти Росії, до якого увійшли понад 100 індивідуальних обмежень, посилення тиску на енергетичний сектор і \"тіньовий флот\", а також нові заходи проти фінансових установ у третіх країнах та компаній, що підтримують російський військово-промисловий комплекс.",
-    "date": "2026-04-23",
-    "time": null,
-    "location": null,
-    "category": "Бізнес",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/5/815594/65ae257f37dbe04d87f321596b431dcc.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/23/8031512/",
-    "auto": true
-  },
-  {
-    "id": 8,
-    "title": "Наступний раунд переговорів між Ізраїлем та Ліваном відбудеться 23 квітня – ЗМІ",
-    "description": "Посли Ізраїлю та Лівану проведуть переговори у Держдепі США 23 квітня за участі США.",
-    "date": "2026-04-23",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/8/813475/58ae5e109ab280b76e805e963938b85f.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/21/8031027/",
-    "auto": true
-  },
-  {
-    "id": 17,
-    "title": "Зеленський летить на Кіпр на неформальний саміт ЄС – джерела",
-    "description": "Володимир Зеленський вирушає на неформальний саміт ЄС на Кіпрі вперше особисто.",
-    "date": "2026-04-23",
-    "time": "17:00",
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/b/2/815299/b26b3b9996536afe6b3e9678e671c342.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/23/8031426/",
-    "auto": true
-  },
-  {
     "id": 2,
     "title": "Ярмарок майстрів Волині",
     "description": "Щорічний ярмарок народних майстрів. Вироби з дерева, кераміка, вишивка.",
@@ -103,6 +51,19 @@
     "location": "Олицький замок",
     "category": "Культура",
     "image": "./images/kino-castle.jpg"
+  },
+  {
+    "id": 21,
+    "title": "\"Тут у всіх мужички посипалися\". Історія одного чорнобильського будинку та 40-річної війни",
+    "description": "Якщо війна чогось і вчить, то лише того, що смерть не обирає жертв за віком, статтю, переконаннями. Але свідомість щоразу висмикує з нескінченної трагедії епізоди, де минуле перегукується із сьогоденням.",
+    "date": "2026-11-14",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/5/815906/55d91a593b0b7965d419f076b1eb815e.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/articles/2026/04/24/8031558/",
+    "auto": true
   },
   {
     "id": 10,
