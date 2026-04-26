@@ -75,10 +75,14 @@ function initModalSwipe() {
 
   inner.addEventListener('touchstart', e => {
     startedOnHandle = handle && (e.target === handle || handle.contains(e.target));
-    startedAtTop = inner.scrollTop <= 0;
+    startedAtTop = inner.scrollTop <= 2;
     const canSwipe = startedOnHandle || startedAtTop;
-    if (!canSwipe) return;
-    // Зупиняємо будь-яку анімацію одразу — щоб палець одразу "підхопив" панель
+    if (!canSwipe) {
+      startY = e.touches[0].clientY;
+      isSwiping = false;
+      return;
+    }
+
     inner.style.animation = 'none';
     inner.style.transition = 'none';
     inner.style.transform = 'translateY(0)';
@@ -87,11 +91,18 @@ function initModalSwipe() {
   }, { passive: true });
 
   inner.addEventListener('touchmove', e => {
-    if (!startedOnHandle && !startedAtTop) return;
     const dy = e.touches[0].clientY - startY;
+    if (!startedOnHandle && !startedAtTop && dy > 0 && inner.scrollTop <= 2) {
+      startedAtTop = true;
+      inner.style.animation = 'none';
+      inner.style.transition = 'none';
+      inner.style.transform = 'translateY(0)';
+    }
+    if (!startedOnHandle && !startedAtTop) return;
     if (dy > 0) {
       e.preventDefault();
       isSwiping = true;
+      if (!startedOnHandle) inner.scrollTop = 0;
       // requestAnimationFrame — плавне оновлення 60fps без ривків
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
