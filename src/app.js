@@ -64,7 +64,6 @@ function initModalSwipe() {
   let startY = 0;
   let isSwiping = false;
   let startedOnHandle = false;
-  let startedAtTop = false;
   let rafId = null;
 
   const reset = () => {
@@ -91,18 +90,11 @@ function initModalSwipe() {
   }, { passive: true });
 
   inner.addEventListener('touchmove', e => {
+    if (!startedOnHandle) return;
     const dy = e.touches[0].clientY - startY;
-    if (!startedOnHandle && !startedAtTop && dy > 0 && inner.scrollTop <= 2) {
-      startedAtTop = true;
-      inner.style.animation = 'none';
-      inner.style.transition = 'none';
-      inner.style.transform = 'translateY(0)';
-    }
-    if (!startedOnHandle && !startedAtTop) return;
     if (dy > 0) {
       e.preventDefault();
       isSwiping = true;
-      if (!startedOnHandle) inner.scrollTop = 0;
       // requestAnimationFrame — плавне оновлення 60fps без ривків
       if (rafId) cancelAnimationFrame(rafId);
       rafId = requestAnimationFrame(() => {
@@ -114,12 +106,7 @@ function initModalSwipe() {
 
   inner.addEventListener('touchend', e => {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    if ((!startedOnHandle && !startedAtTop) || !isSwiping) {
-      if (startedOnHandle || startedAtTop) reset();
-      startedOnHandle = false;
-      startedAtTop = false;
-      return;
-    }
+    if (!startedOnHandle || !isSwiping) { if (startedOnHandle) reset(); return; }
     isSwiping = false;
     const dy = e.changedTouches[0].clientY - startY;
     if (dy > 80) {
@@ -132,13 +119,11 @@ function initModalSwipe() {
       setTimeout(reset, 300);
     }
     startedOnHandle = false;
-    startedAtTop = false;
   });
 
   inner.addEventListener('touchcancel', () => {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     startedOnHandle = false;
-    startedAtTop = false;
     isSwiping = false;
     inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
     inner.style.transform = 'translateY(0)';
