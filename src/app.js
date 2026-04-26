@@ -64,6 +64,7 @@ function initModalSwipe() {
   let startY = 0;
   let isSwiping = false;
   let startedOnHandle = false;
+  let startedAtTop = false;
   let rafId = null;
 
   const reset = () => {
@@ -74,7 +75,9 @@ function initModalSwipe() {
 
   inner.addEventListener('touchstart', e => {
     startedOnHandle = handle && (e.target === handle || handle.contains(e.target));
-    if (!startedOnHandle) return;
+    startedAtTop = inner.scrollTop <= 0;
+    const canSwipe = startedOnHandle || startedAtTop;
+    if (!canSwipe) return;
     // Зупиняємо будь-яку анімацію одразу — щоб палець одразу "підхопив" панель
     inner.style.animation = 'none';
     inner.style.transition = 'none';
@@ -84,7 +87,7 @@ function initModalSwipe() {
   }, { passive: true });
 
   inner.addEventListener('touchmove', e => {
-    if (!startedOnHandle) return;
+    if (!startedOnHandle && !startedAtTop) return;
     const dy = e.touches[0].clientY - startY;
     if (dy > 0) {
       e.preventDefault();
@@ -100,7 +103,12 @@ function initModalSwipe() {
 
   inner.addEventListener('touchend', e => {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
-    if (!startedOnHandle || !isSwiping) { if (startedOnHandle) reset(); return; }
+    if ((!startedOnHandle && !startedAtTop) || !isSwiping) {
+      if (startedOnHandle || startedAtTop) reset();
+      startedOnHandle = false;
+      startedAtTop = false;
+      return;
+    }
     isSwiping = false;
     const dy = e.changedTouches[0].clientY - startY;
     if (dy > 80) {
@@ -112,11 +120,14 @@ function initModalSwipe() {
       inner.style.transform = 'translateY(0)';
       setTimeout(reset, 300);
     }
+    startedOnHandle = false;
+    startedAtTop = false;
   });
 
   inner.addEventListener('touchcancel', () => {
     if (rafId) { cancelAnimationFrame(rafId); rafId = null; }
     startedOnHandle = false;
+    startedAtTop = false;
     isSwiping = false;
     inner.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
     inner.style.transform = 'translateY(0)';

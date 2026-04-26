@@ -560,6 +560,7 @@ html, body {
   width: 100%;
   max-height: calc(100svh - var(--header-h) - 12px);
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   position: relative;
   padding-bottom: env(safe-area-inset-bottom);
 }
