@@ -1,31 +1,5 @@
 [
   {
-    "id": 7,
-    "title": "Україна підписала з ЄБРР угоду про перші 30 млн євро на відновлення захисту ЧАЕС – Шмигаль",
-    "description": "ЄБРР виділив 30 млн євро Україні для ремонту конфайнменту ЧАЕС після російських атак.",
-    "date": "2026-04-26",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/b/817635/ab6772d65924754f00fe742640cfbb56.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/27/8031941/",
-    "auto": true
-  },
-  {
-    "id": 5,
-    "title": "Молдова хоче долучитися до \"коаліції рішучих\"",
-    "description": "Президентка Молдови Мая Санду підтвердила готовність країни долучитися до зусиль в межах \"коаліції рішучих\".",
-    "date": "2026-04-26",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/2/817383/c2d1911d3b908ab326766c26f8cfd13b.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/26/8031903/",
-    "auto": true
-  },
-  {
     "id": 2,
     "title": "Ярмарок майстрів Волині",
     "description": "Щорічний ярмарок народних майстрів. Вироби з дерева, кераміка, вишивка.",
@@ -36,16 +10,16 @@
     "image": null
   },
   {
-    "id": 6,
-    "title": "Зведення Генштабу: На Покровському й Гуляйпільському напрямках найбільше ворожих атак",
-    "description": "26 квітня ворог особливо активний на Покровському, Гуляйпільському напрямках.",
-    "date": "2026-04-26",
-    "time": "22:00",
+    "id": 8,
+    "title": "Іран пропонує США відкрити Ормузьку протоку і закінчити війну – ЗМІ",
+    "description": "Іран висунув США нову мирну пропозицію, яка передбачає відкриття Ормузької протоки, продовження припинення вогню, або і остаточне припинення війни, але при цьому перенесення ядерних переговорів на пізніший час.",
+    "date": "2026-04-27",
+    "time": null,
     "location": null,
     "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/b/817562/dbdf5083bc4aea5fbf7b53d44c01eb78.jpeg",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/0/817751/50e022c1434ee15083a936e07691dc2e.jpeg",
     "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/26/8031932/",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/27/8031966/",
     "auto": true
   },
   {
