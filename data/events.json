@@ -10,45 +10,6 @@
     "image": null
   },
   {
-    "id": 13,
-    "title": "Неприйнятний дисонанс: МЗС вручило ноту ізраїльському послу через крадене зерно",
-    "description": "28 квітня Міністерство закордонних справ вручило ноту протесту надзвичайному і повноважному послу Держави Ізраїль Міхаелю Бродському через триваюче надходження до Ізраїлю сільськогосподарської продукції, незаконно вивезеної Російською Федерацією з тимчасово окупованих територій України.",
-    "date": "2026-04-28",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/0/818562/f0c76069cc544fd37f66069dc896efa0.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/28/8032190/",
-    "auto": true
-  },
-  {
-    "id": 11,
-    "title": "Король Чарльз зустрівся з Трампом у США",
-    "description": "Король Чарльз III зустрівся з президентом США Дональдом Трампом у Вашингтоні в рамках символічного державного візиту, що має на меті відзначити зв'язки між США та Великою Британією.",
-    "date": "2026-04-28",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/2/818305/c2971d7822efee4f36bc6e4b96648729.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/28/8032122/",
-    "auto": true
-  },
-  {
-    "id": 9,
-    "title": "Сили оброни зупинили 52 атаки на Покровському напрямку – Генштаб",
-    "description": "На фронті за добу відбулося 226 бойових зіткнень, 52 рази окупанти атакували на Покровському напрямку.",
-    "date": "2026-04-28",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/2/818265/82d690c2930cc7af6ee23795f7f82596.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/28/8032118/",
-    "auto": true
-  },
-  {
     "id": 3,
     "title": "Турнір з волейболу «Олика-2026»",
     "description": "Відкритий турнір з пляжного волейболу серед команд Волинської області. Призовий фонд — 5000 грн. Реєстрація команд до 30 квітня.",
@@ -102,6 +63,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/4/818992/14d7bb0aa7820f6e40722787c775f9f1.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/04/29/8032272/",
+    "auto": true
+  },
+  {
+    "id": 15,
+    "title": "Politico: Король Чарльз кинув Трампу \"завуальований виклик\" щодо України і НАТО",
+    "description": "Виступ короля Чарльза в Конгресі США містив виклик Трампу щодо підтримки України - Politico.",
+    "date": "2026-09-11",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/7/819005/3759ce9c081143435890aef0baf57770.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/29/8032277/",
     "auto": true
   },
   {
