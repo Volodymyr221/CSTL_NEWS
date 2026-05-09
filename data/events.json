@@ -20,6 +20,19 @@
     "image": "./images/volleyball.jpg"
   },
   {
+    "id": 44,
+    "title": "Путін сказав, кого хотів би бачити переговірником між ЄС і Росією",
+    "description": "Правитель РФ Володимир Путін назвав кандидатуру колишнього канцлера Німеччини Герхарда Шредера найкращим варіантом для переговорів між Євросоюзом і Росією.",
+    "date": "2026-05-09",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/0/825794/a06246c364368da91ebed42ef565fe66.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/09/8034005/",
+    "auto": true
+  },
+  {
     "id": 42,
     "title": "Путін висунув умову щодо зустрічі з Зеленським у третій країні",
     "description": "Правитель РФ Володимир Путін заявив, що готовий зустрітися з президентом України Володимиром Зеленським у третій країні, але лише для підписання остаточних домовленостей про припинення війни.",
@@ -147,6 +160,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/f/825571/7fc290179715ef6e1535b7be7a322e9d.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/09/8033972/",
+    "auto": true
+  },
+  {
+    "id": 43,
+    "title": "У день \"перемир'я\" на фронті відбулося 121 бойове зіткнення – Генштаб",
+    "description": "Росія здійснила понад 120 атак і понад 1500 обстрілів фронту 9 травня, попри перемир'я.",
+    "date": "2026-05-09",
+    "time": "22:00",
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/6/825820/e6c3378a7eb7a7e736defddcbbc37dc3.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/09/8034007/",
     "auto": true
   },
   {
