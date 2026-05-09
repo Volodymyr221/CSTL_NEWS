@@ -20,19 +20,6 @@
     "image": "./images/volleyball.jpg"
   },
   {
-    "id": 34,
-    "title": "Безпілотники атакували Чечню: у Грозному лунали вибухи, зафіксовано приліт по будівлі УФСБ – ЗМІ",
-    "description": "У Грозному 8 травня дрони вдарили по військовій базі в Ханкалі та будівлі ФСБ у Знаменському. Влада Чечні ситуацію не коментує.",
-    "date": "2026-05-08",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/7/824768/0726b7d74fa98eec03a656034729256c.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/08/8033764/",
-    "auto": true
-  },
-  {
     "id": 40,
     "title": "Трамп оголосив триденне перемир’я за згоди Зеленського і Путіна та анонсував обмін",
     "description": "Президент США Дональд Трамп оголосив про триденне перемир'я у війні між Україною та РФ і анонсував обмін полоненими.",
@@ -134,6 +121,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/0/821049/60853b83ccaa63cfc921926e73aad3e1.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/02/8032840/",
+    "auto": true
+  },
+  {
+    "id": 41,
+    "title": "Під час \"перемир'я\" росіяни здійснили вже 51 атаку – Генштаб",
+    "description": "Від початку доби 9 травня, коли мало б діяти так зване \"перемир'я\" у війні з РФ, станом на 16:00 російські війська здійснили 51 атаку.",
+    "date": "2026-05-09",
+    "time": "16:00",
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/f/825571/7fc290179715ef6e1535b7be7a322e9d.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/09/8033972/",
     "auto": true
   },
   {
