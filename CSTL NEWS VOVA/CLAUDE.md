@@ -78,14 +78,39 @@
 - **Після змін архітектури** — оновити `docs/ARCHITECTURE.md`.
 - **При додаванні нових JS-файлів** — використовуй скіл `/new-file` (повний workflow там, включно з правильною папкою у `src/` та імпортом у `src/app.js`).
 
-### Деплой (публікація на сервер — підхід А+)
+### Деплой (публікація на сервер — підхід А+ + двогілковий потік)
 
-**Флоу:** пушиш у `main` → `.github/workflows/deploy.yml` автоматично:
-1. `npm install` (встановлює esbuild — збирач коду)
-2. `node build.js` (збирає `bundle.js` зі `src/`)
-3. `sed` замінює плейсхолдер лічильника версії у `index.html` на свіжий час Києва
-4. `actions/upload-pages-artifact@v3` (завантажує весь проект як artifact — пакунок файлів)
-5. `actions/deploy-pages@v4` (деплоїть artifact прямо на GitHub Pages)
+**Двогілковий потік (branching workflow):**
+
+```
+Робоча гілка (claude/start-session-XXX)
+    ↓ розробка, експерименти, обговорення, коміти
+    ↓
+Вова перевірив і сказав "Роби /finish"
+    ↓
+Скіл /finish:
+  1. CACHE_NAME у sw.js (якщо змінювався код)
+  2. node --check для зміненого JS
+  3. Оновити SESSION_STATE.md
+  4. git push робочої гілки
+  5. mcp__github__create_pull_request → mcp__github__merge_pull_request (squash)
+    ↓
+main отримує мердж-коміт
+    ↓
+.github/workflows/deploy.yml запускається автоматично:
+  1. npm install (встановлює esbuild — збирач коду)
+  2. node build.js (збирає bundle.js зі src/)
+  3. sed замінює плейсхолдер лічильника версії у index.html на свіжий час Києва
+  4. actions/upload-pages-artifact@v3 (завантажує весь проект як artifact — пакунок файлів)
+  5. actions/deploy-pages@v4 (деплоїть artifact прямо на GitHub Pages)
+    ↓
+Сайт оновлюється через 1-3 хв
+```
+
+**Правило гілок:**
+- **Робоча гілка** — все недороблене, експерименти, що ще обговорюємо.
+- **`main`** — тільки готові узгоджені зміни. Мерджимо через `/finish` коли Вова сказав "готово, публікуй".
+- **Не пушити в `main` напряму** з робочої сесії — тільки через PR через `/finish`.
 
 **Критична відмінність від старого підходу:** А+ **нічого не комітить у `main` з CI**. Попередній деплой намагався `git commit bundle.js + push main` і падав з non-fast-forward помилкою (баг B-01). А+ цю проблему повністю оминає — див. `docs/ARCHITECTURE.md` і закритий баг B-01 у `CSTL_BUGS.md`.
 
