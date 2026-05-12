@@ -402,38 +402,19 @@ async function renderBoardBlock() {
   }
 }
 
-// ── Блок 6: Останні новини ────────────────────────────────────────────────────
+// ── Блок 5: Найближча подія громади ───────────────────────────────────────────
 
-async function renderNewsBlock() {
-  const el = document.getElementById('cm-news-content');
-  if (!el) return;
+// 17 населених пунктів Олицької ОТГ — для фільтра подій
+const OTG_VILLAGES = [
+  'Олика', 'Горянівка', 'Дерно', 'Дідичі', 'Жорнище', 'Залісоче',
+  'Котів', 'Личани', 'Метельне', 'Мощаниця', 'Носовичі', 'Одеради',
+  'Покащів', 'Путилівка', 'Ставок', 'Хромяків', 'Чемерин',
+];
 
-  try {
-    const res      = await fetch('./data/articles.json');
-    const articles = await res.json();
-    const sorted   = articles.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
-
-    if (!sorted.length) {
-      el.innerHTML = '<div class="cm-block-empty">Новин поки немає</div>';
-      return;
-    }
-
-    el.innerHTML = sorted.map(a => `
-      <article class="cm-news-row" onclick="switchTab('news'); setTimeout(() => window.openArticle && window.openArticle(${a.id}), 250);">
-        ${a.image ? `<img class="cm-news-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : '<div class="cm-news-img cm-news-img--placeholder"></div>'}
-        <div class="cm-news-body">
-          <div class="cm-news-meta">${escapeHtml(a.geo)} · ${escapeHtml(a.category)}</div>
-          <h4 class="cm-news-title">${escapeHtml(a.title)}</h4>
-          <div class="cm-news-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
-        </div>
-      </article>
-    `).join('');
-  } catch {
-    el.innerHTML = '<div class="cm-block-empty">Новини недоступні</div>';
-  }
+function isLocalEvent(ev) {
+  const loc = (ev.location || '').toLowerCase();
+  return OTG_VILLAGES.some(v => loc.includes(v.toLowerCase()));
 }
-
-// ── Блок 6: Найближча подія ───────────────────────────────────────────────────
 
 async function renderEventBlock() {
   const el = document.getElementById('cm-event-content');
@@ -445,10 +426,11 @@ async function renderEventBlock() {
     const today  = new Date(); today.setHours(0, 0, 0, 0);
     const next = events
       .filter(e => new Date(e.date + 'T00:00:00') >= today)
+      .filter(isLocalEvent)
       .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
     if (!next) {
-      el.innerHTML = '<div class="cm-block-empty">Найближчих подій поки немає</div>';
+      el.innerHTML = '<div class="cm-block-empty">Поки немає запланованих подій у громаді</div>';
       return;
     }
 
@@ -521,6 +503,13 @@ function renderSkeleton() {
       </div>
     </section>
 
+    <section class="cm-block cm-block--board">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">📌 Дошка громади</h3>
+      </header>
+      <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
+    </section>
+
     <section class="cm-block cm-block--weather">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Погода в Олиці</h3>
@@ -544,24 +533,9 @@ function renderSkeleton() {
       <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
 
-    <section class="cm-block cm-block--board">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">📌 Дошка громади</h3>
-      </header>
-      <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
-    </section>
-
-    <section class="cm-block cm-block--news">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Останні новини</h3>
-        <button class="cm-block-link" onclick="switchTab('news')">Усі →</button>
-      </header>
-      <div id="cm-news-content" class="cm-block-body cm-loading">Завантаження…</div>
-    </section>
-
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
-        <h3 class="cm-block-title">Найближча подія</h3>
+        <h3 class="cm-block-title">Найближча подія громади</h3>
         <button class="cm-block-link" onclick="switchTab('events')">Афіша →</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
@@ -585,7 +559,6 @@ export function initCommunity() {
   renderPowerBlock();
   renderBusBlock();
   renderBoardBlock();
-  renderNewsBlock();
   renderEventBlock();
   renderContactsBlock();
 }

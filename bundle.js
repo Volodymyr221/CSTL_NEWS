@@ -513,31 +513,28 @@
       el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
   }
-  async function renderNewsBlock() {
-    const el = document.getElementById("cm-news-content");
-    if (!el)
-      return;
-    try {
-      const res = await fetch("./data/articles.json");
-      const articles = await res.json();
-      const sorted = articles.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
-      if (!sorted.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
-        return;
-      }
-      el.innerHTML = sorted.map((a) => `
-      <article class="cm-news-row" onclick="switchTab('news'); setTimeout(() => window.openArticle && window.openArticle(${a.id}), 250);">
-        ${a.image ? `<img class="cm-news-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : '<div class="cm-news-img cm-news-img--placeholder"></div>'}
-        <div class="cm-news-body">
-          <div class="cm-news-meta">${escapeHtml(a.geo)} \xB7 ${escapeHtml(a.category)}</div>
-          <h4 class="cm-news-title">${escapeHtml(a.title)}</h4>
-          <div class="cm-news-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-        </div>
-      </article>
-    `).join("");
-    } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
-    }
+  var OTG_VILLAGES = [
+    "\u041E\u043B\u0438\u043A\u0430",
+    "\u0413\u043E\u0440\u044F\u043D\u0456\u0432\u043A\u0430",
+    "\u0414\u0435\u0440\u043D\u043E",
+    "\u0414\u0456\u0434\u0438\u0447\u0456",
+    "\u0416\u043E\u0440\u043D\u0438\u0449\u0435",
+    "\u0417\u0430\u043B\u0456\u0441\u043E\u0447\u0435",
+    "\u041A\u043E\u0442\u0456\u0432",
+    "\u041B\u0438\u0447\u0430\u043D\u0438",
+    "\u041C\u0435\u0442\u0435\u043B\u044C\u043D\u0435",
+    "\u041C\u043E\u0449\u0430\u043D\u0438\u0446\u044F",
+    "\u041D\u043E\u0441\u043E\u0432\u0438\u0447\u0456",
+    "\u041E\u0434\u0435\u0440\u0430\u0434\u0438",
+    "\u041F\u043E\u043A\u0430\u0449\u0456\u0432",
+    "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
+    "\u0421\u0442\u0430\u0432\u043E\u043A",
+    "\u0425\u0440\u043E\u043C\u044F\u043A\u0456\u0432",
+    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D"
+  ];
+  function isLocalEvent(ev) {
+    const loc = (ev.location || "").toLowerCase();
+    return OTG_VILLAGES.some((v) => loc.includes(v.toLowerCase()));
   }
   async function renderEventBlock() {
     const el = document.getElementById("cm-event-content");
@@ -548,9 +545,9 @@
       const events = await res.json();
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const next = events.filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+      const next = events.filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).filter(isLocalEvent).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
       if (!next) {
-        el.innerHTML = '<div class="cm-block-empty">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+        el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
         return;
       }
       const d = /* @__PURE__ */ new Date(next.date + "T00:00:00");
@@ -614,6 +611,13 @@
       </div>
     </section>
 
+    <section class="cm-block cm-block--board">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u{1F4CC} \u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+      </header>
+      <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
     <section class="cm-block cm-block--weather">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 \u041E\u043B\u0438\u0446\u0456</h3>
@@ -637,24 +641,9 @@
       <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
-    <section class="cm-block cm-block--board">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u{1F4CC} \u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-      </header>
-      <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-
-    <section class="cm-block cm-block--news">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043D\u043E\u0432\u0438\u043D\u0438</h3>
-        <button class="cm-block-link" onclick="switchTab('news')">\u0423\u0441\u0456 \u2192</button>
-      </header>
-      <div id="cm-news-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F</h3>
+        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
         <button class="cm-block-link" onclick="switchTab('events')">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
@@ -674,7 +663,6 @@
     renderPowerBlock();
     renderBusBlock();
     renderBoardBlock();
-    renderNewsBlock();
     renderEventBlock();
     renderContactsBlock();
   }
