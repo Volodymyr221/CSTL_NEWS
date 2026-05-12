@@ -1974,3 +1974,175 @@ html, body {
 /* Tab-bar з 5 кнопками — підправити іконку щоб не була завелика */
 .tab-bar .tab-icon { width: 21px; height: 21px; }
 .tab-bar .tab-label { font-size: 9.5px; }
+
+/* ===== COMMUNITY BOARD (Дошка громади — коркова дошка з папірцями) ===== */
+
+/* Тіло блоку дошки — без стандартного padding, бо корковий фон сам зі своїм */
+.cm-board-body { padding: 0; }
+
+/* Коркова дошка — фон з градієнту + текстура крапок (імітує корок) */
+.cm-board-corkboard {
+  position: relative;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.05) 1px, transparent 2px),
+    linear-gradient(135deg, #C9A678 0%, #B08A5C 100%);
+  background-size: 14px 14px, 14px 14px, 100% 100%;
+  border-top: 4px solid #8B6F47;
+  border-bottom: 4px solid #8B6F47;
+  padding: 18px 14px 22px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 8px;
+  justify-content: space-between;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Папірець-оголошення */
+.cm-board-note {
+  --tilt: 0deg;
+  position: relative;
+  width: calc(50% - 4px);
+  min-height: 100px;
+  padding: 14px 12px 10px;
+  background: #FFF59D;
+  border-radius: 2px;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.18),
+    0 6px 12px rgba(0,0,0,0.12);
+  transform: rotate(var(--tilt));
+  transition: transform 0.2s;
+  font-family: 'Caveat', 'Comic Sans MS', cursive, sans-serif;
+  color: #2c2c2c;
+  display: flex;
+  flex-direction: column;
+}
+.cm-board-note:hover { transform: rotate(0deg) scale(1.02); z-index: 5; }
+
+/* Кольори папірців */
+.cm-board-note--yellow { background: #FFF59D; }
+.cm-board-note--blue   { background: #BBDEFB; }
+.cm-board-note--pink   { background: #F8BBD0; }
+.cm-board-note--white  { background: #FAFAFA; }
+.cm-board-note--green  { background: #C8E6C9; }
+
+/* Червона шпилька зверху по центру */
+.cm-board-pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 35%, #ff5252 0%, #c41e3a 60%, #8b0000 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,255,255,0.5);
+  z-index: 2;
+}
+
+.cm-board-cat {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-family: -apple-system, sans-serif;
+  margin-bottom: 4px;
+}
+
+.cm-board-text {
+  font-size: 16px;
+  line-height: 1.3;
+  margin-bottom: 6px;
+  flex: 1;
+  word-wrap: break-word;
+}
+
+.cm-board-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: #666;
+  font-family: -apple-system, sans-serif;
+  border-top: 1px dashed rgba(0,0,0,0.15);
+  padding-top: 4px;
+}
+.cm-board-author { font-weight: 600; }
+.cm-board-time { font-size: 10px; }
+
+.cm-board-contact {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1565C0;
+  font-family: -apple-system, sans-serif;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+/* Форма "Подати оголошення" — стилізована під білий аркуш на дошці */
+.cm-board-form {
+  background: #FFFFFF;
+  margin: 14px;
+  padding: 16px 14px 14px;
+  border-radius: 6px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  position: relative;
+}
+.cm-board-form::before {
+  /* Зелена скотч-стрічка вгорі форми */
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%) rotate(-2deg);
+  width: 70px;
+  height: 16px;
+  background: linear-gradient(180deg, rgba(76,175,80,0.65) 0%, rgba(76,175,80,0.45) 100%);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+}
+.cm-board-form-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 10px;
+}
+.cm-board-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  background: #FAFAFA;
+}
+.cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
+.cm-board-input--small { padding: 8px 11px; font-size: 13px; }
+.cm-board-row { margin-top: 8px; }
+
+.cm-board-submit {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-submit:active { background: var(--red-dark); }
+
+.cm-board-hint {
+  font-size: 11px;
+  color: var(--gray);
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.4;
+}
