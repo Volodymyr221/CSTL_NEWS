@@ -286,42 +286,10 @@ async function renderBusBlock() {
   }
 }
 
-// ── Блок 4: Оголошення громади (від адміністрації) ────────────────────────────
-
-async function renderAnnouncementsBlock() {
-  const el = document.getElementById('cm-announcements-content');
-  if (!el) return;
-
-  try {
-    const res  = await fetch('./data/community.json');
-    const data = await res.json();
-    const list = (data.announcements || []).slice().sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.ts || 0) - (a.ts || 0);
-    });
-
-    if (!list.length) {
-      el.innerHTML = '<div class="cm-block-empty">Оголошень поки немає</div>';
-      return;
-    }
-
-    el.innerHTML = list.map(a => `
-      <article class="cm-ann-card${a.pinned ? ' pinned' : ''}">
-        ${a.pinned ? '<span class="cm-ann-pin">📌 Закріплено</span>' : ''}
-        <h4 class="cm-ann-title">${escapeHtml(a.title)}</h4>
-        <p class="cm-ann-body">${escapeHtml(a.body)}</p>
-        <div class="cm-ann-footer">
-          <span>${escapeHtml(a.author || '—')}</span>
-          <span>${formatTime(a.ts)}</span>
-        </div>
-      </article>
-    `).join('');
-  } catch {
-    el.innerHTML = '<div class="cm-block-empty">Оголошення недоступні</div>';
-  }
-}
-
-// ── Блок 5: Дошка громади (від мешканців, після модерації) ───────────────────
+// ── Блок 4: Дошка громади (мешканці + офіційні оголошення в одному блоці) ────
+// 12.05: окремий блок "Оголошення громади" обʼєднано з дошкою. Офіційні
+// оголошення рендеряться як cm-board-note--official на початку (бронзова
+// рамка + золотиста шпилька + 🏛️), мешканські — стандартні різнокольорові.
 
 const CATEGORY_EMOJI = {
   'продам':      '💰',
@@ -339,37 +307,67 @@ async function renderBoardBlock() {
   if (!el) return;
 
   try {
-    const res  = await fetch('./data/community-board.json');
-    const data = await res.json();
-    const posts = (data.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    // Тягнемо обидва джерела: офіційні оголошення від адміністрації + пости від мешканців
+    const [boardRes, communityRes] = await Promise.all([
+      fetch('./data/community-board.json'),
+      fetch('./data/community.json'),
+    ]);
+    const boardData     = await boardRes.json();
+    const communityData = await communityRes.json();
 
-    if (!posts.length) {
+    const userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    const official  = (communityData.announcements || []).slice().sort((a, b) => {
+      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+      return (b.ts || 0) - (a.ts || 0);
+    });
+
+    if (!official.length && !userPosts.length) {
       el.innerHTML = '<div class="cm-block-empty">На дошці поки порожньо. Будь першим — напиши нижче.</div>';
       return;
     }
 
+    // Офіційні папірці — повна ширина, зверху, золотиста шпилька, бронзова рамка
+    const officialHtml = official.map((a, i) => {
+      const tilt = ((a.id * 5) % 5) - 2; // тонкий нахил −2..+2
+      return `
+        <article class="cm-board-note cm-board-note--official" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin cm-board-pin--gold"></span>
+          <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
+          <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
+          <p class="cm-board-text">${escapeHtml(a.body)}</p>
+          <div class="cm-board-footer">
+            <span class="cm-board-author">— ${escapeHtml(a.author || '—')}</span>
+            <span class="cm-board-time">${formatTime(a.ts)}</span>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    // Мешканські папірці — половина ширини, різнокольорові, з кутиком нахилу
+    const userHtml = userPosts.map(p => {
+      const tilt = ((p.id * 7) % 9) - 4;
+      const emoji = CATEGORY_EMOJI[p.category] || '📌';
+      const contactHtml = p.contact
+        ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>`
+        : '';
+      return `
+        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || 'yellow')}" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin"></span>
+          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+          <p class="cm-board-text">${escapeHtml(p.text)}</p>
+          <div class="cm-board-footer">
+            <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+            <span class="cm-board-time">${formatTime(p.ts)}</span>
+          </div>
+          ${contactHtml}
+        </article>
+      `;
+    }).join('');
+
     el.innerHTML = `
       <div class="cm-board-corkboard">
-        ${posts.map((p, i) => {
-          // Псевдовипадковий нахил −4..+4°, стабільний для одного і того самого id
-          const tilt = ((p.id * 7) % 9) - 4;
-          const emoji = CATEGORY_EMOJI[p.category] || '📌';
-          const contactHtml = p.contact
-            ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>`
-            : '';
-          return `
-            <article class="cm-board-note cm-board-note--${escapeHtml(p.color || 'yellow')}" style="--tilt:${tilt}deg">
-              <span class="cm-board-pin"></span>
-              <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-              <p class="cm-board-text">${escapeHtml(p.text)}</p>
-              <div class="cm-board-footer">
-                <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-                <span class="cm-board-time">${formatTime(p.ts)}</span>
-              </div>
-              ${contactHtml}
-            </article>
-          `;
-        }).join('')}
+        ${officialHtml}
+        ${userHtml}
       </div>
 
       <form class="cm-board-form" id="cm-board-form">
@@ -515,6 +513,14 @@ function renderSkeleton() {
   const el = document.getElementById('cm-content');
   if (!el) return;
   el.innerHTML = `
+    <section class="cm-hero">
+      <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="Олика" loading="eager">
+      <div class="cm-hero-overlay">
+        <h2 class="cm-hero-title">Олика</h2>
+        <p class="cm-hero-sub">Все головне на одному екрані</p>
+      </div>
+    </section>
+
     <section class="cm-block cm-block--weather">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Погода в Олиці</h3>
@@ -536,13 +542,6 @@ function renderSkeleton() {
         <button class="cm-block-link" onclick="switchTab('buses')">Розклад →</button>
       </header>
       <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
-    </section>
-
-    <section class="cm-block cm-block--announcements">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Оголошення громади</h3>
-      </header>
-      <div id="cm-announcements-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
 
     <section class="cm-block cm-block--board">
@@ -585,7 +584,6 @@ export function initCommunity() {
   renderWeatherBlock();
   renderPowerBlock();
   renderBusBlock();
-  renderAnnouncementsBlock();
   renderBoardBlock();
   renderNewsBlock();
   renderEventBlock();

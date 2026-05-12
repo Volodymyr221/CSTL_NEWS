@@ -415,37 +415,6 @@
       el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
     }
   }
-  async function renderAnnouncementsBlock() {
-    const el = document.getElementById("cm-announcements-content");
-    if (!el)
-      return;
-    try {
-      const res = await fetch("./data/community.json");
-      const data = await res.json();
-      const list = (data.announcements || []).slice().sort((a, b) => {
-        if (a.pinned !== b.pinned)
-          return a.pinned ? -1 : 1;
-        return (b.ts || 0) - (a.ts || 0);
-      });
-      if (!list.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
-        return;
-      }
-      el.innerHTML = list.map((a) => `
-      <article class="cm-ann-card${a.pinned ? " pinned" : ""}">
-        ${a.pinned ? '<span class="cm-ann-pin">\u{1F4CC} \u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E</span>' : ""}
-        <h4 class="cm-ann-title">${escapeHtml(a.title)}</h4>
-        <p class="cm-ann-body">${escapeHtml(a.body)}</p>
-        <div class="cm-ann-footer">
-          <span>${escapeHtml(a.author || "\u2014")}</span>
-          <span>${formatTime(a.ts)}</span>
-        </div>
-      </article>
-    `).join("");
-    } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
-    }
-  }
   var CATEGORY_EMOJI = {
     "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
     "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
@@ -461,32 +430,58 @@
     if (!el)
       return;
     try {
-      const res = await fetch("./data/community-board.json");
-      const data = await res.json();
-      const posts = (data.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      if (!posts.length) {
+      const [boardRes, communityRes] = await Promise.all([
+        fetch("./data/community-board.json"),
+        fetch("./data/community.json")
+      ]);
+      const boardData = await boardRes.json();
+      const communityData = await communityRes.json();
+      const userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const official = (communityData.announcements || []).slice().sort((a, b) => {
+        if (a.pinned !== b.pinned)
+          return a.pinned ? -1 : 1;
+        return (b.ts || 0) - (a.ts || 0);
+      });
+      if (!official.length && !userPosts.length) {
         el.innerHTML = '<div class="cm-block-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E. \u0411\u0443\u0434\u044C \u043F\u0435\u0440\u0448\u0438\u043C \u2014 \u043D\u0430\u043F\u0438\u0448\u0438 \u043D\u0438\u0436\u0447\u0435.</div>';
         return;
       }
-      el.innerHTML = `
-      <div class="cm-board-corkboard">
-        ${posts.map((p, i) => {
+      const officialHtml = official.map((a, i) => {
+        const tilt = a.id * 5 % 5 - 2;
+        return `
+        <article class="cm-board-note cm-board-note--official" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin cm-board-pin--gold"></span>
+          <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
+          <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
+          <p class="cm-board-text">${escapeHtml(a.body)}</p>
+          <div class="cm-board-footer">
+            <span class="cm-board-author">\u2014 ${escapeHtml(a.author || "\u2014")}</span>
+            <span class="cm-board-time">${formatTime(a.ts)}</span>
+          </div>
+        </article>
+      `;
+      }).join("");
+      const userHtml = userPosts.map((p) => {
         const tilt = p.id * 7 % 9 - 4;
         const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
         const contactHtml = p.contact ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>` : "";
         return `
-            <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
-              <span class="cm-board-pin"></span>
-              <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-              <p class="cm-board-text">${escapeHtml(p.text)}</p>
-              <div class="cm-board-footer">
-                <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-                <span class="cm-board-time">${formatTime(p.ts)}</span>
-              </div>
-              ${contactHtml}
-            </article>
-          `;
-      }).join("")}
+        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin"></span>
+          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+          <p class="cm-board-text">${escapeHtml(p.text)}</p>
+          <div class="cm-board-footer">
+            <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+            <span class="cm-board-time">${formatTime(p.ts)}</span>
+          </div>
+          ${contactHtml}
+        </article>
+      `;
+      }).join("");
+      el.innerHTML = `
+      <div class="cm-board-corkboard">
+        ${officialHtml}
+        ${userHtml}
       </div>
 
       <form class="cm-board-form" id="cm-board-form">
@@ -611,6 +606,14 @@
     if (!el)
       return;
     el.innerHTML = `
+    <section class="cm-hero">
+      <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="\u041E\u043B\u0438\u043A\u0430" loading="eager">
+      <div class="cm-hero-overlay">
+        <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
+        <p class="cm-hero-sub">\u0412\u0441\u0435 \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u043D\u0430 \u043E\u0434\u043D\u043E\u043C\u0443 \u0435\u043A\u0440\u0430\u043D\u0456</p>
+      </div>
+    </section>
+
     <section class="cm-block cm-block--weather">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 \u041E\u043B\u0438\u0446\u0456</h3>
@@ -632,13 +635,6 @@
         <button class="cm-block-link" onclick="switchTab('buses')">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
       </header>
       <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-
-    <section class="cm-block cm-block--announcements">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-      </header>
-      <div id="cm-announcements-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
     <section class="cm-block cm-block--board">
@@ -677,7 +673,6 @@
     renderWeatherBlock();
     renderPowerBlock();
     renderBusBlock();
-    renderAnnouncementsBlock();
     renderBoardBlock();
     renderNewsBlock();
     renderEventBlock();
