@@ -512,16 +512,6 @@ async function renderContactsBlock() {
 
 // ── Скелетон-каркас вкладки ───────────────────────────────────────────────────
 
-// SVG-іконки для заголовків блоків. Стиль: outline 24×24, stroke 1.9, currentColor.
-// Колір береться з .cm-block-icon--<theme>.
-const BLOCK_ICONS = {
-  board: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M12 2v6M9 11h6a3 3 0 0 1 3 3v6a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1v-6a3 3 0 0 1 3-3z"/><circle cx="12" cy="8" r="2.5"/></svg>`,
-  power: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M13 2L4 14h7l-1 8 10-12h-7l1-8z"/></svg>`,
-  bus:   `<svg viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="5" width="18" height="13" rx="2"/><path d="M3 11h18M7 5v13M17 5v13"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/></svg>`,
-  event: `<svg viewBox="0 0 24 24" stroke="currentColor"><rect x="3" y="4" width="18" height="18" rx="3"/><path d="M3 10h18M8 2v4M16 2v4"/><path d="m12 14 1.2 2.5 2.8.4-2 2 .5 2.8L12 20.5l-2.5 1.2.5-2.8-2-2 2.8-.4z"/></svg>`,
-  contacts: `<svg viewBox="0 0 24 24" stroke="currentColor"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`,
-};
-
 function renderSkeleton() {
   const el = document.getElementById('cm-content');
   if (!el) return;
@@ -536,7 +526,6 @@ function renderSkeleton() {
 
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
-        <span class="cm-block-icon cm-block-icon--board">${BLOCK_ICONS.board}</span>
         <h3 class="cm-block-title">Дошка громади</h3>
       </header>
       <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
@@ -551,7 +540,6 @@ function renderSkeleton() {
 
     <section class="cm-block cm-block--power">
       <header class="cm-block-header">
-        <span class="cm-block-icon cm-block-icon--power">${BLOCK_ICONS.power}</span>
         <h3 class="cm-block-title">Світло зараз</h3>
         <button class="cm-block-link" onclick="switchTab('power')">Графік →</button>
       </header>
@@ -560,7 +548,6 @@ function renderSkeleton() {
 
     <section class="cm-block cm-block--bus">
       <header class="cm-block-header">
-        <span class="cm-block-icon cm-block-icon--bus">${BLOCK_ICONS.bus}</span>
         <h3 class="cm-block-title">Наступний автобус</h3>
         <button class="cm-block-link" onclick="switchTab('buses')">Розклад →</button>
       </header>
@@ -569,7 +556,6 @@ function renderSkeleton() {
 
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
-        <span class="cm-block-icon cm-block-icon--event">${BLOCK_ICONS.event}</span>
         <h3 class="cm-block-title">Найближча подія громади</h3>
         <button class="cm-block-link" onclick="switchTab('events')">Афіша →</button>
       </header>
@@ -578,7 +564,6 @@ function renderSkeleton() {
 
     <section class="cm-block cm-block--contacts">
       <header class="cm-block-header">
-        <span class="cm-block-icon cm-block-icon--contacts">${BLOCK_ICONS.contacts}</span>
         <h3 class="cm-block-title">Корисні контакти</h3>
       </header>
       <div id="cm-contacts-content" class="cm-block-body cm-contacts-grid cm-loading">Завантаження…</div>
