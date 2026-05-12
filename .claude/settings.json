@@ -37,6 +37,17 @@
         ]
       }
     ],
+    "PreToolUse": [
+      {
+        "matcher": "Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/user/CSTL_NEWS/.claude/hooks/pre-edit-read-check.js"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "matcher": "Edit|Write",
@@ -44,6 +55,10 @@
           {
             "type": "command",
             "command": "file=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$file\" == *.js ]]; then node --check \"$file\" && echo \"✓ синтаксис OK: $file\" || echo \"✗ ПОМИЛКА синтаксису: $file\"; fi"
+          },
+          {
+            "type": "command",
+            "command": "bash /home/user/CSTL_NEWS/.claude/hooks/cache-name-reminder.sh"
           }
         ]
       }
