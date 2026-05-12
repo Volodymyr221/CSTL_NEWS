@@ -307,6 +307,68 @@ async function renderBusBlock() {
   }
 }
 
+// Модалка «Подати оголошення» — викликається кнопкою у дошці.
+// Створює оверлей через append у body, прибирає при close.
+function openBoardModal() {
+  if (document.getElementById('cm-board-modal')) return; // вже відкрита
+
+  const wrap = document.createElement('div');
+  wrap.id = 'cm-board-modal';
+  wrap.className = 'cm-board-modal';
+  wrap.innerHTML = `
+    <div class="cm-board-modal-backdrop"></div>
+    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
+      <div class="cm-board-modal-handle"></div>
+      <button class="cm-board-modal-close" type="button" aria-label="Закрити">✕</button>
+      <h3 class="cm-board-modal-title">✏️ Подати оголошення</h3>
+      <p class="cm-board-modal-sub">Оголошення, подія або новина — модератор обере куди опублікувати.</p>
+      <form id="cm-board-modal-form">
+        <textarea class="cm-board-input" id="cm-board-text" placeholder="Що хочете повідомити громаді? (продам, шукаю, подяка, подія…)" rows="4" required></textarea>
+        <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="Імʼя (або залиште порожнім — анонімно)">
+        <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="Контакт: телефон / Telegram (необовʼязково)">
+        <button class="cm-board-submit" type="submit">Надіслати →</button>
+        <p class="cm-board-hint">Запит йде модератору. Після перевірки оголошення зʼявиться на дошці, у новинах або в подіях.</p>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  document.body.classList.add('modal-open');
+  // Активація після append (для CSS-переходу)
+  requestAnimationFrame(() => wrap.classList.add('open'));
+
+  // Фокус на textarea
+  setTimeout(() => wrap.querySelector('#cm-board-text')?.focus(), 200);
+
+  function close() {
+    wrap.classList.remove('open');
+    document.body.classList.remove('modal-open');
+    setTimeout(() => wrap.remove(), 220);
+  }
+
+  wrap.querySelector('.cm-board-modal-backdrop')?.addEventListener('click', close);
+  wrap.querySelector('.cm-board-modal-close')?.addEventListener('click', close);
+  document.addEventListener('keydown', function onEsc(e) {
+    if (e.key === 'Escape') {
+      close();
+      document.removeEventListener('keydown', onEsc);
+    }
+  });
+
+  wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const text = wrap.querySelector('#cm-board-text')?.value.trim();
+    if (!text) return;
+    // Заглушка до підключення Supabase (Фаза 3).
+    console.log('[community-board] pending submission:', {
+      text,
+      author:  wrap.querySelector('#cm-board-author')?.value.trim() || 'анонімно',
+      contact: wrap.querySelector('#cm-board-contact')?.value.trim() || null,
+    });
+    close();
+    showToast('Дякуємо! Запит надіслано модератору.', 4000);
+  });
+}
+
 // ── Блок 4: Дошка громади (мешканці + офіційні оголошення в одному блоці) ────
 // 12.05: окремий блок "Оголошення громади" обʼєднано з дошкою. Офіційні
 // оголошення рендеряться як cm-board-note--official на початку (бронзова
@@ -391,33 +453,13 @@ async function renderBoardBlock() {
         ${userHtml}
       </div>
 
-      <form class="cm-board-form" id="cm-board-form">
-        <h4 class="cm-board-form-title">✏️ Подати оголошення, подію або новину</h4>
-        <textarea class="cm-board-input" id="cm-board-text" placeholder="Що хочете повідомити громаді? (продам, шукаю, подяка, подія…)" rows="3" required></textarea>
-        <div class="cm-board-row">
-          <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="Ім'я (або залишіть порожнім — анонімно)">
-        </div>
-        <div class="cm-board-row">
-          <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="Контакт: телефон / Telegram (необов'язково)">
-        </div>
-        <button class="cm-board-submit" type="submit">Надіслати →</button>
-        <p class="cm-board-hint">Запит йде модератору. Після перевірки оголошення зʼявиться на дошці, у новинах або в подіях.</p>
-      </form>
+      <button class="cm-board-trigger" id="cm-board-trigger" type="button">
+        <span class="cm-board-trigger-icon">✏️</span>
+        <span class="cm-board-trigger-text">Подати оголошення, подію або новину</span>
+      </button>
     `;
 
-    document.getElementById('cm-board-form')?.addEventListener('submit', (e) => {
-      e.preventDefault();
-      const text = document.getElementById('cm-board-text')?.value.trim();
-      if (!text) return;
-      // Заглушка до підключення Supabase (Фаза 3): показуємо toast і логуємо.
-      // TODO Supabase: POST у таблицю community_posts зі статусом 'pending'.
-      console.log('[community-board] pending submission:', {
-        text,
-        author:  document.getElementById('cm-board-author')?.value.trim() || 'анонімно',
-        contact: document.getElementById('cm-board-contact')?.value.trim() || null,
-      });
-      showToast('Дякуємо! Запит надіслано модератору. Поки що модерація ще не підключена — функція запрацює після Supabase.', 5000);
-    });
+    document.getElementById('cm-board-trigger')?.addEventListener('click', openBoardModal);
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Дошка тимчасово недоступна</div>';
   }
