@@ -94,44 +94,19 @@
       return "\u26C8\uFE0F";
     return "\u{1F321}\uFE0F";
   }
-  async function getCoords() {
-    if (!navigator.geolocation)
-      return { ...OLYKA, city: "\u041E\u043B\u0438\u043A\u0430" };
-    return new Promise((resolve) => {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
-        () => resolve({ ...OLYKA, city: "\u041E\u043B\u0438\u043A\u0430" }),
-        { timeout: 5e3, maximumAge: 6e5 }
-      );
-    });
-  }
-  async function getCityName(lat, lon) {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-        { headers: { "Accept-Language": "uk" } }
-      );
-      const data = await res.json();
-      return data.address?.city || data.address?.town || data.address?.village || "\u041E\u043B\u0438\u043A\u0430";
-    } catch {
-      return "\u041E\u043B\u0438\u043A\u0430";
-    }
-  }
   async function initWeather() {
     const iconEl = document.getElementById("weather-icon");
     const tempEl = document.getElementById("weather-temp");
     if (!iconEl || !tempEl)
       return;
     try {
-      const { lat, lon, city: knownCity } = await getCoords();
-      const [weatherRes, cityName] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`),
-        knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
-      ]);
-      const data = await weatherRes.json();
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${OLYKA.lat}&longitude=${OLYKA.lon}&current=temperature_2m,weather_code&timezone=auto`
+      );
+      const data = await res.json();
       const temp = Math.round(data.current.temperature_2m);
       iconEl.textContent = codeToIcon(data.current.weather_code);
-      document.getElementById("weather-city").textContent = cityName;
+      document.getElementById("weather-city").textContent = "\u041E\u043B\u0438\u043A\u0430";
       tempEl.textContent = `${temp}\xB0`;
     } catch {
       const widget = document.getElementById("weather-widget");
