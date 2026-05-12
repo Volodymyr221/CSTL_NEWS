@@ -13,9 +13,7 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, showToast } from '../core/utils.js';
-
-const OLYKA = { lat: 50.7333, lon: 25.8167 };
+import { escapeHtml, formatTime, showToast, getCoords, getCityName } from '../core/utils.js';
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
 
@@ -74,25 +72,52 @@ function loadBusPrefs() {
 
 // ── Блок 1: Погода (розширена) ────────────────────────────────────────────────
 
+// Дні тижня українською (Пн..Нд) для getDay() 0=Нд..6=Сб
+const WEEKDAYS_UA = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+// Оновити заголовок блоку погоди на ім'я міста користувача
+function setWeatherTitle(cityName) {
+  const headerEl = document.querySelector('.cm-block--weather .cm-block-title');
+  if (headerEl && cityName) headerEl.textContent = `Погода в ${cityName}`;
+}
+
 async function renderWeatherBlock() {
   const el = document.getElementById('cm-weather-content');
   if (!el) return;
 
   try {
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${OLYKA.lat}&longitude=${OLYKA.lon}` +
-      `&current=temperature_2m,weather_code,apparent_temperature,wind_speed_10m` +
-      `&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
-    );
-    const data = await res.json();
+    const { lat, lon, city: knownCity } = await getCoords();
+    const [weatherRes, cityName] = await Promise.all([
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}` +
+        `&current=temperature_2m,weather_code,apparent_temperature` +
+        `&daily=weather_code,temperature_2m_max,temperature_2m_min` +
+        `&forecast_days=7&timezone=auto`
+      ),
+      knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon),
+    ]);
+    const data = await weatherRes.json();
     const cur  = data.current;
     const day  = data.daily;
     const info = weatherCodeInfo(cur.weather_code);
-    const temp     = Math.round(cur.temperature_2m);
-    const feels    = Math.round(cur.apparent_temperature);
-    const wind     = Math.round(cur.wind_speed_10m);
-    const tMax     = Math.round(day.temperature_2m_max[0]);
-    const tMin     = Math.round(day.temperature_2m_min[0]);
+    const temp  = Math.round(cur.temperature_2m);
+    const feels = Math.round(cur.apparent_temperature);
+
+    setWeatherTitle(cityName);
+
+    // Прогноз на 7 днів: день тижня + дата + іконка
+    const forecastHtml = day.time.map((dateStr, i) => {
+      const d = new Date(dateStr + 'T00:00:00');
+      const wd = i === 0 ? 'Сьогодні' : WEEKDAYS_UA[d.getDay()];
+      const dayInfo = weatherCodeInfo(day.weather_code[i]);
+      return `
+        <div class="cm-fc-day${i === 0 ? ' cm-fc-day--today' : ''}">
+          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+          <span class="cm-fc-date">${d.getDate()}</span>
+          <span class="cm-fc-icon">${dayInfo.icon}</span>
+        </div>
+      `;
+    }).join('');
 
     el.innerHTML = `
       <div class="cm-weather-main">
@@ -103,11 +128,7 @@ async function renderWeatherBlock() {
           <div class="cm-weather-feels">Відчувається як ${feels}°</div>
         </div>
       </div>
-      <div class="cm-weather-extra">
-        <span>↑ ${tMax}°</span>
-        <span>↓ ${tMin}°</span>
-        <span>💨 ${wind} км/год</span>
-      </div>
+      <div class="cm-weather-forecast">${forecastHtml}</div>
     `;
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Погода тимчасово недоступна</div>';

@@ -1,7 +1,4 @@
-// Координати Олики — погода у шапці завжди про Олику (синхронізовано
-// з блоком «Погода в Олиці» у вкладці Громада, що теж використовує OLYKA).
-// Геолокацію прибрано: сайт про Олику, користувач може бути будь-де.
-const OLYKA = { lat: 50.7333, lon: 25.8167 };
+import { getCoords, getCityName } from './utils.js';
 
 // WMO weather codes → emoji
 function codeToIcon(code) {
@@ -23,13 +20,15 @@ export async function initWeather() {
   if (!iconEl || !tempEl) return;
 
   try {
-    const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${OLYKA.lat}&longitude=${OLYKA.lon}&current=temperature_2m,weather_code&timezone=auto`
-    );
-    const data = await res.json();
+    const { lat, lon, city: knownCity } = await getCoords();
+    const [weatherRes, cityName] = await Promise.all([
+      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`),
+      knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon),
+    ]);
+    const data = await weatherRes.json();
     const temp = Math.round(data.current.temperature_2m);
     iconEl.textContent = codeToIcon(data.current.weather_code);
-    document.getElementById('weather-city').textContent = 'Олика';
+    document.getElementById('weather-city').textContent = cityName;
     tempEl.textContent = `${temp}°`;
   } catch {
     const widget = document.getElementById('weather-widget');

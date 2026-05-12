@@ -71,8 +71,63 @@
     }
   }
 
+  // src/core/utils.js
+  function formatTime(ts) {
+    const diff = Date.now() - ts;
+    if (diff < 6e4)
+      return "\u0449\u043E\u0439\u043D\u043E";
+    if (diff < 36e5)
+      return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+    if (diff < 864e5)
+      return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+    return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
+  var OLYKA_COORDS = { lat: 50.7333, lon: 25.8167 };
+  var _coordsPromise = null;
+  function getCoords() {
+    if (_coordsPromise)
+      return _coordsPromise;
+    _coordsPromise = new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" });
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
+        () => resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" }),
+        { timeout: 5e3, maximumAge: 6e5 }
+      );
+    });
+    return _coordsPromise;
+  }
+  async function getCityName(lat, lon) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+        { headers: { "Accept-Language": "uk" } }
+      );
+      const data = await res.json();
+      return data.address?.city || data.address?.town || data.address?.village || "\u041E\u043B\u0438\u043A\u0430";
+    } catch {
+      return "\u041E\u043B\u0438\u043A\u0430";
+    }
+  }
+  function showToast(msg, duration = 3e3) {
+    let toast = document.getElementById("cstl-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "cstl-toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("visible");
+    setTimeout(() => toast.classList.remove("visible"), duration);
+  }
+
   // src/core/weather.js
-  var OLYKA = { lat: 50.7333, lon: 25.8167 };
   function codeToIcon(code) {
     if (code === 0)
       return "\u2600\uFE0F";
@@ -100,13 +155,15 @@
     if (!iconEl || !tempEl)
       return;
     try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${OLYKA.lat}&longitude=${OLYKA.lon}&current=temperature_2m,weather_code&timezone=auto`
-      );
-      const data = await res.json();
+      const { lat, lon, city: knownCity } = await getCoords();
+      const [weatherRes, cityName] = await Promise.all([
+        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`),
+        knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
+      ]);
+      const data = await weatherRes.json();
       const temp = Math.round(data.current.temperature_2m);
       iconEl.textContent = codeToIcon(data.current.weather_code);
-      document.getElementById("weather-city").textContent = "\u041E\u043B\u0438\u043A\u0430";
+      document.getElementById("weather-city").textContent = cityName;
       tempEl.textContent = `${temp}\xB0`;
     } catch {
       const widget = document.getElementById("weather-widget");
@@ -115,34 +172,7 @@
     }
   }
 
-  // src/core/utils.js
-  function formatTime(ts) {
-    const diff = Date.now() - ts;
-    if (diff < 6e4)
-      return "\u0449\u043E\u0439\u043D\u043E";
-    if (diff < 36e5)
-      return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-    if (diff < 864e5)
-      return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
-    return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
-  }
-  function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-  }
-  function showToast(msg, duration = 3e3) {
-    let toast = document.getElementById("cstl-toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "cstl-toast";
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.classList.add("visible");
-    setTimeout(() => toast.classList.remove("visible"), duration);
-  }
-
   // src/tabs/community.js
-  var OLYKA2 = { lat: 50.7333, lon: 25.8167 };
   var POWER_PREFS_KEY = "power_prefs_v2";
   var BUS_PREFS_KEY = "bus_prefs_v2";
   function pad(n) {
@@ -203,23 +233,43 @@
       return {};
     }
   }
+  var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
+  function setWeatherTitle(cityName) {
+    const headerEl = document.querySelector(".cm-block--weather .cm-block-title");
+    if (headerEl && cityName)
+      headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
+  }
   async function renderWeatherBlock() {
     const el = document.getElementById("cm-weather-content");
     if (!el)
       return;
     try {
-      const res = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${OLYKA2.lat}&longitude=${OLYKA2.lon}&current=temperature_2m,weather_code,apparent_temperature,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
-      );
-      const data = await res.json();
+      const { lat, lon, city: knownCity } = await getCoords();
+      const [weatherRes, cityName] = await Promise.all([
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`
+        ),
+        knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
+      ]);
+      const data = await weatherRes.json();
       const cur = data.current;
       const day = data.daily;
       const info = weatherCodeInfo(cur.weather_code);
       const temp = Math.round(cur.temperature_2m);
       const feels = Math.round(cur.apparent_temperature);
-      const wind = Math.round(cur.wind_speed_10m);
-      const tMax = Math.round(day.temperature_2m_max[0]);
-      const tMin = Math.round(day.temperature_2m_min[0]);
+      setWeatherTitle(cityName);
+      const forecastHtml = day.time.map((dateStr, i) => {
+        const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+        const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
+        const dayInfo = weatherCodeInfo(day.weather_code[i]);
+        return `
+        <div class="cm-fc-day${i === 0 ? " cm-fc-day--today" : ""}">
+          <span class="cm-fc-wd">${escapeHtml(wd)}</span>
+          <span class="cm-fc-date">${d.getDate()}</span>
+          <span class="cm-fc-icon">${dayInfo.icon}</span>
+        </div>
+      `;
+      }).join("");
       el.innerHTML = `
       <div class="cm-weather-main">
         <div class="cm-weather-icon">${info.icon}</div>
@@ -229,11 +279,7 @@
           <div class="cm-weather-feels">\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A ${feels}\xB0</div>
         </div>
       </div>
-      <div class="cm-weather-extra">
-        <span>\u2191 ${tMax}\xB0</span>
-        <span>\u2193 ${tMin}\xB0</span>
-        <span>\u{1F4A8} ${wind} \u043A\u043C/\u0433\u043E\u0434</span>
-      </div>
+      <div class="cm-weather-forecast">${forecastHtml}</div>
     `;
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
