@@ -155,6 +155,444 @@
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
 
+  // src/tabs/community.js
+  var OLYKA2 = { lat: 50.7333, lon: 25.8167 };
+  var POWER_PREFS_KEY = "power_prefs_v2";
+  var BUS_PREFS_KEY = "bus_prefs_v2";
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  function weatherCodeInfo(code) {
+    if (code === 0)
+      return { icon: "\u2600\uFE0F", text: "\u042F\u0441\u043D\u043E" };
+    if (code <= 2)
+      return { icon: "\u{1F324}\uFE0F", text: "\u041C\u0456\u043D\u043B\u0438\u0432\u0430 \u0445\u043C\u0430\u0440\u043D\u0456\u0441\u0442\u044C" };
+    if (code === 3)
+      return { icon: "\u2601\uFE0F", text: "\u0425\u043C\u0430\u0440\u043D\u043E" };
+    if (code <= 48)
+      return { icon: "\u{1F32B}\uFE0F", text: "\u0422\u0443\u043C\u0430\u043D" };
+    if (code <= 55)
+      return { icon: "\u{1F326}\uFE0F", text: "\u041C\u0440\u044F\u043A\u0430" };
+    if (code <= 65)
+      return { icon: "\u{1F327}\uFE0F", text: "\u0414\u043E\u0449" };
+    if (code <= 77)
+      return { icon: "\u2744\uFE0F", text: "\u0421\u043D\u0456\u0433" };
+    if (code <= 82)
+      return { icon: "\u{1F327}\uFE0F", text: "\u0417\u043B\u0438\u0432\u0438" };
+    if (code >= 95)
+      return { icon: "\u26C8\uFE0F", text: "\u0413\u0440\u043E\u0437\u0430" };
+    return { icon: "\u{1F321}\uFE0F", text: "\u2014" };
+  }
+  var CONTACT_ICONS = {
+    ambulance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h4M12 8v4"/><path d="M2 17h20v-3a2 2 0 0 0-2-2h-3l-3-4H7a4 4 0 0 0-4 4v5h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
+    fire: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 17a2.5 2.5 0 0 0 2.5-2.5c0-1.5-.5-2-2-3.5C10 9.5 8.5 8 8.5 6c0 0-2 2-2 5a5 5 0 0 0 5 5 5 5 0 0 0 5-5c0-3-3-7-5-9 0 2-2 4.5-3.5 6.5z"/></svg>',
+    police: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>',
+    gas: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M8 6h8M6 6v14a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V6"/><path d="M10 12h4"/></svg>',
+    hospital: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 22h20"/><path d="M12 11v4M10 13h4"/></svg>',
+    gromada: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg>',
+    power: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
+    default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+  };
+  var CONTACT_COLORS = {
+    emergency: "#C41E3A",
+    medical: "#2E7D32",
+    gov: "#1565C0",
+    utility: "#B45309"
+  };
+  function loadPowerPrefs() {
+    try {
+      return JSON.parse(localStorage.getItem(POWER_PREFS_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  function loadBusPrefs() {
+    try {
+      return JSON.parse(localStorage.getItem(BUS_PREFS_KEY) || "{}");
+    } catch {
+      return {};
+    }
+  }
+  async function renderWeatherBlock() {
+    const el = document.getElementById("cm-weather-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${OLYKA2.lat}&longitude=${OLYKA2.lon}&current=temperature_2m,weather_code,apparent_temperature,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min&timezone=auto`
+      );
+      const data = await res.json();
+      const cur = data.current;
+      const day = data.daily;
+      const info = weatherCodeInfo(cur.weather_code);
+      const temp = Math.round(cur.temperature_2m);
+      const feels = Math.round(cur.apparent_temperature);
+      const wind = Math.round(cur.wind_speed_10m);
+      const tMax = Math.round(day.temperature_2m_max[0]);
+      const tMin = Math.round(day.temperature_2m_min[0]);
+      el.innerHTML = `
+      <div class="cm-weather-main">
+        <div class="cm-weather-icon">${info.icon}</div>
+        <div class="cm-weather-temp">${temp}\xB0</div>
+        <div class="cm-weather-text">
+          <div class="cm-weather-desc">${escapeHtml(info.text)}</div>
+          <div class="cm-weather-feels">\u0412\u0456\u0434\u0447\u0443\u0432\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A ${feels}\xB0</div>
+        </div>
+      </div>
+      <div class="cm-weather-extra">
+        <span>\u2191 ${tMax}\xB0</span>
+        <span>\u2193 ${tMin}\xB0</span>
+        <span>\u{1F4A8} ${wind} \u043A\u043C/\u0433\u043E\u0434</span>
+      </div>
+    `;
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+    }
+  }
+  async function renderPowerBlock() {
+    const el = document.getElementById("cm-power-content");
+    if (!el)
+      return;
+    const prefs = loadPowerPrefs();
+    if (!prefs.cityId || !prefs.streetId) {
+      el.innerHTML = `
+      <div class="cm-block-empty">
+        \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0439\u0442\u0435 \u0432\u0430\u0448\u0443 \u0432\u0443\u043B\u0438\u0446\u044E \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \xAB\u0421\u0432\u0456\u0442\u043B\u043E\xBB
+        <button class="cm-block-cta" onclick="switchTab('power')">\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u2192</button>
+      </div>`;
+      return;
+    }
+    try {
+      const res = await fetch("./data/power.json");
+      const data = await res.json();
+      const city = data.cities.find((c) => c.id === prefs.cityId);
+      const street = city?.streets.find((s) => s.id === prefs.streetId);
+      const queue = street ? data.queues.find((q) => q.id === street.queue_id) : null;
+      if (!queue) {
+        el.innerHTML = '<div class="cm-block-empty">\u0414\u0430\u043D\u0456 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u2014 \u043E\u043D\u043E\u0432\u0456\u0442\u044C \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F</div>';
+        return;
+      }
+      const schedule = queue.schedule[todayKey()] || queue.schedule[Object.keys(queue.schedule)[0]];
+      if (!schedule) {
+        el.innerHTML = '<div class="cm-block-empty">\u0413\u0440\u0430\u0444\u0456\u043A \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439</div>';
+        return;
+      }
+      const curH = (/* @__PURE__ */ new Date()).getHours();
+      const cur = schedule[curH];
+      let nextH = null;
+      for (let h = curH + 1; h < 24; h++) {
+        if (schedule[h] !== cur) {
+          nextH = h;
+          break;
+        }
+      }
+      const statusText = cur === 1 ? "\u0404 \u0441\u0432\u0456\u0442\u043B\u043E" : cur === 0 ? "\u041D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
+      const statusCls = cur === 1 ? "on" : cur === 0 ? "off" : "maybe";
+      const statusDot = cur === 1 ? "\u{1F7E2}" : cur === 0 ? "\u{1F534}" : "\u{1F7E1}";
+      const nextLabel = nextH !== null ? cur === 1 ? `\u0412\u0438\u043C\u043A\u043D\u0443\u0442\u044C \u043E ${pad(nextH)}:00` : cur === 0 ? `\u0423\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u044C \u043E ${pad(nextH)}:00` : `\u0417\u043C\u0456\u043D\u0430 \u043E ${pad(nextH)}:00` : "\u0414\u043E \u043A\u0456\u043D\u0446\u044F \u0434\u043E\u0431\u0438 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D";
+      const locLabel = city.streets.length === 1 ? city.name : `${city.name} \xB7 ${street.name}`;
+      el.innerHTML = `
+      <div class="cm-power-status cm-power-${statusCls}">
+        <span class="cm-power-dot">${statusDot}</span>
+        <div class="cm-power-text">
+          <div class="cm-power-main">${escapeHtml(statusText)}</div>
+          <div class="cm-power-next">${escapeHtml(nextLabel)}</div>
+        </div>
+      </div>
+      <div class="cm-power-loc">${escapeHtml(locLabel)} \xB7 ${escapeHtml(queue.name)}</div>
+    `;
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u0414\u0430\u043D\u0456 \u043F\u0440\u043E \u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+  function busToMinutes(hhmm) {
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  }
+  function busMinsToHHMM(total) {
+    const h = Math.floor(total / 60) % 24;
+    const m = total % 60;
+    return `${pad(h)}:${pad(m)}`;
+  }
+  function busIsDayActive(days) {
+    const d = (/* @__PURE__ */ new Date()).getDay();
+    if (days === "\u0449\u043E\u0434\u043D\u044F")
+      return true;
+    if (days === "\u043F\u043D-\u0441\u0431")
+      return d >= 1 && d <= 6;
+    if (days === "\u043F\u043D-\u043F\u0442")
+      return d >= 1 && d <= 5;
+    return true;
+  }
+  function busGetStopMins(route, stopName) {
+    const stop = route.stops.find((s) => s.name === stopName);
+    if (!stop)
+      return null;
+    const totalKm = route.stops[route.stops.length - 1].km;
+    if (totalKm === 0)
+      return busToMinutes(route.departure_time);
+    return busToMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
+  }
+  async function renderBusBlock() {
+    const el = document.getElementById("cm-bus-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/schedule.json");
+      const data = await res.json();
+      const prefs = loadBusPrefs();
+      const now = /* @__PURE__ */ new Date();
+      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const candidates = data.routes.filter((r) => {
+        if (!busIsDayActive(r.days))
+          return false;
+        if (prefs.from && !r.stops.some((s) => s.name === prefs.from))
+          return false;
+        if (prefs.to && !r.stops.some((s) => s.name === prefs.to))
+          return false;
+        if (prefs.from && prefs.to) {
+          const fi = r.stops.findIndex((s) => s.name === prefs.from);
+          const ti = r.stops.findIndex((s) => s.name === prefs.to);
+          if (fi >= ti)
+            return false;
+        }
+        const startName = prefs.from || r.stops[0].name;
+        const m = busGetStopMins(r, startName);
+        return m !== null && m > nowMin;
+      });
+      candidates.sort((a, b) => {
+        const aFrom = prefs.from || a.stops[0].name;
+        const bFrom = prefs.from || b.stops[0].name;
+        return (busGetStopMins(a, aFrom) || 0) - (busGetStopMins(b, bFrom) || 0);
+      });
+      const next = candidates[0];
+      if (!next) {
+        el.innerHTML = `
+        <div class="cm-block-empty">
+          \u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454
+          <button class="cm-block-cta" onclick="switchTab('buses')">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
+        </div>`;
+        return;
+      }
+      const fromName = prefs.from || next.stops[0].name;
+      const toName = prefs.to || next.stops[next.stops.length - 1].name;
+      const fromMin = busGetStopMins(next, fromName);
+      const toMin = busGetStopMins(next, toName);
+      const fromHHMM = busMinsToHHMM(fromMin);
+      const toHHMM = busMinsToHHMM(toMin);
+      const minsLeft = fromMin - nowMin;
+      const urgent = minsLeft <= 10;
+      const countdown = minsLeft < 60 ? `\u0447\u0435\u0440\u0435\u0437 ${minsLeft} \u0445\u0432` : (() => {
+        const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
+        return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
+      })();
+      el.innerHTML = `
+      <div class="cm-bus-main ${urgent ? "urgent" : ""}">
+        <div class="cm-bus-time">${escapeHtml(fromHHMM)}</div>
+        <div class="cm-bus-info">
+          <div class="cm-bus-route">${escapeHtml(fromName)} \u2192 ${escapeHtml(toName)}</div>
+          <div class="cm-bus-meta">${escapeHtml(next.name)} \xB7 \u043F\u0440\u0438\u0431\u0443\u0442\u0442\u044F ${escapeHtml(toHHMM)}</div>
+        </div>
+        <div class="cm-bus-countdown ${urgent ? "urgent" : ""}">${escapeHtml(countdown)}</div>
+      </div>
+    `;
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
+    }
+  }
+  async function renderAnnouncementsBlock() {
+    const el = document.getElementById("cm-announcements-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/community.json");
+      const data = await res.json();
+      const list = (data.announcements || []).slice().sort((a, b) => {
+        if (a.pinned !== b.pinned)
+          return a.pinned ? -1 : 1;
+        return (b.ts || 0) - (a.ts || 0);
+      });
+      if (!list.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+        return;
+      }
+      el.innerHTML = list.map((a) => `
+      <article class="cm-ann-card${a.pinned ? " pinned" : ""}">
+        ${a.pinned ? '<span class="cm-ann-pin">\u{1F4CC} \u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E</span>' : ""}
+        <h4 class="cm-ann-title">${escapeHtml(a.title)}</h4>
+        <p class="cm-ann-body">${escapeHtml(a.body)}</p>
+        <div class="cm-ann-footer">
+          <span>${escapeHtml(a.author || "\u2014")}</span>
+          <span>${formatTime(a.ts)}</span>
+        </div>
+      </article>
+    `).join("");
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+  async function renderNewsBlock() {
+    const el = document.getElementById("cm-news-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/articles.json");
+      const articles = await res.json();
+      const sorted = articles.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
+      if (!sorted.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+        return;
+      }
+      el.innerHTML = sorted.map((a) => `
+      <article class="cm-news-row" onclick="switchTab('news'); setTimeout(() => window.openArticle && window.openArticle(${a.id}), 250);">
+        ${a.image ? `<img class="cm-news-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : '<div class="cm-news-img cm-news-img--placeholder"></div>'}
+        <div class="cm-news-body">
+          <div class="cm-news-meta">${escapeHtml(a.geo)} \xB7 ${escapeHtml(a.category)}</div>
+          <h4 class="cm-news-title">${escapeHtml(a.title)}</h4>
+          <div class="cm-news-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+        </div>
+      </article>
+    `).join("");
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+  async function renderEventBlock() {
+    const el = document.getElementById("cm-event-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/events.json");
+      const events = await res.json();
+      const today = /* @__PURE__ */ new Date();
+      today.setHours(0, 0, 0, 0);
+      const next = events.filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+      if (!next) {
+        el.innerHTML = '<div class="cm-block-empty">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+        return;
+      }
+      const d = /* @__PURE__ */ new Date(next.date + "T00:00:00");
+      const months = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+      const dateStr = `${d.getDate()} ${months[d.getMonth()]}`;
+      el.innerHTML = `
+      <article class="cm-event-card" onclick="switchTab('events')">
+        <div class="cm-event-date">
+          <span class="cm-event-day">${d.getDate()}</span>
+          <span class="cm-event-month">${months[d.getMonth()].slice(0, 3)}</span>
+        </div>
+        <div class="cm-event-body">
+          <div class="cm-event-cat">${escapeHtml(next.category)}</div>
+          <h4 class="cm-event-title">${escapeHtml(next.title)}</h4>
+          <div class="cm-event-meta">\u{1F4CD} ${escapeHtml(next.location)} \xB7 \u23F0 ${escapeHtml(next.time)}</div>
+        </div>
+      </article>
+    `;
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+  async function renderContactsBlock() {
+    const el = document.getElementById("cm-contacts-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/community.json");
+      const data = await res.json();
+      const list = data.contacts || [];
+      if (!list.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
+        return;
+      }
+      el.innerHTML = list.map((c) => {
+        const icon = CONTACT_ICONS[c.icon] || CONTACT_ICONS.default;
+        const color = CONTACT_COLORS[c.category] || "#666";
+        const tel = c.phone.replace(/[^\d+]/g, "");
+        return `
+        <a class="cm-contact-card" href="tel:${escapeHtml(tel)}" style="--accent:${color}">
+          <span class="cm-contact-icon">${icon}</span>
+          <span class="cm-contact-name">${escapeHtml(c.name)}</span>
+          <span class="cm-contact-phone">${escapeHtml(c.phone)}</span>
+        </a>
+      `;
+      }).join("");
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+  function renderSkeleton() {
+    const el = document.getElementById("cm-content");
+    if (!el)
+      return;
+    el.innerHTML = `
+    <section class="cm-block cm-block--weather">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 \u041E\u043B\u0438\u0446\u0456</h3>
+      </header>
+      <div id="cm-weather-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--power">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u0421\u0432\u0456\u0442\u043B\u043E \u0437\u0430\u0440\u0430\u0437</h3>
+        <button class="cm-block-link" onclick="switchTab('power')">\u0413\u0440\u0430\u0444\u0456\u043A \u2192</button>
+      </header>
+      <div id="cm-power-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--bus">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0431\u0443\u0441</h3>
+        <button class="cm-block-link" onclick="switchTab('buses')">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
+      </header>
+      <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--announcements">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+      </header>
+      <div id="cm-announcements-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--news">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043D\u043E\u0432\u0438\u043D\u0438</h3>
+        <button class="cm-block-link" onclick="switchTab('news')">\u0423\u0441\u0456 \u2192</button>
+      </header>
+      <div id="cm-news-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--event">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F</h3>
+        <button class="cm-block-link" onclick="switchTab('events')">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
+      </header>
+      <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--contacts">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
+      </header>
+      <div id="cm-contacts-content" class="cm-block-body cm-contacts-grid cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+  `;
+  }
+  function initCommunity() {
+    renderSkeleton();
+    renderWeatherBlock();
+    renderPowerBlock();
+    renderBusBlock();
+    renderAnnouncementsBlock();
+    renderNewsBlock();
+    renderEventBlock();
+    renderContactsBlock();
+  }
+
   // src/tabs/news.js
   var allArticles = [];
   var activeGeo = "\u0412\u0441\u0456";
@@ -249,18 +687,22 @@
       return;
     const modal = document.getElementById("article-modal");
     const modalContent = document.getElementById("article-modal-content");
+    const modalMetaTags = document.getElementById("modalMetaTags");
     if (!modal || !modalContent)
       return;
     const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
     const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
     const bodyHtml = renderArticleBody(rawText);
+    if (modalMetaTags) {
+      modalMetaTags.innerHTML = `
+      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
+      <span class="modal-meta-sep">\u2022</span>
+      <span class="news-card-category">${escapeHtml(article.category)}</span>
+      ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    `;
+    }
     modalContent.innerHTML = `
     <div class="article-modal-header">
-      <div class="news-card-meta">
-        <span class="news-card-geo">${escapeHtml(article.geo)}</span>
-        <span class="news-card-category">${escapeHtml(article.category)}</span>
-        ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-      </div>
       <h1 class="article-title">${escapeHtml(article.title)}</h1>
       <div class="article-byline">
         ${sourceHtml}
@@ -305,10 +747,10 @@
     return CATEGORY_COLORS[category] || "#C41E3A";
   }
   function buildIcsContent(ev) {
-    const pad2 = (n) => String(n).padStart(2, "0");
+    const pad3 = (n) => String(n).padStart(2, "0");
     const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+    const fmt = (d) => `${d.getFullYear()}${pad3(d.getMonth() + 1)}${pad3(d.getDate())}T${pad3(d.getHours())}${pad3(d.getMinutes())}00`;
     const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
     return [
       "BEGIN:VCALENDAR",
@@ -344,7 +786,7 @@
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
-  function renderSkeleton(el) {
+  function renderSkeleton2(el) {
     el.innerHTML = Array(3).fill(`
     <div class="ev-skeleton">
       <div class="ev-skel-img"></div>
@@ -496,7 +938,7 @@
   async function initEvents() {
     const el = document.getElementById("events-list");
     if (el)
-      renderSkeleton(el);
+      renderSkeleton2(el);
     try {
       const res = await fetch("./data/events.json");
       allEvents = await res.json();
@@ -960,12 +1402,12 @@
   var selCity = null;
   var selStreet = null;
   var PREFS_KEY2 = "power_prefs_v2";
-  function pad(n) {
+  function pad2(n) {
     return String(n).padStart(2, "0");
   }
-  function todayKey() {
+  function todayKey2() {
     const d = /* @__PURE__ */ new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
   }
   function savePrefs2() {
     localStorage.setItem(PREFS_KEY2, JSON.stringify({
@@ -993,7 +1435,7 @@
     const queue = findQueue(queueId);
     if (!queue)
       return null;
-    const key = todayKey();
+    const key = todayKey2();
     return queue.schedule[key] || queue.schedule[Object.keys(queue.schedule)[0]] || null;
   }
   function generateICS(street, queue) {
@@ -1001,7 +1443,7 @@
     if (!schedule)
       return;
     const d = /* @__PURE__ */ new Date();
-    const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const ymd = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
     const events = [];
     let i = 0;
     while (i < 24) {
@@ -1011,8 +1453,8 @@
           i++;
         events.push(
           `BEGIN:VEVENT\r
-DTSTART:${ymd}T${pad(start)}0000\r
-DTEND:${ymd}T${pad(i)}0000\r
+DTSTART:${ymd}T${pad2(start)}0000\r
+DTEND:${ymd}T${pad2(i)}0000\r
 SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
 DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
 END:VEVENT`
@@ -1110,13 +1552,13 @@ END:VEVENT`
       const nowMarker = isCurrent ? `
       <div class="pw-now-marker" id="pw-now-marker">
         <div class="pw-now-dot"></div>
-        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad(curH)}:${pad(curM)}</span>
+        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad2(curH)}:${pad2(curM)}</span>
         <div class="pw-now-line-right"></div>
       </div>` : "";
       return `
       ${nowMarker}
       <div class="pw-row${isPast ? " pw-row--past" : ""}${isCurrent ? " pw-row--current" : ""}">
-        <span class="pw-time">${pad(hour)}:00</span>
+        <span class="pw-time">${pad2(hour)}:00</span>
         <div class="pw-block ${blockCls}">
           <span class="pw-block-label">${label}</span>
         </div>
@@ -1134,7 +1576,7 @@ END:VEVENT`
     if (!container || !powerData)
       return;
     const upd = new Date(powerData._meta.last_updated);
-    const updStr = `${pad(upd.getHours())}:${pad(upd.getMinutes())}`;
+    const updStr = `${pad2(upd.getHours())}:${pad2(upd.getMinutes())}`;
     const offlineBanner = !navigator.onLine ? `<div class="pw-offline-banner">\u26A1 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u0434\u0430\u043D\u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u043E ${updStr}</div>` : "";
     if (!selCity) {
       container.innerHTML = offlineBanner;
@@ -1167,7 +1609,7 @@ END:VEVENT`
     }
     const statusText = curStatus === 1 ? "\u{1F7E2} \u0417\u0430\u0440\u0430\u0437 \u0454 \u0441\u0432\u0456\u0442\u043B\u043E" : curStatus === 0 ? "\u{1F534} \u0417\u0430\u0440\u0430\u0437 \u043D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u{1F7E1} \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
     const statusCls = curStatus === 1 ? "pw-status--on" : curStatus === 0 ? "pw-status--off" : "pw-status--maybe";
-    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad(nextH)}:00` : "";
+    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad2(nextH)}:00` : "";
     const locationLabel = selCity.streets.length === 1 ? escapeHtml(selCity.name) : `${escapeHtml(selCity.name)} \xB7 ${escapeHtml(selStreet.name)}`;
     container.innerHTML = `
     ${offlineBanner}
@@ -1237,7 +1679,7 @@ END:VEVENT`
   }
 
   // src/app.js
-  var currentTab = "news";
+  var currentTab = "community";
   window.switchTab = function(tab) {
     if (tab === currentTab)
       return;
@@ -1279,6 +1721,9 @@ END:VEVENT`
       inner.style.transition = "";
       inner.style.animation = "";
     }
+    const metaTags = document.getElementById("modalMetaTags");
+    if (metaTags)
+      metaTags.innerHTML = "";
   };
   function initModalSwipe() {
     const inner = document.querySelector(".article-modal-inner");
@@ -1296,8 +1741,13 @@ END:VEVENT`
     };
     inner.addEventListener("touchstart", (e) => {
       startedOnHandle = handle && (e.target === handle || handle.contains(e.target));
-      if (!startedOnHandle)
+      startedAtTop = inner.scrollTop <= 2;
+      const canSwipe = startedOnHandle || startedAtTop;
+      if (!canSwipe) {
+        startY = e.touches[0].clientY;
+        isSwiping = false;
         return;
+      }
       inner.style.animation = "none";
       inner.style.transition = "none";
       inner.style.transform = "translateY(0)";
@@ -1340,6 +1790,7 @@ END:VEVENT`
         inner.style.transform = "translateY(0)";
         setTimeout(reset, 300);
       }
+      startedOnHandle = false;
     });
     inner.addEventListener("touchcancel", () => {
       if (rafId) {
@@ -1357,6 +1808,7 @@ END:VEVENT`
     bootApp();
     initModalSwipe();
     initWeather();
+    initCommunity();
     initNews();
     initEvents();
     initBuses();

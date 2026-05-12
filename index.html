@@ -35,8 +35,17 @@
   <!-- Основний контент -->
   <main class="app-main">
 
+    <!-- Вкладка: Громада (головна) -->
+    <div id="page-community" class="page active">
+      <div class="tab-header">
+        <h2 class="tab-title">Громада</h2>
+        <p class="tab-subtitle">Олика — все головне на одному екрані</p>
+      </div>
+      <div id="cm-content" class="cm-content"></div>
+    </div>
+
     <!-- Вкладка: Новини -->
-    <div id="page-news" class="page active">
+    <div id="page-news" class="page" style="display:none">
       <div class="filters-bar">
         <div id="geo-filters" class="chips-row"></div>
       </div>
@@ -89,7 +98,14 @@
 
   <!-- Нижня навігація (tab bar) -->
   <nav class="tab-bar">
-    <button class="tab-item active" data-tab="news" onclick="switchTab('news')">
+    <button class="tab-item active" data-tab="community" onclick="switchTab('community')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12l9-9 9 9"/>
+        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>
+      </svg>
+      <span class="tab-label">Громада</span>
+    </button>
+    <button class="tab-item" data-tab="news" onclick="switchTab('news')">
       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-7"/>
         <path d="M10 8h8M10 12h6M10 16h4"/>

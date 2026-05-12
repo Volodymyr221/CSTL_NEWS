@@ -1,12 +1,13 @@
 import { bootApp } from './core/boot.js';
 import { initWeather } from './core/weather.js';
+import { initCommunity } from './tabs/community.js';
 import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 
 // Поточна активна вкладка
-let currentTab = 'news';
+let currentTab = 'community';
 
 // Переключення між вкладками з плавною анімацією
 window.switchTab = function(tab) {
@@ -136,6 +137,7 @@ function init() {
   bootApp();
   initModalSwipe();
   initWeather();
+  initCommunity();
   initNews();
   initEvents();
   initBuses();
