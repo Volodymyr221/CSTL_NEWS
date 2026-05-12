@@ -12,13 +12,6 @@
   --header-h: 56px;
   --tabbar-h: 56px;  /* висота контентної зони таб-бару, без safe area */
   --navy: #1B2A4A;
-
-  /* Дизайн v2 (12.05.2026): «iOS Settings»-style фон сторінки + білі картки.
-     Зворотний бекап у backup/design-v1/. */
-  --bg-page: #F4F4F7;
-  --bg-card: #FFFFFF;
-  --card-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05);
-  --card-radius: 16px;
 }
 
 html, body {
@@ -28,7 +21,7 @@ html, body {
   overflow: hidden;
   overscroll-behavior: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  background: var(--bg-page);
+  background: var(--white);
   color: var(--black);
   -webkit-font-smoothing: antialiased;
 }
@@ -1679,24 +1672,22 @@ html, body {
   gap: 14px;
 }
 .cm-block {
-  background: var(--bg-card);
-  border-radius: var(--card-radius);
-  box-shadow: var(--card-shadow);
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
   overflow: hidden;
 }
 .cm-block-header {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px 10px;
+  justify-content: space-between;
+  padding: 12px 14px 8px;
 }
 .cm-block-title {
   font-size: 15px;
   font-weight: 700;
   color: var(--black);
   letter-spacing: 0.2px;
-  flex: 1;
-  min-width: 0;
 }
 .cm-block-link {
   background: none;
@@ -1708,33 +1699,7 @@ html, body {
   padding: 4px 0;
   font-family: inherit;
   -webkit-tap-highlight-color: transparent;
-  margin-left: auto;
-  flex-shrink: 0;
 }
-
-/* Іконка блоку — кругла плашка з кольоровим тоном по темі */
-.cm-block-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.cm-block-icon svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-.cm-block-icon--power    { background: rgba(245,158,11,0.13); color: #D97706; }
-.cm-block-icon--bus      { background: rgba(5,150,105,0.13);  color: #059669; }
-.cm-block-icon--event    { background: rgba(147,51,234,0.13); color: #7C3AED; }
-.cm-block-icon--contacts { background: rgba(37,99,235,0.13);  color: #2563EB; }
-.cm-block-icon--board    { background: rgba(220,38,38,0.13);  color: #DC2626; }
 .cm-block-body { padding: 4px 14px 14px; }
 .cm-loading { color: var(--gray); font-size: 13px; padding: 8px 14px 14px; }
 .cm-block-empty {
@@ -1837,7 +1802,7 @@ html, body {
 .cm-power-off   { background: #FFEBEE; }
 .cm-power-maybe { background: #FFF8E1; }
 .cm-power-dot { font-size: 22px; line-height: 1; }
-.cm-power-main { font-weight: 700; font-size: 17px; color: var(--black); }
+.cm-power-main { font-weight: 700; font-size: 15px; color: var(--black); }
 .cm-power-next { font-size: 12.5px; color: var(--gray); margin-top: 2px; }
 .cm-power-loc { font-size: 12px; color: var(--gray); padding-left: 4px; }
 
@@ -1849,7 +1814,7 @@ html, body {
   padding: 6px 0;
 }
 .cm-bus-time {
-  font-size: 26px;
+  font-size: 24px;
   font-weight: 800;
   color: var(--black);
   flex-shrink: 0;
@@ -1866,12 +1831,12 @@ html, body {
 }
 .cm-bus-meta { font-size: 11.5px; color: var(--gray); margin-top: 2px; }
 .cm-bus-countdown {
-  font-size: 14px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--gray);
-  padding: 6px 12px;
+  padding: 5px 10px;
   background: var(--gray-light);
-  border-radius: 16px;
+  border-radius: 14px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -1946,7 +1911,7 @@ html, body {
   border-radius: 10px;
   flex-shrink: 0;
 }
-.cm-event-day { font-size: 26px; font-weight: 800; line-height: 1; }
+.cm-event-day { font-size: 24px; font-weight: 800; line-height: 1; }
 .cm-event-month {
   font-size: 11px;
   font-weight: 600;
