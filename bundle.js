@@ -436,6 +436,59 @@
       el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
     }
   }
+  function openBoardModal() {
+    if (document.getElementById("cm-board-modal"))
+      return;
+    const wrap = document.createElement("div");
+    wrap.id = "cm-board-modal";
+    wrap.className = "cm-board-modal";
+    wrap.innerHTML = `
+    <div class="cm-board-modal-backdrop"></div>
+    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
+      <div class="cm-board-modal-handle"></div>
+      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+      <p class="cm-board-modal-sub">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044F \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0430 \u2014 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440 \u043E\u0431\u0435\u0440\u0435 \u043A\u0443\u0434\u0438 \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438.</p>
+      <form id="cm-board-modal-form">
+        <textarea class="cm-board-input" id="cm-board-text" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456? (\u043F\u0440\u043E\u0434\u0430\u043C, \u0448\u0443\u043A\u0430\u044E, \u043F\u043E\u0434\u044F\u043A\u0430, \u043F\u043E\u0434\u0456\u044F\u2026)" rows="4" required></textarea>
+        <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="\u0406\u043C\u02BC\u044F (\u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0442\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)">
+        <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="\u041A\u043E\u043D\u0442\u0430\u043A\u0442: \u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)">
+        <button class="cm-board-submit" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2192</button>
+        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456, \u0443 \u043D\u043E\u0432\u0438\u043D\u0430\u0445 \u0430\u0431\u043E \u0432 \u043F\u043E\u0434\u0456\u044F\u0445.</p>
+      </form>
+    </div>
+  `;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    setTimeout(() => wrap.querySelector("#cm-board-text")?.focus(), 200);
+    function close() {
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => wrap.remove(), 220);
+    }
+    wrap.querySelector(".cm-board-modal-backdrop")?.addEventListener("click", close);
+    wrap.querySelector(".cm-board-modal-close")?.addEventListener("click", close);
+    document.addEventListener("keydown", function onEsc(e) {
+      if (e.key === "Escape") {
+        close();
+        document.removeEventListener("keydown", onEsc);
+      }
+    });
+    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = wrap.querySelector("#cm-board-text")?.value.trim();
+      if (!text)
+        return;
+      console.log("[community-board] pending submission:", {
+        text,
+        author: wrap.querySelector("#cm-board-author")?.value.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E",
+        contact: wrap.querySelector("#cm-board-contact")?.value.trim() || null
+      });
+      close();
+      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
+    });
+  }
   var CATEGORY_EMOJI = {
     "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
     "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
@@ -505,31 +558,12 @@
         ${userHtml}
       </div>
 
-      <form class="cm-board-form" id="cm-board-form">
-        <h4 class="cm-board-form-title">\u270F\uFE0F \u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044E \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0443</h4>
-        <textarea class="cm-board-input" id="cm-board-text" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456? (\u043F\u0440\u043E\u0434\u0430\u043C, \u0448\u0443\u043A\u0430\u044E, \u043F\u043E\u0434\u044F\u043A\u0430, \u043F\u043E\u0434\u0456\u044F\u2026)" rows="3" required></textarea>
-        <div class="cm-board-row">
-          <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="\u0406\u043C'\u044F (\u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0456\u0442\u044C \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)">
-        </div>
-        <div class="cm-board-row">
-          <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="\u041A\u043E\u043D\u0442\u0430\u043A\u0442: \u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)">
-        </div>
-        <button class="cm-board-submit" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2192</button>
-        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456, \u0443 \u043D\u043E\u0432\u0438\u043D\u0430\u0445 \u0430\u0431\u043E \u0432 \u043F\u043E\u0434\u0456\u044F\u0445.</p>
-      </form>
+      <button class="cm-board-trigger" id="cm-board-trigger" type="button">
+        <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044E \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0443</span>
+      </button>
     `;
-      document.getElementById("cm-board-form")?.addEventListener("submit", (e) => {
-        e.preventDefault();
-        const text = document.getElementById("cm-board-text")?.value.trim();
-        if (!text)
-          return;
-        console.log("[community-board] pending submission:", {
-          text,
-          author: document.getElementById("cm-board-author")?.value.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E",
-          contact: document.getElementById("cm-board-contact")?.value.trim() || null
-        });
-        showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u043E\u043A\u0438 \u0449\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0446\u0456\u044F \u0449\u0435 \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0430 \u2014 \u0444\u0443\u043D\u043A\u0446\u0456\u044F \u0437\u0430\u043F\u0440\u0430\u0446\u044E\u0454 \u043F\u0456\u0441\u043B\u044F Supabase.", 5e3);
-      });
+      document.getElementById("cm-board-trigger")?.addEventListener("click", openBoardModal);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }

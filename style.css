@@ -2298,26 +2298,89 @@ html, body {
 }
 
 /* Форма "Подати оголошення" — стилізована під білий аркуш на дошці */
-.cm-board-form {
-  background: #FFFFFF;
+/* Кнопка-тригер «Подати оголошення» (стара inline-форма видалена) */
+.cm-board-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 28px);
   margin: 14px;
-  padding: 16px 14px 14px;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.12);
-  position: relative;
+  padding: 14px 18px;
+  background: var(--red);
+  color: #fff;
+  border: 0;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(196, 30, 58, 0.30);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.15s;
 }
-.cm-board-form::before {
-  /* Зелена скотч-стрічка вгорі форми */
-  content: '';
+.cm-board-trigger:active { transform: scale(0.98); background: var(--red-dark); }
+.cm-board-trigger-icon { font-size: 18px; line-height: 1; }
+.cm-board-trigger-text { flex: 1; text-align: left; }
+
+/* Модалка «Подати оголошення» — повноекранна, з білою панеллю знизу */
+.cm-board-modal {
+  position: fixed; inset: 0;
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.cm-board-modal.open { opacity: 1; pointer-events: auto; }
+.cm-board-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+.cm-board-modal-panel {
   position: absolute;
-  top: -6px;
-  left: 50%;
-  transform: translateX(-50%) rotate(-2deg);
-  width: 70px;
-  height: 16px;
-  background: linear-gradient(180deg, rgba(76,175,80,0.65) 0%, rgba(76,175,80,0.45) 100%);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.15);
+  left: 0; right: 0; bottom: 0;
+  max-height: 90svh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #FFFFFF;
+  border-radius: 22px 22px 0 0;
+  padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
 }
+.cm-board-modal.open .cm-board-modal-panel { transform: translateY(0); }
+.cm-board-modal-handle {
+  width: 40px; height: 4px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 2px;
+  margin: 4px auto 12px;
+}
+.cm-board-modal-close {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: var(--gray-light);
+  border: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.cm-board-modal-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+.cm-board-modal-panel .cm-board-input { margin-bottom: 10px; }
+.cm-board-modal-panel .cm-board-input:last-of-type { margin-bottom: 14px; }
+
 .cm-board-form-title {
   font-size: 14px;
   font-weight: 700;
