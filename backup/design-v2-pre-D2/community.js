@@ -512,40 +512,15 @@ async function renderContactsBlock() {
 
 // ── Скелетон-каркас вкладки ───────────────────────────────────────────────────
 
-function getGreeting() {
-  const h = new Date().getHours();
-  if (h >= 5  && h < 11) return { text: 'Добрий ранок',  sub: 'Ось що головне у нас сьогодні' };
-  if (h >= 11 && h < 17) return { text: 'Добридень',     sub: 'Ось що головне у нас сьогодні' };
-  if (h >= 17 && h < 22) return { text: 'Добрий вечір',  sub: 'Що цікавого було сьогодні' };
-  return { text: 'Доброї ночі', sub: 'Громада спить — ось добірка' };
-}
-
-function formatTodayHeader() {
-  const d = new Date();
-  const wd = ['неділя','понеділок','вівторок','середа','четвер','пʼятниця','субота'][d.getDay()];
-  const m  = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'][d.getMonth()];
-  return `${wd} · ${d.getDate()} ${m}`;
-}
-
 function renderSkeleton() {
   const el = document.getElementById('cm-content');
   if (!el) return;
-
-  const greeting = getGreeting();
-  const todayStr = formatTodayHeader();
-
   el.innerHTML = `
-    <section class="cm-greeting">
-      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
-    </section>
-
     <section class="cm-hero">
       <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="Олика" loading="eager">
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
-        <p class="cm-hero-sub">Наше містечко на Волині</p>
+        <p class="cm-hero-sub">Все головне на одному екрані</p>
       </div>
     </section>
 

@@ -619,16 +619,40 @@
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
+  function getGreeting() {
+    const h = (/* @__PURE__ */ new Date()).getHours();
+    if (h >= 5 && h < 11)
+      return { text: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A", sub: "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
+    if (h >= 11 && h < 17)
+      return { text: "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C", sub: "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
+    if (h >= 17 && h < 22)
+      return { text: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440", sub: "\u0429\u043E \u0446\u0456\u043A\u0430\u0432\u043E\u0433\u043E \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
+    return { text: "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456", sub: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430 \u0441\u043F\u0438\u0442\u044C \u2014 \u043E\u0441\u044C \u0434\u043E\u0431\u0456\u0440\u043A\u0430" };
+  }
+  function formatTodayHeader() {
+    const d = /* @__PURE__ */ new Date();
+    const wd = ["\u043D\u0435\u0434\u0456\u043B\u044F", "\u043F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0432\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0441\u0435\u0440\u0435\u0434\u0430", "\u0447\u0435\u0442\u0432\u0435\u0440", "\u043F\u02BC\u044F\u0442\u043D\u0438\u0446\u044F", "\u0441\u0443\u0431\u043E\u0442\u0430"][d.getDay()];
+    const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
+    return `${wd} \xB7 ${d.getDate()} ${m}`;
+  }
   function renderSkeleton() {
     const el = document.getElementById("cm-content");
     if (!el)
       return;
+    const greeting = getGreeting();
+    const todayStr = formatTodayHeader();
     el.innerHTML = `
+    <section class="cm-greeting">
+      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
+    </section>
+
     <section class="cm-hero">
       <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="\u041E\u043B\u0438\u043A\u0430" loading="eager">
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
-        <p class="cm-hero-sub">\u0412\u0441\u0435 \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u043D\u0430 \u043E\u0434\u043D\u043E\u043C\u0443 \u0435\u043A\u0440\u0430\u043D\u0456</p>
+        <p class="cm-hero-sub">\u041D\u0430\u0448\u0435 \u043C\u0456\u0441\u0442\u0435\u0447\u043A\u043E \u043D\u0430 \u0412\u043E\u043B\u0438\u043D\u0456</p>
       </div>
     </section>
 

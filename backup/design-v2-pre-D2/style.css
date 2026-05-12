@@ -13,35 +13,12 @@
   --tabbar-h: 56px;  /* висота контентної зони таб-бару, без safe area */
   --navy: #1B2A4A;
 
-  /* ===== ДИЗАЙН v3 — D2 «ПОЛЕ» (12.05.2026) =====
-     Натуральна палітра: бежевий папір + шавлія/теракот/мед/горіх.
-     Бекап попереднього (v2 «iOS Settings»): backup/design-v2-pre-D2/.
-     Бекап оригінального (v1): backup/design-v1/. */
-  --paper:       #F4F1E6;
-  --paper-deep:  #EAE4D2;
-  --card-cream:  #FAF8EF;
-  --sky:         #C8DFD4;     /* Погода — пастельна шавлія */
-  --sky-deep:    #94BCB2;
-  --sky-text:    #1F4038;
-  --mint:        #D3E3B8;     /* Світло — м'ятна трава */
-  --mint-deep:   #A4C476;
-  --mint-text:   #2E4017;
-  --honey:       #E6CC8F;     /* Автобус — медовий */
-  --honey-deep:  #C9A85B;
-  --honey-text:  #4E380E;
-  --peach:       #E5B89A;     /* Подія — теракот */
-  --peach-deep:  #C68E6A;
-  --peach-text:  #4E2C12;
-  --brand-tint:  #FAE2E6;
-  --ink:         #2A2520;
-  --ink-soft:    #5F5448;
-  --ink-mute:    #9C9080;
-  --hairline:    rgba(60, 50, 30, 0.10);
-
-  --bg-page: var(--paper);
-  --bg-card: var(--card-cream);
-  --card-shadow: 0 1px 2px rgba(70, 45, 20, 0.05), 0 8px 24px rgba(70, 45, 20, 0.08);
-  --card-radius: 22px;
+  /* Дизайн v2 (12.05.2026): «iOS Settings»-style фон сторінки + білі картки.
+     Зворотний бекап у backup/design-v1/. */
+  --bg-page: #F4F4F7;
+  --bg-card: #FFFFFF;
+  --card-shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.05);
+  --card-radius: 16px;
 }
 
 html, body {
@@ -52,7 +29,7 @@ html, body {
   overscroll-behavior: none;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   background: var(--bg-page);
-  color: var(--ink);
+  color: var(--black);
   -webkit-font-smoothing: antialiased;
 }
 
@@ -1762,33 +1739,28 @@ html, body {
 
 /* ── Блок 1: Погода ── */
 .cm-block--weather {
-  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-deep) 100%);
-  color: var(--sky-text);
+  background: linear-gradient(135deg, #2196F3 0%, #1976D2 100%);
+  border-color: transparent;
+  color: white;
 }
-.cm-block--weather .cm-block-title { color: var(--sky-text); }
+.cm-block--weather .cm-block-title { color: white; }
 .cm-weather-main {
   display: flex;
   align-items: center;
   gap: 14px;
   padding: 4px 0 10px;
 }
-.cm-weather-icon { font-size: 56px; line-height: 1; }
-.cm-weather-temp {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 56px; font-weight: 700; line-height: 0.9;
-  letter-spacing: -2px;
-  color: var(--sky-text);
-}
+.cm-weather-icon { font-size: 48px; line-height: 1; }
+.cm-weather-temp { font-size: 44px; font-weight: 800; line-height: 1; }
 .cm-weather-text { display: flex; flex-direction: column; gap: 2px; }
-.cm-weather-desc { font-size: 15px; font-weight: 600; color: var(--sky-text); }
-.cm-weather-feels { font-size: 12.5px; color: var(--sky-text); opacity: 0.75; }
+.cm-weather-desc { font-size: 15px; font-weight: 600; }
+.cm-weather-feels { font-size: 12px; opacity: 0.85; }
 .cm-weather-extra {
   display: flex;
   gap: 16px;
   font-size: 12.5px;
-  color: var(--sky-text);
   padding-top: 10px;
-  border-top: 1px solid rgba(0,0,0,0.10);
+  border-top: 1px solid rgba(255,255,255,0.2);
   opacity: 0.95;
 }
 
@@ -1796,22 +1768,21 @@ html, body {
 .cm-weather-forecast {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 2px;
   padding-top: 10px;
-  border-top: 1px solid rgba(0,0,0,0.10);
+  border-top: 1px solid rgba(255,255,255,0.2);
 }
 .cm-fc-day {
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 3px;
-  padding: 8px 2px;
-  border-radius: 10px;
-  background: rgba(255,255,255,0.40);
-  color: var(--sky-text);
+  padding: 6px 2px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
 }
 .cm-fc-day--today {
-  background: rgba(255,255,255,0.85);
+  background: rgba(255,255,255,0.22);
   font-weight: 700;
 }
 .cm-fc-wd {
@@ -2023,105 +1994,6 @@ html, body {
 /* Tab-bar з 5 кнопками — підправити іконку щоб не була завелика */
 .tab-bar .tab-icon { width: 21px; height: 21px; }
 .tab-bar .tab-label { font-size: 9.5px; }
-
-/* ===== D2 «ПОЛЕ» — колірні фарбування блоків (12.05.2026) ===== */
-
-/* Світло — м'ятна трава */
-.cm-block--power {
-  background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 100%);
-}
-.cm-block--power .cm-block-title { color: var(--mint-text); }
-.cm-block--power .cm-power-main  { color: var(--mint-text); }
-.cm-block--power .cm-power-next  { color: var(--mint-text); opacity: 0.75; }
-.cm-block--power .cm-power-loc   { color: var(--mint-text); opacity: 0.75; }
-.cm-block--power .cm-power-status.cm-power-on    { background: rgba(255,255,255,0.55); }
-.cm-block--power .cm-power-status.cm-power-off   { background: rgba(196,30,58,0.18); }
-.cm-block--power .cm-power-status.cm-power-maybe { background: rgba(255,255,255,0.35); }
-
-/* Автобус — медовий */
-.cm-block--bus {
-  background: linear-gradient(135deg, var(--honey) 0%, var(--honey-deep) 100%);
-}
-.cm-block--bus .cm-block-title  { color: var(--honey-text); }
-.cm-block--bus .cm-bus-time     { color: var(--honey-text); }
-.cm-block--bus .cm-bus-route    { color: var(--honey-text); }
-.cm-block--bus .cm-bus-meta     { color: var(--honey-text); opacity: 0.75; }
-.cm-block--bus .cm-bus-countdown {
-  background: rgba(255,255,255,0.70);
-  color: var(--honey-text);
-}
-.cm-block--bus .cm-bus-countdown.urgent { background: var(--red); color: white; }
-
-/* Подія — теракот */
-.cm-block--event {
-  background: linear-gradient(135deg, var(--peach) 0%, var(--peach-deep) 100%);
-}
-.cm-block--event .cm-block-title { color: var(--peach-text); }
-.cm-block--event .cm-event-cat   { color: var(--peach-text); }
-.cm-block--event .cm-event-title { color: var(--peach-text); }
-.cm-block--event .cm-event-meta  { color: var(--peach-text); opacity: 0.75; }
-
-/* Контакти — кремовий папір, рамки делікатні */
-.cm-block--contacts { background: var(--card-cream); }
-.cm-block--contacts .cm-contact-card {
-  background: var(--paper);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--accent, var(--ink-mute));
-}
-.cm-block--contacts .cm-contact-card:active { background: var(--paper-deep); }
-
-/* Дошка — кремовий папір (внутрішня коркова дошка лишається своя) */
-.cm-block--board { background: var(--card-cream); }
-
-/* Block link — на кольорових фонах має бути контрастним до тону блоку */
-.cm-block--power .cm-block-link,
-.cm-block--bus   .cm-block-link,
-.cm-block--event .cm-block-link {
-  background: rgba(255,255,255,0.7);
-  border-radius: 999px;
-  padding: 4px 12px;
-  color: var(--red);
-}
-
-/* Greeting — привітання над hero (дата → Добрий ранок → підпис) */
-.cm-greeting {
-  padding: 4px 4px 14px;
-}
-.cm-greeting-date {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-mute);
-  text-transform: uppercase;
-  letter-spacing: 1.2px;
-  margin-bottom: 4px;
-}
-.cm-greeting-text {
-  font-family: Georgia, 'Times New Roman', serif;
-  font-size: 28px;
-  font-weight: 700;
-  line-height: 1.1;
-  color: var(--ink);
-}
-.cm-greeting-sub {
-  font-size: 13px;
-  color: var(--ink-soft);
-  margin-top: 4px;
-}
-
-/* Tab-bar — м'якша pill для активного айтема */
-.tab-bar .tab-item.active .tab-label {
-  font-weight: 700;
-}
-.tab-bar .tab-item.active::before {
-  content: '';
-  position: absolute;
-  top: 4px;
-  width: 32px;
-  height: 4px;
-  border-radius: 2px;
-  background: var(--red);
-}
-.tab-bar .tab-item { position: relative; }
 
 /* ===== COMMUNITY HERO (фото-заставка вкладки Громада) ===== */
 
