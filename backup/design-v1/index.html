@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#C41E3A">
+  <meta name="description" content="CSTL NEWS — локальна медіа-платформа Олики та Волині">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="CSTL NEWS">
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>CSTL NEWS</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Splash screen (заставка при завантаженні) -->
+  <div id="splash">
+    <img src="logo.png" class="splash-icon" alt="Olyka Castle">
+    <div class="splash-logo">CSTL NEWS</div>
+    <div class="splash-sub">Олика · Волинь · Україна</div>
+  </div>
+
+  <!-- Шапка сайту -->
+  <header class="app-header">
+    <div class="header-logo">CSTL <span>NEWS</span></div>
+    <div class="weather-widget" id="weather-widget">
+      <span class="weather-icon" id="weather-icon"></span>
+      <span class="weather-city" id="weather-city"></span>
+      <span class="weather-temp" id="weather-temp"></span>
+    </div>
+  </header>
+
+  <!-- Основний контент -->
+  <main class="app-main">
+
+    <!-- Вкладка: Громада (головна) -->
+    <div id="page-community" class="page active">
+      <div class="tab-header">
+        <h2 class="tab-title">Громада</h2>
+        <p class="tab-subtitle">Олика — все головне на одному екрані</p>
+      </div>
+      <div id="cm-content" class="cm-content"></div>
+    </div>
+
+    <!-- Вкладка: Новини -->
+    <div id="page-news" class="page" style="display:none">
+      <div class="filters-bar">
+        <div id="geo-filters" class="chips-row"></div>
+      </div>
+      <div id="news-list" class="news-list"></div>
+    </div>
+
+    <!-- Вкладка: події -->
+    <div id="page-events" class="page" style="display:none">
+      <div class="tab-header">
+        <h2 class="tab-title">Події</h2>
+        <p class="tab-subtitle">Афіша Олики та Волині</p>
+      </div>
+      <div class="events-filters-bar">
+        <div id="events-filters" class="chips-row"></div>
+      </div>
+      <div id="events-list" class="events-list"></div>
+    </div>
+
+    <!-- Вкладка: Автобуси -->
+    <div id="page-buses" class="page" style="display:none">
+      <div class="tab-header">
+        <h2 class="tab-title">Автобуси</h2>
+        <p class="tab-subtitle">Маршрути через Олику</p>
+      </div>
+      <div id="buses-content"></div>
+    </div>
+
+    <!-- Вкладка: Світло -->
+    <div id="page-power" class="page" style="display:none">
+      <div class="tab-header">
+        <h2 class="tab-title">Світло</h2>
+        <p class="tab-subtitle">Графік відключень · Олика</p>
+      </div>
+      <div id="power-content"></div>
+    </div>
+
+  </main>
+
+  <!-- Модальне вікно статті (відкривається при натисканні на новину) -->
+  <div id="article-modal" class="article-modal" onclick="if(event.target===this)closeArticleModal()">
+    <div class="article-modal-inner">
+      <div class="modal-sticky-header">
+        <div class="modal-handle"></div>
+        <button class="modal-close-btn" onclick="closeArticleModal()">✕</button>
+        <div class="modal-meta-tags" id="modalMetaTags"></div>
+      </div>
+      <div id="article-modal-content" class="article-modal-content"></div>
+    </div>
+  </div>
+
+  <!-- Нижня навігація (tab bar) -->
+  <nav class="tab-bar">
+    <button class="tab-item active" data-tab="community" onclick="switchTab('community')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12l9-9 9 9"/>
+        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>
+      </svg>
+      <span class="tab-label">Громада</span>
+    </button>
+    <button class="tab-item" data-tab="news" onclick="switchTab('news')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-7"/>
+        <path d="M10 8h8M10 12h6M10 16h4"/>
+      </svg>
+      <span class="tab-label">Новини</span>
+    </button>
+    <button class="tab-item" data-tab="events" onclick="switchTab('events')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M3 10h18M8 2v4M16 2v4"/>
+        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
+      </svg>
+      <span class="tab-label">Події</span>
+    </button>
+    <button class="tab-item" data-tab="buses" onclick="switchTab('buses')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 8h18M3 14h18M5 8v8M19 8v8"/>
+        <rect x="2" y="6" width="20" height="12" rx="2"/>
+        <circle cx="7" cy="20" r="1.5"/>
+        <circle cx="17" cy="20" r="1.5"/>
+        <path d="M7 18v2M17 18v2"/>
+      </svg>
+      <span class="tab-label">Автобуси</span>
+    </button>
+    <button class="tab-item" data-tab="power" onclick="switchTab('power')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+      </svg>
+      <span class="tab-label">Світло</span>
+    </button>
+  </nav>
+
+  <!-- Toast повідомлення (маленьке сповіщення знизу) -->
+  <div id="cstl-toast" class="toast"></div>
+
+  <!-- Лічильник версії деплою. Автоматично замінюється через sed у .github/workflows/deploy.yml -->
+  <div class="deploy-stamp">v1 · 01.01 00:00</div>
+
+  <script src="bundle.js"></script>
+</body>
+</html>
