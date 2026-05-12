@@ -1743,6 +1743,43 @@ html, body {
   opacity: 0.95;
 }
 
+/* Прогноз на 7 днів — горизонтальна стрічка з днями */
+.cm-weather-forecast {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255,255,255,0.2);
+}
+.cm-fc-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 6px 2px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+}
+.cm-fc-day--today {
+  background: rgba(255,255,255,0.22);
+  font-weight: 700;
+}
+.cm-fc-wd {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  opacity: 0.85;
+}
+.cm-fc-date {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.cm-fc-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
 /* ── Блок 2: Світло ── */
 .cm-power-status {
   display: flex;
