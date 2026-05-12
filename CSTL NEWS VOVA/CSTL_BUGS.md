@@ -36,7 +36,6 @@
 | # | Файл | Опис | Рішення |
 |---|------|------|---------|
 | **B-09** | `style.css:171-203` | Мертвий CSS — блок `.news-card` (стара fallback-картка). Жодне з цих імен не використовується в поточному `src/`. ~32 рядки. | Фаза 2.4. Видалити. |
-| **B-10** | `.claude/commands/` і `CSTL NEWS VOVA/.claude/commands/` | Два майже однакові набори слеш-команд з маленькими відмінностями. Inner-копія не підхопиться Claude Code. Джерело розсинхронізації. | Фаза 2.4. Лишити тільки корінну `.claude/`, видалити дубль всередині `CSTL NEWS VOVA/`. |
 | **B-11** | `.DS_Store`×3, `CSTL NEWS VOVA.zip` | macOS метадані та 35 KB архів-дубль папки закомічені в git. Шумлять у репо. | Фаза 2.4. Додати в `.gitignore` і видалити з git. |
 | **B-15** | `src/tabs/news.js` і `src/tabs/buses.js` | Патерн `onclick="fn('${data}')"` — XSS-ризик у майбутньому якщо дані прийдуть з неконтрольованого джерела. | Фаза 2.4. Переписати на `addEventListener` + `data-`-атрибути. |
 | **B-16** | `src/core/boot.js:4-23` | `setupPWA` створює manifest.json через Blob URL. На Safari iOS може бути нестабільно — iOS краще бачить статичний файл. | Фаза 2.4 або 3. Створити статичний `manifest.json` і додати у `index.html`. |
@@ -53,3 +52,4 @@
 |---|------|--------------|-------|
 | **B-01** | Деплой падав з помилкою "non-fast-forward" після зміни нікнейму GitHub (старий deploy.yml робив `git commit bundle.js → push main`, а main рухався). | 2026-04-10 | Закрито через архітектурне рішення А+ (новий підхід GitHub Pages Deploy Action не комітить у main взагалі — див. `docs/ARCHITECTURE.md`). Крок 3 Фази 1. |
 | **B-05** | `buses.js` ігнорував поле `days` — показував рейси у неділю для «пн-сб». | 2026-04-18 | `isDayActive()` + `kyivDayOfWeek()` у `matchesSearch()`. |
+| **B-10** | Два набори слеш-команд (root `.claude/commands/` + дубль у `CSTL NEWS VOVA/.claude/commands/`). Claude Code підхоплює тільки root, sub-копія була джерелом розсинхронізації. | 2026-05-12 | Видалено sub-копію (6 файлів: `audit`, `fix`, `mockup`, `new-file`, `start`, `gemini`). Root лишається єдиним джерелом правди. |
