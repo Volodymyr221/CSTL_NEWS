@@ -154,6 +154,17 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  function showToast(msg, duration = 3e3) {
+    let toast = document.getElementById("cstl-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "cstl-toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.add("visible");
+    setTimeout(() => toast.classList.remove("visible"), duration);
+  }
 
   // src/tabs/community.js
   var OLYKA2 = { lat: 50.7333, lon: 25.8167 };
@@ -435,6 +446,78 @@
       el.innerHTML = '<div class="cm-block-empty">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
+  var CATEGORY_EMOJI = {
+    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
+    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
+    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
+    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
+    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
+    "\u043F\u043E\u0434\u044F\u043A\u0430": "\u2764\uFE0F",
+    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
+    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
+  };
+  async function renderBoardBlock() {
+    const el = document.getElementById("cm-board-content");
+    if (!el)
+      return;
+    try {
+      const res = await fetch("./data/community-board.json");
+      const data = await res.json();
+      const posts = (data.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      if (!posts.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E. \u0411\u0443\u0434\u044C \u043F\u0435\u0440\u0448\u0438\u043C \u2014 \u043D\u0430\u043F\u0438\u0448\u0438 \u043D\u0438\u0436\u0447\u0435.</div>';
+        return;
+      }
+      el.innerHTML = `
+      <div class="cm-board-corkboard">
+        ${posts.map((p, i) => {
+        const tilt = p.id * 7 % 9 - 4;
+        const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
+        const contactHtml = p.contact ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>` : "";
+        return `
+            <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
+              <span class="cm-board-pin"></span>
+              <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+              <p class="cm-board-text">${escapeHtml(p.text)}</p>
+              <div class="cm-board-footer">
+                <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+                <span class="cm-board-time">${formatTime(p.ts)}</span>
+              </div>
+              ${contactHtml}
+            </article>
+          `;
+      }).join("")}
+      </div>
+
+      <form class="cm-board-form" id="cm-board-form">
+        <h4 class="cm-board-form-title">\u270F\uFE0F \u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044E \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0443</h4>
+        <textarea class="cm-board-input" id="cm-board-text" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456? (\u043F\u0440\u043E\u0434\u0430\u043C, \u0448\u0443\u043A\u0430\u044E, \u043F\u043E\u0434\u044F\u043A\u0430, \u043F\u043E\u0434\u0456\u044F\u2026)" rows="3" required></textarea>
+        <div class="cm-board-row">
+          <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="\u0406\u043C'\u044F (\u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0456\u0442\u044C \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)">
+        </div>
+        <div class="cm-board-row">
+          <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="\u041A\u043E\u043D\u0442\u0430\u043A\u0442: \u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)">
+        </div>
+        <button class="cm-board-submit" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2192</button>
+        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456, \u0443 \u043D\u043E\u0432\u0438\u043D\u0430\u0445 \u0430\u0431\u043E \u0432 \u043F\u043E\u0434\u0456\u044F\u0445.</p>
+      </form>
+    `;
+      document.getElementById("cm-board-form")?.addEventListener("submit", (e) => {
+        e.preventDefault();
+        const text = document.getElementById("cm-board-text")?.value.trim();
+        if (!text)
+          return;
+        console.log("[community-board] pending submission:", {
+          text,
+          author: document.getElementById("cm-board-author")?.value.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E",
+          contact: document.getElementById("cm-board-contact")?.value.trim() || null
+        });
+        showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u043E\u043A\u0438 \u0449\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0446\u0456\u044F \u0449\u0435 \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0430 \u2014 \u0444\u0443\u043D\u043A\u0446\u0456\u044F \u0437\u0430\u043F\u0440\u0430\u0446\u044E\u0454 \u043F\u0456\u0441\u043B\u044F Supabase.", 5e3);
+      });
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+    }
+  }
   async function renderNewsBlock() {
     const el = document.getElementById("cm-news-content");
     if (!el)
@@ -558,6 +641,13 @@
       <div id="cm-announcements-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
+    <section class="cm-block cm-block--board">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u{1F4CC} \u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+      </header>
+      <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
     <section class="cm-block cm-block--news">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041E\u0441\u0442\u0430\u043D\u043D\u0456 \u043D\u043E\u0432\u0438\u043D\u0438</h3>
@@ -588,6 +678,7 @@
     renderPowerBlock();
     renderBusBlock();
     renderAnnouncementsBlock();
+    renderBoardBlock();
     renderNewsBlock();
     renderEventBlock();
     renderContactsBlock();

@@ -13,7 +13,7 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime } from '../core/utils.js';
+import { escapeHtml, formatTime, showToast } from '../core/utils.js';
 
 const OLYKA = { lat: 50.7333, lon: 25.8167 };
 const POWER_PREFS_KEY = 'power_prefs_v2';
@@ -286,7 +286,7 @@ async function renderBusBlock() {
   }
 }
 
-// ── Блок 4: Оголошення громади ────────────────────────────────────────────────
+// ── Блок 4: Оголошення громади (від адміністрації) ────────────────────────────
 
 async function renderAnnouncementsBlock() {
   const el = document.getElementById('cm-announcements-content');
@@ -321,7 +321,90 @@ async function renderAnnouncementsBlock() {
   }
 }
 
-// ── Блок 5: Останні новини ────────────────────────────────────────────────────
+// ── Блок 5: Дошка громади (від мешканців, після модерації) ───────────────────
+
+const CATEGORY_EMOJI = {
+  'продам':      '💰',
+  'куплю':       '🛒',
+  'шукаю':       '🔍',
+  'знайдено':    '🎁',
+  'загубилось':  '😟',
+  'подяка':      '❤️',
+  'послуга':     '🔧',
+  'оголошення':  '📢',
+};
+
+async function renderBoardBlock() {
+  const el = document.getElementById('cm-board-content');
+  if (!el) return;
+
+  try {
+    const res  = await fetch('./data/community-board.json');
+    const data = await res.json();
+    const posts = (data.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+    if (!posts.length) {
+      el.innerHTML = '<div class="cm-block-empty">На дошці поки порожньо. Будь першим — напиши нижче.</div>';
+      return;
+    }
+
+    el.innerHTML = `
+      <div class="cm-board-corkboard">
+        ${posts.map((p, i) => {
+          // Псевдовипадковий нахил −4..+4°, стабільний для одного і того самого id
+          const tilt = ((p.id * 7) % 9) - 4;
+          const emoji = CATEGORY_EMOJI[p.category] || '📌';
+          const contactHtml = p.contact
+            ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>`
+            : '';
+          return `
+            <article class="cm-board-note cm-board-note--${escapeHtml(p.color || 'yellow')}" style="--tilt:${tilt}deg">
+              <span class="cm-board-pin"></span>
+              <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+              <p class="cm-board-text">${escapeHtml(p.text)}</p>
+              <div class="cm-board-footer">
+                <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+                <span class="cm-board-time">${formatTime(p.ts)}</span>
+              </div>
+              ${contactHtml}
+            </article>
+          `;
+        }).join('')}
+      </div>
+
+      <form class="cm-board-form" id="cm-board-form">
+        <h4 class="cm-board-form-title">✏️ Подати оголошення, подію або новину</h4>
+        <textarea class="cm-board-input" id="cm-board-text" placeholder="Що хочете повідомити громаді? (продам, шукаю, подяка, подія…)" rows="3" required></textarea>
+        <div class="cm-board-row">
+          <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="Ім'я (або залишіть порожнім — анонімно)">
+        </div>
+        <div class="cm-board-row">
+          <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="Контакт: телефон / Telegram (необов'язково)">
+        </div>
+        <button class="cm-board-submit" type="submit">Надіслати →</button>
+        <p class="cm-board-hint">Запит йде модератору. Після перевірки оголошення зʼявиться на дошці, у новинах або в подіях.</p>
+      </form>
+    `;
+
+    document.getElementById('cm-board-form')?.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = document.getElementById('cm-board-text')?.value.trim();
+      if (!text) return;
+      // Заглушка до підключення Supabase (Фаза 3): показуємо toast і логуємо.
+      // TODO Supabase: POST у таблицю community_posts зі статусом 'pending'.
+      console.log('[community-board] pending submission:', {
+        text,
+        author:  document.getElementById('cm-board-author')?.value.trim() || 'анонімно',
+        contact: document.getElementById('cm-board-contact')?.value.trim() || null,
+      });
+      showToast('Дякуємо! Запит надіслано модератору. Поки що модерація ще не підключена — функція запрацює після Supabase.', 5000);
+    });
+  } catch {
+    el.innerHTML = '<div class="cm-block-empty">Дошка тимчасово недоступна</div>';
+  }
+}
+
+// ── Блок 6: Останні новини ────────────────────────────────────────────────────
 
 async function renderNewsBlock() {
   const el = document.getElementById('cm-news-content');
@@ -462,6 +545,13 @@ function renderSkeleton() {
       <div id="cm-announcements-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
 
+    <section class="cm-block cm-block--board">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">📌 Дошка громади</h3>
+      </header>
+      <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
+    </section>
+
     <section class="cm-block cm-block--news">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Останні новини</h3>
@@ -496,6 +586,7 @@ export function initCommunity() {
   renderPowerBlock();
   renderBusBlock();
   renderAnnouncementsBlock();
+  renderBoardBlock();
   renderNewsBlock();
   renderEventBlock();
   renderContactsBlock();
