@@ -1712,29 +1712,6 @@ html, body {
   flex-shrink: 0;
 }
 
-/* Іконка блоку — кругла плашка з кольоровим тоном по темі */
-.cm-block-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 12px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-.cm-block-icon svg {
-  width: 22px;
-  height: 22px;
-  stroke-width: 1.9;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  fill: none;
-}
-.cm-block-icon--power    { background: rgba(245,158,11,0.13); color: #D97706; }
-.cm-block-icon--bus      { background: rgba(5,150,105,0.13);  color: #059669; }
-.cm-block-icon--event    { background: rgba(147,51,234,0.13); color: #7C3AED; }
-.cm-block-icon--contacts { background: rgba(37,99,235,0.13);  color: #2563EB; }
-.cm-block-icon--board    { background: rgba(220,38,38,0.13);  color: #DC2626; }
 .cm-block-body { padding: 4px 14px 14px; }
 .cm-loading { color: var(--gray); font-size: 13px; padding: 8px 14px 14px; }
 .cm-block-empty {
