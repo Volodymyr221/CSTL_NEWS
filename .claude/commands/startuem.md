@@ -29,12 +29,13 @@ CSTL NEWS VOVA/_ai-tools/NEW_SESSION_PROMPT.md
 
 Згідно з інструкцією у `NEW_SESSION_PROMPT.md`, прочитай у такому порядку:
 
-1. `CSTL NEWS VOVA/START_HERE.md`
-2. `CSTL NEWS VOVA/_ai-tools/SESSION_STATE.md`
-3. `CSTL NEWS VOVA/_ai-tools/BACKLOG.md`
-4. `CSTL NEWS VOVA/CSTL_BUGS.md`
-5. `CSTL NEWS VOVA/CLAUDE.md`
-6. `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
+1. `CSTL NEWS VOVA/HOT_RULES.md` — 8 болючих правил що порушуються найчастіше (читай ПЕРШИМ)
+2. `CSTL NEWS VOVA/START_HERE.md`
+3. `CSTL NEWS VOVA/_ai-tools/SESSION_STATE.md`
+4. `CSTL NEWS VOVA/_ai-tools/BACKLOG.md`
+5. `CSTL NEWS VOVA/CSTL_BUGS.md`
+6. `CSTL NEWS VOVA/CLAUDE.md`
+7. `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
 
 Додатково — подивись git-історію:
 ```
