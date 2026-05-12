@@ -642,18 +642,18 @@
     const greeting = getGreeting();
     const todayStr = formatTodayHeader();
     el.innerHTML = `
-    <section class="cm-greeting">
-      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
-    </section>
-
     <section class="cm-hero">
       <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="\u041E\u043B\u0438\u043A\u0430" loading="eager">
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
         <p class="cm-hero-sub">\u041D\u0430\u0448\u0435 \u043C\u0456\u0441\u0442\u0435\u0447\u043A\u043E \u043D\u0430 \u0412\u043E\u043B\u0438\u043D\u0456</p>
       </div>
+    </section>
+
+    <section class="cm-greeting">
+      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
     </section>
 
     <section class="cm-block cm-block--board">

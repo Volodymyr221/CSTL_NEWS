@@ -535,18 +535,18 @@ function renderSkeleton() {
   const todayStr = formatTodayHeader();
 
   el.innerHTML = `
-    <section class="cm-greeting">
-      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
-    </section>
-
     <section class="cm-hero">
       <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="Олика" loading="eager">
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
         <p class="cm-hero-sub">Наше містечко на Волині</p>
       </div>
+    </section>
+
+    <section class="cm-greeting">
+      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
     </section>
 
     <section class="cm-block cm-block--board">
