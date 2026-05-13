@@ -41,10 +41,11 @@ CSTL_NEWS/
 │   │   ├── utils.js              # formatTime, escapeHtml, showToast, formatEventDate
 │   │   └── weather.js            # Віджет погоди в шапці (Open-Meteo API)
 │   └── tabs/
+│       ├── community.js          # Вкладка Громада (головна — дашборд + дошка)
 │       ├── news.js               # Вкладка Новини (фільтри, картки, модалка статті)
 │       ├── events.js             # Вкладка Події (афіша)
 │       ├── buses.js              # Вкладка Автобуси (розклад + "через X хв")
-│       └── submit.js             # Вкладка Подати новину/оголошення
+│       └── power.js              # Вкладка Світло (графік відключень)
 │
 ├── .github/
 │   └── workflows/
@@ -73,10 +74,11 @@ src/app.js (точка входу)
   → імпортує src/core/boot.js
   → імпортує src/core/weather.js
   → імпортує src/core/utils.js
+  → імпортує src/tabs/community.js
   → імпортує src/tabs/news.js
   → імпортує src/tabs/events.js
   → імпортує src/tabs/buses.js
-  → імпортує src/tabs/submit.js
+  → імпортує src/tabs/power.js
        ↓
   node build.js (запускає esbuild)
        ↓

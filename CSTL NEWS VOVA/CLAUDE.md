@@ -155,11 +155,14 @@ main отримує мердж-коміт
 | `src/app.js` | Точка входу — імпортує всі модулі |
 | `src/core/boot.js` | PWA setup, Service Worker |
 | `src/core/utils.js` | `formatTime`, `escapeHtml`, `showToast`, `formatEventDate` |
-| `src/core/weather.js` | Віджет погоди у шапці (Open-Meteo API) |
+| `src/core/weather.js` | Віджет погоди у шапці (Open-Meteo API + geolocation з utils.js) |
+| `src/tabs/community.js` | Головна вкладка-дашборд: hero фото, greeting, дошка громади, погода, світло, автобус, подія, контакти |
 | `src/tabs/news.js` | Стрічка новин, фільтри |
 | `src/tabs/events.js` | Афіша подій |
 | `src/tabs/buses.js` | Розклад автобусів |
-| `src/tabs/submit.js` | Форма подачі новини |
+| `src/tabs/power.js` | Графік відключень електрики |
+| `data/community.json` | Офіційні оголошення (для дошки громади) + контакти |
+| `data/community-board.json` | Пости мешканців на дошці громади |
 
 **Збірка локально:** `node build.js` → читає `src/app.js` → збирає `bundle.js` (esbuild, IIFE формат)
 

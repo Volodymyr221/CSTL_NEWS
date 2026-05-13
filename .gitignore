@@ -2,3 +2,17 @@ node_modules/
 bundle.js.map
 __pycache__/
 *.pyc
+
+# macOS / Windows / IDE сміття
+.DS_Store
+**/.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Архіви і логи не комітимо
+*.zip
+*.log
+*.tmp
+.env
+.env.local
