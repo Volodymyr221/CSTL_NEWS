@@ -1,25 +1,5 @@
 (() => {
   // src/core/boot.js
-  function setupPWA() {
-    const manifest = {
-      name: "CSTL NEWS",
-      short_name: "CSTL",
-      start_url: "/",
-      display: "standalone",
-      background_color: "#ffffff",
-      theme_color: "#C41E3A",
-      icons: [{
-        src: "data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjIwIiBmaWxsPSIjQzQxRTNBIi8+PHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNjAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QzwvdGV4dD48L3N2Zz4=",
-        sizes: "192x192",
-        type: "image/svg+xml"
-      }]
-    };
-    const blob = new Blob([JSON.stringify(manifest)], { type: "application/manifest+json" });
-    const link = document.createElement("link");
-    link.rel = "manifest";
-    link.href = URL.createObjectURL(blob);
-    document.head.appendChild(link);
-  }
   function setupSW() {
     if (!("serviceWorker" in navigator))
       return;
@@ -61,10 +41,6 @@
     });
   }
   function bootApp() {
-    try {
-      setupPWA();
-    } catch (e) {
-    }
     try {
       setupSW();
     } catch (e) {
@@ -161,18 +137,25 @@
     const tempEl = document.getElementById("weather-temp");
     if (!iconEl || !tempEl)
       return;
+    const ac = new AbortController();
+    const timeoutId = setTimeout(() => ac.abort(), 5e3);
     try {
       const { lat, lon, city: knownCity } = await getCoords();
       const [weatherRes, cityName] = await Promise.all([
-        fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`),
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`,
+          { signal: ac.signal }
+        ),
         knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
       ]);
+      clearTimeout(timeoutId);
       const data = await weatherRes.json();
       const temp = Math.round(data.current.temperature_2m);
       iconEl.textContent = codeToIcon(data.current.weather_code);
       document.getElementById("weather-city").textContent = cityName;
       tempEl.textContent = `${temp}\xB0`;
     } catch {
+      clearTimeout(timeoutId);
       const widget = document.getElementById("weather-widget");
       if (widget)
         widget.style.visibility = "hidden";
@@ -767,7 +750,7 @@
   `).join("");
   }
   function getFiltered() {
-    return allArticles.filter((a) => activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo);
+    return allArticles.filter((a) => activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
   }
   function renderNews() {
     const el = document.getElementById("news-list");
@@ -1031,7 +1014,12 @@
       if (d < now)
         return false;
       return activeFilter === "\u0412\u0441\u0456" || e.category === activeFilter;
-    }).sort((a, b) => new Date(a.date) - new Date(b.date));
+    }).sort((a, b) => {
+      const byDate = new Date(a.date) - new Date(b.date);
+      if (byDate !== 0)
+        return byDate;
+      return (a.time || "").localeCompare(b.time || "");
+    });
     if (!list.length) {
       el.innerHTML = '<div class="empty-state">\u041F\u043E\u0434\u0456\u0439 \u0443 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
       return;

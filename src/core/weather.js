@@ -19,18 +19,27 @@ export async function initWeather() {
   const tempEl = document.getElementById('weather-temp');
   if (!iconEl || !tempEl) return;
 
+  // B-13 fix: AbortController з 5с таймаутом, щоб fetch не висів безкінечно.
+  const ac = new AbortController();
+  const timeoutId = setTimeout(() => ac.abort(), 5000);
+
   try {
     const { lat, lon, city: knownCity } = await getCoords();
     const [weatherRes, cityName] = await Promise.all([
-      fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`),
+      fetch(
+        `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`,
+        { signal: ac.signal }
+      ),
       knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon),
     ]);
+    clearTimeout(timeoutId);
     const data = await weatherRes.json();
     const temp = Math.round(data.current.temperature_2m);
     iconEl.textContent = codeToIcon(data.current.weather_code);
     document.getElementById('weather-city').textContent = cityName;
     tempEl.textContent = `${temp}°`;
   } catch {
+    clearTimeout(timeoutId);
     const widget = document.getElementById('weather-widget');
     if (widget) widget.style.visibility = 'hidden';
   }

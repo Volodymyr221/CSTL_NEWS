@@ -25,7 +25,11 @@ function renderGeoFilters() {
 }
 
 function getFiltered() {
-  return allArticles.filter(a => activeGeo === 'Всі' || a.geo === activeGeo);
+  // B-12 fix: сортуємо за ts (новіші зверху), щоб featured завжди була найсвіжіша.
+  return allArticles
+    .filter(a => activeGeo === 'Всі' || a.geo === activeGeo)
+    .slice()
+    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
 }
 
 export function renderNews() {

@@ -22,10 +22,7 @@
 | # | Файл | Опис | Рішення |
 |---|------|------|---------|
 | ~~**B-05**~~ | ~~`src/tabs/buses.js`~~ | ~~`getNextDeparture()` ігнорує поле `days`.~~ | **Закрито 2026-04-18.** `isDayActive(route.days)` в `matchesSearch()` фільтрує рейси за `щодня / пн-сб / пн-пт` через `kyivDayOfWeek()`. |
-| **B-06** | `src/tabs/events.js:21` | `new Date(now.toDateString())` — крихкий парсинг дати, на iOS Safari може ламатись. | Фаза 2.4. Замінити на `const d = new Date(); d.setHours(0,0,0,0);`. |
 | **B-08** | `sw.js:6-11` | `logo.png` не в `STATIC_ASSETS`, не кешується. В офлайні splash порожній квадрат. | Крок 4 Фази 1. Додати `'./logo.png'` у список. |
-| **B-12** | `src/tabs/news.js:42` | `articles.map((a,i) => i===0 ? renderFeatured(a) : renderRow(a))` — перша стаття у масиві завжди featured, без сортування за `ts`. | Фаза 2.1. Додати `.sort((a,b) => b.ts - a.ts)` перед map. |
-| **B-13** | `src/core/weather.js:37` | `fetch` до Open-Meteo без таймаута і `AbortController`. Може зависати назавжди. | Фаза 2.4. Додати AbortController з таймаутом 5с. |
 | **B-14** | Немає тематичного фільтра у `news.js` | Документація обіцяє "географія + тематика", але `news.js` має тільки `GEO_FILTERS`. `category` виводиться в картку, але фільтра нема. | Фаза 2.1. Додати `TOPIC_FILTERS` і другий рядок чіпів. |
 
 ---
@@ -34,12 +31,7 @@
 
 | # | Файл | Опис | Рішення |
 |---|------|------|---------|
-| **B-09** | `style.css:171-203` | Мертвий CSS — блок `.news-card` (стара fallback-картка). Жодне з цих імен не використовується в поточному `src/`. ~32 рядки. | Фаза 2.4. Видалити. |
-| **B-15** | `src/tabs/news.js` і `src/tabs/buses.js` | Патерн `onclick="fn('${data}')"` — XSS-ризик у майбутньому якщо дані прийдуть з неконтрольованого джерела. | Фаза 2.4. Переписати на `addEventListener` + `data-`-атрибути. |
-| **B-16** | `src/core/boot.js:4-23` | `setupPWA` створює manifest.json через Blob URL. На Safari iOS може бути нестабільно — iOS краще бачить статичний файл. | Фаза 2.4 або 3. Створити статичний `manifest.json` і додати у `index.html`. |
-| **B-17** | `src/tabs/events.js` | Немає сортування за часом у межах однієї дати. Дві події на одну дату — в порядку JSON. | Фаза 2.4. Додати `.sort((a,b) => a.time.localeCompare(b.time))`. |
-| **B-19** | Граматика "Вови" у 6 файлах | `"Воваа"`, `"Вовау"`, `"Воваом"` — некоректні відмінки імені. | Фаза 2.4. Виправити на "Вови", "Вовою", "Вові" відповідно. |
-| **B-20** | `sync.sh:4` | `git pull origin main --no-rebase -X ours` мовчки відкидає чужі зміни при конфлікті. | Фаза 2.4. Видалити файл або переписати безпечно. |
+| **B-15** | `src/tabs/news.js` | Патерн `onclick="fn('${data}')"` — XSS-ризик у майбутньому якщо дані прийдуть з неконтрольованого джерела. | Переписати на `addEventListener` + `data-`-атрибути. У buses.js уже закрито (0 onclick), у news.js — 3 використання залишається. |
 
 ---
 
@@ -53,3 +45,11 @@
 | **B-07** | `src/tabs/submit.js` — форма «Подати новину» через `mailto:` з оманливим toast «Надіслано!». | 2026-05-12 | Файл `submit.js` видалено повністю. Замінено крутішим UX: кнопка-тригер у Дошці громади (`community.js`) → bottom-sheet модалка → submit-handler. Бекенд (Supabase) — у Фазі 3. |
 | **B-18** | `src/tabs/submit.js` — PII (телефон/Instagram) зберігалися у localStorage без TTL. | 2026-05-12 | Файл `submit.js` видалено повністю. Нова форма у модалці нічого не зберігає у localStorage; дані підуть напряму у Supabase у Фазі 3. |
 | **B-11** | `.DS_Store`×3 і `CSTL NEWS VOVA.zip` (36 KB) закомічені в git. | 2026-05-12 | Розширено `.gitignore` (`.DS_Store`, `*.zip`, `*.log`, `.idea/`, `.vscode/`, `.env`). Файли прибрано з git tracking через `git rm --cached`. |
+| **B-09** | Мертвий CSS `.submit-form` / `.form-input` / `.submit-btn` (~32 рядки), стара картка `.news-card`. | 2026-05-13 | Прибрано при розбитті style.css на 8 модулів (`style/*.css`) — мертві блоки не перенесено. |
+| **B-13** | `fetch` до Open-Meteo у `weather.js` без таймаута і AbortController. Висить безкінечно при поганому з'єднанні. | 2026-05-13 | Додано `AbortController` з 5-секундним `setTimeout(() => ac.abort(), 5000)`. `clearTimeout` у success і catch. |
+| **B-12** | `news.js:42` featured = `articles[0]` без сортування — перша у JSON може бути стара. | 2026-05-13 | У `getFiltered()` додано `.sort((a,b) => (b.ts || 0) - (a.ts || 0))`. Featured тепер завжди найсвіжіша. |
+| **B-17** | `events.js` сортування тільки за датою — при однакових датах події у порядку JSON. | 2026-05-13 | Додано вторинне сортування `(a.time || '').localeCompare(b.time || '')`. |
+| **B-06** | `events.js` крихкий парсинг дати `new Date(now.toDateString())` — на iOS Safari ламається. | 2026-05-13 | Уже закрито у коді: `now.setHours(0,0,0,0)` + `new Date(e.date + 'T00:00:00')`. Підтверджено пошуком — крихких патернів нема. |
+| **B-16** | `boot.js setupPWA()` створював дубль `<link rel="manifest">` через Blob URL — конфлікт із статичним з index.html, на iOS Safari нестабільно. | 2026-05-13 | Функцію `setupPWA()` повністю видалено з `boot.js`. Лишився тільки статичний `<link rel="manifest" href="manifest.json">` у index.html (повний з PNG-іконками). |
+| **B-19** | Граматика "Вови" у документації: `"Воваа"`, `"Вовау"`, `"Воваом"`. | 2026-05-13 | `sed` по `docs/RULES.md` і `docs/CONCEPT.md`. Виправлено на правильні відмінки. |
+| **B-20** | `sync.sh` робив `git pull origin main --no-rebase -X ours` — мовчки відкидав чужі зміни. | 2026-05-13 | Файл `sync.sh` видалено. Workflow тепер через робочу гілку → auto-merge → deploy. |
