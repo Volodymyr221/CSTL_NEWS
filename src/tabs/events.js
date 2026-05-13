@@ -182,7 +182,12 @@ function renderList() {
       if (d < now) return false;
       return activeFilter === 'Всі' || e.category === activeFilter;
     })
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .sort((a, b) => {
+      // B-17 fix: при однаковій даті сортуємо за часом (раніше — у порядку JSON).
+      const byDate = new Date(a.date) - new Date(b.date);
+      if (byDate !== 0) return byDate;
+      return (a.time || '').localeCompare(b.time || '');
+    });
 
   if (!list.length) {
     el.innerHTML = '<div class="empty-state">Подій у цій категорії поки немає</div>';

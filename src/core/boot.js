@@ -1,26 +1,8 @@
 // boot.js — ініціалізація PWA і Service Worker
 
-// === PWA MANIFEST (дозволяє встановити сайт на телефон як додаток) ===
-function setupPWA() {
-  const manifest = {
-    name: 'CSTL NEWS',
-    short_name: 'CSTL',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#ffffff',
-    theme_color: '#C41E3A',
-    icons: [{
-      src: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAxOTIgMTkyIj48cmVjdCB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgcng9IjIwIiBmaWxsPSIjQzQxRTNBIi8+PHRleHQgeD0iOTYiIHk9IjExMCIgZm9udC1mYW1pbHk9Ikdlb3JnaWEsc2VyaWYiIGZvbnQtc2l6ZT0iNjAiIGZvbnQtd2VpZ2h0PSJib2xkIiBmaWxsPSJ3aGl0ZSIgdGV4dC1hbmNob3I9Im1pZGRsZSI+QzwvdGV4dD48L3N2Zz4=',
-      sizes: '192x192',
-      type: 'image/svg+xml'
-    }]
-  };
-  const blob = new Blob([JSON.stringify(manifest)], { type: 'application/manifest+json' });
-  const link = document.createElement('link');
-  link.rel = 'manifest';
-  link.href = URL.createObjectURL(blob);
-  document.head.appendChild(link);
-}
+// PWA manifest — статичний у index.html (<link rel="manifest" href="manifest.json">).
+// B-16 fix: прибрано динамічний Blob-manifest який дублювався і конфліктував
+// зі статичним на iOS Safari (iOS краще бачить файл, не blob URL).
 
 // === SERVICE WORKER (офлайн-кешування) ===
 function setupSW() {
@@ -65,6 +47,5 @@ function setupSW() {
 }
 
 export function bootApp() {
-  try { setupPWA(); } catch(e) {}
   try { setupSW(); } catch(e) {}
 }
