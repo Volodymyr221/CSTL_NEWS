@@ -1,0 +1,230 @@
+/* ===== EVENTS ===== */
+.events-list { padding: 12px 16px; display: flex; flex-direction: column; gap: 12px; }
+.event-card { background: var(--white); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+.event-card-img { width: 100%; height: 160px; object-fit: cover; }
+.event-card-body { padding: 14px; }
+.event-card-date { font-size: 12px; color: var(--red); font-weight: 600; text-transform: capitalize; margin-bottom: 6px; }
+.event-card-title { font-size: 17px; font-weight: 700; margin-bottom: 6px; color: var(--black); }
+.event-card-desc { font-size: 13px; color: var(--gray); line-height: 1.5; margin-bottom: 10px; }
+.event-card-location { font-size: 12px; color: var(--gray); font-weight: 500; }
+
+/* ===== EVENTS v2 — нові картки подій ===== */
+
+/* Смуга з фільтрами (sticky — прилипає до шапки при скролі) */
+.events-filters-bar {
+  padding: 10px 16px 0;
+  background: var(--white);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Картка події */
+.ev-card {
+  background: var(--white);
+  border: 1.5px solid color-mix(in srgb, var(--cat-color, var(--border)) 38%, white);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: opacity 0.15s, background-color 0.3s;
+}
+.ev-card:active { opacity: 0.82; }
+/* Розгорнутий стан: легкий тонований фон */
+.ev-card.expanded { background: #f4f5f9; }
+/* Ховаємо стислий опис — повний показується в деталях */
+.ev-card.expanded .ev-card-desc { display: none; }
+
+/* Обкладинка 16:9 */
+.ev-card-cover {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--gray-light);
+}
+.ev-card-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.ev-card-img--ph {
+  background: linear-gradient(135deg, #ebebeb 0%, #d8d8d8 100%);
+}
+
+/* Бейдж з датою і категорією */
+.ev-card-badge {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+  color: white;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+}
+.ev-badge-dot { opacity: 0.7; }
+
+/* Бейдж всередині тіла картки (без фото) */
+.ev-card-badge--inline {
+  position: static;
+  display: inline-flex;
+  margin-bottom: 8px;
+}
+
+/* Тіло картки */
+.ev-card-body { padding: 14px; }
+
+.ev-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  color: var(--navy);
+  margin-bottom: 6px;
+}
+
+.ev-card-desc {
+  font-size: 13px;
+  color: var(--gray);
+  line-height: 1.5;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.ev-card-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ev-meta-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--gray);
+  font-weight: 500;
+}
+.ev-meta-item svg { flex-shrink: 0; }
+
+/* ── Skeleton (переливаючі блоки завантаження) ── */
+.ev-skeleton {
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.ev-skel-img {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: ev-shimmer 1.4s infinite;
+}
+.ev-skel-body { padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.ev-skel-line {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e4e4e4 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: ev-shimmer 1.4s infinite;
+}
+.ev-skel-line.w100 { width: 100%; }
+.ev-skel-line.w80  { width: 80%; }
+.ev-skel-line.w60  { width: 60%; }
+.ev-skel-line.w40  { width: 40%; }
+
+@keyframes ev-shimmer {
+  0%   { background-position:  200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* ── Акордеон карток подій (accordion — розгортання на місці) ── */
+
+/* Підказка "Детальніше" знизу картки */
+.ev-card-expand-hint {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 10px;
+  margin-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--cat-color, var(--red));
+  font-weight: 600;
+  letter-spacing: 0.2px;
+}
+.ev-expand-chevron {
+  font-size: 18px;
+  line-height: 1;
+  transition: transform 0.3s;
+}
+/* Коли картка розгорнута — ховаємо підказку та повертаємо стрілку */
+.ev-card.expanded .ev-expand-chevron { transform: rotate(90deg); }
+.ev-card.expanded .ev-card-expand-hint { display: none; }
+
+/* Блок деталей — схований за замовчуванням, плавно розкривається */
+.ev-card-detail {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.38s ease;
+}
+.ev-card.expanded .ev-card-detail { max-height: 1400px; }
+
+.ev-detail-body {
+  padding: 0 14px 20px;
+  border-top: 1px solid var(--border);
+}
+
+/* Повний текст опису з підтримкою переносів рядка */
+.ev-detail-desc {
+  font-size: 14px;
+  line-height: 1.75;
+  color: var(--black);
+  white-space: pre-line;
+  margin: 14px 0 18px;
+}
+
+/* Кнопка "Створити нагадування" — завантажує .ics у рідний Calendar */
+.ev-ics-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 11px 14px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  letter-spacing: 0.3px;
+  transition: background 0.15s;
+}
+.ev-ics-btn:active { background: var(--red-dark); }
+
+/* Кнопка "Згорнути" */
+.ev-detail-close {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  background: var(--gray-light);
+  border: none;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.ev-detail-close:active { background: var(--border); }
+

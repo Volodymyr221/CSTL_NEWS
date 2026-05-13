@@ -1,0 +1,730 @@
+/* ===== COMMUNITY (Громада — головна вкладка-дашборд) ===== */
+.cm-content {
+  padding: 12px 14px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+.cm-block {
+  background: var(--bg-card);
+  border-radius: var(--card-radius);
+  box-shadow: var(--card-shadow);
+  overflow: hidden;
+}
+.cm-block-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+.cm-block-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--black);
+  letter-spacing: 0.2px;
+  flex: 1;
+  min-width: 0;
+}
+.cm-block-link {
+  background: none;
+  border: none;
+  color: var(--red);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.cm-block-body { padding: 4px 14px 14px; }
+.cm-loading { color: var(--gray); font-size: 13px; padding: 8px 14px 14px; }
+.cm-block-empty {
+  padding: 14px 14px 18px;
+  color: var(--gray);
+  font-size: 13.5px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+.cm-block-cta {
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 18px;
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Блок 1: Погода ── */
+.cm-block--weather {
+  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-deep) 100%);
+  color: var(--sky-text);
+}
+.cm-block--weather .cm-block-title { color: var(--sky-text); }
+.cm-weather-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 4px 0 10px;
+}
+.cm-weather-icon { font-size: 56px; line-height: 1; }
+.cm-weather-temp {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 56px; font-weight: 700; line-height: 0.9;
+  letter-spacing: -2px;
+  color: var(--sky-text);
+}
+.cm-weather-text { display: flex; flex-direction: column; gap: 2px; }
+.cm-weather-desc { font-size: 15px; font-weight: 600; color: var(--sky-text); }
+.cm-weather-feels { font-size: 12.5px; color: var(--sky-text); opacity: 0.75; }
+.cm-weather-extra {
+  display: flex;
+  gap: 16px;
+  font-size: 12.5px;
+  color: var(--sky-text);
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.10);
+  opacity: 0.95;
+}
+
+/* Прогноз на 7 днів — горизонтальна стрічка з днями */
+.cm-weather-forecast {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(0,0,0,0.10);
+}
+.cm-fc-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  padding: 8px 2px;
+  border-radius: 10px;
+  background: rgba(255,255,255,0.40);
+  color: var(--sky-text);
+}
+.cm-fc-day--today {
+  background: rgba(255,255,255,0.85);
+  font-weight: 700;
+}
+.cm-fc-wd {
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  opacity: 0.85;
+}
+.cm-fc-date {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+.cm-fc-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
+/* ── Блок 2: Світло ── */
+.cm-power-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+.cm-power-on    { background: #E8F5E9; }
+.cm-power-off   { background: #FFEBEE; }
+.cm-power-maybe { background: #FFF8E1; }
+.cm-power-dot { font-size: 22px; line-height: 1; }
+.cm-power-main { font-weight: 700; font-size: 17px; color: var(--black); }
+.cm-power-next { font-size: 12.5px; color: var(--gray); margin-top: 2px; }
+.cm-power-loc { font-size: 12px; color: var(--gray); padding-left: 4px; }
+
+/* ── Блок 3: Автобус ── */
+.cm-bus-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+}
+.cm-bus-time {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--black);
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+.cm-bus-info { flex: 1; min-width: 0; }
+.cm-bus-route {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-bus-meta { font-size: 11.5px; color: var(--gray); margin-top: 2px; }
+.cm-bus-countdown {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray);
+  padding: 6px 12px;
+  background: var(--gray-light);
+  border-radius: 16px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.cm-bus-countdown.urgent {
+  background: var(--red);
+  color: white;
+}
+.cm-bus-main.urgent .cm-bus-time { color: var(--red); }
+
+/* ── Блок 4: Оголошення — обʼєднано з Дошкою громади 12.05 (стилі видалено) ──*/
+
+/* ── Блок 5: Новини ── */
+.cm-news-row {
+  display: flex;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-news-row:last-child { border-bottom: none; padding-bottom: 0; }
+.cm-news-row:first-child { padding-top: 4px; }
+.cm-news-img {
+  width: 64px;
+  height: 64px;
+  border-radius: 8px;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: var(--gray-light);
+}
+.cm-news-img--placeholder {
+  background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+}
+.cm-news-body { flex: 1; min-width: 0; }
+.cm-news-meta {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.cm-news-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--black);
+  line-height: 1.35;
+  margin: 3px 0 4px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.cm-news-footer { font-size: 11px; color: var(--gray); }
+
+/* ── Блок 6: Подія ── */
+.cm-event-card {
+  display: flex;
+  gap: 12px;
+  padding: 8px 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-event-date {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 64px;
+  background: var(--red);
+  color: white;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+.cm-event-day { font-size: 26px; font-weight: 800; line-height: 1; }
+.cm-event-month {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 2px;
+}
+.cm-event-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
+.cm-event-cat {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.cm-event-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  line-height: 1.3;
+  margin: 3px 0 4px;
+}
+.cm-event-meta { font-size: 11.5px; color: var(--gray); }
+
+/* ── Блок 7: Контакти ── */
+.cm-contacts-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+  padding: 4px 14px 14px;
+}
+.cm-contact-card {
+  --accent: #666;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding: 12px;
+  background: var(--white);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent);
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--black);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.cm-contact-card:active { background: var(--gray-light); }
+.cm-contact-icon {
+  display: inline-flex;
+  width: 22px;
+  height: 22px;
+  color: var(--accent);
+}
+.cm-contact-icon svg { width: 100%; height: 100%; }
+.cm-contact-name {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--black);
+  line-height: 1.2;
+}
+.cm-contact-phone {
+  font-size: 12px;
+  color: var(--gray);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tab-bar з 5 кнопками — підправити іконку щоб не була завелика */
+.tab-bar .tab-icon { width: 21px; height: 21px; }
+.tab-bar .tab-label { font-size: 9.5px; }
+
+/* ===== D2 «ПОЛЕ» — колірні фарбування блоків (12.05.2026) ===== */
+
+/* Світло — м'ятна трава */
+.cm-block--power {
+  background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 100%);
+}
+.cm-block--power .cm-block-title { color: var(--mint-text); }
+.cm-block--power .cm-power-main  { color: var(--mint-text); }
+.cm-block--power .cm-power-next  { color: var(--mint-text); opacity: 0.75; }
+.cm-block--power .cm-power-loc   { color: var(--mint-text); opacity: 0.75; }
+.cm-block--power .cm-power-status.cm-power-on    { background: rgba(255,255,255,0.55); }
+.cm-block--power .cm-power-status.cm-power-off   { background: rgba(196,30,58,0.18); }
+.cm-block--power .cm-power-status.cm-power-maybe { background: rgba(255,255,255,0.35); }
+
+/* Автобус — медовий */
+.cm-block--bus {
+  background: linear-gradient(135deg, var(--honey) 0%, var(--honey-deep) 100%);
+}
+.cm-block--bus .cm-block-title  { color: var(--honey-text); }
+.cm-block--bus .cm-bus-time     { color: var(--honey-text); }
+.cm-block--bus .cm-bus-route    { color: var(--honey-text); }
+.cm-block--bus .cm-bus-meta     { color: var(--honey-text); opacity: 0.75; }
+.cm-block--bus .cm-bus-countdown {
+  background: rgba(255,255,255,0.70);
+  color: var(--honey-text);
+}
+.cm-block--bus .cm-bus-countdown.urgent { background: var(--red); color: white; }
+
+/* Подія — теракот */
+.cm-block--event {
+  background: linear-gradient(135deg, var(--peach) 0%, var(--peach-deep) 100%);
+}
+.cm-block--event .cm-block-title { color: var(--peach-text); }
+.cm-block--event .cm-event-cat   { color: var(--peach-text); }
+.cm-block--event .cm-event-title { color: var(--peach-text); }
+.cm-block--event .cm-event-meta  { color: var(--peach-text); opacity: 0.75; }
+
+/* Контакти — кремовий папір, рамки делікатні */
+.cm-block--contacts { background: var(--card-cream); }
+.cm-block--contacts .cm-contact-card {
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--accent, var(--ink-mute));
+}
+.cm-block--contacts .cm-contact-card:active { background: var(--paper-deep); }
+
+/* Дошка — кремовий папір (внутрішня коркова дошка лишається своя) */
+.cm-block--board { background: var(--card-cream); }
+
+/* Block link — на кольорових фонах має бути контрастним до тону блоку */
+.cm-block--power .cm-block-link,
+.cm-block--bus   .cm-block-link,
+.cm-block--event .cm-block-link {
+  background: rgba(255,255,255,0.7);
+  border-radius: 999px;
+  padding: 4px 12px;
+  color: var(--red);
+}
+
+/* Greeting — привітання над hero (дата → Добрий ранок → підпис) */
+.cm-greeting {
+  padding: 4px 4px 14px;
+}
+.cm-greeting-date {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  margin-bottom: 4px;
+}
+.cm-greeting-text {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 28px;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--ink);
+}
+.cm-greeting-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-top: 4px;
+}
+
+/* Tab-bar — м'якша pill для активного айтема */
+.tab-bar .tab-item.active .tab-label {
+  font-weight: 700;
+}
+.tab-bar .tab-item.active::before {
+  content: '';
+  position: absolute;
+  top: 4px;
+  width: 32px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--red);
+}
+.tab-bar .tab-item { position: relative; }
+
+/* ===== COMMUNITY HERO (фото-заставка вкладки Громада) ===== */
+
+.cm-hero {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  background: var(--gray-light);
+}
+.cm-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+.cm-hero-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 16px 18px;
+  background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%);
+  color: white;
+}
+.cm-hero-title {
+  font-size: 28px;
+  font-weight: 800;
+  font-family: Georgia, serif;
+  letter-spacing: 0.5px;
+  margin: 0;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.5);
+}
+.cm-hero-sub {
+  font-size: 13px;
+  margin-top: 4px;
+  opacity: 0.9;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* ===== COMMUNITY BOARD (Дошка громади — коркова дошка з папірцями) ===== */
+
+/* Тіло блоку дошки — без стандартного padding, бо корковий фон сам зі своїм */
+.cm-board-body { padding: 0; }
+
+/* Коркова дошка — фон з градієнту + текстура крапок (імітує корок) */
+.cm-board-corkboard {
+  position: relative;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.05) 1px, transparent 2px),
+    linear-gradient(135deg, #C9A678 0%, #B08A5C 100%);
+  background-size: 14px 14px, 14px 14px, 100% 100%;
+  border-top: 4px solid #8B6F47;
+  border-bottom: 4px solid #8B6F47;
+  padding: 18px 14px 22px;
+  max-height: 460px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px 8px;
+  justify-content: space-between;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Папірець-оголошення */
+.cm-board-note {
+  --tilt: 0deg;
+  position: relative;
+  width: calc(50% - 4px);
+  min-height: 100px;
+  padding: 14px 12px 10px;
+  background: #FFF59D;
+  border-radius: 2px;
+  box-shadow:
+    0 2px 4px rgba(0,0,0,0.18),
+    0 6px 12px rgba(0,0,0,0.12);
+  transform: rotate(var(--tilt));
+  transition: transform 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #2c2c2c;
+  display: flex;
+  flex-direction: column;
+}
+.cm-board-note:hover { transform: rotate(0deg) scale(1.02); z-index: 5; }
+
+/* Кольори папірців */
+.cm-board-note--yellow { background: #FFF59D; }
+.cm-board-note--blue   { background: #BBDEFB; }
+.cm-board-note--pink   { background: #F8BBD0; }
+.cm-board-note--white  { background: #FAFAFA; }
+.cm-board-note--green  { background: #C8E6C9; }
+
+/* Офіційний папірець (адміністрація) — на повну ширину, бронзова рамка */
+.cm-board-note--official {
+  width: 100%;
+  background: linear-gradient(135deg, #FFFDE7 0%, #FFF9C4 100%);
+  border: 1.5px solid #B45309;
+  padding: 16px 14px 12px;
+  box-shadow:
+    0 3px 6px rgba(0,0,0,0.22),
+    0 8px 16px rgba(0,0,0,0.15);
+}
+.cm-board-cat--official {
+  color: #B45309;
+  font-size: 11.5px;
+}
+.cm-board-official-title {
+  font-size: 14.5px;
+  font-weight: 800;
+  color: #1a1a1a;
+  margin: 4px 0 6px;
+  line-height: 1.3;
+}
+
+/* Золотиста шпилька для офіційних */
+.cm-board-pin--gold {
+  background: radial-gradient(circle at 35% 35%, #FFD54F 0%, #FFA000 60%, #B45309 100%);
+}
+
+/* Червона шпилька зверху по центру */
+.cm-board-pin {
+  position: absolute;
+  top: -7px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle at 35% 35%, #ff5252 0%, #c41e3a 60%, #8b0000 100%);
+  border-radius: 50%;
+  box-shadow: 0 2px 3px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,255,255,0.5);
+  z-index: 2;
+}
+
+.cm-board-cat {
+  font-size: 11px;
+  font-weight: 700;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.cm-board-text {
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  margin-bottom: 6px;
+  flex: 1;
+  word-wrap: break-word;
+}
+
+.cm-board-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 11px;
+  color: #666;
+  border-top: 1px dashed rgba(0,0,0,0.15);
+  padding-top: 4px;
+}
+.cm-board-author { font-weight: 600; }
+.cm-board-time { font-size: 10px; }
+
+.cm-board-contact {
+  font-size: 12px;
+  font-weight: 600;
+  color: #1565C0;
+  margin-top: 4px;
+  word-break: break-all;
+}
+
+/* Форма "Подати оголошення" — стилізована під білий аркуш на дошці */
+/* Кнопка-тригер «Подати оголошення» (стара inline-форма видалена) */
+.cm-board-trigger {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: calc(100% - 28px);
+  margin: 14px;
+  padding: 14px 18px;
+  background: var(--red);
+  color: #fff;
+  border: 0;
+  border-radius: 16px;
+  font-family: inherit;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 4px 14px rgba(196, 30, 58, 0.30);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s ease, background 0.15s;
+}
+.cm-board-trigger:active { transform: scale(0.98); background: var(--red-dark); }
+.cm-board-trigger-icon { font-size: 18px; line-height: 1; }
+.cm-board-trigger-text { flex: 1; text-align: left; }
+
+/* Модалка «Подати оголошення» — повноекранна, з білою панеллю знизу */
+.cm-board-modal {
+  position: fixed; inset: 0;
+  z-index: 1200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s;
+}
+.cm-board-modal.open { opacity: 1; pointer-events: auto; }
+.cm-board-modal-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,0.45);
+}
+.cm-board-modal-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-height: 90svh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: #FFFFFF;
+  border-radius: 22px 22px 0 0;
+  padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
+}
+.cm-board-modal.open .cm-board-modal-panel { transform: translateY(0); }
+.cm-board-modal-handle {
+  width: 40px; height: 4px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 2px;
+  margin: 4px auto 12px;
+}
+.cm-board-modal-close {
+  position: absolute;
+  top: 12px; right: 14px;
+  background: var(--gray-light);
+  border: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-modal-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--ink);
+  margin-bottom: 4px;
+}
+.cm-board-modal-sub {
+  font-size: 13px;
+  color: var(--ink-soft);
+  margin-bottom: 14px;
+}
+.cm-board-modal-panel .cm-board-input { margin-bottom: 10px; }
+.cm-board-modal-panel .cm-board-input:last-of-type { margin-bottom: 14px; }
+
+.cm-board-form-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  margin-bottom: 10px;
+}
+.cm-board-input {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  background: #FAFAFA;
+}
+.cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
+.cm-board-input--small { padding: 8px 11px; font-size: 13px; }
+.cm-board-row { margin-top: 8px; }
+
+.cm-board-submit {
+  width: 100%;
+  margin-top: 10px;
+  padding: 11px;
+  background: var(--red);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-submit:active { background: var(--red-dark); }
+
+.cm-board-hint {
+  font-size: 11px;
+  color: var(--gray);
+  text-align: center;
+  margin-top: 8px;
+  line-height: 1.4;
+}

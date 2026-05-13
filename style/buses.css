@@ -1,0 +1,849 @@
+/* ===== BUSES v2 ===== */
+.buses-updated {
+  font-size: 11px;
+  color: var(--gray);
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  text-align: center;
+}
+
+/* Таби напрямку */
+.route-tabs { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; border-bottom: 2px solid var(--border); }
+.route-tabs::-webkit-scrollbar { display: none; }
+.route-tab {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--gray);
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s;
+}
+.route-tab.active { color: var(--red); border-bottom-color: var(--red); }
+
+/* Смуга фільтру зупинок */
+.bus-stop-bar {
+  padding: 8px 16px 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--white);
+  position: sticky;
+  top: calc(var(--header-h) + 44px);
+  z-index: 49;
+}
+
+/* Smart-рядок наступного рейсу */
+.bus-smart-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  background: var(--gray-light);
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--black);
+  min-height: 40px;
+}
+.bus-smart-row.urgent { background: #fff5f5; }
+.bsr-icon { color: var(--navy); font-size: 11px; flex-shrink: 0; }
+.bsr-text { flex: 1; }
+.bsr-text strong { color: var(--navy); }
+.bus-smart-row.urgent .bsr-text strong { color: var(--red); }
+.bsr-hurry {
+  font-size: 11px;
+  font-weight: 700;
+  background: var(--red);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+  animation: pulse 1s ease-in-out infinite;
+}
+.bsr-empty { color: var(--gray); font-size: 13px; }
+
+/* Список рейсів */
+.bus-list { padding: 0; }
+
+/* Рядок рейсу */
+.brow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: opacity 0.15s;
+}
+.brow--past {
+  opacity: 0.35;
+}
+.brow--next {
+  border-left: 3px solid var(--navy);
+  background: #f7f9ff;
+  padding-left: 13px;
+}
+
+/* Блок часу: відправлення + прибуття (arrival) */
+.brow-time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 52px;
+}
+
+/* Час відправлення */
+.brow-time {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--navy);
+  letter-spacing: -0.5px;
+  line-height: 1.1;
+}
+.brow--past .brow-time { color: var(--gray); }
+
+/* Час прибуття */
+.brow-arrival {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 1px;
+}
+
+/* Інфо маршруту */
+.brow-info { flex: 1; min-width: 0; }
+.brow-route {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 2px;
+}
+.brow-meta {
+  font-size: 11px;
+  color: var(--gray);
+}
+
+/* Кнопка дзвінка */
+.brow-call {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  text-decoration: none;
+  flex-shrink: 0;
+  transition: background 0.15s;
+}
+.brow-call:active { background: var(--red-dark); }
+
+/* Кнопка "Показати всі рейси / Сховати минулі" */
+.bus-show-all {
+  display: block;
+  width: 100%;
+  padding: 14px 16px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  font-size: 13px;
+  color: var(--navy);
+  text-align: center;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.bus-show-all:active { background: var(--gray-light); }
+.bus-show-all--less { color: var(--gray); font-weight: 400; }
+
+/* ===== BUSES v2 — Smart-Focus + картки рейсів ===== */
+
+/* Sticky-блок з таймером наступного рейсу */
+.bus-smart-focus {
+  padding: 14px 16px;
+  background: var(--gray-light);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+  min-height: 72px;
+}
+.bus-smart-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+.bus-smart-timer {
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--navy);
+  line-height: 1.1;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.bus-smart-timer.urgent { color: var(--red); }
+.bus-smart-hurry {
+  font-size: 12px;
+  font-weight: 700;
+  background: var(--red);
+  color: white;
+  padding: 3px 8px;
+  border-radius: 20px;
+  animation: pulse 1s ease-in-out infinite;
+}
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.75; }
+}
+.bus-smart-route { font-size: 13px; color: var(--gray); }
+.bus-smart-empty { font-size: 14px; color: var(--gray); padding: 8px 0; }
+
+/* Картка рейсу */
+.bus-card {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.bus-card.past { opacity: 0.35; }
+
+.bus-card-main {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Час відправлення — головний акцент */
+.bus-card-time {
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--navy);
+  min-width: 78px;
+  letter-spacing: -1px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.bus-card.past .bus-card-time { color: var(--gray); }
+
+.bus-card-info { flex: 1; min-width: 0; }
+
+.bus-card-route {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  margin-bottom: 3px;
+}
+.bus-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--gray);
+  margin-bottom: 3px;
+}
+.bus-meta-sep { opacity: 0.4; }
+
+.bus-card-verified {
+  font-size: 10px;
+  color: var(--gray);
+  opacity: 0.6;
+}
+
+/* Кнопка дзвінка диспетчеру */
+.bus-call-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  background: var(--red);
+  color: white;
+  border-radius: 50%;
+  flex-shrink: 0;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+.bus-call-btn:active { background: var(--red-dark); }
+.bus-card.past .bus-call-btn { display: none; }
+
+/* Кнопка "Поділитись рейсом" */
+.bus-share-btn {
+  margin-top: 10px;
+  display: block;
+  width: 100%;
+  padding: 8px;
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--gray);
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.15s, color 0.15s;
+}
+.bus-share-btn:active { background: var(--gray-light); }
+
+/* ===== BUSES v3 — Пошук "Звідки → Куди" + акордеон зупинок ===== */
+
+/* Контейнер панелі пошуку */
+.bus-search {
+  padding: 10px 16px 12px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: var(--header-h);
+  z-index: 50;
+}
+
+/* Рядок з двома полями і кнопкою swap */
+.bs-search-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+/* Одне поле "Від" або "До" */
+.bs-search-field {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.bs-search-label {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.bs-search-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--black);
+  background: var(--gray-light);
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+.bs-search-input:focus {
+  border-color: var(--navy);
+  background: var(--white);
+}
+.bs-search-input::placeholder { color: var(--gray); }
+
+/* Кнопка "⇌" — поміняти місцями (swap button) */
+.bs-swap-btn {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  background: none;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 18px;
+  color: var(--navy);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s, border-color 0.15s;
+  margin-bottom: 1px;
+}
+.bs-swap-btn:active { background: var(--gray-light); border-color: var(--navy); }
+
+/* Блок часу (відправлення + прибуття) */
+.bs-time-block {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  flex-shrink: 0;
+  min-width: 72px;
+}
+
+/* Час прибуття під відправленням */
+.bs-arr {
+  font-size: 11px;
+  color: var(--gray);
+  margin-top: 1px;
+}
+
+/* Підсвічування наступного рейсу */
+.bus-card.next {
+  border-left: 3px solid var(--navy);
+  background: #f7f9ff;
+  padding-left: 13px;
+}
+.bus-card.next .bus-card-main { padding-left: 0; }
+
+/* Кнопка "Всі зупинки ▾ / Сховати ▴" */
+.bs-toggle {
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+  background: none;
+  border: none;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s;
+}
+.bs-toggle:active { background: var(--gray-light); }
+
+/* Тіло акордеону (accordion body — список зупинок, прихований за замовчуванням) */
+.bs-stops-body {
+  background: var(--gray-light);
+  border-top: 1px solid var(--border);
+  padding: 4px 0 6px;
+}
+.bs-stops-body[hidden] { display: none; }
+
+/* Рядок однієї зупинки */
+.bs-stop-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 5px 16px;
+  font-size: 12px;
+  color: var(--gray);
+}
+.bs-stop-row.hl {
+  background: var(--white);
+  font-weight: 700;
+  color: var(--black);
+}
+
+.bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
+.bs-stop-name  { flex: 1; }
+.bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; }
+
+/* Бейджики статусу (status badge — cancelled, delayed) */
+.bs-status {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  margin-left: 5px;
+  vertical-align: middle;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+.bs-status.cancelled { background: #fee2e2; color: var(--red); }
+.bs-status.delayed   { background: #fef3c7; color: #92400e; }
+
+/* Підказка "розрахований зворотний рейс" */
+.bs-autogen {
+  font-size: 10px;
+  color: var(--gray);
+  font-style: italic;
+  margin-top: 2px;
+}
+
+/* Курсор-рука для полів вибору зупинки (readonly — тільки читання, відкриває дропдаун) */
+.bs-search-input--tap { cursor: pointer; }
+.bs-search-input--tap:focus { outline: none; }
+
+/* Рядок кнопки "✕ Всі маршрути" (з'являється коли є активний фільтр) */
+.bs-reset-row {
+  margin-top: 6px;
+  display: flex;
+  justify-content: flex-end;
+}
+.bs-reset-btn {
+  background: none;
+  border: none;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--red);
+  cursor: pointer;
+  padding: 2px 0;
+  letter-spacing: 0.1px;
+}
+
+/* ===== DROPDOWN — кастомний список вибору зупинки ===== */
+/* position:fixed — прив'язаний до екрана, не залежить від скролу */
+.bs-dropdown {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 500;
+  background: var(--white);
+  max-height: 56vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 6px 28px rgba(0,0,0,0.18);
+  border-bottom: 2px solid var(--border);
+}
+.bs-dropdown[hidden] { display: none; }
+
+/* Шапка: назва поля + кнопка ✕ */
+.bs-dd-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+.bs-dd-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--black);
+}
+.bs-dd-x {
+  width: 30px;
+  height: 30px;
+  background: var(--gray-light);
+  border: none;
+  border-radius: 50%;
+  font-size: 14px;
+  color: var(--gray);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: inherit;
+  flex-shrink: 0;
+}
+
+/* Поле фільтру всередині дропдауну */
+.bs-dd-search {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  background: var(--gray-light);
+}
+.bs-dd-filter {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  font-size: 16px; /* мін 16px — iOS не масштабує екран при фокусі */
+  font-family: inherit;
+  outline: none;
+  background: var(--white);
+  box-sizing: border-box;
+  color: var(--black);
+}
+.bs-dd-filter:focus { border-color: var(--navy); }
+
+/* Список зупинок — прокручується */
+.bs-dd-list {
+  overflow-y: auto;
+  flex: 1;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Кнопка однієї зупинки */
+.bs-dd-item {
+  display: block;
+  width: 100%;
+  padding: 15px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 15px;
+  font-family: inherit;
+  color: var(--black);
+  cursor: pointer;
+}
+.bs-dd-item.sel {
+  background: #eef2ff;
+  font-weight: 700;
+  color: var(--navy);
+}
+.bs-dd-item:active { background: var(--gray-light); }
+
+/* "Очистити вибір" */
+.bs-dd-clear {
+  display: block;
+  width: 100%;
+  padding: 13px 16px;
+  text-align: left;
+  background: none;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  color: var(--red);
+  cursor: pointer;
+}
+.bs-dd-clear:active { background: #fff5f5; }
+
+/* "Зупинку не знайдено" */
+.bs-dd-empty {
+  padding: 24px 16px;
+  font-size: 14px;
+  color: var(--gray);
+  text-align: center;
+}
+
+/* ============================================================
+   POWER MODULE — Модуль «Світло» (графік відключень)
+   Navy Blue  #001F3F = є світло
+   Burgundy   #800020 = немає світла
+   ============================================================ */
+
+/* Офлайн-банер */
+.pw-offline-banner {
+  background: #FFF8E1;
+  border-bottom: 1px solid #FFE082;
+  color: #795548;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ── Onboarding (вибір вулиці) ── */
+.pw-onboarding {
+  padding: 28px 20px 24px;
+  text-align: center;
+}
+.pw-onboarding-icon { font-size: 44px; margin-bottom: 12px; }
+.pw-onboarding-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--black);
+  margin: 0 0 8px;
+}
+.pw-onboarding-sub {
+  font-size: 14px;
+  color: var(--gray);
+  line-height: 1.5;
+  margin: 0 0 22px;
+}
+.pw-street-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.pw-street-btn {
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  padding: 14px 16px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--black);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+}
+.pw-street-btn:active {
+  background: #f0f4f8;
+  border-color: #001F3F;
+}
+.pw-back-btn {
+  background: none;
+  border: none;
+  color: var(--primary, #001F3F);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0 0 12px;
+  display: block;
+  text-align: left;
+  opacity: 0.7;
+}
+.pw-back-btn:active { opacity: 1; }
+
+/* ── Верхня панель з вулицею ── */
+.pw-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+.pw-street-btn-top {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 700;
+  color: #001F3F;
+}
+.pw-icon-loc  { width: 16px; height: 16px; color: #001F3F; flex-shrink: 0; }
+.pw-icon-chev { width: 16px; height: 16px; color: #001F3F; flex-shrink: 0; }
+.pw-queue-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray);
+  background: #f0f0f0;
+  padding: 3px 9px;
+  border-radius: 20px;
+  white-space: nowrap;
+}
+
+/* ── Картка поточного статусу ── */
+.pw-status-card {
+  margin: 12px 16px 4px;
+  padding: 13px 16px;
+  border-radius: 12px;
+  border-left: 4px solid transparent;
+}
+.pw-status--on    { background: #E8F0F8; border-color: #001F3F; }
+.pw-status--off   { background: #F8E8EA; border-color: #800020; }
+.pw-status--maybe { background: #FFF8E1; border-color: #F9A825; }
+.pw-status-main {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--black);
+}
+.pw-status-upd {
+  font-size: 12px;
+  color: var(--gray);
+  margin-top: 3px;
+}
+
+/* ── Таймлайн (вертикальна шкала 24 год) ── */
+.pw-timeline { padding: 8px 16px 8px; }
+.pw-timeline-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+
+/* Рядок години */
+.pw-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 3px;
+}
+.pw-row--past { opacity: 0.35; }
+
+.pw-time {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--black);
+  width: 42px;
+  flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.pw-block {
+  flex: 1;
+  height: 34px;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  padding: 0 11px;
+}
+.pw-block--on    { background: #001F3F; }
+.pw-block--off   { background: #800020; }
+.pw-block--maybe {
+  background: repeating-linear-gradient(
+    45deg, #ddd, #ddd 4px, #efefef 4px, #efefef 8px
+  );
+}
+.pw-block-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #fff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.pw-block--maybe .pw-block-label { color: #888; }
+
+/* Маркер «ЗАРАЗ» */
+.pw-now-marker {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 6px 0 4px;
+}
+.pw-now-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  flex-shrink: 0;
+}
+.pw-now-label {
+  font-size: 10px;
+  font-weight: 800;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  white-space: nowrap;
+}
+.pw-now-line-right {
+  flex: 1;
+  height: 1px;
+  background: var(--red);
+  opacity: 0.4;
+}
+
+/* ── Кнопки дій ── */
+.pw-actions {
+  padding: 12px 16px 8px;
+}
+.pw-ics-btn {
+  width: 100%;
+  padding: 13px;
+  background: var(--white);
+  border: 1.5px solid var(--border);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.15s;
+}
+.pw-ics-btn:active { background: #f5f5f5; }
+
+/* ── Футер модуля ── */
+.pw-footer-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--gray);
+  line-height: 1.6;
+  padding: 4px 16px 24px;
+}
+.pw-demo-note { color: #F9A825; font-weight: 600; }
+
+/* Порожній стан / помилка */
+.pw-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--gray);
+  font-size: 14px;
+}
+

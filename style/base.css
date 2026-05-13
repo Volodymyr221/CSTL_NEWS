@@ -1,0 +1,206 @@
+/* ===== RESET і BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --red: #C41E3A;
+  --red-dark: #9e1830;
+  --black: #1a1a1a;
+  --gray: #666;
+  --gray-light: #f5f5f5;
+  --border: #e5e5e5;
+  --white: #ffffff;
+  --header-h: 56px;
+  --tabbar-h: 56px;  /* висота контентної зони таб-бару, без safe area */
+  --navy: #1B2A4A;
+
+  /* ===== ДИЗАЙН v3 — D2 «ПОЛЕ» (12.05.2026) =====
+     Натуральна палітра: бежевий папір + шавлія/теракот/мед/горіх.
+     Бекап попереднього (v2 «iOS Settings»): backup/design-v2-pre-D2/.
+     Бекап оригінального (v1): backup/design-v1/. */
+  --paper:       #F4F1E6;
+  --paper-deep:  #EAE4D2;
+  --card-cream:  #FAF8EF;
+  --sky:         #C5DDFB;     /* Погода — небесний синій */
+  --sky-deep:    #8AB7E8;
+  --sky-text:    #14365C;
+  --mint:        #FFE89C;     /* Світло — жовтий (як лампочка) */
+  --mint-deep:   #F4C97A;
+  --mint-text:   #5C3F0E;
+  --honey:       #E6CC8F;     /* Автобус — медовий */
+  --honey-deep:  #C9A85B;
+  --honey-text:  #4E380E;
+  --peach:       #E5B89A;     /* Подія — теракот */
+  --peach-deep:  #C68E6A;
+  --peach-text:  #4E2C12;
+  --brand-tint:  #FAE2E6;
+  --ink:         #2A2520;
+  --ink-soft:    #5F5448;
+  --ink-mute:    #9C9080;
+  --hairline:    rgba(60, 50, 30, 0.10);
+
+  --bg-page: var(--paper);
+  --bg-card: var(--card-cream);
+  --card-shadow: 0 1px 2px rgba(70, 45, 20, 0.05), 0 8px 24px rgba(70, 45, 20, 0.08);
+  --card-radius: 22px;
+}
+
+html, body {
+  height: 100%;
+  /* iOS PWA: блокуємо overscroll-bounce на body щоб tab-bar position:fixed
+     не "обрізався" при pull-down/up. Скрол перенесено у .app-main. */
+  overflow: hidden;
+  overscroll-behavior: none;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg-page);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ===== SPLASH (заставка) ===== */
+#splash {
+  position: fixed;
+  inset: 0;
+  background: var(--red);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  transition: opacity 0.6s ease;
+  padding-bottom: 150px;
+}
+.splash-icon {
+  width: 230px;
+  height: 230px;
+  margin-bottom: -90px;
+  object-fit: contain;
+  animation: splashPop 0.5s ease-out, shadowSweep 3.5s ease-in-out forwards;
+}
+.splash-logo {
+  font-size: 42px;
+  font-weight: 900;
+  color: white;
+  letter-spacing: 2px;
+  font-family: Georgia, serif;
+  margin-top: 30px;
+  animation: splashFadeUp 0.5s ease-out 0.15s both, textShadowSweep 3.5s ease-in-out forwards;
+}
+.splash-sub {
+  color: rgba(255,255,255,0.7);
+  font-size: 14px;
+  margin-top: 8px;
+  letter-spacing: 1px;
+}
+
+/* ===== SPLASH ANIMATIONS (анімації заставки) ===== */
+@keyframes splashPop {
+  0%   { transform: scale(0.85); opacity: 0; }
+  100% { transform: scale(1);    opacity: 1; }
+}
+@keyframes splashFadeUp {
+  0%   { opacity: 0; transform: translateY(14px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes shadowSweep {
+  0%   { filter: drop-shadow( 18px 18px 21px rgba(0,0,0,0.92)); }
+  50%  { filter: drop-shadow(  0px 10px 14px rgba(0,0,0,0.60)); }
+  100% { filter: drop-shadow(-18px 18px 21px rgba(0,0,0,0.92)); }
+}
+@keyframes textShadowSweep {
+  0%   { text-shadow:  10px 10px 13px rgba(0,0,0,0.88); }
+  50%  { text-shadow:   0px  5px  8px rgba(0,0,0,0.50); }
+  100% { text-shadow: -10px 10px 13px rgba(0,0,0,0.88); }
+}
+
+/* ===== HEADER (шапка) ===== */
+.app-header {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: var(--header-h);
+  background: var(--white);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  z-index: 100;
+  overflow: hidden;
+}
+.header-logo {
+  font-size: 20px;
+  font-weight: 900;
+  color: var(--black);
+  font-family: Georgia, serif;
+  letter-spacing: 1px;
+}
+.header-logo span { color: var(--red); }
+.weather-widget {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+.weather-icon { font-size: 20px; line-height: 1; }
+.weather-city { font-size: 12px; font-weight: 500; color: var(--gray); }
+.weather-temp {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--black);
+  letter-spacing: -0.3px;
+  min-width: 26px;
+}
+
+/* ===== MAIN ===== */
+/* .app-main — справжній скролер (body заблокований overflow:hidden щоб
+   уникнути overscroll-bounce який обрізав tab-bar на iOS). */
+.app-main {
+  height: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  padding-top: var(--header-h);
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+}
+.page {
+  min-height: calc(100svh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
+}
+
+/* ===== TOAST ===== */
+.toast {
+  position: fixed;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  background: var(--black);
+  color: white;
+  padding: 10px 18px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.2s, transform 0.2s;
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 999;
+}
+.toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== EMPTY STATE ===== */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--gray); font-size: 15px; }
+
+/* ===== DEPLOY STAMP (лічильник версії і часу деплою) ===== */
+.deploy-stamp {
+  position: fixed;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom) + 2px);
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px;
+  color: rgba(102, 102, 102, 0.4);
+  letter-spacing: 0.3px;
+  font-family: monospace;
+  pointer-events: none;
+  z-index: 99;
+  user-select: none;
+}
+
