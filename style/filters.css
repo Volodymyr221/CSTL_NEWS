@@ -1,0 +1,42 @@
+/* ===== FILTERS ===== */
+.filters-bar {
+  padding: 10px 16px 0;
+  background: var(--white);
+  position: fixed;
+  top: var(--header-h);
+  left: 0;
+  right: 0;
+  z-index: 90;
+  border-bottom: 1px solid var(--border);
+}
+/* Компенсація висоти фіксованих фільтрів щоб контент не ховався під ними */
+#page-news {
+  padding-top: 52px;
+}
+.chips-row {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 10px;
+  scrollbar-width: none;
+}
+.chips-row::-webkit-scrollbar { display: none; }
+.chip {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  color: var(--black);
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+  white-space: nowrap;
+}
+.chip.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
+  font-weight: 600;
+}
+
