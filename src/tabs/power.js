@@ -10,7 +10,7 @@
 //
 // При міграції: замінити fetch('./data/power.json') на Supabase client queries.
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, pad, todayKey } from '../core/utils.js';
 
 let powerData  = null;
 let selCity    = null; // { id, name, streets[] }
@@ -18,13 +18,7 @@ let selStreet  = null; // { id, name, queue_id }
 const PREFS_KEY = 'power_prefs_v2';
 
 // ── Хелпери (допоміжні функції) ──────────────────────────────────────────────
-
-function pad(n) { return String(n).padStart(2, '0'); }
-
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+// pad() і todayKey() — спільні утиліти, винесено у utils.js (12.05).
 
 function savePrefs() {
   localStorage.setItem(PREFS_KEY, JSON.stringify({

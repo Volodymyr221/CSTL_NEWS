@@ -13,18 +13,13 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, showToast, getCoords, getCityName } from '../core/utils.js';
+import { escapeHtml, formatTime, showToast, getCoords, getCityName, pad, todayKey } from '../core/utils.js';
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
 
 // ── Утиліти (helpers) ─────────────────────────────────────────────────────────
 
-function pad(n) { return String(n).padStart(2, '0'); }
-
-function todayKey() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-}
+// pad() і todayKey() винесені у utils.js (12.05) — раніше були дублями з power.js.
 
 // WMO weather code → emoji + текстовий опис
 function weatherCodeInfo(code) {
@@ -358,12 +353,8 @@ function openBoardModal() {
     e.preventDefault();
     const text = wrap.querySelector('#cm-board-text')?.value.trim();
     if (!text) return;
-    // Заглушка до підключення Supabase (Фаза 3).
-    console.log('[community-board] pending submission:', {
-      text,
-      author:  wrap.querySelector('#cm-board-author')?.value.trim() || 'анонімно',
-      contact: wrap.querySelector('#cm-board-contact')?.value.trim() || null,
-    });
+    // TODO Supabase (Фаза 3): POST у таблицю community_posts зі статусом 'pending'.
+    // Зараз форма не зберігає нічого — модерація буде на бекенді.
     close();
     showToast('Дякуємо! Запит надіслано модератору.', 4000);
   });

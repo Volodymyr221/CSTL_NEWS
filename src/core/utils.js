@@ -22,6 +22,15 @@ export function formatEventDate(dateStr) {
   return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' });
 }
 
+// Доповнити число до 2 знаків ('5' → '05'). Використовується для часу, дат, ID.
+export function pad(n) { return String(n).padStart(2, '0'); }
+
+// Сьогоднішня дата у форматі 'YYYY-MM-DD' — ключ для розкладів і JSON-таблиць.
+export function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 // Координати Олики (fallback якщо геолокація недоступна або відмовлена)
 const OLYKA_COORDS = { lat: 50.7333, lon: 25.8167 };
 

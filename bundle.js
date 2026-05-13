@@ -85,6 +85,13 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
   }
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
   var OLYKA_COORDS = { lat: 50.7333, lon: 25.8167 };
   var _coordsPromise = null;
   function getCoords() {
@@ -175,13 +182,6 @@
   // src/tabs/community.js
   var POWER_PREFS_KEY = "power_prefs_v2";
   var BUS_PREFS_KEY = "bus_prefs_v2";
-  function pad(n) {
-    return String(n).padStart(2, "0");
-  }
-  function todayKey() {
-    const d = /* @__PURE__ */ new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
   function weatherCodeInfo(code) {
     if (code === 0)
       return { icon: "\u2600\uFE0F", text: "\u042F\u0441\u043D\u043E" };
@@ -480,11 +480,6 @@
       const text = wrap.querySelector("#cm-board-text")?.value.trim();
       if (!text)
         return;
-      console.log("[community-board] pending submission:", {
-        text,
-        author: wrap.querySelector("#cm-board-author")?.value.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E",
-        contact: wrap.querySelector("#cm-board-contact")?.value.trim() || null
-      });
       close();
       showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
     });
@@ -900,10 +895,10 @@
     return CATEGORY_COLORS[category] || "#C41E3A";
   }
   function buildIcsContent(ev) {
-    const pad3 = (n) => String(n).padStart(2, "0");
+    const pad2 = (n) => String(n).padStart(2, "0");
     const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad3(d.getMonth() + 1)}${pad3(d.getDate())}T${pad3(d.getHours())}${pad3(d.getMinutes())}00`;
+    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
     const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
     return [
       "BEGIN:VCALENDAR",
@@ -1555,13 +1550,6 @@
   var selCity = null;
   var selStreet = null;
   var PREFS_KEY2 = "power_prefs_v2";
-  function pad2(n) {
-    return String(n).padStart(2, "0");
-  }
-  function todayKey2() {
-    const d = /* @__PURE__ */ new Date();
-    return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
-  }
   function savePrefs2() {
     localStorage.setItem(PREFS_KEY2, JSON.stringify({
       cityId: selCity?.id || null,
@@ -1588,7 +1576,7 @@
     const queue = findQueue(queueId);
     if (!queue)
       return null;
-    const key = todayKey2();
+    const key = todayKey();
     return queue.schedule[key] || queue.schedule[Object.keys(queue.schedule)[0]] || null;
   }
   function generateICS(street, queue) {
@@ -1596,7 +1584,7 @@
     if (!schedule)
       return;
     const d = /* @__PURE__ */ new Date();
-    const ymd = `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}`;
+    const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
     const events = [];
     let i = 0;
     while (i < 24) {
@@ -1606,8 +1594,8 @@
           i++;
         events.push(
           `BEGIN:VEVENT\r
-DTSTART:${ymd}T${pad2(start)}0000\r
-DTEND:${ymd}T${pad2(i)}0000\r
+DTSTART:${ymd}T${pad(start)}0000\r
+DTEND:${ymd}T${pad(i)}0000\r
 SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
 DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
 END:VEVENT`
@@ -1705,13 +1693,13 @@ END:VEVENT`
       const nowMarker = isCurrent ? `
       <div class="pw-now-marker" id="pw-now-marker">
         <div class="pw-now-dot"></div>
-        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad2(curH)}:${pad2(curM)}</span>
+        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad(curH)}:${pad(curM)}</span>
         <div class="pw-now-line-right"></div>
       </div>` : "";
       return `
       ${nowMarker}
       <div class="pw-row${isPast ? " pw-row--past" : ""}${isCurrent ? " pw-row--current" : ""}">
-        <span class="pw-time">${pad2(hour)}:00</span>
+        <span class="pw-time">${pad(hour)}:00</span>
         <div class="pw-block ${blockCls}">
           <span class="pw-block-label">${label}</span>
         </div>
@@ -1729,7 +1717,7 @@ END:VEVENT`
     if (!container || !powerData)
       return;
     const upd = new Date(powerData._meta.last_updated);
-    const updStr = `${pad2(upd.getHours())}:${pad2(upd.getMinutes())}`;
+    const updStr = `${pad(upd.getHours())}:${pad(upd.getMinutes())}`;
     const offlineBanner = !navigator.onLine ? `<div class="pw-offline-banner">\u26A1 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u0434\u0430\u043D\u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u043E ${updStr}</div>` : "";
     if (!selCity) {
       container.innerHTML = offlineBanner;
@@ -1762,7 +1750,7 @@ END:VEVENT`
     }
     const statusText = curStatus === 1 ? "\u{1F7E2} \u0417\u0430\u0440\u0430\u0437 \u0454 \u0441\u0432\u0456\u0442\u043B\u043E" : curStatus === 0 ? "\u{1F534} \u0417\u0430\u0440\u0430\u0437 \u043D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u{1F7E1} \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
     const statusCls = curStatus === 1 ? "pw-status--on" : curStatus === 0 ? "pw-status--off" : "pw-status--maybe";
-    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad2(nextH)}:00` : "";
+    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad(nextH)}:00` : "";
     const locationLabel = selCity.streets.length === 1 ? escapeHtml(selCity.name) : `${escapeHtml(selCity.name)} \xB7 ${escapeHtml(selStreet.name)}`;
     container.innerHTML = `
     ${offlineBanner}
