@@ -160,6 +160,19 @@
     "auto": true
   },
   {
+    "id": 81,
+    "title": "В Україні – тривога через зліт МіГ-31К, триває атака дронів та ракет",
+    "description": "14 травня в Києві та Україні оголосили тривогу через загрозу балістичних обстрілів РФ.",
+    "date": "2026-05-14",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/7/828044/f7c19c4b3986c6137accfd8a3cc189ed.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/14/8034589/",
+    "auto": true
+  },
+  {
     "id": 28,
     "title": "Суд ухвалив примусово доставити на засідання нардепа Тищенка",
     "description": "Шевченківський районний суд Дніпра наказав застосувати примусовий привід до народного депутата Миколи Тищенка через те, що він ігнорував попередні засідання у справі про незаконне позбавлення волі людини.",
@@ -219,6 +232,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/0/827834/90e4e844017d5d940009901e325d96a2.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/13/8034537/",
+    "auto": true
+  },
+  {
+    "id": 80,
+    "title": "Politico: Рютте звернувся до союзників НАТО з проханням про додаткові мільярди для допомоги Україні",
+    "description": "Марк Рютте закликав країни НАТО надавати більше підтримки Україні. Пропозиція може потроїти допомогу, але зустріла опір.",
+    "date": "2026-07-08",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/d/828045/1d411d8f56209bff714749f540ce556e.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/14/8034590/",
     "auto": true
   },
   {
