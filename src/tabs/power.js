@@ -488,8 +488,8 @@ function openQueueHelpModal() {
           <div>
             <div class="pw-help-opt-title">Особистий кабінет ВОЕ</div>
             <div class="pw-help-opt-sub">Зайдіть на сайт і подивіться у профілі.</div>
-            <a class="pw-help-btn" href="https://www.voe.com.ua/disconnection/schedule" target="_blank" rel="noopener">
-              Відкрити voe.com.ua →
+            <a class="pw-help-btn" href="https://ok.prosvitlo.com/home/login" target="_blank" rel="noopener">
+              Відкрити кабінет →
             </a>
           </div>
         </div>
