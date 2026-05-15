@@ -245,6 +245,17 @@ function renderHeroTimer(schedule) {
   const statusText = cur === 1 ? 'Є світло' : cur === 0 ? 'Немає світла' : 'Можливі перебої';
   const nextLabel  = nextH !== null ? `до ${pad(nextH)}:00` : '';
 
+  // Знайти ТРИВАЛІСТЬ наступного періоду (для рядка «потім X год Y»)
+  let nextPeriodHtml = '';
+  if (nextH !== null) {
+    const nextStatus = schedule[nextH];
+    let afterNextH = nextH;
+    while (afterNextH < 24 && schedule[afterNextH] === nextStatus) afterNextH++;
+    const nextDuration = afterNextH - nextH;
+    const nextWord = nextStatus === 1 ? 'світла' : nextStatus === 0 ? 'без світла' : 'можливих перебоїв';
+    nextPeriodHtml = `<div class="pw-hero-next">потім ${nextDuration} год ${nextWord}</div>`;
+  }
+
   return `
     <div class="pw-hero pw-hero--${cur === 1 ? 'on' : cur === 0 ? 'off' : 'maybe'}">
       <div class="pw-hero-ring-wrap">
@@ -253,6 +264,7 @@ function renderHeroTimer(schedule) {
           <div class="pw-hero-status">${statusEmoji} ${statusText}</div>
           <div class="pw-hero-time">${nextH !== null ? timeLeft : '—'}</div>
           <div class="pw-hero-label">${actionLabel}${nextH !== null ? ` ${nextLabel}` : ''}</div>
+          ${nextPeriodHtml}
         </div>
       </div>
     </div>
@@ -275,6 +287,9 @@ function renderHorizontalTimeline(schedule) {
                 title="${pad(h)}:00 — ${label}"></div>`;
   }).join('');
 
+  // Годинна вісь — через кожні 2 години (00, 02, 04, ..., 22, 24) = 13 значень
+  const axisHtml = Array.from({length: 13}, (_, i) => `<span>${pad(i * 2)}</span>`).join('');
+
   return `
     <div class="pw-timeline-card">
       <div class="pw-timeline-title">Сьогодні · 24 години</div>
@@ -285,13 +300,11 @@ function renderHorizontalTimeline(schedule) {
           <div class="pw-timeline-marker-label">${pad(curH)}:${pad(curM)}</div>
         </div>
       </div>
+      <div class="pw-timeline-axis">${axisHtml}</div>
       <div class="pw-timeline-legend">
         <span><i class="pw-leg pw-leg--on"></i> є світло</span>
         <span><i class="pw-leg pw-leg--off"></i> немає</span>
         <span><i class="pw-leg pw-leg--maybe"></i> можливо</span>
-      </div>
-      <div class="pw-timeline-axis">
-        <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
       </div>
     </div>
   `;

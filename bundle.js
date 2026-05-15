@@ -1764,6 +1764,16 @@ END:VEVENT`
     }
     const statusText = cur === 1 ? "\u0404 \u0441\u0432\u0456\u0442\u043B\u043E" : cur === 0 ? "\u041D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
     const nextLabel = nextH !== null ? `\u0434\u043E ${pad(nextH)}:00` : "";
+    let nextPeriodHtml = "";
+    if (nextH !== null) {
+      const nextStatus = schedule[nextH];
+      let afterNextH = nextH;
+      while (afterNextH < 24 && schedule[afterNextH] === nextStatus)
+        afterNextH++;
+      const nextDuration = afterNextH - nextH;
+      const nextWord = nextStatus === 1 ? "\u0441\u0432\u0456\u0442\u043B\u0430" : nextStatus === 0 ? "\u0431\u0435\u0437 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u043C\u043E\u0436\u043B\u0438\u0432\u0438\u0445 \u043F\u0435\u0440\u0435\u0431\u043E\u0457\u0432";
+      nextPeriodHtml = `<div class="pw-hero-next">\u043F\u043E\u0442\u0456\u043C ${nextDuration} \u0433\u043E\u0434 ${nextWord}</div>`;
+    }
     return `
     <div class="pw-hero pw-hero--${cur === 1 ? "on" : cur === 0 ? "off" : "maybe"}">
       <div class="pw-hero-ring-wrap">
@@ -1772,6 +1782,7 @@ END:VEVENT`
           <div class="pw-hero-status">${statusEmoji} ${statusText}</div>
           <div class="pw-hero-time">${nextH !== null ? timeLeft : "\u2014"}</div>
           <div class="pw-hero-label">${actionLabel}${nextH !== null ? ` ${nextLabel}` : ""}</div>
+          ${nextPeriodHtml}
         </div>
       </div>
     </div>
@@ -1791,6 +1802,7 @@ END:VEVENT`
       return `<div class="pw-seg pw-seg--${cls}${isCurrent ? " pw-seg--current" : ""}"
                 title="${pad(h)}:00 \u2014 ${label}"></div>`;
     }).join("");
+    const axisHtml = Array.from({ length: 13 }, (_, i) => `<span>${pad(i * 2)}</span>`).join("");
     return `
     <div class="pw-timeline-card">
       <div class="pw-timeline-title">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 24 \u0433\u043E\u0434\u0438\u043D\u0438</div>
@@ -1801,13 +1813,11 @@ END:VEVENT`
           <div class="pw-timeline-marker-label">${pad(curH)}:${pad(curM)}</div>
         </div>
       </div>
+      <div class="pw-timeline-axis">${axisHtml}</div>
       <div class="pw-timeline-legend">
         <span><i class="pw-leg pw-leg--on"></i> \u0454 \u0441\u0432\u0456\u0442\u043B\u043E</span>
         <span><i class="pw-leg pw-leg--off"></i> \u043D\u0435\u043C\u0430\u0454</span>
         <span><i class="pw-leg pw-leg--maybe"></i> \u043C\u043E\u0436\u043B\u0438\u0432\u043E</span>
-      </div>
-      <div class="pw-timeline-axis">
-        <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
       </div>
     </div>
   `;
