@@ -287,8 +287,11 @@ function renderHorizontalTimeline(schedule) {
                 title="${pad(h)}:00 — ${label}"></div>`;
   }).join('');
 
-  // Годинна вісь — через кожні 2 години (00, 02, 04, ..., 22, 24) = 13 значень
-  const axisHtml = Array.from({length: 13}, (_, i) => `<span>${pad(i * 2)}</span>`).join('');
+  // Годинна вісь — 24 колонки рівно як stripe. Лейбли тільки на парних годинах
+  // (00, 02, 04, ..., 22), пусті span'и між ними щоб усе вирівнялось.
+  const axisHtml = Array.from({length: 24}, (_, i) =>
+    i % 2 === 0 ? `<span>${pad(i)}</span>` : `<span></span>`
+  ).join('');
 
   return `
     <div class="pw-timeline-card">
@@ -402,6 +405,15 @@ function renderPowerPage() {
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
     </div>
 
+    <button class="pw-help-link" id="pw-help-link" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-help-icon">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      Не знаєте свою чергу?
+    </button>
+
     ${renderHeroTimer(schedule)}
 
     ${renderHorizontalTimeline(schedule)}
@@ -432,12 +444,88 @@ function renderPowerPage() {
     renderPowerPage();
   });
 
+  // Help-кнопка «Як дізнатись свою чергу»
+  document.getElementById('pw-help-link')?.addEventListener('click', openQueueHelpModal);
+
   document.getElementById('pw-ics-btn')?.addEventListener('click', () => {
     generateICS(selStreet, queue);
   });
 }
 
 // ── Ініціалізація ─────────────────────────────────────────────────────────────
+
+// ── Модалка «Як дізнатись свою чергу» ────────────────────────────────────────
+// Bottom-sheet з поясненням: чому не можемо автоматично визначити чергу
+// (Волиньобленерго не дає публічного API) + 3 способи дізнатись.
+
+function openQueueHelpModal() {
+  if (document.getElementById('pw-help-modal')) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'pw-help-modal';
+  wrap.className = 'pw-help-modal';
+  wrap.innerHTML = `
+    <div class="pw-help-backdrop"></div>
+    <div class="pw-help-panel" role="dialog" aria-modal="true">
+      <div class="pw-help-handle"></div>
+      <button class="pw-help-close" type="button" aria-label="Закрити">✕</button>
+      <h3 class="pw-help-title">Як дізнатись свою чергу?</h3>
+      <p class="pw-help-sub">
+        Чергу призначає <b>Волиньобленерго</b> за фізичним підключенням вашого
+        будинку до підстанції. На жаль, ВОЕ не дає публічного API — ми не
+        можемо визначити її автоматично.
+      </p>
+      <div class="pw-help-options">
+        <div class="pw-help-opt">
+          <span class="pw-help-emoji">📄</span>
+          <div>
+            <div class="pw-help-opt-title">Подивіться на платіжку</div>
+            <div class="pw-help-opt-sub">У квитанції за світло вказано «Черга №».</div>
+          </div>
+        </div>
+        <div class="pw-help-opt">
+          <span class="pw-help-emoji">🌐</span>
+          <div>
+            <div class="pw-help-opt-title">Особистий кабінет ВОЕ</div>
+            <div class="pw-help-opt-sub">Зайдіть на сайт і подивіться у профілі.</div>
+            <a class="pw-help-btn" href="https://www.voe.com.ua/disconnection/schedule" target="_blank" rel="noopener">
+              Відкрити voe.com.ua →
+            </a>
+          </div>
+        </div>
+        <div class="pw-help-opt">
+          <span class="pw-help-emoji">📞</span>
+          <div>
+            <div class="pw-help-opt-title">Зателефонуйте у ВОЕ</div>
+            <div class="pw-help-opt-sub">Цілодобова аварійна.</div>
+            <a class="pw-help-btn" href="tel:0800501482">
+              0 800 501 482
+            </a>
+          </div>
+        </div>
+      </div>
+      <p class="pw-help-footnote">
+        💡 Скоро у Фазі 3 додамо краудсорсинг — жителі позначатимуть свою чергу,
+        і додаток автоматично запам'ятає вулицю → чергу.
+      </p>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  document.body.classList.add('modal-open');
+  requestAnimationFrame(() => wrap.classList.add('open'));
+
+  function close() {
+    wrap.classList.remove('open');
+    document.body.classList.remove('modal-open');
+    setTimeout(() => wrap.remove(), 220);
+  }
+
+  wrap.querySelector('.pw-help-backdrop')?.addEventListener('click', close);
+  wrap.querySelector('.pw-help-close')?.addEventListener('click', close);
+  document.addEventListener('keydown', function onEsc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+  });
+}
 
 export function initPower() {
   fetch('./data/power.json')

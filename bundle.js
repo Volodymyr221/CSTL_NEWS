@@ -1802,7 +1802,10 @@ END:VEVENT`
       return `<div class="pw-seg pw-seg--${cls}${isCurrent ? " pw-seg--current" : ""}"
                 title="${pad(h)}:00 \u2014 ${label}"></div>`;
     }).join("");
-    const axisHtml = Array.from({ length: 13 }, (_, i) => `<span>${pad(i * 2)}</span>`).join("");
+    const axisHtml = Array.from(
+      { length: 24 },
+      (_, i) => i % 2 === 0 ? `<span>${pad(i)}</span>` : `<span></span>`
+    ).join("");
     return `
     <div class="pw-timeline-card">
       <div class="pw-timeline-title">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 24 \u0433\u043E\u0434\u0438\u043D\u0438</div>
@@ -1902,6 +1905,15 @@ END:VEVENT`
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
     </div>
 
+    <button class="pw-help-link" id="pw-help-link" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-help-icon">
+        <circle cx="12" cy="12" r="10"/>
+        <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+        <line x1="12" y1="17" x2="12.01" y2="17"/>
+      </svg>
+      \u041D\u0435 \u0437\u043D\u0430\u0454\u0442\u0435 \u0441\u0432\u043E\u044E \u0447\u0435\u0440\u0433\u0443?
+    </button>
+
     ${renderHeroTimer(schedule)}
 
     ${renderHorizontalTimeline(schedule)}
@@ -1928,8 +1940,78 @@ END:VEVENT`
       savePrefs2();
       renderPowerPage();
     });
+    document.getElementById("pw-help-link")?.addEventListener("click", openQueueHelpModal);
     document.getElementById("pw-ics-btn")?.addEventListener("click", () => {
       generateICS(selStreet, queue);
+    });
+  }
+  function openQueueHelpModal() {
+    if (document.getElementById("pw-help-modal"))
+      return;
+    const wrap = document.createElement("div");
+    wrap.id = "pw-help-modal";
+    wrap.className = "pw-help-modal";
+    wrap.innerHTML = `
+    <div class="pw-help-backdrop"></div>
+    <div class="pw-help-panel" role="dialog" aria-modal="true">
+      <div class="pw-help-handle"></div>
+      <button class="pw-help-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      <h3 class="pw-help-title">\u042F\u043A \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C \u0441\u0432\u043E\u044E \u0447\u0435\u0440\u0433\u0443?</h3>
+      <p class="pw-help-sub">
+        \u0427\u0435\u0440\u0433\u0443 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0430\u0454 <b>\u0412\u043E\u043B\u0438\u043D\u044C\u043E\u0431\u043B\u0435\u043D\u0435\u0440\u0433\u043E</b> \u0437\u0430 \u0444\u0456\u0437\u0438\u0447\u043D\u0438\u043C \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F\u043C \u0432\u0430\u0448\u043E\u0433\u043E
+        \u0431\u0443\u0434\u0438\u043D\u043A\u0443 \u0434\u043E \u043F\u0456\u0434\u0441\u0442\u0430\u043D\u0446\u0456\u0457. \u041D\u0430 \u0436\u0430\u043B\u044C, \u0412\u041E\u0415 \u043D\u0435 \u0434\u0430\u0454 \u043F\u0443\u0431\u043B\u0456\u0447\u043D\u043E\u0433\u043E API \u2014 \u043C\u0438 \u043D\u0435
+        \u043C\u043E\u0436\u0435\u043C\u043E \u0432\u0438\u0437\u043D\u0430\u0447\u0438\u0442\u0438 \u0457\u0457 \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.
+      </p>
+      <div class="pw-help-options">
+        <div class="pw-help-opt">
+          <span class="pw-help-emoji">\u{1F4C4}</span>
+          <div>
+            <div class="pw-help-opt-title">\u041F\u043E\u0434\u0438\u0432\u0456\u0442\u044C\u0441\u044F \u043D\u0430 \u043F\u043B\u0430\u0442\u0456\u0436\u043A\u0443</div>
+            <div class="pw-help-opt-sub">\u0423 \u043A\u0432\u0438\u0442\u0430\u043D\u0446\u0456\u0457 \u0437\u0430 \u0441\u0432\u0456\u0442\u043B\u043E \u0432\u043A\u0430\u0437\u0430\u043D\u043E \xAB\u0427\u0435\u0440\u0433\u0430 \u2116\xBB.</div>
+          </div>
+        </div>
+        <div class="pw-help-opt">
+          <span class="pw-help-emoji">\u{1F310}</span>
+          <div>
+            <div class="pw-help-opt-title">\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442 \u0412\u041E\u0415</div>
+            <div class="pw-help-opt-sub">\u0417\u0430\u0439\u0434\u0456\u0442\u044C \u043D\u0430 \u0441\u0430\u0439\u0442 \u0456 \u043F\u043E\u0434\u0438\u0432\u0456\u0442\u044C\u0441\u044F \u0443 \u043F\u0440\u043E\u0444\u0456\u043B\u0456.</div>
+            <a class="pw-help-btn" href="https://www.voe.com.ua/disconnection/schedule" target="_blank" rel="noopener">
+              \u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 voe.com.ua \u2192
+            </a>
+          </div>
+        </div>
+        <div class="pw-help-opt">
+          <span class="pw-help-emoji">\u{1F4DE}</span>
+          <div>
+            <div class="pw-help-opt-title">\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0439\u0442\u0435 \u0443 \u0412\u041E\u0415</div>
+            <div class="pw-help-opt-sub">\u0426\u0456\u043B\u043E\u0434\u043E\u0431\u043E\u0432\u0430 \u0430\u0432\u0430\u0440\u0456\u0439\u043D\u0430.</div>
+            <a class="pw-help-btn" href="tel:0800501482">
+              0 800 501 482
+            </a>
+          </div>
+        </div>
+      </div>
+      <p class="pw-help-footnote">
+        \u{1F4A1} \u0421\u043A\u043E\u0440\u043E \u0443 \u0424\u0430\u0437\u0456 3 \u0434\u043E\u0434\u0430\u043C\u043E \u043A\u0440\u0430\u0443\u0434\u0441\u043E\u0440\u0441\u0438\u043D\u0433 \u2014 \u0436\u0438\u0442\u0435\u043B\u0456 \u043F\u043E\u0437\u043D\u0430\u0447\u0430\u0442\u0438\u043C\u0443\u0442\u044C \u0441\u0432\u043E\u044E \u0447\u0435\u0440\u0433\u0443,
+        \u0456 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0454 \u0432\u0443\u043B\u0438\u0446\u044E \u2192 \u0447\u0435\u0440\u0433\u0443.
+      </p>
+    </div>
+  `;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    function close() {
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => wrap.remove(), 220);
+    }
+    wrap.querySelector(".pw-help-backdrop")?.addEventListener("click", close);
+    wrap.querySelector(".pw-help-close")?.addEventListener("click", close);
+    document.addEventListener("keydown", function onEsc(e) {
+      if (e.key === "Escape") {
+        close();
+        document.removeEventListener("keydown", onEsc);
+      }
     });
   }
   function initPower() {

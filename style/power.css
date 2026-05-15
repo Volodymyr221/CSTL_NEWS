@@ -58,6 +58,113 @@
   box-shadow: var(--card-shadow);
 }
 
+/* ── Help-link «Як дізнатись свою чергу?» ─────────────────────────────────── */
+.pw-help-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 16px 4px;
+  padding: 6px 0;
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--red);
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-help-icon { width: 14px; height: 14px; flex-shrink: 0; }
+
+/* ── Модалка help ─────────────────────────────────────────────────────────── */
+.pw-help-modal {
+  position: fixed; inset: 0; z-index: 1200;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.2s;
+}
+.pw-help-modal.open { opacity: 1; pointer-events: auto; }
+.pw-help-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); }
+.pw-help-panel {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  max-height: 90svh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  background: var(--bg-card);
+  border-radius: 22px 22px 0 0;
+  padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%);
+  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
+  box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
+}
+.pw-help-modal.open .pw-help-panel { transform: translateY(0); }
+.pw-help-handle {
+  width: 40px; height: 4px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 2px;
+  margin: 4px auto 12px;
+}
+.pw-help-close {
+  position: absolute; top: 12px; right: 14px;
+  background: var(--gray-light);
+  border: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  font-size: 14px; color: var(--ink-soft);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.pw-help-title {
+  font-family: Georgia, serif;
+  font-size: 22px; font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.pw-help-sub {
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.45;
+  margin-bottom: 16px;
+}
+.pw-help-options { display: flex; flex-direction: column; gap: 14px; }
+.pw-help-opt {
+  display: flex; gap: 12px;
+  padding: 14px;
+  background: var(--paper);
+  border-radius: 14px;
+}
+.pw-help-emoji { font-size: 24px; line-height: 1; flex-shrink: 0; }
+.pw-help-opt-title {
+  font-size: 14.5px; font-weight: 700; color: var(--ink);
+  margin-bottom: 2px;
+}
+.pw-help-opt-sub {
+  font-size: 12.5px; color: var(--ink-soft);
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+.pw-help-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  background: var(--red);
+  color: white;
+  border-radius: 999px;
+  font-size: 13px; font-weight: 700;
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-help-footnote {
+  margin-top: 16px;
+  padding: 12px 14px;
+  background: linear-gradient(135deg, var(--mint) 0%, var(--mint-deep) 100%);
+  border-radius: 12px;
+  font-size: 12.5px;
+  color: var(--mint-text);
+  line-height: 1.4;
+}
+
 /* ── Hero таймер ───────────────────────────────────────────────────────────── */
 /* Без фону навколо бублика — тільки сам бублик з тінню (ефект левітації) */
 .pw-hero {
@@ -206,21 +313,20 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.15);
 }
 
-/* Годинна вісь — близько до стовпчиків, кожні 2 години (13 значень) */
+/* Годинна вісь — 24 колонки точно як strip, лейбли під центром парних годин */
 .pw-timeline-axis {
   display: grid;
-  grid-template-columns: repeat(13, 1fr);
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;            /* той самий gap що у .pw-timeline-strip — вирівнюємо ідеально */
   font-size: 9.5px;
   color: var(--ink-mute);
   font-variant-numeric: tabular-nums;
-  margin-top: 0;
+  margin-top: 4px;
 }
 .pw-timeline-axis span {
   text-align: center;
-  /* перші і останні значення вирівнюємо по краях */
+  white-space: nowrap;
 }
-.pw-timeline-axis span:first-child { text-align: left; }
-.pw-timeline-axis span:last-child { text-align: right; }
 
 /* Легенда — нижче, відокремлено від таймлайну тонкою лінією */
 .pw-timeline-legend {
