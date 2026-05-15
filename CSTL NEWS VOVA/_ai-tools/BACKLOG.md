@@ -8,11 +8,26 @@
 
 ## 🔴 Роби зараз
 
-### Фаза 3 — Supabase + «Світло»
+### Фаза 9 — Дошка громади 2.0 (план: `docs/COMMUNITY_BOARD_VISION.md`)
+
+Перетворення Дошки з простих папірців у «OLX рівня громади» — 3 типи постів (Дошка / Розмови / Вітання) з фото, категоріями, реакціями, пошуком.
 
 | ✓ | Задача |
 |---|--------|
-| ☐ | Створити Supabase проект (таблиці: queues, cities, streets, schedules) |
+| ☐ | **Спринт 1.** Підняти Supabase проект (Вова реєструється + надсилає URL+anon-key) |
+| ☐ | **Спринт 1.** SQL-схеми: `posts`, `reactions`, RLS policies |
+| ☐ | **Спринт 1.** Адмін-панель `/admin` — модерація pending → published |
+| ☐ | **Спринт 1.** Submit-форма дошки реально POST у Supabase (зараз заглушка) |
+| ☐ | **Спринт 1.** Перенести `data/community-board.json` + `data/community.json` (announcements) у Supabase |
+| ☐ | **Спринт 2.** Supabase Storage + upload фото з форми |
+| ☐ | **Спринт 2.** 3 типи карток (board/chat/greeting) + таби-фільтри |
+| ☐ | **Спринт 3.** Реакції ❤️👍😂😢, збережені (per device), пошук |
+
+### Фаза 3 — Supabase + «Світло» (паралельно з Фазою 9 — той самий Supabase)
+
+| ✓ | Задача |
+|---|--------|
+| ☐ | Таблиці для Світла: `queues`, `cities`, `streets`, `schedules` |
 | ☐ | Замінити `fetch('./data/power.json')` на Supabase client queries |
 | ☐ | Адмін-форма для оновлення розкладу без GitHub |
 | ☐ | Заповнити реальні черги і вулиці Олицької ОТГ |
