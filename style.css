@@ -13,6 +13,7 @@
 @import url('style/news.css');       /* .news-card-featured, .news-card-row, meta */
 @import url('style/events.css');     /* .ev-card v2 + skeleton + .ics btn */
 @import url('style/buses.css');      /* .bus-card, .bs-search, .bs-dropdown, smart-row */
+@import url('style/power.css');      /* .pw-* — Світло v2: hero-таймер, горизонтальна стрічка */
 @import url('style/modal.css');      /* .article-modal — sticky-header, swipe, body */
 @import url('style/tabbar.css');     /* .tab-bar, .tab-item, .tab-icon, .tab-label */
 @import url('style/community.css');  /* .cm-* — вкладка Громада, D2 colored blocks, hero, board */

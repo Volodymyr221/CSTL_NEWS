@@ -1,0 +1,337 @@
+/* =============================================================
+   POWER (Світло) — v2 редизайн 15.05.2026 (Tier 1)
+
+   Заміна вертикальної таблиці 24 рядків на:
+   - Hero-таймер з SVG прогрес-кільцем (як iPhone Clock Timer)
+   - Горизонтальна стрічка 24 сегментів з маркером поточної години
+   - Картка прогнозу на завтра
+   ============================================================= */
+
+/* ── Top bar (вибір локації + черга) ───────────────────────────────────────── */
+.pw-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 14px 16px 8px;
+}
+.pw-street-btn-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 999px;
+  box-shadow: var(--card-shadow);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.pw-street-btn-top:active { transform: scale(0.97); }
+.pw-icon-loc, .pw-icon-chev {
+  width: 16px; height: 16px;
+  fill: none; stroke: currentColor;
+  flex-shrink: 0;
+}
+.pw-queue-badge {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  background: var(--bg-card);
+  padding: 6px 10px;
+  border-radius: 999px;
+  box-shadow: var(--card-shadow);
+}
+
+/* ── Hero таймер ───────────────────────────────────────────────────────────── */
+.pw-hero {
+  margin: 0 14px 14px;
+  padding: 24px 16px;
+  background: var(--bg-card);
+  border-radius: 22px;
+  box-shadow: var(--card-shadow);
+  display: flex;
+  justify-content: center;
+}
+.pw-hero--on    { background: linear-gradient(135deg, #E6F5DE 0%, #D3E3B8 100%); }
+.pw-hero--off   { background: linear-gradient(135deg, #FCE0E5 0%, #F5C0CA 100%); }
+.pw-hero--maybe { background: linear-gradient(135deg, #FFF4D9 0%, #FFE89C 100%); }
+
+.pw-hero-ring-wrap {
+  position: relative;
+  width: 220px;
+  height: 220px;
+}
+.pw-ring {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg); /* старт зверху */
+}
+.pw-ring-bg {
+  fill: none;
+  stroke: rgba(0, 0, 0, 0.07);
+  stroke-width: 10;
+}
+.pw-ring-fg {
+  fill: none;
+  stroke-width: 12;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.6s ease, stroke 0.3s ease;
+}
+
+.pw-hero-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 20px;
+}
+.pw-hero-status {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-bottom: 4px;
+}
+.pw-hero-time {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--ink);
+  letter-spacing: -1px;
+}
+.pw-hero-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  margin-top: 6px;
+  letter-spacing: 0.2px;
+}
+
+/* ── Горизонтальна стрічка 24 годин ────────────────────────────────────────── */
+.pw-timeline-card {
+  margin: 0 14px 14px;
+  padding: 16px;
+  background: var(--bg-card);
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+}
+.pw-timeline-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  margin-bottom: 10px;
+}
+.pw-timeline-strip {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(24, 1fr);
+  gap: 2px;
+  height: 36px;
+  margin-bottom: 6px;
+}
+.pw-seg {
+  border-radius: 4px;
+  transition: filter 0.15s;
+}
+.pw-seg--on    { background: #4F8B3D; }
+.pw-seg--off   { background: #DA4A5E; }
+.pw-seg--maybe { background: #F4C97A; }
+.pw-seg--current { box-shadow: 0 0 0 2px var(--ink) inset; }
+
+.pw-timeline-marker {
+  position: absolute;
+  top: -8px;
+  width: 2px;
+  height: calc(100% + 16px);
+  background: var(--ink);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+.pw-timeline-marker-dot {
+  position: absolute;
+  top: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ink);
+}
+.pw-timeline-marker-label {
+  position: absolute;
+  top: -22px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink);
+  background: var(--bg-card);
+  padding: 2px 6px;
+  border-radius: 8px;
+  white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.pw-timeline-axis {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10px;
+  color: var(--ink-mute);
+  margin-top: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.pw-timeline-legend {
+  display: flex;
+  gap: 14px;
+  font-size: 11px;
+  color: var(--ink-soft);
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.pw-leg {
+  display: inline-block;
+  width: 10px; height: 10px;
+  border-radius: 3px;
+  margin-right: 4px;
+  vertical-align: -1px;
+}
+.pw-leg--on    { background: #4F8B3D; }
+.pw-leg--off   { background: #DA4A5E; }
+.pw-leg--maybe { background: #F4C97A; }
+
+/* ── Картка завтра ─────────────────────────────────────────────────────────── */
+.pw-tomorrow {
+  margin: 0 14px 14px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #FFFDE7 0%, #FFF59D 100%);
+  border-radius: 16px;
+  box-shadow: var(--card-shadow);
+}
+.pw-tomorrow--good {
+  background: linear-gradient(135deg, #E6F5DE 0%, #D3E3B8 100%);
+  text-align: center;
+  font-weight: 700;
+  color: var(--mint-text);
+}
+.pw-tomorrow-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 2px;
+}
+.pw-tomorrow-sub {
+  font-size: 12.5px;
+  color: var(--ink-soft);
+}
+
+/* ── Кнопка ICS + footer note ──────────────────────────────────────────────── */
+.pw-actions { padding: 0 14px 8px; }
+.pw-ics-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.pw-ics-btn:active { transform: scale(0.98); }
+
+.pw-footer-note {
+  text-align: center;
+  font-size: 11px;
+  color: var(--ink-mute);
+  line-height: 1.6;
+  padding: 4px 16px 24px;
+}
+.pw-demo-note { color: #B45309; font-weight: 600; }
+
+.pw-empty {
+  padding: 48px 20px;
+  text-align: center;
+  color: var(--ink-mute);
+  font-size: 14px;
+}
+
+/* ── Офлайн-банер ──────────────────────────────────────────────────────────── */
+.pw-offline-banner {
+  margin: 0 14px 12px;
+  padding: 10px 14px;
+  background: var(--peach);
+  color: var(--peach-text);
+  border-radius: 12px;
+  font-size: 13px;
+  font-weight: 600;
+  text-align: center;
+}
+
+/* ── Onboarding (вибір міста/вулиці) ───────────────────────────────────────── */
+.pw-onboarding {
+  padding: 24px 16px;
+  text-align: center;
+}
+.pw-onboarding-icon { font-size: 56px; margin-bottom: 12px; }
+.pw-onboarding-title {
+  font-family: Georgia, serif;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 6px;
+}
+.pw-onboarding-sub {
+  font-size: 14px;
+  color: var(--ink-soft);
+  margin-bottom: 18px;
+  line-height: 1.4;
+}
+.pw-street-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 360px;
+  margin: 0 auto;
+}
+.pw-street-btn {
+  padding: 14px 18px;
+  background: var(--bg-card);
+  border: none;
+  border-radius: 14px;
+  box-shadow: var(--card-shadow);
+  font: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  text-align: left;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.pw-street-btn:active { transform: scale(0.98); }
+.pw-back-btn {
+  background: none;
+  border: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--red);
+  padding: 8px 0;
+  margin-bottom: 8px;
+  cursor: pointer;
+}

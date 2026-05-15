@@ -1704,39 +1704,147 @@ END:VEVENT`
       });
     });
   }
-  function renderTimeline(queue) {
-    const schedule = getTodaySchedule(queue.id);
+  function findPeriodStart(schedule, fromH) {
+    let h = fromH;
+    while (h > 0 && schedule[h - 1] === schedule[fromH])
+      h--;
+    return h;
+  }
+  function findNextChange(schedule, fromH) {
+    for (let h = fromH + 1; h < 24; h++) {
+      if (schedule[h] !== schedule[fromH])
+        return h;
+    }
+    return null;
+  }
+  function renderProgressRing(progress, color) {
+    const r = 88;
+    const c = 2 * Math.PI * r;
+    const offset = c * (1 - progress);
+    return `
+    <svg class="pw-ring" viewBox="0 0 200 200">
+      <circle class="pw-ring-bg" cx="100" cy="100" r="${r}"></circle>
+      <circle class="pw-ring-fg"
+              cx="100" cy="100" r="${r}"
+              stroke="${color}"
+              stroke-dasharray="${c.toFixed(2)}"
+              stroke-dashoffset="${offset.toFixed(2)}"></circle>
+    </svg>
+  `;
+  }
+  function renderHeroTimer(schedule) {
     if (!schedule)
       return '<p class="pw-empty">\u0414\u0430\u043D\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456</p>';
     const now = /* @__PURE__ */ new Date();
     const curH = now.getHours();
     const curM = now.getMinutes();
-    const rows = schedule.map((status, hour) => {
-      const isPast = hour < curH;
-      const isCurrent = hour === curH;
-      const blockCls = status === 1 ? "pw-block--on" : status === 0 ? "pw-block--off" : "pw-block--maybe";
-      const label = status === 1 ? "\u0404" : status === 0 ? "\u041D\u0435\u043C\u0430\u0454" : "?";
-      const nowMarker = isCurrent ? `
-      <div class="pw-now-marker" id="pw-now-marker">
-        <div class="pw-now-dot"></div>
-        <span class="pw-now-label">\u0417\u0410\u0420\u0410\u0417 ${pad(curH)}:${pad(curM)}</span>
-        <div class="pw-now-line-right"></div>
-      </div>` : "";
-      return `
-      ${nowMarker}
-      <div class="pw-row${isPast ? " pw-row--past" : ""}${isCurrent ? " pw-row--current" : ""}">
-        <span class="pw-time">${pad(hour)}:00</span>
-        <div class="pw-block ${blockCls}">
-          <span class="pw-block-label">${label}</span>
-        </div>
-      </div>`;
-    }).join("");
-    const dateStr = now.toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+    const cur = schedule[curH];
+    const nextH = findNextChange(schedule, curH);
+    const periodStart = findPeriodStart(schedule, curH);
+    const minToChange = nextH !== null ? (nextH - curH) * 60 - curM : (24 - curH) * 60 - curM;
+    const minSinceStart = (curH - periodStart) * 60 + curM;
+    const totalMin = minSinceStart + minToChange;
+    const progress = totalMin > 0 ? minSinceStart / totalMin : 0;
+    const h = Math.floor(minToChange / 60);
+    const m = minToChange % 60;
+    const timeLeft = h > 0 ? `${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `${m} \u0445\u0432`;
+    let actionLabel, statusEmoji, ringColor;
+    if (cur === 1) {
+      actionLabel = nextH !== null ? "\u0414\u043E \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F" : "\u0411\u0435\u0437 \u0437\u043C\u0456\u043D \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u0434\u043E\u0431\u0438";
+      statusEmoji = "\u{1F7E2}";
+      ringColor = "#4F8B3D";
+    } else if (cur === 0) {
+      actionLabel = nextH !== null ? "\u0414\u043E \u0441\u0432\u0456\u0442\u043B\u0430" : "\u0411\u0435\u0437 \u0437\u043C\u0456\u043D \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u0434\u043E\u0431\u0438";
+      statusEmoji = "\u{1F534}";
+      ringColor = "#C41E3A";
+    } else {
+      actionLabel = nextH !== null ? "\u0414\u043E \u0437\u043C\u0456\u043D\u0438" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
+      statusEmoji = "\u{1F7E1}";
+      ringColor = "#D97706";
+    }
+    const statusText = cur === 1 ? "\u0404 \u0441\u0432\u0456\u0442\u043B\u043E" : cur === 0 ? "\u041D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
+    const nextLabel = nextH !== null ? `\u0434\u043E ${pad(nextH)}:00` : "";
     return `
-    <div class="pw-timeline">
-      <div class="pw-timeline-date">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456, ${dateStr}</div>
-      ${rows}
-    </div>`;
+    <div class="pw-hero pw-hero--${cur === 1 ? "on" : cur === 0 ? "off" : "maybe"}">
+      <div class="pw-hero-ring-wrap">
+        ${renderProgressRing(progress, ringColor)}
+        <div class="pw-hero-center">
+          <div class="pw-hero-status">${statusEmoji} ${statusText}</div>
+          <div class="pw-hero-time">${nextH !== null ? timeLeft : "\u2014"}</div>
+          <div class="pw-hero-label">${actionLabel}${nextH !== null ? ` ${nextLabel}` : ""}</div>
+        </div>
+      </div>
+    </div>
+  `;
+  }
+  function renderHorizontalTimeline(schedule) {
+    if (!schedule)
+      return "";
+    const now = /* @__PURE__ */ new Date();
+    const curH = now.getHours();
+    const curM = now.getMinutes();
+    const markerPos = (curH + curM / 60) / 24 * 100;
+    const segments = schedule.map((status, h) => {
+      const cls = status === 1 ? "on" : status === 0 ? "off" : "maybe";
+      const isCurrent = h === curH;
+      const label = status === 1 ? "\u0454" : status === 0 ? "\u043D\u0435\u043C\u0430\u0454" : "?";
+      return `<div class="pw-seg pw-seg--${cls}${isCurrent ? " pw-seg--current" : ""}"
+                title="${pad(h)}:00 \u2014 ${label}"></div>`;
+    }).join("");
+    return `
+    <div class="pw-timeline-card">
+      <div class="pw-timeline-title">\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \xB7 24 \u0433\u043E\u0434\u0438\u043D\u0438</div>
+      <div class="pw-timeline-strip">
+        ${segments}
+        <div class="pw-timeline-marker" style="left: ${markerPos.toFixed(2)}%">
+          <div class="pw-timeline-marker-dot"></div>
+          <div class="pw-timeline-marker-label">${pad(curH)}:${pad(curM)}</div>
+        </div>
+      </div>
+      <div class="pw-timeline-legend">
+        <span><i class="pw-leg pw-leg--on"></i> \u0454 \u0441\u0432\u0456\u0442\u043B\u043E</span>
+        <span><i class="pw-leg pw-leg--off"></i> \u043D\u0435\u043C\u0430\u0454</span>
+        <span><i class="pw-leg pw-leg--maybe"></i> \u043C\u043E\u0436\u043B\u0438\u0432\u043E</span>
+      </div>
+      <div class="pw-timeline-axis">
+        <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
+      </div>
+    </div>
+  `;
+  }
+  function renderTomorrowCard(queue) {
+    const d = /* @__PURE__ */ new Date();
+    d.setDate(d.getDate() + 1);
+    const tomorrowKey = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const tomorrowSched = queue.schedule[tomorrowKey];
+    if (!tomorrowSched)
+      return "";
+    const hoursOff = tomorrowSched.filter((s) => s === 0).length;
+    if (hoursOff === 0) {
+      return `<div class="pw-tomorrow pw-tomorrow--good">\u2728 \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u0441\u0432\u0456\u0442\u043B\u043E \u0446\u0456\u043B\u0438\u0439 \u0434\u0435\u043D\u044C</div>`;
+    }
+    let maxLen = 0, maxStart = -1, curLen = 0, curStart = -1;
+    for (let h = 0; h < 24; h++) {
+      if (tomorrowSched[h] === 0) {
+        if (curStart === -1)
+          curStart = h;
+        curLen++;
+        if (curLen > maxLen) {
+          maxLen = curLen;
+          maxStart = curStart;
+        }
+      } else {
+        curLen = 0;
+        curStart = -1;
+      }
+    }
+    const periodTxt = maxLen > 0 ? `\u041D\u0430\u0439\u0434\u043E\u0432\u0448\u0438\u0439 \u043F\u0435\u0440\u0456\u043E\u0434: ${pad(maxStart)}:00\u2013${pad(maxStart + maxLen)}:00` : "";
+    return `
+    <div class="pw-tomorrow">
+      <div class="pw-tomorrow-title">\u26A0\uFE0F \u0417\u0430\u0432\u0442\u0440\u0430: ${hoursOff} \u0433\u043E\u0434\u0438\u043D \u0431\u0435\u0437 \u0441\u0432\u0456\u0442\u043B\u0430</div>
+      <div class="pw-tomorrow-sub">${periodTxt}</div>
+    </div>
+  `;
   }
   function renderPowerPage() {
     const container = document.getElementById("power-content");
@@ -1763,20 +1871,6 @@ END:VEVENT`
       return;
     }
     const schedule = getTodaySchedule(queue.id);
-    const curH = (/* @__PURE__ */ new Date()).getHours();
-    const curStatus = schedule ? schedule[curH] : null;
-    let nextH = null;
-    if (schedule) {
-      for (let h = curH + 1; h < 24; h++) {
-        if (schedule[h] !== curStatus) {
-          nextH = h;
-          break;
-        }
-      }
-    }
-    const statusText = curStatus === 1 ? "\u{1F7E2} \u0417\u0430\u0440\u0430\u0437 \u0454 \u0441\u0432\u0456\u0442\u043B\u043E" : curStatus === 0 ? "\u{1F534} \u0417\u0430\u0440\u0430\u0437 \u043D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u{1F7E1} \u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
-    const statusCls = curStatus === 1 ? "pw-status--on" : curStatus === 0 ? "pw-status--off" : "pw-status--maybe";
-    const nextTxt = nextH !== null ? ` \xB7 \u0434\u043E ${pad(nextH)}:00` : "";
     const locationLabel = selCity.streets.length === 1 ? escapeHtml(selCity.name) : `${escapeHtml(selCity.name)} \xB7 ${escapeHtml(selStreet.name)}`;
     container.innerHTML = `
     ${offlineBanner}
@@ -1790,20 +1884,19 @@ END:VEVENT`
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
     </div>
 
-    <div class="pw-status-card ${statusCls}">
-      <div class="pw-status-main">${statusText}${nextTxt}</div>
-      <div class="pw-status-upd">\u0414\u0430\u043D\u0456 \u0430\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456 \u043D\u0430 ${updStr}</div>
-    </div>
+    ${renderHeroTimer(schedule)}
 
-    ${renderTimeline(queue)}
+    ${renderHorizontalTimeline(schedule)}
+
+    ${renderTomorrowCard(queue)}
 
     <div class="pw-actions">
       <button class="pw-ics-btn" id="pw-ics-btn">\u{1F4C5} \u0414\u043E\u0434\u0430\u0442\u0438 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440</button>
     </div>
 
     <div class="pw-footer-note">
-      \u0414\u0436\u0435\u0440\u0435\u043B\u043E: ${escapeHtml(powerData._meta.source)}<br>
-      <span class="pw-demo-note">\u26A0\uFE0F DEMO-\u0434\u0430\u043D\u0456 \u2014 \u043E\u043D\u043E\u0432\u0456\u0442\u044C \u0443 data/power.json</span>
+      \u0414\u0436\u0435\u0440\u0435\u043B\u043E: ${escapeHtml(powerData._meta.source)} \xB7 \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E \u043E ${updStr}<br>
+      <span class="pw-demo-note">\u26A0\uFE0F DEMO-\u0434\u0430\u043D\u0456 \u2014 \u0431\u0443\u0434\u0435 Supabase \u0443 \u0424\u0430\u0437\u0456 3</span>
     </div>
   `;
     document.getElementById("pw-change-location")?.addEventListener("click", () => {
@@ -1815,9 +1908,6 @@ END:VEVENT`
     document.getElementById("pw-ics-btn")?.addEventListener("click", () => {
       generateICS(selStreet, queue);
     });
-    setTimeout(() => {
-      document.getElementById("pw-now-marker")?.scrollIntoView({ behavior: "smooth", block: "center" });
-    }, 120);
   }
   function initPower() {
     fetch("./data/power.json").then((r) => r.json()).then((data) => {

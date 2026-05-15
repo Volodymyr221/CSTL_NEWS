@@ -166,48 +166,171 @@ function renderStreetOnboarding(container) {
   });
 }
 
-// ── Рендер: таймлайн ─────────────────────────────────────────────────────────
+// ── Рендер v2: hero-таймер + горизонтальна стрічка + завтра (15.05) ──────────
 
-function renderTimeline(queue) {
-  const schedule = getTodaySchedule(queue.id);
+// Знаходить початок поточного періоду (година з тим самим статусом, ззаду)
+function findPeriodStart(schedule, fromH) {
+  let h = fromH;
+  while (h > 0 && schedule[h - 1] === schedule[fromH]) h--;
+  return h;
+}
+
+// Знаходить наступну зміну статусу від поточної години
+function findNextChange(schedule, fromH) {
+  for (let h = fromH + 1; h < 24; h++) {
+    if (schedule[h] !== schedule[fromH]) return h;
+  }
+  return null; // до кінця доби без змін
+}
+
+// SVG прогрес-кільце. progress: 0..1. color: CSS color.
+function renderProgressRing(progress, color) {
+  const r = 88;                       // радіус
+  const c = 2 * Math.PI * r;          // довжина кола
+  const offset = c * (1 - progress);
+  return `
+    <svg class="pw-ring" viewBox="0 0 200 200">
+      <circle class="pw-ring-bg" cx="100" cy="100" r="${r}"></circle>
+      <circle class="pw-ring-fg"
+              cx="100" cy="100" r="${r}"
+              stroke="${color}"
+              stroke-dasharray="${c.toFixed(2)}"
+              stroke-dashoffset="${offset.toFixed(2)}"></circle>
+    </svg>
+  `;
+}
+
+// Hero-блок: велике коло з прогресом + текст всередині
+function renderHeroTimer(schedule) {
   if (!schedule) return '<p class="pw-empty">Дані на сьогодні відсутні</p>';
 
   const now   = new Date();
   const curH  = now.getHours();
   const curM  = now.getMinutes();
+  const cur   = schedule[curH];                  // 0 нема / 1 є / 2 maybe
 
-  const rows = schedule.map((status, hour) => {
-    const isPast    = hour < curH;
-    const isCurrent = hour === curH;
-    const blockCls  = status === 1 ? 'pw-block--on'
-                    : status === 0 ? 'pw-block--off'
-                    :                'pw-block--maybe';
-    const label     = status === 1 ? 'Є' : status === 0 ? 'Немає' : '?';
+  const nextH = findNextChange(schedule, curH);
+  const periodStart = findPeriodStart(schedule, curH);
 
-    const nowMarker = isCurrent ? `
-      <div class="pw-now-marker" id="pw-now-marker">
-        <div class="pw-now-dot"></div>
-        <span class="pw-now-label">ЗАРАЗ ${pad(curH)}:${pad(curM)}</span>
-        <div class="pw-now-line-right"></div>
-      </div>` : '';
+  // Скільки хвилин до зміни (або до кінця доби)
+  const minToChange = nextH !== null
+    ? (nextH - curH) * 60 - curM
+    : (24 - curH) * 60 - curM;
 
-    return `
-      ${nowMarker}
-      <div class="pw-row${isPast ? ' pw-row--past' : ''}${isCurrent ? ' pw-row--current' : ''}">
-        <span class="pw-time">${pad(hour)}:00</span>
-        <div class="pw-block ${blockCls}">
-          <span class="pw-block-label">${label}</span>
-        </div>
-      </div>`;
-  }).join('');
+  // Скільки хвилин уже триває поточний період
+  const minSinceStart = (curH - periodStart) * 60 + curM;
+  const totalMin = minSinceStart + minToChange;
+  const progress = totalMin > 0 ? minSinceStart / totalMin : 0;
 
-  const dateStr = now.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+  // Текст всередині кільця
+  const h = Math.floor(minToChange / 60);
+  const m = minToChange % 60;
+  const timeLeft = h > 0 ? `${h} год ${m} хв` : `${m} хв`;
+
+  let actionLabel, statusEmoji, ringColor;
+  if (cur === 1) {
+    actionLabel = nextH !== null ? 'До відключення' : 'Без змін до кінця доби';
+    statusEmoji = '🟢';
+    ringColor = '#4F8B3D'; // зелений
+  } else if (cur === 0) {
+    actionLabel = nextH !== null ? 'До світла' : 'Без змін до кінця доби';
+    statusEmoji = '🔴';
+    ringColor = '#C41E3A'; // червоний
+  } else {
+    actionLabel = nextH !== null ? 'До зміни' : 'Можливі перебої';
+    statusEmoji = '🟡';
+    ringColor = '#D97706'; // жовтий
+  }
+
+  const statusText = cur === 1 ? 'Є світло' : cur === 0 ? 'Немає світла' : 'Можливі перебої';
+  const nextLabel  = nextH !== null ? `до ${pad(nextH)}:00` : '';
 
   return `
-    <div class="pw-timeline">
-      <div class="pw-timeline-date">Сьогодні, ${dateStr}</div>
-      ${rows}
-    </div>`;
+    <div class="pw-hero pw-hero--${cur === 1 ? 'on' : cur === 0 ? 'off' : 'maybe'}">
+      <div class="pw-hero-ring-wrap">
+        ${renderProgressRing(progress, ringColor)}
+        <div class="pw-hero-center">
+          <div class="pw-hero-status">${statusEmoji} ${statusText}</div>
+          <div class="pw-hero-time">${nextH !== null ? timeLeft : '—'}</div>
+          <div class="pw-hero-label">${actionLabel}${nextH !== null ? ` ${nextLabel}` : ''}</div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// Горизонтальна стрічка 24 сегменти
+function renderHorizontalTimeline(schedule) {
+  if (!schedule) return '';
+  const now  = new Date();
+  const curH = now.getHours();
+  const curM = now.getMinutes();
+  const markerPos = ((curH + curM / 60) / 24) * 100;
+
+  const segments = schedule.map((status, h) => {
+    const cls = status === 1 ? 'on' : status === 0 ? 'off' : 'maybe';
+    const isCurrent = h === curH;
+    const label = status === 1 ? 'є' : status === 0 ? 'немає' : '?';
+    return `<div class="pw-seg pw-seg--${cls}${isCurrent ? ' pw-seg--current' : ''}"
+                title="${pad(h)}:00 — ${label}"></div>`;
+  }).join('');
+
+  return `
+    <div class="pw-timeline-card">
+      <div class="pw-timeline-title">Сьогодні · 24 години</div>
+      <div class="pw-timeline-strip">
+        ${segments}
+        <div class="pw-timeline-marker" style="left: ${markerPos.toFixed(2)}%">
+          <div class="pw-timeline-marker-dot"></div>
+          <div class="pw-timeline-marker-label">${pad(curH)}:${pad(curM)}</div>
+        </div>
+      </div>
+      <div class="pw-timeline-legend">
+        <span><i class="pw-leg pw-leg--on"></i> є світло</span>
+        <span><i class="pw-leg pw-leg--off"></i> немає</span>
+        <span><i class="pw-leg pw-leg--maybe"></i> можливо</span>
+      </div>
+      <div class="pw-timeline-axis">
+        <span>00</span><span>06</span><span>12</span><span>18</span><span>24</span>
+      </div>
+    </div>
+  `;
+}
+
+// Картка прогнозу на завтра — рахуємо години без світла з графіка
+function renderTomorrowCard(queue) {
+  // Завтрашній key
+  const d = new Date(); d.setDate(d.getDate() + 1);
+  const tomorrowKey = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  const tomorrowSched = queue.schedule[tomorrowKey];
+  if (!tomorrowSched) return '';
+
+  const hoursOff = tomorrowSched.filter(s => s === 0).length;
+  if (hoursOff === 0) {
+    return `<div class="pw-tomorrow pw-tomorrow--good">✨ Завтра — світло цілий день</div>`;
+  }
+
+  // Найдовший період off-status
+  let maxLen = 0, maxStart = -1, curLen = 0, curStart = -1;
+  for (let h = 0; h < 24; h++) {
+    if (tomorrowSched[h] === 0) {
+      if (curStart === -1) curStart = h;
+      curLen++;
+      if (curLen > maxLen) { maxLen = curLen; maxStart = curStart; }
+    } else {
+      curLen = 0; curStart = -1;
+    }
+  }
+  const periodTxt = maxLen > 0
+    ? `Найдовший період: ${pad(maxStart)}:00–${pad(maxStart + maxLen)}:00`
+    : '';
+
+  return `
+    <div class="pw-tomorrow">
+      <div class="pw-tomorrow-title">⚠️ Завтра: ${hoursOff} годин без світла</div>
+      <div class="pw-tomorrow-sub">${periodTxt}</div>
+    </div>
+  `;
 }
 
 // ── Рендер: головна сторінка ──────────────────────────────────────────────────
@@ -237,29 +360,11 @@ function renderPowerPage() {
     return;
   }
 
-  // Крок 3: все вибрано — таймлайн
+  // Крок 3: все вибрано — hero-таймер + горизонтальна стрічка + завтра
   const queue = findQueue(selStreet.queue_id);
   if (!queue) { selStreet = null; savePrefs(); renderPowerPage(); return; }
 
-  const schedule  = getTodaySchedule(queue.id);
-  const curH      = new Date().getHours();
-  const curStatus = schedule ? schedule[curH] : null;
-
-  // Наступна зміна статусу
-  let nextH = null;
-  if (schedule) {
-    for (let h = curH + 1; h < 24; h++) {
-      if (schedule[h] !== curStatus) { nextH = h; break; }
-    }
-  }
-
-  const statusText = curStatus === 1 ? '🟢 Зараз є світло'
-                   : curStatus === 0 ? '🔴 Зараз немає світла'
-                   :                  '🟡 Можливі перебої';
-  const statusCls  = curStatus === 1 ? 'pw-status--on'
-                   : curStatus === 0 ? 'pw-status--off'
-                   :                  'pw-status--maybe';
-  const nextTxt    = nextH !== null ? ` · до ${pad(nextH)}:00` : '';
+  const schedule = getTodaySchedule(queue.id);
 
   // Підпис вверху: «Дерно» або «Олика · вул. Замкова»
   const locationLabel = selCity.streets.length === 1
@@ -278,20 +383,19 @@ function renderPowerPage() {
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
     </div>
 
-    <div class="pw-status-card ${statusCls}">
-      <div class="pw-status-main">${statusText}${nextTxt}</div>
-      <div class="pw-status-upd">Дані актуальні на ${updStr}</div>
-    </div>
+    ${renderHeroTimer(schedule)}
 
-    ${renderTimeline(queue)}
+    ${renderHorizontalTimeline(schedule)}
+
+    ${renderTomorrowCard(queue)}
 
     <div class="pw-actions">
       <button class="pw-ics-btn" id="pw-ics-btn">📅 Додати відключення в календар</button>
     </div>
 
     <div class="pw-footer-note">
-      Джерело: ${escapeHtml(powerData._meta.source)}<br>
-      <span class="pw-demo-note">⚠️ DEMO-дані — оновіть у data/power.json</span>
+      Джерело: ${escapeHtml(powerData._meta.source)} · оновлено о ${updStr}<br>
+      <span class="pw-demo-note">⚠️ DEMO-дані — буде Supabase у Фазі 3</span>
     </div>
   `;
 
@@ -305,11 +409,6 @@ function renderPowerPage() {
   document.getElementById('pw-ics-btn')?.addEventListener('click', () => {
     generateICS(selStreet, queue);
   });
-
-  // Прокрутити до рядка «ЗАРАЗ»
-  setTimeout(() => {
-    document.getElementById('pw-now-marker')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, 120);
 }
 
 // ── Ініціалізація ─────────────────────────────────────────────────────────────
