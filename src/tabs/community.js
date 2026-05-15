@@ -17,6 +17,33 @@ import {
   renderContactsBlock,
 } from './community-blocks.js';
 
+// ── Hero ротатор: 3 фото Олики, fade-transition 0.8s, інтервал 6s ────────────
+const HERO_IMAGES = [
+  './photos/olyka-1.jpg',
+  './photos/olyka-2.jpg',
+  './photos/olyka-3.jpg',
+];
+
+let _heroInterval = null;
+let _heroIndex = 0;
+
+function startHeroRotator() {
+  if (_heroInterval) clearInterval(_heroInterval);
+  if (HERO_IMAGES.length < 2) return;
+  _heroIndex = 0;
+  _heroInterval = setInterval(() => {
+    const wrap = document.querySelector('.cm-hero');
+    if (!wrap) { clearInterval(_heroInterval); _heroInterval = null; return; }
+    _heroIndex = (_heroIndex + 1) % HERO_IMAGES.length;
+    wrap.querySelectorAll('.cm-hero-img').forEach((img, i) => {
+      img.classList.toggle('active', i === _heroIndex);
+    });
+    wrap.querySelectorAll('.cm-hero-dot').forEach((d, i) => {
+      d.classList.toggle('active', i === _heroIndex);
+    });
+  }, 6000);
+}
+
 // ── Greeting + Дата (заголовок вкладки) ──────────────────────────────────────
 
 function getGreeting() {
@@ -51,10 +78,15 @@ function renderSkeleton() {
     </section>
 
     <section class="cm-hero">
-      <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="Олика" loading="eager">
+      ${HERO_IMAGES.map((url, i) => `
+        <img class="cm-hero-img${i === 0 ? ' active' : ''}" src="${escapeHtml(url)}" alt="${i === 0 ? 'Олика' : ''}" loading="${i === 0 ? 'eager' : 'lazy'}">
+      `).join('')}
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
         <p class="cm-hero-sub">Наше містечко на Волині</p>
+      </div>
+      <div class="cm-hero-dots">
+        ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? ' active' : ''}"></span>`).join('')}
       </div>
     </section>
 
@@ -109,6 +141,7 @@ function renderSkeleton() {
 
 export function initCommunity() {
   renderSkeleton();
+  startHeroRotator();
   // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
   renderWeatherBlock();
   renderPowerBlock();

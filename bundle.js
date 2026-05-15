@@ -634,6 +634,35 @@
   }
 
   // src/tabs/community.js
+  var HERO_IMAGES = [
+    "./photos/olyka-1.jpg",
+    "./photos/olyka-2.jpg",
+    "./photos/olyka-3.jpg"
+  ];
+  var _heroInterval = null;
+  var _heroIndex = 0;
+  function startHeroRotator() {
+    if (_heroInterval)
+      clearInterval(_heroInterval);
+    if (HERO_IMAGES.length < 2)
+      return;
+    _heroIndex = 0;
+    _heroInterval = setInterval(() => {
+      const wrap = document.querySelector(".cm-hero");
+      if (!wrap) {
+        clearInterval(_heroInterval);
+        _heroInterval = null;
+        return;
+      }
+      _heroIndex = (_heroIndex + 1) % HERO_IMAGES.length;
+      wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
+        img.classList.toggle("active", i === _heroIndex);
+      });
+      wrap.querySelectorAll(".cm-hero-dot").forEach((d, i) => {
+        d.classList.toggle("active", i === _heroIndex);
+      });
+    }, 6e3);
+  }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
     if (h >= 5 && h < 11)
@@ -664,10 +693,15 @@
     </section>
 
     <section class="cm-hero">
-      <img class="cm-hero-img" src="https://vidviday.ua/storage/media/place/5304/260244-6a454c65-caf-11264762-1467163756920578-759794530-n.jpg" alt="\u041E\u043B\u0438\u043A\u0430" loading="eager">
+      ${HERO_IMAGES.map((url, i) => `
+        <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(url)}" alt="${i === 0 ? "\u041E\u043B\u0438\u043A\u0430" : ""}" loading="${i === 0 ? "eager" : "lazy"}">
+      `).join("")}
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
         <p class="cm-hero-sub">\u041D\u0430\u0448\u0435 \u043C\u0456\u0441\u0442\u0435\u0447\u043A\u043E \u043D\u0430 \u0412\u043E\u043B\u0438\u043D\u0456</p>
+      </div>
+      <div class="cm-hero-dots">
+        ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? " active" : ""}"></span>`).join("")}
       </div>
     </section>
 
@@ -719,6 +753,7 @@
   }
   function initCommunity() {
     renderSkeleton();
+    startHeroRotator();
     renderWeatherBlock();
     renderPowerBlock();
     renderBusBlock();
