@@ -379,20 +379,26 @@ function renderPowerPage() {
 
   const schedule = getTodaySchedule(queue.id);
 
-  // Підпис вверху: «Дерно» або «Олика · вул. Замкова»
-  const locationLabel = selCity.streets.length === 1
-    ? escapeHtml(selCity.name)
-    : `${escapeHtml(selCity.name)} · ${escapeHtml(selStreet.name)}`;
+  // Дві окремі pills: 🏘 село + 🛣 вулиця. Якщо у селі одна вулиця — друга ховається.
+  const hasStreets = selCity.streets.length > 1;
+  const streetPillHtml = hasStreets ? `
+    <button class="pw-street-btn-top pw-street-btn--secondary" id="pw-change-street" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-loc"><path d="M3 12h18M3 6h18M3 18h18"/></svg>
+      <span>${escapeHtml(selStreet.name)}</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-chev"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+  ` : '';
 
   container.innerHTML = `
     ${offlineBanner}
 
     <div class="pw-top-bar">
-      <button class="pw-street-btn-top" id="pw-change-location">
+      <button class="pw-street-btn-top" id="pw-change-location" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-loc"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
-        <span>${locationLabel}</span>
+        <span>${escapeHtml(selCity.name)}</span>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="pw-icon-chev"><path d="M6 9l6 6 6-6"/></svg>
       </button>
+      ${streetPillHtml}
       <span class="pw-queue-badge">${escapeHtml(queue.name)}</span>
     </div>
 
@@ -414,6 +420,13 @@ function renderPowerPage() {
 
   document.getElementById('pw-change-location')?.addEventListener('click', () => {
     selCity   = null;
+    selStreet = null;
+    savePrefs();
+    renderPowerPage();
+  });
+
+  // Друга pill — змінити тільки вулицю (село лишити)
+  document.getElementById('pw-change-street')?.addEventListener('click', () => {
     selStreet = null;
     savePrefs();
     renderPowerPage();
