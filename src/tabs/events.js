@@ -1,7 +1,7 @@
 import { escapeHtml } from '../core/utils.js';
 
 // Категорії для фільтрів (categories for filters)
-const CATEGORY_FILTERS = ['Всі', 'Культура', 'Спорт', 'Благодійність'];
+const CATEGORY_FILTERS = ['Всі', 'Свята', 'Культура', 'Спорт', 'Благодійність'];
 
 // Кольори бейджів по категорії
 const CATEGORY_COLORS = {
@@ -9,6 +9,7 @@ const CATEGORY_COLORS = {
   'Kino_Castle':   '#722F37',
   'Спорт':         '#1565C0',
   'Благодійність': '#B45309',
+  'Свято':         '#8B6F47',  // коричневий — нейтральний для свят (державних і релігійних)
 };
 
 // Назви місяців у родовому відмінку для повної дати
@@ -117,6 +118,20 @@ function cardHtml(ev) {
       <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
     </div>` : '';
 
+  const locationBlock = ev.location ? `
+    <span class="ev-meta-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      ${escapeHtml(ev.location)}
+    </span>` : '';
+
+  // Час: для свят null, для подій — є
+  const timeText = ev.time
+    ? `${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}`
+    : escapeHtml(formatFullDate(ev.date));
+
   return `
     <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
       ${coverBlock}
@@ -127,19 +142,13 @@ function cardHtml(ev) {
         <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
         <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
         <div class="ev-card-meta">
-          <span class="ev-meta-item">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
-            ${escapeHtml(ev.location)}
-          </span>
+          ${locationBlock}
           <span class="ev-meta-item">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
             </svg>
-            ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
+            ${timeText}
           </span>
         </div>
         <div class="ev-card-expand-hint">
@@ -251,7 +260,10 @@ function renderList() {
       const d = new Date(e.date + 'T00:00:00');
       if (d < now) return false;
       if (selectedDate && e.date !== selectedDate) return false;
-      return activeFilter === 'Всі' || e.category === activeFilter;
+      if (activeFilter === 'Всі') return true;
+      // Чіп «Свята» (мн.) фільтрує по категорії «Свято» (однина)
+      if (activeFilter === 'Свята') return e.category === 'Свято';
+      return e.category === activeFilter;
     })
     .sort((a, b) => {
       // B-17 fix: при однаковій даті сортуємо за часом (раніше — у порядку JSON).
@@ -328,14 +340,22 @@ function renderList() {
   });
 }
 
-// Точка входу — ініціалізує модуль подій
+// Точка входу — ініціалізує модуль подій.
+// Підвантажуємо подвійно: events.json (мероприємства) + holidays.json (свята).
+// Тримаємо в окремих файлах щоб RSS-парсер не затирав свята.
 export async function initEvents() {
   const el = document.getElementById('events-list');
   if (el) renderSkeleton(el);
 
   try {
-    const res = await fetch('./data/events.json');
-    allEvents  = await res.json();
+    const [evRes, holRes] = await Promise.all([
+      fetch('./data/events.json'),
+      fetch('./data/holidays.json'),
+    ]);
+    const events   = await evRes.json();
+    const holData  = await holRes.json();
+    const holidays = (holData.holidays || []).map(h => ({ ...h, time: null, location: null }));
+    allEvents = [...events, ...holidays];
   } catch {
     allEvents = [];
   }
