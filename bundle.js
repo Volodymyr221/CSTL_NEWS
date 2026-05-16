@@ -368,42 +368,41 @@
       });
       const totalCount = official.length + userPosts.length;
       if (!totalCount) {
-        el.innerHTML = `
-        <div class="cm-board-preview-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>
-      `;
+        el.innerHTML = `<div class="cm-board-preview-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
         return;
       }
-      const preview = [
-        ...official.map((a) => ({ type: "official", title: a.title, text: a.body, ts: a.ts })),
-        ...userPosts.map((p) => ({ type: "user", category: p.category, text: p.text, ts: p.ts }))
-      ].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
-      const itemsHtml = preview.map((item) => {
+      const merged = [
+        ...official.map((a) => ({ type: "official", title: a.title, text: a.body, ts: a.ts, id: a.id })),
+        ...userPosts.map((p) => ({ type: "user", category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color }))
+      ].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
+      const stickersHtml = merged.map((item) => {
+        const tilt = item.id * 7 % 9 - 4;
         if (item.type === "official") {
           return `
-          <div class="cm-board-preview-item">
-            <span class="cm-board-preview-cat cm-board-preview-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
-            <span class="cm-board-preview-text">${escapeHtml(item.title)}</span>
-          </div>
+          <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
+            <span class="cm-board-pin cm-board-pin--gold"></span>
+            <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
+            <p class="cm-board-text">${escapeHtml(item.title)}</p>
+          </article>
         `;
         }
         const emoji = CATEGORY_EMOJI[item.category] || "\u{1F4CC}";
         return `
-        <div class="cm-board-preview-item">
-          <span class="cm-board-preview-cat">${emoji} ${escapeHtml(item.category)}</span>
-          <span class="cm-board-preview-text">${escapeHtml(item.text)}</span>
-        </div>
+        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin"></span>
+          <span class="cm-board-cat">${emoji} ${escapeHtml(item.category)}</span>
+          <p class="cm-board-text">${escapeHtml(item.text)}</p>
+        </article>
       `;
       }).join("");
+      const more = Math.max(0, totalCount - merged.length);
+      const moreHtml = more > 0 ? `<div class="cm-board-preview-more">+${more} \u0449\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>` : "";
       el.innerHTML = `
       <div class="cm-board-preview" onclick="switchTab('board')">
-        <div class="cm-board-preview-count">
-          <span class="cm-board-preview-num">${totalCount}</span>
-          <span class="cm-board-preview-lbl">${totalCount === 1 ? "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" : totalCount < 5 ? "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" : "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C"}</span>
+        <div class="cm-board-corkboard cm-board-corkboard--mini">
+          ${stickersHtml}
         </div>
-        <div class="cm-board-preview-list">
-          ${itemsHtml}
-        </div>
-        <div class="cm-board-preview-cta">\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192</div>
+        ${moreHtml}
       </div>
     `;
     } catch {
@@ -615,7 +614,7 @@
         <h3 class="cm-block-title">\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
         <button class="cm-block-link" onclick="switchTab('board')">\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u2192</button>
       </header>
-      <div id="cm-board-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
     <section class="cm-block cm-block--weather">

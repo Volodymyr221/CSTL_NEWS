@@ -889,81 +889,72 @@
 }
 
 /* ===== BOARD MINI-PREVIEW (16.05.2026) =====
-   Компактний preview-блок Дошки на Громаді (як Погода). Тап → вкладка Дошка. */
+   Міні-коркова дошка на Громаді з 2 стікерами в стилі повної Дошки.
+   Впізнавана з першого погляду. Тап → switchTab('board'). */
 .cm-board-preview {
-  padding: 4px 14px 14px;
+  padding: 0;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   transition: opacity 0.15s;
 }
-.cm-board-preview:active { opacity: 0.7; }
+.cm-board-preview:active { opacity: 0.82; }
 
 .cm-board-preview-empty {
-  padding: 14px;
+  padding: 18px;
   color: var(--gray);
   font-size: 13.5px;
   text-align: center;
 }
 
-.cm-board-preview-count {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  margin-bottom: 10px;
-}
-.cm-board-preview-num {
-  font-family: Georgia, serif;
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--ink);
-  line-height: 1;
-  letter-spacing: -1px;
-}
-.cm-board-preview-lbl {
-  font-size: 13px;
-  color: var(--ink-soft);
-  font-weight: 600;
+/* Міні-варіант коркової дошки — компактніша, без overflow scroll */
+.cm-board-corkboard--mini {
+  max-height: none;
+  padding: 14px 12px 12px;
+  border-top-width: 3px;
+  border-bottom-width: 3px;
+  gap: 8px 8px;
 }
 
-.cm-board-preview-list {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: 10px;
+/* Міні-стікер — менші розміри + обрізаний текст */
+.cm-board-note.cm-board-mini {
+  width: calc(50% - 4px);
+  min-height: 88px;
+  padding: 12px 10px 10px;
 }
-.cm-board-preview-item {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 10px;
-  background: var(--paper);
-  border-radius: 8px;
-  border-left: 3px solid var(--hairline);
+.cm-board-note.cm-board-mini .cm-board-cat {
+  font-size: 10px;
+  margin-bottom: 3px;
 }
-.cm-board-preview-cat {
-  font-size: 10.5px;
-  font-weight: 700;
-  color: var(--ink-mute);
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-}
-.cm-board-preview-cat--official { color: #B45309; }
-.cm-board-preview-text {
-  font-size: 13px;
-  color: var(--ink);
+.cm-board-note.cm-board-mini .cm-board-text {
+  font-size: 12.5px;
   line-height: 1.35;
+  margin-bottom: 0;
   display: -webkit-box;
-  -webkit-line-clamp: 1;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-
-.cm-board-preview-cta {
-  font-size: 13px;
+/* Офіційний міні-стікер — повна ширина, як у Дошці */
+.cm-board-note.cm-board-mini.cm-board-note--official {
+  width: 100%;
+  min-height: 0;
+  padding: 12px 12px 10px;
+}
+.cm-board-note.cm-board-mini.cm-board-note--official .cm-board-text {
+  font-size: 13.5px;
   font-weight: 700;
-  color: var(--red);
-  text-align: right;
+  color: #1a1a1a;
+}
+
+/* Лічильник "+N ще" знизу — підказка що ще є оголошення */
+.cm-board-preview-more {
+  padding: 8px 14px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  text-align: center;
   letter-spacing: 0.2px;
+  background: var(--bg-card);
 }
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */

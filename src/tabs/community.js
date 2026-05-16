@@ -95,7 +95,7 @@ function renderSkeleton() {
         <h3 class="cm-block-title">Дошка громади</h3>
         <button class="cm-block-link" onclick="switchTab('board')">Відкрити →</button>
       </header>
-      <div id="cm-board-content" class="cm-block-body cm-loading">Завантаження…</div>
+      <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
     </section>
 
     <section class="cm-block cm-block--weather">
