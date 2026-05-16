@@ -1,6 +1,6 @@
 /* ===== COMMUNITY (Громада — головна вкладка-дашборд) ===== */
 .cm-content {
-  padding: 12px 14px 24px;
+  padding: 6px 14px 24px;
   display: flex;
   flex-direction: column;
   gap: 14px;

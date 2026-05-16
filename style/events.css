@@ -12,12 +12,11 @@
 
 /* Смуга з фільтрами (sticky — прилипає до шапки при скролі) */
 .events-filters-bar {
-  padding: 10px 16px 0;
-  background: var(--white);
+  padding: 6px 14px 8px;
+  background: var(--bg-page);
   position: sticky;
   top: var(--header-h);
   z-index: 50;
-  border-bottom: 1px solid var(--border);
 }
 
 /* Картка події */

@@ -13,7 +13,7 @@
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
-  padding: 14px 16px 8px;
+  padding: 6px 14px 4px;
 }
 .pw-top-bar .pw-queue-badge { margin-left: auto; }
 .pw-street-btn-top {
