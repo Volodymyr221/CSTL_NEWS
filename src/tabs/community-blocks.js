@@ -280,7 +280,7 @@ const CATEGORY_EMOJI = {
   'оголошення':  '📢',
 };
 
-// Міні-блок Дошки (preview-картка) — компактний, як Погода.
+// Міні-блок Дошки (preview-картка) — компактна коркова дошка з 2 стікерами.
 // Повна Дошка відкривається у вкладці switchTab('board').
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
@@ -302,48 +302,48 @@ export async function renderBoardBlock() {
     const totalCount = official.length + userPosts.length;
 
     if (!totalCount) {
-      el.innerHTML = `
-        <div class="cm-board-preview-empty">На дошці поки порожньо.</div>
-      `;
+      el.innerHTML = `<div class="cm-board-preview-empty">На дошці поки порожньо.</div>`;
       return;
     }
 
-    // Показуємо до 3 останніх (офіційні мають пріоритет)
-    const preview = [
-      ...official.map(a => ({ type: 'official', title: a.title, text: a.body, ts: a.ts })),
-      ...userPosts.map(p => ({ type: 'user', category: p.category, text: p.text, ts: p.ts })),
-    ]
-      .sort((a, b) => (b.ts || 0) - (a.ts || 0))
-      .slice(0, 3);
+    // Беремо 2 найсвіжіші (офіційні мають пріоритет — більш репрезентативні)
+    const merged = [
+      ...official.map(a => ({ type: 'official', title: a.title, text: a.body, ts: a.ts, id: a.id })),
+      ...userPosts.map(p => ({ type: 'user', category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color })),
+    ].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
 
-    const itemsHtml = preview.map(item => {
+    const stickersHtml = merged.map(item => {
+      const tilt = ((item.id * 7) % 9) - 4;
       if (item.type === 'official') {
         return `
-          <div class="cm-board-preview-item">
-            <span class="cm-board-preview-cat cm-board-preview-cat--official">🏛️ ОФІЦІЙНО</span>
-            <span class="cm-board-preview-text">${escapeHtml(item.title)}</span>
-          </div>
+          <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
+            <span class="cm-board-pin cm-board-pin--gold"></span>
+            <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
+            <p class="cm-board-text">${escapeHtml(item.title)}</p>
+          </article>
         `;
       }
       const emoji = CATEGORY_EMOJI[item.category] || '📌';
       return `
-        <div class="cm-board-preview-item">
-          <span class="cm-board-preview-cat">${emoji} ${escapeHtml(item.category)}</span>
-          <span class="cm-board-preview-text">${escapeHtml(item.text)}</span>
-        </div>
+        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || 'yellow')} cm-board-mini" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin"></span>
+          <span class="cm-board-cat">${emoji} ${escapeHtml(item.category)}</span>
+          <p class="cm-board-text">${escapeHtml(item.text)}</p>
+        </article>
       `;
     }).join('');
 
+    const more = Math.max(0, totalCount - merged.length);
+    const moreHtml = more > 0
+      ? `<div class="cm-board-preview-more">+${more} ще на дошці</div>`
+      : '';
+
     el.innerHTML = `
       <div class="cm-board-preview" onclick="switchTab('board')">
-        <div class="cm-board-preview-count">
-          <span class="cm-board-preview-num">${totalCount}</span>
-          <span class="cm-board-preview-lbl">${totalCount === 1 ? 'оголошення' : (totalCount < 5 ? 'оголошення' : 'оголошень')}</span>
+        <div class="cm-board-corkboard cm-board-corkboard--mini">
+          ${stickersHtml}
         </div>
-        <div class="cm-board-preview-list">
-          ${itemsHtml}
-        </div>
-        <div class="cm-board-preview-cta">Перейти на дошку →</div>
+        ${moreHtml}
       </div>
     `;
   } catch {
