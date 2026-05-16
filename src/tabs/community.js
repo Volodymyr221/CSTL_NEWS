@@ -132,7 +132,7 @@ function renderSkeleton() {
       <header class="cm-block-header">
         <h3 class="cm-block-title">Корисні контакти</h3>
       </header>
-      <div id="cm-contacts-content" class="cm-block-body cm-contacts-grid cm-loading">Завантаження…</div>
+      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">Завантаження…</div>
     </section>
   `;
 }

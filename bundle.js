@@ -598,12 +598,6 @@
     power: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
     default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
   };
-  var CONTACT_COLORS = {
-    emergency: "#C41E3A",
-    medical: "#2E7D32",
-    gov: "#1565C0",
-    utility: "#B45309"
-  };
   async function renderContactsBlock() {
     const el = document.getElementById("cm-contacts-content");
     if (!el)
@@ -616,18 +610,51 @@
         el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
         return;
       }
-      el.innerHTML = list.map((c) => {
-        const icon = CONTACT_ICONS[c.icon] || CONTACT_ICONS.default;
-        const color = CONTACT_COLORS[c.category] || "#666";
-        const tel = c.phone.replace(/[^\d+]/g, "");
-        return `
-        <a class="cm-contact-card" href="tel:${escapeHtml(tel)}" style="--accent:${color}">
-          <span class="cm-contact-icon">${icon}</span>
-          <span class="cm-contact-name">${escapeHtml(c.name)}</span>
-          <span class="cm-contact-phone">${escapeHtml(c.phone)}</span>
-        </a>
-      `;
-      }).join("");
+      const hero = list.find((c) => c.group === "hero" || c.priority === "critical");
+      const emergency = list.filter((c) => c.group === "emergency");
+      const local = list.filter((c) => c.group === "local");
+      const telOf = (p) => p.replace(/[^\d+]/g, "");
+      const heroHtml = hero ? `
+      <a class="cm-contact-hero" href="tel:${escapeHtml(telOf(hero.phone))}">
+        <span class="cm-contact-hero-icon">${CONTACT_ICONS[hero.icon] || CONTACT_ICONS.default}</span>
+        <span class="cm-contact-hero-text">
+          <span class="cm-contact-hero-name">${escapeHtml(hero.name)}</span>
+          <span class="cm-contact-hero-hint">\u0422\u0430\u043F \u0434\u043B\u044F \u0432\u0438\u043A\u043B\u0438\u043A\u0443</span>
+        </span>
+        <span class="cm-contact-hero-phone">${escapeHtml(hero.phone)}</span>
+      </a>
+    ` : "";
+      const emergencyHtml = emergency.length ? `
+      <div class="cm-contact-group cm-contact-group--emergency">
+        <div class="cm-contact-group-title">\u0410\u0432\u0430\u0440\u0456\u0439\u043D\u0456</div>
+        <div class="cm-contact-grid-2x2">
+          ${emergency.map((c) => `
+            <a class="cm-contact-tile" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-tile-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-tile-name">${escapeHtml(c.name)}</span>
+              <span class="cm-contact-tile-phone">${escapeHtml(c.phone)}</span>
+            </a>
+          `).join("")}
+        </div>
+      </div>
+    ` : "";
+      const localHtml = local.length ? `
+      <div class="cm-contact-group cm-contact-group--local">
+        <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
+        <div class="cm-contact-rows">
+          ${local.map((c) => `
+            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-row-text">
+                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
+                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
+              </span>
+            </a>
+          `).join("")}
+        </div>
+      </div>
+    ` : "";
+      el.innerHTML = heroHtml + emergencyHtml + localHtml;
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
@@ -747,7 +774,7 @@
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
       </header>
-      <div id="cm-contacts-content" class="cm-block-body cm-contacts-grid cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
   `;
   }

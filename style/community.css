@@ -281,46 +281,181 @@
 }
 .cm-event-meta { font-size: 11.5px; color: var(--gray); }
 
-/* ── Блок 7: Контакти ── */
-.cm-contacts-grid {
+/* ── Блок 7: Контакти v2 — Tier 3 (16.05.2026) ── */
+/* Ієрархія: HERO (Швидка 103) + Аварійні 2×2 + Місцеві рядками */
+
+.cm-contacts-body {
+  padding: 4px 14px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── HERO: Швидка 103 — велика пульсуюча картка ── */
+.cm-contact-hero {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 18px 18px;
+  background: linear-gradient(135deg, #DC143C 0%, #8B0000 100%);
+  border-radius: 18px;
+  text-decoration: none;
+  color: white;
+  box-shadow: 0 4px 14px rgba(196, 30, 58, 0.30), 0 1px 3px rgba(0,0,0,0.12);
+  position: relative;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+  animation: cm-pulse-border 2s ease-in-out infinite;
+}
+.cm-contact-hero:active { transform: scale(0.98); }
+
+/* Пульсація — м'який ореол навколо картки (всередині кордону) */
+@keyframes cm-pulse-border {
+  0%, 100% { box-shadow: 0 4px 14px rgba(196, 30, 58, 0.30), 0 0 0 0 rgba(220, 20, 60, 0.55); }
+  50%      { box-shadow: 0 4px 14px rgba(196, 30, 58, 0.30), 0 0 0 10px rgba(220, 20, 60, 0); }
+}
+
+.cm-contact-hero-icon {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  color: white;
+  flex-shrink: 0;
+}
+.cm-contact-hero-icon svg { width: 100%; height: 100%; stroke-width: 2.2; }
+
+.cm-contact-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.cm-contact-hero-name {
+  font-size: 18px;
+  font-weight: 800;
+  line-height: 1.15;
+  letter-spacing: 0.2px;
+}
+.cm-contact-hero-hint {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.cm-contact-hero-phone {
+  font-size: 36px;
+  font-weight: 800;
+  font-family: Georgia, serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+}
+
+/* ── ГРУПА (заголовок + контейнер) ── */
+.cm-contact-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.cm-contact-group-title {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  padding-left: 2px;
+}
+
+/* ── EMERGENCY: 2×2 сітка плиток ── */
+.cm-contact-grid-2x2 {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: 8px;
-  padding: 4px 14px 14px;
 }
-.cm-contact-card {
-  --accent: #666;
+.cm-contact-tile {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
   padding: 12px;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  background: #FFF4E6;
+  border: 1px solid rgba(245, 158, 11, 0.22);
+  border-left: 3px solid #E67E22;
   border-radius: 10px;
   text-decoration: none;
-  color: var(--black);
+  color: var(--ink);
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
 }
-.cm-contact-card:active { background: var(--gray-light); }
-.cm-contact-icon {
+.cm-contact-tile:active { background: #FFE9CC; }
+.cm-contact-tile-icon {
   display: inline-flex;
   width: 22px;
   height: 22px;
-  color: var(--accent);
+  color: #E67E22;
 }
-.cm-contact-icon svg { width: 100%; height: 100%; }
-.cm-contact-name {
+.cm-contact-tile-icon svg { width: 100%; height: 100%; }
+.cm-contact-tile-name {
   font-size: 12.5px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.cm-contact-tile-phone {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
   font-weight: 600;
-  color: var(--black);
+}
+
+/* ── LOCAL: список карток-рядків на всю ширину ── */
+.cm-contact-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.cm-contact-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  background: #EAF6EC;
+  border: 1px solid rgba(46, 125, 50, 0.18);
+  border-left: 3px solid #2E7D32;
+  border-radius: 10px;
+  text-decoration: none;
+  color: var(--ink);
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.cm-contact-row:active { background: #D6EBDB; }
+.cm-contact-row-icon {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+  color: #2E7D32;
+  flex-shrink: 0;
+}
+.cm-contact-row-icon svg { width: 100%; height: 100%; }
+.cm-contact-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+}
+.cm-contact-row-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
   line-height: 1.2;
 }
-.cm-contact-phone {
-  font-size: 12px;
-  color: var(--gray);
+.cm-contact-row-phone {
+  font-size: 12.5px;
+  color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
 }
 
@@ -365,14 +500,8 @@
 .cm-block--event .cm-event-title { color: var(--peach-text); }
 .cm-block--event .cm-event-meta  { color: var(--peach-text); opacity: 0.75; }
 
-/* Контакти — кремовий папір, рамки делікатні */
+/* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
-.cm-block--contacts .cm-contact-card {
-  background: var(--paper);
-  border: 1px solid var(--hairline);
-  border-left: 3px solid var(--accent, var(--ink-mute));
-}
-.cm-block--contacts .cm-contact-card:active { background: var(--paper-deep); }
 
 /* Дошка — кремовий папір (внутрішня коркова дошка лишається своя) */
 .cm-block--board { background: var(--card-cream); }

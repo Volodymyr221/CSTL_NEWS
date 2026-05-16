@@ -444,18 +444,60 @@ export async function renderContactsBlock() {
       return;
     }
 
-    el.innerHTML = list.map(c => {
-      const icon  = CONTACT_ICONS[c.icon] || CONTACT_ICONS.default;
-      const color = CONTACT_COLORS[c.category] || '#666';
-      const tel   = c.phone.replace(/[^\d+]/g, '');
-      return `
-        <a class="cm-contact-card" href="tel:${escapeHtml(tel)}" style="--accent:${color}">
-          <span class="cm-contact-icon">${icon}</span>
-          <span class="cm-contact-name">${escapeHtml(c.name)}</span>
-          <span class="cm-contact-phone">${escapeHtml(c.phone)}</span>
-        </a>
-      `;
-    }).join('');
+    // Розділяємо контакти по групах: hero (Швидка) / emergency (4 аварійні) / local (амбулаторія, сільрада)
+    const hero      = list.find(c => c.group === 'hero' || c.priority === 'critical');
+    const emergency = list.filter(c => c.group === 'emergency');
+    const local     = list.filter(c => c.group === 'local');
+
+    const telOf = p => p.replace(/[^\d+]/g, '');
+
+    // ── HERO: Швидка 103 — велика пульсуюча картка ────────────────────────────
+    const heroHtml = hero ? `
+      <a class="cm-contact-hero" href="tel:${escapeHtml(telOf(hero.phone))}">
+        <span class="cm-contact-hero-icon">${CONTACT_ICONS[hero.icon] || CONTACT_ICONS.default}</span>
+        <span class="cm-contact-hero-text">
+          <span class="cm-contact-hero-name">${escapeHtml(hero.name)}</span>
+          <span class="cm-contact-hero-hint">Тап для виклику</span>
+        </span>
+        <span class="cm-contact-hero-phone">${escapeHtml(hero.phone)}</span>
+      </a>
+    ` : '';
+
+    // ── EMERGENCY: 2×2 сітка компактних плиток ─────────────────────────────────
+    const emergencyHtml = emergency.length ? `
+      <div class="cm-contact-group cm-contact-group--emergency">
+        <div class="cm-contact-group-title">Аварійні</div>
+        <div class="cm-contact-grid-2x2">
+          ${emergency.map(c => `
+            <a class="cm-contact-tile" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-tile-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-tile-name">${escapeHtml(c.name)}</span>
+              <span class="cm-contact-tile-phone">${escapeHtml(c.phone)}</span>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    // ── LOCAL: список карток на всю ширину ─────────────────────────────────────
+    const localHtml = local.length ? `
+      <div class="cm-contact-group cm-contact-group--local">
+        <div class="cm-contact-group-title">Місцеві</div>
+        <div class="cm-contact-rows">
+          ${local.map(c => `
+            <a class="cm-contact-row" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-row-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-row-text">
+                <span class="cm-contact-row-name">${escapeHtml(c.name)}</span>
+                <span class="cm-contact-row-phone">${escapeHtml(c.phone)}</span>
+              </span>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    el.innerHTML = heroHtml + emergencyHtml + localHtml;
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Контакти недоступні</div>';
   }
