@@ -504,7 +504,43 @@
 .cm-block--contacts { background: var(--card-cream); }
 
 /* Дошка — кремовий папір (внутрішня коркова дошка лишається своя) */
-.cm-block--board { background: var(--card-cream); }
+/* Дошка громади — весь блок виглядає як справжня коркова дошка,
+   без кремових секцій (16.05.2026). Шапка і CTA — частина дошки. */
+.cm-block--board {
+  background:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.07) 1px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    linear-gradient(135deg, #C9A678 0%, #A8845C 100%);
+  background-size: 12px 12px, 12px 12px, 100% 100%;
+}
+/* Шапка «Дошка громади» — темно-коричневий текст на корці */
+.cm-block--board .cm-block-title {
+  color: #2A1B0E;
+  letter-spacing: 0.3px;
+}
+/* Лінк «Відкрити →» — кремовий, контрастує з корком */
+.cm-block--board .cm-block-link {
+  color: #FFF4D6;
+  font-weight: 700;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.30);
+}
+/* Внутрішня міні-корка тепер прозора — фон уже на блоку */
+.cm-block--board .cm-board-corkboard--mini {
+  background: none;
+  border-top: none;
+  border-bottom: none;
+  padding: 4px 14px 16px;
+}
+/* CTA «Перейти на дошку» — темніша тінь корка, кремовий текст */
+.cm-block--board .cm-board-preview-cta {
+  background: rgba(60, 40, 20, 0.20);
+  border-top: 1px solid rgba(60, 40, 20, 0.35);
+  color: #FFF4D6;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.40);
+}
+.cm-block--board .cm-board-preview-cta:active {
+  background: rgba(60, 40, 20, 0.32);
+}
 
 /* Block link — на кольорових фонах має бути контрастним до тону блоку */
 .cm-block--power .cm-block-link,
