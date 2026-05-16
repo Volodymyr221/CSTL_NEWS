@@ -344,19 +344,14 @@ export async function renderBoardBlock() {
       `;
     }).join('');
 
-    const more = Math.max(0, totalCount - merged.length);
-    const moreHtml = more > 0
-      ? `<button class="cm-board-preview-cta" type="button">
-           Перейти на дошку <span class="cm-board-preview-count">+${more}</span>
-         </button>`
-      : '';
-
     el.innerHTML = `
       <div class="cm-board-preview" onclick="switchTab('board')">
         <div class="cm-board-corkboard cm-board-corkboard--mini">
           ${stickersHtml}
         </div>
-        ${moreHtml}
+        <button class="cm-board-preview-cta" type="button">
+          Перейти на дошку →
+        </button>
       </div>
     `;
   } catch {

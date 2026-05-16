@@ -401,16 +401,14 @@
         </article>
       `;
       }).join("");
-      const more = Math.max(0, totalCount - merged.length);
-      const moreHtml = more > 0 ? `<button class="cm-board-preview-cta" type="button">
-           \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 <span class="cm-board-preview-count">+${more}</span>
-         </button>` : "";
       el.innerHTML = `
       <div class="cm-board-preview" onclick="switchTab('board')">
         <div class="cm-board-corkboard cm-board-corkboard--mini">
           ${stickersHtml}
         </div>
-        ${moreHtml}
+        <button class="cm-board-preview-cta" type="button">
+          \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192
+        </button>
       </div>
     `;
     } catch {
@@ -620,7 +618,6 @@
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-        <button class="cm-block-link" onclick="switchTab('board')">\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u2192</button>
       </header>
       <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>

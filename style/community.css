@@ -531,15 +531,19 @@
   border-bottom: none;
   padding: 4px 14px 16px;
 }
-/* CTA «Перейти на дошку» — темніша тінь корка, кремовий текст */
+/* CTA «Перейти на дошку» — виділена червона кнопка-смуга на корці */
 .cm-block--board .cm-board-preview-cta {
-  background: rgba(60, 40, 20, 0.20);
-  border-top: 1px solid rgba(60, 40, 20, 0.35);
-  color: #FFF4D6;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.40);
+  background: var(--red);
+  color: white;
+  border-top: 1px solid rgba(0, 0, 0, 0.20);
+  font-size: 15px;
+  font-weight: 800;
+  padding: 14px 16px;
+  letter-spacing: 0.4px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15);
 }
 .cm-block--board .cm-board-preview-cta:active {
-  background: rgba(60, 40, 20, 0.32);
+  background: var(--red-dark);
 }
 
 /* Block link — на кольорових фонах має бути контрастним до тону блоку */
@@ -1028,19 +1032,6 @@
   transition: background 0.15s;
 }
 .cm-board-preview-cta:active { background: var(--paper-deep); }
-.cm-board-preview-cta .cm-board-preview-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 26px;
-  padding: 2px 8px;
-  background: var(--red);
-  color: white;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0;
-}
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
 

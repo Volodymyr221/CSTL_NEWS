@@ -25,10 +25,13 @@
   <!-- Шапка сайту -->
   <header class="app-header">
     <div class="header-logo">CSTL <span>LIFE</span></div>
-    <div class="weather-widget" id="weather-widget">
-      <span class="weather-icon" id="weather-icon"></span>
-      <span class="weather-city" id="weather-city"></span>
-      <span class="weather-temp" id="weather-temp"></span>
+    <div class="header-right">
+      <div class="weather-widget" id="weather-widget">
+        <span class="weather-icon" id="weather-icon"></span>
+        <span class="weather-city" id="weather-city"></span>
+        <span class="weather-temp" id="weather-temp"></span>
+      </div>
+      <div class="deploy-stamp">v1 · 01.01 00:00</div>
     </div>
   </header>
 
@@ -143,9 +146,6 @@
 
   <!-- Toast повідомлення (маленьке сповіщення знизу) -->
   <div id="cstl-toast" class="toast"></div>
-
-  <!-- Лічильник версії деплою. Автоматично замінюється через sed у .github/workflows/deploy.yml -->
-  <div class="deploy-stamp">v1 · 01.01 00:00</div>
 
   <script src="bundle.js"></script>
 </body>
