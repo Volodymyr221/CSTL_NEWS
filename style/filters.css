@@ -1,37 +1,38 @@
 /* ===== FILTERS ===== */
 .filters-bar {
-  padding: 10px 16px 0;
-  background: var(--white);
+  padding: 6px 14px 0;
+  background: var(--bg-page);
   position: fixed;
   top: var(--header-h);
   left: 0;
   right: 0;
   z-index: 90;
-  border-bottom: 1px solid var(--border);
 }
 /* Компенсація висоти фіксованих фільтрів щоб контент не ховався під ними */
 #page-news {
-  padding-top: 52px;
+  padding-top: 46px;
 }
 .chips-row {
   display: flex;
   gap: 6px;
   overflow-x: auto;
-  padding-bottom: 10px;
+  padding-bottom: 8px;
   scrollbar-width: none;
 }
 .chips-row::-webkit-scrollbar { display: none; }
 .chip {
   flex-shrink: 0;
-  padding: 5px 12px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
-  background: var(--white);
-  color: var(--black);
+  padding: 6px 14px;
+  border-radius: 999px;
+  border: none;
+  background: var(--bg-card);
+  color: var(--ink);
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;
   white-space: nowrap;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .chip.active {
   background: var(--red);
