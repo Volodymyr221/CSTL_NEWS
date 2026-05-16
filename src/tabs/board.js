@@ -31,8 +31,7 @@ function renderContact(contact) {
   return `
     <div class="cm-board-contact cm-board-contact--phone">
       <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-      <a class="cm-board-call" href="tel:${escapeHtml(tel)}"
-         onclick="event.stopPropagation()" aria-label="Зателефонувати ${escapeHtml(trimmed)}">
+      <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Зателефонувати ${escapeHtml(trimmed)}">
         ${PHONE_ICON_SVG}
       </a>
     </div>
@@ -121,23 +120,31 @@ export async function renderBoard() {
 
     document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
     initBoardNoteExpand(el);
+    // Кнопки виклика — окремий handler, щоб клік не "ловився" батьківським стікером
+    // (інакше стікер реагує на тап і кнопка href="tel:" не встигає спрацювати).
+    // capture: true — перехоплюємо до того як click дійде до стікера.
+    el.querySelectorAll('.cm-board-call').forEach(btn => {
+      btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
+    });
   } catch {
     el.innerHTML = '<div class="empty-state">Дошка тимчасово недоступна</div>';
   }
 }
 
 // Зум розгортання/згортання через FLIP-стиль:
-// - Орігінал лишається на місці завдяки placeholder тих самих розмірів
-// - Стікер переходить у position:fixed і анімовано їде до центру з scale > 1
-// - Згорт — зворотній: стікер їде назад у placeholder + scale 1, потім видаляється placeholder
+// - Стікер переходить у position:fixed на ОРІГІНАЛЬНІЙ позиції
+// - Анімується ТІЛЬКИ через transform: translate3d(dx,dy) rotate(R) scale(S)
+//   (плавніше ніж змінювати left/top окремо, бо браузер інтерполює ОДИН property
+//   і робить GPU-композицію без re-layout)
+// - Згорт — рахуємо актуальну позицію placeholder і translate-имо назад
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
 
   let activeNote = null;
   let isAnimating = false;
-  const DURATION = 320;
-  const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+  const DURATION = 340;
+  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';  // ease-out quart — плавне сповільнення
 
   const showBackdrop = () => {
     requestAnimationFrame(() => backdrop.classList.add('visible'));
@@ -153,7 +160,7 @@ function initBoardNoteExpand(root) {
     const rect = note.getBoundingClientRect();
     const origW = rect.width;
     const origH = rect.height;
-    const tilt = note.style.getPropertyValue('--tilt') || '0deg';
+    const tilt = parseFloat(note.style.getPropertyValue('--tilt')) || 0;
 
     // Placeholder — займає місце на дошці поки стікер «знятий»
     const placeholder = document.createElement('div');
@@ -163,8 +170,25 @@ function initBoardNoteExpand(root) {
     note.parentNode.insertBefore(placeholder, note);
     note._placeholder = placeholder;
     note._tilt = tilt;
+    note._origLeft = rect.left;
+    note._origTop = rect.top;
 
-    // Перевід у fixed у тій же візуальній позиції (без скачка)
+    // Цільовий стан — центр viewport, scale підібраний щоб не виходити за межі
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const safeT = 80;
+    const safeB = 140;
+    const usableH = vh - safeT - safeB;
+    const targetMaxW = Math.min(vw - 32, 380);
+    const scaleW = targetMaxW / origW;
+    const scaleH = usableH / origH;
+    const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
+
+    // Дельта від оригінальної позиції до центру viewport
+    const dx = (vw / 2) - (rect.left + origW / 2);
+    const dy = (vh / 2) - (rect.top + origH / 2);
+
+    // Фіксуємо в оригінальній позиції, потім транзишн тільки transform
     note.style.position = 'fixed';
     note.style.left = `${rect.left}px`;
     note.style.top = `${rect.top}px`;
@@ -172,34 +196,19 @@ function initBoardNoteExpand(root) {
     note.style.margin = '0';
     note.style.zIndex = '210';
     note.style.transformOrigin = 'center center';
+    note.style.willChange = 'transform';
     note.style.transition = 'none';
-    note.style.transform = `rotate(${tilt}) scale(1)`;
+    note.style.transform = `translate3d(0, 0, 0) rotate(${tilt}deg) scale(1)`;
     note.classList.add('expanded');
 
     showBackdrop();
 
-    // Цільовий стан — центр viewport, scale підібраний щоб не виходити за межі
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const safeT = 80;   // шапка
-    const safeB = 140;  // tab bar + fixed CTA + safe area
-    const usableH = vh - safeT - safeB;
-    const targetMaxW = Math.min(vw - 32, 380);
-    const scaleW = targetMaxW / origW;
-    const scaleH = usableH / origH;
-    const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
-    const targetLeft = (vw - origW) / 2;
-    const targetTop  = (vh - origH) / 2;
+    // Force reflow щоб браузер застосував initial state перед transition
+    void note.offsetHeight;
 
-    // Два rAF — щоб браузер встиг застосувати початковий стан до transition
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
-        note.style.left = `${targetLeft}px`;
-        note.style.top = `${targetTop}px`;
-        note.style.transform = `rotate(0deg) scale(${scale})`;
-      });
-    });
+    // Анімуємо ТІЛЬКИ transform (єдиний property → плавна 60fps GPU-анімація)
+    note.style.transition = `transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+    note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(${scale})`;
 
     activeNote = note;
     setTimeout(() => { isAnimating = false; }, DURATION);
@@ -211,25 +220,29 @@ function initBoardNoteExpand(root) {
 
     const note = activeNote;
     const placeholder = note._placeholder;
-    const tilt = note._tilt || '0deg';
+    const tilt = note._tilt || 0;
 
     if (placeholder) {
+      // Беремо АКТУАЛЬНУ позицію placeholder (на випадок якщо була прокрутка)
       const phRect = placeholder.getBoundingClientRect();
-      note.style.left = `${phRect.left}px`;
-      note.style.top = `${phRect.top}px`;
-      note.style.transform = `rotate(${tilt}) scale(1)`;
+      const dx = phRect.left - note._origLeft;
+      const dy = phRect.top  - note._origTop;
+      // Анімуємо transform назад: translate до placeholder + rotate назад до tilt + scale назад до 1
+      note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${tilt}deg) scale(1)`;
     }
 
     hideBackdrop();
 
     setTimeout(() => {
       note.classList.remove('expanded');
-      ['position','left','top','width','margin','zIndex','transform','transition','transformOrigin'].forEach(p => {
+      ['position','left','top','width','margin','zIndex','transform','transition','transformOrigin','willChange'].forEach(p => {
         note.style[p] = '';
       });
       placeholder?.remove();
       delete note._placeholder;
       delete note._tilt;
+      delete note._origLeft;
+      delete note._origTop;
       isAnimating = false;
       activeNote = null;
     }, DURATION);

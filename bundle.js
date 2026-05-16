@@ -2035,8 +2035,7 @@ END:VEVENT`
     return `
     <div class="cm-board-contact cm-board-contact--phone">
       <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-      <a class="cm-board-call" href="tel:${escapeHtml(tel)}"
-         onclick="event.stopPropagation()" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
+      <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
         ${PHONE_ICON_SVG}
       </a>
     </div>
@@ -2119,6 +2118,11 @@ END:VEVENT`
     `;
       document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
       initBoardNoteExpand(el);
+      el.querySelectorAll(".cm-board-call").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+        }, { capture: true });
+      });
     } catch {
       el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
@@ -2129,8 +2133,8 @@ END:VEVENT`
       return;
     let activeNote = null;
     let isAnimating = false;
-    const DURATION = 320;
-    const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+    const DURATION = 340;
+    const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
     const showBackdrop = () => {
       requestAnimationFrame(() => backdrop.classList.add("visible"));
     };
@@ -2144,7 +2148,7 @@ END:VEVENT`
       const rect = note.getBoundingClientRect();
       const origW = rect.width;
       const origH = rect.height;
-      const tilt = note.style.getPropertyValue("--tilt") || "0deg";
+      const tilt = parseFloat(note.style.getPropertyValue("--tilt")) || 0;
       const placeholder = document.createElement("div");
       placeholder.className = "cm-board-placeholder";
       placeholder.style.width = `${origW}px`;
@@ -2152,17 +2156,8 @@ END:VEVENT`
       note.parentNode.insertBefore(placeholder, note);
       note._placeholder = placeholder;
       note._tilt = tilt;
-      note.style.position = "fixed";
-      note.style.left = `${rect.left}px`;
-      note.style.top = `${rect.top}px`;
-      note.style.width = `${origW}px`;
-      note.style.margin = "0";
-      note.style.zIndex = "210";
-      note.style.transformOrigin = "center center";
-      note.style.transition = "none";
-      note.style.transform = `rotate(${tilt}) scale(1)`;
-      note.classList.add("expanded");
-      showBackdrop();
+      note._origLeft = rect.left;
+      note._origTop = rect.top;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const safeT = 80;
@@ -2172,16 +2167,23 @@ END:VEVENT`
       const scaleW = targetMaxW / origW;
       const scaleH = usableH / origH;
       const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
-      const targetLeft = (vw - origW) / 2;
-      const targetTop = (vh - origH) / 2;
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
-          note.style.left = `${targetLeft}px`;
-          note.style.top = `${targetTop}px`;
-          note.style.transform = `rotate(0deg) scale(${scale})`;
-        });
-      });
+      const dx = vw / 2 - (rect.left + origW / 2);
+      const dy = vh / 2 - (rect.top + origH / 2);
+      note.style.position = "fixed";
+      note.style.left = `${rect.left}px`;
+      note.style.top = `${rect.top}px`;
+      note.style.width = `${origW}px`;
+      note.style.margin = "0";
+      note.style.zIndex = "210";
+      note.style.transformOrigin = "center center";
+      note.style.willChange = "transform";
+      note.style.transition = "none";
+      note.style.transform = `translate3d(0, 0, 0) rotate(${tilt}deg) scale(1)`;
+      note.classList.add("expanded");
+      showBackdrop();
+      void note.offsetHeight;
+      note.style.transition = `transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+      note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(${scale})`;
       activeNote = note;
       setTimeout(() => {
         isAnimating = false;
@@ -2193,22 +2195,24 @@ END:VEVENT`
       isAnimating = true;
       const note = activeNote;
       const placeholder = note._placeholder;
-      const tilt = note._tilt || "0deg";
+      const tilt = note._tilt || 0;
       if (placeholder) {
         const phRect = placeholder.getBoundingClientRect();
-        note.style.left = `${phRect.left}px`;
-        note.style.top = `${phRect.top}px`;
-        note.style.transform = `rotate(${tilt}) scale(1)`;
+        const dx = phRect.left - note._origLeft;
+        const dy = phRect.top - note._origTop;
+        note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${tilt}deg) scale(1)`;
       }
       hideBackdrop();
       setTimeout(() => {
         note.classList.remove("expanded");
-        ["position", "left", "top", "width", "margin", "zIndex", "transform", "transition", "transformOrigin"].forEach((p) => {
+        ["position", "left", "top", "width", "margin", "zIndex", "transform", "transition", "transformOrigin", "willChange"].forEach((p) => {
           note.style[p] = "";
         });
         placeholder?.remove();
         delete note._placeholder;
         delete note._tilt;
+        delete note._origLeft;
+        delete note._origTop;
         isAnimating = false;
         activeNote = null;
       }, DURATION);
