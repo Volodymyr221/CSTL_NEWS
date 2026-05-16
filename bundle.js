@@ -2091,9 +2091,11 @@ END:VEVENT`
         const tilt = p.id * 7 % 9 - 4;
         const emoji = CATEGORY_EMOJI2[p.category] || "\u{1F4CC}";
         const contactHtml = renderContact(p.contact);
+        const photoHtml = p.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
         return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
+        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}${p.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
           <span class="cm-board-pin"></span>
+          ${photoHtml}
           <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
           <p class="cm-board-text">${escapeHtml(p.text)}</p>
           <div class="cm-board-footer">

@@ -12,7 +12,8 @@
       "author": "Іван",
       "contact": "+38 050 123 45 67",
       "ts": 1747044000000,
-      "color": "yellow"
+      "color": "yellow",
+      "photo": "https://picsum.photos/seed/olyka-cow/400/300"
     },
     {
       "id": 2,
@@ -30,7 +31,8 @@
       "author": "Олена",
       "contact": "Telegram @olena_dn",
       "ts": 1746940000000,
-      "color": "pink"
+      "color": "pink",
+      "photo": "https://picsum.photos/id/237/400/300"
     },
     {
       "id": 4,
@@ -57,7 +59,8 @@
       "author": "Тетяна",
       "contact": "+38 063 222 33 44",
       "ts": 1746700000000,
-      "color": "yellow"
+      "color": "yellow",
+      "photo": "https://picsum.photos/seed/olyka-keys/400/300"
     },
     {
       "id": 7,
