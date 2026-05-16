@@ -2106,7 +2106,7 @@ END:VEVENT`
       `;
       }).join("");
       el.innerHTML = `
-      <div class="board-backdrop" id="board-backdrop" hidden></div>
+      <div class="board-backdrop" id="board-backdrop"></div>
       <div class="cm-board-corkboard board-corkboard--full">
         ${officialHtml}
         ${userHtml}
@@ -2127,47 +2127,104 @@ END:VEVENT`
     const backdrop = root.querySelector("#board-backdrop");
     if (!backdrop)
       return;
+    let activeNote = null;
     let isAnimating = false;
-    const COLLAPSE_MS = 200;
-    const removeExpand = () => {
-      root.querySelectorAll(".cm-board-note").forEach(
-        (n) => n.classList.remove("expanded", "collapsing")
-      );
-      backdrop.classList.remove("fading-out");
-      backdrop.hidden = true;
+    const DURATION = 320;
+    const EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+    const showBackdrop = () => {
+      requestAnimationFrame(() => backdrop.classList.add("visible"));
     };
-    const collapseAnimated = () => {
-      if (isAnimating)
+    const hideBackdrop = () => {
+      backdrop.classList.remove("visible");
+    };
+    const expand = (note) => {
+      if (isAnimating || activeNote)
         return;
-      const expanded = root.querySelector(".cm-board-note.expanded");
-      if (!expanded) {
-        removeExpand();
-        return;
-      }
       isAnimating = true;
-      expanded.classList.add("collapsing");
-      backdrop.classList.add("fading-out");
+      const rect = note.getBoundingClientRect();
+      const origW = rect.width;
+      const origH = rect.height;
+      const tilt = note.style.getPropertyValue("--tilt") || "0deg";
+      const placeholder = document.createElement("div");
+      placeholder.className = "cm-board-placeholder";
+      placeholder.style.width = `${origW}px`;
+      placeholder.style.height = `${origH}px`;
+      note.parentNode.insertBefore(placeholder, note);
+      note._placeholder = placeholder;
+      note._tilt = tilt;
+      note.style.position = "fixed";
+      note.style.left = `${rect.left}px`;
+      note.style.top = `${rect.top}px`;
+      note.style.width = `${origW}px`;
+      note.style.margin = "0";
+      note.style.zIndex = "210";
+      note.style.transformOrigin = "center center";
+      note.style.transition = "none";
+      note.style.transform = `rotate(${tilt}) scale(1)`;
+      note.classList.add("expanded");
+      showBackdrop();
+      const vw = window.innerWidth;
+      const vh = window.innerHeight;
+      const safeT = 80;
+      const safeB = 140;
+      const usableH = vh - safeT - safeB;
+      const targetMaxW = Math.min(vw - 32, 380);
+      const scaleW = targetMaxW / origW;
+      const scaleH = usableH / origH;
+      const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
+      const targetLeft = (vw - origW) / 2;
+      const targetTop = (vh - origH) / 2;
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+          note.style.left = `${targetLeft}px`;
+          note.style.top = `${targetTop}px`;
+          note.style.transform = `rotate(0deg) scale(${scale})`;
+        });
+      });
+      activeNote = note;
       setTimeout(() => {
-        removeExpand();
         isAnimating = false;
-      }, COLLAPSE_MS);
+      }, DURATION);
+    };
+    const collapse = () => {
+      if (!activeNote || isAnimating)
+        return;
+      isAnimating = true;
+      const note = activeNote;
+      const placeholder = note._placeholder;
+      const tilt = note._tilt || "0deg";
+      if (placeholder) {
+        const phRect = placeholder.getBoundingClientRect();
+        note.style.left = `${phRect.left}px`;
+        note.style.top = `${phRect.top}px`;
+        note.style.transform = `rotate(${tilt}) scale(1)`;
+      }
+      hideBackdrop();
+      setTimeout(() => {
+        note.classList.remove("expanded");
+        ["position", "left", "top", "width", "margin", "zIndex", "transform", "transition", "transformOrigin"].forEach((p) => {
+          note.style[p] = "";
+        });
+        placeholder?.remove();
+        delete note._placeholder;
+        delete note._tilt;
+        isAnimating = false;
+        activeNote = null;
+      }, DURATION);
     };
     root.querySelectorAll(".cm-board-note").forEach((note) => {
       note.addEventListener("click", (e) => {
         e.stopPropagation();
         if (isAnimating)
           return;
-        const isExpanded = note.classList.contains("expanded");
-        if (isExpanded) {
-          collapseAnimated();
-        } else {
-          removeExpand();
-          note.classList.add("expanded");
-          backdrop.hidden = false;
-        }
+        if (note === activeNote)
+          collapse();
+        else if (!activeNote)
+          expand(note);
       });
     });
-    backdrop.addEventListener("click", collapseAnimated);
+    backdrop.addEventListener("click", collapse);
   }
   function initBoard() {
     renderBoard();
@@ -2202,6 +2259,9 @@ END:VEVENT`
     const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
     if (activeTab)
       activeTab.classList.add("active");
+    const main = document.querySelector(".app-main");
+    if (main)
+      main.scrollTop = 0;
     currentTab = tab;
   };
   window.closeArticleModal = function() {

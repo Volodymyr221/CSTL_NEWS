@@ -1015,65 +1015,41 @@
   box-shadow: 0 6px 20px rgba(196, 30, 58, 0.40), 0 2px 6px rgba(0,0,0,0.18);
 }
 
-/* ── Тап-збільшення картки оголошення ── */
+/* ── Зум розгортання картки оголошення ── */
+/* Backdrop — плавне затемнення фону при відкритому стікері */
 .board-backdrop {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.55);
   z-index: 200;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.28s ease;
   -webkit-tap-highlight-color: transparent;
-  animation: board-backdrop-in 0.18s ease-out;
 }
-@keyframes board-backdrop-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+.board-backdrop.visible {
+  opacity: 1;
+  pointer-events: auto;
 }
 
+/* Placeholder — пусте місце на дошці поки стікер «знятий» */
+.cm-board-placeholder {
+  flex-shrink: 0;
+  background: transparent;
+  pointer-events: none;
+}
+
+/* Розгорнутий стан стікера — position і transform контролюються через JS
+   (для FLIP-анімації від місця стікера до центру з scale). Тут лише візуал. */
 .cm-board-note.expanded {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  width: min(86vw, 420px);
-  max-height: 80vh;
-  overflow-y: auto;
-  transform: translate(-50%, -50%) rotate(0deg) scale(1);
-  z-index: 210;
-  padding: 22px 20px 18px;
-  font-size: 15px;
   box-shadow:
-    0 10px 30px rgba(0,0,0,0.40),
-    0 4px 12px rgba(0,0,0,0.20);
-  animation: board-note-in 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    0 12px 32px rgba(0,0,0,0.45),
+    0 4px 12px rgba(0,0,0,0.22);
 }
-@keyframes board-note-in {
-  from { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); opacity: 0.4; }
-  to   { transform: translate(-50%, -50%) rotate(0deg) scale(1);    opacity: 1; }
-}
-.cm-board-note.expanded .cm-board-text { font-size: 16px; line-height: 1.5; }
-.cm-board-note.expanded .cm-board-official-title { font-size: 18px; }
-.cm-board-note.expanded .cm-board-footer { font-size: 13px; padding-top: 8px; margin-top: 4px; }
-.cm-board-note.expanded .cm-board-contact { font-size: 14px; margin-top: 8px; }
-/* На розгорнутій картці прибираємо hover-ефект щоб не дриґалась */
-.cm-board-note.expanded:hover { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
-/* Червона шпилька — зайва коли стікер відкритий по центру */
+/* Шпилька зайва коли стікер відкритий по центру */
 .cm-board-note.expanded .cm-board-pin { display: none; }
-
-/* Згортання — reverse анімація, потім видалення класу */
-.cm-board-note.collapsing {
-  animation: board-note-out 0.20s ease-in forwards;
-}
-@keyframes board-note-out {
-  from { transform: translate(-50%, -50%) rotate(0deg) scale(1);    opacity: 1; }
-  to   { transform: translate(-50%, -50%) rotate(0deg) scale(0.88); opacity: 0; }
-}
-
-.board-backdrop.fading-out {
-  animation: board-backdrop-out 0.20s ease-in forwards;
-}
-@keyframes board-backdrop-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
-}
+/* На розгорнутій картці прибираємо hover (інакше переб'є JS-transform) */
+.cm-board-note.expanded:hover { transform: rotate(0deg) scale(2); }
 
 /* ── Контакт-телефон з кнопкою виклика праворуч ── */
 .cm-board-contact--phone {
@@ -1095,19 +1071,14 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: var(--red);
+  background: #A8334A; /* муніший за основний червоний — не б'є в очі */
   color: white;
   text-decoration: none;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.20), 0 1px 2px rgba(0,0,0,0.12);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.10);
   transition: background 0.15s, transform 0.1s;
   -webkit-tap-highlight-color: transparent;
 }
 .cm-board-call:active {
-  background: var(--red-dark);
+  background: #8B2A3D;
   transform: scale(0.92);
 }
-.cm-board-note.expanded .cm-board-call {
-  width: 40px;
-  height: 40px;
-}
-.cm-board-note.expanded .cm-board-call svg { width: 20px; height: 20px; }

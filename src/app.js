@@ -43,6 +43,11 @@ window.switchTab = function(tab) {
   const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
   if (activeTab) activeTab.classList.add('active');
 
+  // Скидаємо скрол вгору щоб нова вкладка відкривалась з початку
+  // (інакше при перемиканні з довгої Громади на Дошку — її контент видно з середини)
+  const main = document.querySelector('.app-main');
+  if (main) main.scrollTop = 0;
+
   currentTab = tab;
 };
 
