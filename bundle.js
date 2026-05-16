@@ -2022,6 +2022,26 @@ END:VEVENT`
     "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
     "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
   };
+  var PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+  function renderContact(contact) {
+    if (!contact)
+      return "";
+    const trimmed = String(contact).trim();
+    const isPhone = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
+    if (!isPhone) {
+      return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
+    }
+    const tel = trimmed.replace(/[^\d+]/g, "");
+    return `
+    <div class="cm-board-contact cm-board-contact--phone">
+      <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
+      <a class="cm-board-call" href="tel:${escapeHtml(tel)}"
+         onclick="event.stopPropagation()" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
+        ${PHONE_ICON_SVG}
+      </a>
+    </div>
+  `;
+  }
   async function renderBoard() {
     const el = document.getElementById("board-content");
     if (!el)
@@ -2071,7 +2091,7 @@ END:VEVENT`
       const userHtml = userPosts.map((p) => {
         const tilt = p.id * 7 % 9 - 4;
         const emoji = CATEGORY_EMOJI2[p.category] || "\u{1F4CC}";
-        const contactHtml = p.contact ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>` : "";
+        const contactHtml = renderContact(p.contact);
         return `
         <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
           <span class="cm-board-pin"></span>
@@ -2107,22 +2127,47 @@ END:VEVENT`
     const backdrop = root.querySelector("#board-backdrop");
     if (!backdrop)
       return;
-    const collapse = () => {
-      root.querySelectorAll(".cm-board-note.expanded").forEach((n) => n.classList.remove("expanded"));
+    let isAnimating = false;
+    const COLLAPSE_MS = 200;
+    const removeExpand = () => {
+      root.querySelectorAll(".cm-board-note").forEach(
+        (n) => n.classList.remove("expanded", "collapsing")
+      );
+      backdrop.classList.remove("fading-out");
       backdrop.hidden = true;
+    };
+    const collapseAnimated = () => {
+      if (isAnimating)
+        return;
+      const expanded = root.querySelector(".cm-board-note.expanded");
+      if (!expanded) {
+        removeExpand();
+        return;
+      }
+      isAnimating = true;
+      expanded.classList.add("collapsing");
+      backdrop.classList.add("fading-out");
+      setTimeout(() => {
+        removeExpand();
+        isAnimating = false;
+      }, COLLAPSE_MS);
     };
     root.querySelectorAll(".cm-board-note").forEach((note) => {
       note.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (isAnimating)
+          return;
         const isExpanded = note.classList.contains("expanded");
-        collapse();
-        if (!isExpanded) {
+        if (isExpanded) {
+          collapseAnimated();
+        } else {
+          removeExpand();
           note.classList.add("expanded");
           backdrop.hidden = false;
         }
       });
     });
-    backdrop.addEventListener("click", collapse);
+    backdrop.addEventListener("click", collapseAnimated);
   }
   function initBoard() {
     renderBoard();
