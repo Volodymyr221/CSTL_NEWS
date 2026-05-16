@@ -64,9 +64,10 @@
   -webkit-tap-highlight-color: transparent;
 }
 
-/* ── Блок 1: Погода ── */
+/* ── Блок 1: Погода ──
+   Градієнт зверху вниз: насичений синій (як небо) → світло-синій (як хмари) */
 .cm-block--weather {
-  background: linear-gradient(135deg, var(--sky) 0%, var(--sky-deep) 100%);
+  background: linear-gradient(180deg, #2C71BC 0%, #C5DDFB 100%);
   color: var(--sky-text);
 }
 .cm-block--weather .cm-block-title { color: var(--sky-text); }
