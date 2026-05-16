@@ -28,49 +28,57 @@
       "name": "Швидка допомога",
       "phone": "103",
       "category": "emergency",
-      "icon": "ambulance"
+      "icon": "ambulance",
+      "priority": "critical",
+      "group": "hero"
     },
     {
       "id": "fire",
-      "name": "Пожежна служба",
+      "name": "Пожежна",
       "phone": "101",
       "category": "emergency",
-      "icon": "fire"
+      "icon": "fire",
+      "group": "emergency"
     },
     {
       "id": "police",
       "name": "Поліція",
       "phone": "102",
       "category": "emergency",
-      "icon": "police"
+      "icon": "police",
+      "group": "emergency"
     },
     {
       "id": "gas",
       "name": "Аварійна газу",
       "phone": "104",
       "category": "emergency",
-      "icon": "gas"
+      "icon": "gas",
+      "group": "emergency"
+    },
+    {
+      "id": "power",
+      "name": "Волиньобленерго",
+      "phone": "0 800 501 482",
+      "category": "utility",
+      "icon": "power",
+      "group": "emergency"
     },
     {
       "id": "hospital",
       "name": "Олицька амбулаторія",
       "phone": "+38 (03365) 9-21-12",
       "category": "medical",
-      "icon": "hospital"
+      "icon": "hospital",
+      "group": "local"
     },
     {
       "id": "gromada",
       "name": "Олицька сільрада",
       "phone": "+38 (03365) 9-15-50",
       "category": "gov",
-      "icon": "gromada"
-    },
-    {
-      "id": "power",
-      "name": "Аварійна Волиньобленерго",
-      "phone": "0 800 501 482",
-      "category": "utility",
-      "icon": "power"
+      "icon": "gromada",
+      "group": "local"
     }
   ]
 }
