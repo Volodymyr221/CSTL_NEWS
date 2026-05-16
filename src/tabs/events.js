@@ -14,9 +14,24 @@ const CATEGORY_COLORS = {
 // Назви місяців у родовому відмінку для повної дати
 const MONTHS_FULL = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
 
+// Скорочення для днів тижня в календарній стрічці (Tier 5)
+const WEEKDAYS_SHORT = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
+
+// Кількість днів у календарній стрічці
+const CALENDAR_DAYS = 21;
+
 let allEvents = [];
 let activeFilter = 'Всі';
+let selectedDate = null;  // YYYY-MM-DD або null (всі дати)
 let cardObserver = null; // IntersectionObserver для авто-згортання (auto-collapse)
+
+// Локальний формат YYYY-MM-DD з Date (toISOString дає UTC, що зсуває день)
+function ymd(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
 
 // Форматує повну дату: "3 травня 2026"
 function formatFullDate(dateStr) {
@@ -168,6 +183,60 @@ function renderFilters() {
   });
 }
 
+// Календарна стрічка — наступні CALENDAR_DAYS днів з точками для днів з подіями
+function renderCalendar() {
+  const bar = document.getElementById('events-calendar');
+  if (!bar) return;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  // Множина дат з реальними локальними подіями (виключаємо auto:true RSS-новини)
+  const datesWithEvents = new Set();
+  allEvents.forEach(e => {
+    if (e.auto) return;
+    datesWithEvents.add(e.date);
+  });
+
+  // 21 день вперед
+  const days = [];
+  for (let i = 0; i < CALENDAR_DAYS; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    days.push(d);
+  }
+
+  const allBtn = `
+    <button class="cal-pill cal-pill--all${selectedDate === null ? ' active' : ''}" data-date="">
+      <span class="cal-pill-label">Всі</span>
+    </button>
+  `;
+
+  const daysHtml = days.map(d => {
+    const ymdStr = ymd(d);
+    const isToday  = ymdStr === ymd(today);
+    const hasEv    = datesWithEvents.has(ymdStr);
+    const isActive = ymdStr === selectedDate;
+    return `
+      <button class="cal-pill${isActive ? ' active' : ''}${isToday ? ' cal-pill--today' : ''}${hasEv ? ' cal-pill--has-events' : ''}" data-date="${ymdStr}">
+        <span class="cal-pill-wd">${WEEKDAYS_SHORT[d.getDay()]}</span>
+        <span class="cal-pill-num">${d.getDate()}</span>
+        <span class="cal-pill-dot"></span>
+      </button>
+    `;
+  }).join('');
+
+  bar.innerHTML = allBtn + daysHtml;
+
+  bar.querySelectorAll('.cal-pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedDate = btn.dataset.date || null;
+      renderCalendar();
+      renderList();
+    });
+  });
+}
+
 // Рендер списку відфільтрованих подій
 function renderList() {
   const el = document.getElementById('events-list');
@@ -178,8 +247,10 @@ function renderList() {
 
   const list = allEvents
     .filter(e => {
+      if (e.auto) return false;  // RSS-новини не сюди — вкладка Події тільки для локальних подій
       const d = new Date(e.date + 'T00:00:00');
       if (d < now) return false;
+      if (selectedDate && e.date !== selectedDate) return false;
       return activeFilter === 'Всі' || e.category === activeFilter;
     })
     .sort((a, b) => {
@@ -190,7 +261,10 @@ function renderList() {
     });
 
   if (!list.length) {
-    el.innerHTML = '<div class="empty-state">Подій у цій категорії поки немає</div>';
+    const emptyMsg = selectedDate
+      ? `На ${selectedDate.split('-').reverse().slice(0, 2).join('.')} подій немає`
+      : 'Подій у цій категорії поки немає';
+    el.innerHTML = `<div class="empty-state">${escapeHtml(emptyMsg)}</div>`;
     return;
   }
 
@@ -267,5 +341,6 @@ export async function initEvents() {
   }
 
   renderFilters();
+  renderCalendar();
   renderList();
 }

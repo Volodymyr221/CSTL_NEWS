@@ -10,20 +10,97 @@
 
 /* ===== EVENTS v2 — нові картки подій ===== */
 
-/* Смуга з фільтрами (sticky — прилипає до шапки при скролі) */
+/* Смуга з фільтрами + календарна стрічка (fixed — прилипає до шапки при скролі) */
 .events-filters-bar {
-  padding: 6px 14px 8px;
+  padding: 0 0 6px;
   background: var(--bg-page);
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
   z-index: 90;
+  border-bottom: 1px solid var(--border);
 }
-/* Компенсація висоти fixed filters-bar */
+/* Компенсація висоти fixed filters-bar (calendar ~60px + chips ~38px = ~98px) */
 #page-events {
-  padding-top: 50px;
+  padding-top: 102px;
 }
+
+/* ── Календарна стрічка (Tier 5 — 16.05.2026) ── */
+.events-calendar {
+  display: flex;
+  gap: 6px;
+  padding: 8px 14px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.events-calendar::-webkit-scrollbar { display: none; }
+
+.cal-pill {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 44px;
+  padding: 7px 10px;
+  background: var(--bg-card);
+  border: 1.5px solid transparent;
+  border-radius: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+  transition: background 0.15s, transform 0.08s;
+}
+.cal-pill:active { transform: scale(0.95); }
+.cal-pill.active {
+  background: var(--red);
+  color: white;
+}
+.cal-pill--today {
+  border-color: var(--red);
+}
+.cal-pill--today.active { border-color: var(--red-dark); }
+.cal-pill-wd {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.cal-pill.active .cal-pill-wd { color: rgba(255,255,255,0.85); }
+.cal-pill-num {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.cal-pill.active .cal-pill-num { color: white; }
+.cal-pill-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  padding: 4px 2px;
+}
+.cal-pill.active .cal-pill-label { color: white; }
+/* Крапка — індикатор дня з подіями */
+.cal-pill-dot {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: transparent;
+}
+.cal-pill--has-events .cal-pill-dot { background: var(--red); }
+.cal-pill--has-events.active .cal-pill-dot { background: white; }
+.cal-pill--all .cal-pill-dot { display: none; }
 
 /* Картка події */
 .ev-card {
