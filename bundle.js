@@ -2087,20 +2087,43 @@ END:VEVENT`
       `;
       }).join("");
       el.innerHTML = `
+      <div class="board-backdrop" id="board-backdrop" hidden></div>
       <div class="cm-board-corkboard board-corkboard--full">
         ${officialHtml}
         ${userHtml}
       </div>
 
-      <button class="cm-board-trigger" id="board-trigger" type="button">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
         <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     `;
       document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
+      initBoardNoteExpand(el);
     } catch {
       el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
+  }
+  function initBoardNoteExpand(root) {
+    const backdrop = root.querySelector("#board-backdrop");
+    if (!backdrop)
+      return;
+    const collapse = () => {
+      root.querySelectorAll(".cm-board-note.expanded").forEach((n) => n.classList.remove("expanded"));
+      backdrop.hidden = true;
+    };
+    root.querySelectorAll(".cm-board-note").forEach((note) => {
+      note.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const isExpanded = note.classList.contains("expanded");
+        collapse();
+        if (!isExpanded) {
+          note.classList.add("expanded");
+          backdrop.hidden = false;
+        }
+      });
+    });
+    backdrop.addEventListener("click", collapse);
   }
   function initBoard() {
     renderBoard();

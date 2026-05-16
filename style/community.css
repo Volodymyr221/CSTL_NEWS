@@ -968,7 +968,9 @@
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
 .board-content {
-  padding-bottom: 24px;
+  /* нижній відступ під fixed-кнопку «Подати оголошення» + safe-area */
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
+  position: relative;
 }
 .board-empty {
   padding: 60px 24px 20px;
@@ -985,3 +987,56 @@
   border-top: none;
   border-radius: 0;
 }
+
+/* Зафіксована знизу кнопка «Подати оголошення» — завжди видно при скролі */
+.board-trigger--fixed {
+  position: fixed;
+  left: 14px;
+  right: 14px;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
+  width: auto;
+  margin: 0;
+  z-index: 80;
+  box-shadow: 0 6px 20px rgba(196, 30, 58, 0.40), 0 2px 6px rgba(0,0,0,0.18);
+}
+
+/* ── Тап-збільшення картки оголошення ── */
+.board-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 200;
+  -webkit-tap-highlight-color: transparent;
+  animation: board-backdrop-in 0.18s ease-out;
+}
+@keyframes board-backdrop-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.cm-board-note.expanded {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(86vw, 420px);
+  max-height: 80vh;
+  overflow-y: auto;
+  transform: translate(-50%, -50%) rotate(0deg) scale(1);
+  z-index: 210;
+  padding: 22px 20px 18px;
+  font-size: 15px;
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.40),
+    0 4px 12px rgba(0,0,0,0.20);
+  animation: board-note-in 0.22s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+}
+@keyframes board-note-in {
+  from { transform: translate(-50%, -50%) rotate(0deg) scale(0.85); opacity: 0.4; }
+  to   { transform: translate(-50%, -50%) rotate(0deg) scale(1);    opacity: 1; }
+}
+.cm-board-note.expanded .cm-board-text { font-size: 16px; line-height: 1.5; }
+.cm-board-note.expanded .cm-board-official-title { font-size: 18px; }
+.cm-board-note.expanded .cm-board-footer { font-size: 13px; padding-top: 8px; margin-top: 4px; }
+.cm-board-note.expanded .cm-board-contact { font-size: 14px; margin-top: 8px; }
+/* На розгорнутій картці прибираємо hover-ефект щоб не дриґалась */
+.cm-board-note.expanded:hover { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
