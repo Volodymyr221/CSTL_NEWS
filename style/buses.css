@@ -37,33 +37,122 @@
 }
 
 /* Smart-рядок наступного рейсу */
+/* ── Hero-картка «Наступний автобус» (v2 — 15.05.2026) ─────────────────── */
 .bus-smart-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--gray-light);
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-  color: var(--black);
-  min-height: 40px;
+  /* контейнер тепер — порожній wrapper, всю розмітку малює .bus-hero всередині */
+  padding: 14px 14px 0;
 }
-.bus-smart-row.urgent { background: #fff5f5; }
-.bsr-icon { color: var(--navy); font-size: 11px; flex-shrink: 0; }
-.bsr-text { flex: 1; }
-.bsr-text strong { color: var(--navy); }
-.bus-smart-row.urgent .bsr-text strong { color: var(--red); }
-.bsr-hurry {
+.bus-hero {
+  background: linear-gradient(135deg, var(--honey) 0%, var(--honey-deep) 100%);
+  border-radius: 22px;
+  padding: 18px 18px 16px;
+  box-shadow: 0 6px 18px rgba(196, 30, 58, 0.10), 0 2px 6px rgba(0,0,0,0.06);
+  color: var(--honey-text);
+  position: relative;
+}
+.bus-hero--urgent {
+  background: linear-gradient(135deg, #FFC0CB 0%, #DA4A5E 100%);
+  color: #4E0E18;
+}
+.bus-hero--empty {
+  color: var(--ink-soft);
+  background: var(--bg-card);
+  text-align: center;
+  padding: 28px;
+  font-size: 15px;
+  font-weight: 600;
+}
+.bus-hero-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.bus-hero-countdown {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  background: rgba(255,255,255,0.55);
+  padding: 4px 10px;
+  border-radius: 999px;
+}
+.bus-hero-urgent {
   font-size: 11px;
-  font-weight: 700;
-  background: var(--red);
+  font-weight: 800;
   color: white;
-  padding: 2px 8px;
-  border-radius: 20px;
-  flex-shrink: 0;
+  background: var(--red);
+  padding: 4px 10px;
+  border-radius: 999px;
   animation: pulse 1s ease-in-out infinite;
 }
-.bsr-empty { color: var(--gray); font-size: 13px; }
+.bus-hero-row {
+  display: flex; align-items: center; gap: 12px;
+  margin-bottom: 6px;
+}
+.bus-hero-times {
+  display: flex; align-items: center; gap: 8px;
+  flex: 1; min-width: 0;
+}
+.bus-hero-time {
+  font-family: Georgia, serif;
+  font-size: 36px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -1.5px;
+}
+.bus-hero-time--to {
+  font-size: 28px;
+  opacity: 0.85;
+}
+.bus-hero-arrow {
+  font-size: 22px;
+  opacity: 0.7;
+  font-weight: 700;
+}
+.bus-hero-call {
+  width: 52px; height: 52px;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  text-decoration: none;
+  box-shadow: 0 4px 12px rgba(196, 30, 58, 0.35);
+  transition: transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bus-hero-call:active { transform: scale(0.94); }
+.bus-hero-route {
+  font-size: 16px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+.bus-hero-meta {
+  font-size: 12px;
+  opacity: 0.85;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+.bus-hero-meta-sep { opacity: 0.5; }
+
+.bus-hero-progress {
+  height: 5px;
+  background: rgba(255,255,255,0.35);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.bus-hero-progress-fill {
+  height: 100%;
+  background: rgba(255,255,255,0.9);
+  border-radius: 3px;
+  transition: width 0.6s ease;
+}
+.bus-hero--urgent .bus-hero-progress-fill { background: white; }
 
 /* Список рейсів */
 .bus-list { padding: 0; }
@@ -209,10 +298,13 @@
 
 /* Картка рейсу */
 .bus-card {
-  padding: 14px 16px;
-  border-bottom: 1px solid var(--border);
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--hairline);
 }
 .bus-card.past { opacity: 0.35; }
+.bus-card.next {
+  background: rgba(230, 204, 143, 0.18); /* медовий 18% — підсвічуємо наступний у списку */
+}
 
 .bus-card-main {
   display: flex;
@@ -220,33 +312,37 @@
   gap: 12px;
 }
 
-/* Час відправлення — головний акцент */
+/* Час відправлення — головний акцент, компактний */
 .bus-card-time {
-  font-size: 32px;
-  font-weight: 800;
-  color: var(--navy);
-  min-width: 78px;
-  letter-spacing: -1px;
+  font-family: Georgia, serif;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--ink);
+  min-width: 72px;
+  letter-spacing: -0.5px;
   line-height: 1;
   flex-shrink: 0;
 }
-.bus-card.past .bus-card-time { color: var(--gray); }
+.bus-card.past .bus-card-time { color: var(--ink-mute); }
 
 .bus-card-info { flex: 1; min-width: 0; }
 
 .bus-card-route {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 600;
-  color: var(--black);
-  margin-bottom: 3px;
+  color: var(--ink);
+  margin-bottom: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .bus-card-meta {
   display: flex;
   align-items: center;
   gap: 5px;
-  font-size: 12px;
-  color: var(--gray);
-  margin-bottom: 3px;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+  margin-bottom: 0;
 }
 .bus-meta-sep { opacity: 0.4; }
 
@@ -381,10 +477,10 @@
   margin-top: 1px;
 }
 
-/* Підсвічування наступного рейсу */
+/* Підсвічування наступного рейсу — медовий тон у тон з hero */
 .bus-card.next {
-  border-left: 3px solid var(--navy);
-  background: #f7f9ff;
+  border-left: 3px solid var(--honey-deep);
+  background: rgba(230, 204, 143, 0.18);
   padding-left: 13px;
 }
 .bus-card.next .bus-card-main { padding-left: 0; }
