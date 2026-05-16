@@ -131,126 +131,70 @@ export async function renderBoard() {
   }
 }
 
-// Зум розгортання/згортання:
-// - Стікер position:fixed, left/top анімуються в АБСОЛЮТНИХ viewport-координатах
-//   (раніше через translate3d матрична інтерполяція ламала траєкторію правого
-//   стовпчика і кидала стікер в нижній-лівий кут)
-// - transform лише rotate+scale (без translate)
-// - Після анімації — снап на справжні великі розміри з пропорційно більшим
-//   font-size (текст реренодиться чіткий, layout зберігається бо все
-//   пропорційне)
+// Zoom-перегляд стікера через окрему модалку (16.05.2026):
+// - Тап на стікер → створюється МОДАЛКА-копія по центру з більшим font-size
+// - Оригінальний стікер плавно зникає (opacity: 0) щоб виглядав «знятим з дошки»
+// - Інші картки не рухаються, не зникають — backdrop їх просто димає
+// - Тап на backdrop → модалка зникає, оригінал повертається
+//
+// Чому не FLIP/scale: transform:scale() на iOS завжди розмиває текст
+// (растеризує bitmap-шар і масштабує), плюс матрична інтерполяція ламає
+// траєкторію. Окрема модалка з більшим font-size — чіткий рендер без проблем.
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
 
   let activeNote = null;
+  let activeModal = null;
   let isAnimating = false;
-  const DURATION = 320;
-  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
-
-  const showBackdrop = () => {
-    requestAnimationFrame(() => backdrop.classList.add('visible'));
-  };
-  const hideBackdrop = () => {
-    backdrop.classList.remove('visible');
-  };
+  const DURATION = 240;
 
   const expand = (note) => {
     if (isAnimating || activeNote) return;
     isAnimating = true;
 
-    const rect = note.getBoundingClientRect();
-    const origW = rect.width;
-    const origH = rect.height;
-    const tilt = parseFloat(note.style.getPropertyValue('--tilt')) || 0;
+    // Створюємо модалку-клон з тими ж класами (для кольору й категорії)
+    const modal = document.createElement('article');
+    modal.className = note.className + ' cm-board-modal-note';
+    modal.innerHTML = note.innerHTML;
+    document.body.appendChild(modal);
 
-    // Placeholder тих самих розмірів — займає місце на дошці
-    const placeholder = document.createElement('div');
-    placeholder.className = 'cm-board-placeholder';
-    placeholder.style.width = `${origW}px`;
-    placeholder.style.height = `${origH}px`;
-    note.parentNode.insertBefore(placeholder, note);
-    note._placeholder = placeholder;
-    note._tilt = tilt;
-    note._origW = origW;
-    note._origH = origH;
-
-    // Цільовий стан — центр viewport
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
-    const safeT = 80;
-    const safeB = 140;
-    const usableH = vh - safeT - safeB;
-    const targetMaxW = Math.min(vw - 32, 380);
-    const scaleW = targetMaxW / origW;
-    const scaleH = usableH / origH;
-    const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
-    const targetLeft = (vw - origW) / 2;
-    const targetTop  = (vh - origH) / 2;
-    note._scale = scale;
-
-    // Фіксуємо в оригінальній позиції — без translate, через left/top
-    note.style.position = 'fixed';
-    note.style.left = `${rect.left}px`;
-    note.style.top = `${rect.top}px`;
-    note.style.width = `${origW}px`;
-    note.style.height = `${origH}px`;
-    note.style.margin = '0';
-    note.style.zIndex = '210';
-    note.style.transformOrigin = 'center center';
-    note.style.willChange = 'transform, left, top';
-    note.style.transition = 'none';
-    note.style.transform = `rotate(${tilt}deg) scale(1)`;
-    note.classList.add('expanded');
-
-    showBackdrop();
-
-    // Force reflow
-    void note.offsetHeight;
-
-    // Анімуємо left/top (абсолютні координати — без матричної плутанини)
-    // + transform (rotate+scale для візуального ефекту)
-    note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
-    note.style.left = `${targetLeft}px`;
-    note.style.top = `${targetTop}px`;
-    note.style.transform = `rotate(0deg) scale(${scale})`;
+    // Кнопка виклика всередині модалки — окремий handler
+    modal.querySelectorAll('.cm-board-call').forEach(btn => {
+      btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
+    });
 
     activeNote = note;
+    activeModal = modal;
+
+    // Ховаємо оригінал плавно (opacity 1→0)
+    note.classList.add('cm-board-note--hidden');
+
+    // Запускаємо backdrop і модалку (наступний frame щоб transition спрацював)
+    requestAnimationFrame(() => {
+      backdrop.classList.add('visible');
+      modal.classList.add('visible');
+    });
+
     setTimeout(() => { isAnimating = false; }, DURATION);
   };
 
   const collapse = () => {
-    if (!activeNote || isAnimating) return;
+    if (!activeNote || !activeModal || isAnimating) return;
     isAnimating = true;
 
     const note = activeNote;
-    const placeholder = note._placeholder;
-    const tilt = note._tilt || 0;
+    const modal = activeModal;
 
-    if (placeholder) {
-      const phRect = placeholder.getBoundingClientRect();
-      // Анімуємо left/top назад до placeholder + transform скидаємо до rotate(tilt) scale(1)
-      note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
-      note.style.left = `${phRect.left}px`;
-      note.style.top = `${phRect.top}px`;
-      note.style.transform = `rotate(${tilt}deg) scale(1)`;
-    }
-
-    hideBackdrop();
+    modal.classList.remove('visible');
+    backdrop.classList.remove('visible');
+    note.classList.remove('cm-board-note--hidden');
 
     setTimeout(() => {
-      note.classList.remove('expanded');
-      ['position','left','top','width','height','margin','zIndex','transform','transition','transformOrigin','willChange'].forEach(p => {
-        note.style[p] = '';
-      });
-      placeholder?.remove();
-      delete note._placeholder;
-      delete note._tilt;
-      delete note._origW;
-      delete note._origH;
-      delete note._scale;
-      isAnimating = false;
+      modal.remove();
       activeNote = null;
+      activeModal = null;
+      isAnimating = false;
     }, DURATION);
   };
 
@@ -258,8 +202,7 @@ function initBoardNoteExpand(root) {
     note.addEventListener('click', e => {
       e.stopPropagation();
       if (isAnimating) return;
-      if (note === activeNote) collapse();
-      else if (!activeNote) expand(note);
+      if (!activeNote) expand(note);
     });
   });
 

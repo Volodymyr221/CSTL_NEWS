@@ -1032,29 +1032,75 @@
   pointer-events: auto;
 }
 
-/* Placeholder — пусте місце на дошці поки стікер «знятий» */
-.cm-board-placeholder {
-  flex-shrink: 0;
-  background: transparent;
+/* Оригінальний стікер на дошці плавно зникає коли модалка відкрита */
+.cm-board-note--hidden {
+  opacity: 0;
   pointer-events: none;
+  transition: opacity 0.18s ease;
 }
 
-/* Розгорнутий стан стікера — position і transform контролюються через JS
-   (для FLIP-анімації від місця стікера до центру з scale). Тут лише візуал. */
-.cm-board-note.expanded {
+/* ── Модалка-копія стікера (16.05.2026, замінює FLIP-zoom підхід) ──
+   Окремий елемент по центру з більшим font-size — текст КРИШТАЛЕВО чіткий
+   (ніяких transform: scale, ніякої матричної інтерполяції) */
+.cm-board-modal-note {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(86vw, 380px);
+  max-height: 80vh;
+  overflow-y: auto;
+  z-index: 220;
+  margin: 0;
+  padding: 22px 20px 18px;
+  border-radius: 4px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  color: #2c2c2c;
   box-shadow:
-    0 12px 32px rgba(0,0,0,0.45),
-    0 4px 12px rgba(0,0,0,0.22);
-  /* GPU-хінти для крихкого рендерингу при scale transform на iOS Safari */
-  -webkit-backface-visibility: hidden;
-  backface-visibility: hidden;
-  -webkit-font-smoothing: subpixel-antialiased;
-  transform-style: preserve-3d;
+    0 16px 40px rgba(0,0,0,0.45),
+    0 6px 16px rgba(0,0,0,0.25);
+  transform: translate(-50%, -50%) scale(0.88);
+  opacity: 0;
+  transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
+  -webkit-overflow-scrolling: touch;
 }
-/* Шпилька зайва коли стікер відкритий по центру */
-.cm-board-note.expanded .cm-board-pin { display: none; }
-/* На розгорнутій картці прибираємо hover (інакше переб'є JS-transform) */
-.cm-board-note.expanded:hover { transform: rotate(0deg) scale(2); }
+.cm-board-modal-note.visible {
+  transform: translate(-50%, -50%) scale(1);
+  opacity: 1;
+}
+/* Шпилька зайва — модалка не на дошці */
+.cm-board-modal-note .cm-board-pin { display: none; }
+
+/* Більші розміри тексту/елементів у модалці — текст чіткий бо рендериться
+   у природному великому розмірі (без transform: scale) */
+.cm-board-modal-note .cm-board-cat {
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+.cm-board-modal-note .cm-board-official-title {
+  font-size: 19px;
+  margin: 6px 0 10px;
+  line-height: 1.3;
+}
+.cm-board-modal-note .cm-board-text {
+  font-size: 16px;
+  line-height: 1.5;
+  margin-bottom: 14px;
+}
+.cm-board-modal-note .cm-board-footer {
+  font-size: 13px;
+  padding-top: 10px;
+  margin-top: 6px;
+}
+.cm-board-modal-note .cm-board-time { font-size: 12px; }
+.cm-board-modal-note .cm-board-contact {
+  font-size: 15px;
+  margin-top: 10px;
+}
+.cm-board-modal-note .cm-board-call {
+  width: 42px;
+  height: 42px;
+}
+.cm-board-modal-note .cm-board-call svg { width: 20px; height: 20px; }
 
 /* ── Контакт-телефон з кнопкою виклика праворуч ── */
 .cm-board-contact--phone {
