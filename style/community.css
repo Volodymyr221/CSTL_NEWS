@@ -938,6 +938,139 @@
   line-height: 1.4;
 }
 
+/* ===== BOARD MODAL FORM v2 (Tier 4 — 16.05.2026) ===== */
+
+.bm-section { margin-bottom: 14px; }
+.bm-label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+.bm-label-hint {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-left: 4px;
+}
+
+/* Категорії — чіпи */
+.bm-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.bm-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  background: var(--gray-light);
+  border: 1.5px solid transparent;
+  border-radius: 999px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+}
+.bm-chip:active { transform: scale(0.96); }
+.bm-chip.active {
+  background: var(--red);
+  border-color: var(--red);
+  color: white;
+}
+.bm-chip-emoji { font-size: 14px; line-height: 1; }
+.bm-chip-label { text-transform: capitalize; }
+
+/* Фото-слоти */
+.bm-photos {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.bm-photo-slot {
+  position: relative;
+  aspect-ratio: 1;
+  background: var(--gray-light);
+  background-size: cover;
+  background-position: center;
+  border: 1.5px dashed var(--border);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  overflow: hidden;
+  -webkit-tap-highlight-color: transparent;
+  transition: border-color 0.12s, background-color 0.12s;
+}
+.bm-photo-slot:active { background-color: var(--paper); }
+.bm-photo-slot.filled {
+  border: 1.5px solid var(--border);
+  background-color: transparent;
+}
+.bm-photo-plus {
+  font-size: 26px;
+  font-weight: 300;
+  color: var(--ink-mute);
+  line-height: 1;
+  user-select: none;
+}
+.bm-photo-slot.filled .bm-photo-plus {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 24px;
+  height: 24px;
+  background: rgba(0, 0, 0, 0.65);
+  color: white;
+  font-size: 14px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Live-preview секція */
+.bm-preview-section {
+  margin: 18px -18px 14px;
+  padding: 14px 18px 18px;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.07) 1px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    linear-gradient(135deg, #C9A678 0%, #A8845C 100%);
+  background-size: 12px 12px, 12px 12px, 100% 100%;
+  border-top: 3px solid #8B6F47;
+  border-bottom: 3px solid #8B6F47;
+}
+.bm-preview-label {
+  font-size: 11px;
+  font-weight: 800;
+  color: #FFF4D6;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  text-align: center;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.35);
+  margin-bottom: 12px;
+}
+.bm-preview-canvas {
+  display: flex;
+  justify-content: center;
+}
+/* Сам стікер у preview — обмежена ширина для центрування */
+.bm-preview-canvas .cm-board-note {
+  width: min(80%, 240px);
+  pointer-events: none;
+}
+
 /* ===== BOARD MINI-PREVIEW (16.05.2026) =====
    Міні-коркова дошка на Громаді — 2 стікера в стилі повної Дошки + CTA.
    Тап на стікер або на CTA → switchTab('board'). */

@@ -1967,9 +1967,58 @@ END:VEVENT`
   }
 
   // src/tabs/community-modal.js
+  var CATEGORIES = [
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
+    { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
+    { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
+    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", emoji: "\u2764\uFE0F", color: "white" },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
+    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
+  ];
+  function isPhone(s) {
+    return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
+  }
+  function compressImage(file) {
+    return new Promise(function executor(resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 800;
+          let w = img.width, h = img.height;
+          if (w > h && w > maxDim) {
+            h = h * maxDim / w;
+            w = maxDim;
+          } else if (h > maxDim) {
+            w = w * maxDim / h;
+            h = maxDim;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(w);
+          canvas.height = Math.round(h);
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.78));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
   function openBoardModal() {
     if (document.getElementById("cm-board-modal"))
       return;
+    const state = {
+      category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
+      text: "",
+      photos: [],
+      // до 3 base64-картинок
+      contact: "",
+      author: ""
+    };
     const wrap = document.createElement("div");
     wrap.id = "cm-board-modal";
     wrap.className = "cm-board-modal";
@@ -1978,21 +2027,80 @@ END:VEVENT`
     <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
       <div class="cm-board-modal-handle"></div>
       <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
-      <p class="cm-board-modal-sub">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044F \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0430 \u2014 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440 \u043E\u0431\u0435\u0440\u0435 \u043A\u0443\u0434\u0438 \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438.</p>
-      <form id="cm-board-modal-form">
-        <textarea class="cm-board-input" id="cm-board-text" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456? (\u043F\u0440\u043E\u0434\u0430\u043C, \u0448\u0443\u043A\u0430\u044E, \u043F\u043E\u0434\u044F\u043A\u0430, \u043F\u043E\u0434\u0456\u044F\u2026)" rows="4" required></textarea>
-        <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="\u0406\u043C\u02BC\u044F (\u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0442\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)">
-        <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="\u041A\u043E\u043D\u0442\u0430\u043A\u0442: \u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)">
-        <button class="cm-board-submit" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2192</button>
-        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456, \u0443 \u043D\u043E\u0432\u0438\u043D\u0430\u0445 \u0430\u0431\u043E \u0432 \u043F\u043E\u0434\u0456\u044F\u0445.</p>
+      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+      <p class="cm-board-modal-sub">\u0417\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F. \u0417\u043D\u0438\u0437\u0443 \u2014 \u044F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0442\u0438\u043C\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</p>
+
+      <form id="cm-board-modal-form" novalidate>
+        <!-- \u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F: \u0447\u0456\u043F\u0438 -->
+        <div class="bm-section">
+          <label class="bm-label">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</label>
+          <div class="bm-chips" id="bm-chips">
+            ${CATEGORIES.map((c) => `
+              <button type="button" class="bm-chip${c.id === state.category ? " active" : ""}" data-cat="${c.id}">
+                <span class="bm-chip-emoji">${c.emoji}</span>
+                <span class="bm-chip-label">${c.id}</span>
+              </button>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- \u041E\u043F\u0438\u0441 -->
+        <div class="bm-section">
+          <label class="bm-label" for="bm-text">\u041E\u043F\u0438\u0441</label>
+          <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456?" required></textarea>
+        </div>
+
+        <!-- \u0424\u043E\u0442\u043E -->
+        <div class="bm-section">
+          <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, \u0434\u043E 3)</span></label>
+          <div class="bm-photos" id="bm-photos">
+            ${[0, 1, 2].map((i) => `
+              <label class="bm-photo-slot" data-idx="${i}">
+                <input type="file" accept="image/*" hidden>
+                <span class="bm-photo-plus">\uFF0B</span>
+              </label>
+            `).join("")}
+          </div>
+        </div>
+
+        <!-- \u041A\u043E\u043D\u0442\u0430\u043A\u0442 -->
+        <div class="bm-section">
+          <label class="bm-label" for="bm-contact">\u041A\u043E\u043D\u0442\u0430\u043A\u0442 <span class="bm-label-hint">(\u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram)</span></label>
+          <input class="cm-board-input cm-board-input--small" id="bm-contact" type="text" placeholder="+38 050 ___ __ __" inputmode="tel">
+        </div>
+
+        <!-- \u0406\u043C'\u044F -->
+        <div class="bm-section">
+          <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
+          <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F">
+        </div>
+
+        <!-- LIVE-preview -->
+        <div class="bm-preview-section">
+          <div class="bm-preview-label">\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0442\u0438\u043C\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>
+          <div class="bm-preview-canvas">
+            <article class="cm-board-note cm-board-note--${state.category === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" ? "pink" : "yellow"}" id="bm-preview" style="--tilt:0deg">
+              <span class="cm-board-pin"></span>
+              <span class="cm-board-cat">\u{1F4E2} ${escapeHtml(state.category)}</span>
+              <p class="cm-board-text" id="bm-preview-text">\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026</p>
+              <div class="cm-board-footer">
+                <span class="cm-board-author" id="bm-preview-author">\u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E</span>
+                <span class="cm-board-time">\u0449\u043E\u0439\u043D\u043E</span>
+              </div>
+              <div class="cm-board-contact" id="bm-preview-contact" hidden></div>
+            </article>
+          </div>
+        </div>
+
+        <button class="cm-board-submit" type="submit">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
+        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</p>
       </form>
     </div>
   `;
     document.body.appendChild(wrap);
     document.body.classList.add("modal-open");
     requestAnimationFrame(() => wrap.classList.add("open"));
-    setTimeout(() => wrap.querySelector("#cm-board-text")?.focus(), 200);
+    setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
     function close() {
       wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
@@ -2006,11 +2114,101 @@ END:VEVENT`
         document.removeEventListener("keydown", onEsc);
       }
     });
+    wrap.querySelectorAll(".bm-chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        wrap.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.category = btn.dataset.cat;
+        updatePreview();
+      });
+    });
+    wrap.querySelector("#bm-text")?.addEventListener("input", (e) => {
+      state.text = e.target.value;
+      updatePreview();
+    });
+    wrap.querySelector("#bm-contact")?.addEventListener("input", (e) => {
+      state.contact = e.target.value;
+      updatePreview();
+    });
+    wrap.querySelector("#bm-author")?.addEventListener("input", (e) => {
+      state.author = e.target.value;
+      updatePreview();
+    });
+    wrap.querySelectorAll(".bm-photo-slot").forEach((slot) => {
+      const input = slot.querySelector('input[type="file"]');
+      const idx = parseInt(slot.dataset.idx, 10);
+      input.addEventListener("change", async () => {
+        const file = input.files[0];
+        if (!file)
+          return;
+        try {
+          const dataUrl = await compressImage(file);
+          state.photos[idx] = dataUrl;
+          slot.classList.add("filled");
+          slot.style.backgroundImage = `url("${dataUrl}")`;
+          slot.querySelector(".bm-photo-plus").textContent = "\u2715";
+          slot.querySelector(".bm-photo-plus").classList.add("bm-photo-remove");
+          updatePreview();
+        } catch {
+          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E", 3e3);
+        }
+      });
+      slot.querySelector(".bm-photo-plus").addEventListener("click", (e) => {
+        if (slot.classList.contains("filled")) {
+          e.preventDefault();
+          state.photos[idx] = null;
+          slot.classList.remove("filled");
+          slot.style.backgroundImage = "";
+          const span = slot.querySelector(".bm-photo-plus");
+          span.textContent = "\uFF0B";
+          span.classList.remove("bm-photo-remove");
+          input.value = "";
+          updatePreview();
+        }
+      });
+    });
+    function updatePreview() {
+      const cat = CATEGORIES.find((c) => c.id === state.category) || CATEGORIES[7];
+      const previewEl = wrap.querySelector("#bm-preview");
+      const textEl = wrap.querySelector("#bm-preview-text");
+      const authorEl = wrap.querySelector("#bm-preview-author");
+      const contactEl = wrap.querySelector("#bm-preview-contact");
+      previewEl.className = `cm-board-note cm-board-note--${cat.color}`;
+      if (state.photos.filter(Boolean).length > 0)
+        previewEl.classList.add("cm-board-note--has-photo");
+      previewEl.querySelector(".cm-board-cat").textContent = `${cat.emoji} ${cat.id}`;
+      textEl.textContent = state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026";
+      authorEl.textContent = "\u2014 " + (state.author.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E");
+      const contactTrim = state.contact.trim();
+      if (contactTrim) {
+        contactEl.hidden = false;
+        contactEl.textContent = contactTrim;
+        contactEl.classList.toggle("cm-board-contact--phone", isPhone(contactTrim));
+      } else {
+        contactEl.hidden = true;
+      }
+      const firstPhoto = state.photos.find((p) => p);
+      let photoWrap = previewEl.querySelector(".cm-board-photo-wrap");
+      if (firstPhoto) {
+        if (!photoWrap) {
+          photoWrap = document.createElement("div");
+          photoWrap.className = "cm-board-photo-wrap";
+          photoWrap.innerHTML = `<img class="cm-board-photo" src="${firstPhoto}" alt="">`;
+          previewEl.insertBefore(photoWrap, previewEl.querySelector(".cm-board-cat"));
+        } else {
+          photoWrap.querySelector(".cm-board-photo").src = firstPhoto;
+        }
+      } else if (photoWrap) {
+        photoWrap.remove();
+      }
+    }
     wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
-      const text = wrap.querySelector("#cm-board-text")?.value.trim();
-      if (!text)
+      if (!state.text.trim()) {
+        showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043E\u043F\u0438\u0441 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 2500);
+        wrap.querySelector("#bm-text")?.focus();
         return;
+      }
       close();
       showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
     });
@@ -2032,8 +2230,8 @@ END:VEVENT`
     if (!contact)
       return "";
     const trimmed = String(contact).trim();
-    const isPhone = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
-    if (!isPhone) {
+    const isPhone2 = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
+    if (!isPhone2) {
       return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
     }
     const tel = trimmed.replace(/[^\d+]/g, "");
