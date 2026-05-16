@@ -371,12 +371,17 @@
         el.innerHTML = `<div class="cm-board-preview-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
         return;
       }
-      const merged = [
+      const all = [
         ...official.map((a) => ({ type: "official", title: a.title, text: a.body, ts: a.ts, id: a.id })),
-        ...userPosts.map((p) => ({ type: "user", category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color }))
-      ].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
+        ...userPosts.map((p) => ({ type: "user", category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color, photo: p.photo }))
+      ].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const first = all[0];
+      const withPhoto = all.find((item) => item !== first && item.photo);
+      const second = withPhoto || all[1];
+      const merged = [first, second].filter(Boolean);
       const stickersHtml = merged.map((item) => {
         const tilt = item.id * 7 % 9 - 4;
+        const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
         if (item.type === "official") {
           return `
           <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
@@ -388,15 +393,18 @@
         }
         const emoji = CATEGORY_EMOJI[item.category] || "\u{1F4CC}";
         return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini" style="--tilt:${tilt}deg">
+        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
           <span class="cm-board-pin"></span>
+          ${photoHtml}
           <span class="cm-board-cat">${emoji} ${escapeHtml(item.category)}</span>
           <p class="cm-board-text">${escapeHtml(item.text)}</p>
         </article>
       `;
       }).join("");
       const more = Math.max(0, totalCount - merged.length);
-      const moreHtml = more > 0 ? `<div class="cm-board-preview-more">+${more} \u0449\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>` : "";
+      const moreHtml = more > 0 ? `<button class="cm-board-preview-cta" type="button">
+           \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 <span class="cm-board-preview-count">+${more}</span>
+         </button>` : "";
       el.innerHTML = `
       <div class="cm-board-preview" onclick="switchTab('board')">
         <div class="cm-board-corkboard cm-board-corkboard--mini">

@@ -650,6 +650,9 @@
   flex-wrap: wrap;
   gap: 14px 8px;
   justify-content: space-between;
+  /* align-items: flex-start — кожен стікер своєї природньої висоти, не тягнеться
+     щоб співпасти з сусідом-з-фото. На місці коротшого стікера лишається корок. */
+  align-items: flex-start;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -893,8 +896,8 @@
 }
 
 /* ===== BOARD MINI-PREVIEW (16.05.2026) =====
-   Міні-коркова дошка на Громаді з 2 стікерами в стилі повної Дошки.
-   Впізнавана з першого погляду. Тап → switchTab('board'). */
+   Міні-коркова дошка на Громаді — 2 стікера в стилі повної Дошки + CTA.
+   Тап на стікер або на CTA → switchTab('board'). */
 .cm-board-preview {
   padding: 0;
   cursor: pointer;
@@ -910,24 +913,32 @@
   text-align: center;
 }
 
-/* Міні-варіант коркової дошки — компактніша, без overflow scroll */
+/* Міні-варіант коркової дошки — компактніша, без overflow scroll.
+   Більш контрастний фон і чіткі рамки щоб виглядало як справжня дошка. */
 .cm-board-corkboard--mini {
   max-height: none;
-  padding: 14px 12px 12px;
-  border-top-width: 3px;
-  border-bottom-width: 3px;
-  gap: 8px 8px;
+  padding: 16px 14px 18px;
+  border-top: 4px solid #8B6F47;
+  border-bottom: 4px solid #8B6F47;
+  gap: 10px 10px;
+  /* Деталізованіший фон з більш насиченим кольором — мабуть з градієнтом
+     і тонким нерівним «дерев'яним» обрамленням знизу */
+  background:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.07) 1px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    linear-gradient(135deg, #C9A678 0%, #A8845C 100%);
+  background-size: 12px 12px, 12px 12px, 100% 100%;
 }
 
 /* Міні-стікер — менші розміри + обрізаний текст */
 .cm-board-note.cm-board-mini {
-  width: calc(50% - 4px);
-  min-height: 88px;
+  width: calc(50% - 5px);
+  min-height: 92px;
   padding: 12px 10px 10px;
 }
 .cm-board-note.cm-board-mini .cm-board-cat {
-  font-size: 10px;
-  margin-bottom: 3px;
+  font-size: 10.5px;
+  margin-bottom: 4px;
 }
 .cm-board-note.cm-board-mini .cm-board-text {
   font-size: 12.5px;
@@ -937,6 +948,16 @@
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
+}
+/* Стікер з фото на міні-дошці — фото менше, текст на 2 рядки */
+.cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-photo-wrap {
+  margin: -12px -10px 8px;
+}
+.cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-photo {
+  aspect-ratio: 4 / 3;
+}
+.cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-text {
+  -webkit-line-clamp: 2;
 }
 /* Офіційний міні-стікер — повна ширина, як у Дошці */
 .cm-board-note.cm-board-mini.cm-board-note--official {
@@ -950,15 +971,39 @@
   color: #1a1a1a;
 }
 
-/* Лічильник "+N ще" знизу — підказка що ще є оголошення */
-.cm-board-preview-more {
-  padding: 8px 14px 12px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--ink-soft);
-  text-align: center;
-  letter-spacing: 0.2px;
+/* CTA «Перейти на дошку +N» — кнопка-смуга під корковим блоком */
+.cm-board-preview-cta {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 13px 16px;
   background: var(--bg-card);
+  border: none;
+  border-top: 1px solid var(--hairline);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red);
+  cursor: pointer;
+  letter-spacing: 0.2px;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.cm-board-preview-cta:active { background: var(--paper-deep); }
+.cm-board-preview-cta .cm-board-preview-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  padding: 2px 8px;
+  background: var(--red);
+  color: white;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0;
 }
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */

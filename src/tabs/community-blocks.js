@@ -306,14 +306,24 @@ export async function renderBoardBlock() {
       return;
     }
 
-    // Беремо 2 найсвіжіші (офіційні мають пріоритет — більш репрезентативні)
-    const merged = [
+    // Беремо до 2 свіжих стікерів. Пріоритет — стікер з фото (візуально цікаво).
+    const all = [
       ...official.map(a => ({ type: 'official', title: a.title, text: a.body, ts: a.ts, id: a.id })),
-      ...userPosts.map(p => ({ type: 'user', category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color })),
-    ].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 2);
+      ...userPosts.map(p => ({ type: 'user', category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color, photo: p.photo })),
+    ].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+    // Першим — найсвіжіший. Другим — найсвіжіший серед тих що мають фото
+    // (якщо такий є і він не той самий). Інакше — другий найсвіжіший.
+    const first = all[0];
+    const withPhoto = all.find(item => item !== first && item.photo);
+    const second = withPhoto || all[1];
+    const merged = [first, second].filter(Boolean);
 
     const stickersHtml = merged.map(item => {
       const tilt = ((item.id * 7) % 9) - 4;
+      const photoHtml = item.photo
+        ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
+        : '';
       if (item.type === 'official') {
         return `
           <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
@@ -325,8 +335,9 @@ export async function renderBoardBlock() {
       }
       const emoji = CATEGORY_EMOJI[item.category] || '📌';
       return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || 'yellow')} cm-board-mini" style="--tilt:${tilt}deg">
+        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || 'yellow')} cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
           <span class="cm-board-pin"></span>
+          ${photoHtml}
           <span class="cm-board-cat">${emoji} ${escapeHtml(item.category)}</span>
           <p class="cm-board-text">${escapeHtml(item.text)}</p>
         </article>
@@ -335,7 +346,9 @@ export async function renderBoardBlock() {
 
     const more = Math.max(0, totalCount - merged.length);
     const moreHtml = more > 0
-      ? `<div class="cm-board-preview-more">+${more} ще на дошці</div>`
+      ? `<button class="cm-board-preview-cta" type="button">
+           Перейти на дошку <span class="cm-board-preview-count">+${more}</span>
+         </button>`
       : '';
 
     el.innerHTML = `
