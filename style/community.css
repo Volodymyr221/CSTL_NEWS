@@ -855,13 +855,13 @@
   padding: 9px 11px;
   border: 1px solid var(--border);
   border-radius: 8px;
-  font-size: 14px;
+  font-size: 16px;        /* мін 16px — інакше iOS Safari зумить екран при фокусі (і не завжди повертає) */
   font-family: inherit;
   resize: vertical;
   background: #FAFAFA;
 }
 .cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
-.cm-board-input--small { padding: 8px 11px; font-size: 13px; }
+.cm-board-input--small { padding: 8px 11px; font-size: 16px; }
 .cm-board-row { margin-top: 8px; }
 
 .cm-board-submit {
