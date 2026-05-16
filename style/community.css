@@ -887,3 +887,101 @@
   margin-top: 8px;
   line-height: 1.4;
 }
+
+/* ===== BOARD MINI-PREVIEW (16.05.2026) =====
+   Компактний preview-блок Дошки на Громаді (як Погода). Тап → вкладка Дошка. */
+.cm-board-preview {
+  padding: 4px 14px 14px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: opacity 0.15s;
+}
+.cm-board-preview:active { opacity: 0.7; }
+
+.cm-board-preview-empty {
+  padding: 14px;
+  color: var(--gray);
+  font-size: 13.5px;
+  text-align: center;
+}
+
+.cm-board-preview-count {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.cm-board-preview-num {
+  font-family: Georgia, serif;
+  font-size: 32px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1;
+  letter-spacing: -1px;
+}
+.cm-board-preview-lbl {
+  font-size: 13px;
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.cm-board-preview-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.cm-board-preview-item {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--paper);
+  border-radius: 8px;
+  border-left: 3px solid var(--hairline);
+}
+.cm-board-preview-cat {
+  font-size: 10.5px;
+  font-weight: 700;
+  color: var(--ink-mute);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+.cm-board-preview-cat--official { color: #B45309; }
+.cm-board-preview-text {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.35;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.cm-board-preview-cta {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--red);
+  text-align: right;
+  letter-spacing: 0.2px;
+}
+
+/* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
+.board-content {
+  padding-bottom: 24px;
+}
+.board-empty {
+  padding: 60px 24px 20px;
+  text-align: center;
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.6;
+}
+.board-empty p { margin-bottom: 6px; }
+
+/* Повна коркова дошка — без обмеження висоти (на цілу сторінку) */
+.board-corkboard--full {
+  max-height: none;
+  border-top: none;
+  border-radius: 0;
+}

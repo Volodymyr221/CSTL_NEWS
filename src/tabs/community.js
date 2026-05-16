@@ -93,8 +93,9 @@ function renderSkeleton() {
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Дошка громади</h3>
+        <button class="cm-block-link" onclick="switchTab('board')">Відкрити →</button>
       </header>
-      <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
+      <div id="cm-board-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
 
     <section class="cm-block cm-block--weather">
@@ -104,6 +105,9 @@ function renderSkeleton() {
       <div id="cm-weather-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
 
+    <!-- Блок Світло — приховано 16.05.2026 (світло наразі не відключають).
+         Щоб повернути: розкоментувати секцію + повернути renderPowerBlock() у initCommunity. -->
+    <!--
     <section class="cm-block cm-block--power">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Світло зараз</h3>
@@ -111,6 +115,7 @@ function renderSkeleton() {
       </header>
       <div id="cm-power-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
+    -->
 
     <section class="cm-block cm-block--bus">
       <header class="cm-block-header">
@@ -144,7 +149,7 @@ export function initCommunity() {
   startHeroRotator();
   // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
   renderWeatherBlock();
-  renderPowerBlock();
+  // renderPowerBlock(); — Світло приховано (16.05.2026, не актуально)
   renderBusBlock();
   renderBoardBlock();
   renderEventBlock();
