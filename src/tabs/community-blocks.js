@@ -425,7 +425,7 @@ const CONTACT_ICONS = {
 };
 
 const CONTACT_COLORS = {
-  emergency: '#C41E3A',
+  emergency: '#722F37',
   medical:   '#2E7D32',
   gov:       '#1565C0',
   utility:   '#B45309',

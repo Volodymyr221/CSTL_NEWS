@@ -2,8 +2,8 @@
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 :root {
-  --red: #C41E3A;
-  --red-dark: #9e1830;
+  --red: #722F37;        /* бордо/винний — основний бренд (16.05.2026, було #C41E3A) */
+  --red-dark: #5A2329;   /* темніше бордо для :active станів */
   --black: #1a1a1a;
   --gray: #666;
   --gray-light: #f5f5f5;
