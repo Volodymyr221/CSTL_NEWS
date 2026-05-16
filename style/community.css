@@ -1045,6 +1045,11 @@
   box-shadow:
     0 12px 32px rgba(0,0,0,0.45),
     0 4px 12px rgba(0,0,0,0.22);
+  /* GPU-хінти для крихкого рендерингу при scale transform на iOS Safari */
+  -webkit-backface-visibility: hidden;
+  backface-visibility: hidden;
+  -webkit-font-smoothing: subpixel-antialiased;
+  transform-style: preserve-3d;
 }
 /* Шпилька зайва коли стікер відкритий по центру */
 .cm-board-note.expanded .cm-board-pin { display: none; }

@@ -131,20 +131,22 @@ export async function renderBoard() {
   }
 }
 
-// Зум розгортання/згортання через FLIP-стиль:
-// - Стікер переходить у position:fixed на ОРІГІНАЛЬНІЙ позиції
-// - Анімується ТІЛЬКИ через transform: translate3d(dx,dy) rotate(R) scale(S)
-//   (плавніше ніж змінювати left/top окремо, бо браузер інтерполює ОДИН property
-//   і робить GPU-композицію без re-layout)
-// - Згорт — рахуємо актуальну позицію placeholder і translate-имо назад
+// Зум розгортання/згортання:
+// - Стікер position:fixed, left/top анімуються в АБСОЛЮТНИХ viewport-координатах
+//   (раніше через translate3d матрична інтерполяція ламала траєкторію правого
+//   стовпчика і кидала стікер в нижній-лівий кут)
+// - transform лише rotate+scale (без translate)
+// - Після анімації — снап на справжні великі розміри з пропорційно більшим
+//   font-size (текст реренодиться чіткий, layout зберігається бо все
+//   пропорційне)
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
 
   let activeNote = null;
   let isAnimating = false;
-  const DURATION = 340;
-  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';  // ease-out quart — плавне сповільнення
+  const DURATION = 320;
+  const EASE = 'cubic-bezier(0.22, 1, 0.36, 1)';
 
   const showBackdrop = () => {
     requestAnimationFrame(() => backdrop.classList.add('visible'));
@@ -162,7 +164,7 @@ function initBoardNoteExpand(root) {
     const origH = rect.height;
     const tilt = parseFloat(note.style.getPropertyValue('--tilt')) || 0;
 
-    // Placeholder — займає місце на дошці поки стікер «знятий»
+    // Placeholder тих самих розмірів — займає місце на дошці
     const placeholder = document.createElement('div');
     placeholder.className = 'cm-board-placeholder';
     placeholder.style.width = `${origW}px`;
@@ -170,10 +172,10 @@ function initBoardNoteExpand(root) {
     note.parentNode.insertBefore(placeholder, note);
     note._placeholder = placeholder;
     note._tilt = tilt;
-    note._origLeft = rect.left;
-    note._origTop = rect.top;
+    note._origW = origW;
+    note._origH = origH;
 
-    // Цільовий стан — центр viewport, scale підібраний щоб не виходити за межі
+    // Цільовий стан — центр viewport
     const vw = window.innerWidth;
     const vh = window.innerHeight;
     const safeT = 80;
@@ -183,32 +185,35 @@ function initBoardNoteExpand(root) {
     const scaleW = targetMaxW / origW;
     const scaleH = usableH / origH;
     const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
+    const targetLeft = (vw - origW) / 2;
+    const targetTop  = (vh - origH) / 2;
+    note._scale = scale;
 
-    // Дельта від оригінальної позиції до центру viewport
-    const dx = (vw / 2) - (rect.left + origW / 2);
-    const dy = (vh / 2) - (rect.top + origH / 2);
-
-    // Фіксуємо в оригінальній позиції, потім транзишн тільки transform
+    // Фіксуємо в оригінальній позиції — без translate, через left/top
     note.style.position = 'fixed';
     note.style.left = `${rect.left}px`;
     note.style.top = `${rect.top}px`;
     note.style.width = `${origW}px`;
+    note.style.height = `${origH}px`;
     note.style.margin = '0';
     note.style.zIndex = '210';
     note.style.transformOrigin = 'center center';
-    note.style.willChange = 'transform';
+    note.style.willChange = 'transform, left, top';
     note.style.transition = 'none';
-    note.style.transform = `translate3d(0, 0, 0) rotate(${tilt}deg) scale(1)`;
+    note.style.transform = `rotate(${tilt}deg) scale(1)`;
     note.classList.add('expanded');
 
     showBackdrop();
 
-    // Force reflow щоб браузер застосував initial state перед transition
+    // Force reflow
     void note.offsetHeight;
 
-    // Анімуємо ТІЛЬКИ transform (єдиний property → плавна 60fps GPU-анімація)
-    note.style.transition = `transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
-    note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(${scale})`;
+    // Анімуємо left/top (абсолютні координати — без матричної плутанини)
+    // + transform (rotate+scale для візуального ефекту)
+    note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+    note.style.left = `${targetLeft}px`;
+    note.style.top = `${targetTop}px`;
+    note.style.transform = `rotate(0deg) scale(${scale})`;
 
     activeNote = note;
     setTimeout(() => { isAnimating = false; }, DURATION);
@@ -223,26 +228,27 @@ function initBoardNoteExpand(root) {
     const tilt = note._tilt || 0;
 
     if (placeholder) {
-      // Беремо АКТУАЛЬНУ позицію placeholder (на випадок якщо була прокрутка)
       const phRect = placeholder.getBoundingClientRect();
-      const dx = phRect.left - note._origLeft;
-      const dy = phRect.top  - note._origTop;
-      // Анімуємо transform назад: translate до placeholder + rotate назад до tilt + scale назад до 1
-      note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${tilt}deg) scale(1)`;
+      // Анімуємо left/top назад до placeholder + transform скидаємо до rotate(tilt) scale(1)
+      note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+      note.style.left = `${phRect.left}px`;
+      note.style.top = `${phRect.top}px`;
+      note.style.transform = `rotate(${tilt}deg) scale(1)`;
     }
 
     hideBackdrop();
 
     setTimeout(() => {
       note.classList.remove('expanded');
-      ['position','left','top','width','margin','zIndex','transform','transition','transformOrigin','willChange'].forEach(p => {
+      ['position','left','top','width','height','margin','zIndex','transform','transition','transformOrigin','willChange'].forEach(p => {
         note.style[p] = '';
       });
       placeholder?.remove();
       delete note._placeholder;
       delete note._tilt;
-      delete note._origLeft;
-      delete note._origTop;
+      delete note._origW;
+      delete note._origH;
+      delete note._scale;
       isAnimating = false;
       activeNote = null;
     }, DURATION);
