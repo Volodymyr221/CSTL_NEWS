@@ -374,14 +374,20 @@
 
 /* ===== BUSES v3 — Пошук "Звідки → Куди" + акордеон зупинок ===== */
 
-/* Контейнер панелі пошуку */
+/* Контейнер панелі пошуку (fixed — як у News, прилипає під шапку) */
 .bus-search {
   margin: 0;
   padding: 6px 14px 10px;
   background: var(--bg-page);
-  position: sticky;
+  position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  z-index: 50;
+  left: 0;
+  right: 0;
+  z-index: 90;
+}
+/* Компенсація висоти fixed bus-search */
+#page-buses {
+  padding-top: 78px;
 }
 
 /* Рядок з двома полями і кнопкою swap */
@@ -751,7 +757,7 @@
 }
 .pw-back-btn:active { opacity: 1; }
 
-/* ── Верхня панель з вулицею ── */
+/* ── Верхня панель з вулицею (legacy v1 — перекрита в style/power.css) ── */
 .pw-top-bar {
   display: flex;
   align-items: center;
@@ -759,9 +765,6 @@
   padding: 10px 16px;
   background: var(--white);
   border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
-  z-index: 10;
 }
 .pw-street-btn-top {
   display: flex;

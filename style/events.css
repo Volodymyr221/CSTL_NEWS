@@ -14,9 +14,15 @@
 .events-filters-bar {
   padding: 6px 14px 8px;
   background: var(--bg-page);
-  position: sticky;
+  position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  z-index: 50;
+  left: 0;
+  right: 0;
+  z-index: 90;
+}
+/* Компенсація висоти fixed filters-bar */
+#page-events {
+  padding-top: 50px;
 }
 
 /* Картка події */
