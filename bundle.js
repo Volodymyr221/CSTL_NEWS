@@ -162,58 +162,7 @@
     }
   }
 
-  // src/tabs/community-modal.js
-  function openBoardModal() {
-    if (document.getElementById("cm-board-modal"))
-      return;
-    const wrap = document.createElement("div");
-    wrap.id = "cm-board-modal";
-    wrap.className = "cm-board-modal";
-    wrap.innerHTML = `
-    <div class="cm-board-modal-backdrop"></div>
-    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
-      <div class="cm-board-modal-handle"></div>
-      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
-      <p class="cm-board-modal-sub">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044F \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0430 \u2014 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440 \u043E\u0431\u0435\u0440\u0435 \u043A\u0443\u0434\u0438 \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438.</p>
-      <form id="cm-board-modal-form">
-        <textarea class="cm-board-input" id="cm-board-text" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456? (\u043F\u0440\u043E\u0434\u0430\u043C, \u0448\u0443\u043A\u0430\u044E, \u043F\u043E\u0434\u044F\u043A\u0430, \u043F\u043E\u0434\u0456\u044F\u2026)" rows="4" required></textarea>
-        <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="\u0406\u043C\u02BC\u044F (\u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0442\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)">
-        <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="\u041A\u043E\u043D\u0442\u0430\u043A\u0442: \u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)">
-        <button class="cm-board-submit" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2192</button>
-        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456, \u0443 \u043D\u043E\u0432\u0438\u043D\u0430\u0445 \u0430\u0431\u043E \u0432 \u043F\u043E\u0434\u0456\u044F\u0445.</p>
-      </form>
-    </div>
-  `;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    setTimeout(() => wrap.querySelector("#cm-board-text")?.focus(), 200);
-    function close() {
-      wrap.classList.remove("open");
-      document.body.classList.remove("modal-open");
-      setTimeout(() => wrap.remove(), 220);
-    }
-    wrap.querySelector(".cm-board-modal-backdrop")?.addEventListener("click", close);
-    wrap.querySelector(".cm-board-modal-close")?.addEventListener("click", close);
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key === "Escape") {
-        close();
-        document.removeEventListener("keydown", onEsc);
-      }
-    });
-    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", (e) => {
-      e.preventDefault();
-      const text = wrap.querySelector("#cm-board-text")?.value.trim();
-      if (!text)
-        return;
-      close();
-      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
-    });
-  }
-
   // src/tabs/community-blocks.js
-  var POWER_PREFS_KEY = "power_prefs_v2";
   var BUS_PREFS_KEY = "bus_prefs_v2";
   function weatherCodeInfo(code) {
     if (code === 0)
@@ -235,13 +184,6 @@
     if (code >= 95)
       return { icon: "\u26C8\uFE0F", text: "\u0413\u0440\u043E\u0437\u0430" };
     return { icon: "\u{1F321}\uFE0F", text: "\u2014" };
-  }
-  function loadPowerPrefs() {
-    try {
-      return JSON.parse(localStorage.getItem(POWER_PREFS_KEY) || "{}");
-    } catch {
-      return {};
-    }
   }
   function loadBusPrefs() {
     try {
@@ -300,62 +242,6 @@
     `;
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
-    }
-  }
-  async function renderPowerBlock() {
-    const el = document.getElementById("cm-power-content");
-    if (!el)
-      return;
-    const prefs = loadPowerPrefs();
-    if (!prefs.cityId || !prefs.streetId) {
-      el.innerHTML = `
-      <div class="cm-block-empty">
-        \u041D\u0430\u043B\u0430\u0448\u0442\u0443\u0439\u0442\u0435 \u0432\u0430\u0448\u0443 \u0432\u0443\u043B\u0438\u0446\u044E \u0443 \u0432\u043A\u043B\u0430\u0434\u0446\u0456 \xAB\u0421\u0432\u0456\u0442\u043B\u043E\xBB
-        <button class="cm-block-cta" onclick="switchTab('power')">\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u2192</button>
-      </div>`;
-      return;
-    }
-    try {
-      const res = await fetch("./data/power.json");
-      const data = await res.json();
-      const city = data.cities.find((c) => c.id === prefs.cityId);
-      const street = city?.streets.find((s) => s.id === prefs.streetId);
-      const queue = street ? data.queues.find((q) => q.id === street.queue_id) : null;
-      if (!queue) {
-        el.innerHTML = '<div class="cm-block-empty">\u0414\u0430\u043D\u0456 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u2014 \u043E\u043D\u043E\u0432\u0456\u0442\u044C \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F</div>';
-        return;
-      }
-      const schedule = queue.schedule[todayKey()] || queue.schedule[Object.keys(queue.schedule)[0]];
-      if (!schedule) {
-        el.innerHTML = '<div class="cm-block-empty">\u0413\u0440\u0430\u0444\u0456\u043A \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0439</div>';
-        return;
-      }
-      const curH = (/* @__PURE__ */ new Date()).getHours();
-      const cur = schedule[curH];
-      let nextH = null;
-      for (let h = curH + 1; h < 24; h++) {
-        if (schedule[h] !== cur) {
-          nextH = h;
-          break;
-        }
-      }
-      const statusText = cur === 1 ? "\u0404 \u0441\u0432\u0456\u0442\u043B\u043E" : cur === 0 ? "\u041D\u0435\u043C\u0430\u0454 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
-      const statusCls = cur === 1 ? "on" : cur === 0 ? "off" : "maybe";
-      const statusDot = cur === 1 ? "\u{1F7E2}" : cur === 0 ? "\u{1F534}" : "\u{1F7E1}";
-      const nextLabel = nextH !== null ? cur === 1 ? `\u0412\u0438\u043C\u043A\u043D\u0443\u0442\u044C \u043E ${pad(nextH)}:00` : cur === 0 ? `\u0423\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u044C \u043E ${pad(nextH)}:00` : `\u0417\u043C\u0456\u043D\u0430 \u043E ${pad(nextH)}:00` : "\u0414\u043E \u043A\u0456\u043D\u0446\u044F \u0434\u043E\u0431\u0438 \u0431\u0435\u0437 \u0437\u043C\u0456\u043D";
-      const locLabel = city.streets.length === 1 ? city.name : `${city.name} \xB7 ${street.name}`;
-      el.innerHTML = `
-      <div class="cm-power-status cm-power-${statusCls}">
-        <span class="cm-power-dot">${statusDot}</span>
-        <div class="cm-power-text">
-          <div class="cm-power-main">${escapeHtml(statusText)}</div>
-          <div class="cm-power-next">${escapeHtml(nextLabel)}</div>
-        </div>
-      </div>
-      <div class="cm-power-loc">${escapeHtml(locLabel)} \xB7 ${escapeHtml(queue.name)}</div>
-    `;
-    } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u0414\u0430\u043D\u0456 \u043F\u0440\u043E \u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
   function busToMinutes(hhmm) {
@@ -480,54 +366,46 @@
           return a.pinned ? -1 : 1;
         return (b.ts || 0) - (a.ts || 0);
       });
-      if (!official.length && !userPosts.length) {
-        el.innerHTML = '<div class="cm-block-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E. \u0411\u0443\u0434\u044C \u043F\u0435\u0440\u0448\u0438\u043C \u2014 \u043D\u0430\u043F\u0438\u0448\u0438 \u043D\u0438\u0436\u0447\u0435.</div>';
+      const totalCount = official.length + userPosts.length;
+      if (!totalCount) {
+        el.innerHTML = `
+        <div class="cm-board-preview-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>
+      `;
         return;
       }
-      const officialHtml = official.map((a) => {
-        const tilt = a.id * 5 % 5 - 2;
-        return `
-        <article class="cm-board-note cm-board-note--official" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin cm-board-pin--gold"></span>
-          <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
-          <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
-          <p class="cm-board-text">${escapeHtml(a.body)}</p>
-          <div class="cm-board-footer">
-            <span class="cm-board-author">\u2014 ${escapeHtml(a.author || "\u2014")}</span>
-            <span class="cm-board-time">${formatTime(a.ts)}</span>
+      const preview = [
+        ...official.map((a) => ({ type: "official", title: a.title, text: a.body, ts: a.ts })),
+        ...userPosts.map((p) => ({ type: "user", category: p.category, text: p.text, ts: p.ts }))
+      ].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 3);
+      const itemsHtml = preview.map((item) => {
+        if (item.type === "official") {
+          return `
+          <div class="cm-board-preview-item">
+            <span class="cm-board-preview-cat cm-board-preview-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
+            <span class="cm-board-preview-text">${escapeHtml(item.title)}</span>
           </div>
-        </article>
-      `;
-      }).join("");
-      const userHtml = userPosts.map((p) => {
-        const tilt = p.id * 7 % 9 - 4;
-        const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
-        const contactHtml = p.contact ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>` : "";
+        `;
+        }
+        const emoji = CATEGORY_EMOJI[item.category] || "\u{1F4CC}";
         return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin"></span>
-          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-          <p class="cm-board-text">${escapeHtml(p.text)}</p>
-          <div class="cm-board-footer">
-            <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="cm-board-time">${formatTime(p.ts)}</span>
-          </div>
-          ${contactHtml}
-        </article>
+        <div class="cm-board-preview-item">
+          <span class="cm-board-preview-cat">${emoji} ${escapeHtml(item.category)}</span>
+          <span class="cm-board-preview-text">${escapeHtml(item.text)}</span>
+        </div>
       `;
       }).join("");
       el.innerHTML = `
-      <div class="cm-board-corkboard">
-        ${officialHtml}
-        ${userHtml}
+      <div class="cm-board-preview" onclick="switchTab('board')">
+        <div class="cm-board-preview-count">
+          <span class="cm-board-preview-num">${totalCount}</span>
+          <span class="cm-board-preview-lbl">${totalCount === 1 ? "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" : totalCount < 5 ? "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" : "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C"}</span>
+        </div>
+        <div class="cm-board-preview-list">
+          ${itemsHtml}
+        </div>
+        <div class="cm-board-preview-cta">\u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192</div>
       </div>
-
-      <button class="cm-board-trigger" id="cm-board-trigger" type="button">
-        <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
-        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044E \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0443</span>
-      </button>
     `;
-      document.getElementById("cm-board-trigger")?.addEventListener("click", openBoardModal);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
@@ -735,8 +613,9 @@
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+        <button class="cm-block-link" onclick="switchTab('board')">\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u2192</button>
       </header>
-      <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-board-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
     <section class="cm-block cm-block--weather">
@@ -746,6 +625,9 @@
       <div id="cm-weather-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
+    <!-- \u0411\u043B\u043E\u043A \u0421\u0432\u0456\u0442\u043B\u043E \u2014 \u043F\u0440\u0438\u0445\u043E\u0432\u0430\u043D\u043E 16.05.2026 (\u0441\u0432\u0456\u0442\u043B\u043E \u043D\u0430\u0440\u0430\u0437\u0456 \u043D\u0435 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0430\u044E\u0442\u044C).
+         \u0429\u043E\u0431 \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438: \u0440\u043E\u0437\u043A\u043E\u043C\u0435\u043D\u0442\u0443\u0432\u0430\u0442\u0438 \u0441\u0435\u043A\u0446\u0456\u044E + \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 renderPowerBlock() \u0443 initCommunity. -->
+    <!--
     <section class="cm-block cm-block--power">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u0421\u0432\u0456\u0442\u043B\u043E \u0437\u0430\u0440\u0430\u0437</h3>
@@ -753,6 +635,7 @@
       </header>
       <div id="cm-power-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
+    -->
 
     <section class="cm-block cm-block--bus">
       <header class="cm-block-header">
@@ -782,7 +665,6 @@
     renderSkeleton();
     startHeroRotator();
     renderWeatherBlock();
-    renderPowerBlock();
     renderBusBlock();
     renderBoardBlock();
     renderEventBlock();
@@ -2080,6 +1962,150 @@ END:VEVENT`
     });
   }
 
+  // src/tabs/community-modal.js
+  function openBoardModal() {
+    if (document.getElementById("cm-board-modal"))
+      return;
+    const wrap = document.createElement("div");
+    wrap.id = "cm-board-modal";
+    wrap.className = "cm-board-modal";
+    wrap.innerHTML = `
+    <div class="cm-board-modal-backdrop"></div>
+    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
+      <div class="cm-board-modal-handle"></div>
+      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+      <p class="cm-board-modal-sub">\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u043E\u0434\u0456\u044F \u0430\u0431\u043E \u043D\u043E\u0432\u0438\u043D\u0430 \u2014 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440 \u043E\u0431\u0435\u0440\u0435 \u043A\u0443\u0434\u0438 \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438.</p>
+      <form id="cm-board-modal-form">
+        <textarea class="cm-board-input" id="cm-board-text" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456? (\u043F\u0440\u043E\u0434\u0430\u043C, \u0448\u0443\u043A\u0430\u044E, \u043F\u043E\u0434\u044F\u043A\u0430, \u043F\u043E\u0434\u0456\u044F\u2026)" rows="4" required></textarea>
+        <input class="cm-board-input cm-board-input--small" id="cm-board-author" type="text" placeholder="\u0406\u043C\u02BC\u044F (\u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0442\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)">
+        <input class="cm-board-input cm-board-input--small" id="cm-board-contact" type="text" placeholder="\u041A\u043E\u043D\u0442\u0430\u043A\u0442: \u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)">
+        <button class="cm-board-submit" type="submit">\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2192</button>
+        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456, \u0443 \u043D\u043E\u0432\u0438\u043D\u0430\u0445 \u0430\u0431\u043E \u0432 \u043F\u043E\u0434\u0456\u044F\u0445.</p>
+      </form>
+    </div>
+  `;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    setTimeout(() => wrap.querySelector("#cm-board-text")?.focus(), 200);
+    function close() {
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => wrap.remove(), 220);
+    }
+    wrap.querySelector(".cm-board-modal-backdrop")?.addEventListener("click", close);
+    wrap.querySelector(".cm-board-modal-close")?.addEventListener("click", close);
+    document.addEventListener("keydown", function onEsc(e) {
+      if (e.key === "Escape") {
+        close();
+        document.removeEventListener("keydown", onEsc);
+      }
+    });
+    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const text = wrap.querySelector("#cm-board-text")?.value.trim();
+      if (!text)
+        return;
+      close();
+      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
+    });
+  }
+
+  // src/tabs/board.js
+  var CATEGORY_EMOJI2 = {
+    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
+    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
+    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
+    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
+    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
+    "\u043F\u043E\u0434\u044F\u043A\u0430": "\u2764\uFE0F",
+    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
+    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
+  };
+  async function renderBoard() {
+    const el = document.getElementById("board-content");
+    if (!el)
+      return;
+    try {
+      const [boardRes, communityRes] = await Promise.all([
+        fetch("./data/community-board.json"),
+        fetch("./data/community.json")
+      ]);
+      const boardData = await boardRes.json();
+      const communityData = await communityRes.json();
+      const userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      const official = (communityData.announcements || []).slice().sort((a, b) => {
+        if (a.pinned !== b.pinned)
+          return a.pinned ? -1 : 1;
+        return (b.ts || 0) - (a.ts || 0);
+      });
+      if (!official.length && !userPosts.length) {
+        el.innerHTML = `
+        <div class="board-empty">
+          <p>\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</p>
+          <p>\u0411\u0443\u0434\u044C \u043F\u0435\u0440\u0448\u0438\u043C \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0438 \u043A\u043D\u043E\u043F\u043A\u0443 \u043D\u0438\u0436\u0447\u0435.</p>
+        </div>
+        <button class="cm-board-trigger" id="board-trigger" type="button">
+          <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+          <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+        </button>
+      `;
+        document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
+        return;
+      }
+      const officialHtml = official.map((a) => {
+        const tilt = a.id * 5 % 5 - 2;
+        return `
+        <article class="cm-board-note cm-board-note--official" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin cm-board-pin--gold"></span>
+          <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
+          <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
+          <p class="cm-board-text">${escapeHtml(a.body)}</p>
+          <div class="cm-board-footer">
+            <span class="cm-board-author">\u2014 ${escapeHtml(a.author || "\u2014")}</span>
+            <span class="cm-board-time">${formatTime(a.ts)}</span>
+          </div>
+        </article>
+      `;
+      }).join("");
+      const userHtml = userPosts.map((p) => {
+        const tilt = p.id * 7 % 9 - 4;
+        const emoji = CATEGORY_EMOJI2[p.category] || "\u{1F4CC}";
+        const contactHtml = p.contact ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>` : "";
+        return `
+        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}" style="--tilt:${tilt}deg">
+          <span class="cm-board-pin"></span>
+          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+          <p class="cm-board-text">${escapeHtml(p.text)}</p>
+          <div class="cm-board-footer">
+            <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+            <span class="cm-board-time">${formatTime(p.ts)}</span>
+          </div>
+          ${contactHtml}
+        </article>
+      `;
+      }).join("");
+      el.innerHTML = `
+      <div class="cm-board-corkboard board-corkboard--full">
+        ${officialHtml}
+        ${userHtml}
+      </div>
+
+      <button class="cm-board-trigger" id="board-trigger" type="button">
+        <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+      </button>
+    `;
+      document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
+    } catch {
+      el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+    }
+  }
+  function initBoard() {
+    renderBoard();
+  }
+
   // src/app.js
   var currentTab = "community";
   window.switchTab = function(tab) {
@@ -2215,6 +2241,7 @@ END:VEVENT`
     initEvents();
     initBuses();
     initPower();
+    initBoard();
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {

@@ -7,7 +7,6 @@
 // Помилка одного блоку не ламає інші.
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey } from '../core/utils.js';
-import { openBoardModal } from './community-modal.js';
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
@@ -281,6 +280,8 @@ const CATEGORY_EMOJI = {
   'оголошення':  '📢',
 };
 
+// Міні-блок Дошки (preview-картка) — компактний, як Погода.
+// Повна Дошка відкривається у вкладці switchTab('board').
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
   if (!el) return;
@@ -298,61 +299,53 @@ export async function renderBoardBlock() {
       if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
       return (b.ts || 0) - (a.ts || 0);
     });
+    const totalCount = official.length + userPosts.length;
 
-    if (!official.length && !userPosts.length) {
-      el.innerHTML = '<div class="cm-block-empty">На дошці поки порожньо. Будь першим — напиши нижче.</div>';
+    if (!totalCount) {
+      el.innerHTML = `
+        <div class="cm-board-preview-empty">На дошці поки порожньо.</div>
+      `;
       return;
     }
 
-    const officialHtml = official.map(a => {
-      const tilt = ((a.id * 5) % 5) - 2;
-      return `
-        <article class="cm-board-note cm-board-note--official" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin cm-board-pin--gold"></span>
-          <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
-          <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
-          <p class="cm-board-text">${escapeHtml(a.body)}</p>
-          <div class="cm-board-footer">
-            <span class="cm-board-author">— ${escapeHtml(a.author || '—')}</span>
-            <span class="cm-board-time">${formatTime(a.ts)}</span>
-          </div>
-        </article>
-      `;
-    }).join('');
+    // Показуємо до 3 останніх (офіційні мають пріоритет)
+    const preview = [
+      ...official.map(a => ({ type: 'official', title: a.title, text: a.body, ts: a.ts })),
+      ...userPosts.map(p => ({ type: 'user', category: p.category, text: p.text, ts: p.ts })),
+    ]
+      .sort((a, b) => (b.ts || 0) - (a.ts || 0))
+      .slice(0, 3);
 
-    const userHtml = userPosts.map(p => {
-      const tilt = ((p.id * 7) % 9) - 4;
-      const emoji = CATEGORY_EMOJI[p.category] || '📌';
-      const contactHtml = p.contact
-        ? `<div class="cm-board-contact">${escapeHtml(p.contact)}</div>`
-        : '';
-      return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || 'yellow')}" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin"></span>
-          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-          <p class="cm-board-text">${escapeHtml(p.text)}</p>
-          <div class="cm-board-footer">
-            <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-            <span class="cm-board-time">${formatTime(p.ts)}</span>
+    const itemsHtml = preview.map(item => {
+      if (item.type === 'official') {
+        return `
+          <div class="cm-board-preview-item">
+            <span class="cm-board-preview-cat cm-board-preview-cat--official">🏛️ ОФІЦІЙНО</span>
+            <span class="cm-board-preview-text">${escapeHtml(item.title)}</span>
           </div>
-          ${contactHtml}
-        </article>
+        `;
+      }
+      const emoji = CATEGORY_EMOJI[item.category] || '📌';
+      return `
+        <div class="cm-board-preview-item">
+          <span class="cm-board-preview-cat">${emoji} ${escapeHtml(item.category)}</span>
+          <span class="cm-board-preview-text">${escapeHtml(item.text)}</span>
+        </div>
       `;
     }).join('');
 
     el.innerHTML = `
-      <div class="cm-board-corkboard">
-        ${officialHtml}
-        ${userHtml}
+      <div class="cm-board-preview" onclick="switchTab('board')">
+        <div class="cm-board-preview-count">
+          <span class="cm-board-preview-num">${totalCount}</span>
+          <span class="cm-board-preview-lbl">${totalCount === 1 ? 'оголошення' : (totalCount < 5 ? 'оголошення' : 'оголошень')}</span>
+        </div>
+        <div class="cm-board-preview-list">
+          ${itemsHtml}
+        </div>
+        <div class="cm-board-preview-cta">Перейти на дошку →</div>
       </div>
-
-      <button class="cm-board-trigger" id="cm-board-trigger" type="button">
-        <span class="cm-board-trigger-icon">✏️</span>
-        <span class="cm-board-trigger-text">Подати оголошення, подію або новину</span>
-      </button>
     `;
-
-    document.getElementById('cm-board-trigger')?.addEventListener('click', openBoardModal);
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Дошка тимчасово недоступна</div>';
   }

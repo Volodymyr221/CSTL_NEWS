@@ -61,9 +61,16 @@
       <div id="buses-content"></div>
     </div>
 
-    <!-- Вкладка: Світло -->
+    <!-- Вкладка: Світло. Прихована з tab-bar 16.05.2026 (наразі не актуально).
+         Залишена в DOM щоб switchTab('power') не падав, якщо викликати програмно.
+         Щоб повернути в навігацію — розкоментуй кнопку в tab-bar нижче. -->
     <div id="page-power" class="page" style="display:none">
       <div id="power-content"></div>
+    </div>
+
+    <!-- Вкладка: Дошка громади -->
+    <div id="page-board" class="page" style="display:none">
+      <div id="board-content" class="board-content"></div>
     </div>
 
   </main>
@@ -114,11 +121,22 @@
       </svg>
       <span class="tab-label">Автобуси</span>
     </button>
+    <!-- Кнопка «Світло» прихована 16.05.2026 (не актуально, світло не відключають).
+         Щоб повернути — розкоментуй блок нижче.
     <button class="tab-item" data-tab="power" onclick="switchTab('power')">
       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
       </svg>
       <span class="tab-label">Світло</span>
+    </button>
+    -->
+    <button class="tab-item" data-tab="board" onclick="switchTab('board')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M9 5V3h6v2"/>
+        <path d="M7 10h10M7 14h10M7 18h6"/>
+      </svg>
+      <span class="tab-label">Дошка</span>
     </button>
   </nav>
 

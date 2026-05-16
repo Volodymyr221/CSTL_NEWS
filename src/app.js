@@ -5,6 +5,7 @@ import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
+import { initBoard } from './tabs/board.js';
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -142,6 +143,7 @@ function init() {
   initEvents();
   initBuses();
   initPower();
+  initBoard();
 
   // Splash screen — прибираємо після завантаження
   setTimeout(() => {
