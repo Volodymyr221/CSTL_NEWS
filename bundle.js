@@ -1159,12 +1159,6 @@
     const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
     return diff > 0 ? diff : null;
   }
-  function formatCountdown(mins) {
-    if (mins < 60)
-      return `\u0447\u0435\u0440\u0435\u0437 ${mins} \u0445\u0432`;
-    const h = Math.floor(mins / 60), m = mins % 60;
-    return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
-  }
   function isDayActive(days) {
     const d = (/* @__PURE__ */ new Date()).getDay();
     if (days === "\u0449\u043E\u0434\u043D\u044F")
@@ -1325,28 +1319,62 @@
     renderSmartRow();
     renderRouteList();
   }
+  var HERO_MAX_WAIT_MIN = 60;
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
     const next = findNextRoute();
     if (!next) {
-      el.innerHTML = `<span class="bsr-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</span>`;
-      el.className = "bus-smart-row";
+      el.innerHTML = `<div class="bus-hero bus-hero--empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
       return;
     }
     const effFrom = getEffectiveFrom(next);
+    const effTo = getEffectiveTo(next);
     const fromTime = getStopHHMM(next, effFrom);
+    const toTime = getStopHHMM(next, effTo);
     const mins = minutesUntil(fromTime);
     const urgent = mins !== null && mins <= 10;
-    el.className = `bus-smart-row${urgent ? " urgent" : ""}`;
+    const fromMins = getStopMins(next, effFrom) || 0;
+    const toMins = getStopMins(next, effTo) || 0;
+    const segDur = toMins - fromMins;
+    const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
+    const price = getSegmentPrice(next, effFrom, effTo);
+    const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: "0332 224 500" };
+    const progress = mins !== null ? Math.max(0, Math.min(1, 1 - mins / HERO_MAX_WAIT_MIN)) : 0;
+    const countdownText = mins !== null ? mins < 60 ? `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${Math.floor(mins / 60)} \u0413\u041E\u0414 ${mins % 60 ? mins % 60 + " \u0425\u0412" : ""}` : "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
     el.innerHTML = `
-    <span class="bsr-icon">\u25B6</span>
-    <span class="bsr-text">
-      \u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : "\u0437\u0430\u0440\u0430\u0437")}</strong>
-      \u2014 ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
-    </span>
-    ${urgent ? `<span class="bsr-hurry">\u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>` : ""}
+    <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}">
+      <div class="bus-hero-top">
+        <span class="bus-hero-countdown">${escapeHtml(countdownText)}</span>
+        ${urgent ? '<span class="bus-hero-urgent">\u26A1 \u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>' : ""}
+      </div>
+      <div class="bus-hero-row">
+        <div class="bus-hero-times">
+          <span class="bus-hero-time">${escapeHtml(fromTime || "\u2014")}</span>
+          <span class="bus-hero-arrow">\u2192</span>
+          <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || "\u2014")}</span>
+        </div>
+        <a class="bus-hero-call" href="tel:${escapeHtml(carrier.phone.replace(/\s/g, ""))}"
+           aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 \u0434\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440\u0443" title="\u0414\u0438\u0441\u043F\u0435\u0442\u0447\u0435\u0440 ${escapeHtml(carrier.phone)}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </a>
+      </div>
+      <div class="bus-hero-route">${escapeHtml(effFrom)} \u2192 ${escapeHtml(effTo)}</div>
+      <div class="bus-hero-meta">
+        <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
+        <span class="bus-hero-meta-sep">\xB7</span>
+        <span>${escapeHtml(durStr)}</span>
+        <span class="bus-hero-meta-sep">\xB7</span>
+        <span>${escapeHtml(carrier.name)}</span>
+      </div>
+      <div class="bus-hero-progress" aria-hidden="true">
+        <div class="bus-hero-progress-fill" style="width: ${(progress * 100).toFixed(1)}%"></div>
+      </div>
+    </div>
   `;
   }
   function renderRouteList() {

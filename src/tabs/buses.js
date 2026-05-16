@@ -231,28 +231,77 @@ function selectStop(stop, field) {
   renderRouteList();
 }
 
-// ── Smart row (рядок "наступний автобус") ─────────────────────────────
+// ── Hero-картка «Наступний автобус» (v2 редизайн 15.05) ────────────────────
+// Замість компактного рядка тепер велика картка з countdown + прогрес-баром.
+// Прогрес-бар спустошується по мірі наближення часу відправки.
+
+const HERO_MAX_WAIT_MIN = 60; // вікно орієнтиру: коли minsLeft <60 — бар починає рости
+
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
   const next = findNextRoute();
   if (!next) {
-    el.innerHTML = `<span class="bsr-empty">Рейсів сьогодні більше немає</span>`;
-    el.className = 'bus-smart-row';
+    el.innerHTML = `<div class="bus-hero bus-hero--empty">Рейсів сьогодні більше немає</div>`;
     return;
   }
+
   const effFrom  = getEffectiveFrom(next);
+  const effTo    = getEffectiveTo(next);
   const fromTime = getStopHHMM(next, effFrom);
+  const toTime   = getStopHHMM(next, effTo);
   const mins     = minutesUntil(fromTime);
   const urgent   = mins !== null && mins <= 10;
-  el.className   = `bus-smart-row${urgent ? ' urgent' : ''}`;
-  el.innerHTML   = `
-    <span class="bsr-icon">▶</span>
-    <span class="bsr-text">
-      Наступний <strong>${escapeHtml(mins !== null ? formatCountdown(mins) : 'зараз')}</strong>
-      — ${escapeHtml(fromTime)}, ${escapeHtml(next.name)}
-    </span>
-    ${urgent ? `<span class="bsr-hurry">Поспішай!</span>` : ''}
+  const fromMins = getStopMins(next, effFrom) || 0;
+  const toMins   = getStopMins(next, effTo)   || 0;
+  const segDur   = toMins - fromMins;
+  const durStr   = segDur >= 60
+    ? `${Math.floor(segDur / 60)} год${segDur % 60 ? ' ' + (segDur % 60) + ' хв' : ''}`
+    : `${segDur} хв`;
+  const price = getSegmentPrice(next, effFrom, effTo);
+  const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: '0332 224 500' };
+
+  // Прогрес: бар спустошується від MAX до 0 коли minsLeft = 0
+  const progress = mins !== null
+    ? Math.max(0, Math.min(1, 1 - mins / HERO_MAX_WAIT_MIN))
+    : 0;
+
+  const countdownText = mins !== null
+    ? (mins < 60 ? `ЧЕРЕЗ ${mins} ХВ` : `ЧЕРЕЗ ${Math.floor(mins/60)} ГОД ${mins%60 ? (mins%60) + ' ХВ' : ''}`)
+    : 'ВЖЕ ЗАРАЗ';
+
+  el.innerHTML = `
+    <div class="bus-hero${urgent ? ' bus-hero--urgent' : ''}">
+      <div class="bus-hero-top">
+        <span class="bus-hero-countdown">${escapeHtml(countdownText)}</span>
+        ${urgent ? '<span class="bus-hero-urgent">⚡ Поспішай!</span>' : ''}
+      </div>
+      <div class="bus-hero-row">
+        <div class="bus-hero-times">
+          <span class="bus-hero-time">${escapeHtml(fromTime || '—')}</span>
+          <span class="bus-hero-arrow">→</span>
+          <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || '—')}</span>
+        </div>
+        <a class="bus-hero-call" href="tel:${escapeHtml(carrier.phone.replace(/\s/g, ''))}"
+           aria-label="Зателефонувати диспетчеру" title="Диспетчер ${escapeHtml(carrier.phone)}">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
+          </svg>
+        </a>
+      </div>
+      <div class="bus-hero-route">${escapeHtml(effFrom)} → ${escapeHtml(effTo)}</div>
+      <div class="bus-hero-meta">
+        <span>${escapeHtml(price || '—')} грн</span>
+        <span class="bus-hero-meta-sep">·</span>
+        <span>${escapeHtml(durStr)}</span>
+        <span class="bus-hero-meta-sep">·</span>
+        <span>${escapeHtml(carrier.name)}</span>
+      </div>
+      <div class="bus-hero-progress" aria-hidden="true">
+        <div class="bus-hero-progress-fill" style="width: ${(progress * 100).toFixed(1)}%"></div>
+      </div>
+    </div>
   `;
 }
 
