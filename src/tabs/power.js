@@ -73,7 +73,7 @@ function generateICS(street, queue) {
         `DTSTART:${ymd}T${pad(start)}0000\r\n` +
         `DTEND:${ymd}T${pad(i)}0000\r\n` +
         `SUMMARY:⚡ Відключення — ${escapeHtml(street.name)}\r\n` +
-        `DESCRIPTION:${escapeHtml(queue.name)} · CSTL NEWS Олицька ОТГ\r\n` +
+        `DESCRIPTION:${escapeHtml(queue.name)} · CSTL LIFE Олицька ОТГ\r\n` +
         `END:VEVENT`
       );
     } else {
@@ -83,7 +83,7 @@ function generateICS(street, queue) {
 
   const ics = [
     'BEGIN:VCALENDAR', 'VERSION:2.0',
-    'PRODID:-//CSTL NEWS//Power Schedule//UK',
+    'PRODID:-//CSTL LIFE//Power Schedule//UK',
     'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
     ...events,
     'END:VCALENDAR'

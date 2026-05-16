@@ -832,7 +832,7 @@
     return [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//CSTL NEWS//UA",
+      "PRODID:-//CSTL LIFE//UA",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       "BEGIN:VEVENT",
@@ -1544,7 +1544,7 @@
 DTSTART:${ymd}T${pad(start)}0000\r
 DTEND:${ymd}T${pad(i)}0000\r
 SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
-DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL NEWS \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
+DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL LIFE \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
 END:VEVENT`
         );
       } else {
@@ -1554,7 +1554,7 @@ END:VEVENT`
     const ics = [
       "BEGIN:VCALENDAR",
       "VERSION:2.0",
-      "PRODID:-//CSTL NEWS//Power Schedule//UK",
+      "PRODID:-//CSTL LIFE//Power Schedule//UK",
       "CALSCALE:GREGORIAN",
       "METHOD:PUBLISH",
       ...events,

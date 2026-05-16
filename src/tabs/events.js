@@ -44,7 +44,7 @@ function buildIcsContent(ev) {
   return [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
-    'PRODID:-//CSTL NEWS//UA',
+    'PRODID:-//CSTL LIFE//UA',
     'CALSCALE:GREGORIAN',
     'METHOD:PUBLISH',
     'BEGIN:VEVENT',
