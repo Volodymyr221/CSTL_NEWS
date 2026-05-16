@@ -26,9 +26,12 @@
   --mint:        #FFE89C;     /* Світло — жовтий (як лампочка) */
   --mint-deep:   #F4C97A;
   --mint-text:   #5C3F0E;
-  --honey:       #E6CC8F;     /* Автобус — медовий */
+  --honey:       #E6CC8F;     /* Світло (pill вибору вулиці) — медовий */
   --honey-deep:  #C9A85B;
   --honey-text:  #4E380E;
+  --bus:         #B5C99F;     /* Автобус — шавлія/зелений (16.05.2026, було honey) */
+  --bus-deep:    #6F8E51;
+  --bus-text:    #1F3A14;
   --peach:       #E5B89A;     /* Подія — теракот */
   --peach-deep:  #C68E6A;
   --peach-text:  #4E2C12;
