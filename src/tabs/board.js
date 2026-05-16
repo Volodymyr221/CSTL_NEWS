@@ -107,7 +107,7 @@ export async function renderBoard() {
     }).join('');
 
     el.innerHTML = `
-      <div class="board-backdrop" id="board-backdrop" hidden></div>
+      <div class="board-backdrop" id="board-backdrop"></div>
       <div class="cm-board-corkboard board-corkboard--full">
         ${officialHtml}
         ${userHtml}
@@ -126,54 +126,125 @@ export async function renderBoard() {
   }
 }
 
-// Тап на папірець → збільшити (.expanded + backdrop).
-// Тап на backdrop або інший папірець → згорнути з анімацією.
+// Зум розгортання/згортання через FLIP-стиль:
+// - Орігінал лишається на місці завдяки placeholder тих самих розмірів
+// - Стікер переходить у position:fixed і анімовано їде до центру з scale > 1
+// - Згорт — зворотній: стікер їде назад у placeholder + scale 1, потім видаляється placeholder
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
 
+  let activeNote = null;
   let isAnimating = false;
-  const COLLAPSE_MS = 200;
+  const DURATION = 320;
+  const EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
 
-  // Миттєвий скид без анімації — для перемикання на інший папірець.
-  const removeExpand = () => {
-    root.querySelectorAll('.cm-board-note').forEach(n =>
-      n.classList.remove('expanded', 'collapsing')
-    );
-    backdrop.classList.remove('fading-out');
-    backdrop.hidden = true;
+  const showBackdrop = () => {
+    requestAnimationFrame(() => backdrop.classList.add('visible'));
+  };
+  const hideBackdrop = () => {
+    backdrop.classList.remove('visible');
   };
 
-  // М'який згорт з reverse-анімацією.
-  const collapseAnimated = () => {
-    if (isAnimating) return;
-    const expanded = root.querySelector('.cm-board-note.expanded');
-    if (!expanded) { removeExpand(); return; }
+  const expand = (note) => {
+    if (isAnimating || activeNote) return;
     isAnimating = true;
-    expanded.classList.add('collapsing');
-    backdrop.classList.add('fading-out');
+
+    const rect = note.getBoundingClientRect();
+    const origW = rect.width;
+    const origH = rect.height;
+    const tilt = note.style.getPropertyValue('--tilt') || '0deg';
+
+    // Placeholder — займає місце на дошці поки стікер «знятий»
+    const placeholder = document.createElement('div');
+    placeholder.className = 'cm-board-placeholder';
+    placeholder.style.width = `${origW}px`;
+    placeholder.style.height = `${origH}px`;
+    note.parentNode.insertBefore(placeholder, note);
+    note._placeholder = placeholder;
+    note._tilt = tilt;
+
+    // Перевід у fixed у тій же візуальній позиції (без скачка)
+    note.style.position = 'fixed';
+    note.style.left = `${rect.left}px`;
+    note.style.top = `${rect.top}px`;
+    note.style.width = `${origW}px`;
+    note.style.margin = '0';
+    note.style.zIndex = '210';
+    note.style.transformOrigin = 'center center';
+    note.style.transition = 'none';
+    note.style.transform = `rotate(${tilt}) scale(1)`;
+    note.classList.add('expanded');
+
+    showBackdrop();
+
+    // Цільовий стан — центр viewport, scale підібраний щоб не виходити за межі
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const safeT = 80;   // шапка
+    const safeB = 140;  // tab bar + fixed CTA + safe area
+    const usableH = vh - safeT - safeB;
+    const targetMaxW = Math.min(vw - 32, 380);
+    const scaleW = targetMaxW / origW;
+    const scaleH = usableH / origH;
+    const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
+    const targetLeft = (vw - origW) / 2;
+    const targetTop  = (vh - origH) / 2;
+
+    // Два rAF — щоб браузер встиг застосувати початковий стан до transition
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+        note.style.left = `${targetLeft}px`;
+        note.style.top = `${targetTop}px`;
+        note.style.transform = `rotate(0deg) scale(${scale})`;
+      });
+    });
+
+    activeNote = note;
+    setTimeout(() => { isAnimating = false; }, DURATION);
+  };
+
+  const collapse = () => {
+    if (!activeNote || isAnimating) return;
+    isAnimating = true;
+
+    const note = activeNote;
+    const placeholder = note._placeholder;
+    const tilt = note._tilt || '0deg';
+
+    if (placeholder) {
+      const phRect = placeholder.getBoundingClientRect();
+      note.style.left = `${phRect.left}px`;
+      note.style.top = `${phRect.top}px`;
+      note.style.transform = `rotate(${tilt}) scale(1)`;
+    }
+
+    hideBackdrop();
+
     setTimeout(() => {
-      removeExpand();
+      note.classList.remove('expanded');
+      ['position','left','top','width','margin','zIndex','transform','transition','transformOrigin'].forEach(p => {
+        note.style[p] = '';
+      });
+      placeholder?.remove();
+      delete note._placeholder;
+      delete note._tilt;
       isAnimating = false;
-    }, COLLAPSE_MS);
+      activeNote = null;
+    }, DURATION);
   };
 
   root.querySelectorAll('.cm-board-note').forEach(note => {
     note.addEventListener('click', e => {
       e.stopPropagation();
       if (isAnimating) return;
-      const isExpanded = note.classList.contains('expanded');
-      if (isExpanded) {
-        collapseAnimated();
-      } else {
-        removeExpand();
-        note.classList.add('expanded');
-        backdrop.hidden = false;
-      }
+      if (note === activeNote) collapse();
+      else if (!activeNote) expand(note);
     });
   });
 
-  backdrop.addEventListener('click', collapseAnimated);
+  backdrop.addEventListener('click', collapse);
 }
 
 export function initBoard() {
