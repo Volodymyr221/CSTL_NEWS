@@ -235,7 +235,7 @@ function renderHeroTimer(schedule) {
   } else if (cur === 0) {
     actionLabel = nextH !== null ? 'До світла' : 'Без змін до кінця доби';
     statusEmoji = '🔴';
-    ringColor = '#C41E3A'; // червоний
+    ringColor = '#722F37'; // червоний
   } else {
     actionLabel = nextH !== null ? 'До зміни' : 'Можливі перебої';
     statusEmoji = '🟡';

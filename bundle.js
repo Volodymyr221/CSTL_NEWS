@@ -812,8 +812,8 @@
   // src/tabs/events.js
   var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
   var CATEGORY_COLORS = {
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#C41E3A",
-    "Kino_Castle": "#C41E3A",
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
+    "Kino_Castle": "#722F37",
     "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
     "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309"
   };
@@ -826,7 +826,7 @@
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
   function catColor(category) {
-    return CATEGORY_COLORS[category] || "#C41E3A";
+    return CATEGORY_COLORS[category] || "#722F37";
   }
   function buildIcsContent(ev) {
     const pad2 = (n) => String(n).padStart(2, "0");
@@ -1682,7 +1682,7 @@ END:VEVENT`
     } else if (cur === 0) {
       actionLabel = nextH !== null ? "\u0414\u043E \u0441\u0432\u0456\u0442\u043B\u0430" : "\u0411\u0435\u0437 \u0437\u043C\u0456\u043D \u0434\u043E \u043A\u0456\u043D\u0446\u044F \u0434\u043E\u0431\u0438";
       statusEmoji = "\u{1F534}";
-      ringColor = "#C41E3A";
+      ringColor = "#722F37";
     } else {
       actionLabel = nextH !== null ? "\u0414\u043E \u0437\u043C\u0456\u043D\u0438" : "\u041C\u043E\u0436\u043B\u0438\u0432\u0456 \u043F\u0435\u0440\u0435\u0431\u043E\u0457";
       statusEmoji = "\u{1F7E1}";
