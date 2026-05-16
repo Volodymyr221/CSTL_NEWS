@@ -282,13 +282,6 @@ function renderSmartRow() {
           <span class="bus-hero-arrow">→</span>
           <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || '—')}</span>
         </div>
-        <a class="bus-hero-call" href="tel:${escapeHtml(carrier.phone.replace(/\s/g, ''))}"
-           aria-label="Зателефонувати диспетчеру" title="Диспетчер ${escapeHtml(carrier.phone)}">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-               stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/>
-          </svg>
-        </a>
       </div>
       <div class="bus-hero-route">${escapeHtml(effFrom)} → ${escapeHtml(effTo)}</div>
       <div class="bus-hero-meta">
