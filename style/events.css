@@ -15,7 +15,7 @@
   padding: 6px 14px 8px;
   background: var(--bg-page);
   position: sticky;
-  top: var(--header-h);
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   z-index: 50;
 }
 

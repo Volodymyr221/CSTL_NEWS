@@ -113,16 +113,19 @@ html, body {
 }
 
 /* ===== HEADER (шапка) ===== */
+/* iOS PWA з viewport-fit=cover: шапка має врахувати safe-area-inset-top
+   (висоту статусбару iPhone з notch ~44px). Без цього контент під нею
+   зсувається на ~44px вниз через auto-behavior iOS. */
 .app-header {
   position: fixed;
   top: 0; left: 0; right: 0;
-  height: var(--header-h);
+  height: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  padding: env(safe-area-inset-top, 0px) 16px 0;
   background: var(--white);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
   z-index: 100;
   overflow: hidden;
 }
@@ -159,7 +162,8 @@ html, body {
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
-  padding-top: var(--header-h);
+  /* Включаємо safe-area-inset-top у padding — компенсує іподром iOS */
+  padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
 }
 .page {
