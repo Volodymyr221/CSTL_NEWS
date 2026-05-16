@@ -86,21 +86,49 @@ export async function renderBoard() {
     }).join('');
 
     el.innerHTML = `
+      <div class="board-backdrop" id="board-backdrop" hidden></div>
       <div class="cm-board-corkboard board-corkboard--full">
         ${officialHtml}
         ${userHtml}
       </div>
 
-      <button class="cm-board-trigger" id="board-trigger" type="button">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
         <span class="cm-board-trigger-icon">✏️</span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
       </button>
     `;
 
     document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
+    initBoardNoteExpand(el);
   } catch {
     el.innerHTML = '<div class="empty-state">Дошка тимчасово недоступна</div>';
   }
+}
+
+// Тап на папірець → збільшити (.expanded + backdrop).
+// Тап на backdrop або інший папірець → згорнути.
+function initBoardNoteExpand(root) {
+  const backdrop = root.querySelector('#board-backdrop');
+  if (!backdrop) return;
+
+  const collapse = () => {
+    root.querySelectorAll('.cm-board-note.expanded').forEach(n => n.classList.remove('expanded'));
+    backdrop.hidden = true;
+  };
+
+  root.querySelectorAll('.cm-board-note').forEach(note => {
+    note.addEventListener('click', e => {
+      e.stopPropagation();
+      const isExpanded = note.classList.contains('expanded');
+      collapse();
+      if (!isExpanded) {
+        note.classList.add('expanded');
+        backdrop.hidden = false;
+      }
+    });
+  });
+
+  backdrop.addEventListener('click', collapse);
 }
 
 export function initBoard() {
