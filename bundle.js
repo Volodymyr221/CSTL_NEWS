@@ -2133,7 +2133,7 @@ END:VEVENT`
       return;
     let activeNote = null;
     let isAnimating = false;
-    const DURATION = 340;
+    const DURATION = 320;
     const EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
     const showBackdrop = () => {
       requestAnimationFrame(() => backdrop.classList.add("visible"));
@@ -2156,8 +2156,8 @@ END:VEVENT`
       note.parentNode.insertBefore(placeholder, note);
       note._placeholder = placeholder;
       note._tilt = tilt;
-      note._origLeft = rect.left;
-      note._origTop = rect.top;
+      note._origW = origW;
+      note._origH = origH;
       const vw = window.innerWidth;
       const vh = window.innerHeight;
       const safeT = 80;
@@ -2167,23 +2167,27 @@ END:VEVENT`
       const scaleW = targetMaxW / origW;
       const scaleH = usableH / origH;
       const scale = Math.max(1.05, Math.min(2.4, scaleW, scaleH));
-      const dx = vw / 2 - (rect.left + origW / 2);
-      const dy = vh / 2 - (rect.top + origH / 2);
+      const targetLeft = (vw - origW) / 2;
+      const targetTop = (vh - origH) / 2;
+      note._scale = scale;
       note.style.position = "fixed";
       note.style.left = `${rect.left}px`;
       note.style.top = `${rect.top}px`;
       note.style.width = `${origW}px`;
+      note.style.height = `${origH}px`;
       note.style.margin = "0";
       note.style.zIndex = "210";
       note.style.transformOrigin = "center center";
-      note.style.willChange = "transform";
+      note.style.willChange = "transform, left, top";
       note.style.transition = "none";
-      note.style.transform = `translate3d(0, 0, 0) rotate(${tilt}deg) scale(1)`;
+      note.style.transform = `rotate(${tilt}deg) scale(1)`;
       note.classList.add("expanded");
       showBackdrop();
       void note.offsetHeight;
-      note.style.transition = `transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
-      note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(${scale})`;
+      note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+      note.style.left = `${targetLeft}px`;
+      note.style.top = `${targetTop}px`;
+      note.style.transform = `rotate(0deg) scale(${scale})`;
       activeNote = note;
       setTimeout(() => {
         isAnimating = false;
@@ -2198,21 +2202,23 @@ END:VEVENT`
       const tilt = note._tilt || 0;
       if (placeholder) {
         const phRect = placeholder.getBoundingClientRect();
-        const dx = phRect.left - note._origLeft;
-        const dy = phRect.top - note._origTop;
-        note.style.transform = `translate3d(${dx}px, ${dy}px, 0) rotate(${tilt}deg) scale(1)`;
+        note.style.transition = `left ${DURATION}ms ${EASE}, top ${DURATION}ms ${EASE}, transform ${DURATION}ms ${EASE}, box-shadow ${DURATION}ms ease`;
+        note.style.left = `${phRect.left}px`;
+        note.style.top = `${phRect.top}px`;
+        note.style.transform = `rotate(${tilt}deg) scale(1)`;
       }
       hideBackdrop();
       setTimeout(() => {
         note.classList.remove("expanded");
-        ["position", "left", "top", "width", "margin", "zIndex", "transform", "transition", "transformOrigin", "willChange"].forEach((p) => {
+        ["position", "left", "top", "width", "height", "margin", "zIndex", "transform", "transition", "transformOrigin", "willChange"].forEach((p) => {
           note.style[p] = "";
         });
         placeholder?.remove();
         delete note._placeholder;
         delete note._tilt;
-        delete note._origLeft;
-        delete note._origTop;
+        delete note._origW;
+        delete note._origH;
+        delete note._scale;
         isAnimating = false;
         activeNote = null;
       }, DURATION);
