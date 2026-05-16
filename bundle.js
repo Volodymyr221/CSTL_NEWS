@@ -810,12 +810,14 @@
   };
 
   // src/tabs/events.js
-  var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
+  var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u0421\u0432\u044F\u0442\u0430", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
   var CATEGORY_COLORS = {
     "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
     "Kino_Castle": "#722F37",
     "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309"
+    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
+    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
+    // коричневий — нейтральний для свят (державних і релігійних)
   };
   var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
   var WEEKDAYS_SHORT = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
@@ -896,6 +898,15 @@
     <div class="ev-card-cover">
       <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
     </div>` : "";
+    const locationBlock = ev.location ? `
+    <span class="ev-meta-item">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
+        <circle cx="12" cy="10" r="3"/>
+      </svg>
+      ${escapeHtml(ev.location)}
+    </span>` : "";
+    const timeText = ev.time ? `${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}` : escapeHtml(formatFullDate(ev.date));
     return `
     <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
       ${coverBlock}
@@ -906,19 +917,13 @@
         <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
         <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
         <div class="ev-card-meta">
-          <span class="ev-meta-item">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-              <circle cx="12" cy="10" r="3"/>
-            </svg>
-            ${escapeHtml(ev.location)}
-          </span>
+          ${locationBlock}
           <span class="ev-meta-item">
             <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <circle cx="12" cy="12" r="10"/>
               <polyline points="12 6 12 12 16 14"/>
             </svg>
-            ${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}
+            ${timeText}
           </span>
         </div>
         <div class="ev-card-expand-hint">
@@ -1019,7 +1024,11 @@
         return false;
       if (selectedDate && e.date !== selectedDate)
         return false;
-      return activeFilter === "\u0412\u0441\u0456" || e.category === activeFilter;
+      if (activeFilter === "\u0412\u0441\u0456")
+        return true;
+      if (activeFilter === "\u0421\u0432\u044F\u0442\u0430")
+        return e.category === "\u0421\u0432\u044F\u0442\u043E";
+      return e.category === activeFilter;
     }).sort((a, b) => {
       const byDate = new Date(a.date) - new Date(b.date);
       if (byDate !== 0)
@@ -1086,8 +1095,14 @@
     if (el)
       renderSkeleton2(el);
     try {
-      const res = await fetch("./data/events.json");
-      allEvents = await res.json();
+      const [evRes, holRes] = await Promise.all([
+        fetch("./data/events.json"),
+        fetch("./data/holidays.json")
+      ]);
+      const events = await evRes.json();
+      const holData = await holRes.json();
+      const holidays = (holData.holidays || []).map((h) => ({ ...h, time: null, location: null }));
+      allEvents = [...events, ...holidays];
     } catch {
       allEvents = [];
     }
