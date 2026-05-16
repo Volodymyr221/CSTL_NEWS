@@ -1055,3 +1055,59 @@
 .cm-board-note.expanded .cm-board-contact { font-size: 14px; margin-top: 8px; }
 /* На розгорнутій картці прибираємо hover-ефект щоб не дриґалась */
 .cm-board-note.expanded:hover { transform: translate(-50%, -50%) rotate(0deg) scale(1); }
+/* Червона шпилька — зайва коли стікер відкритий по центру */
+.cm-board-note.expanded .cm-board-pin { display: none; }
+
+/* Згортання — reverse анімація, потім видалення класу */
+.cm-board-note.collapsing {
+  animation: board-note-out 0.20s ease-in forwards;
+}
+@keyframes board-note-out {
+  from { transform: translate(-50%, -50%) rotate(0deg) scale(1);    opacity: 1; }
+  to   { transform: translate(-50%, -50%) rotate(0deg) scale(0.88); opacity: 0; }
+}
+
+.board-backdrop.fading-out {
+  animation: board-backdrop-out 0.20s ease-in forwards;
+}
+@keyframes board-backdrop-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* ── Контакт-телефон з кнопкою виклика праворуч ── */
+.cm-board-contact--phone {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: space-between;
+}
+.cm-board-contact-num {
+  flex: 1;
+  min-width: 0;
+  word-break: break-all;
+}
+.cm-board-call {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  text-decoration: none;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.20), 0 1px 2px rgba(0,0,0,0.12);
+  transition: background 0.15s, transform 0.1s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-call:active {
+  background: var(--red-dark);
+  transform: scale(0.92);
+}
+.cm-board-note.expanded .cm-board-call {
+  width: 40px;
+  height: 40px;
+}
+.cm-board-note.expanded .cm-board-call svg { width: 20px; height: 20px; }
