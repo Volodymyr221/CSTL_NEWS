@@ -3,7 +3,7 @@
   padding: 6px 14px 0;
   background: var(--bg-page);
   position: fixed;
-  top: var(--header-h);
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
   z-index: 90;

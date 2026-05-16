@@ -242,7 +242,7 @@
   background: var(--gray-light);
   border-bottom: 1px solid var(--border);
   position: sticky;
-  top: var(--header-h);
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   z-index: 50;
   min-height: 72px;
 }
@@ -380,7 +380,7 @@
   padding: 6px 14px 10px;
   background: var(--bg-page);
   position: sticky;
-  top: var(--header-h);
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   z-index: 50;
 }
 
