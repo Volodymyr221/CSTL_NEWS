@@ -479,15 +479,15 @@
 
 /* Автобус — медовий */
 .cm-block--bus {
-  background: linear-gradient(135deg, var(--honey) 0%, var(--honey-deep) 100%);
+  background: linear-gradient(135deg, var(--bus) 0%, var(--bus-deep) 100%);
 }
-.cm-block--bus .cm-block-title  { color: var(--honey-text); }
-.cm-block--bus .cm-bus-time     { color: var(--honey-text); }
-.cm-block--bus .cm-bus-route    { color: var(--honey-text); }
-.cm-block--bus .cm-bus-meta     { color: var(--honey-text); opacity: 0.75; }
+.cm-block--bus .cm-block-title  { color: var(--bus-text); }
+.cm-block--bus .cm-bus-time     { color: var(--bus-text); }
+.cm-block--bus .cm-bus-route    { color: var(--bus-text); }
+.cm-block--bus .cm-bus-meta     { color: var(--bus-text); opacity: 0.75; }
 .cm-block--bus .cm-bus-countdown {
   background: rgba(255,255,255,0.70);
-  color: var(--honey-text);
+  color: var(--bus-text);
 }
 .cm-block--bus .cm-bus-countdown.urgent { background: var(--red); color: white; }
 
