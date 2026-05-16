@@ -958,10 +958,30 @@
 }
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
+
+/* Фіксований корковий фон — займає область між шапкою і tab-bar,
+   не скролиться разом з папірцями (раніше cork був на самому corkboard div
+   і скролився разом з нотатками). */
+.board-bg {
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background:
+    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.05) 1px, transparent 2px),
+    linear-gradient(135deg, #C9A678 0%, #B08A5C 100%);
+  background-size: 14px 14px, 14px 14px, 100% 100%;
+  pointer-events: none;
+  z-index: 0;
+}
+
 .board-content {
+  position: relative;
+  z-index: 1;
   /* нижній відступ під fixed-кнопку «Подати оголошення» + safe-area */
   padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
-  position: relative;
 }
 .board-empty {
   padding: 60px 24px 20px;
@@ -972,11 +992,15 @@
 }
 .board-empty p { margin-bottom: 6px; }
 
-/* Повна коркова дошка — без обмеження висоти (на цілу сторінку) */
+/* Повна коркова дошка — прозора, бо корок винесений у .board-bg.
+   Залишаємо лише padding для розташування папірців. */
 .board-corkboard--full {
-  max-height: none;
+  background: none;
   border-top: none;
+  border-bottom: none;
   border-radius: 0;
+  max-height: none;
+  overflow: visible;
 }
 
 /* Зафіксована знизу кнопка «Подати оголошення» — завжди видно при скролі */
