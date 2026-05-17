@@ -2168,7 +2168,7 @@
   border: 1px solid var(--paper-deep);
   border-radius: 18px;
   padding: 8px 14px;
-  font-size: 14px;
+  font-size: 16px;   /* iOS Safari zoom-fix — нижче 16px iOS auto-zoom-ить input */
   font-family: inherit;
   color: var(--black);
   outline: none;
