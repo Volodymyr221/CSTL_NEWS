@@ -46,8 +46,30 @@
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
 }
+
+/* ── Кольорові бейджі (Tier 6 — 17.05.2026): geo + category як pill з власним фоном ── */
+.news-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 800;
+  color: white;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  white-space: nowrap;
+  line-height: 1.35;
+}
+.news-badge--excl {
+  background: linear-gradient(135deg, #FFD700 0%, #F57F17 100%);
+  color: #4E2C0E;
+  font-size: 10px;
+  letter-spacing: 0.3px;
+}
+/* Legacy селектори (lишаються щоб модалка не зламалась) */
 .news-card-geo {
   font-size: 11px;
   font-weight: 600;
@@ -73,46 +95,61 @@
   letter-spacing: 0.5px;
 }
 
-/* ===== FEATURED CARD ===== */
+/* ===== FEATURED CARD (Tier 6 — magazine-style cover) ===== */
 .news-card-featured {
   position: relative;
-  border-radius: 12px;
+  border-radius: 18px;
   overflow: hidden;
   cursor: pointer;
+  box-shadow: var(--card-shadow);
+  transition: transform 0.1s, opacity 0.15s;
 }
-.news-card-featured:active { opacity: 0.9; }
+.news-card-featured:active { opacity: 0.92; transform: scale(0.995); }
 .news-card-featured-img {
   width: 100%;
-  height: 220px;
+  height: 260px;
   object-fit: cover;
   display: block;
 }
 .news-card-featured-overlay {
   position: absolute;
   bottom: 0; left: 0; right: 0;
-  padding: 48px 14px 14px;
-  background: linear-gradient(to bottom, transparent, rgba(0,0,0,0.80));
+  padding: 60px 16px 16px;
+  background: linear-gradient(to bottom,
+    transparent 0%,
+    rgba(0,0,0,0.35) 35%,
+    rgba(0,0,0,0.85) 100%);
 }
 .news-card-featured-title {
-  font-size: 18px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 22px;
   font-weight: 800;
   color: white;
-  line-height: 1.3;
-  margin-bottom: 6px;
+  line-height: 1.25;
+  letter-spacing: -0.3px;
+  margin-bottom: 8px;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.4);
 }
-.news-card-featured-footer { font-size: 11px; color: rgba(255,255,255,0.70); }
-.news-card-featured .news-card-geo { color: rgba(255,255,255,0.80); }
-.news-card-featured .news-card-category { color: #ff8080; }
-.news-card-featured .exclusive-badge { background: rgba(196,30,58,0.90); }
+.news-card-featured-footer {
+  font-size: 11.5px;
+  color: rgba(255,255,255,0.85);
+  font-weight: 500;
+  letter-spacing: 0.2px;
+}
 
-.news-card-featured { box-shadow: var(--card-shadow); border-radius: 18px; overflow: hidden; }
+/* No-image fallback — все ще картка але без overlay */
 .news-card-featured.no-image { background: var(--bg-card); }
-.news-card-featured.no-image.exclusive { box-shadow: 0 0 0 1.5px var(--red), var(--card-shadow); }
-.news-card-featured.no-image .news-card-featured-overlay { position: static; background: none; padding: 14px; }
-.news-card-featured.no-image .news-card-featured-title { color: var(--black); font-size: 17px; }
-.news-card-featured.no-image .news-card-featured-footer { color: var(--gray); }
-.news-card-featured.no-image .news-card-geo { color: var(--gray); }
-.news-card-featured.no-image .news-card-category { color: var(--red); }
+.news-card-featured.no-image .news-card-featured-overlay {
+  position: static;
+  background: none;
+  padding: 18px;
+}
+.news-card-featured.no-image .news-card-featured-title {
+  color: var(--ink);
+  font-size: 20px;
+  text-shadow: none;
+}
+.news-card-featured.no-image .news-card-featured-footer { color: var(--ink-soft); }
 
 /* ===== ROW CARD ===== */
 .news-card-row {
