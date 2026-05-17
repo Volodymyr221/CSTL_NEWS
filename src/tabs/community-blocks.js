@@ -8,6 +8,7 @@
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
+import { setBoardActiveType } from './board.js';
 
 // Типи у міні-блоці Дошки — свайп циклічно
 const BOARD_MINI_TYPES = [
@@ -389,8 +390,8 @@ function renderBoardMiniSlide(el) {
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
       ${labelHtml}
       <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
-      <button class="cm-board-preview-cta" type="button" data-switch-tab="board">
-        Перейти на дошку →
+      <button class="cm-board-preview-cta" type="button" data-mini-cta>
+        Перейти на ${escapeHtml(cfg.label.toLowerCase())} →
       </button>
     </div>
   `;
@@ -412,6 +413,17 @@ function renderBoardMiniSlide(el) {
         renderBoardMiniSlide(el);
       });
     });
+    // CTA «Перейти на …» — перемикає на вкладку Дошка з активним типом
+    // що зараз вибраний у міні-блоці (official → 'all', решта → той самий ID).
+    const cta = wrap.querySelector('[data-mini-cta]');
+    if (cta) {
+      cta.addEventListener('click', e => {
+        e.stopPropagation();
+        const targetType = cfg.id === 'official' ? 'all' : cfg.id;
+        setBoardActiveType(targetType);
+        if (typeof window.switchTab === 'function') window.switchTab('board');
+      });
+    }
   }
 }
 

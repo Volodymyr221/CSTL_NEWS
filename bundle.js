@@ -353,6 +353,1237 @@
     return () => supa.removeChannel(ch);
   }
 
+  // src/tabs/community-modal.js
+  var TYPE_TABS = [
+    { id: "board", emoji: "\u{1F6D2}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" },
+    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" },
+    { id: "greeting", emoji: "\u{1F389}", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F" }
+  ];
+  var BOARD_CATEGORIES = [
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
+    { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
+    { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
+    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", emoji: "\u2764\uFE0F", color: "white" },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
+    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
+  ];
+  var GREETING_PRESETS = [
+    { emoji: "\u{1F382}", gradient: "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)", label: "\u0414\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F" },
+    { emoji: "\u{1F476}", gradient: "linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)", label: "\u041D\u043E\u0432\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0438\u0439" },
+    { emoji: "\u{1F48D}", gradient: "linear-gradient(135deg, #FFF9E6 0%, #FFECB3 100%)", label: "\u0412\u0435\u0441\u0456\u043B\u043B\u044F" },
+    { emoji: "\u{1F393}", gradient: "linear-gradient(135deg, #E1BEE7 0%, #BA68C8 100%)", label: "\u0412\u0438\u043F\u0443\u0441\u043A" },
+    { emoji: "\u2764\uFE0F", gradient: "linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)", label: "\u041F\u043E\u0434\u044F\u043A\u0430" },
+    { emoji: "\u{1F333}", gradient: "linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)", label: "\u041F\u0440\u0438\u0440\u043E\u0434\u0430" },
+    { emoji: "\u{1F389}", gradient: "linear-gradient(135deg, #FFE0B2 0%, #FFB74D 100%)", label: "\u0421\u0432\u044F\u0442\u043E" },
+    { emoji: "\u{1F54A}\uFE0F", gradient: "linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)", label: "\u041F\u0430\u043C\u02BC\u044F\u0442\u044C" }
+  ];
+  function isPhone(s) {
+    return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
+  }
+  function parseTags(str) {
+    return String(str || "").split(/\s+/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith("#") ? s : "#" + s);
+  }
+  function compressImage(file) {
+    return new Promise(function executor(resolve, reject) {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 800;
+          let w = img.width, h = img.height;
+          if (w > h && w > maxDim) {
+            h = h * maxDim / w;
+            w = maxDim;
+          } else if (h > maxDim) {
+            w = w * maxDim / h;
+            h = maxDim;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(w);
+          canvas.height = Math.round(h);
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          resolve(canvas.toDataURL("image/jpeg", 0.78));
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+  function openBoardModal() {
+    if (document.getElementById("cm-board-modal"))
+      return;
+    const state = {
+      type: "board",
+      // SPILNI
+      text: "",
+      photos: [],
+      author: "",
+      // BOARD
+      category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
+      contact: "",
+      // CHAT
+      tagsRaw: "",
+      // GREETING
+      title: "",
+      greetingIdx: 0
+    };
+    const wrap = document.createElement("div");
+    wrap.id = "cm-board-modal";
+    wrap.className = "cm-board-modal";
+    wrap.innerHTML = `
+    <div class="cm-board-modal-backdrop"></div>
+    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
+      <div class="cm-board-modal-handle"></div>
+      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442</h3>
+      <p class="cm-board-modal-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0442\u0438\u043F \u0456 \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F.</p>
+
+      <form id="cm-board-modal-form" novalidate>
+        <!-- \u041F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447 \u0442\u0438\u043F\u0443 (3 \u0442\u0430\u0431\u0438) -->
+        <div class="bm-type-tabs" id="bm-type-tabs">
+          ${TYPE_TABS.map((t) => `
+            <button type="button" class="bm-type-tab${t.id === state.type ? " active" : ""}" data-type="${t.id}">
+              <span class="bm-type-emoji">${t.emoji}</span>
+              <span class="bm-type-label">${t.label}</span>
+            </button>
+          `).join("")}
+        </div>
+
+        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u2014 \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0438\u043F -->
+        <div id="bm-dynamic"></div>
+
+        <!-- LIVE-preview -->
+        <div class="bm-preview-section" id="bm-preview-section">
+          <div class="bm-preview-label">\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0442\u0438\u043C\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>
+          <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
+        </div>
+
+        <button class="cm-board-submit" type="submit">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
+        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</p>
+      </form>
+    </div>
+  `;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    function close() {
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => wrap.remove(), 220);
+    }
+    wrap.querySelector(".cm-board-modal-backdrop")?.addEventListener("click", close);
+    wrap.querySelector(".cm-board-modal-close")?.addEventListener("click", close);
+    document.addEventListener("keydown", function onEsc(e) {
+      if (e.key === "Escape") {
+        close();
+        document.removeEventListener("keydown", onEsc);
+      }
+    });
+    wrap.querySelectorAll(".bm-type-tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        if (state.type === btn.dataset.type)
+          return;
+        wrap.querySelectorAll(".bm-type-tab").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        state.type = btn.dataset.type;
+        renderDynamic();
+        renderPreview();
+      });
+    });
+    const dynamicEl = wrap.querySelector("#bm-dynamic");
+    function renderDynamic() {
+      if (state.type === "board")
+        return renderBoardFields();
+      if (state.type === "chat")
+        return renderChatFields();
+      if (state.type === "greeting")
+        return renderGreetingFields();
+    }
+    function renderBoardFields() {
+      dynamicEl.innerHTML = `
+      <div class="bm-section">
+        <label class="bm-label">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</label>
+        <div class="bm-chips" id="bm-chips">
+          ${BOARD_CATEGORIES.map((c) => `
+            <button type="button" class="bm-chip${c.id === state.category ? " active" : ""}" data-cat="${c.id}">
+              <span class="bm-chip-emoji">${c.emoji}</span>
+              <span class="bm-chip-label">${c.id}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-text">\u041E\u043F\u0438\u0441</label>
+        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456?" required>${escapeHtml(state.text)}</textarea>
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, \u0434\u043E 3)</span></label>
+        ${photoSlotsHtml()}
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-contact">\u041A\u043E\u043D\u0442\u0430\u043A\u0442 <span class="bm-label-hint">(\u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-contact" type="text" placeholder="+38 050 ___ __ __" inputmode="tel" value="${escapeHtml(state.contact)}">
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(state.author)}">
+      </div>
+    `;
+      bindCommonFields();
+      dynamicEl.querySelectorAll(".bm-chip").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          dynamicEl.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.category = btn.dataset.cat;
+          renderPreview();
+        });
+      });
+      dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
+        state.contact = e.target.value;
+        renderPreview();
+      });
+      bindPhotoSlots();
+    }
+    function renderChatFields() {
+      dynamicEl.innerHTML = `
+      <div class="bm-section">
+        <label class="bm-label" for="bm-text">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</label>
+        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0425\u043E\u0447\u0443 \u0441\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443..." required>${escapeHtml(state.text)}</textarea>
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-tags">\u0422\u0435\u043C\u0438 <span class="bm-label-hint">(\u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0456\u043B, \u043D\u0430\u043F\u0440. #\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-tags" type="text" placeholder="#\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438" value="${escapeHtml(state.tagsRaw)}">
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, 1)</span></label>
+        ${photoSlotsHtml(1)}
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(state.author)}">
+      </div>
+    `;
+      bindCommonFields();
+      dynamicEl.querySelector("#bm-tags")?.addEventListener("input", (e) => {
+        state.tagsRaw = e.target.value;
+        renderPreview();
+      });
+      bindPhotoSlots();
+    }
+    function renderGreetingFields() {
+      dynamicEl.innerHTML = `
+      <div class="bm-section">
+        <label class="bm-label">\u041E\u0431\u043A\u043B\u0430\u0434\u0438\u043D\u043A\u0430</label>
+        <div class="bm-greet-presets" id="bm-greet-presets">
+          ${GREETING_PRESETS.map((g, i) => `
+            <button type="button" class="bm-greet-preset${i === state.greetingIdx ? " active" : ""}" data-idx="${i}" style="background:${g.gradient}" aria-label="${escapeHtml(g.label)}">
+              <span class="bm-greet-preset-emoji">${g.emoji}</span>
+            </button>
+          `).join("")}
+        </div>
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-title">\u041A\u043E\u043C\u0443 <span class="bm-label-hint">(\u0456\u043C\u02BC\u044F, \u0440\u043E\u0434\u0438\u043D\u0430, \u0443\u0441\u0456\u0439 \u0433\u0440\u043E\u043C\u0430\u0434\u0456...)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="\u0421\u0435\u0440\u0433\u0456\u044E / \u0443\u0441\u0456\u043C \u043C\u0430\u0442\u0435\u0440\u044F\u043C / \u0440\u043E\u0434\u0438\u043D\u0456 \u0406\u0432\u0430\u043D\u0447\u0443\u043A\u0456\u0432" value="${escapeHtml(state.title)}">
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-text">\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F</label>
+        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0417 \u0414\u043D\u0435\u043C \u041D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F! \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F, \u0449\u0430\u0441\u0442\u044F..." required>${escapeHtml(state.text)}</textarea>
+      </div>
+
+      <div class="bm-section">
+        <label class="bm-label" for="bm-author">\u0412\u0456\u0434 \u043A\u043E\u0433\u043E <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0421\u0443\u0441\u0456\u0434\u0438 / \u041A\u043E\u043B\u0435\u043A\u0442\u0438\u0432 \u0448\u043A\u043E\u043B\u0438" value="${escapeHtml(state.author)}">
+      </div>
+    `;
+      bindCommonFields();
+      dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
+        state.title = e.target.value;
+        renderPreview();
+      });
+      dynamicEl.querySelectorAll(".bm-greet-preset").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          dynamicEl.querySelectorAll(".bm-greet-preset").forEach((b) => b.classList.remove("active"));
+          btn.classList.add("active");
+          state.greetingIdx = parseInt(btn.dataset.idx, 10) || 0;
+          renderPreview();
+        });
+      });
+    }
+    function bindCommonFields() {
+      dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
+        state.text = e.target.value;
+        renderPreview();
+      });
+      dynamicEl.querySelector("#bm-author")?.addEventListener("input", (e) => {
+        state.author = e.target.value;
+        renderPreview();
+      });
+    }
+    function photoSlotsHtml(count = 3) {
+      return `
+      <div class="bm-photos" id="bm-photos">
+        ${Array.from({ length: count }, (_, i) => `
+          <label class="bm-photo-slot${state.photos[i] ? " filled" : ""}" data-idx="${i}" ${state.photos[i] ? `style="background-image:url('${state.photos[i]}')"` : ""}>
+            <input type="file" accept="image/*" hidden>
+            <span class="bm-photo-plus${state.photos[i] ? " bm-photo-remove" : ""}">${state.photos[i] ? "\u2715" : "\uFF0B"}</span>
+          </label>
+        `).join("")}
+      </div>
+    `;
+    }
+    function bindPhotoSlots() {
+      dynamicEl.querySelectorAll(".bm-photo-slot").forEach((slot) => {
+        const input = slot.querySelector('input[type="file"]');
+        const idx = parseInt(slot.dataset.idx, 10);
+        input.addEventListener("change", async () => {
+          const file = input.files[0];
+          if (!file)
+            return;
+          try {
+            const dataUrl = await compressImage(file);
+            state.photos[idx] = dataUrl;
+            slot.classList.add("filled");
+            slot.style.backgroundImage = `url("${dataUrl}")`;
+            slot.querySelector(".bm-photo-plus").textContent = "\u2715";
+            slot.querySelector(".bm-photo-plus").classList.add("bm-photo-remove");
+            renderPreview();
+          } catch {
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E", 3e3);
+          }
+        });
+        slot.querySelector(".bm-photo-plus").addEventListener("click", (e) => {
+          if (slot.classList.contains("filled")) {
+            e.preventDefault();
+            state.photos[idx] = null;
+            slot.classList.remove("filled");
+            slot.style.backgroundImage = "";
+            const span = slot.querySelector(".bm-photo-plus");
+            span.textContent = "\uFF0B";
+            span.classList.remove("bm-photo-remove");
+            input.value = "";
+            renderPreview();
+          }
+        });
+      });
+    }
+    const previewCanvas = wrap.querySelector("#bm-preview-canvas");
+    function renderPreview() {
+      if (state.type === "board")
+        renderBoardPreview();
+      else if (state.type === "chat")
+        renderChatPreview();
+      else if (state.type === "greeting")
+        renderGreetingPreview();
+    }
+    function renderBoardPreview() {
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
+      const firstPhoto = state.photos.find((p) => p);
+      const contactTrim = state.contact.trim();
+      const contactHtml = contactTrim ? `
+      <div class="cm-board-contact${isPhone(contactTrim) ? " cm-board-contact--phone" : ""}">
+        ${escapeHtml(contactTrim)}
+      </div>` : "";
+      previewCanvas.innerHTML = `
+      <article class="cm-board-note cm-board-note--${cat.color}${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
+        <span class="cm-board-pin"></span>
+        ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
+        <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
+        <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
+        <div class="cm-board-footer">
+          <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-time">\u0449\u043E\u0439\u043D\u043E</span>
+        </div>
+        ${contactHtml}
+      </article>
+    `;
+    }
+    function renderChatPreview() {
+      const tags = parseTags(state.tagsRaw);
+      const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
+      const firstPhoto = state.photos.find((p) => p);
+      const author = state.author.trim();
+      const initial = author ? author.charAt(0).toUpperCase() : "\u{1F464}";
+      const hue = author ? author.charCodeAt(0) * 47 % 360 : 0;
+      const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
+      previewCanvas.innerHTML = `
+      <article class="bd-card bd-card--chat">
+        <div class="bd-chat-head">
+          <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
+          <div class="bd-chat-meta">
+            <span class="bd-chat-author">${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+            <span class="bd-chat-time">\u0449\u043E\u0439\u043D\u043E</span>
+          </div>
+        </div>
+        <p class="bd-chat-text">${escapeHtml(state.text.trim() || "\u0412\u0430\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026")}</p>
+        ${firstPhoto ? `<img class="bd-chat-photo" src="${firstPhoto}" alt="">` : ""}
+        ${tagsHtml}
+      </article>
+    `;
+    }
+    function renderGreetingPreview() {
+      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
+      const author = state.author.trim();
+      const title = state.title.trim();
+      previewCanvas.innerHTML = `
+      <article class="bd-card bd-card--greeting">
+        <div class="bd-greet-cover" style="background:${preset.gradient}">
+          <span class="bd-greet-emoji">${preset.emoji}</span>
+        </div>
+        <div class="bd-greet-body">
+          ${title ? `<div class="bd-greet-to">\u0414\u043B\u044F ${escapeHtml(title)}</div>` : ""}
+          <p class="bd-greet-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
+          <div class="bd-greet-footer">
+            <span class="bd-greet-author">\u2014 ${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+            <span class="bd-greet-time">\u0449\u043E\u0439\u043D\u043E</span>
+          </div>
+        </div>
+      </article>
+    `;
+    }
+    renderDynamic();
+    renderPreview();
+    setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
+    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      if (!state.text.trim()) {
+        showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
+        wrap.querySelector("#bm-text")?.focus();
+        return;
+      }
+      if (state.type === "greeting" && !state.title.trim()) {
+        showToast("\u0412\u043A\u0430\u0436\u0456\u0442\u044C \u043A\u043E\u043C\u0443 \u0432\u0456\u0442\u0430\u043D\u043D\u044F", 2500);
+        wrap.querySelector("#bm-title")?.focus();
+        return;
+      }
+      const submitBtn = wrap.querySelector(".cm-board-submit");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "\u041D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u043C\u043E\u2026";
+      }
+      const payload = buildPayload(state);
+      if (isSupabaseReady()) {
+        const result = await submitPost(payload);
+        if (!result.ok) {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+          }
+          showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (result.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438"), 4500);
+          return;
+        }
+      } else {
+        console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
+      }
+      close();
+      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
+    });
+  }
+  function buildPayload(state) {
+    const base = {
+      type: state.type,
+      text: state.text.trim(),
+      author: state.author.trim() || null,
+      photos: state.photos.filter(Boolean),
+      status: "pending"
+    };
+    if (state.type === "board") {
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
+      return {
+        ...base,
+        category: state.category,
+        color: cat.color,
+        contact: state.contact.trim() || null,
+        tags: []
+      };
+    }
+    if (state.type === "chat") {
+      return {
+        ...base,
+        category: null,
+        tags: parseTags(state.tagsRaw)
+      };
+    }
+    if (state.type === "greeting") {
+      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
+      return {
+        ...base,
+        category: null,
+        title: state.title.trim(),
+        cover_emoji: preset.emoji,
+        cover_gradient: preset.gradient,
+        tags: []
+      };
+    }
+    return base;
+  }
+
+  // src/tabs/board.js
+  var TYPE_TABS2 = [
+    { id: "all", label: "\u0423\u0441\u0456", emoji: "\u{1F504}" },
+    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
+    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" },
+    { id: "greeting", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F", emoji: "\u{1F389}" },
+    { id: "saved", label: "\u041C\u043E\u0457", emoji: "\u{1F4BE}" }
+  ];
+  var BOARD_CATEGORIES2 = [
+    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726" },
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}" },
+    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}" },
+    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}" },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}" },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}" },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}" },
+    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", label: "\u041F\u043E\u0434\u044F\u043A\u0438", emoji: "\u2764\uFE0F" },
+    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}" }
+  ];
+  var CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES2.map((c) => [c.id, c.emoji]));
+  var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
+  var PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+  var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var allPosts = [];
+  var allAnnouncements = [];
+  var activeType = "all";
+  var activeCategory = "all";
+  var searchQuery = "";
+  var reactionsByPost = /* @__PURE__ */ new Map();
+  var commentsByPost = /* @__PURE__ */ new Map();
+  var LS_SAVED = "cstl-saved-v1";
+  function lsGet(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function lsSet(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  function getMyReaction(postId) {
+    const r = reactionsByPost.get(postId);
+    return r ? r.my : null;
+  }
+  function getReactionCounts(postId) {
+    const r = reactionsByPost.get(postId);
+    return r ? r.counts : {};
+  }
+  function getTotalReactionCount(postId) {
+    const counts = getReactionCounts(postId);
+    return Object.values(counts).reduce((s, n) => s + n, 0);
+  }
+  function getComments(postId) {
+    return commentsByPost.get(postId) || [];
+  }
+  function getSavedIds() {
+    return new Set(lsGet(LS_SAVED, []));
+  }
+  function isSaved(postId) {
+    return getSavedIds().has(postId);
+  }
+  function toggleSaved(postId) {
+    const arr = lsGet(LS_SAVED, []);
+    const idx = arr.indexOf(postId);
+    if (idx >= 0)
+      arr.splice(idx, 1);
+    else
+      arr.push(postId);
+    lsSet(LS_SAVED, arr);
+  }
+  function authorAvatar(author) {
+    const a = String(author || "").trim();
+    if (!a)
+      return '<span class="bd-avatar bd-avatar--anon">\u{1F464}</span>';
+    const letter = a.charAt(0).toUpperCase();
+    const hue = a.charCodeAt(0) * 47 % 360;
+    return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
+  }
+  function renderContact(contact) {
+    if (!contact)
+      return "";
+    const trimmed = String(contact).trim();
+    const isPhone2 = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
+    if (!isPhone2) {
+      return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
+    }
+    const tel = trimmed.replace(/[^\d+]/g, "");
+    return `
+    <div class="cm-board-contact cm-board-contact--phone">
+      <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
+      <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
+        ${PHONE_ICON_SVG}
+      </a>
+    </div>
+  `;
+  }
+  function reactTriggerHtml(post) {
+    const myReaction = getMyReaction(post.id);
+    const counts = getReactionCounts(post.id);
+    const total = getTotalReactionCount(post.id);
+    const top3 = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
+    let content;
+    if (total === 0) {
+      content = `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
+    } else {
+      content = top3.map(([em, n]) => `
+      <span class="bd-react-trigger-group${em === myReaction ? " bd-react-trigger-group--mine" : ""}">
+        <span class="bd-react-trigger-emoji">${em}</span>
+        <span class="bd-react-trigger-count">${n}</span>
+      </span>
+    `).join("");
+    }
+    return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
+          data-react-trigger="${post.id}" aria-label="\u0420\u0435\u0430\u043A\u0446\u0456\u0457 (${total})">${content}</button>`;
+  }
+  function saveBtnHtml(post) {
+    const saved = isSaved(post.id);
+    return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
+          data-save-id="${post.id}"
+          aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
+    ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
+  </button>`;
+  }
+  function shareBtnHtml(post) {
+    const shareText = buildShareText(post);
+    const shareTitle = post.type === "greeting" ? `\u{1F389} ${post.title || "\u0412\u0456\u0442\u0430\u043D\u043D\u044F"} (CSTL LIFE)` : post.type === "chat" ? "\u0420\u043E\u0437\u043C\u043E\u0432\u0430 \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438" : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438";
+    return `<button class="bd-icon-btn bd-share-btn" type="button"
+          data-share-board
+          data-share-title="${escapeHtml(shareTitle)}"
+          data-share-text="${escapeHtml(shareText)}"
+          aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
+  }
+  function boardActionsHtml(post) {
+    return `
+    <div class="bd-actions bd-actions--board-compact">
+      ${reactTriggerHtml(post)}
+      <div class="bd-actions-extra">
+        ${saveBtnHtml(post)}
+        ${shareBtnHtml(post)}
+      </div>
+    </div>
+  `;
+  }
+  function greetingActionsHtml(post) {
+    return `
+    <div class="bd-actions">
+      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
+      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
+    </div>
+    ${chatCommentsHtml(post)}
+  `;
+  }
+  function chatActionsHtml(post) {
+    return `
+    <div class="bd-actions">
+      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
+      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
+    </div>
+    ${chatCommentsHtml(post)}
+  `;
+  }
+  function chatCommentsHtml(post) {
+    const items = getComments(post.id);
+    const listHtml = items.length ? items.map((c) => `
+        <div class="bd-inline-comment">
+          <span class="bd-inline-comment-author">${escapeHtml(c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
+          <span class="bd-inline-comment-time">${formatTime(postTime(c))}</span>
+        </div>
+      `).join("") : "";
+    return `
+    <div class="bd-inline-comments" data-comments-for="${post.id}">
+      ${listHtml ? `<div class="bd-inline-comments-list">${listHtml}</div>` : ""}
+      <form class="bd-inline-comment-form" data-comment-form="${post.id}">
+        <input class="bd-inline-comment-input" type="text"
+               placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440..." aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440"
+               data-comment-input="${post.id}">
+        <button class="bd-inline-comment-submit" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
+      </form>
+    </div>
+  `;
+  }
+  function openReactionPopup(triggerBtn, postId) {
+    closeReactionPopup();
+    const myReaction = getMyReaction(postId);
+    const counts = getReactionCounts(postId);
+    const popup = document.createElement("div");
+    popup.className = "bd-react-popup";
+    popup.id = "bd-react-popup";
+    popup.innerHTML = REACTIONS.map((em) => {
+      const n = counts[em] || 0;
+      return `
+      <button class="bd-react-opt${myReaction === em ? " bd-react-opt--active" : ""}" type="button"
+              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
+        <span class="bd-react-opt-emoji">${em}</span>
+        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ""}
+      </button>
+    `;
+    }).join("");
+    document.body.appendChild(popup);
+    const rect = triggerBtn.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    let top = rect.top - popupRect.height - 8;
+    if (top < 8)
+      top = rect.bottom + 8;
+    let left = rect.left + rect.width / 2 - popupRect.width / 2;
+    if (left < 8)
+      left = 8;
+    if (left + popupRect.width > window.innerWidth - 8) {
+      left = window.innerWidth - popupRect.width - 8;
+    }
+    popup.style.top = `${top + window.scrollY}px`;
+    popup.style.left = `${left}px`;
+    requestAnimationFrame(() => popup.classList.add("visible"));
+  }
+  function closeReactionPopup() {
+    const existing = document.getElementById("bd-react-popup");
+    if (existing) {
+      existing.classList.remove("visible");
+      setTimeout(() => existing.remove(), 150);
+    }
+  }
+  function buildShareText(post) {
+    if (post.type === "board") {
+      const cat = CATEGORY_EMOJI[post.category] || "\u{1F4CC}";
+      return `${cat} ${post.category}
+
+${post.text}
+\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
+    }
+    if (post.type === "chat") {
+      const tags = (post.tags || []).join(" ");
+      return `${post.text}${tags ? "\n\n" + tags : ""}
+\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
+    }
+    if (post.type === "greeting") {
+      return `${post.cover_emoji || "\u{1F389}"} ${post.title ? "\u0414\u043B\u044F " + post.title + ":\n" : ""}${post.text}${post.author ? "\n\u2014 " + post.author : ""}`;
+    }
+    return post.text || "";
+  }
+  function renderBoardCard(p) {
+    const tilt = p.id * 7 % 9 - 4;
+    const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
+    const contactHtml = renderContact(p.contact);
+    const photoHtml = p.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
+    return `
+    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || "yellow")}${p.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+      <span class="cm-board-pin"></span>
+      ${photoHtml}
+      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+      </div>
+      ${contactHtml}
+      ${boardActionsHtml(p)}
+    </article>
+  `;
+  }
+  function renderOfficialCard(a) {
+    const tilt = a.id * 5 % 5 - 2;
+    return `
+    <article class="cm-board-note bd-card bd-card--official cm-board-note--official" style="--tilt:${tilt}deg">
+      <span class="cm-board-pin cm-board-pin--gold"></span>
+      <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
+      <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
+      <p class="cm-board-text">${escapeHtml(a.body)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">\u2014 ${escapeHtml(a.author || "\u2014")}</span>
+        <span class="cm-board-time">${formatTime(postTime(a))}</span>
+      </div>
+    </article>
+  `;
+  }
+  function renderChatCard(p) {
+    const tagsHtml = (p.tags || []).length ? `<div class="bd-chat-tags">${p.tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
+    const photoHtml = p.photo ? `<img class="bd-chat-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+    return `
+    <article class="bd-card bd-card--chat" data-post-id="${p.id}">
+      <div class="bd-chat-head">
+        ${authorAvatar(p.author)}
+        <div class="bd-chat-meta">
+          <span class="bd-chat-author">${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="bd-chat-time">${formatTime(postTime(p))}</span>
+        </div>
+      </div>
+      <p class="bd-chat-text">${escapeHtml(p.text)}</p>
+      ${photoHtml}
+      ${tagsHtml}
+      ${chatActionsHtml(p)}
+    </article>
+  `;
+  }
+  function renderGreetingCard(p) {
+    const grad = p.cover_gradient || "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)";
+    const emoji = p.cover_emoji || "\u{1F389}";
+    const titleLine = p.title ? `<div class="bd-greet-to">\u0414\u043B\u044F ${escapeHtml(p.title)}</div>` : "";
+    return `
+    <article class="bd-card bd-card--greeting" data-post-id="${p.id}">
+      <div class="bd-greet-cover" style="background:${escapeHtml(grad)}">
+        <span class="bd-greet-emoji">${emoji}</span>
+      </div>
+      <div class="bd-greet-body">
+        ${titleLine}
+        <p class="bd-greet-text">${escapeHtml(p.text)}</p>
+        <div class="bd-greet-footer">
+          <span class="bd-greet-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="bd-greet-time">${formatTime(postTime(p))}</span>
+        </div>
+      </div>
+      ${greetingActionsHtml(p)}
+    </article>
+  `;
+  }
+  function renderCard(post) {
+    if (post.type === "chat")
+      return renderChatCard(post);
+    if (post.type === "greeting")
+      return renderGreetingCard(post);
+    return renderBoardCard(post);
+  }
+  function getFilteredPosts() {
+    const q = searchQuery.trim().toLowerCase();
+    const savedIds = activeType === "saved" ? getSavedIds() : null;
+    return allPosts.filter((p) => {
+      if (activeType === "saved") {
+        if (!savedIds.has(p.id))
+          return false;
+      } else if (activeType !== "all" && p.type !== activeType) {
+        return false;
+      }
+      if (activeType === "board" && activeCategory !== "all") {
+        if (p.category !== activeCategory)
+          return false;
+      }
+      if (q) {
+        const hay = [
+          p.text,
+          p.title,
+          p.author,
+          ...p.tags || []
+        ].filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q))
+          return false;
+      }
+      return true;
+    });
+  }
+  function renderHeader() {
+    const tabs = TYPE_TABS2.map((t) => `
+    <button class="bd-tab${t.id === activeType ? " bd-tab--active" : ""}" type="button" data-bd-tab="${t.id}">
+      <span class="bd-tab-emoji">${t.emoji}</span>
+      <span class="bd-tab-label">${escapeHtml(t.label)}</span>
+    </button>
+  `).join("");
+    const showCategories = activeType === "board";
+    const categoriesHtml = showCategories ? `
+    <div class="bd-categories">
+      ${BOARD_CATEGORIES2.map((c) => `
+        <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
+          <span class="bd-cat-emoji">${c.emoji}</span>
+          ${escapeHtml(c.label)}
+        </button>
+      `).join("")}
+    </div>
+  ` : "";
+    return `
+    <div class="bd-controls">
+      <div class="bd-search">
+        <span class="bd-search-icon">\u{1F50D}</span>
+        <input class="bd-search-input" id="bd-search-input" type="search"
+               placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..." value="${escapeHtml(searchQuery)}">
+        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
+      </div>
+      <div class="bd-tabs">${tabs}</div>
+      ${categoriesHtml}
+    </div>
+  `;
+  }
+  function renderBody() {
+    const filtered = getFilteredPosts();
+    if (!filtered.length) {
+      const msg = activeType === "saved" ? "\u0423 \xAB\u041C\u043E\u0457\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u0422\u0430\u043F\u043D\u0456\u0442\u044C \u{1F90D} \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438." : searchQuery ? `\u0417\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery)}\xBB \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E` : "\u0423 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
+      return `<div class="bd-empty">${msg}</div>`;
+    }
+    const sorted = [...filtered].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    if (activeType === "board") {
+      const cards = sorted.map(renderBoardCard).join("");
+      return `
+      <div class="board-backdrop" id="board-backdrop"></div>
+      <div class="cm-board-corkboard board-corkboard--full">${cards}</div>
+    `;
+    }
+    if (activeType === "all") {
+      const officialCards = allAnnouncements.map(renderOfficialCard).join("");
+      const boardOnly = sorted.filter((p) => p.type === "board").map(renderBoardCard).join("");
+      const others = sorted.filter((p) => p.type !== "board").map(renderCard).join("");
+      return `
+      <div class="board-backdrop" id="board-backdrop"></div>
+      ${officialCards || boardOnly ? `<div class="cm-board-corkboard board-corkboard--full">${officialCards}${boardOnly}</div>` : ""}
+      ${others ? `<div class="bd-stream">${others}</div>` : ""}
+    `;
+    }
+    return `<div class="bd-stream">${sorted.map(renderCard).join("")}</div>`;
+  }
+  async function renderBoard() {
+    const el = document.getElementById("board-content");
+    if (!el)
+      return;
+    if (isSupabaseReady()) {
+      const anonId = getAnonId();
+      const [posts, anns, reactions, comments] = await Promise.all([
+        fetchPublishedPosts(),
+        fetchPublishedAnnouncements(),
+        fetchAllReactions(anonId),
+        fetchAllComments()
+      ]);
+      if (posts !== null) {
+        allPosts = posts;
+        allAnnouncements = anns || [];
+        reactionsByPost = reactions;
+        commentsByPost = comments;
+        renderAll(el);
+        return;
+      }
+    }
+    try {
+      const [boardRes, communityRes] = await Promise.all([
+        fetch("./data/community-board.json"),
+        fetch("./data/community.json")
+      ]);
+      const boardData = await boardRes.json();
+      const communityData = await communityRes.json();
+      allPosts = boardData.posts || [];
+      allAnnouncements = communityData.announcements || [];
+      reactionsByPost = /* @__PURE__ */ new Map();
+      commentsByPost = /* @__PURE__ */ new Map();
+    } catch {
+      el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
+      return;
+    }
+    renderAll(el);
+  }
+  function renderAll(el) {
+    el.innerHTML = `
+    ${renderHeader()}
+    <div class="bd-body" id="bd-body">${renderBody()}</div>
+    <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
+      <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+      <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+    </button>
+  `;
+    document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
+    const searchInput = document.getElementById("bd-search-input");
+    if (searchInput) {
+      let debounce = null;
+      searchInput.addEventListener("input", (e) => {
+        searchQuery = e.target.value;
+        clearTimeout(debounce);
+        debounce = setTimeout(() => renderBodyOnly(el), 180);
+      });
+    }
+    document.getElementById("bd-search-clear")?.addEventListener("click", () => {
+      searchQuery = "";
+      renderAll(el);
+    });
+    el.querySelectorAll("[data-bd-tab]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeType = btn.dataset.bdTab;
+        activeCategory = "all";
+        renderAll(el);
+      });
+    });
+    el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        activeCategory = btn.dataset.bdCat;
+        renderAll(el);
+      });
+    });
+    el.querySelectorAll(".cm-board-call").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+      }, { capture: true });
+    });
+    initBoardNoteExpand(el);
+  }
+  function renderBodyOnly(el) {
+    const body = document.getElementById("bd-body");
+    if (!body)
+      return renderAll(el);
+    body.innerHTML = renderBody();
+    body.querySelectorAll(".cm-board-call").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+      }, { capture: true });
+    });
+    initBoardNoteExpand(el);
+  }
+  function initBoardNoteExpand(root) {
+    const backdrop = root.querySelector("#board-backdrop");
+    if (!backdrop)
+      return;
+    let activeNote = null;
+    let activeModal = null;
+    let isAnimating = false;
+    const DURATION = 240;
+    const expand = (note) => {
+      if (isAnimating || activeNote)
+        return;
+      isAnimating = true;
+      const modal = document.createElement("article");
+      modal.className = note.className + " cm-board-modal-note";
+      modal.innerHTML = note.innerHTML;
+      document.body.appendChild(modal);
+      modal.querySelectorAll(".cm-board-call").forEach((btn) => {
+        btn.addEventListener("click", (e) => {
+          e.stopPropagation();
+        }, { capture: true });
+      });
+      activeNote = note;
+      activeModal = modal;
+      note.classList.add("cm-board-note--hidden");
+      requestAnimationFrame(() => {
+        backdrop.classList.add("visible");
+        modal.classList.add("visible");
+      });
+      setTimeout(() => {
+        isAnimating = false;
+      }, DURATION);
+    };
+    const collapse = () => {
+      if (!activeNote || !activeModal || isAnimating)
+        return;
+      isAnimating = true;
+      const note = activeNote;
+      const modal = activeModal;
+      modal.classList.remove("visible");
+      backdrop.classList.remove("visible");
+      note.classList.remove("cm-board-note--hidden");
+      setTimeout(() => {
+        modal.remove();
+        activeNote = null;
+        activeModal = null;
+        isAnimating = false;
+      }, DURATION);
+    };
+    root.querySelectorAll(".cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)").forEach((note) => {
+      note.addEventListener("click", (e) => {
+        e.stopPropagation();
+        if (isAnimating)
+          return;
+        if (!activeNote)
+          expand(note);
+      });
+    });
+    backdrop.addEventListener("click", collapse);
+  }
+  var _delegationAttached = false;
+  function attachBoardDelegation() {
+    if (_delegationAttached)
+      return;
+    _delegationAttached = true;
+    document.addEventListener("submit", async (e) => {
+      const form = e.target.closest("[data-comment-form]");
+      if (!form)
+        return;
+      e.preventDefault();
+      e.stopPropagation();
+      const postId = Number(form.dataset.commentForm);
+      const input = form.querySelector("[data-comment-input]");
+      const text = (input?.value || "").trim();
+      if (!text) {
+        input?.focus();
+        return;
+      }
+      const tempComment = {
+        id: "temp-" + Date.now(),
+        post_id: postId,
+        author: null,
+        text,
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      const list = commentsByPost.get(postId) || [];
+      list.push(tempComment);
+      commentsByPost.set(postId, list);
+      if (input)
+        input.value = "";
+      rerenderCommentsBlock(postId);
+      if (isSupabaseReady()) {
+        const result = await addComment(postId, null, text);
+        if (!result.ok) {
+          const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
+          commentsByPost.set(postId, filtered);
+          rerenderCommentsBlock(postId);
+          alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440: " + result.error);
+        } else if (result.comment) {
+          const updated = (commentsByPost.get(postId) || []).map(
+            (c) => c.id === tempComment.id ? result.comment : c
+          );
+          commentsByPost.set(postId, updated);
+          rerenderCommentsBlock(postId);
+        }
+      }
+    });
+    function rerenderCommentsBlock(postId) {
+      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+      if (!wrap)
+        return;
+      const post = allPosts.find((p) => p.id === postId);
+      if (!post)
+        return;
+      wrap.outerHTML = chatCommentsHtml(post);
+      setTimeout(() => {
+        document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
+      }, 50);
+    }
+    document.addEventListener("click", (e) => {
+      const trigger = e.target.closest("[data-react-trigger]");
+      if (trigger) {
+        e.stopPropagation();
+        const id = Number(trigger.dataset.reactTrigger);
+        const existing = document.getElementById("bd-react-popup");
+        if (existing && existing.dataset.forPost == id) {
+          closeReactionPopup();
+        } else {
+          openReactionPopup(trigger, id);
+          const p = document.getElementById("bd-react-popup");
+          if (p)
+            p.dataset.forPost = id;
+        }
+        return;
+      }
+      const opt = e.target.closest("[data-react-opt]");
+      if (opt) {
+        e.stopPropagation();
+        const id = Number(opt.dataset.reactPost);
+        const emoji = opt.dataset.reactOpt;
+        const current = getMyReaction(id);
+        const newReaction = current === emoji ? null : emoji;
+        const r = reactionsByPost.get(id) || { counts: {}, my: null };
+        if (r.my)
+          r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
+        if (newReaction)
+          r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
+        r.my = newReaction;
+        reactionsByPost.set(id, r);
+        closeReactionPopup();
+        document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach((btn) => {
+          btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === id) || { id });
+        });
+        if (isSupabaseReady()) {
+          setReaction(id, getAnonId(), newReaction).then((result) => {
+            if (!result.ok) {
+              console.warn("[reactions] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F:", result.error);
+            }
+          });
+        }
+        return;
+      }
+      if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
+        e.stopPropagation();
+        return;
+      }
+      const saveBtn = e.target.closest("[data-save-id]");
+      if (saveBtn) {
+        e.stopPropagation();
+        const id = Number(saveBtn.dataset.saveId);
+        toggleSaved(id);
+        const nowSaved = isSaved(id);
+        saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
+        saveBtn.classList.toggle("bd-bookmark--active", nowSaved);
+        saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
+        if (activeType === "saved" && !nowSaved) {
+          const el = document.getElementById("board-content");
+          if (el)
+            renderBodyOnly(el);
+        }
+        return;
+      }
+      const shareBtn = e.target.closest("[data-share-board]");
+      if (shareBtn) {
+        e.stopPropagation();
+        sharePost({
+          title: shareBtn.dataset.shareTitle,
+          text: shareBtn.dataset.shareText
+        });
+        return;
+      }
+      if (document.getElementById("bd-react-popup") && !e.target.closest(".bd-react-popup")) {
+        closeReactionPopup();
+      }
+    }, { capture: true });
+  }
+  function onReactionRealtimeEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || !row.post_id)
+      return;
+    const postId = row.post_id;
+    const anonId = getAnonId();
+    fetchAllReactions(anonId).then((fresh) => {
+      const r = fresh.get(postId) || { counts: {}, my: null };
+      reactionsByPost.set(postId, r);
+      document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
+        btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === postId) || { id: postId });
+      });
+    });
+  }
+  function onCommentRealtimeEvent(payload) {
+    const postId = (payload.new || payload.old || {}).post_id;
+    if (!postId)
+      return;
+    fetchAllComments().then((fresh) => {
+      commentsByPost = fresh;
+      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+      if (wrap) {
+        const post = allPosts.find((p) => p.id === postId);
+        if (post)
+          wrap.outerHTML = chatCommentsHtml(post);
+      }
+    });
+  }
+  var _realtimeAttached = false;
+  function attachRealtime() {
+    if (_realtimeAttached || !isSupabaseReady())
+      return;
+    _realtimeAttached = true;
+    subscribeReactions(onReactionRealtimeEvent);
+    subscribeComments(onCommentRealtimeEvent);
+  }
+  function setBoardActiveType(type) {
+    if (!type)
+      return;
+    activeType = type;
+    activeCategory = "all";
+    searchQuery = "";
+    const el = document.getElementById("board-content");
+    if (el)
+      renderAll(el);
+  }
+  function initBoard() {
+    attachBoardDelegation();
+    attachRealtime();
+    renderBoard();
+  }
+
   // src/tabs/community-blocks.js
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
@@ -539,7 +1770,7 @@
       el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
     }
   }
-  var CATEGORY_EMOJI = {
+  var CATEGORY_EMOJI2 = {
     "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
     "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
     "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
@@ -630,8 +1861,8 @@
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
       ${labelHtml}
       <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
-      <button class="cm-board-preview-cta" type="button" data-switch-tab="board">
-        \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192
+      <button class="cm-board-preview-cta" type="button" data-mini-cta>
+        \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 ${escapeHtml(cfg.label.toLowerCase())} \u2192
       </button>
     </div>
   `;
@@ -659,6 +1890,16 @@
           renderBoardMiniSlide(el);
         });
       });
+      const cta = wrap.querySelector("[data-mini-cta]");
+      if (cta) {
+        cta.addEventListener("click", (e) => {
+          e.stopPropagation();
+          const targetType = cfg.id === "official" ? "all" : cfg.id;
+          setBoardActiveType(targetType);
+          if (typeof window.switchTab === "function")
+            window.switchTab("board");
+        });
+      }
     }
   }
   function renderMiniCard(item, type) {
@@ -673,7 +1914,7 @@
     `;
     }
     if (type === "board") {
-      const emoji = CATEGORY_EMOJI[item.category] || "\u{1F4CC}";
+      const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
       <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
@@ -2498,1227 +3739,6 @@ END:VEVENT`
       if (powerData)
         renderPowerPage();
     });
-  }
-
-  // src/tabs/community-modal.js
-  var TYPE_TABS = [
-    { id: "board", emoji: "\u{1F6D2}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" },
-    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" },
-    { id: "greeting", emoji: "\u{1F389}", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F" }
-  ];
-  var BOARD_CATEGORIES = [
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
-    { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
-    { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
-    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", emoji: "\u2764\uFE0F", color: "white" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
-  ];
-  var GREETING_PRESETS = [
-    { emoji: "\u{1F382}", gradient: "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)", label: "\u0414\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F" },
-    { emoji: "\u{1F476}", gradient: "linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)", label: "\u041D\u043E\u0432\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0438\u0439" },
-    { emoji: "\u{1F48D}", gradient: "linear-gradient(135deg, #FFF9E6 0%, #FFECB3 100%)", label: "\u0412\u0435\u0441\u0456\u043B\u043B\u044F" },
-    { emoji: "\u{1F393}", gradient: "linear-gradient(135deg, #E1BEE7 0%, #BA68C8 100%)", label: "\u0412\u0438\u043F\u0443\u0441\u043A" },
-    { emoji: "\u2764\uFE0F", gradient: "linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)", label: "\u041F\u043E\u0434\u044F\u043A\u0430" },
-    { emoji: "\u{1F333}", gradient: "linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)", label: "\u041F\u0440\u0438\u0440\u043E\u0434\u0430" },
-    { emoji: "\u{1F389}", gradient: "linear-gradient(135deg, #FFE0B2 0%, #FFB74D 100%)", label: "\u0421\u0432\u044F\u0442\u043E" },
-    { emoji: "\u{1F54A}\uFE0F", gradient: "linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)", label: "\u041F\u0430\u043C\u02BC\u044F\u0442\u044C" }
-  ];
-  function isPhone(s) {
-    return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
-  }
-  function parseTags(str) {
-    return String(str || "").split(/\s+/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith("#") ? s : "#" + s);
-  }
-  function compressImage(file) {
-    return new Promise(function executor(resolve, reject) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 800;
-          let w = img.width, h = img.height;
-          if (w > h && w > maxDim) {
-            h = h * maxDim / w;
-            w = maxDim;
-          } else if (h > maxDim) {
-            w = w * maxDim / h;
-            h = maxDim;
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(w);
-          canvas.height = Math.round(h);
-          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL("image/jpeg", 0.78));
-        };
-        img.onerror = reject;
-        img.src = e.target.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
-  function openBoardModal() {
-    if (document.getElementById("cm-board-modal"))
-      return;
-    const state = {
-      type: "board",
-      // SPILNI
-      text: "",
-      photos: [],
-      author: "",
-      // BOARD
-      category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
-      contact: "",
-      // CHAT
-      tagsRaw: "",
-      // GREETING
-      title: "",
-      greetingIdx: 0
-    };
-    const wrap = document.createElement("div");
-    wrap.id = "cm-board-modal";
-    wrap.className = "cm-board-modal";
-    wrap.innerHTML = `
-    <div class="cm-board-modal-backdrop"></div>
-    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
-      <div class="cm-board-modal-handle"></div>
-      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442</h3>
-      <p class="cm-board-modal-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0442\u0438\u043F \u0456 \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F.</p>
-
-      <form id="cm-board-modal-form" novalidate>
-        <!-- \u041F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447 \u0442\u0438\u043F\u0443 (3 \u0442\u0430\u0431\u0438) -->
-        <div class="bm-type-tabs" id="bm-type-tabs">
-          ${TYPE_TABS.map((t) => `
-            <button type="button" class="bm-type-tab${t.id === state.type ? " active" : ""}" data-type="${t.id}">
-              <span class="bm-type-emoji">${t.emoji}</span>
-              <span class="bm-type-label">${t.label}</span>
-            </button>
-          `).join("")}
-        </div>
-
-        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u2014 \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0438\u043F -->
-        <div id="bm-dynamic"></div>
-
-        <!-- LIVE-preview -->
-        <div class="bm-preview-section" id="bm-preview-section">
-          <div class="bm-preview-label">\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0442\u0438\u043C\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>
-          <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
-        </div>
-
-        <button class="cm-board-submit" type="submit">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
-        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</p>
-      </form>
-    </div>
-  `;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    function close() {
-      wrap.classList.remove("open");
-      document.body.classList.remove("modal-open");
-      setTimeout(() => wrap.remove(), 220);
-    }
-    wrap.querySelector(".cm-board-modal-backdrop")?.addEventListener("click", close);
-    wrap.querySelector(".cm-board-modal-close")?.addEventListener("click", close);
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key === "Escape") {
-        close();
-        document.removeEventListener("keydown", onEsc);
-      }
-    });
-    wrap.querySelectorAll(".bm-type-tab").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (state.type === btn.dataset.type)
-          return;
-        wrap.querySelectorAll(".bm-type-tab").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.type = btn.dataset.type;
-        renderDynamic();
-        renderPreview();
-      });
-    });
-    const dynamicEl = wrap.querySelector("#bm-dynamic");
-    function renderDynamic() {
-      if (state.type === "board")
-        return renderBoardFields();
-      if (state.type === "chat")
-        return renderChatFields();
-      if (state.type === "greeting")
-        return renderGreetingFields();
-    }
-    function renderBoardFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</label>
-        <div class="bm-chips" id="bm-chips">
-          ${BOARD_CATEGORIES.map((c) => `
-            <button type="button" class="bm-chip${c.id === state.category ? " active" : ""}" data-cat="${c.id}">
-              <span class="bm-chip-emoji">${c.emoji}</span>
-              <span class="bm-chip-label">${c.id}</span>
-            </button>
-          `).join("")}
-        </div>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u041E\u043F\u0438\u0441</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456?" required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, \u0434\u043E 3)</span></label>
-        ${photoSlotsHtml()}
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-contact">\u041A\u043E\u043D\u0442\u0430\u043A\u0442 <span class="bm-label-hint">(\u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-contact" type="text" placeholder="+38 050 ___ __ __" inputmode="tel" value="${escapeHtml(state.contact)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(state.author)}">
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelectorAll(".bm-chip").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          dynamicEl.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          state.category = btn.dataset.cat;
-          renderPreview();
-        });
-      });
-      dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
-        state.contact = e.target.value;
-        renderPreview();
-      });
-      bindPhotoSlots();
-    }
-    function renderChatFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0425\u043E\u0447\u0443 \u0441\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-tags">\u0422\u0435\u043C\u0438 <span class="bm-label-hint">(\u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0456\u043B, \u043D\u0430\u043F\u0440. #\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-tags" type="text" placeholder="#\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438" value="${escapeHtml(state.tagsRaw)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, 1)</span></label>
-        ${photoSlotsHtml(1)}
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(state.author)}">
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelector("#bm-tags")?.addEventListener("input", (e) => {
-        state.tagsRaw = e.target.value;
-        renderPreview();
-      });
-      bindPhotoSlots();
-    }
-    function renderGreetingFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label">\u041E\u0431\u043A\u043B\u0430\u0434\u0438\u043D\u043A\u0430</label>
-        <div class="bm-greet-presets" id="bm-greet-presets">
-          ${GREETING_PRESETS.map((g, i) => `
-            <button type="button" class="bm-greet-preset${i === state.greetingIdx ? " active" : ""}" data-idx="${i}" style="background:${g.gradient}" aria-label="${escapeHtml(g.label)}">
-              <span class="bm-greet-preset-emoji">${g.emoji}</span>
-            </button>
-          `).join("")}
-        </div>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-title">\u041A\u043E\u043C\u0443 <span class="bm-label-hint">(\u0456\u043C\u02BC\u044F, \u0440\u043E\u0434\u0438\u043D\u0430, \u0443\u0441\u0456\u0439 \u0433\u0440\u043E\u043C\u0430\u0434\u0456...)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="\u0421\u0435\u0440\u0433\u0456\u044E / \u0443\u0441\u0456\u043C \u043C\u0430\u0442\u0435\u0440\u044F\u043C / \u0440\u043E\u0434\u0438\u043D\u0456 \u0406\u0432\u0430\u043D\u0447\u0443\u043A\u0456\u0432" value="${escapeHtml(state.title)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0417 \u0414\u043D\u0435\u043C \u041D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F! \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F, \u0449\u0430\u0441\u0442\u044F..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0412\u0456\u0434 \u043A\u043E\u0433\u043E <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0421\u0443\u0441\u0456\u0434\u0438 / \u041A\u043E\u043B\u0435\u043A\u0442\u0438\u0432 \u0448\u043A\u043E\u043B\u0438" value="${escapeHtml(state.author)}">
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
-        state.title = e.target.value;
-        renderPreview();
-      });
-      dynamicEl.querySelectorAll(".bm-greet-preset").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          dynamicEl.querySelectorAll(".bm-greet-preset").forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          state.greetingIdx = parseInt(btn.dataset.idx, 10) || 0;
-          renderPreview();
-        });
-      });
-    }
-    function bindCommonFields() {
-      dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
-        state.text = e.target.value;
-        renderPreview();
-      });
-      dynamicEl.querySelector("#bm-author")?.addEventListener("input", (e) => {
-        state.author = e.target.value;
-        renderPreview();
-      });
-    }
-    function photoSlotsHtml(count = 3) {
-      return `
-      <div class="bm-photos" id="bm-photos">
-        ${Array.from({ length: count }, (_, i) => `
-          <label class="bm-photo-slot${state.photos[i] ? " filled" : ""}" data-idx="${i}" ${state.photos[i] ? `style="background-image:url('${state.photos[i]}')"` : ""}>
-            <input type="file" accept="image/*" hidden>
-            <span class="bm-photo-plus${state.photos[i] ? " bm-photo-remove" : ""}">${state.photos[i] ? "\u2715" : "\uFF0B"}</span>
-          </label>
-        `).join("")}
-      </div>
-    `;
-    }
-    function bindPhotoSlots() {
-      dynamicEl.querySelectorAll(".bm-photo-slot").forEach((slot) => {
-        const input = slot.querySelector('input[type="file"]');
-        const idx = parseInt(slot.dataset.idx, 10);
-        input.addEventListener("change", async () => {
-          const file = input.files[0];
-          if (!file)
-            return;
-          try {
-            const dataUrl = await compressImage(file);
-            state.photos[idx] = dataUrl;
-            slot.classList.add("filled");
-            slot.style.backgroundImage = `url("${dataUrl}")`;
-            slot.querySelector(".bm-photo-plus").textContent = "\u2715";
-            slot.querySelector(".bm-photo-plus").classList.add("bm-photo-remove");
-            renderPreview();
-          } catch {
-            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E", 3e3);
-          }
-        });
-        slot.querySelector(".bm-photo-plus").addEventListener("click", (e) => {
-          if (slot.classList.contains("filled")) {
-            e.preventDefault();
-            state.photos[idx] = null;
-            slot.classList.remove("filled");
-            slot.style.backgroundImage = "";
-            const span = slot.querySelector(".bm-photo-plus");
-            span.textContent = "\uFF0B";
-            span.classList.remove("bm-photo-remove");
-            input.value = "";
-            renderPreview();
-          }
-        });
-      });
-    }
-    const previewCanvas = wrap.querySelector("#bm-preview-canvas");
-    function renderPreview() {
-      if (state.type === "board")
-        renderBoardPreview();
-      else if (state.type === "chat")
-        renderChatPreview();
-      else if (state.type === "greeting")
-        renderGreetingPreview();
-    }
-    function renderBoardPreview() {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
-      const firstPhoto = state.photos.find((p) => p);
-      const contactTrim = state.contact.trim();
-      const contactHtml = contactTrim ? `
-      <div class="cm-board-contact${isPhone(contactTrim) ? " cm-board-contact--phone" : ""}">
-        ${escapeHtml(contactTrim)}
-      </div>` : "";
-      previewCanvas.innerHTML = `
-      <article class="cm-board-note cm-board-note--${cat.color}${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
-        <span class="cm-board-pin"></span>
-        ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
-        <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
-        <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
-        <div class="cm-board-footer">
-          <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="cm-board-time">\u0449\u043E\u0439\u043D\u043E</span>
-        </div>
-        ${contactHtml}
-      </article>
-    `;
-    }
-    function renderChatPreview() {
-      const tags = parseTags(state.tagsRaw);
-      const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
-      const firstPhoto = state.photos.find((p) => p);
-      const author = state.author.trim();
-      const initial = author ? author.charAt(0).toUpperCase() : "\u{1F464}";
-      const hue = author ? author.charCodeAt(0) * 47 % 360 : 0;
-      const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
-      previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--chat">
-        <div class="bd-chat-head">
-          <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-          <div class="bd-chat-meta">
-            <span class="bd-chat-author">${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="bd-chat-time">\u0449\u043E\u0439\u043D\u043E</span>
-          </div>
-        </div>
-        <p class="bd-chat-text">${escapeHtml(state.text.trim() || "\u0412\u0430\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026")}</p>
-        ${firstPhoto ? `<img class="bd-chat-photo" src="${firstPhoto}" alt="">` : ""}
-        ${tagsHtml}
-      </article>
-    `;
-    }
-    function renderGreetingPreview() {
-      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-      const author = state.author.trim();
-      const title = state.title.trim();
-      previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--greeting">
-        <div class="bd-greet-cover" style="background:${preset.gradient}">
-          <span class="bd-greet-emoji">${preset.emoji}</span>
-        </div>
-        <div class="bd-greet-body">
-          ${title ? `<div class="bd-greet-to">\u0414\u043B\u044F ${escapeHtml(title)}</div>` : ""}
-          <p class="bd-greet-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
-          <div class="bd-greet-footer">
-            <span class="bd-greet-author">\u2014 ${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="bd-greet-time">\u0449\u043E\u0439\u043D\u043E</span>
-          </div>
-        </div>
-      </article>
-    `;
-    }
-    renderDynamic();
-    renderPreview();
-    setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
-    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      if (!state.text.trim()) {
-        showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
-        wrap.querySelector("#bm-text")?.focus();
-        return;
-      }
-      if (state.type === "greeting" && !state.title.trim()) {
-        showToast("\u0412\u043A\u0430\u0436\u0456\u0442\u044C \u043A\u043E\u043C\u0443 \u0432\u0456\u0442\u0430\u043D\u043D\u044F", 2500);
-        wrap.querySelector("#bm-title")?.focus();
-        return;
-      }
-      const submitBtn = wrap.querySelector(".cm-board-submit");
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "\u041D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u043C\u043E\u2026";
-      }
-      const payload = buildPayload(state);
-      if (isSupabaseReady()) {
-        const result = await submitPost(payload);
-        if (!result.ok) {
-          if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
-          }
-          showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (result.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438"), 4500);
-          return;
-        }
-      } else {
-        console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
-      }
-      close();
-      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
-    });
-  }
-  function buildPayload(state) {
-    const base = {
-      type: state.type,
-      text: state.text.trim(),
-      author: state.author.trim() || null,
-      photos: state.photos.filter(Boolean),
-      status: "pending"
-    };
-    if (state.type === "board") {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
-      return {
-        ...base,
-        category: state.category,
-        color: cat.color,
-        contact: state.contact.trim() || null,
-        tags: []
-      };
-    }
-    if (state.type === "chat") {
-      return {
-        ...base,
-        category: null,
-        tags: parseTags(state.tagsRaw)
-      };
-    }
-    if (state.type === "greeting") {
-      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-      return {
-        ...base,
-        category: null,
-        title: state.title.trim(),
-        cover_emoji: preset.emoji,
-        cover_gradient: preset.gradient,
-        tags: []
-      };
-    }
-    return base;
-  }
-
-  // src/tabs/board.js
-  var TYPE_TABS2 = [
-    { id: "all", label: "\u0423\u0441\u0456", emoji: "\u{1F504}" },
-    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
-    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" },
-    { id: "greeting", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F", emoji: "\u{1F389}" },
-    { id: "saved", label: "\u041C\u043E\u0457", emoji: "\u{1F4BE}" }
-  ];
-  var BOARD_CATEGORIES2 = [
-    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726" },
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}" },
-    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}" },
-    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}" },
-    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", label: "\u041F\u043E\u0434\u044F\u043A\u0438", emoji: "\u2764\uFE0F" },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}" }
-  ];
-  var CATEGORY_EMOJI2 = Object.fromEntries(BOARD_CATEGORIES2.map((c) => [c.id, c.emoji]));
-  var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
-  var PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
-  var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-  var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-  var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
-  var allPosts = [];
-  var allAnnouncements = [];
-  var activeType = "all";
-  var activeCategory = "all";
-  var searchQuery = "";
-  var reactionsByPost = /* @__PURE__ */ new Map();
-  var commentsByPost = /* @__PURE__ */ new Map();
-  var LS_SAVED = "cstl-saved-v1";
-  function lsGet(key, fallback) {
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  function lsSet(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-    }
-  }
-  function getMyReaction(postId) {
-    const r = reactionsByPost.get(postId);
-    return r ? r.my : null;
-  }
-  function getReactionCounts(postId) {
-    const r = reactionsByPost.get(postId);
-    return r ? r.counts : {};
-  }
-  function getTotalReactionCount(postId) {
-    const counts = getReactionCounts(postId);
-    return Object.values(counts).reduce((s, n) => s + n, 0);
-  }
-  function getComments(postId) {
-    return commentsByPost.get(postId) || [];
-  }
-  function getSavedIds() {
-    return new Set(lsGet(LS_SAVED, []));
-  }
-  function isSaved(postId) {
-    return getSavedIds().has(postId);
-  }
-  function toggleSaved(postId) {
-    const arr = lsGet(LS_SAVED, []);
-    const idx = arr.indexOf(postId);
-    if (idx >= 0)
-      arr.splice(idx, 1);
-    else
-      arr.push(postId);
-    lsSet(LS_SAVED, arr);
-  }
-  function authorAvatar(author) {
-    const a = String(author || "").trim();
-    if (!a)
-      return '<span class="bd-avatar bd-avatar--anon">\u{1F464}</span>';
-    const letter = a.charAt(0).toUpperCase();
-    const hue = a.charCodeAt(0) * 47 % 360;
-    return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
-  }
-  function renderContact(contact) {
-    if (!contact)
-      return "";
-    const trimmed = String(contact).trim();
-    const isPhone2 = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
-    if (!isPhone2) {
-      return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
-    }
-    const tel = trimmed.replace(/[^\d+]/g, "");
-    return `
-    <div class="cm-board-contact cm-board-contact--phone">
-      <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-      <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
-        ${PHONE_ICON_SVG}
-      </a>
-    </div>
-  `;
-  }
-  function reactTriggerHtml(post) {
-    const myReaction = getMyReaction(post.id);
-    const counts = getReactionCounts(post.id);
-    const total = getTotalReactionCount(post.id);
-    const top3 = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    let content;
-    if (total === 0) {
-      content = `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
-    } else {
-      content = top3.map(([em, n]) => `
-      <span class="bd-react-trigger-group${em === myReaction ? " bd-react-trigger-group--mine" : ""}">
-        <span class="bd-react-trigger-emoji">${em}</span>
-        <span class="bd-react-trigger-count">${n}</span>
-      </span>
-    `).join("");
-    }
-    return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
-          data-react-trigger="${post.id}" aria-label="\u0420\u0435\u0430\u043A\u0446\u0456\u0457 (${total})">${content}</button>`;
-  }
-  function saveBtnHtml(post) {
-    const saved = isSaved(post.id);
-    return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
-          data-save-id="${post.id}"
-          aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
-    ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
-  </button>`;
-  }
-  function shareBtnHtml(post) {
-    const shareText = buildShareText(post);
-    const shareTitle = post.type === "greeting" ? `\u{1F389} ${post.title || "\u0412\u0456\u0442\u0430\u043D\u043D\u044F"} (CSTL LIFE)` : post.type === "chat" ? "\u0420\u043E\u0437\u043C\u043E\u0432\u0430 \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438" : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438";
-    return `<button class="bd-icon-btn bd-share-btn" type="button"
-          data-share-board
-          data-share-title="${escapeHtml(shareTitle)}"
-          data-share-text="${escapeHtml(shareText)}"
-          aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
-  }
-  function boardActionsHtml(post) {
-    return `
-    <div class="bd-actions bd-actions--board-compact">
-      ${reactTriggerHtml(post)}
-      <div class="bd-actions-extra">
-        ${saveBtnHtml(post)}
-        ${shareBtnHtml(post)}
-      </div>
-    </div>
-  `;
-  }
-  function greetingActionsHtml(post) {
-    return `
-    <div class="bd-actions">
-      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
-      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
-    </div>
-    ${chatCommentsHtml(post)}
-  `;
-  }
-  function chatActionsHtml(post) {
-    return `
-    <div class="bd-actions">
-      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
-      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
-    </div>
-    ${chatCommentsHtml(post)}
-  `;
-  }
-  function chatCommentsHtml(post) {
-    const items = getComments(post.id);
-    const listHtml = items.length ? items.map((c) => `
-        <div class="bd-inline-comment">
-          <span class="bd-inline-comment-author">${escapeHtml(c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
-          <span class="bd-inline-comment-time">${formatTime(postTime(c))}</span>
-        </div>
-      `).join("") : "";
-    return `
-    <div class="bd-inline-comments" data-comments-for="${post.id}">
-      ${listHtml ? `<div class="bd-inline-comments-list">${listHtml}</div>` : ""}
-      <form class="bd-inline-comment-form" data-comment-form="${post.id}">
-        <input class="bd-inline-comment-input" type="text"
-               placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440..." aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440"
-               data-comment-input="${post.id}">
-        <button class="bd-inline-comment-submit" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
-      </form>
-    </div>
-  `;
-  }
-  function openReactionPopup(triggerBtn, postId) {
-    closeReactionPopup();
-    const myReaction = getMyReaction(postId);
-    const counts = getReactionCounts(postId);
-    const popup = document.createElement("div");
-    popup.className = "bd-react-popup";
-    popup.id = "bd-react-popup";
-    popup.innerHTML = REACTIONS.map((em) => {
-      const n = counts[em] || 0;
-      return `
-      <button class="bd-react-opt${myReaction === em ? " bd-react-opt--active" : ""}" type="button"
-              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
-        <span class="bd-react-opt-emoji">${em}</span>
-        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ""}
-      </button>
-    `;
-    }).join("");
-    document.body.appendChild(popup);
-    const rect = triggerBtn.getBoundingClientRect();
-    const popupRect = popup.getBoundingClientRect();
-    let top = rect.top - popupRect.height - 8;
-    if (top < 8)
-      top = rect.bottom + 8;
-    let left = rect.left + rect.width / 2 - popupRect.width / 2;
-    if (left < 8)
-      left = 8;
-    if (left + popupRect.width > window.innerWidth - 8) {
-      left = window.innerWidth - popupRect.width - 8;
-    }
-    popup.style.top = `${top + window.scrollY}px`;
-    popup.style.left = `${left}px`;
-    requestAnimationFrame(() => popup.classList.add("visible"));
-  }
-  function closeReactionPopup() {
-    const existing = document.getElementById("bd-react-popup");
-    if (existing) {
-      existing.classList.remove("visible");
-      setTimeout(() => existing.remove(), 150);
-    }
-  }
-  function buildShareText(post) {
-    if (post.type === "board") {
-      const cat = CATEGORY_EMOJI2[post.category] || "\u{1F4CC}";
-      return `${cat} ${post.category}
-
-${post.text}
-\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
-    }
-    if (post.type === "chat") {
-      const tags = (post.tags || []).join(" ");
-      return `${post.text}${tags ? "\n\n" + tags : ""}
-\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
-    }
-    if (post.type === "greeting") {
-      return `${post.cover_emoji || "\u{1F389}"} ${post.title ? "\u0414\u043B\u044F " + post.title + ":\n" : ""}${post.text}${post.author ? "\n\u2014 " + post.author : ""}`;
-    }
-    return post.text || "";
-  }
-  function renderBoardCard(p) {
-    const tilt = p.id * 7 % 9 - 4;
-    const emoji = CATEGORY_EMOJI2[p.category] || "\u{1F4CC}";
-    const contactHtml = renderContact(p.contact);
-    const photoHtml = p.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
-    return `
-    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || "yellow")}${p.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
-      <span class="cm-board-pin"></span>
-      ${photoHtml}
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-      <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      <div class="cm-board-footer">
-        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
-      </div>
-      ${contactHtml}
-      ${boardActionsHtml(p)}
-    </article>
-  `;
-  }
-  function renderOfficialCard(a) {
-    const tilt = a.id * 5 % 5 - 2;
-    return `
-    <article class="cm-board-note bd-card bd-card--official cm-board-note--official" style="--tilt:${tilt}deg">
-      <span class="cm-board-pin cm-board-pin--gold"></span>
-      <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
-      <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
-      <p class="cm-board-text">${escapeHtml(a.body)}</p>
-      <div class="cm-board-footer">
-        <span class="cm-board-author">\u2014 ${escapeHtml(a.author || "\u2014")}</span>
-        <span class="cm-board-time">${formatTime(postTime(a))}</span>
-      </div>
-    </article>
-  `;
-  }
-  function renderChatCard(p) {
-    const tagsHtml = (p.tags || []).length ? `<div class="bd-chat-tags">${p.tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
-    const photoHtml = p.photo ? `<img class="bd-chat-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
-    return `
-    <article class="bd-card bd-card--chat" data-post-id="${p.id}">
-      <div class="bd-chat-head">
-        ${authorAvatar(p.author)}
-        <div class="bd-chat-meta">
-          <span class="bd-chat-author">${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-chat-time">${formatTime(postTime(p))}</span>
-        </div>
-      </div>
-      <p class="bd-chat-text">${escapeHtml(p.text)}</p>
-      ${photoHtml}
-      ${tagsHtml}
-      ${chatActionsHtml(p)}
-    </article>
-  `;
-  }
-  function renderGreetingCard(p) {
-    const grad = p.cover_gradient || "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)";
-    const emoji = p.cover_emoji || "\u{1F389}";
-    const titleLine = p.title ? `<div class="bd-greet-to">\u0414\u043B\u044F ${escapeHtml(p.title)}</div>` : "";
-    return `
-    <article class="bd-card bd-card--greeting" data-post-id="${p.id}">
-      <div class="bd-greet-cover" style="background:${escapeHtml(grad)}">
-        <span class="bd-greet-emoji">${emoji}</span>
-      </div>
-      <div class="bd-greet-body">
-        ${titleLine}
-        <p class="bd-greet-text">${escapeHtml(p.text)}</p>
-        <div class="bd-greet-footer">
-          <span class="bd-greet-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-greet-time">${formatTime(postTime(p))}</span>
-        </div>
-      </div>
-      ${greetingActionsHtml(p)}
-    </article>
-  `;
-  }
-  function renderCard(post) {
-    if (post.type === "chat")
-      return renderChatCard(post);
-    if (post.type === "greeting")
-      return renderGreetingCard(post);
-    return renderBoardCard(post);
-  }
-  function getFilteredPosts() {
-    const q = searchQuery.trim().toLowerCase();
-    const savedIds = activeType === "saved" ? getSavedIds() : null;
-    return allPosts.filter((p) => {
-      if (activeType === "saved") {
-        if (!savedIds.has(p.id))
-          return false;
-      } else if (activeType !== "all" && p.type !== activeType) {
-        return false;
-      }
-      if (activeType === "board" && activeCategory !== "all") {
-        if (p.category !== activeCategory)
-          return false;
-      }
-      if (q) {
-        const hay = [
-          p.text,
-          p.title,
-          p.author,
-          ...p.tags || []
-        ].filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q))
-          return false;
-      }
-      return true;
-    });
-  }
-  function renderHeader() {
-    const tabs = TYPE_TABS2.map((t) => `
-    <button class="bd-tab${t.id === activeType ? " bd-tab--active" : ""}" type="button" data-bd-tab="${t.id}">
-      <span class="bd-tab-emoji">${t.emoji}</span>
-      <span class="bd-tab-label">${escapeHtml(t.label)}</span>
-    </button>
-  `).join("");
-    const showCategories = activeType === "board";
-    const categoriesHtml = showCategories ? `
-    <div class="bd-categories">
-      ${BOARD_CATEGORIES2.map((c) => `
-        <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
-          <span class="bd-cat-emoji">${c.emoji}</span>
-          ${escapeHtml(c.label)}
-        </button>
-      `).join("")}
-    </div>
-  ` : "";
-    return `
-    <div class="bd-controls">
-      <div class="bd-search">
-        <span class="bd-search-icon">\u{1F50D}</span>
-        <input class="bd-search-input" id="bd-search-input" type="search"
-               placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..." value="${escapeHtml(searchQuery)}">
-        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
-      </div>
-      <div class="bd-tabs">${tabs}</div>
-      ${categoriesHtml}
-    </div>
-  `;
-  }
-  function renderBody() {
-    const filtered = getFilteredPosts();
-    if (!filtered.length) {
-      const msg = activeType === "saved" ? "\u0423 \xAB\u041C\u043E\u0457\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u0422\u0430\u043F\u043D\u0456\u0442\u044C \u{1F90D} \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438." : searchQuery ? `\u0417\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery)}\xBB \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E` : "\u0423 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
-      return `<div class="bd-empty">${msg}</div>`;
-    }
-    const sorted = [...filtered].sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    if (activeType === "board") {
-      const cards = sorted.map(renderBoardCard).join("");
-      return `
-      <div class="board-backdrop" id="board-backdrop"></div>
-      <div class="cm-board-corkboard board-corkboard--full">${cards}</div>
-    `;
-    }
-    if (activeType === "all") {
-      const officialCards = allAnnouncements.map(renderOfficialCard).join("");
-      const boardOnly = sorted.filter((p) => p.type === "board").map(renderBoardCard).join("");
-      const others = sorted.filter((p) => p.type !== "board").map(renderCard).join("");
-      return `
-      <div class="board-backdrop" id="board-backdrop"></div>
-      ${officialCards || boardOnly ? `<div class="cm-board-corkboard board-corkboard--full">${officialCards}${boardOnly}</div>` : ""}
-      ${others ? `<div class="bd-stream">${others}</div>` : ""}
-    `;
-    }
-    return `<div class="bd-stream">${sorted.map(renderCard).join("")}</div>`;
-  }
-  async function renderBoard() {
-    const el = document.getElementById("board-content");
-    if (!el)
-      return;
-    if (isSupabaseReady()) {
-      const anonId = getAnonId();
-      const [posts, anns, reactions, comments] = await Promise.all([
-        fetchPublishedPosts(),
-        fetchPublishedAnnouncements(),
-        fetchAllReactions(anonId),
-        fetchAllComments()
-      ]);
-      if (posts !== null) {
-        allPosts = posts;
-        allAnnouncements = anns || [];
-        reactionsByPost = reactions;
-        commentsByPost = comments;
-        renderAll(el);
-        return;
-      }
-    }
-    try {
-      const [boardRes, communityRes] = await Promise.all([
-        fetch("./data/community-board.json"),
-        fetch("./data/community.json")
-      ]);
-      const boardData = await boardRes.json();
-      const communityData = await communityRes.json();
-      allPosts = boardData.posts || [];
-      allAnnouncements = communityData.announcements || [];
-      reactionsByPost = /* @__PURE__ */ new Map();
-      commentsByPost = /* @__PURE__ */ new Map();
-    } catch {
-      el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
-      return;
-    }
-    renderAll(el);
-  }
-  function renderAll(el) {
-    el.innerHTML = `
-    ${renderHeader()}
-    <div class="bd-body" id="bd-body">${renderBody()}</div>
-    <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
-      <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
-      <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-    </button>
-  `;
-    document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
-    const searchInput = document.getElementById("bd-search-input");
-    if (searchInput) {
-      let debounce = null;
-      searchInput.addEventListener("input", (e) => {
-        searchQuery = e.target.value;
-        clearTimeout(debounce);
-        debounce = setTimeout(() => renderBodyOnly(el), 180);
-      });
-    }
-    document.getElementById("bd-search-clear")?.addEventListener("click", () => {
-      searchQuery = "";
-      renderAll(el);
-    });
-    el.querySelectorAll("[data-bd-tab]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeType = btn.dataset.bdTab;
-        activeCategory = "all";
-        renderAll(el);
-      });
-    });
-    el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeCategory = btn.dataset.bdCat;
-        renderAll(el);
-      });
-    });
-    el.querySelectorAll(".cm-board-call").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-      }, { capture: true });
-    });
-    initBoardNoteExpand(el);
-  }
-  function renderBodyOnly(el) {
-    const body = document.getElementById("bd-body");
-    if (!body)
-      return renderAll(el);
-    body.innerHTML = renderBody();
-    body.querySelectorAll(".cm-board-call").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-      }, { capture: true });
-    });
-    initBoardNoteExpand(el);
-  }
-  function initBoardNoteExpand(root) {
-    const backdrop = root.querySelector("#board-backdrop");
-    if (!backdrop)
-      return;
-    let activeNote = null;
-    let activeModal = null;
-    let isAnimating = false;
-    const DURATION = 240;
-    const expand = (note) => {
-      if (isAnimating || activeNote)
-        return;
-      isAnimating = true;
-      const modal = document.createElement("article");
-      modal.className = note.className + " cm-board-modal-note";
-      modal.innerHTML = note.innerHTML;
-      document.body.appendChild(modal);
-      modal.querySelectorAll(".cm-board-call").forEach((btn) => {
-        btn.addEventListener("click", (e) => {
-          e.stopPropagation();
-        }, { capture: true });
-      });
-      activeNote = note;
-      activeModal = modal;
-      note.classList.add("cm-board-note--hidden");
-      requestAnimationFrame(() => {
-        backdrop.classList.add("visible");
-        modal.classList.add("visible");
-      });
-      setTimeout(() => {
-        isAnimating = false;
-      }, DURATION);
-    };
-    const collapse = () => {
-      if (!activeNote || !activeModal || isAnimating)
-        return;
-      isAnimating = true;
-      const note = activeNote;
-      const modal = activeModal;
-      modal.classList.remove("visible");
-      backdrop.classList.remove("visible");
-      note.classList.remove("cm-board-note--hidden");
-      setTimeout(() => {
-        modal.remove();
-        activeNote = null;
-        activeModal = null;
-        isAnimating = false;
-      }, DURATION);
-    };
-    root.querySelectorAll(".cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)").forEach((note) => {
-      note.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (isAnimating)
-          return;
-        if (!activeNote)
-          expand(note);
-      });
-    });
-    backdrop.addEventListener("click", collapse);
-  }
-  var _delegationAttached = false;
-  function attachBoardDelegation() {
-    if (_delegationAttached)
-      return;
-    _delegationAttached = true;
-    document.addEventListener("submit", async (e) => {
-      const form = e.target.closest("[data-comment-form]");
-      if (!form)
-        return;
-      e.preventDefault();
-      e.stopPropagation();
-      const postId = Number(form.dataset.commentForm);
-      const input = form.querySelector("[data-comment-input]");
-      const text = (input?.value || "").trim();
-      if (!text) {
-        input?.focus();
-        return;
-      }
-      const tempComment = {
-        id: "temp-" + Date.now(),
-        post_id: postId,
-        author: null,
-        text,
-        created_at: (/* @__PURE__ */ new Date()).toISOString()
-      };
-      const list = commentsByPost.get(postId) || [];
-      list.push(tempComment);
-      commentsByPost.set(postId, list);
-      if (input)
-        input.value = "";
-      rerenderCommentsBlock(postId);
-      if (isSupabaseReady()) {
-        const result = await addComment(postId, null, text);
-        if (!result.ok) {
-          const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
-          commentsByPost.set(postId, filtered);
-          rerenderCommentsBlock(postId);
-          alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440: " + result.error);
-        } else if (result.comment) {
-          const updated = (commentsByPost.get(postId) || []).map(
-            (c) => c.id === tempComment.id ? result.comment : c
-          );
-          commentsByPost.set(postId, updated);
-          rerenderCommentsBlock(postId);
-        }
-      }
-    });
-    function rerenderCommentsBlock(postId) {
-      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-      if (!wrap)
-        return;
-      const post = allPosts.find((p) => p.id === postId);
-      if (!post)
-        return;
-      wrap.outerHTML = chatCommentsHtml(post);
-      setTimeout(() => {
-        document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
-      }, 50);
-    }
-    document.addEventListener("click", (e) => {
-      const trigger = e.target.closest("[data-react-trigger]");
-      if (trigger) {
-        e.stopPropagation();
-        const id = Number(trigger.dataset.reactTrigger);
-        const existing = document.getElementById("bd-react-popup");
-        if (existing && existing.dataset.forPost == id) {
-          closeReactionPopup();
-        } else {
-          openReactionPopup(trigger, id);
-          const p = document.getElementById("bd-react-popup");
-          if (p)
-            p.dataset.forPost = id;
-        }
-        return;
-      }
-      const opt = e.target.closest("[data-react-opt]");
-      if (opt) {
-        e.stopPropagation();
-        const id = Number(opt.dataset.reactPost);
-        const emoji = opt.dataset.reactOpt;
-        const current = getMyReaction(id);
-        const newReaction = current === emoji ? null : emoji;
-        const r = reactionsByPost.get(id) || { counts: {}, my: null };
-        if (r.my)
-          r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
-        if (newReaction)
-          r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
-        r.my = newReaction;
-        reactionsByPost.set(id, r);
-        closeReactionPopup();
-        document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach((btn) => {
-          btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === id) || { id });
-        });
-        if (isSupabaseReady()) {
-          setReaction(id, getAnonId(), newReaction).then((result) => {
-            if (!result.ok) {
-              console.warn("[reactions] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F:", result.error);
-            }
-          });
-        }
-        return;
-      }
-      if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
-        e.stopPropagation();
-        return;
-      }
-      const saveBtn = e.target.closest("[data-save-id]");
-      if (saveBtn) {
-        e.stopPropagation();
-        const id = Number(saveBtn.dataset.saveId);
-        toggleSaved(id);
-        const nowSaved = isSaved(id);
-        saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
-        saveBtn.classList.toggle("bd-bookmark--active", nowSaved);
-        saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
-        if (activeType === "saved" && !nowSaved) {
-          const el = document.getElementById("board-content");
-          if (el)
-            renderBodyOnly(el);
-        }
-        return;
-      }
-      const shareBtn = e.target.closest("[data-share-board]");
-      if (shareBtn) {
-        e.stopPropagation();
-        sharePost({
-          title: shareBtn.dataset.shareTitle,
-          text: shareBtn.dataset.shareText
-        });
-        return;
-      }
-      if (document.getElementById("bd-react-popup") && !e.target.closest(".bd-react-popup")) {
-        closeReactionPopup();
-      }
-    }, { capture: true });
-  }
-  function onReactionRealtimeEvent(payload) {
-    const row = payload.new || payload.old;
-    if (!row || !row.post_id)
-      return;
-    const postId = row.post_id;
-    const anonId = getAnonId();
-    fetchAllReactions(anonId).then((fresh) => {
-      const r = fresh.get(postId) || { counts: {}, my: null };
-      reactionsByPost.set(postId, r);
-      document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
-        btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === postId) || { id: postId });
-      });
-    });
-  }
-  function onCommentRealtimeEvent(payload) {
-    const postId = (payload.new || payload.old || {}).post_id;
-    if (!postId)
-      return;
-    fetchAllComments().then((fresh) => {
-      commentsByPost = fresh;
-      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-      if (wrap) {
-        const post = allPosts.find((p) => p.id === postId);
-        if (post)
-          wrap.outerHTML = chatCommentsHtml(post);
-      }
-    });
-  }
-  var _realtimeAttached = false;
-  function attachRealtime() {
-    if (_realtimeAttached || !isSupabaseReady())
-      return;
-    _realtimeAttached = true;
-    subscribeReactions(onReactionRealtimeEvent);
-    subscribeComments(onCommentRealtimeEvent);
-  }
-  function initBoard() {
-    attachBoardDelegation();
-    attachRealtime();
-    renderBoard();
   }
 
   // src/app.js

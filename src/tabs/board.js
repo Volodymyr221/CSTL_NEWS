@@ -925,6 +925,17 @@ function attachRealtime() {
   subscribeComments(onCommentRealtimeEvent);
 }
 
+// Зовнішнє переключення активного типу (для CTA з міні-блока Дошки на Громаді).
+// type: 'all' | 'board' | 'chat' | 'greeting' | 'saved'
+export function setBoardActiveType(type) {
+  if (!type) return;
+  activeType = type;
+  activeCategory = 'all';
+  searchQuery = '';
+  const el = document.getElementById('board-content');
+  if (el) renderAll(el);
+}
+
 export function initBoard() {
   attachBoardDelegation();
   attachRealtime();
