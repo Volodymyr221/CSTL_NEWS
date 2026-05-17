@@ -424,9 +424,11 @@ const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let currentUser = null;       // user object з Supabase Auth
 let isAdmin = false;          // прапорець після перевірки у admins
 let activeTab = 'pending';    // pending | announcements | admins
-let pendingPosts = [];
-let announcements = [];
-let admins = [];
+let pendingPosts   = [];
+let publishedPosts = [];
+let announcements  = [];
+let admins         = [];
+let comments       = [];
 
 // ── ENTRY: перевіряємо сесію, або рендеримо login ──────────────────────
 async function init() {
@@ -575,14 +577,18 @@ VALUES ('${escapeHtml(currentUser.email)}', 'Імʼя');</code>
 
 // ── ДАНІ: завантажити все паралельно ──────────────────────────────────
 async function loadAll() {
-  const [posts, ann, ad] = await Promise.all([
+  const [pending, published, ann, ad, com] = await Promise.all([
     supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
+    supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
     supa.from('announcements').select('*').order('created_at', { ascending: false }),
     supa.from('admins').select('*').order('created_at', { ascending: true }),
+    supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
   ]);
-  pendingPosts = posts.data || [];
-  announcements = ann.data || [];
-  admins = ad.data || [];
+  pendingPosts   = pending.data   || [];
+  publishedPosts = published.data || [];
+  announcements  = ann.data       || [];
+  admins         = ad.data        || [];
+  comments       = com.data       || [];
 }
 
 // ── APP VIEW: таби ────────────────────────────────────────────────────
@@ -595,6 +601,14 @@ function renderApp() {
       </button>
       <button class="tab ${activeTab === 'announcements' ? 'active' : ''}" data-tab="announcements">
         🏛️ Оголошення
+      </button>
+      <button class="tab ${activeTab === 'published' ? 'active' : ''}" data-tab="published">
+        ✓ Опубліковані
+        <span class="tab-count">${publishedPosts.length}</span>
+      </button>
+      <button class="tab ${activeTab === 'comments' ? 'active' : ''}" data-tab="comments">
+        💬 Коментарі
+        <span class="tab-count">${comments.length}</span>
       </button>
       <button class="tab ${activeTab === 'admins' ? 'active' : ''}" data-tab="admins">
         👥 Адміни
@@ -619,6 +633,8 @@ function renderTabContent() {
   const el = document.getElementById('tab-content');
   if (!el) return;
   if (activeTab === 'pending')        return renderPending(el);
+  if (activeTab === 'published')      return renderPublished(el);
+  if (activeTab === 'comments')       return renderCommentsModeration(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'settings')       return renderSettings(el);
@@ -683,6 +699,90 @@ async function deletePost(id) {
   if (error) return showToast('Помилка: ' + error.message, 4000);
   showToast('Видалено');
   await loadAll(); renderApp();
+}
+
+// ── TAB: опубліковані пости (фільтр + delete для anti-spam) ───────────
+function renderPublished(el) {
+  if (!publishedPosts.length) {
+    el.innerHTML = '<div class="empty">Опублікованих постів ще немає.</div>';
+    return;
+  }
+  el.innerHTML = `
+    <div class="section-title">Усього на дошці: ${publishedPosts.length}</div>
+    ${publishedPosts.map(p => `
+      <article class="card">
+        <div class="card-meta">
+          <span class="badge badge--type">${escapeHtml(typeLabel(p.type))}</span>
+          ${p.category ? `<span class="badge badge--cat">${escapeHtml(p.category)}</span>` : ''}
+          ${p.location ? `<span class="badge badge--loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+          <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(p.published_at || p.created_at))}</span>
+        </div>
+        ${p.title ? `<div style="font-weight:600;margin-bottom:4px">${escapeHtml(p.title)}</div>` : ''}
+        <p class="card-text">${escapeHtml(p.text)}</p>
+        ${(p.tags && p.tags.length) ? `<div style="margin-bottom:8px">${p.tags.map(t => `<span style="font-size:12px;color:#1a73e8;background:rgba(26,115,232,0.08);padding:2px 8px;border-radius:8px;margin-right:4px">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+        ${p.contact ? `<div style="font-size:13px;color:#555;margin-bottom:8px">📞 ${escapeHtml(p.contact)}</div>` : ''}
+        <p class="card-author">— ${escapeHtml(p.author || 'анонімно')}</p>
+        <div class="card-actions">
+          <button class="btn btn--reject"  data-unpublish="${p.id}">⊘ Зняти з публікації</button>
+          <button class="btn btn--delete"  data-delete-pub="${p.id}">🗑 Видалити</button>
+        </div>
+      </article>
+    `).join('')}
+  `;
+
+  el.querySelectorAll('[data-unpublish]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Зняти пост з публікації (зробити rejected)?')) return;
+    const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', Number(b.dataset.unpublish));
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Знято з публікації');
+    await loadAll(); renderApp();
+  }));
+  el.querySelectorAll('[data-delete-pub]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePub))));
+}
+
+// ── TAB: модерація коментарів (видалити спам) ─────────────────────────
+function renderCommentsModeration(el) {
+  if (!comments.length) {
+    el.innerHTML = '<div class="empty">Коментарів ще немає.</div>';
+    return;
+  }
+  // Мапа postId → текст поста для контексту
+  const postMap = new Map();
+  [...publishedPosts, ...pendingPosts].forEach(p => postMap.set(p.id, p));
+
+  el.innerHTML = `
+    <div class="section-title">Усього коментарів: ${comments.length}</div>
+    ${comments.map(c => {
+      const parentPost = postMap.get(c.post_id);
+      const parentSnippet = parentPost
+        ? (parentPost.text || '').slice(0, 80) + ((parentPost.text || '').length > 80 ? '…' : '')
+        : `(пост #${c.post_id} не знайдено)`;
+      return `
+        <article class="card">
+          <div class="card-meta">
+            <span class="badge">пост #${c.post_id}</span>
+            ${parentPost ? `<span class="badge badge--type">${escapeHtml(typeLabel(parentPost.type))}</span>` : ''}
+            <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(c.created_at))}</span>
+          </div>
+          <div style="font-size:12px;color:#888;font-style:italic;margin-bottom:6px;border-left:3px solid #ddd;padding-left:8px">
+            ${escapeHtml(parentSnippet)}
+          </div>
+          <p class="card-text"><strong style="color:#722F37">${escapeHtml(c.author || 'анонімно')}:</strong> ${escapeHtml(c.text)}</p>
+          <div class="card-actions">
+            <button class="btn btn--delete" data-delete-comment="${c.id}">🗑 Видалити коментар</button>
+          </div>
+        </article>
+      `;
+    }).join('')}
+  `;
+
+  el.querySelectorAll('[data-delete-comment]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Видалити коментар назавжди?')) return;
+    const { error } = await supa.from('comments').delete().eq('id', Number(b.dataset.deleteComment));
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Коментар видалено');
+    await loadAll(); renderApp();
+  }));
 }
 
 // ── TAB 2: офіційні оголошення ────────────────────────────────────────
