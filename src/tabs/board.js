@@ -162,11 +162,29 @@ function renderContact(contact) {
 
 function reactTriggerHtml(post) {
   const myReaction = getMyReaction(post.id);
-  const label = myReaction
-    ? `<span class="bd-react-trigger-emoji">${myReaction}</span>`
-    : `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
+  const counts    = getReactionCounts(post.id);
+  const total     = getTotalReactionCount(post.id);
+
+  // Топ-3 emoji за кількістю натискань усіх юзерів
+  const top3 = Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([emoji]) => emoji);
+
+  let content;
+  if (total === 0) {
+    // Ніхто ще не реагував — показуємо запрошення
+    content = `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
+  } else {
+    // Топ-3 emoji + загальний counter. Моя виділена.
+    const emojiHtml = top3.map(em =>
+      `<span class="bd-react-trigger-emoji${em === myReaction ? ' bd-react-trigger-emoji--mine' : ''}">${em}</span>`
+    ).join('');
+    content = emojiHtml + `<span class="bd-react-trigger-count">${total}</span>`;
+  }
+
   return `<button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
-          data-react-trigger="${post.id}" aria-label="Поставити реакцію">${label}</button>`;
+          data-react-trigger="${post.id}" aria-label="Реакції (${total})">${content}</button>`;
 }
 
 function saveBtnHtml(post) {
