@@ -362,6 +362,7 @@
   ];
   var _boardMiniTypeIdx = 0;
   var _boardMiniData = { userPosts: [], official: [] };
+  var _boardMiniDir = 1;
   var BUS_PREFS_KEY = "bus_prefs_v2";
   function weatherCodeInfo(code) {
     if (code === 0)
@@ -624,10 +625,11 @@
     const cardsHtml = items.length ? items.map((item) => renderMiniCard(item, cfg.id)).join("") : emptyHtml;
     const isCorkType = cfg.id === "board" || cfg.id === "official";
     const innerHtml = isCorkType ? `<div class="cm-board-corkboard cm-board-corkboard--mini">${cardsHtml}</div>` : `<div class="cm-board-mini-stream">${cardsHtml}</div>`;
+    const slideClass = _boardMiniDir < 0 ? " bd-mini-slide-back" : "";
     el.innerHTML = `
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
       ${labelHtml}
-      <div class="cm-board-mini-content">${innerHtml}</div>
+      <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
       <button class="cm-board-preview-cta" type="button" data-switch-tab="board">
         \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192
       </button>
@@ -638,10 +640,12 @@
       attachSwipe(
         wrap,
         () => {
+          _boardMiniDir = 1;
           _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length;
           renderBoardMiniSlide(el);
         },
         () => {
+          _boardMiniDir = -1;
           _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length;
           renderBoardMiniSlide(el);
         }
@@ -649,7 +653,9 @@
       wrap.querySelectorAll(".cm-board-mini-dot").forEach((dot) => {
         dot.addEventListener("click", (e) => {
           e.stopPropagation();
-          _boardMiniTypeIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
+          const newIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
+          _boardMiniDir = newIdx > _boardMiniTypeIdx ? 1 : -1;
+          _boardMiniTypeIdx = newIdx;
           renderBoardMiniSlide(el);
         });
       });
