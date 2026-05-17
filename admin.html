@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="theme-color" content="#722F37">
+  <meta name="description" content="Адмінка CSTL LIFE — модерація Дошки громади">
+  <meta name="apple-mobile-web-app-title" content="CSTL Admin">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <title>CSTL LIFE — Адмінка</title>
+
+  <!--
+    ⚙️  НАЛАШТУВАННЯ:
+    Після створення Supabase проекту встав сюди:
+      1. SUPABASE_URL з Project Settings → API → Project URL
+      2. SUPABASE_ANON_KEY з Project Settings → API → anon public
+
+    Поки порожньо — адмінка покаже повідомлення «не налаштовано».
+  -->
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #F4F1E6;
+      color: #1a1a1a;
+      line-height: 1.5;
+      min-height: 100vh;
+      padding-bottom: 40px;
+    }
+
+    /* ── HEADER ──────────────────────────────────────────────────────── */
+    .header {
+      background: #722F37;
+      color: white;
+      padding: 14px 18px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+    }
+    .header-brand {
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+    .header-logo { font-size: 18px; font-weight: 700; letter-spacing: 0.3px; }
+    .header-tag {
+      font-size: 11px;
+      background: rgba(255,255,255,0.18);
+      padding: 2px 8px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .header-user {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+    }
+    .header-email {
+      opacity: 0.85;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .btn-logout {
+      background: rgba(255,255,255,0.18);
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 8px;
+      font-size: 12px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .btn-logout:active { background: rgba(255,255,255,0.30); }
+
+    /* ── MAIN ────────────────────────────────────────────────────────── */
+    .main {
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    /* ── LOGIN VIEW ──────────────────────────────────────────────────── */
+    .login-card {
+      background: white;
+      border-radius: 18px;
+      padding: 30px 24px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.06);
+      max-width: 420px;
+      margin: 60px auto 0;
+      text-align: center;
+    }
+    .login-icon { font-size: 40px; margin-bottom: 14px; }
+    .login-title { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+    .login-sub { color: #666; font-size: 14px; margin-bottom: 24px; }
+    .login-form {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .login-input {
+      width: 100%;
+      padding: 14px 16px;
+      border: 1px solid #e5e5e5;
+      border-radius: 12px;
+      font-size: 16px;
+      font-family: inherit;
+      outline: none;
+    }
+    .login-input:focus { border-color: #722F37; }
+    .login-btn {
+      width: 100%;
+      padding: 14px;
+      background: #722F37;
+      color: white;
+      border: none;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .login-btn:active { background: #5A2329; }
+    .login-btn:disabled { background: #999; cursor: wait; }
+
+    .login-info {
+      background: #f5f5f5;
+      border-left: 3px solid #722F37;
+      padding: 12px 14px;
+      margin-top: 18px;
+      border-radius: 0 8px 8px 0;
+      font-size: 13px;
+      color: #555;
+      text-align: left;
+    }
+
+    /* ── TABS ───────────────────────────────────────────────────────── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: #EAE4D2;
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 8px;
+      background: transparent;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 13px;
+      font-family: inherit;
+      color: #666;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+    .tab.active {
+      background: white;
+      color: #722F37;
+      font-weight: 600;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+    }
+    .tab-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 20px;
+      height: 20px;
+      padding: 0 5px;
+      background: #722F37;
+      color: white;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+    .tab:not(.active) .tab-count { background: #999; }
+
+    /* ── CARDS ──────────────────────────────────────────────────────── */
+    .section-title {
+      font-size: 13px;
+      color: #888;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 14px 16px;
+      margin-bottom: 10px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .card-meta {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 3px;
+      padding: 2px 9px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 600;
+      background: #f5f5f5;
+      color: #666;
+    }
+    .badge--type { background: #C5E1A5; color: #2e5e1f; }
+    .badge--cat { background: #FFE89C; color: #5C3F0E; }
+    .badge--loc { background: #C5DDFB; color: #14365C; }
+
+    .card-text {
+      font-size: 14px;
+      line-height: 1.5;
+      color: #1a1a1a;
+      margin-bottom: 6px;
+      word-wrap: break-word;
+    }
+    .card-author {
+      font-size: 12px;
+      color: #888;
+      font-style: italic;
+      margin-bottom: 10px;
+    }
+    .card-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      border-top: 1px solid #f0f0f0;
+      padding-top: 10px;
+      margin-top: 8px;
+    }
+    .btn {
+      padding: 8px 14px;
+      border: none;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+      transition: transform 0.08s, background 0.15s;
+    }
+    .btn:active { transform: scale(0.96); }
+    .btn--approve { background: #2E5E1F; color: white; }
+    .btn--approve:hover { background: #245017; }
+    .btn--reject  { background: #FFE89C; color: #5C3F0E; }
+    .btn--delete  { background: transparent; color: #C41E3A; border: 1px solid #ffd2d9; }
+    .btn--delete:hover { background: #ffe9ed; }
+    .btn--primary { background: #722F37; color: white; }
+    .btn--primary:active { background: #5A2329; }
+
+    /* ── ADD FORM ─────────────────────────────────────────────────── */
+    .add-form {
+      background: white;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .add-form-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #722F37;
+      margin-bottom: 4px;
+    }
+    .input, .textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid #e5e5e5;
+      border-radius: 10px;
+      font-size: 14px;
+      font-family: inherit;
+      outline: none;
+    }
+    .input:focus, .textarea:focus { border-color: #722F37; }
+    .textarea { resize: vertical; min-height: 60px; }
+
+    /* ── EMPTY / LOADING ──────────────────────────────────────────── */
+    .empty {
+      text-align: center;
+      padding: 50px 20px;
+      color: #888;
+      font-size: 14px;
+    }
+    .loading { text-align: center; padding: 30px; color: #888; }
+
+    /* ── NOT CONFIGURED ───────────────────────────────────────────── */
+    .not-configured {
+      background: #FFF3CD;
+      border: 1px solid #FFE69C;
+      border-radius: 14px;
+      padding: 20px;
+      margin-top: 30px;
+      color: #5C3F0E;
+    }
+    .not-configured-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; }
+    .not-configured code {
+      display: block;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      padding: 10px;
+      margin: 8px 0;
+      font-family: 'SF Mono', Monaco, Consolas, monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }
+
+    /* ── TOAST ────────────────────────────────────────────────────── */
+    .toast {
+      position: fixed;
+      bottom: 30px;
+      left: 50%;
+      transform: translateX(-50%) translateY(80px);
+      background: #1a1a1a;
+      color: white;
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.30);
+      opacity: 0;
+      transition: opacity 0.2s, transform 0.2s;
+      z-index: 999;
+    }
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+<header class="header">
+  <div class="header-brand">
+    <span class="header-logo">CSTL LIFE</span>
+    <span class="header-tag">Адмінка</span>
+  </div>
+  <div class="header-user" id="header-user" style="display:none">
+    <span class="header-email" id="header-email"></span>
+    <button class="btn-logout" id="btn-logout">Вийти</button>
+  </div>
+</header>
+
+<main class="main" id="main">
+  <div class="loading">Завантаження…</div>
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- Supabase JS SDK з CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+
+<script>
+// ════════════════════════════════════════════════════════════════════════
+//  ⚙️ КОНФІГ — встав сюди ключі з Supabase після створення проекту
+//     Project Settings → API
+// ════════════════════════════════════════════════════════════════════════
+const SUPABASE_URL      = '';   // приклад: 'https://xxxxxx.supabase.co'
+const SUPABASE_ANON_KEY = '';   // приклад: 'eyJhbG...'
+// ════════════════════════════════════════════════════════════════════════
+
+const mainEl = document.getElementById('main');
+const userEl = document.getElementById('header-user');
+const emailEl = document.getElementById('header-email');
+const toastEl = document.getElementById('toast');
+
+function showToast(msg, ms = 2500) {
+  toastEl.textContent = msg;
+  toastEl.classList.add('show');
+  setTimeout(() => toastEl.classList.remove('show'), ms);
+}
+
+function escapeHtml(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function formatDate(ts) {
+  if (!ts) return '';
+  const d = new Date(typeof ts === 'number' ? ts : ts);
+  return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
+}
+
+// ── Якщо ключі не задані — показати інструкцію ─────────────────────────
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  mainEl.innerHTML = `
+    <div class="not-configured">
+      <div class="not-configured-title">⚙️ Адмінка не налаштована</div>
+      <p>Зайди у Supabase → Project Settings → API, скопіюй URL та anon-key, і встав їх у файл <code>admin.html</code>:</p>
+      <code>const SUPABASE_URL      = 'https://xxxxxx.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbG...';</code>
+      <p>Після збереження зміни → пушнути у git → задеплоїти. Адмінка одразу запрацює.</p>
+    </div>
+  `;
+  throw new Error('Supabase not configured');
+}
+
+const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+});
+
+// ── Поточний стан ───────────────────────────────────────────────────────
+let currentUser = null;       // user object з Supabase Auth
+let isAdmin = false;          // прапорець після перевірки у admins
+let activeTab = 'pending';    // pending | announcements | admins
+let pendingPosts = [];
+let announcements = [];
+let admins = [];
+
+// ── ENTRY: перевіряємо сесію, або рендеримо login ──────────────────────
+async function init() {
+  const { data: { session } } = await supa.auth.getSession();
+  await handleSession(session);
+
+  // Слухаємо зміни сесії (вхід / вихід / token refresh)
+  supa.auth.onAuthStateChange(async (event, session) => {
+    await handleSession(session);
+  });
+}
+
+async function handleSession(session) {
+  currentUser = session?.user || null;
+  if (!currentUser) {
+    renderLogin();
+    userEl.style.display = 'none';
+    return;
+  }
+  // Перевіряємо чи ця пошта є у whitelist admins
+  const { data, error } = await supa.from('admins').select('email').eq('email', currentUser.email);
+  isAdmin = !error && data && data.length > 0;
+
+  emailEl.textContent = currentUser.email;
+  userEl.style.display = 'flex';
+
+  if (!isAdmin) {
+    renderNoAccess();
+    return;
+  }
+  await loadAll();
+  renderApp();
+}
+
+// ── LOGIN VIEW ─────────────────────────────────────────────────────────
+function renderLogin() {
+  mainEl.innerHTML = `
+    <div class="login-card">
+      <div class="login-icon">🔐</div>
+      <h1 class="login-title">Вхід у адмінку</h1>
+      <p class="login-sub">Введи свою пошту — на неї прийде посилання для входу.</p>
+      <form class="login-form" id="login-form">
+        <input class="login-input" id="login-email" type="email" placeholder="ваша@пошта.com" required autocomplete="email">
+        <button class="login-btn" id="login-btn" type="submit">Надіслати посилання</button>
+      </form>
+      <div class="login-info">
+        Без пароля. Безпечно: лише власник пошти зможе зайти.
+        Якщо твоя пошта не у списку адмінів — увійти зможеш, але адмінку не побачиш.
+      </div>
+    </div>
+  `;
+  document.getElementById('login-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('login-email').value.trim();
+    const btn = document.getElementById('login-btn');
+    if (!email) return;
+    btn.disabled = true;
+    btn.textContent = 'Надсилаємо…';
+    const { error } = await supa.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href }
+    });
+    btn.disabled = false;
+    btn.textContent = 'Надіслати посилання';
+    if (error) {
+      showToast('Помилка: ' + error.message, 4000);
+    } else {
+      mainEl.innerHTML = `
+        <div class="login-card">
+          <div class="login-icon">📬</div>
+          <h1 class="login-title">Перевір пошту</h1>
+          <p class="login-sub">Надіслали посилання на <strong>${escapeHtml(email)}</strong>.<br>
+          Клікни — і будеш у адмінці.</p>
+          <div class="login-info">
+            Не прийшло? Перевір спам. Або повторно введи пошту і надішли ще раз.
+          </div>
+        </div>
+      `;
+    }
+  });
+}
+
+function renderNoAccess() {
+  mainEl.innerHTML = `
+    <div class="login-card">
+      <div class="login-icon">🚫</div>
+      <h1 class="login-title">Немає доступу</h1>
+      <p class="login-sub">Твоя пошта <strong>${escapeHtml(currentUser.email)}</strong> не у списку адмінів.</p>
+      <div class="login-info">
+        Якщо це помилка — попроси існуючого адміна додати твою пошту через SQL:
+        <code style="display:block;background:#fff;padding:8px;border-radius:6px;margin-top:8px;font-family:monospace;font-size:12px">INSERT INTO admins (email, name)
+VALUES ('${escapeHtml(currentUser.email)}', 'Імʼя');</code>
+      </div>
+      <button class="login-btn" style="margin-top:18px" onclick="window.supabase_logout()">Вийти і ввести іншу пошту</button>
+    </div>
+  `;
+}
+
+// ── ДАНІ: завантажити все паралельно ──────────────────────────────────
+async function loadAll() {
+  const [posts, ann, ad] = await Promise.all([
+    supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
+    supa.from('announcements').select('*').order('created_at', { ascending: false }),
+    supa.from('admins').select('*').order('created_at', { ascending: true }),
+  ]);
+  pendingPosts = posts.data || [];
+  announcements = ann.data || [];
+  admins = ad.data || [];
+}
+
+// ── APP VIEW: таби ────────────────────────────────────────────────────
+function renderApp() {
+  mainEl.innerHTML = `
+    <div class="tabs">
+      <button class="tab ${activeTab === 'pending' ? 'active' : ''}" data-tab="pending">
+        📋 Модерація
+        ${pendingPosts.length ? `<span class="tab-count">${pendingPosts.length}</span>` : ''}
+      </button>
+      <button class="tab ${activeTab === 'announcements' ? 'active' : ''}" data-tab="announcements">
+        🏛️ Оголошення
+      </button>
+      <button class="tab ${activeTab === 'admins' ? 'active' : ''}" data-tab="admins">
+        👥 Адміни
+        <span class="tab-count">${admins.length}</span>
+      </button>
+    </div>
+    <div id="tab-content"></div>
+  `;
+  document.querySelectorAll('.tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeTab = btn.dataset.tab;
+      renderApp();
+    });
+  });
+  renderTabContent();
+}
+
+function renderTabContent() {
+  const el = document.getElementById('tab-content');
+  if (!el) return;
+  if (activeTab === 'pending')        return renderPending(el);
+  if (activeTab === 'announcements')  return renderAnnouncements(el);
+  if (activeTab === 'admins')         return renderAdmins(el);
+}
+
+// ── TAB 1: модерація постів ───────────────────────────────────────────
+function renderPending(el) {
+  if (!pendingPosts.length) {
+    el.innerHTML = '<div class="empty">Усі пости перевірені ✓<br>Нових заявок на модерацію немає.</div>';
+    return;
+  }
+  el.innerHTML = pendingPosts.map(p => `
+    <article class="card">
+      <div class="card-meta">
+        <span class="badge badge--type">${escapeHtml(typeLabel(p.type))}</span>
+        ${p.category ? `<span class="badge badge--cat">${escapeHtml(p.category)}</span>` : ''}
+        ${p.location ? `<span class="badge badge--loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+        <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(p.created_at))}</span>
+      </div>
+      ${p.title ? `<div style="font-weight:600;margin-bottom:4px">${escapeHtml(p.title)}</div>` : ''}
+      <p class="card-text">${escapeHtml(p.text)}</p>
+      ${(p.tags && p.tags.length) ? `<div style="margin-bottom:8px">${p.tags.map(t => `<span style="font-size:12px;color:#1a73e8;background:rgba(26,115,232,0.08);padding:2px 8px;border-radius:8px;margin-right:4px">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      ${p.contact ? `<div style="font-size:13px;color:#555;margin-bottom:8px">📞 ${escapeHtml(p.contact)}</div>` : ''}
+      <p class="card-author">— ${escapeHtml(p.author || 'анонімно')}</p>
+      <div class="card-actions">
+        <button class="btn btn--approve" data-approve="${p.id}">✓ Опублікувати</button>
+        <button class="btn btn--reject"  data-reject="${p.id}">⊘ Відхилити</button>
+        <button class="btn btn--delete"  data-delete-post="${p.id}">🗑 Видалити</button>
+      </div>
+    </article>
+  `).join('');
+
+  el.querySelectorAll('[data-approve]').forEach(b => b.addEventListener('click', () => approvePost(Number(b.dataset.approve))));
+  el.querySelectorAll('[data-reject]').forEach(b => b.addEventListener('click', () => rejectPost(Number(b.dataset.reject))));
+  el.querySelectorAll('[data-delete-post]').forEach(b => b.addEventListener('click', () => deletePost(Number(b.dataset.deletePost))));
+}
+
+function typeLabel(t) {
+  return t === 'chat' ? '💬 розмова' : t === 'greeting' ? '🎉 вітання' : '🛒 оголошення';
+}
+
+async function approvePost(id) {
+  const { error } = await supa.from('posts').update({
+    status: 'published',
+    published_at: new Date().toISOString(),
+  }).eq('id', id);
+  if (error) return showToast('Помилка: ' + error.message, 4000);
+  showToast('Опубліковано ✓');
+  await loadAll(); renderApp();
+}
+
+async function rejectPost(id) {
+  const { error } = await supa.from('posts').update({ status: 'rejected' }).eq('id', id);
+  if (error) return showToast('Помилка: ' + error.message, 4000);
+  showToast('Відхилено');
+  await loadAll(); renderApp();
+}
+
+async function deletePost(id) {
+  if (!confirm('Видалити пост назавжди? Цю дію не скасувати.')) return;
+  const { error } = await supa.from('posts').delete().eq('id', id);
+  if (error) return showToast('Помилка: ' + error.message, 4000);
+  showToast('Видалено');
+  await loadAll(); renderApp();
+}
+
+// ── TAB 2: офіційні оголошення ────────────────────────────────────────
+function renderAnnouncements(el) {
+  el.innerHTML = `
+    <form class="add-form" id="ann-form">
+      <div class="add-form-title">+ Додати оголошення</div>
+      <input class="input" id="ann-title" type="text" placeholder="Заголовок (наприклад: «Графік прийому громадян»)" required>
+      <textarea class="textarea" id="ann-body" placeholder="Текст оголошення..." required></textarea>
+      <input class="input" id="ann-author" type="text" placeholder="Автор (Олицька сільська рада)" required>
+      <label style="font-size:13px;color:#555;display:flex;align-items:center;gap:8px;cursor:pointer">
+        <input type="checkbox" id="ann-pinned" style="width:16px;height:16px"> Закріпити зверху (📌)
+      </label>
+      <button class="btn btn--primary" type="submit">Опублікувати</button>
+    </form>
+
+    <div class="section-title">Опубліковані (${announcements.length})</div>
+    ${announcements.length === 0 ? '<div class="empty">Жодного оголошення</div>' : announcements.map(a => `
+      <article class="card">
+        <div class="card-meta">
+          ${a.pinned ? '<span class="badge" style="background:#FFD700;color:#5C3F0E">📌 Закріплено</span>' : ''}
+          <span class="badge">${escapeHtml(a.status || 'published')}</span>
+          <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(a.created_at))}</span>
+        </div>
+        <div style="font-weight:600;margin-bottom:4px">${escapeHtml(a.title)}</div>
+        <p class="card-text">${escapeHtml(a.body)}</p>
+        <p class="card-author">— ${escapeHtml(a.author || '—')}</p>
+        <div class="card-actions">
+          <button class="btn btn--delete" data-delete-ann="${a.id}">🗑 Видалити</button>
+        </div>
+      </article>
+    `).join('')}
+  `;
+
+  document.getElementById('ann-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const title  = document.getElementById('ann-title').value.trim();
+    const body   = document.getElementById('ann-body').value.trim();
+    const author = document.getElementById('ann-author').value.trim();
+    const pinned = document.getElementById('ann-pinned').checked;
+    if (!title || !body) return;
+    const { error } = await supa.from('announcements').insert({
+      title, body, author, pinned,
+      status: 'published',
+      published_at: new Date().toISOString(),
+      ts: Date.now(),
+    });
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Додано ✓');
+    await loadAll(); renderApp();
+  });
+
+  el.querySelectorAll('[data-delete-ann]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Видалити оголошення?')) return;
+    const { error } = await supa.from('announcements').delete().eq('id', Number(b.dataset.deleteAnn));
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Видалено');
+    await loadAll(); renderApp();
+  }));
+}
+
+// ── TAB 3: адміни ─────────────────────────────────────────────────────
+function renderAdmins(el) {
+  el.innerHTML = `
+    <form class="add-form" id="admin-form">
+      <div class="add-form-title">+ Додати адміна</div>
+      <input class="input" id="adm-email" type="email" placeholder="email@example.com" required autocomplete="off">
+      <input class="input" id="adm-name"  type="text"  placeholder="Імʼя (опційно)">
+      <button class="btn btn--primary" type="submit">Додати</button>
+    </form>
+
+    <div class="section-title">Поточні адміни (${admins.length})</div>
+    ${admins.map(a => `
+      <article class="card" style="display:flex;align-items:center;gap:12px">
+        <div style="flex:1">
+          <div style="font-weight:600">${escapeHtml(a.name || '—')}</div>
+          <div style="font-size:13px;color:#666">${escapeHtml(a.email)}</div>
+          <div style="font-size:11px;color:#999;margin-top:3px">додано ${escapeHtml(formatDate(a.created_at))}</div>
+        </div>
+        ${a.email === currentUser.email
+          ? '<span class="badge" style="background:#C5E1A5;color:#2e5e1f">це ви</span>'
+          : `<button class="btn btn--delete" data-delete-admin="${escapeHtml(a.email)}">🗑 Прибрати</button>`}
+      </article>
+    `).join('')}
+  `;
+
+  document.getElementById('admin-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('adm-email').value.trim().toLowerCase();
+    const name  = document.getElementById('adm-name').value.trim() || null;
+    if (!email) return;
+    const { error } = await supa.from('admins').insert({ email, name });
+    if (error) {
+      if (error.code === '23505') showToast('Ця пошта вже є у списку');
+      else showToast('Помилка: ' + error.message, 4000);
+      return;
+    }
+    showToast('Адмін доданий ✓');
+    await loadAll(); renderApp();
+  });
+
+  el.querySelectorAll('[data-delete-admin]').forEach(b => b.addEventListener('click', async () => {
+    const email = b.dataset.deleteAdmin;
+    if (!confirm(`Прибрати ${email} зі списку адмінів?`)) return;
+    const { error } = await supa.from('admins').delete().eq('email', email);
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Прибрано');
+    await loadAll(); renderApp();
+  }));
+}
+
+// ── LOGOUT ────────────────────────────────────────────────────────────
+window.supabase_logout = async () => {
+  await supa.auth.signOut();
+  location.reload();
+};
+document.getElementById('btn-logout').addEventListener('click', window.supabase_logout);
+
+// Старт
+init();
+</script>
+
+</body>
+</html>
