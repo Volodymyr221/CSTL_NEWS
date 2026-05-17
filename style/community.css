@@ -1082,6 +1082,135 @@
 }
 .cm-board-preview:active { opacity: 0.82; }
 
+/* Swipe-варіант — без opacity на active бо це блокує сприйняття свайпу */
+.cm-board-preview--swipe { touch-action: pan-y; }
+.cm-board-preview--swipe:active { opacity: 1; }
+
+/* Заголовок з типом і точками-індикаторами */
+.cm-board-mini-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px 10px;
+  font-size: 13px;
+}
+.cm-board-mini-emoji { font-size: 15px; }
+.cm-board-mini-name {
+  font-weight: 600;
+  color: var(--black);
+}
+.cm-board-mini-dots {
+  margin-left: auto;
+  display: flex;
+  gap: 5px;
+}
+.cm-board-mini-dot {
+  width: 6px; height: 6px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.18);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.cm-board-mini-dot.active {
+  background: var(--red);
+  transform: scale(1.3);
+}
+
+.cm-board-mini-content { min-height: 130px; }
+
+.cm-board-mini-empty {
+  padding: 40px 18px;
+  text-align: center;
+  color: var(--gray);
+  font-size: 13px;
+}
+
+/* Стрічка для chat/greeting у міні-блоці */
+.cm-board-mini-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 14px;
+}
+
+/* Mini-картка розмови */
+.cm-mini-chat {
+  display: flex;
+  gap: 10px;
+  background: var(--card-cream);
+  border-radius: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--paper-deep);
+}
+.cm-mini-chat-avatar {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.cm-mini-chat-body { flex: 1; min-width: 0; }
+.cm-mini-chat-author {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--red);
+  margin-bottom: 2px;
+}
+.cm-mini-chat-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--black);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Mini-картка вітання */
+.cm-mini-greet {
+  display: flex;
+  gap: 10px;
+  background: white;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+}
+.cm-mini-greet-cover {
+  width: 70px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.cm-mini-greet-emoji {
+  font-size: 32px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+}
+.cm-mini-greet-body {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px 10px 0;
+}
+.cm-mini-greet-to {
+  font-size: 11px;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  font-weight: 600;
+  margin-bottom: 3px;
+}
+.cm-mini-greet-text {
+  font-size: 13px;
+  line-height: 1.4;
+  color: var(--black);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
 .cm-board-preview-empty {
   padding: 18px;
   color: var(--gray);
@@ -1570,9 +1699,24 @@
   margin-left: 1px;
 }
 .bd-react-trigger-emoji {
-  font-size: 17px;
+  font-size: 16px;
   line-height: 1;
+  margin-left: -2px;        /* злегка наклавши emoji як у Facebook */
 }
+.bd-react-trigger-emoji:first-child { margin-left: 0; }
+.bd-react-trigger-emoji--mine {
+  filter: drop-shadow(0 0 2px rgba(114, 47, 55, 0.55));
+  transform: scale(1.15);
+  z-index: 1;
+}
+.bd-react-trigger-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+  margin-left: 4px;
+  font-variant-numeric: tabular-nums;
+}
+.bd-react-trigger--active .bd-react-trigger-count { color: var(--red); }
 
 /* Попап з вибором емоції — над тригером, capsule з 8 emoji */
 .bd-react-popup {

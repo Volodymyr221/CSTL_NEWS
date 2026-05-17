@@ -322,6 +322,14 @@
   }
 
   // src/tabs/community-blocks.js
+  var BOARD_MINI_TYPES = [
+    { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
+    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
+    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" },
+    { id: "greeting", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F", emoji: "\u{1F389}" }
+  ];
+  var _boardMiniTypeIdx = 0;
+  var _boardMiniData = { userPosts: [], official: [] };
   var BUS_PREFS_KEY = "bus_prefs_v2";
   function weatherCodeInfo(code) {
     if (code === 0)
@@ -512,10 +520,8 @@
     const el = document.getElementById("cm-board-content");
     if (!el)
       return;
-    let userPosts = [];
-    let official = [];
     try {
-      let usedSupabase = false;
+      let userPosts = [], official = [], usedSupabase = false;
       if (isSupabaseReady()) {
         const [posts, anns] = await Promise.all([
           fetchPublishedPosts(),
@@ -545,54 +551,131 @@
           return (b.ts || 0) - (a.ts || 0);
         });
       }
-      const totalCount = official.length + userPosts.length;
-      if (!totalCount) {
-        el.innerHTML = `<div class="cm-board-preview-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
-        return;
-      }
-      const all = [
-        ...official.map((a) => ({ type: "official", title: a.title, text: a.body, ts: a.ts, id: a.id })),
-        ...userPosts.map((p) => ({ type: "user", category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color, photo: p.photo }))
-      ].sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      const first = all[0];
-      const withPhoto = all.find((item) => item !== first && item.photo);
-      const second = withPhoto || all[1];
-      const merged = [first, second].filter(Boolean);
-      const stickersHtml = merged.map((item) => {
-        const tilt = item.id * 7 % 9 - 4;
-        const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
-        if (item.type === "official") {
-          return `
-          <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
-            <span class="cm-board-pin cm-board-pin--gold"></span>
-            <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
-            <p class="cm-board-text">${escapeHtml(item.title)}</p>
-          </article>
-        `;
-        }
-        const emoji = CATEGORY_EMOJI[item.category] || "\u{1F4CC}";
-        return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin"></span>
-          ${photoHtml}
-          <span class="cm-board-cat">${emoji} ${escapeHtml(item.category)}</span>
-          <p class="cm-board-text">${escapeHtml(item.text)}</p>
-        </article>
-      `;
-      }).join("");
-      el.innerHTML = `
-      <div class="cm-board-preview" data-switch-tab="board">
-        <div class="cm-board-corkboard cm-board-corkboard--mini">
-          ${stickersHtml}
-        </div>
-        <button class="cm-board-preview-cta" type="button">
-          \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192
-        </button>
-      </div>
-    `;
+      _boardMiniData = { userPosts, official };
+      renderBoardMiniSlide(el);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
+  }
+  function renderBoardMiniSlide(el) {
+    const cfg = BOARD_MINI_TYPES[_boardMiniTypeIdx];
+    const { userPosts, official } = _boardMiniData;
+    let items = [];
+    if (cfg.id === "official") {
+      items = official.slice(0, 2).map((a) => ({ kind: "official", title: a.title, text: a.body, ts: a.ts, id: a.id }));
+    } else {
+      items = userPosts.filter((p) => (p.type || "board") === cfg.id).slice(0, 2).map((p) => ({
+        kind: cfg.id,
+        id: p.id,
+        ts: p.ts || p.created_at && new Date(p.created_at).getTime(),
+        category: p.category,
+        text: p.text,
+        title: p.title,
+        color: p.color,
+        photo: p.photo,
+        cover_emoji: p.cover_emoji,
+        cover_gradient: p.cover_gradient,
+        author: p.author
+      }));
+    }
+    const dotsHtml = BOARD_MINI_TYPES.map(
+      (t, i) => `<span class="cm-board-mini-dot${i === _boardMiniTypeIdx ? " active" : ""}" data-mini-idx="${i}"></span>`
+    ).join("");
+    const labelHtml = `
+    <div class="cm-board-mini-label">
+      <span class="cm-board-mini-emoji">${cfg.emoji}</span>
+      <span class="cm-board-mini-name">${escapeHtml(cfg.label)}</span>
+      <span class="cm-board-mini-dots">${dotsHtml}</span>
+    </div>
+  `;
+    const emptyHtml = `<div class="cm-board-mini-empty">\u0423 \xAB${escapeHtml(cfg.label)}\xBB \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>`;
+    const cardsHtml = items.length ? items.map((item) => renderMiniCard(item, cfg.id)).join("") : emptyHtml;
+    const isCorkType = cfg.id === "board" || cfg.id === "official";
+    const innerHtml = isCorkType ? `<div class="cm-board-corkboard cm-board-corkboard--mini">${cardsHtml}</div>` : `<div class="cm-board-mini-stream">${cardsHtml}</div>`;
+    el.innerHTML = `
+    <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
+      ${labelHtml}
+      <div class="cm-board-mini-content">${innerHtml}</div>
+      <button class="cm-board-preview-cta" type="button" data-switch-tab="board">
+        \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 \u0434\u043E\u0448\u043A\u0443 \u2192
+      </button>
+    </div>
+  `;
+    const wrap = document.getElementById("cm-board-preview");
+    if (wrap) {
+      attachSwipe(
+        wrap,
+        () => {
+          _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length;
+          renderBoardMiniSlide(el);
+        },
+        () => {
+          _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length;
+          renderBoardMiniSlide(el);
+        }
+      );
+      wrap.querySelectorAll(".cm-board-mini-dot").forEach((dot) => {
+        dot.addEventListener("click", (e) => {
+          e.stopPropagation();
+          _boardMiniTypeIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
+          renderBoardMiniSlide(el);
+        });
+      });
+    }
+  }
+  function renderMiniCard(item, type) {
+    const tilt = item.id * 7 % 9 - 4;
+    if (type === "official") {
+      return `
+      <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
+        <span class="cm-board-pin cm-board-pin--gold"></span>
+        <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
+        <p class="cm-board-text">${escapeHtml(item.title)}</p>
+      </article>
+    `;
+    }
+    if (type === "board") {
+      const emoji = CATEGORY_EMOJI[item.category] || "\u{1F4CC}";
+      const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
+      return `
+      <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
+        <span class="cm-board-pin"></span>
+        ${photoHtml}
+        <span class="cm-board-cat">${emoji} ${escapeHtml(item.category || "")}</span>
+        <p class="cm-board-text">${escapeHtml(item.text)}</p>
+      </article>
+    `;
+    }
+    if (type === "chat") {
+      const initial = item.author ? item.author.charAt(0).toUpperCase() : "\u{1F464}";
+      const hue = item.author ? item.author.charCodeAt(0) * 47 % 360 : 0;
+      const avatarStyle = item.author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
+      return `
+      <article class="cm-mini-chat">
+        <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
+        <div class="cm-mini-chat-body">
+          <div class="cm-mini-chat-author">${escapeHtml(item.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</div>
+          <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
+        </div>
+      </article>
+    `;
+    }
+    if (type === "greeting") {
+      const grad = item.cover_gradient || "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)";
+      const emoji = item.cover_emoji || "\u{1F389}";
+      return `
+      <article class="cm-mini-greet">
+        <div class="cm-mini-greet-cover" style="background:${escapeHtml(grad)}">
+          <span class="cm-mini-greet-emoji">${emoji}</span>
+        </div>
+        <div class="cm-mini-greet-body">
+          ${item.title ? `<div class="cm-mini-greet-to">\u0414\u043B\u044F ${escapeHtml(item.title)}</div>` : ""}
+          <p class="cm-mini-greet-text">${escapeHtml(item.text)}</p>
+        </div>
+      </article>
+    `;
+    }
+    return "";
   }
   var OTG_VILLAGES = [
     "\u041E\u043B\u0438\u043A\u0430",
@@ -2908,6 +2991,14 @@ END:VEVENT`
     const r = reactionsByPost.get(postId);
     return r ? r.my : null;
   }
+  function getReactionCounts(postId) {
+    const r = reactionsByPost.get(postId);
+    return r ? r.counts : {};
+  }
+  function getTotalReactionCount(postId) {
+    const counts = getReactionCounts(postId);
+    return Object.values(counts).reduce((s, n) => s + n, 0);
+  }
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
   }
@@ -2954,9 +3045,20 @@ END:VEVENT`
   }
   function reactTriggerHtml(post) {
     const myReaction = getMyReaction(post.id);
-    const label = myReaction ? `<span class="bd-react-trigger-emoji">${myReaction}</span>` : `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
+    const counts = getReactionCounts(post.id);
+    const total = getTotalReactionCount(post.id);
+    const top3 = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([emoji]) => emoji);
+    let content;
+    if (total === 0) {
+      content = `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
+    } else {
+      const emojiHtml = top3.map(
+        (em) => `<span class="bd-react-trigger-emoji${em === myReaction ? " bd-react-trigger-emoji--mine" : ""}">${em}</span>`
+      ).join("");
+      content = emojiHtml + `<span class="bd-react-trigger-count">${total}</span>`;
+    }
     return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
-          data-react-trigger="${post.id}" aria-label="\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0440\u0435\u0430\u043A\u0446\u0456\u044E">${label}</button>`;
+          data-react-trigger="${post.id}" aria-label="\u0420\u0435\u0430\u043A\u0446\u0456\u0457 (${total})">${content}</button>`;
   }
   function saveBtnHtml(post) {
     const saved = isSaved(post.id);

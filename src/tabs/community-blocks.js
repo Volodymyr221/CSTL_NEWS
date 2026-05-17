@@ -6,8 +6,18 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
+
+// Типи у міні-блоці Дошки — свайп циклічно
+const BOARD_MINI_TYPES = [
+  { id: 'official', label: 'Офіційні', emoji: '🏛️' },
+  { id: 'board',    label: 'Дошка',    emoji: '🛒' },
+  { id: 'chat',     label: 'Розмови',  emoji: '💬' },
+  { id: 'greeting', label: 'Вітання',  emoji: '🎉' },
+];
+let _boardMiniTypeIdx = 0;   // індекс активного типу
+let _boardMiniData    = { userPosts: [], official: [] };   // кеш даних щоб не запитувати при свайпі
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
@@ -281,18 +291,16 @@ const CATEGORY_EMOJI = {
   'оголошення':  '📢',
 };
 
-// Міні-блок Дошки (preview-картка) — компактна коркова дошка з 2 стікерами.
-// Повна Дошка відкривається у вкладці switchTab('board').
+// Міні-блок Дошки — свайпом перемикається тип: Офіційні → Дошка → Розмови → Вітання.
+// Повна Дошка відкривається тапом на CTA внизу.
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
   if (!el) return;
 
-  let userPosts = [];
-  let official = [];
-
   try {
-    // 1. Supabase спочатку (published posts + announcements)
-    let usedSupabase = false;
+    // 1. Завантажуємо дані — Supabase спочатку, JSON якщо не вийшло
+    let userPosts = [], official = [], usedSupabase = false;
+
     if (isSupabaseReady()) {
       const [posts, anns] = await Promise.all([
         fetchPublishedPosts(),
@@ -308,7 +316,6 @@ export async function renderBoardBlock() {
       }
     }
 
-    // 2. Fallback на JSON якщо БД не дала даних
     if (!usedSupabase) {
       const [boardRes, communityRes] = await Promise.all([
         fetch('./data/community-board.json'),
@@ -322,64 +329,148 @@ export async function renderBoardBlock() {
         return (b.ts || 0) - (a.ts || 0);
       });
     }
-    const totalCount = official.length + userPosts.length;
 
-    if (!totalCount) {
-      el.innerHTML = `<div class="cm-board-preview-empty">На дошці поки порожньо.</div>`;
-      return;
-    }
-
-    // Беремо до 2 свіжих стікерів. Пріоритет — стікер з фото (візуально цікаво).
-    const all = [
-      ...official.map(a => ({ type: 'official', title: a.title, text: a.body, ts: a.ts, id: a.id })),
-      ...userPosts.map(p => ({ type: 'user', category: p.category, text: p.text, ts: p.ts, id: p.id, color: p.color, photo: p.photo })),
-    ].sort((a, b) => (b.ts || 0) - (a.ts || 0));
-
-    // Першим — найсвіжіший. Другим — найсвіжіший серед тих що мають фото
-    // (якщо такий є і він не той самий). Інакше — другий найсвіжіший.
-    const first = all[0];
-    const withPhoto = all.find(item => item !== first && item.photo);
-    const second = withPhoto || all[1];
-    const merged = [first, second].filter(Boolean);
-
-    const stickersHtml = merged.map(item => {
-      const tilt = ((item.id * 7) % 9) - 4;
-      const photoHtml = item.photo
-        ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
-        : '';
-      if (item.type === 'official') {
-        return `
-          <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
-            <span class="cm-board-pin cm-board-pin--gold"></span>
-            <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
-            <p class="cm-board-text">${escapeHtml(item.title)}</p>
-          </article>
-        `;
-      }
-      const emoji = CATEGORY_EMOJI[item.category] || '📌';
-      return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(item.color || 'yellow')} cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin"></span>
-          ${photoHtml}
-          <span class="cm-board-cat">${emoji} ${escapeHtml(item.category)}</span>
-          <p class="cm-board-text">${escapeHtml(item.text)}</p>
-        </article>
-      `;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="cm-board-preview" data-switch-tab="board">
-        <div class="cm-board-corkboard cm-board-corkboard--mini">
-          ${stickersHtml}
-        </div>
-        <button class="cm-board-preview-cta" type="button">
-          Перейти на дошку →
-        </button>
-      </div>
-    `;
+    _boardMiniData = { userPosts, official };
+    renderBoardMiniSlide(el);
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Дошка тимчасово недоступна</div>';
   }
+}
+
+// Рендеримо ОДИН слайд міні-блоку (для активного типу). Свайп змінює _boardMiniTypeIdx.
+function renderBoardMiniSlide(el) {
+  const cfg     = BOARD_MINI_TYPES[_boardMiniTypeIdx];
+  const { userPosts, official } = _boardMiniData;
+
+  // Беремо до 2 пости активного типу
+  let items = [];
+  if (cfg.id === 'official') {
+    items = official.slice(0, 2).map(a => ({ kind: 'official', title: a.title, text: a.body, ts: a.ts, id: a.id }));
+  } else {
+    items = userPosts
+      .filter(p => (p.type || 'board') === cfg.id)
+      .slice(0, 2)
+      .map(p => ({
+        kind: cfg.id, id: p.id, ts: p.ts || (p.created_at && new Date(p.created_at).getTime()),
+        category: p.category, text: p.text, title: p.title, color: p.color, photo: p.photo,
+        cover_emoji: p.cover_emoji, cover_gradient: p.cover_gradient, author: p.author,
+      }));
+  }
+
+  const dotsHtml = BOARD_MINI_TYPES.map((t, i) =>
+    `<span class="cm-board-mini-dot${i === _boardMiniTypeIdx ? ' active' : ''}" data-mini-idx="${i}"></span>`
+  ).join('');
+
+  const labelHtml = `
+    <div class="cm-board-mini-label">
+      <span class="cm-board-mini-emoji">${cfg.emoji}</span>
+      <span class="cm-board-mini-name">${escapeHtml(cfg.label)}</span>
+      <span class="cm-board-mini-dots">${dotsHtml}</span>
+    </div>
+  `;
+
+  const emptyHtml = `<div class="cm-board-mini-empty">У «${escapeHtml(cfg.label)}» поки порожньо</div>`;
+
+  const cardsHtml = items.length ? items.map(item => renderMiniCard(item, cfg.id)).join('') : emptyHtml;
+
+  // BOARD — корок зі стікерами (з нахилами і шпильками)
+  // CHAT/GREETING/OFFICIAL — простіший лейаут без корки
+  const isCorkType = cfg.id === 'board' || cfg.id === 'official';
+  const innerHtml = isCorkType
+    ? `<div class="cm-board-corkboard cm-board-corkboard--mini">${cardsHtml}</div>`
+    : `<div class="cm-board-mini-stream">${cardsHtml}</div>`;
+
+  el.innerHTML = `
+    <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
+      ${labelHtml}
+      <div class="cm-board-mini-content">${innerHtml}</div>
+      <button class="cm-board-preview-cta" type="button" data-switch-tab="board">
+        Перейти на дошку →
+      </button>
+    </div>
+  `;
+
+  // Свайп
+  const wrap = document.getElementById('cm-board-preview');
+  if (wrap) {
+    attachSwipe(wrap,
+      () => { _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); },
+      () => { _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); }
+    );
+    // Клік на dot — перехід на відповідний тип
+    wrap.querySelectorAll('.cm-board-mini-dot').forEach(dot => {
+      dot.addEventListener('click', e => {
+        e.stopPropagation();
+        _boardMiniTypeIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
+        renderBoardMiniSlide(el);
+      });
+    });
+  }
+}
+
+// Рендер однієї карточки в міні-блоці. Стиль залежить від типу.
+function renderMiniCard(item, type) {
+  const tilt = ((item.id * 7) % 9) - 4;
+
+  if (type === 'official') {
+    return `
+      <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
+        <span class="cm-board-pin cm-board-pin--gold"></span>
+        <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
+        <p class="cm-board-text">${escapeHtml(item.title)}</p>
+      </article>
+    `;
+  }
+
+  if (type === 'board') {
+    const emoji = CATEGORY_EMOJI[item.category] || '📌';
+    const photoHtml = item.photo
+      ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
+      : '';
+    return `
+      <article class="cm-board-note cm-board-note--${escapeHtml(item.color || 'yellow')} cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
+        <span class="cm-board-pin"></span>
+        ${photoHtml}
+        <span class="cm-board-cat">${emoji} ${escapeHtml(item.category || '')}</span>
+        <p class="cm-board-text">${escapeHtml(item.text)}</p>
+      </article>
+    `;
+  }
+
+  if (type === 'chat') {
+    const initial = item.author ? item.author.charAt(0).toUpperCase() : '👤';
+    const hue = item.author ? (item.author.charCodeAt(0) * 47) % 360 : 0;
+    const avatarStyle = item.author
+      ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600`
+      : 'background:#f5f5f5;color:#666;font-size:18px';
+    return `
+      <article class="cm-mini-chat">
+        <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
+        <div class="cm-mini-chat-body">
+          <div class="cm-mini-chat-author">${escapeHtml(item.author || 'анонімно')}</div>
+          <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
+        </div>
+      </article>
+    `;
+  }
+
+  if (type === 'greeting') {
+    const grad  = item.cover_gradient || 'linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)';
+    const emoji = item.cover_emoji || '🎉';
+    return `
+      <article class="cm-mini-greet">
+        <div class="cm-mini-greet-cover" style="background:${escapeHtml(grad)}">
+          <span class="cm-mini-greet-emoji">${emoji}</span>
+        </div>
+        <div class="cm-mini-greet-body">
+          ${item.title ? `<div class="cm-mini-greet-to">Для ${escapeHtml(item.title)}</div>` : ''}
+          <p class="cm-mini-greet-text">${escapeHtml(item.text)}</p>
+        </div>
+      </article>
+    `;
+  }
+
+  return '';
 }
 
 // ── Блок 5: Найближча подія громади (фільтр по 17 селах ОТГ) ─────────────────
