@@ -225,3 +225,57 @@ html, body {
   user-select: none;
 }
 
+/* ===== SHARE BUTTON (📤 Web Share API, віральність 17.05.2026) =====
+   Два варіанти:
+   - .share-btn--inline — поряд з іншою CTA (модалка новини, картка події)
+   - .share-btn--corner — крихітна іконка у кутку (стікер Дошки) */
+.share-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  background: var(--gray-light);
+  color: var(--black);
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.1s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+.share-btn:active {
+  background: var(--paper-deep);
+  transform: scale(0.96);
+}
+
+.share-btn--inline {
+  padding: 8px 14px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.share-btn--corner {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(4px);
+  font-size: 14px;
+  padding: 0;
+  z-index: 2;
+}
+.share-btn--corner:active {
+  background: rgba(255, 255, 255, 1);
+}
+
+/* article-source-row тепер flex: автор зліва, дії справа в один ряд */
+.article-source-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+

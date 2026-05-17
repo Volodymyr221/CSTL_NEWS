@@ -59,16 +59,16 @@
 | ☐ | Прайс-лист PDF (200-800 грн/міс залежно від формату). Роздати власникам бізнесу в Олиці на касах |
 | ☐ | Перші 3-5 безкоштовних реклам як кейси (Smoke_Castle, Kino_Castle, друзі-підприємці) |
 
-### Стратегія віральності — Web Share API
+### Стратегія віральності — Web Share API ✅ ЗАВЕРШЕНО (2026-05-17)
 > Обговорено 13.05. Швидкий патч до Дошки 2.0 для прискорення розповсюдження.
 
 | ✓ | Задача |
 |---|--------|
-| ☐ | Додати `sharePost({title, text, url})` у `src/core/utils.js`. Використовує `navigator.share()` (iOS Safari, Chrome Android) з fallback на `navigator.clipboard.writeText` + toast «Скопійовано посилання» |
-| ☐ | Кнопка 📤 «Поділитися» у **модалці статті** (`src/tabs/news.js openArticle`) — поряд з «Читати оригінал →». Це найголовніше: читач → одразу шле у Viber/Telegram |
-| ☐ | Кнопка 📤 на **папірцях Дошки громади** (`src/tabs/community-blocks.js renderBoardBlock`) — у кутику кожного `cm-board-note`. Для конкретного оголошення «Продам корову» → пересилка одним тапом |
-| ☐ | Кнопка 📤 на **картці події** (`src/tabs/events.js` модалка деталів) — «Концерт 25 травня → ходімо?» |
-| ☐ | Стилі для `.share-btn` у `style/base.css` або `style/buttons.css` |
+| ✅ | ~~`sharePost({title, text, url})` у `src/core/utils.js`~~ — `navigator.share()` з fallback на `clipboard.writeText` + toast |
+| ✅ | ~~Кнопка 📤 у **модалці статті**~~ — `data-share-article` + delegated listener у `attachNewsListeners` |
+| ✅ | ~~Кнопка 📤 на **папірцях Дошки**~~ — `share-btn--corner` у кутику `cm-board-note`, document-level listener (бо стікер клонується у zoom-модалку) |
+| ✅ | ~~Кнопка 📤 на **картці події**~~ — `ev-share-btn` у `ev-detail-body` поряд з нагадуванням |
+| ✅ | ~~Стилі для `.share-btn`~~ у `style/base.css` (`--inline` + `--corner` варіанти) |
 
 **Очікуваний ефект:** кожен пост стає вхідною воронкою → жителька шле сусідці → та ставить PWA → +1 user. Це частина плану зростання аудиторії 100→500/день до серпня 2026.
 
@@ -173,3 +173,6 @@
 | 2026-05-17 | **Tier 6: 📰 Новини** — magazine-cover featured (Georgia serif 22px) + 8 CATEGORY_COLORS + 4 GEO_COLORS + ексклюзив золотий | *(серія)* |
 | 2026-05-17 | **B-15 закрито** — event delegation у `news.js` (3 inline onclick → `data-geo` + `data-article-id` + 2 listener-и на батьках). `setGeoFilter`/`openArticle` прибрано з `window.*` | — |
 | 2026-05-17 | **Cleanup хвостів документації** — синхронізовано BACKLOG/SESSION_STATE/ROADMAP/BUGS/START_HERE з реальним станом (Tier-и закриті, дублі прибрані, CACHE_NAME актуалізовано) | `edcb379` |
+| 2026-05-17 | **B-21 закрито** — event delegation для 7× `switchTab` у `community.js` + `community-blocks.js`. `data-switch-tab` атрибути + один listener на `#cm-content` | `5a9f28d` |
+| 2026-05-17 | **Data prep для Supabase** — `community-board.json` + `community.json` отримали поля `type`/`status`/`location`/`published_at` під майбутню схему `posts`. Прибрано 3× Picsum URL | `d457ffd` |
+| 2026-05-17 | **Web Share API (sharePost)** — `navigator.share()` з clipboard-fallback. Кнопки 📤 у модалці статті, на стікерах Дошки, у деталях події. CSS `.share-btn` у base.css | — |

@@ -69,6 +69,38 @@ export async function getCityName(lat, lon) {
   }
 }
 
+// Web Share API — поділитись контентом через рідне меню iOS/Android.
+// iOS Safari відкриває меню з Viber/Telegram/Messenger/SMS одним тапом.
+// Fallback: copy URL у clipboard + toast «Скопійовано».
+// Стратегія віральності з docs/COMMUNITY_BOARD_VISION.md.
+export async function sharePost({ title, text, url }) {
+  const shareData = {
+    title: title || 'CSTL LIFE',
+    text:  text || '',
+    url:   url || location.href,
+  };
+  // iOS Safari + Chrome Android підтримують navigator.share()
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+      return true;
+    } catch (err) {
+      // AbortError = користувач закрив меню. Це не помилка.
+      if (err && err.name === 'AbortError') return false;
+      // Інша помилка → fallback на clipboard
+    }
+  }
+  // Fallback: копія URL у буфер обміну
+  try {
+    await navigator.clipboard.writeText(shareData.url);
+    showToast('Скопійовано посилання', 2500);
+    return true;
+  } catch {
+    showToast('Не вдалось поділитись', 2500);
+    return false;
+  }
+}
+
 // Показати toast-повідомлення (маленьке сповіщення знизу екрану)
 export function showToast(msg, duration = 3000) {
   let toast = document.getElementById('cstl-toast');

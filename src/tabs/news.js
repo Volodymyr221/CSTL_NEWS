@@ -1,4 +1,4 @@
-import { formatTime, escapeHtml } from '../core/utils.js';
+import { formatTime, escapeHtml, sharePost } from '../core/utils.js';
 
 let allArticles = [];
 let activeGeo = 'Всі';
@@ -62,6 +62,21 @@ function attachNewsListeners() {
       if (!card) return;
       const id = Number(card.dataset.articleId);
       if (Number.isFinite(id)) openArticle(id);
+    });
+  }
+
+  // Кнопка 📤 «Поділитись» у модалці статті — Web Share API + fallback на clipboard.
+  // Стратегія віральності з docs/COMMUNITY_BOARD_VISION.md.
+  const modal = document.getElementById('article-modal');
+  if (modal) {
+    modal.addEventListener('click', e => {
+      const btn = e.target.closest('[data-share-article]');
+      if (!btn) return;
+      sharePost({
+        title: btn.dataset.shareTitle,
+        text:  btn.dataset.shareText,
+        url:   btn.dataset.shareUrl,
+      });
     });
   }
 }
@@ -201,9 +216,18 @@ function openArticle(id) {
     ` : ''}
     <div class="article-source-row">
       <span class="article-source-author"><strong>Автор публікації:</strong><br>${escapeHtml(article.source)}</span>
-      ${article.sourceUrl
-        ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
-        : ''}
+      <div class="article-source-actions">
+        <button class="share-btn share-btn--inline" type="button"
+                data-share-article
+                data-share-title="${escapeHtml(article.title)}"
+                data-share-text="${escapeHtml(article.excerpt || '')}"
+                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
+          📤 Поділитись
+        </button>
+        ${article.sourceUrl
+          ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
+          : ''}
+      </div>
     </div>
   `;
 

@@ -1,4 +1,4 @@
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, sharePost } from '../core/utils.js';
 
 // Категорії для фільтрів (categories for filters)
 const CATEGORY_FILTERS = ['Всі', 'Свята', 'Культура', 'Спорт', 'Благодійність'];
@@ -182,6 +182,9 @@ function cardHtml(ev) {
             </svg>
             Створити нагадування
           </button>
+          <button class="ev-share-btn share-btn share-btn--inline" type="button" data-share-event data-id="${ev.id}">
+            📤 Поділитись
+          </button>
           <button class="ev-detail-close" type="button">Згорнути ↑</button>
         </div>
       </div>
@@ -335,8 +338,9 @@ function renderList() {
         card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         return;
       }
-      // Клік на кнопку нагадування — обробляється окремим listener нижче
+      // Клік на кнопку нагадування / поділитись — обробляються окремими listener-ами
       if (e.target.closest('.ev-ics-btn')) return;
+      if (e.target.closest('.ev-share-btn')) return;
 
       card.classList.toggle('expanded');
     });
@@ -348,6 +352,23 @@ function renderList() {
       e.stopPropagation();
       const ev = allEvents.find(ev => ev.id === Number(btn.dataset.id));
       if (ev) downloadIcs(ev);
+    });
+  });
+
+  // Кнопка 📤 «Поділитись» — Web Share API + fallback на clipboard
+  el.querySelectorAll('.ev-share-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const ev = allEvents.find(ev => ev.id === Number(btn.dataset.id));
+      if (!ev) return;
+      const when = ev.time
+        ? `${formatFullDate(ev.date)}, ${ev.time}`
+        : formatFullDate(ev.date);
+      const loc = ev.location ? ` · ${ev.location}` : '';
+      sharePost({
+        title: ev.title,
+        text:  `📅 ${ev.title}\n${when}${loc}\n\n${ev.description}`,
+      });
     });
   });
 }

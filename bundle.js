@@ -98,6 +98,30 @@
       return "\u041E\u043B\u0438\u043A\u0430";
     }
   }
+  async function sharePost({ title, text, url }) {
+    const shareData = {
+      title: title || "CSTL LIFE",
+      text: text || "",
+      url: url || location.href
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return true;
+      } catch (err) {
+        if (err && err.name === "AbortError")
+          return false;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareData.url);
+      showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 2500);
+      return true;
+    } catch {
+      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C", 2500);
+      return false;
+    }
+  }
   function showToast(msg, duration = 3e3) {
     let toast = document.getElementById("cstl-toast");
     if (!toast) {
@@ -765,6 +789,19 @@
           openArticle(id);
       });
     }
+    const modal = document.getElementById("article-modal");
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-share-article]");
+        if (!btn)
+          return;
+        sharePost({
+          title: btn.dataset.shareTitle,
+          text: btn.dataset.shareText,
+          url: btn.dataset.shareUrl
+        });
+      });
+    }
   }
   function renderGeoFilters() {
     const el = document.getElementById("geo-filters");
@@ -877,7 +914,16 @@
     ` : ""}
     <div class="article-source-row">
       <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
-      ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
+      <div class="article-source-actions">
+        <button class="share-btn share-btn--inline" type="button"
+                data-share-article
+                data-share-title="${escapeHtml(article.title)}"
+                data-share-text="${escapeHtml(article.excerpt || "")}"
+                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
+          \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
+        </button>
+        ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
+      </div>
     </div>
   `;
     modal.classList.add("open");
@@ -1030,6 +1076,9 @@
             </svg>
             \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
           </button>
+          <button class="ev-share-btn share-btn share-btn--inline" type="button" data-share-event data-id="${ev.id}">
+            \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
+          </button>
           <button class="ev-detail-close" type="button">\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191</button>
         </div>
       </div>
@@ -1163,6 +1212,8 @@
         }
         if (e.target.closest(".ev-ics-btn"))
           return;
+        if (e.target.closest(".ev-share-btn"))
+          return;
         card.classList.toggle("expanded");
       });
     });
@@ -1172,6 +1223,23 @@
         const ev = allEvents.find((ev2) => ev2.id === Number(btn.dataset.id));
         if (ev)
           downloadIcs(ev);
+      });
+    });
+    el.querySelectorAll(".ev-share-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const ev = allEvents.find((ev2) => ev2.id === Number(btn.dataset.id));
+        if (!ev)
+          return;
+        const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+        const loc = ev.location ? ` \xB7 ${ev.location}` : "";
+        sharePost({
+          title: ev.title,
+          text: `\u{1F4C5} ${ev.title}
+${when}${loc}
+
+${ev.description}`
+        });
       });
     });
   }
@@ -2455,9 +2523,20 @@ END:VEVENT`
         const emoji = CATEGORY_EMOJI2[p.category] || "\u{1F4CC}";
         const contactHtml = renderContact(p.contact);
         const photoHtml = p.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
+        const shareText = `${emoji} ${p.category}
+
+${p.text}
+\u2014 ${p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
+        const shareBtn = `
+        <button class="cm-board-share share-btn share-btn--corner" type="button"
+                data-share-board
+                data-share-title="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438"
+                data-share-text="${escapeHtml(shareText)}"
+                aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\u043C">\u{1F4E4}</button>`;
         return `
         <article class="cm-board-note cm-board-note--${escapeHtml(p.color || "yellow")}${p.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
           <span class="cm-board-pin"></span>
+          ${shareBtn}
           ${photoHtml}
           <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
           <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -2551,7 +2630,24 @@ END:VEVENT`
     });
     backdrop.addEventListener("click", collapse);
   }
+  var _shareListenerAttached = false;
+  function attachBoardShareListener() {
+    if (_shareListenerAttached)
+      return;
+    _shareListenerAttached = true;
+    document.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-share-board]");
+      if (!btn)
+        return;
+      e.stopPropagation();
+      sharePost({
+        title: btn.dataset.shareTitle,
+        text: btn.dataset.shareText
+      });
+    }, { capture: true });
+  }
   function initBoard() {
+    attachBoardShareListener();
     renderBoard();
   }
 

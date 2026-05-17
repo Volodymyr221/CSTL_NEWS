@@ -2,7 +2,7 @@
 // Вкладка «Дошка громади» — повний список оголошень мешканців + офіційні.
 // Створена 16.05.2026 — винесено з блоку Громади у власну вкладку.
 
-import { escapeHtml, formatTime } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 
 const CATEGORY_EMOJI = {
@@ -96,9 +96,19 @@ export async function renderBoard() {
       const photoHtml = p.photo
         ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
         : '';
+      // Кнопка 📤 — Web Share API (Viber/Telegram/SMS одним тапом)
+      // Текст для шеру збираємо тут, бо потім innerHTML клонується у zoom-модалку.
+      const shareText = `${emoji} ${p.category}\n\n${p.text}\n— ${p.author || 'анонімно'}`;
+      const shareBtn = `
+        <button class="cm-board-share share-btn share-btn--corner" type="button"
+                data-share-board
+                data-share-title="Оголошення з Дошки громади Олики"
+                data-share-text="${escapeHtml(shareText)}"
+                aria-label="Поділитися оголошенням">📤</button>`;
       return `
         <article class="cm-board-note cm-board-note--${escapeHtml(p.color || 'yellow')}${p.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
           <span class="cm-board-pin"></span>
+          ${shareBtn}
           ${photoHtml}
           <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
           <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -215,6 +225,26 @@ function initBoardNoteExpand(root) {
   backdrop.addEventListener('click', collapse);
 }
 
+// Document-level listener для кнопок 📤 — щоб охопити і оригінальні стікери,
+// і клон у zoom-модалці (`expand()` копіює innerHTML у новий вузол на body).
+// `once` нема — listener живе весь час життя сторінки.
+let _shareListenerAttached = false;
+function attachBoardShareListener() {
+  if (_shareListenerAttached) return;
+  _shareListenerAttached = true;
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('[data-share-board]');
+    if (!btn) return;
+    // Не даємо кліку «лизнути» на стікер (інакше відкриється zoom-модалка)
+    e.stopPropagation();
+    sharePost({
+      title: btn.dataset.shareTitle,
+      text:  btn.dataset.shareText,
+    });
+  }, { capture: true });
+}
+
 export function initBoard() {
+  attachBoardShareListener();
   renderBoard();
 }
