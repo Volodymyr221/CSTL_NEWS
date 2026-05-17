@@ -72,6 +72,10 @@ CREATE TABLE posts (
   price         NUMERIC,
   currency      TEXT DEFAULT 'UAH',
 
+  -- Для greeting-постів: emoji-обкладинка + CSS-градієнт фону
+  cover_emoji    TEXT,
+  cover_gradient TEXT,
+
   -- Село ОТГ (Олика, Дерно, Ставок, Жорнище...)
   location      TEXT,
 

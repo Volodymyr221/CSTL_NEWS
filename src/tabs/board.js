@@ -11,7 +11,11 @@
 
 import { escapeHtml, formatTime, sharePost } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
+import {
+  fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
+  getAnonId, fetchAllReactions, setReaction,
+  fetchAllComments, addComment,
+} from '../core/supabase.js';
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
@@ -52,19 +56,22 @@ const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="no
 // Іконка коментаря (мовний пузир)
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
 
-// ── Стан (зберігається в межах сесії, фільтри у localStorage) ────────────────
+// ── Стан (зберігається в межах сесії) ────────────────────────────────────────
 
 let allPosts       = [];   // [{id, type, ...}]
-let allAnnouncements = []; // офіційні з community.json
+let allAnnouncements = []; // офіційні з announcements
 let activeType     = 'all';
 let activeCategory = 'all';
 let searchQuery    = '';
 
-// ── localStorage: реакції і збережене ────────────────────────────────────────
+// Реакції і коментарі — централізовано у Map<postId, ...>. Завантажується з
+// Supabase у renderBoard(), оновлюється при кліках через optimistic update.
+let reactionsByPost = new Map();  // postId → { counts: {emoji: count}, my: emoji|null }
+let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
 
-const LS_REACTIONS = 'cstl-reactions-v1';   // { [postId]: '❤️' | null }
-const LS_SAVED     = 'cstl-saved-v1';        // [postId, postId, ...]
-const LS_COMMENTS  = 'cstl-comments-v1';     // { [postId]: [{author, text, ts}, ...] }
+// ── localStorage: тільки «Збережені» (✅ це per-device, у Supabase не йде) ──
+
+const LS_SAVED = 'cstl-saved-v1';   // [postId, postId, ...]
 
 function lsGet(key, fallback) {
   try {
@@ -76,28 +83,25 @@ function lsSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
-// Одна реакція на пост (як у iMessage): emoji або null
+// ── Реакції (з Supabase, fallback на in-memory map) ─────────────────────────
+
 function getMyReaction(postId) {
-  const all = lsGet(LS_REACTIONS, {});
-  return all[postId] || null;
+  const r = reactionsByPost.get(postId);
+  return r ? r.my : null;
 }
-function setMyReaction(postId, emoji) {
-  const all = lsGet(LS_REACTIONS, {});
-  if (emoji) all[postId] = emoji;
-  else delete all[postId];
-  lsSet(LS_REACTIONS, all);
+function getReactionCounts(postId) {
+  const r = reactionsByPost.get(postId);
+  return r ? r.counts : {};
+}
+function getTotalReactionCount(postId) {
+  const counts = getReactionCounts(postId);
+  return Object.values(counts).reduce((s, n) => s + n, 0);
 }
 
+// ── Коментарі (з Supabase, in-memory map) ───────────────────────────────────
+
 function getComments(postId) {
-  const all = lsGet(LS_COMMENTS, {});
-  return all[postId] || [];
-}
-function addComment(postId, author, text) {
-  const all = lsGet(LS_COMMENTS, {});
-  const list = all[postId] || [];
-  list.push({ author: author || null, text, ts: Date.now() });
-  all[postId] = list;
-  lsSet(LS_COMMENTS, all);
+  return commentsByPost.get(postId) || [];
 }
 
 function getSavedIds() {
@@ -232,7 +236,7 @@ function chatCommentsHtml(post) {
         <div class="bd-inline-comment">
           <span class="bd-inline-comment-author">${escapeHtml(c.author || 'анонімно')}</span>
           <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
-          <span class="bd-inline-comment-time">${formatTime(c.ts)}</span>
+          <span class="bd-inline-comment-time">${formatTime(c.ts || new Date(c.created_at).getTime())}</span>
         </div>
       `).join('')
     : '';
@@ -514,15 +518,20 @@ export async function renderBoard() {
   const el = document.getElementById('board-content');
   if (!el) return;
 
-  // 1. Спочатку пробуємо Supabase (production data — те що пройшло модерацію)
+  // 1. Supabase: пости + анонси + реакції + коментарі паралельно
   if (isSupabaseReady()) {
-    const [posts, anns] = await Promise.all([
+    const anonId = getAnonId();
+    const [posts, anns, reactions, comments] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
+      fetchAllReactions(anonId),
+      fetchAllComments(),
     ]);
     if (posts !== null) {
       allPosts         = posts;
       allAnnouncements = anns || [];
+      reactionsByPost  = reactions;
+      commentsByPost   = comments;
       renderAll(el);
       return;
     }
@@ -538,6 +547,8 @@ export async function renderBoard() {
     const communityData = await communityRes.json();
     allPosts         = boardData.posts || [];
     allAnnouncements = communityData.announcements || [];
+    reactionsByPost  = new Map();
+    commentsByPost   = new Map();
   } catch {
     el.innerHTML = '<div class="empty-state">Дошка тимчасово недоступна</div>';
     return;
@@ -687,9 +698,11 @@ function attachBoardDelegation() {
   if (_delegationAttached) return;
   _delegationAttached = true;
 
-  // Submit inline-форми коментаря (CHAT-картки): додаємо коментар у localStorage,
-  // перерендерюємо список без перезавантаження всієї дошки.
-  document.addEventListener('submit', e => {
+  // Submit inline-форми коментаря (chat і greeting картки):
+  // 1. Миттєво додаємо у in-memory map і ререндеримо (optimistic)
+  // 2. Паралельно POST у Supabase
+  // 3. Якщо помилка — повертаємо назад
+  document.addEventListener('submit', async e => {
     const form = e.target.closest('[data-comment-form]');
     if (!form) return;
     e.preventDefault();
@@ -698,21 +711,51 @@ function attachBoardDelegation() {
     const input  = form.querySelector('[data-comment-input]');
     const text   = (input?.value || '').trim();
     if (!text) { input?.focus(); return; }
-    addComment(postId, null, text);
+
+    // Optimistic: миттєво у DOM
+    const tempComment = {
+      id: 'temp-' + Date.now(),
+      post_id: postId,
+      author: null,
+      text,
+      created_at: new Date().toISOString(),
+    };
+    const list = commentsByPost.get(postId) || [];
+    list.push(tempComment);
+    commentsByPost.set(postId, list);
     if (input) input.value = '';
-    // Перерендерюємо весь блок коментарів для цього поста
-    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-    if (wrap) {
-      const post = allPosts.find(p => p.id === postId);
-      if (post) {
-        wrap.outerHTML = chatCommentsHtml(post);
-        // Фокус назад у поле введення для зручності серії коментарів
-        setTimeout(() => {
-          document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
-        }, 50);
+    rerenderCommentsBlock(postId);
+
+    // POST у Supabase
+    if (isSupabaseReady()) {
+      const result = await addComment(postId, null, text);
+      if (!result.ok) {
+        // Помилка — забираємо optimistic коментар
+        const filtered = (commentsByPost.get(postId) || []).filter(c => c.id !== tempComment.id);
+        commentsByPost.set(postId, filtered);
+        rerenderCommentsBlock(postId);
+        alert('Не вдалося надіслати коментар: ' + result.error);
+      } else if (result.comment) {
+        // Заміняємо temp-коментар на справжній (з реальним id з БД)
+        const updated = (commentsByPost.get(postId) || []).map(c =>
+          c.id === tempComment.id ? result.comment : c
+        );
+        commentsByPost.set(postId, updated);
+        rerenderCommentsBlock(postId);
       }
     }
   });
+
+  function rerenderCommentsBlock(postId) {
+    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+    if (!wrap) return;
+    const post = allPosts.find(p => p.id === postId);
+    if (!post) return;
+    wrap.outerHTML = chatCommentsHtml(post);
+    setTimeout(() => {
+      document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
+    }, 50);
+  }
 
   document.addEventListener('click', e => {
     // Тригер «🙂+» — відкриває попап реакцій
@@ -738,17 +781,32 @@ function attachBoardDelegation() {
       const id = Number(opt.dataset.reactPost);
       const emoji = opt.dataset.reactOpt;
       const current = getMyReaction(id);
-      // Якщо тапнув те що вже стоїть — знімаємо
-      setMyReaction(id, current === emoji ? null : emoji);
+      const newReaction = current === emoji ? null : emoji;  // тап на ту саму = знімаємо
+
+      // Optimistic: миттєво оновлюємо in-memory map
+      const r = reactionsByPost.get(id) || { counts: {}, my: null };
+      // Прибираємо стару реакцію з counts
+      if (r.my) r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
+      // Додаємо нову (якщо є)
+      if (newReaction) r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
+      r.my = newReaction;
+      reactionsByPost.set(id, r);
+
       closeReactionPopup();
-      // Оновлюємо тригер на сторінці (і у zoom-модалці якщо вона відкрита)
-      const newReaction = getMyReaction(id);
+      // Оновлюємо тригер на сторінці (і у zoom-модалці якщо відкрита)
       document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach(btn => {
-        btn.classList.toggle('bd-react-trigger--active', !!newReaction);
-        btn.innerHTML = newReaction
-          ? `<span class="bd-react-trigger-emoji">${newReaction}</span>`
-          : `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
+        btn.outerHTML = reactTriggerHtml(allPosts.find(p => p.id === id) || { id });
       });
+
+      // Async POST у Supabase
+      if (isSupabaseReady()) {
+        setReaction(id, getAnonId(), newReaction).then(result => {
+          if (!result.ok) {
+            console.warn('[reactions] помилка збереження:', result.error);
+            // (UI rollback опускаємо — спам у комюніті не критично)
+          }
+        });
+      }
       return;
     }
 

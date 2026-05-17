@@ -92,3 +92,91 @@ export async function fetchPublishedAnnouncements() {
   }
   return data;
 }
+
+// ── АНОНІМНИЙ ID для реакцій (поки немає auth у звичайних юзерів) ─────────
+const ANON_ID_KEY = 'cstl-anon-id';
+export function getAnonId() {
+  try {
+    let id = localStorage.getItem(ANON_ID_KEY);
+    if (!id) {
+      id = crypto.randomUUID
+        ? crypto.randomUUID()
+        : 'anon-' + Math.random().toString(36).slice(2) + '-' + Date.now();
+      localStorage.setItem(ANON_ID_KEY, id);
+    }
+    return id;
+  } catch {
+    return 'anon-fallback';
+  }
+}
+
+// ── РЕАКЦІЇ ──────────────────────────────────────────────────────────────
+
+// Усі реакції на всі опубліковані пости.
+// Повертає Map<post_id, { counts: {emoji: count}, my: emoji|null }>.
+export async function fetchAllReactions(anonId) {
+  if (!supa) return new Map();
+  const { data, error } = await supa.from('reactions').select('post_id, user_id, emoji');
+  if (error) {
+    console.warn('[supabase] fetchAllReactions error:', error.message);
+    return new Map();
+  }
+  const map = new Map();
+  for (const r of (data || [])) {
+    if (!map.has(r.post_id)) map.set(r.post_id, { counts: {}, my: null });
+    const e = map.get(r.post_id);
+    e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
+    if (r.user_id === anonId) e.my = r.emoji;
+  }
+  return map;
+}
+
+// Поставити / змінити / зняти свою реакцію
+// emoji = null → знімаємо
+export async function setReaction(postId, anonId, emoji) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  if (emoji == null) {
+    const { error } = await supa.from('reactions')
+      .delete()
+      .eq('post_id', postId)
+      .eq('user_id', anonId);
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  }
+  // upsert через onConflict (post_id, user_id) — або INSERT, або UPDATE emoji
+  const { error } = await supa.from('reactions')
+    .upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: 'post_id,user_id' });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// ── КОМЕНТАРІ ────────────────────────────────────────────────────────────
+
+// Усі коментарі усіх постів — Map<post_id, comments[]>.
+export async function fetchAllComments() {
+  if (!supa) return new Map();
+  const { data, error } = await supa
+    .from('comments')
+    .select('id, post_id, author, text, created_at')
+    .order('created_at', { ascending: true });
+  if (error) {
+    console.warn('[supabase] fetchAllComments error:', error.message);
+    return new Map();
+  }
+  const map = new Map();
+  for (const c of (data || [])) {
+    if (!map.has(c.post_id)) map.set(c.post_id, []);
+    map.get(c.post_id).push(c);
+  }
+  return map;
+}
+
+export async function addComment(postId, author, text) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.from('comments')
+    .insert({ post_id: postId, author: author || null, text })
+    .select()
+    .single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, comment: data };
+}

@@ -230,6 +230,76 @@
     }
     return data;
   }
+  var ANON_ID_KEY = "cstl-anon-id";
+  function getAnonId() {
+    try {
+      let id = localStorage.getItem(ANON_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID ? crypto.randomUUID() : "anon-" + Math.random().toString(36).slice(2) + "-" + Date.now();
+        localStorage.setItem(ANON_ID_KEY, id);
+      }
+      return id;
+    } catch {
+      return "anon-fallback";
+    }
+  }
+  async function fetchAllReactions(anonId) {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
+    if (error) {
+      console.warn("[supabase] fetchAllReactions error:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const r of data || []) {
+      if (!map.has(r.post_id))
+        map.set(r.post_id, { counts: {}, my: null });
+      const e = map.get(r.post_id);
+      e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
+      if (r.user_id === anonId)
+        e.my = r.emoji;
+    }
+    return map;
+  }
+  async function setReaction(postId, anonId, emoji) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (emoji == null) {
+      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", anonId);
+      if (error2)
+        return { ok: false, error: error2.message };
+      return { ok: true };
+    }
+    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: "post_id,user_id" });
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true };
+  }
+  async function fetchAllComments() {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at").order("created_at", { ascending: true });
+    if (error) {
+      console.warn("[supabase] fetchAllComments error:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const c of data || []) {
+      if (!map.has(c.post_id))
+        map.set(c.post_id, []);
+      map.get(c.post_id).push(c);
+    }
+    return map;
+  }
+  async function addComment(postId, author, text) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("comments").insert({ post_id: postId, author: author || null, text }).select().single();
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true, comment: data };
+  }
 
   // src/tabs/community-blocks.js
   var BUS_PREFS_KEY = "bus_prefs_v2";
@@ -2767,9 +2837,9 @@ END:VEVENT`
   var activeType = "all";
   var activeCategory = "all";
   var searchQuery = "";
-  var LS_REACTIONS = "cstl-reactions-v1";
+  var reactionsByPost = /* @__PURE__ */ new Map();
+  var commentsByPost = /* @__PURE__ */ new Map();
   var LS_SAVED = "cstl-saved-v1";
-  var LS_COMMENTS = "cstl-comments-v1";
   function lsGet(key, fallback) {
     try {
       const v = localStorage.getItem(key);
@@ -2785,27 +2855,11 @@ END:VEVENT`
     }
   }
   function getMyReaction(postId) {
-    const all = lsGet(LS_REACTIONS, {});
-    return all[postId] || null;
-  }
-  function setMyReaction(postId, emoji) {
-    const all = lsGet(LS_REACTIONS, {});
-    if (emoji)
-      all[postId] = emoji;
-    else
-      delete all[postId];
-    lsSet(LS_REACTIONS, all);
+    const r = reactionsByPost.get(postId);
+    return r ? r.my : null;
   }
   function getComments(postId) {
-    const all = lsGet(LS_COMMENTS, {});
-    return all[postId] || [];
-  }
-  function addComment(postId, author, text) {
-    const all = lsGet(LS_COMMENTS, {});
-    const list = all[postId] || [];
-    list.push({ author: author || null, text, ts: Date.now() });
-    all[postId] = list;
-    lsSet(LS_COMMENTS, all);
+    return commentsByPost.get(postId) || [];
   }
   function getSavedIds() {
     return new Set(lsGet(LS_SAVED, []));
@@ -2906,7 +2960,7 @@ END:VEVENT`
         <div class="bd-inline-comment">
           <span class="bd-inline-comment-author">${escapeHtml(c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
           <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
-          <span class="bd-inline-comment-time">${formatTime(c.ts)}</span>
+          <span class="bd-inline-comment-time">${formatTime(c.ts || new Date(c.created_at).getTime())}</span>
         </div>
       `).join("") : "";
     return `
@@ -3142,13 +3196,18 @@ ${post.text}
     if (!el)
       return;
     if (isSupabaseReady()) {
-      const [posts, anns] = await Promise.all([
+      const anonId = getAnonId();
+      const [posts, anns, reactions, comments] = await Promise.all([
         fetchPublishedPosts(),
-        fetchPublishedAnnouncements()
+        fetchPublishedAnnouncements(),
+        fetchAllReactions(anonId),
+        fetchAllComments()
       ]);
       if (posts !== null) {
         allPosts = posts;
         allAnnouncements = anns || [];
+        reactionsByPost = reactions;
+        commentsByPost = comments;
         renderAll(el);
         return;
       }
@@ -3162,6 +3221,8 @@ ${post.text}
       const communityData = await communityRes.json();
       allPosts = boardData.posts || [];
       allAnnouncements = communityData.announcements || [];
+      reactionsByPost = /* @__PURE__ */ new Map();
+      commentsByPost = /* @__PURE__ */ new Map();
     } catch {
       el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
       return;
@@ -3287,7 +3348,7 @@ ${post.text}
     if (_delegationAttached)
       return;
     _delegationAttached = true;
-    document.addEventListener("submit", (e) => {
+    document.addEventListener("submit", async (e) => {
       const form = e.target.closest("[data-comment-form]");
       if (!form)
         return;
@@ -3300,20 +3361,47 @@ ${post.text}
         input?.focus();
         return;
       }
-      addComment(postId, null, text);
+      const tempComment = {
+        id: "temp-" + Date.now(),
+        post_id: postId,
+        author: null,
+        text,
+        created_at: (/* @__PURE__ */ new Date()).toISOString()
+      };
+      const list = commentsByPost.get(postId) || [];
+      list.push(tempComment);
+      commentsByPost.set(postId, list);
       if (input)
         input.value = "";
-      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-      if (wrap) {
-        const post = allPosts.find((p) => p.id === postId);
-        if (post) {
-          wrap.outerHTML = chatCommentsHtml(post);
-          setTimeout(() => {
-            document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
-          }, 50);
+      rerenderCommentsBlock(postId);
+      if (isSupabaseReady()) {
+        const result = await addComment(postId, null, text);
+        if (!result.ok) {
+          const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
+          commentsByPost.set(postId, filtered);
+          rerenderCommentsBlock(postId);
+          alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440: " + result.error);
+        } else if (result.comment) {
+          const updated = (commentsByPost.get(postId) || []).map(
+            (c) => c.id === tempComment.id ? result.comment : c
+          );
+          commentsByPost.set(postId, updated);
+          rerenderCommentsBlock(postId);
         }
       }
     });
+    function rerenderCommentsBlock(postId) {
+      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+      if (!wrap)
+        return;
+      const post = allPosts.find((p) => p.id === postId);
+      if (!post)
+        return;
+      wrap.outerHTML = chatCommentsHtml(post);
+      setTimeout(() => {
+        document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
+      }, 50);
+    }
     document.addEventListener("click", (e) => {
       const trigger = e.target.closest("[data-react-trigger]");
       if (trigger) {
@@ -3336,13 +3424,25 @@ ${post.text}
         const id = Number(opt.dataset.reactPost);
         const emoji = opt.dataset.reactOpt;
         const current = getMyReaction(id);
-        setMyReaction(id, current === emoji ? null : emoji);
+        const newReaction = current === emoji ? null : emoji;
+        const r = reactionsByPost.get(id) || { counts: {}, my: null };
+        if (r.my)
+          r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
+        if (newReaction)
+          r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
+        r.my = newReaction;
+        reactionsByPost.set(id, r);
         closeReactionPopup();
-        const newReaction = getMyReaction(id);
         document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach((btn) => {
-          btn.classList.toggle("bd-react-trigger--active", !!newReaction);
-          btn.innerHTML = newReaction ? `<span class="bd-react-trigger-emoji">${newReaction}</span>` : `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
+          btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === id) || { id });
         });
+        if (isSupabaseReady()) {
+          setReaction(id, getAnonId(), newReaction).then((result) => {
+            if (!result.ok) {
+              console.warn("[reactions] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F:", result.error);
+            }
+          });
+        }
         return;
       }
       if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
