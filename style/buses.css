@@ -42,17 +42,20 @@
   /* контейнер тепер — порожній wrapper, всю розмітку малює .bus-hero всередині */
   padding: 14px 14px 0;
 }
+/* HERO — серйозний транспортний стиль (табло автостанції). 18.05.2026
+   Темний сталево-сіро-зелений фон, бурштиновий accent для часу,
+   моноширинний шрифт цифр як на справжніх табло УЗ/АТП. */
 .bus-hero {
-  background: linear-gradient(135deg, var(--bus) 0%, var(--bus-deep) 100%);
-  border-radius: 22px;
-  padding: 18px 18px 16px;
-  box-shadow: 0 6px 18px rgba(114, 47, 55, 0.10), 0 2px 6px rgba(0,0,0,0.06);
-  color: var(--bus-text);
+  background: linear-gradient(135deg, #2F3E36 0%, #1F2B25 100%);
+  border-radius: 12px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  color: white;
   position: relative;
 }
 .bus-hero--urgent {
-  background: linear-gradient(135deg, #FFC0CB 0%, #DA4A5E 100%);
-  color: #4E0E18;
+  background: linear-gradient(135deg, #6B1F2A 0%, #4A1118 100%);
+  color: white;
 }
 .bus-hero--empty {
   color: var(--ink-soft);
@@ -64,24 +67,29 @@
 }
 .bus-hero-top {
   display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 12px;
+  margin-bottom: 10px;
 }
 .bus-hero-countdown {
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 1px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  background: rgba(255,255,255,0.55);
-  padding: 4px 10px;
-  border-radius: 999px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.28);
+  color: #FBBF24;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
 }
 .bus-hero-urgent {
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: white;
   background: var(--red);
-  padding: 4px 10px;
-  border-radius: 999px;
+  padding: 3px 9px;
+  border-radius: 4px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
   animation: pulse 1s ease-in-out infinite;
 }
 .bus-hero-row {
@@ -89,52 +97,54 @@
   margin-bottom: 6px;
 }
 .bus-hero-times {
-  display: flex; align-items: center; gap: 8px;
+  display: flex; align-items: baseline; gap: 10px;
   flex: 1; min-width: 0;
 }
 .bus-hero-time {
-  font-family: Georgia, serif;
-  font-size: 36px;
-  font-weight: 700;
+  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
+  font-size: 34px;
+  font-weight: 600;
   line-height: 1;
   font-variant-numeric: tabular-nums;
-  letter-spacing: -1.5px;
+  letter-spacing: 0;
+  color: #FBBF24;
 }
 .bus-hero-time--to {
-  font-size: 28px;
-  opacity: 0.85;
+  font-size: 26px;
+  color: rgba(255,255,255,0.85);
 }
 .bus-hero-arrow {
-  font-size: 22px;
-  opacity: 0.7;
-  font-weight: 700;
+  font-size: 20px;
+  color: rgba(255,255,255,0.4);
+  font-weight: 400;
 }
 .bus-hero-route {
-  font-size: 16px;
-  font-weight: 700;
+  font-size: 15px;
+  font-weight: 500;
   margin-bottom: 4px;
+  letter-spacing: 0.2px;
 }
 .bus-hero-meta {
   font-size: 12px;
-  opacity: 0.85;
+  color: rgba(255,255,255,0.65);
   display: flex;
   gap: 6px;
   align-items: center;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
-.bus-hero-meta-sep { opacity: 0.5; }
+.bus-hero-meta-sep { color: rgba(255,255,255,0.30); }
 
 .bus-hero-progress {
-  height: 5px;
-  background: rgba(255,255,255,0.35);
-  border-radius: 3px;
+  height: 3px;
+  background: rgba(255,255,255,0.18);
+  border-radius: 2px;
   overflow: hidden;
 }
 .bus-hero-progress-fill {
   height: 100%;
-  background: rgba(255,255,255,0.9);
-  border-radius: 3px;
+  background: #FBBF24;
+  border-radius: 2px;
   transition: width 0.6s ease;
 }
 .bus-hero--urgent .bus-hero-progress-fill { background: white; }
@@ -169,20 +179,24 @@
   min-width: 52px;
 }
 
-/* Час відправлення */
+/* Час відправлення — моноширним як на табло */
 .brow-time {
-  font-size: 20px;
-  font-weight: 700;
+  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
+  font-size: 19px;
+  font-weight: 600;
   color: var(--navy);
-  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
   line-height: 1.1;
 }
 .brow--past .brow-time { color: var(--gray); }
 
-/* Час прибуття */
+/* Час прибуття — теж моноширним */
 .brow-arrival {
+  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
   font-size: 11px;
   color: var(--gray);
+  font-variant-numeric: tabular-nums;
   margin-top: 1px;
 }
 
