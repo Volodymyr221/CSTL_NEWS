@@ -1523,7 +1523,7 @@
   padding-bottom: 100px; /* щоб не перекривала фіксована «Подати оголошення» */
 }
 
-/* ── Реакції + збережене + share (під карткою, спільне для chat і greeting) ── */
+/* ── Рядок дій (тригер реакції зліва + save/share справа) ──────────────── */
 .bd-actions {
   display: flex;
   align-items: center;
@@ -1533,55 +1533,126 @@
   padding-top: 8px;
   border-top: 1px dashed rgba(0,0,0,0.10);
 }
-.bd-reactions {
-  display: flex;
-  gap: 4px;
-}
-.bd-reaction {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 12px;
-  padding: 3px 8px;
-  font-size: 16px;
+
+/* Тригер реакції — кнопка-капсула «🙂+» або обрана emoji */
+.bd-react-trigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1px;
+  min-width: 48px;
+  height: 32px;
+  padding: 0 10px;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 16px;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
   cursor: pointer;
+  font-family: inherit;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+  transition: transform 0.08s, border-color 0.15s, background 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-.bd-reaction:active { transform: scale(0.88); }
-.bd-reaction--active {
-  background: var(--mint);
-  border-color: var(--mint-deep);
+.bd-react-trigger:active { transform: scale(0.94); }
+.bd-react-trigger--active {
+  background: white;
+  border-color: var(--red);
+}
+.bd-react-trigger-default {
+  font-size: 15px;
+  opacity: 0.7;
+}
+.bd-react-trigger-plus {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gray);
+  margin-left: 1px;
+}
+.bd-react-trigger-emoji {
+  font-size: 17px;
+  line-height: 1;
 }
 
+/* Попап з вибором емоції — над тригером, capsule з 8 emoji */
+.bd-react-popup {
+  position: absolute;
+  z-index: 200;
+  display: flex;
+  gap: 2px;
+  padding: 6px;
+  background: white;
+  border-radius: 22px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.18), 0 2px 6px rgba(0,0,0,0.08);
+  opacity: 0;
+  transform: translateY(4px) scale(0.92);
+  transition: opacity 0.15s, transform 0.15s;
+  pointer-events: none;
+}
+.bd-react-popup.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+}
+.bd-react-opt {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, background 0.12s;
+}
+.bd-react-opt:hover { background: var(--gray-light); }
+.bd-react-opt:active { transform: scale(1.25); }
+.bd-react-opt--active {
+  background: var(--mint);
+  transform: scale(1.05);
+}
+
+/* Save + Share — однаковий круглий стиль з SVG-іконкою всередині */
 .bd-actions-right {
   display: flex;
-  gap: 4px;
+  gap: 6px;
 }
-.bd-bookmark {
-  background: transparent;
-  border: none;
-  font-size: 18px;
-  padding: 4px 6px;
+.bd-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid rgba(0,0,0,0.10);
+  border-radius: 50%;
+  background: rgba(255,255,255,0.88);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  color: #555;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  transition: transform 0.08s;
+  transition: transform 0.08s, color 0.15s, border-color 0.15s, background 0.15s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
 }
-.bd-bookmark:active { transform: scale(0.85); }
-.bd-bookmark--active { filter: drop-shadow(0 1px 3px rgba(114, 47, 55, 0.4)); }
-
-.share-btn--corner-inline {
-  background: transparent;
-  border: none;
-  font-size: 16px;
-  padding: 4px 6px;
-  cursor: pointer;
+.bd-icon-btn:active { transform: scale(0.88); }
+.bd-icon-btn svg { display: block; }
+.bd-share-btn:active { color: var(--red); }
+.bd-bookmark--active {
+  color: var(--red);
+  border-color: var(--red);
+  background: white;
 }
 
-/* На board-стікері реакції живуть знизу — тонша риска бо стікер вже має фон */
+/* На board-стікері трохи більший контраст бо фон може бути темний */
 .bd-card--board .bd-actions {
   border-top: 1px dashed rgba(0,0,0,0.18);
   margin-top: 8px;
-  padding-top: 6px;
+  padding-top: 8px;
 }
 
 /* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */

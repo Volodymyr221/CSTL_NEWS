@@ -36,10 +36,17 @@ const BOARD_CATEGORIES = [
 
 const CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES.map(c => [c.id, c.emoji]));
 
-const REACTIONS = ['❤️', '👍', '😂', '😢'];
+const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
 
 // SVG слухавки (для кнопки виклика)
 const PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+
+// Іконка закладки (для «Зберегти у Мої»). Outline за замовчуванням, filled коли збережено.
+const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+
+// Іконка «Поділитись» — стандартний iOS-style (квадрат зі стрілкою вгору)
+const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 
 // ── Стан (зберігається в межах сесії, фільтри у localStorage) ────────────────
 
@@ -64,16 +71,15 @@ function lsSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
 }
 
-function getUserReactions(postId) {
+// Одна реакція на пост (як у iMessage): emoji або null
+function getMyReaction(postId) {
   const all = lsGet(LS_REACTIONS, {});
-  return all[postId] || {};
+  return all[postId] || null;
 }
-function toggleUserReaction(postId, emoji) {
+function setMyReaction(postId, emoji) {
   const all = lsGet(LS_REACTIONS, {});
-  const post = all[postId] || {};
-  post[emoji] = !post[emoji];
-  if (!post[emoji]) delete post[emoji];
-  all[postId] = post;
+  if (emoji) all[postId] = emoji;
+  else delete all[postId];
   lsSet(LS_REACTIONS, all);
 }
 
@@ -124,12 +130,13 @@ function renderContact(contact) {
 // ── Реакції + share + bookmark — спільний рядок дій під/над постом ───────────
 
 function actionsRow(post) {
-  const userReactions = getUserReactions(post.id);
+  const myReaction = getMyReaction(post.id);
   const saved = isSaved(post.id);
-  const reactionsHtml = REACTIONS.map(em => {
-    const active = userReactions[em] ? ' bd-reaction--active' : '';
-    return `<button class="bd-reaction${active}" type="button" data-react-id="${post.id}" data-react-emoji="${escapeHtml(em)}" aria-label="Реакція ${em}">${em}</button>`;
-  }).join('');
+
+  // Тригер реакції — або моя обрана emoji, або «🙂+» якщо нічого не ставив
+  const triggerLabel = myReaction
+    ? `<span class="bd-react-trigger-emoji">${myReaction}</span>`
+    : `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
 
   const shareText = buildShareText(post);
   const shareTitle = post.type === 'greeting'
@@ -140,21 +147,62 @@ function actionsRow(post) {
 
   return `
     <div class="bd-actions">
-      <div class="bd-reactions">${reactionsHtml}</div>
+      <button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
+              data-react-trigger="${post.id}" aria-label="Поставити реакцію">
+        ${triggerLabel}
+      </button>
       <div class="bd-actions-right">
-        <button class="bd-bookmark${saved ? ' bd-bookmark--active' : ''}" type="button"
+        <button class="bd-icon-btn bd-bookmark${saved ? ' bd-bookmark--active' : ''}" type="button"
                 data-save-id="${post.id}"
                 aria-label="${saved ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
-          ${saved ? '💾' : '🤍'}
+          ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
         </button>
-        <button class="share-btn share-btn--corner-inline" type="button"
+        <button class="bd-icon-btn bd-share-btn" type="button"
                 data-share-board
                 data-share-title="${escapeHtml(shareTitle)}"
                 data-share-text="${escapeHtml(shareText)}"
-                aria-label="Поділитися">📤</button>
+                aria-label="Поділитися">${SHARE_ICON_SVG}</button>
       </div>
     </div>
   `;
+}
+
+// Попап вибору реакції — додається у body над кнопкою-тригером
+function openReactionPopup(triggerBtn, postId) {
+  closeReactionPopup();   // якщо вже відкритий — закрити
+
+  const myReaction = getMyReaction(postId);
+  const popup = document.createElement('div');
+  popup.className = 'bd-react-popup';
+  popup.id = 'bd-react-popup';
+  popup.innerHTML = REACTIONS.map(em => `
+    <button class="bd-react-opt${myReaction === em ? ' bd-react-opt--active' : ''}" type="button" data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">${em}</button>
+  `).join('');
+
+  document.body.appendChild(popup);
+
+  // Позиціонуємо над кнопкою (якщо не влізе — під нею)
+  const rect = triggerBtn.getBoundingClientRect();
+  const popupRect = popup.getBoundingClientRect();
+  let top = rect.top - popupRect.height - 8;
+  if (top < 8) top = rect.bottom + 8;
+  let left = rect.left + rect.width / 2 - popupRect.width / 2;
+  if (left < 8) left = 8;
+  if (left + popupRect.width > window.innerWidth - 8) {
+    left = window.innerWidth - popupRect.width - 8;
+  }
+  popup.style.top = `${top + window.scrollY}px`;
+  popup.style.left = `${left}px`;
+
+  requestAnimationFrame(() => popup.classList.add('visible'));
+}
+
+function closeReactionPopup() {
+  const existing = document.getElementById('bd-react-popup');
+  if (existing) {
+    existing.classList.remove('visible');
+    setTimeout(() => existing.remove(), 150);
+  }
 }
 
 function buildShareText(post) {
@@ -540,28 +588,54 @@ function attachBoardDelegation() {
   _delegationAttached = true;
 
   document.addEventListener('click', e => {
-    // Реакція ❤️👍😂😢
-    const reactBtn = e.target.closest('[data-react-id]');
-    if (reactBtn) {
+    // Тригер «🙂+» — відкриває попап реакцій
+    const trigger = e.target.closest('[data-react-trigger]');
+    if (trigger) {
       e.stopPropagation();
-      const id = Number(reactBtn.dataset.reactId);
-      const emoji = reactBtn.dataset.reactEmoji;
-      toggleUserReaction(id, emoji);
-      reactBtn.classList.toggle('bd-reaction--active');
+      const id = Number(trigger.dataset.reactTrigger);
+      const existing = document.getElementById('bd-react-popup');
+      if (existing && existing.dataset.forPost == id) {
+        closeReactionPopup();
+      } else {
+        openReactionPopup(trigger, id);
+        const p = document.getElementById('bd-react-popup');
+        if (p) p.dataset.forPost = id;
+      }
       return;
     }
 
-    // Зберегти / прибрати 💾
+    // Вибір емодзі у попапі
+    const opt = e.target.closest('[data-react-opt]');
+    if (opt) {
+      e.stopPropagation();
+      const id = Number(opt.dataset.reactPost);
+      const emoji = opt.dataset.reactOpt;
+      const current = getMyReaction(id);
+      // Якщо тапнув те що вже стоїть — знімаємо
+      setMyReaction(id, current === emoji ? null : emoji);
+      closeReactionPopup();
+      // Оновлюємо тригер на сторінці (і у zoom-модалці якщо вона відкрита)
+      const newReaction = getMyReaction(id);
+      document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach(btn => {
+        btn.classList.toggle('bd-react-trigger--active', !!newReaction);
+        btn.innerHTML = newReaction
+          ? `<span class="bd-react-trigger-emoji">${newReaction}</span>`
+          : `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
+      });
+      return;
+    }
+
+    // Зберегти / прибрати закладку
     const saveBtn = e.target.closest('[data-save-id]');
     if (saveBtn) {
       e.stopPropagation();
       const id = Number(saveBtn.dataset.saveId);
       toggleSaved(id);
       const nowSaved = isSaved(id);
-      saveBtn.textContent = nowSaved ? '💾' : '🤍';
+      saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
       saveBtn.classList.toggle('bd-bookmark--active', nowSaved);
       saveBtn.setAttribute('aria-label', nowSaved ? 'Прибрати зі збережених' : 'Зберегти у Мої');
-      // Якщо ми у табі «Мої» і прибираємо — перерендерити (щоб картка зникла)
+      // Якщо у табі «Мої» прибираємо — перерендерити (картка зникає)
       if (activeType === 'saved' && !nowSaved) {
         const el = document.getElementById('board-content');
         if (el) renderBodyOnly(el);
@@ -569,7 +643,7 @@ function attachBoardDelegation() {
       return;
     }
 
-    // Share 📤
+    // Share — SVG-кнопка зі стрілкою
     const shareBtn = e.target.closest('[data-share-board]');
     if (shareBtn) {
       e.stopPropagation();
@@ -578,6 +652,11 @@ function attachBoardDelegation() {
         text:  shareBtn.dataset.shareText,
       });
       return;
+    }
+
+    // Клік поза попапом — закрити
+    if (document.getElementById('bd-react-popup') && !e.target.closest('.bd-react-popup')) {
+      closeReactionPopup();
     }
   }, { capture: true });
 }
