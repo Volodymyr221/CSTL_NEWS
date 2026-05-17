@@ -1380,3 +1380,387 @@
   background: #8B2A3D;
   transform: scale(0.92);
 }
+
+/* ============================================================================
+   ДОШКА ГРОМАДИ 2.0 — таби + пошук + 3 типи карток + реакції + збережені
+   (17.05.2026, план з docs/COMMUNITY_BOARD_VISION.md)
+   ============================================================================ */
+
+/* Контролі зверху: пошук + таби + категорії */
+.bd-controls {
+  position: sticky;
+  top: 0;
+  z-index: 30;
+  background: var(--paper);
+  padding: 10px 14px 8px;
+  border-bottom: 1px solid var(--paper-deep);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Пошук */
+.bd-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--card-cream);
+  border: 1px solid var(--paper-deep);
+  border-radius: 14px;
+  padding: 0 12px;
+  height: 40px;
+}
+.bd-search-icon {
+  font-size: 14px;
+  margin-right: 8px;
+  opacity: 0.6;
+}
+.bd-search-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px; /* iOS Safari zoom-fix — нижче 16px iOS автоматично zoom-ить input при focus */
+  font-family: inherit;
+  color: var(--black);
+}
+.bd-search-input::placeholder { color: var(--gray); }
+.bd-search-clear {
+  background: var(--paper-deep);
+  border: none;
+  color: var(--gray);
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Таби типів постів */
+.bd-tabs {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.bd-tabs::-webkit-scrollbar { display: none; }
+.bd-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--paper-deep);
+  background: var(--card-cream);
+  color: var(--gray);
+  font-size: 13px;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, color 0.12s, border-color 0.12s;
+}
+.bd-tab--active {
+  background: var(--red);
+  color: white;
+  border-color: var(--red);
+  font-weight: 600;
+}
+.bd-tab-emoji { font-size: 14px; }
+
+/* Категорії-чіпи (другий ряд, тільки для табу board) */
+.bd-categories {
+  display: flex;
+  gap: 5px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+.bd-categories::-webkit-scrollbar { display: none; }
+.bd-cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 10px;
+  border: 1px solid var(--paper-deep);
+  background: white;
+  color: var(--gray);
+  font-size: 12px;
+  font-family: inherit;
+  cursor: pointer;
+  white-space: nowrap;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-cat-chip--active {
+  background: var(--mint);
+  color: var(--mint-text);
+  border-color: var(--mint-deep);
+  font-weight: 600;
+}
+.bd-cat-emoji { font-size: 13px; }
+
+/* Тіло — порожній стан і стрічка */
+.bd-body { min-height: 50vh; }
+.bd-empty {
+  text-align: center;
+  padding: 60px 24px;
+  color: var(--gray);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.bd-stream {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  padding-bottom: 100px; /* щоб не перекривала фіксована «Подати оголошення» */
+}
+
+/* ── Реакції + збережене + share (під карткою, спільне для chat і greeting) ── */
+.bd-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0,0,0,0.10);
+}
+.bd-reactions {
+  display: flex;
+  gap: 4px;
+}
+.bd-reaction {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 3px 8px;
+  font-size: 16px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.12s, border-color 0.12s, transform 0.08s;
+}
+.bd-reaction:active { transform: scale(0.88); }
+.bd-reaction--active {
+  background: var(--mint);
+  border-color: var(--mint-deep);
+}
+
+.bd-actions-right {
+  display: flex;
+  gap: 4px;
+}
+.bd-bookmark {
+  background: transparent;
+  border: none;
+  font-size: 18px;
+  padding: 4px 6px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s;
+}
+.bd-bookmark:active { transform: scale(0.85); }
+.bd-bookmark--active { filter: drop-shadow(0 1px 3px rgba(114, 47, 55, 0.4)); }
+
+.share-btn--corner-inline {
+  background: transparent;
+  border: none;
+  font-size: 16px;
+  padding: 4px 6px;
+  cursor: pointer;
+}
+
+/* На board-стікері реакції живуть знизу — тонша риска бо стікер вже має фон */
+.bd-card--board .bd-actions {
+  border-top: 1px dashed rgba(0,0,0,0.18);
+  margin-top: 8px;
+  padding-top: 6px;
+}
+
+/* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
+.bd-card--chat {
+  background: var(--card-cream);
+  border: 1px solid var(--paper-deep);
+  border-radius: 16px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+}
+.bd-chat-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+.bd-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.bd-avatar--anon {
+  background: var(--gray-light);
+  color: var(--gray);
+  font-size: 18px;
+}
+.bd-chat-meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+.bd-chat-author {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--black);
+}
+.bd-chat-time {
+  font-size: 11px;
+  color: var(--gray);
+}
+.bd-chat-text {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--black);
+  margin-bottom: 6px;
+}
+.bd-chat-photo {
+  width: 100%;
+  border-radius: 10px;
+  margin: 8px 0;
+  max-height: 280px;
+  object-fit: cover;
+}
+.bd-chat-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 4px;
+}
+.bd-chat-tag {
+  font-size: 12px;
+  color: #1a73e8;
+  background: rgba(26, 115, 232, 0.08);
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+/* ── GREETING — святкова картка з emoji-обкладинкою ─────────────────────── */
+.bd-card--greeting {
+  background: white;
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 3px 12px rgba(0,0,0,0.08);
+}
+.bd-greet-cover {
+  height: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.bd-greet-emoji {
+  font-size: 64px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 4px rgba(0,0,0,0.15));
+}
+.bd-greet-body {
+  padding: 14px 16px;
+}
+.bd-greet-to {
+  font-size: 12px;
+  color: var(--gray);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+.bd-greet-text {
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--black);
+  margin-bottom: 8px;
+}
+.bd-greet-footer {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--gray);
+}
+.bd-greet-author { font-style: italic; }
+
+/* Корок на board не залазить на sticky пошук */
+.cm-board-corkboard.board-corkboard--full {
+  margin-top: 0;
+  padding-top: 18px;
+}
+
+/* ── Submit-форма: перемикач типу (3 таби) ─────────────────────────────── */
+.bm-type-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  background: var(--gray-light);
+  border-radius: 14px;
+  padding: 4px;
+}
+.bm-type-tab {
+  flex: 1;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 4px;
+  border: none;
+  background: transparent;
+  color: var(--gray);
+  font-family: inherit;
+  font-size: 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s, color 0.15s;
+}
+.bm-type-tab.active {
+  background: white;
+  color: var(--black);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+}
+.bm-type-emoji { font-size: 18px; }
+.bm-type-label { font-size: 11px; }
+
+/* ── Submit-форма: пресети обкладинки для greeting ─────────────────────── */
+.bm-greet-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+.bm-greet-preset {
+  aspect-ratio: 1;
+  border: 2px solid transparent;
+  border-radius: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s, border-color 0.15s;
+}
+.bm-greet-preset:active { transform: scale(0.92); }
+.bm-greet-preset.active {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(114, 47, 55, 0.15);
+}
+.bm-greet-preset-emoji {
+  font-size: 28px;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
+}
