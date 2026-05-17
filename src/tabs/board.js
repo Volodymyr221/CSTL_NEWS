@@ -21,12 +21,15 @@ import {
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
 const TYPE_TABS = [
-  { id: 'all',      label: 'Усі',         emoji: '🔄' },
+  { id: 'all',      label: 'Актуальні',   emoji: '⚡' },
   { id: 'board',    label: 'Дошка',       emoji: '🛒' },
   { id: 'chat',     label: 'Розмови',     emoji: '💬' },
   { id: 'greeting', label: 'Вітання',     emoji: '🎉' },
   { id: 'saved',    label: 'Мої',         emoji: '💾' },
 ];
+
+// «Актуальні» = пости опубліковані за останні N днів (з усіх типів)
+const FRESH_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;   // 3 доби
 
 const BOARD_CATEGORIES = [
   { id: 'all',         label: 'Всі',          emoji: '✦' },
@@ -442,12 +445,18 @@ function renderCard(post) {
 function getFilteredPosts() {
   const q = searchQuery.trim().toLowerCase();
   const savedIds = activeType === 'saved' ? getSavedIds() : null;
+  const freshCutoff = Date.now() - FRESH_WINDOW_MS;
 
   return allPosts.filter(p => {
     // Фільтр по типу
     if (activeType === 'saved') {
       if (!savedIds.has(p.id)) return false;
-    } else if (activeType !== 'all' && p.type !== activeType) {
+    } else if (activeType === 'all') {
+      // «Актуальні» — пости за останні 3 доби (по published_at або ts)
+      const t = p.ts || (p.published_at && new Date(p.published_at).getTime())
+                     || (p.created_at && new Date(p.created_at).getTime()) || 0;
+      if (t < freshCutoff) return false;
+    } else if (p.type !== activeType) {
       return false;
     }
     // Фільтр по категорії — тільки для board
@@ -463,6 +472,16 @@ function getFilteredPosts() {
       if (!hay.includes(q)) return false;
     }
     return true;
+  });
+}
+
+// Свіжі офіційні (для табу «Актуальні»)
+function getFreshAnnouncements() {
+  const cutoff = Date.now() - FRESH_WINDOW_MS;
+  return allAnnouncements.filter(a => {
+    const t = a.ts || (a.published_at && new Date(a.published_at).getTime())
+                   || (a.created_at && new Date(a.created_at).getTime()) || 0;
+    return t >= cutoff;
   });
 }
 
@@ -504,10 +523,14 @@ function renderHeader() {
 
 function renderBody() {
   const filtered = getFilteredPosts();
+  // Для «Актуальні» офіційні теж фільтруємо за часом
+  const annsForView = activeType === 'all' ? getFreshAnnouncements() : allAnnouncements;
 
-  if (!filtered.length) {
+  if (!filtered.length && !(activeType === 'all' && annsForView.length)) {
     const msg = activeType === 'saved'
       ? 'У «Моїх» поки нічого. Тапніть 🤍 на пості щоб зберегти.'
+      : activeType === 'all'
+      ? 'За останні 3 дні нічого нового. Заглядайте у Дошку / Розмови / Вітання.'
       : searchQuery
       ? `За запитом «${escapeHtml(searchQuery)}» нічого не знайдено`
       : 'У цій категорії поки порожньо';
@@ -515,7 +538,11 @@ function renderBody() {
   }
 
   // Сортування за часом — нові зверху
-  const sorted = [...filtered].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  const sorted = [...filtered].sort((a, b) => {
+    const ta = a.ts || (a.published_at && new Date(a.published_at).getTime()) || 0;
+    const tb = b.ts || (b.published_at && new Date(b.published_at).getTime()) || 0;
+    return tb - ta;
+  });
 
   // Окремий лейаут для board (корок з нахилами) vs chat/greeting (стрічка)
   if (activeType === 'board') {
@@ -528,8 +555,8 @@ function renderBody() {
   }
 
   if (activeType === 'all') {
-    // Усі — змішане з офіційними зверху на корку + chat/greeting у стрічці
-    const officialCards = allAnnouncements.map(renderOfficialCard).join('');
+    // Актуальні — змішане з офіційними зверху на корку + chat/greeting у стрічці
+    const officialCards = annsForView.map(renderOfficialCard).join('');
     const boardOnly = sorted.filter(p => p.type === 'board').map(renderBoardCard).join('');
     const others    = sorted.filter(p => p.type !== 'board').map(renderCard).join('');
     return `
