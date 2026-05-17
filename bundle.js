@@ -2762,7 +2762,6 @@ END:VEVENT`
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
-  var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
   var allPosts = [];
   var allAnnouncements = [];
   var activeType = "all";
@@ -2849,38 +2848,75 @@ END:VEVENT`
     </div>
   `;
   }
-  function actionsRow(post) {
+  function reactTriggerHtml(post) {
     const myReaction = getMyReaction(post.id);
+    const label = myReaction ? `<span class="bd-react-trigger-emoji">${myReaction}</span>` : `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
+    return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
+          data-react-trigger="${post.id}" aria-label="\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0440\u0435\u0430\u043A\u0446\u0456\u044E">${label}</button>`;
+  }
+  function saveBtnHtml(post) {
     const saved = isSaved(post.id);
-    const commentsCount = getComments(post.id).length;
-    const triggerLabel = myReaction ? `<span class="bd-react-trigger-emoji">${myReaction}</span>` : `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
+    return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
+          data-save-id="${post.id}"
+          aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
+    ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
+  </button>`;
+  }
+  function shareBtnHtml(post) {
     const shareText = buildShareText(post);
     const shareTitle = post.type === "greeting" ? `\u{1F389} ${post.title || "\u0412\u0456\u0442\u0430\u043D\u043D\u044F"} (CSTL LIFE)` : post.type === "chat" ? "\u0420\u043E\u0437\u043C\u043E\u0432\u0430 \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438" : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438";
+    return `<button class="bd-icon-btn bd-share-btn" type="button"
+          data-share-board
+          data-share-title="${escapeHtml(shareTitle)}"
+          data-share-text="${escapeHtml(shareText)}"
+          aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
+  }
+  function boardActionsHtml(post) {
+    return `
+    <div class="bd-actions bd-actions--board-compact">
+      ${reactTriggerHtml(post)}
+      <div class="bd-actions-extra">
+        ${saveBtnHtml(post)}
+        ${shareBtnHtml(post)}
+      </div>
+    </div>
+  `;
+  }
+  function greetingActionsHtml(post) {
     return `
     <div class="bd-actions">
-      <div class="bd-actions-left">
-        <button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
-                data-react-trigger="${post.id}" aria-label="\u041F\u043E\u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u0440\u0435\u0430\u043A\u0446\u0456\u044E">
-          ${triggerLabel}
-        </button>
-        <button class="bd-comments-btn${commentsCount > 0 ? " bd-comments-btn--has" : ""}" type="button"
-                data-comments-id="${post.id}" aria-label="\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 (${commentsCount})">
-          ${COMMENT_ICON_SVG}
-          <span class="bd-comments-count">${commentsCount}</span>
-        </button>
-      </div>
-      <div class="bd-actions-right">
-        <button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
-                data-save-id="${post.id}"
-                aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
-          ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
-        </button>
-        <button class="bd-icon-btn bd-share-btn" type="button"
-                data-share-board
-                data-share-title="${escapeHtml(shareTitle)}"
-                data-share-text="${escapeHtml(shareText)}"
-                aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>
-      </div>
+      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
+      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
+    </div>
+  `;
+  }
+  function chatActionsHtml(post) {
+    return `
+    <div class="bd-actions">
+      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
+      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
+    </div>
+    ${chatCommentsHtml(post)}
+  `;
+  }
+  function chatCommentsHtml(post) {
+    const items = getComments(post.id);
+    const listHtml = items.length ? items.map((c) => `
+        <div class="bd-inline-comment">
+          <span class="bd-inline-comment-author">${escapeHtml(c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
+          <span class="bd-inline-comment-time">${formatTime(c.ts)}</span>
+        </div>
+      `).join("") : "";
+    return `
+    <div class="bd-inline-comments" data-comments-for="${post.id}">
+      ${listHtml ? `<div class="bd-inline-comments-list">${listHtml}</div>` : ""}
+      <form class="bd-inline-comment-form" data-comment-form="${post.id}">
+        <input class="bd-inline-comment-input" type="text"
+               placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440..." aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440"
+               data-comment-input="${post.id}">
+        <button class="bd-inline-comment-submit" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
+      </form>
     </div>
   `;
   }
@@ -2916,108 +2952,6 @@ END:VEVENT`
       setTimeout(() => existing.remove(), 150);
     }
   }
-  function openCommentsModal(postId, post) {
-    if (document.getElementById("bd-comments-modal"))
-      return;
-    const wrap = document.createElement("div");
-    wrap.id = "bd-comments-modal";
-    wrap.className = "bd-comments-modal";
-    wrap.innerHTML = `
-    <div class="bd-comments-backdrop"></div>
-    <div class="bd-comments-panel" role="dialog" aria-modal="true">
-      <div class="bd-comments-handle"></div>
-      <header class="bd-comments-header">
-        <h3 class="bd-comments-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</h3>
-        <button class="bd-comments-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      </header>
-
-      <div class="bd-comments-post-preview">
-        <p class="bd-comments-post-text">${escapeHtml((post.text || "").slice(0, 140))}${(post.text || "").length > 140 ? "\u2026" : ""}</p>
-        <span class="bd-comments-post-meta">\u2014 ${escapeHtml(post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-      </div>
-
-      <div class="bd-comments-list" id="bd-comments-list"></div>
-
-      <form class="bd-comments-form" id="bd-comments-form" novalidate>
-        <input class="bd-comments-author" id="bd-comment-author" type="text"
-               placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F (\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)" autocomplete="name">
-        <div class="bd-comments-input-row">
-          <textarea class="bd-comments-input" id="bd-comment-text"
-                    placeholder="\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440..." rows="2" required></textarea>
-          <button class="bd-comments-submit" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
-        </div>
-      </form>
-    </div>
-  `;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    renderCommentsList(postId);
-    function close() {
-      wrap.classList.remove("open");
-      document.body.classList.remove("modal-open");
-      setTimeout(() => wrap.remove(), 220);
-    }
-    wrap.querySelector(".bd-comments-backdrop").addEventListener("click", close);
-    wrap.querySelector(".bd-comments-close").addEventListener("click", close);
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key === "Escape") {
-        close();
-        document.removeEventListener("keydown", onEsc);
-      }
-    });
-    wrap.querySelector("#bd-comments-form").addEventListener("submit", (e) => {
-      e.preventDefault();
-      const textEl = wrap.querySelector("#bd-comment-text");
-      const authorEl = wrap.querySelector("#bd-comment-author");
-      const text = textEl.value.trim();
-      const author = authorEl.value.trim() || null;
-      if (!text) {
-        textEl.focus();
-        return;
-      }
-      addComment(postId, author, text);
-      textEl.value = "";
-      renderCommentsList(postId);
-      const newCount = getComments(postId).length;
-      document.querySelectorAll(`[data-comments-id="${postId}"]`).forEach((btn) => {
-        const c = btn.querySelector(".bd-comments-count");
-        if (c)
-          c.textContent = newCount;
-        btn.classList.toggle("bd-comments-btn--has", newCount > 0);
-        btn.setAttribute("aria-label", `\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 (${newCount})`);
-      });
-    });
-    setTimeout(() => wrap.querySelector("#bd-comment-text")?.focus(), 250);
-  }
-  function renderCommentsList(postId) {
-    const listEl = document.getElementById("bd-comments-list");
-    if (!listEl)
-      return;
-    const items = getComments(postId);
-    if (!items.length) {
-      listEl.innerHTML = '<div class="bd-comments-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0456!</div>';
-      return;
-    }
-    listEl.innerHTML = items.map((c) => {
-      const author = c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E";
-      const initial = c.author ? c.author.charAt(0).toUpperCase() : "\u{1F464}";
-      const hue = c.author ? c.author.charCodeAt(0) * 47 % 360 : 0;
-      const avatarStyle = c.author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
-      return `
-      <article class="bd-comment">
-        <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-        <div class="bd-comment-body">
-          <div class="bd-comment-head">
-            <span class="bd-comment-author">${escapeHtml(author)}</span>
-            <span class="bd-comment-time">${formatTime(c.ts)}</span>
-          </div>
-          <p class="bd-comment-text">${escapeHtml(c.text)}</p>
-        </div>
-      </article>
-    `;
-    }).join("");
-  }
   function buildShareText(post) {
     if (post.type === "board") {
       const cat = CATEGORY_EMOJI2[post.category] || "\u{1F4CC}";
@@ -3052,7 +2986,7 @@ ${post.text}
         <span class="cm-board-time">${formatTime(p.ts)}</span>
       </div>
       ${contactHtml}
-      ${actionsRow(p)}
+      ${boardActionsHtml(p)}
     </article>
   `;
   }
@@ -3086,7 +3020,7 @@ ${post.text}
       <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       ${photoHtml}
       ${tagsHtml}
-      ${actionsRow(p)}
+      ${chatActionsHtml(p)}
     </article>
   `;
   }
@@ -3107,7 +3041,7 @@ ${post.text}
           <span class="bd-greet-time">${formatTime(p.ts)}</span>
         </div>
       </div>
-      ${actionsRow(p)}
+      ${greetingActionsHtml(p)}
     </article>
   `;
   }
@@ -3352,6 +3286,33 @@ ${post.text}
     if (_delegationAttached)
       return;
     _delegationAttached = true;
+    document.addEventListener("submit", (e) => {
+      const form = e.target.closest("[data-comment-form]");
+      if (!form)
+        return;
+      e.preventDefault();
+      e.stopPropagation();
+      const postId = Number(form.dataset.commentForm);
+      const input = form.querySelector("[data-comment-input]");
+      const text = (input?.value || "").trim();
+      if (!text) {
+        input?.focus();
+        return;
+      }
+      addComment(postId, null, text);
+      if (input)
+        input.value = "";
+      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+      if (wrap) {
+        const post = allPosts.find((p) => p.id === postId);
+        if (post) {
+          wrap.outerHTML = chatCommentsHtml(post);
+          setTimeout(() => {
+            document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
+          }, 50);
+        }
+      }
+    });
     document.addEventListener("click", (e) => {
       const trigger = e.target.closest("[data-react-trigger]");
       if (trigger) {
@@ -3383,13 +3344,8 @@ ${post.text}
         });
         return;
       }
-      const commentsBtn = e.target.closest("[data-comments-id]");
-      if (commentsBtn) {
+      if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
         e.stopPropagation();
-        const id = Number(commentsBtn.dataset.commentsId);
-        const post = allPosts.find((p) => p.id === id);
-        if (post)
-          openCommentsModal(id, post);
         return;
       }
       const saveBtn = e.target.closest("[data-save-id]");

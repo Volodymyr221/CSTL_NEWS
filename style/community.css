@@ -1903,6 +1903,122 @@
   background: var(--red-dark);
 }
 
+/* ── BOARD-стікер: компактний actions (тільки реакція в кутку) ──────────── */
+/* У звичайному вигляді — лише 🙂+ внизу зліва, без save/share/comments.
+   У zoom-modal (.cm-board-modal-note) — показуємо ще save+share. */
+.bd-actions--board-compact {
+  display: block;
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px dashed rgba(0,0,0,0.18);
+}
+.bd-actions--board-compact .bd-react-trigger {
+  /* Зменшена версія в лівому нижньому куті */
+  min-width: 38px;
+  height: 26px;
+  padding: 0 8px;
+  border-radius: 13px;
+}
+.bd-actions--board-compact .bd-react-trigger-default { font-size: 13px; }
+.bd-actions--board-compact .bd-react-trigger-emoji   { font-size: 14px; }
+.bd-actions--board-compact .bd-react-trigger-plus    { font-size: 11px; }
+
+/* Save+Share — приховані на звичайному стікері, з'являються у zoom-modal */
+.bd-actions--board-compact .bd-actions-extra { display: none; }
+.cm-board-modal-note .bd-actions--board-compact {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.cm-board-modal-note .bd-actions-extra {
+  display: flex;
+  gap: 6px;
+}
+
+/* ── INLINE-КОМЕНТАРІ ДЛЯ CHAT-КАРТОК ───────────────────────────────────── */
+.bd-inline-comments {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(0,0,0,0.10);
+}
+.bd-inline-comments-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+.bd-inline-comment {
+  background: rgba(0,0,0,0.03);
+  border-radius: 12px;
+  padding: 7px 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  align-items: baseline;
+}
+.bd-inline-comment-author {
+  font-weight: 600;
+  color: var(--red);
+  font-size: 13px;
+}
+.bd-inline-comment-text {
+  color: var(--black);
+  flex: 1;
+  min-width: 0;
+}
+.bd-inline-comment-time {
+  font-size: 11px;
+  color: var(--gray);
+  margin-left: auto;
+}
+
+/* Форма введення */
+.bd-inline-comment-form {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.bd-inline-comment-input {
+  flex: 1;
+  background: white;
+  border: 1px solid var(--paper-deep);
+  border-radius: 18px;
+  padding: 8px 14px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--black);
+  outline: none;
+  min-width: 0;
+  transition: border-color 0.15s;
+}
+.bd-inline-comment-input:focus { border-color: var(--red); }
+.bd-inline-comment-input::placeholder { color: var(--gray); }
+
+.bd-inline-comment-submit {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  background: var(--red);
+  color: white;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: transform 0.08s, background 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-inline-comment-submit:active {
+  transform: scale(0.90);
+  background: var(--red-dark);
+}
+
 /* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
 .bd-card--chat {
   background: var(--card-cream);

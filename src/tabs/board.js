@@ -146,48 +146,104 @@ function renderContact(contact) {
 
 // ── Реакції + share + bookmark — спільний рядок дій під/над постом ───────────
 
-function actionsRow(post) {
-  const myReaction = getMyReaction(post.id);
-  const saved = isSaved(post.id);
-  const commentsCount = getComments(post.id).length;
+// ── Рядок дій під карткою — різний для board/chat/greeting ──────────────
+//
+// BOARD (стікер):
+//   - Згорнутий: тільки 🙂+ маленька в лівому нижньому куті
+//   - Розгорнутий (zoom-modal): додатково 📑 save + ↗ share
+// CHAT (розмова):
+//   - 🙂+ + 📑 + ↗ + повноцінне поле введення коментарів (inline)
+// GREETING (вітання):
+//   - 🙂+ + 📑 + ↗ (без коментарів)
 
-  // Тригер реакції — або моя обрана emoji, або «🙂+» якщо нічого не ставив
-  const triggerLabel = myReaction
+function reactTriggerHtml(post) {
+  const myReaction = getMyReaction(post.id);
+  const label = myReaction
     ? `<span class="bd-react-trigger-emoji">${myReaction}</span>`
     : `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
+  return `<button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
+          data-react-trigger="${post.id}" aria-label="Поставити реакцію">${label}</button>`;
+}
 
+function saveBtnHtml(post) {
+  const saved = isSaved(post.id);
+  return `<button class="bd-icon-btn bd-bookmark${saved ? ' bd-bookmark--active' : ''}" type="button"
+          data-save-id="${post.id}"
+          aria-label="${saved ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
+    ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
+  </button>`;
+}
+
+function shareBtnHtml(post) {
   const shareText = buildShareText(post);
   const shareTitle = post.type === 'greeting'
     ? `🎉 ${post.title || 'Вітання'} (CSTL LIFE)`
     : post.type === 'chat'
     ? 'Розмова з Дошки громади Олики'
     : 'Оголошення з Дошки громади Олики';
+  return `<button class="bd-icon-btn bd-share-btn" type="button"
+          data-share-board
+          data-share-title="${escapeHtml(shareTitle)}"
+          data-share-text="${escapeHtml(shareText)}"
+          aria-label="Поділитися">${SHARE_ICON_SVG}</button>`;
+}
 
+// BOARD-стікер: тільки реакція. У zoom-modal CSS показує `.bd-actions-extra`
+function boardActionsHtml(post) {
+  return `
+    <div class="bd-actions bd-actions--board-compact">
+      ${reactTriggerHtml(post)}
+      <div class="bd-actions-extra">
+        ${saveBtnHtml(post)}
+        ${shareBtnHtml(post)}
+      </div>
+    </div>
+  `;
+}
+
+// GREETING: реакція + save + share (без коментарів)
+function greetingActionsHtml(post) {
   return `
     <div class="bd-actions">
-      <div class="bd-actions-left">
-        <button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
-                data-react-trigger="${post.id}" aria-label="Поставити реакцію">
-          ${triggerLabel}
-        </button>
-        <button class="bd-comments-btn${commentsCount > 0 ? ' bd-comments-btn--has' : ''}" type="button"
-                data-comments-id="${post.id}" aria-label="Коментарі (${commentsCount})">
-          ${COMMENT_ICON_SVG}
-          <span class="bd-comments-count">${commentsCount}</span>
-        </button>
-      </div>
-      <div class="bd-actions-right">
-        <button class="bd-icon-btn bd-bookmark${saved ? ' bd-bookmark--active' : ''}" type="button"
-                data-save-id="${post.id}"
-                aria-label="${saved ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
-          ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
-        </button>
-        <button class="bd-icon-btn bd-share-btn" type="button"
-                data-share-board
-                data-share-title="${escapeHtml(shareTitle)}"
-                data-share-text="${escapeHtml(shareText)}"
-                aria-label="Поділитися">${SHARE_ICON_SVG}</button>
-      </div>
+      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
+      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
+    </div>
+  `;
+}
+
+// CHAT: реакція + save + share + inline коментарі
+function chatActionsHtml(post) {
+  return `
+    <div class="bd-actions">
+      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
+      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
+    </div>
+    ${chatCommentsHtml(post)}
+  `;
+}
+
+// Інлайн-секція коментарів для chat-карток.
+// Зверху: список існуючих коментарів. Знизу: поле введення + кнопка «↑».
+function chatCommentsHtml(post) {
+  const items = getComments(post.id);
+  const listHtml = items.length
+    ? items.map(c => `
+        <div class="bd-inline-comment">
+          <span class="bd-inline-comment-author">${escapeHtml(c.author || 'анонімно')}</span>
+          <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
+          <span class="bd-inline-comment-time">${formatTime(c.ts)}</span>
+        </div>
+      `).join('')
+    : '';
+  return `
+    <div class="bd-inline-comments" data-comments-for="${post.id}">
+      ${listHtml ? `<div class="bd-inline-comments-list">${listHtml}</div>` : ''}
+      <form class="bd-inline-comment-form" data-comment-form="${post.id}">
+        <input class="bd-inline-comment-input" type="text"
+               placeholder="Написати коментар..." aria-label="Написати коментар"
+               data-comment-input="${post.id}">
+        <button class="bd-inline-comment-submit" type="submit" aria-label="Надіслати">↑</button>
+      </form>
     </div>
   `;
 }
@@ -230,115 +286,8 @@ function closeReactionPopup() {
   }
 }
 
-// ── Модалка коментарів (bottom-sheet) ─────────────────────────────────────
-// Зберігаються у localStorage. У Спринт 4 Фази 9 — перейде у Supabase таблицю
-// `comments` з referencing posts(id) + magic-link auth.
-
-function openCommentsModal(postId, post) {
-  if (document.getElementById('bd-comments-modal')) return;
-
-  const wrap = document.createElement('div');
-  wrap.id = 'bd-comments-modal';
-  wrap.className = 'bd-comments-modal';
-  wrap.innerHTML = `
-    <div class="bd-comments-backdrop"></div>
-    <div class="bd-comments-panel" role="dialog" aria-modal="true">
-      <div class="bd-comments-handle"></div>
-      <header class="bd-comments-header">
-        <h3 class="bd-comments-title">Коментарі</h3>
-        <button class="bd-comments-close" type="button" aria-label="Закрити">✕</button>
-      </header>
-
-      <div class="bd-comments-post-preview">
-        <p class="bd-comments-post-text">${escapeHtml((post.text || '').slice(0, 140))}${(post.text || '').length > 140 ? '…' : ''}</p>
-        <span class="bd-comments-post-meta">— ${escapeHtml(post.author || 'анонімно')}</span>
-      </div>
-
-      <div class="bd-comments-list" id="bd-comments-list"></div>
-
-      <form class="bd-comments-form" id="bd-comments-form" novalidate>
-        <input class="bd-comments-author" id="bd-comment-author" type="text"
-               placeholder="Ваше ім'я (порожнє — анонімно)" autocomplete="name">
-        <div class="bd-comments-input-row">
-          <textarea class="bd-comments-input" id="bd-comment-text"
-                    placeholder="Напишіть коментар..." rows="2" required></textarea>
-          <button class="bd-comments-submit" type="submit" aria-label="Надіслати">↑</button>
-        </div>
-      </form>
-    </div>
-  `;
-  document.body.appendChild(wrap);
-  document.body.classList.add('modal-open');
-  requestAnimationFrame(() => wrap.classList.add('open'));
-
-  renderCommentsList(postId);
-
-  function close() {
-    wrap.classList.remove('open');
-    document.body.classList.remove('modal-open');
-    setTimeout(() => wrap.remove(), 220);
-  }
-  wrap.querySelector('.bd-comments-backdrop').addEventListener('click', close);
-  wrap.querySelector('.bd-comments-close').addEventListener('click', close);
-  document.addEventListener('keydown', function onEsc(e) {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
-  });
-
-  // Submit нового коментаря
-  wrap.querySelector('#bd-comments-form').addEventListener('submit', e => {
-    e.preventDefault();
-    const textEl   = wrap.querySelector('#bd-comment-text');
-    const authorEl = wrap.querySelector('#bd-comment-author');
-    const text   = textEl.value.trim();
-    const author = authorEl.value.trim() || null;
-    if (!text) { textEl.focus(); return; }
-
-    addComment(postId, author, text);
-    textEl.value = '';
-    renderCommentsList(postId);
-
-    // Оновлюємо лічильник на картках (і у zoom-модалці якщо відкрита)
-    const newCount = getComments(postId).length;
-    document.querySelectorAll(`[data-comments-id="${postId}"]`).forEach(btn => {
-      const c = btn.querySelector('.bd-comments-count');
-      if (c) c.textContent = newCount;
-      btn.classList.toggle('bd-comments-btn--has', newCount > 0);
-      btn.setAttribute('aria-label', `Коментарі (${newCount})`);
-    });
-  });
-
-  setTimeout(() => wrap.querySelector('#bd-comment-text')?.focus(), 250);
-}
-
-function renderCommentsList(postId) {
-  const listEl = document.getElementById('bd-comments-list');
-  if (!listEl) return;
-  const items = getComments(postId);
-  if (!items.length) {
-    listEl.innerHTML = '<div class="bd-comments-empty">Поки немає коментарів. Будьте перші!</div>';
-    return;
-  }
-  listEl.innerHTML = items.map(c => {
-    const author = c.author || 'анонімно';
-    const initial = c.author ? c.author.charAt(0).toUpperCase() : '👤';
-    const hue = c.author ? (c.author.charCodeAt(0) * 47) % 360 : 0;
-    const avatarStyle = c.author
-      ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600`
-      : 'background:#f5f5f5;color:#666;font-size:18px';
-    return `
-      <article class="bd-comment">
-        <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-        <div class="bd-comment-body">
-          <div class="bd-comment-head">
-            <span class="bd-comment-author">${escapeHtml(author)}</span>
-            <span class="bd-comment-time">${formatTime(c.ts)}</span>
-          </div>
-          <p class="bd-comment-text">${escapeHtml(c.text)}</p>
-        </div>
-      </article>
-    `;
-  }).join('');
-}
+// (модалку коментарів видалено 18.05.2026 — заміщена inline-формою у chat-картках.
+//  Board і greeting коментарів не мають за рішенням Вови.)
 
 function buildShareText(post) {
   if (post.type === 'board') {
@@ -376,7 +325,7 @@ function renderBoardCard(p) {
         <span class="cm-board-time">${formatTime(p.ts)}</span>
       </div>
       ${contactHtml}
-      ${actionsRow(p)}
+      ${boardActionsHtml(p)}
     </article>
   `;
 }
@@ -418,7 +367,7 @@ function renderChatCard(p) {
       <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       ${photoHtml}
       ${tagsHtml}
-      ${actionsRow(p)}
+      ${chatActionsHtml(p)}
     </article>
   `;
 }
@@ -443,7 +392,7 @@ function renderGreetingCard(p) {
           <span class="bd-greet-time">${formatTime(p.ts)}</span>
         </div>
       </div>
-      ${actionsRow(p)}
+      ${greetingActionsHtml(p)}
     </article>
   `;
 }
@@ -737,6 +686,33 @@ function attachBoardDelegation() {
   if (_delegationAttached) return;
   _delegationAttached = true;
 
+  // Submit inline-форми коментаря (CHAT-картки): додаємо коментар у localStorage,
+  // перерендерюємо список без перезавантаження всієї дошки.
+  document.addEventListener('submit', e => {
+    const form = e.target.closest('[data-comment-form]');
+    if (!form) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const postId = Number(form.dataset.commentForm);
+    const input  = form.querySelector('[data-comment-input]');
+    const text   = (input?.value || '').trim();
+    if (!text) { input?.focus(); return; }
+    addComment(postId, null, text);
+    if (input) input.value = '';
+    // Перерендерюємо весь блок коментарів для цього поста
+    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+    if (wrap) {
+      const post = allPosts.find(p => p.id === postId);
+      if (post) {
+        wrap.outerHTML = chatCommentsHtml(post);
+        // Фокус назад у поле введення для зручності серії коментарів
+        setTimeout(() => {
+          document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
+        }, 50);
+      }
+    }
+  });
+
   document.addEventListener('click', e => {
     // Тригер «🙂+» — відкриває попап реакцій
     const trigger = e.target.closest('[data-react-trigger]');
@@ -775,13 +751,10 @@ function attachBoardDelegation() {
       return;
     }
 
-    // Кнопка коментарів — відкрити модалку
-    const commentsBtn = e.target.closest('[data-comments-id]');
-    if (commentsBtn) {
+    // Усе всередині inline-форми коментарів — не пропускаємо до zoom-модалки
+    // (форма має data-comment-form="<id>" і знаходиться у CHAT-картці, не у board)
+    if (e.target.closest('[data-comment-form]') || e.target.closest('[data-comment-input]')) {
       e.stopPropagation();
-      const id = Number(commentsBtn.dataset.commentsId);
-      const post = allPosts.find(p => p.id === id);
-      if (post) openCommentsModal(id, post);
       return;
     }
 
