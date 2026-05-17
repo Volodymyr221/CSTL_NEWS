@@ -48,6 +48,9 @@ const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fi
 // Іконка «Поділитись» — стандартний iOS-style (квадрат зі стрілкою вгору)
 const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 
+// Іконка коментаря (мовний пузир)
+const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+
 // ── Стан (зберігається в межах сесії, фільтри у localStorage) ────────────────
 
 let allPosts       = [];   // [{id, type, ...}]
@@ -58,8 +61,9 @@ let searchQuery    = '';
 
 // ── localStorage: реакції і збережене ────────────────────────────────────────
 
-const LS_REACTIONS = 'cstl-reactions-v1';   // { [postId]: { '❤️': true, ... } }
+const LS_REACTIONS = 'cstl-reactions-v1';   // { [postId]: '❤️' | null }
 const LS_SAVED     = 'cstl-saved-v1';        // [postId, postId, ...]
+const LS_COMMENTS  = 'cstl-comments-v1';     // { [postId]: [{author, text, ts}, ...] }
 
 function lsGet(key, fallback) {
   try {
@@ -81,6 +85,18 @@ function setMyReaction(postId, emoji) {
   if (emoji) all[postId] = emoji;
   else delete all[postId];
   lsSet(LS_REACTIONS, all);
+}
+
+function getComments(postId) {
+  const all = lsGet(LS_COMMENTS, {});
+  return all[postId] || [];
+}
+function addComment(postId, author, text) {
+  const all = lsGet(LS_COMMENTS, {});
+  const list = all[postId] || [];
+  list.push({ author: author || null, text, ts: Date.now() });
+  all[postId] = list;
+  lsSet(LS_COMMENTS, all);
 }
 
 function getSavedIds() {
@@ -132,6 +148,7 @@ function renderContact(contact) {
 function actionsRow(post) {
   const myReaction = getMyReaction(post.id);
   const saved = isSaved(post.id);
+  const commentsCount = getComments(post.id).length;
 
   // Тригер реакції — або моя обрана emoji, або «🙂+» якщо нічого не ставив
   const triggerLabel = myReaction
@@ -147,10 +164,17 @@ function actionsRow(post) {
 
   return `
     <div class="bd-actions">
-      <button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
-              data-react-trigger="${post.id}" aria-label="Поставити реакцію">
-        ${triggerLabel}
-      </button>
+      <div class="bd-actions-left">
+        <button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
+                data-react-trigger="${post.id}" aria-label="Поставити реакцію">
+          ${triggerLabel}
+        </button>
+        <button class="bd-comments-btn${commentsCount > 0 ? ' bd-comments-btn--has' : ''}" type="button"
+                data-comments-id="${post.id}" aria-label="Коментарі (${commentsCount})">
+          ${COMMENT_ICON_SVG}
+          <span class="bd-comments-count">${commentsCount}</span>
+        </button>
+      </div>
       <div class="bd-actions-right">
         <button class="bd-icon-btn bd-bookmark${saved ? ' bd-bookmark--active' : ''}" type="button"
                 data-save-id="${post.id}"
@@ -203,6 +227,116 @@ function closeReactionPopup() {
     existing.classList.remove('visible');
     setTimeout(() => existing.remove(), 150);
   }
+}
+
+// ── Модалка коментарів (bottom-sheet) ─────────────────────────────────────
+// Зберігаються у localStorage. У Спринт 4 Фази 9 — перейде у Supabase таблицю
+// `comments` з referencing posts(id) + magic-link auth.
+
+function openCommentsModal(postId, post) {
+  if (document.getElementById('bd-comments-modal')) return;
+
+  const wrap = document.createElement('div');
+  wrap.id = 'bd-comments-modal';
+  wrap.className = 'bd-comments-modal';
+  wrap.innerHTML = `
+    <div class="bd-comments-backdrop"></div>
+    <div class="bd-comments-panel" role="dialog" aria-modal="true">
+      <div class="bd-comments-handle"></div>
+      <header class="bd-comments-header">
+        <h3 class="bd-comments-title">Коментарі</h3>
+        <button class="bd-comments-close" type="button" aria-label="Закрити">✕</button>
+      </header>
+
+      <div class="bd-comments-post-preview">
+        <p class="bd-comments-post-text">${escapeHtml((post.text || '').slice(0, 140))}${(post.text || '').length > 140 ? '…' : ''}</p>
+        <span class="bd-comments-post-meta">— ${escapeHtml(post.author || 'анонімно')}</span>
+      </div>
+
+      <div class="bd-comments-list" id="bd-comments-list"></div>
+
+      <form class="bd-comments-form" id="bd-comments-form" novalidate>
+        <input class="bd-comments-author" id="bd-comment-author" type="text"
+               placeholder="Ваше ім'я (порожнє — анонімно)" autocomplete="name">
+        <div class="bd-comments-input-row">
+          <textarea class="bd-comments-input" id="bd-comment-text"
+                    placeholder="Напишіть коментар..." rows="2" required></textarea>
+          <button class="bd-comments-submit" type="submit" aria-label="Надіслати">↑</button>
+        </div>
+      </form>
+    </div>
+  `;
+  document.body.appendChild(wrap);
+  document.body.classList.add('modal-open');
+  requestAnimationFrame(() => wrap.classList.add('open'));
+
+  renderCommentsList(postId);
+
+  function close() {
+    wrap.classList.remove('open');
+    document.body.classList.remove('modal-open');
+    setTimeout(() => wrap.remove(), 220);
+  }
+  wrap.querySelector('.bd-comments-backdrop').addEventListener('click', close);
+  wrap.querySelector('.bd-comments-close').addEventListener('click', close);
+  document.addEventListener('keydown', function onEsc(e) {
+    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+  });
+
+  // Submit нового коментаря
+  wrap.querySelector('#bd-comments-form').addEventListener('submit', e => {
+    e.preventDefault();
+    const textEl   = wrap.querySelector('#bd-comment-text');
+    const authorEl = wrap.querySelector('#bd-comment-author');
+    const text   = textEl.value.trim();
+    const author = authorEl.value.trim() || null;
+    if (!text) { textEl.focus(); return; }
+
+    addComment(postId, author, text);
+    textEl.value = '';
+    renderCommentsList(postId);
+
+    // Оновлюємо лічильник на картках (і у zoom-модалці якщо відкрита)
+    const newCount = getComments(postId).length;
+    document.querySelectorAll(`[data-comments-id="${postId}"]`).forEach(btn => {
+      const c = btn.querySelector('.bd-comments-count');
+      if (c) c.textContent = newCount;
+      btn.classList.toggle('bd-comments-btn--has', newCount > 0);
+      btn.setAttribute('aria-label', `Коментарі (${newCount})`);
+    });
+  });
+
+  setTimeout(() => wrap.querySelector('#bd-comment-text')?.focus(), 250);
+}
+
+function renderCommentsList(postId) {
+  const listEl = document.getElementById('bd-comments-list');
+  if (!listEl) return;
+  const items = getComments(postId);
+  if (!items.length) {
+    listEl.innerHTML = '<div class="bd-comments-empty">Поки немає коментарів. Будьте перші!</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(c => {
+    const author = c.author || 'анонімно';
+    const initial = c.author ? c.author.charAt(0).toUpperCase() : '👤';
+    const hue = c.author ? (c.author.charCodeAt(0) * 47) % 360 : 0;
+    const avatarStyle = c.author
+      ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600`
+      : 'background:#f5f5f5;color:#666;font-size:18px';
+    return `
+      <article class="bd-comment">
+        <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
+        <div class="bd-comment-body">
+          <div class="bd-comment-head">
+            <span class="bd-comment-author">${escapeHtml(author)}</span>
+            <span class="bd-comment-time">${formatTime(c.ts)}</span>
+          </div>
+          <p class="bd-comment-text">${escapeHtml(c.text)}</p>
+        </div>
+      </article>
+    `;
+  }).join('');
 }
 
 function buildShareText(post) {
@@ -622,6 +756,16 @@ function attachBoardDelegation() {
           ? `<span class="bd-react-trigger-emoji">${newReaction}</span>`
           : `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
       });
+      return;
+    }
+
+    // Кнопка коментарів — відкрити модалку
+    const commentsBtn = e.target.closest('[data-comments-id]');
+    if (commentsBtn) {
+      e.stopPropagation();
+      const id = Number(commentsBtn.dataset.commentsId);
+      const post = allPosts.find(p => p.id === id);
+      if (post) openCommentsModal(id, post);
       return;
     }
 
