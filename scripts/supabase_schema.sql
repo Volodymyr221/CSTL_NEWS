@@ -1,8 +1,12 @@
 -- ============================================================================
 -- CSTL LIFE — Supabase schema (Фаза 9 Спринт 1)
 -- ============================================================================
--- Запустити ОДИН РАЗ у Supabase SQL Editor → New Query → Run
+-- Запустити у Supabase SQL Editor → New Query → Run
 -- Перед запуском: знайди БЛОК "AUTHENTICATION SETUP" нижче і впиши свій email.
+--
+-- ⚠️  Скрипт ІДЕМПОТЕНТНИЙ — можна запускати повторно. Усе скидається і
+-- створюється наново. Якщо у БД вже є дані з попередніх запусків — вони
+-- видаляться. На цій стадії проекту даних ще нема — безпечно.
 --
 -- Що створюється:
 --   1. posts          — оголошення Дошки громади (3 типи: board/chat/greeting)
@@ -12,6 +16,22 @@
 --   5. Storage bucket community-photos — для фото оголошень
 --   6. RLS policies   — публічне читання тільки 'published', запис тільки admin
 -- ============================================================================
+
+
+-- ============================================================================
+-- 0. CLEANUP — скидаємо все що могло створитись раніше (для повторних запусків)
+-- ============================================================================
+-- CASCADE — видаляє разом з залежностями (індекси, policies, foreign keys)
+DROP TABLE IF EXISTS ad_events     CASCADE;
+DROP TABLE IF EXISTS ads           CASCADE;
+DROP TABLE IF EXISTS announcements CASCADE;
+DROP TABLE IF EXISTS posts         CASCADE;
+DROP TABLE IF EXISTS admins        CASCADE;
+
+-- Storage policies теж скидаємо (для повторного запуску)
+DROP POLICY IF EXISTS "Public read community photos"   ON storage.objects;
+DROP POLICY IF EXISTS "Anyone can upload to community-photos" ON storage.objects;
+DROP POLICY IF EXISTS "Admins can delete photos"       ON storage.objects;
 
 
 -- ============================================================================
