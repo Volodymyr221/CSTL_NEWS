@@ -1774,14 +1774,36 @@ ${post.text}
         const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
         return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
       })();
+      const dayTotal = 24 * 60;
+      const progress = Math.max(0, Math.min(100, nowMin / dayTotal * 100));
+      const durationMin = toMin - fromMin;
+      const durationStr = durationMin < 60 ? `${durationMin} \u0445\u0432` : (() => {
+        const h = Math.floor(durationMin / 60), m = durationMin % 60;
+        return m ? `${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
+      })();
+      const priceStr = next.price ? `${next.price} \u0433\u0440\u043D` : "";
+      const driverStr = next.driver || "";
+      const metaParts = [priceStr, durationStr, driverStr].filter(Boolean);
+      const metaHtml = metaParts.map(
+        (p, i) => i === 0 ? `<span>${escapeHtml(p)}</span>` : `<span class="bus-hero-meta-sep">\xB7</span><span>${escapeHtml(p)}</span>`
+      ).join("");
       el.innerHTML = `
-      <div class="cm-bus-main ${urgent ? "urgent" : ""}">
-        <div class="cm-bus-time">${escapeHtml(fromHHMM)}</div>
-        <div class="cm-bus-info">
-          <div class="cm-bus-route">${escapeHtml(fromName)} \u2192 ${escapeHtml(toName)}</div>
-          <div class="cm-bus-meta">${escapeHtml(next.name)} \xB7 \u043F\u0440\u0438\u0431\u0443\u0442\u0442\u044F ${escapeHtml(toHHMM)}</div>
+      <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}" data-switch-tab="buses">
+        <div class="bus-hero-top">
+          ${urgent ? `<span class="bus-hero-urgent">\u0447\u0435\u0440\u0435\u0437 ${minsLeft} \u0445\u0432</span>` : `<span class="bus-hero-countdown">${escapeHtml(countdown)}</span>`}
         </div>
-        <div class="cm-bus-countdown ${urgent ? "urgent" : ""}">${escapeHtml(countdown)}</div>
+        <div class="bus-hero-row">
+          <div class="bus-hero-times">
+            <span class="bus-hero-time">${escapeHtml(fromHHMM)}</span>
+            <span class="bus-hero-arrow">\u2192</span>
+            <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM)}</span>
+          </div>
+        </div>
+        <div class="bus-hero-route">${escapeHtml(fromName)} \u2192 ${escapeHtml(toName)}</div>
+        <div class="bus-hero-meta">${metaHtml}</div>
+        <div class="bus-hero-progress">
+          <div class="bus-hero-progress-fill" style="width:${progress}%"></div>
+        </div>
       </div>
     `;
     } catch {
