@@ -8,25 +8,27 @@
 
 ## 🔴 Роби зараз
 
-### Фаза 9 — Дошка громади 2.0 (план: `docs/COMMUNITY_BOARD_VISION.md`)
+### Фаза 9 — Дошка громади 2.0 — Спринт 1 ✅ ЗАВЕРШЕНО (18.05.2026)
 
-Перетворення Дошки з простих папірців у «OLX рівня громади» — 3 типи постів (Дошка / Розмови / Вітання) з фото, категоріями, реакціями, пошуком.
-
-**UI зроблено наперед (17.05.2026)** на DEMO-даних з JSON — коли підключиться Supabase, зміниться тільки data-layer (`fetch` → `supabase.from()`).
+Усе працює на production. Дошка з реальною модерацією, реалтаймом і
+spільним станом для всіх юзерів.
 
 | ✓ | Задача |
 |---|--------|
-| ☐ | **Спринт 1.** Підняти Supabase проект (Вова реєструється + надсилає URL+anon-key) |
-| ✅ | ~~SQL-схеми: `posts`, `announcements`, `ads`, `admins` + RLS policies~~ (готово у `scripts/supabase_schema.sql`) |
-| ☐ | **Спринт 1.** Адмін-панель `/admin` — модерація pending → published (Magic-link auth) |
-| ☐ | **Спринт 1.** Submit-форма реально POST у Supabase (зараз заглушка з готовим payload через `buildPayload()`) |
-| ☐ | **Спринт 1.** Запустити `scripts/migrate_to_supabase.py` (потрібен service_role key) |
-| ☐ | **Спринт 2.** Supabase Storage + upload фото з форми (зараз base64 у JSON) |
-| ✅ | ~~3 типи карток (board/chat/greeting) + таби-фільтри~~ (зроблено 17.05, JSON демо-дані) |
-| ✅ | ~~Submit-форма з вибором типу + різні поля + LIVE-preview для всіх 3~~ (зроблено 17.05) |
-| ✅ | ~~Реакції ❤️👍😂😢 у localStorage (per device, без auth)~~ (зроблено 17.05) |
-| ✅ | ~~Збережені 💾 → таб «Мої»~~ (зроблено 17.05, localStorage) |
-| ✅ | ~~Пошук + категорії-чіпи для board~~ (зроблено 17.05) |
+| ✅ | ~~Підняти Supabase проект (Вова + URL+ключі)~~ |
+| ✅ | ~~SQL-схеми: posts/announcements/ads/admins/comments/reactions + RLS~~ |
+| ✅ | ~~Адмін-панель `/admin.html` з email+password auth + 4 табами~~ |
+| ✅ | ~~Submit-форма реально POST у Supabase~~ |
+| ✅ | ~~Міграція data/*.json у Supabase (`migrate_to_supabase.py`)~~ |
+| ✅ | ~~3 типи карток (board/chat/greeting) + таби-фільтри~~ |
+| ✅ | ~~Submit-форма з вибором типу + різні поля + LIVE-preview~~ |
+| ✅ | ~~Реакції з топ-3 emoji + лічильниками (single per user)~~ |
+| ✅ | ~~Збережені 💾 → таб «Мої» (localStorage per-device)~~ |
+| ✅ | ~~Пошук + категорії-чіпи для board (fixed position)~~ |
+| ✅ | ~~Inline-коментарі у chat/greeting~~ |
+| ✅ | ~~Supabase Realtime — миттєва синхронізація реакцій/коментарів~~ |
+
+| ☐ | **Спринт 2.** Supabase Storage + upload фото з форми (зараз base64) |
 
 ### Фаза 3 — Supabase + «Світло» (паралельно з Фазою 9 — той самий Supabase)
 
