@@ -1,89 +1,25 @@
 #!/usr/bin/env python3
 """
-migrate_to_supabase.py — одноразова міграція даних з data/*.json у Supabase.
+migrate_to_supabase.py — одноразова міграція data/*.json у Supabase.
 
-ЗАПУСК (після того як Вова створив Supabase проект):
+ПЕРЕДУМОВА:
+  1. Створено Supabase проект
+  2. У SQL Editor запущено scripts/supabase_schema.sql (вписав свій email!)
+  3. У env-змінних SUPABASE_URL і SUPABASE_SERVICE_KEY
 
-    export SUPABASE_URL="https://xxxxxx.supabase.co"
-    export SUPABASE_SERVICE_KEY="eyJhbG..."   # service_role key, НЕ anon!
-    python3 scripts/migrate_to_supabase.py
+ЗАПУСК:
+  pip install requests
+  export SUPABASE_URL="https://xxxxxx.supabase.co"
+  export SUPABASE_SERVICE_KEY="eyJhbG..."   # service_role, НЕ anon!
+  python3 scripts/migrate_to_supabase.py
 
-Що робить:
-  1. Створює таблиці `posts` і `announcements` через REST PostgREST API
-     (SQL запускати вручну у SQL Editor — див. CREATE TABLE нижче)
-  2. Читає data/community-board.json → INSERT у `posts`
-  3. Читає data/community.json::announcements → INSERT у `announcements`
-  4. Виводить статистику: скільки рядків записано, які пропущено
+ЩО РОБИТЬ:
+  - Читає data/community-board.json → INSERT у `posts` (status='published')
+  - Читає data/community.json::announcements → INSERT у `announcements`
+  - Контакти з community.json лишаються у JSON (рідко змінюються)
 
-Контакти з community.json НЕ мігруються — вони лишаються у JSON (рідко змінюються).
-
-Залежності: requests (`pip install requests`).
-
-SQL-схема (запустити у Supabase SQL Editor ПЕРЕД скриптом):
-
-    -- Таблиця оголошень Дошки громади (план з docs/COMMUNITY_BOARD_VISION.md)
-    CREATE TABLE posts (
-      id            BIGSERIAL PRIMARY KEY,
-      type          TEXT NOT NULL DEFAULT 'board',     -- 'board' | 'chat' | 'greeting'
-      category      TEXT,                              -- 'продам' | 'куплю' | 'шукаю' | 'знайдено' | 'загубилось' | 'подяка' | 'послуга' | 'оголошення'
-      text          TEXT NOT NULL,
-      author        TEXT,                              -- NULL = анонім
-      contact       TEXT,                              -- телефон / Telegram
-      color         TEXT DEFAULT 'yellow',             -- колір стікера
-      photo         TEXT,                              -- URL зі Storage АБО base64 (тимчасово, до Спринту 2)
-      location      TEXT,                              -- село ОТГ (Олика / Дерно / Ставок / ...)
-      status        TEXT NOT NULL DEFAULT 'pending',   -- 'pending' | 'published' | 'rejected'
-      ts            BIGINT,                            -- legacy timestamp у мс (для сумісності з JSON)
-      published_at  TIMESTAMPTZ,
-      created_at    TIMESTAMPTZ DEFAULT now()
-    );
-    CREATE INDEX idx_posts_status_published_at ON posts (status, published_at DESC);
-
-    -- Офіційні оголошення від адміністрації
-    CREATE TABLE announcements (
-      id            BIGSERIAL PRIMARY KEY,
-      pinned        BOOLEAN DEFAULT false,
-      title         TEXT NOT NULL,
-      body          TEXT NOT NULL,
-      author        TEXT,
-      ts            BIGINT,
-      status        TEXT NOT NULL DEFAULT 'pending',
-      published_at  TIMESTAMPTZ,
-      created_at    TIMESTAMPTZ DEFAULT now()
-    );
-
-    -- RLS (Row Level Security) — публічне читання тільки published, запис тільки через service_role
-    ALTER TABLE posts ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY "Public read published posts" ON posts FOR SELECT
-      USING (status = 'published');
-
-    ALTER TABLE announcements ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY "Public read published announcements" ON announcements FOR SELECT
-      USING (status = 'published');
-
-    -- Реклама (з docs/MONETIZATION.md) — закласти одразу щоб потім не ALTER
-    CREATE TABLE ads (
-      id            BIGSERIAL PRIMARY KEY,
-      title         TEXT NOT NULL,
-      body          TEXT,
-      image_url     TEXT,
-      link_url      TEXT,
-      placement     TEXT NOT NULL,   -- 'board' | 'news_feed' | 'event_card' | 'banner'
-      priority      INT DEFAULT 0,
-      paid_amount   NUMERIC,
-      client_name   TEXT,
-      client_email  TEXT,
-      client_phone  TEXT,
-      starts_at     TIMESTAMPTZ DEFAULT now(),
-      expires_at    TIMESTAMPTZ NOT NULL,
-      views_count   INT DEFAULT 0,
-      clicks_count  INT DEFAULT 0,
-      is_active     BOOLEAN DEFAULT true,
-      created_at    TIMESTAMPTZ DEFAULT now()
-    );
-    ALTER TABLE ads ENABLE ROW LEVEL SECURITY;
-    CREATE POLICY "Public read active ads" ON ads FOR SELECT
-      USING (is_active = true AND expires_at > now());
+ВАЖЛИВО: використовується service_role key — він проходить повз RLS policies.
+Anon-key не годиться, бо RLS блокує запис нечітких статусів.
 """
 
 import json
@@ -125,14 +61,27 @@ def migrate_posts(url, key):
 
     rows = []
     for p in data.get("posts", []):
+        # photo (single str|null) у JSON → photos (TEXT[]) у Supabase
+        photo = p.get("photo")
+        photos = [photo] if photo else []
+
+        # "анонімно" у JSON → NULL у БД (Supabase has author=NULL convention)
+        author = p.get("author")
+        if author in (None, "", "анонімно"):
+            author = None
+
         rows.append({
             "type":         p.get("type", "board"),
             "category":     p.get("category"),
             "text":         p["text"],
-            "author":       p.get("author") if p.get("author") not in (None, "", "анонімно") else None,
+            "title":        None,                       # для board без title
+            "author":       author,
             "contact":      p.get("contact"),
             "color":        p.get("color", "yellow"),
-            "photo":        p.get("photo"),
+            "photos":       photos,
+            "tags":         [],                         # для board порожній
+            "price":        None,
+            "currency":     "UAH",
             "location":     p.get("location"),
             "status":       p.get("status", "published"),
             "ts":           p.get("ts"),
@@ -143,6 +92,7 @@ def migrate_posts(url, key):
     print(f"posts: записано {ok}/{len(rows)}")
     for e in errors:
         print(f"  ERROR: {e}", file=sys.stderr)
+    return ok, errors
 
 
 def migrate_announcements(url, key):
@@ -166,6 +116,7 @@ def migrate_announcements(url, key):
     print(f"announcements: записано {ok}/{len(rows)}")
     for e in errors:
         print(f"  ERROR: {e}", file=sys.stderr)
+    return ok, errors
 
 
 def main():
@@ -179,13 +130,18 @@ def main():
         sys.exit(1)
 
     print(f"Supabase: {url}")
-    print("Перед запуском — створи таблиці через SQL Editor (див. docstring у цьому файлі).\n")
+    print("Перевір що scripts/supabase_schema.sql виконано і admins має твою пошту.\n")
 
-    migrate_posts(url, key)
-    migrate_announcements(url, key)
+    posts_ok, posts_err     = migrate_posts(url, key)
+    ann_ok, ann_err         = migrate_announcements(url, key)
 
-    print("\nГотово. Перевір через Supabase Table Editor:")
-    print(f"  {url}/project/_/editor")
+    print()
+    print(f"Підсумок: posts={posts_ok}, announcements={ann_ok}")
+    if posts_err or ann_err:
+        print("⚠️ Були помилки — див. ERROR вище", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"✓ Готово. Перевір у Table Editor: {url}/project/_/editor")
 
 
 if __name__ == "__main__":
