@@ -470,11 +470,9 @@ function renderLogin() {
         <input class="login-input" id="login-password" type="password" placeholder="пароль" required autocomplete="current-password">
         <button class="login-btn" id="login-btn" type="submit">Увійти</button>
       </form>
-      <div class="login-info">
-        Якщо пароля ще немає — створи його у Supabase Dashboard:<br>
-        <strong>Authentication → Users</strong> → клік на свою пошту →
-        <strong>«Send password reset»</strong> або встановити пароль через SQL.
-      </div>
+      <p style="text-align:center;margin-top:14px">
+        <a href="#" id="forgot-link" style="color:#722F37;font-size:13px;text-decoration:underline">Забув пароль?</a>
+      </p>
     </div>
   `;
   document.getElementById('login-form').addEventListener('submit', async (e) => {
@@ -492,6 +490,67 @@ function renderLogin() {
       showToast('Помилка: ' + error.message, 4500);
     }
     // При успіху onAuthStateChange сам перерендерить view (handleSession → renderApp)
+  });
+
+  document.getElementById('forgot-link').addEventListener('click', (e) => {
+    e.preventDefault();
+    renderForgotPassword();
+  });
+}
+
+// ── FORGOT PASSWORD VIEW ───────────────────────────────────────────────
+// Шле магік-лінк (signInWithOtp). Юзер клікає → потрапляє в адмінку → у
+// вкладці «Налаштування» встановлює новий пароль.
+function renderForgotPassword() {
+  mainEl.innerHTML = `
+    <div class="login-card">
+      <div class="login-icon">🔑</div>
+      <h1 class="login-title">Скинути пароль</h1>
+      <p class="login-sub">Введи свою пошту — на неї прийде посилання для входу.
+      Після входу зайди у <strong>Налаштування</strong> і встанови новий пароль.</p>
+      <form class="login-form" id="forgot-form">
+        <input class="login-input" id="forgot-email" type="email" placeholder="ваша@пошта.com" required autocomplete="email">
+        <button class="login-btn" id="forgot-btn" type="submit">Надіслати посилання</button>
+      </form>
+      <p style="text-align:center;margin-top:14px">
+        <a href="#" id="back-to-login" style="color:#722F37;font-size:13px;text-decoration:underline">← Повернутись до входу</a>
+      </p>
+    </div>
+  `;
+
+  document.getElementById('back-to-login').addEventListener('click', (e) => {
+    e.preventDefault();
+    renderLogin();
+  });
+
+  document.getElementById('forgot-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('forgot-email').value.trim();
+    const btn = document.getElementById('forgot-btn');
+    if (!email) return;
+    btn.disabled = true;
+    btn.textContent = 'Надсилаємо…';
+    const { error } = await supa.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: window.location.href }
+    });
+    btn.disabled = false;
+    btn.textContent = 'Надіслати посилання';
+    if (error) {
+      showToast('Помилка: ' + error.message, 4500);
+    } else {
+      mainEl.innerHTML = `
+        <div class="login-card">
+          <div class="login-icon">📬</div>
+          <h1 class="login-title">Перевір пошту</h1>
+          <p class="login-sub">Надіслали посилання на <strong>${escapeHtml(email)}</strong>.<br>
+          Клікни — і автоматично зайдеш в адмінку. Потім у Налаштуваннях встанови новий пароль.</p>
+          <div class="login-info">
+            Не прийшло? Перевір спам. Якщо ліміт на пошту вичерпано — почекай 30-60 хв.
+          </div>
+        </div>
+      `;
+    }
   });
 }
 
@@ -538,6 +597,9 @@ function renderApp() {
         👥 Адміни
         <span class="tab-count">${admins.length}</span>
       </button>
+      <button class="tab ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
+        ⚙️ Налаштування
+      </button>
     </div>
     <div id="tab-content"></div>
   `;
@@ -556,6 +618,7 @@ function renderTabContent() {
   if (activeTab === 'pending')        return renderPending(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
+  if (activeTab === 'settings')       return renderSettings(el);
 }
 
 // ── TAB 1: модерація постів ───────────────────────────────────────────
@@ -726,6 +789,66 @@ function renderAdmins(el) {
     showToast('Прибрано');
     await loadAll(); renderApp();
   }));
+}
+
+// ── TAB 4: налаштування (зміна пароля) ────────────────────────────────
+function renderSettings(el) {
+  el.innerHTML = `
+    <form class="add-form" id="pwd-form">
+      <div class="add-form-title">🔒 Змінити пароль</div>
+      <p style="font-size:13px;color:#666;margin-bottom:4px">
+        Поточна пошта: <strong>${escapeHtml(currentUser.email)}</strong>
+      </p>
+      <input class="input" id="pwd-new" type="password" placeholder="Новий пароль (6+ символів)" required minlength="6" autocomplete="new-password">
+      <input class="input" id="pwd-repeat" type="password" placeholder="Повторити пароль" required minlength="6" autocomplete="new-password">
+      <button class="btn btn--primary" type="submit">Змінити пароль</button>
+      <p style="font-size:12px;color:#888;margin-top:6px">
+        Після зміни тебе залогуть і доведеться увійти з новим паролем.
+      </p>
+    </form>
+
+    <div class="section-title" style="margin-top:24px">Про аккаунт</div>
+    <article class="card">
+      <div style="font-size:13px;color:#666">Email</div>
+      <div style="font-weight:600;margin-bottom:8px">${escapeHtml(currentUser.email)}</div>
+      <div style="font-size:13px;color:#666">Останній вхід</div>
+      <div style="font-size:13px">${escapeHtml(formatDate(currentUser.last_sign_in_at))}</div>
+    </article>
+
+    <div class="section-title" style="margin-top:24px">Якщо забув пароль</div>
+    <article class="card">
+      <p style="font-size:13px;line-height:1.5;color:#555">
+        Натисни «Вийти» зверху → на сторінці входу натисни <strong>«Забув пароль?»</strong>.
+        На пошту прийде magic-link → клік → ти автоматично всередині →
+        повернись у Налаштування і встанови новий пароль.
+      </p>
+      <p style="font-size:12px;color:#999;margin-top:8px">
+        Альтернатива: у Supabase SQL Editor виконай UPDATE auth.users SET
+        encrypted_password = crypt('новий', gen_salt('bf')) WHERE email = '...';
+      </p>
+    </article>
+  `;
+
+  document.getElementById('pwd-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const newPwd    = document.getElementById('pwd-new').value;
+    const repeatPwd = document.getElementById('pwd-repeat').value;
+    if (newPwd.length < 6) {
+      return showToast('Пароль має бути 6+ символів');
+    }
+    if (newPwd !== repeatPwd) {
+      return showToast('Паролі не співпадають');
+    }
+    const { error } = await supa.auth.updateUser({ password: newPwd });
+    if (error) {
+      return showToast('Помилка: ' + error.message, 4500);
+    }
+    showToast('Пароль змінено ✓ Перезавантажую…', 2500);
+    setTimeout(async () => {
+      await supa.auth.signOut();
+      location.reload();
+    }, 1500);
+  });
 }
 
 // ── LOGOUT ────────────────────────────────────────────────────────────
