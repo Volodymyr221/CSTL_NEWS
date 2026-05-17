@@ -1,10 +1,11 @@
 {
   "_meta": {
-    "description": "Дошка громади — публічні оголошення від мешканців, після модерації",
+    "description": "Дошка громади 2.0 — 3 типи постів (board/chat/greeting)",
     "moderation": "DEMO-дані. Фаза 9 Спринт 1: переїдемо на Supabase + адмінку /admin",
     "supabase_target_table": "posts",
-    "supabase_target_fields": "id, type, category, text, author, contact, color, photo, location, status, published_at",
-    "note_picsum": "Прибрано тестові https://picsum.photos URL 2026-05-17 (періодично 404-или). Фото додаються користувачами через submit-форму (compressImage → base64).",
+    "supabase_target_fields": "id, type, category, text, title, author, contact, color, photo, tags, location, status, ts, published_at",
+    "types": "board = оголошення (продам/куплю/...); chat = розмови (плітки/питання, з хештегами); greeting = вітання (день народження/подяки/новонароджені)",
+    "note_picsum": "Прибрано тестові https://picsum.photos URL 2026-05-17 (періодично 404-или). Фото додаються користувачами через submit-форму.",
     "last_updated": "2026-05-17"
   },
   "posts": [
@@ -55,7 +56,7 @@
       "type": "board",
       "category": "подяка",
       "text": "Велике дякую сусідам зі Ставка які допомогли з дровами після буревію! Ви справжні люди ❤️",
-      "author": "анонімно",
+      "author": null,
       "contact": null,
       "ts": 1746850000000,
       "color": "white",
@@ -111,7 +112,7 @@
       "type": "board",
       "category": "оголошення",
       "text": "Завтра о 18:00 — суботник на цвинтарі. Приходьте з граблями. Зустрічаємось біля воріт.",
-      "author": "анонімно",
+      "author": null,
       "contact": null,
       "ts": 1746500000000,
       "color": "pink",
@@ -119,6 +120,120 @@
       "location": "Олика",
       "status": "published",
       "published_at": "2026-05-06T03:53:20+03:00"
+    },
+
+    {
+      "id": 101,
+      "type": "chat",
+      "text": "Хто знає коли врешті відремонтують ділянку дороги біля школи? Третій місяць ями.",
+      "author": "Світлана",
+      "tags": ["#дороги", "#сільрада"],
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "ts": 1747100000000,
+      "published_at": "2026-05-13T07:33:20+03:00"
+    },
+    {
+      "id": 102,
+      "type": "chat",
+      "text": "У когось є рекомендації хорошого дитячого стоматолога у Луцьку? Дитина боїться дуже.",
+      "author": "Юля",
+      "tags": ["#питання", "#діти", "#медицина"],
+      "photo": null,
+      "location": null,
+      "status": "published",
+      "ts": 1747060000000,
+      "published_at": "2026-05-12T20:26:40+03:00"
+    },
+    {
+      "id": 103,
+      "type": "chat",
+      "text": "Бачили вчора зграю лелек біля ставка? Десь 12-15 штук, гарно ділили відпочинок. Весна точно прийшла!",
+      "author": null,
+      "tags": ["#природа"],
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "ts": 1746980000000,
+      "published_at": "2026-05-11T22:13:20+03:00"
+    },
+    {
+      "id": 104,
+      "type": "chat",
+      "text": "Хтось знає чи будуть проводити фестиваль ”Олицька весна” цього року? Минулого було круто.",
+      "author": "Микола",
+      "tags": ["#подія", "#культура"],
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "ts": 1746920000000,
+      "published_at": "2026-05-11T05:33:20+03:00"
+    },
+    {
+      "id": 105,
+      "type": "chat",
+      "text": "Маленьке прохання: якщо ваш собака бігає сам без повідця — будь ласка, тримайте під контролем. Сусідська дитина боїться.",
+      "author": null,
+      "tags": ["#громада", "#тварини"],
+      "photo": null,
+      "location": null,
+      "status": "published",
+      "ts": 1746860000000,
+      "published_at": "2026-05-10T13:00:00+03:00"
+    },
+
+    {
+      "id": 201,
+      "type": "greeting",
+      "title": "Сергію",
+      "text": "Сергію, з днем народження! Здоров'я, мирного неба і весни у серці. Цілуємо!",
+      "author": "Сусіди по вулиці",
+      "cover_emoji": "🎂",
+      "cover_gradient": "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)",
+      "location": "Олика",
+      "status": "published",
+      "ts": 1747110000000,
+      "published_at": "2026-05-13T10:20:00+03:00"
+    },
+    {
+      "id": 202,
+      "type": "greeting",
+      "title": "Родині Шевчуків",
+      "text": "Вітаємо з народженням донечки! Хай росте здоровенькою. Щиро тішимось разом.",
+      "author": null,
+      "cover_emoji": "👶",
+      "cover_gradient": "linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)",
+      "location": "Дерно",
+      "status": "published",
+      "ts": 1747050000000,
+      "published_at": "2026-05-12T17:40:00+03:00"
+    },
+    {
+      "id": 203,
+      "type": "greeting",
+      "title": "усім мамам Олики",
+      "text": "З Днем Матері! Дякуємо за все що ви робите. Без вас нічого б не було.",
+      "author": "Олицька громада",
+      "cover_emoji": "❤️",
+      "cover_gradient": "linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)",
+      "location": null,
+      "status": "published",
+      "ts": 1746950000000,
+      "published_at": "2026-05-11T13:53:20+03:00"
+    },
+    {
+      "id": 204,
+      "type": "greeting",
+      "title": "Оксані Петрівні",
+      "text": "Дякуємо Оксані Петрівні за організацію толоки минулі вихідні! Прибрали парк за один день. Ви наш приклад.",
+      "author": "Активісти Олики",
+      "cover_emoji": "🌳",
+      "cover_gradient": "linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)",
+      "location": "Олика",
+      "status": "published",
+      "ts": 1746880000000,
+      "published_at": "2026-05-10T18:13:20+03:00"
     }
   ]
 }

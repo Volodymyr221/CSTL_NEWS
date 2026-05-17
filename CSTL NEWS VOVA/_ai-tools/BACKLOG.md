@@ -12,16 +12,21 @@
 
 Перетворення Дошки з простих папірців у «OLX рівня громади» — 3 типи постів (Дошка / Розмови / Вітання) з фото, категоріями, реакціями, пошуком.
 
+**UI зроблено наперед (17.05.2026)** на DEMO-даних з JSON — коли підключиться Supabase, зміниться тільки data-layer (`fetch` → `supabase.from()`).
+
 | ✓ | Задача |
 |---|--------|
 | ☐ | **Спринт 1.** Підняти Supabase проект (Вова реєструється + надсилає URL+anon-key) |
-| ☐ | **Спринт 1.** SQL-схеми: `posts`, `reactions`, RLS policies |
-| ☐ | **Спринт 1.** Адмін-панель `/admin` — модерація pending → published |
-| ☐ | **Спринт 1.** Submit-форма дошки реально POST у Supabase (зараз заглушка) |
-| ☐ | **Спринт 1.** Перенести `data/community-board.json` + `data/community.json` (announcements) у Supabase |
-| ☐ | **Спринт 2.** Supabase Storage + upload фото з форми |
-| ☐ | **Спринт 2.** 3 типи карток (board/chat/greeting) + таби-фільтри |
-| ☐ | **Спринт 3.** Реакції ❤️👍😂😢, збережені (per device), пошук |
+| ✅ | ~~SQL-схеми: `posts`, `announcements`, `ads`, `admins` + RLS policies~~ (готово у `scripts/supabase_schema.sql`) |
+| ☐ | **Спринт 1.** Адмін-панель `/admin` — модерація pending → published (Magic-link auth) |
+| ☐ | **Спринт 1.** Submit-форма реально POST у Supabase (зараз заглушка з готовим payload через `buildPayload()`) |
+| ☐ | **Спринт 1.** Запустити `scripts/migrate_to_supabase.py` (потрібен service_role key) |
+| ☐ | **Спринт 2.** Supabase Storage + upload фото з форми (зараз base64 у JSON) |
+| ✅ | ~~3 типи карток (board/chat/greeting) + таби-фільтри~~ (зроблено 17.05, JSON демо-дані) |
+| ✅ | ~~Submit-форма з вибором типу + різні поля + LIVE-preview для всіх 3~~ (зроблено 17.05) |
+| ✅ | ~~Реакції ❤️👍😂😢 у localStorage (per device, без auth)~~ (зроблено 17.05) |
+| ✅ | ~~Збережені 💾 → таб «Мої»~~ (зроблено 17.05, localStorage) |
+| ✅ | ~~Пошук + категорії-чіпи для board~~ (зроблено 17.05) |
 
 ### Фаза 3 — Supabase + «Світло» (паралельно з Фазою 9 — той самий Supabase)
 
@@ -176,3 +181,5 @@
 | 2026-05-17 | **B-21 закрито** — event delegation для 7× `switchTab` у `community.js` + `community-blocks.js`. `data-switch-tab` атрибути + один listener на `#cm-content` | `5a9f28d` |
 | 2026-05-17 | **Data prep для Supabase** — `community-board.json` + `community.json` отримали поля `type`/`status`/`location`/`published_at` під майбутню схему `posts`. Прибрано 3× Picsum URL | `d457ffd` |
 | 2026-05-17 | **Web Share API (sharePost)** — `navigator.share()` з clipboard-fallback. Кнопки 📤 у модалці статті, на стікерах Дошки, у деталях події. CSS `.share-btn` у base.css | — |
+| 2026-05-17 | **Supabase SQL-схема + міграційний скрипт** — `scripts/supabase_schema.sql` (posts/announcements/ads/admins + RLS + Storage bucket) + оновлений `migrate_to_supabase.py` під фінальну схему (photos[] масив, magic-link) | `1b04a6e` |
+| 2026-05-17 | **Дошка громади 2.0 UI (на DEMO-даних)** — таби 5 типів (Усі/Дошка/Розмови/Вітання/Мої), 3 структури карток, пошук, категорії-чіпи, реакції ❤️👍😂😢 у localStorage, збережені 💾, submit-форма з перемикачем типу + LIVE-preview для всіх 3 + emoji-обкладинка для вітань. 9 нових демо-постів (5 chat + 4 greeting) | — |

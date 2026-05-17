@@ -1,25 +1,108 @@
 // src/tabs/board.js
-// Вкладка «Дошка громади» — повний список оголошень мешканців + офіційні.
-// Створена 16.05.2026 — винесено з блоку Громади у власну вкладку.
+// Вкладка «Дошка громади 2.0» — 3 типи постів + пошук + фільтри + реакції + збережені.
+// Перебудовано 17.05.2026 під дизайн Дошки 2.0 з docs/COMMUNITY_BOARD_VISION.md.
+//
+// Тиипи постів:
+//   board    = оголошення (продам/куплю/...) — стікер на корку
+//   chat     = розмови — горизонтальна картка з аватаркою і хештегами
+//   greeting = вітання — святкова картка з emoji-обкладинкою
+//
+// Реакції і збережені поки у localStorage (без auth). У Фазі 9 Спринт 3 — у Supabase.
 
 import { escapeHtml, formatTime, sharePost } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 
-const CATEGORY_EMOJI = {
-  'продам':      '💰',
-  'куплю':       '🛒',
-  'шукаю':       '🔍',
-  'знайдено':    '🎁',
-  'загубилось':  '😟',
-  'подяка':      '❤️',
-  'послуга':     '🔧',
-  'оголошення':  '📢',
-};
+// ── Конфігурація ─────────────────────────────────────────────────────────────
 
-// SVG слухавки (для кнопки виклика на оголошеннях з телефоном)
+const TYPE_TABS = [
+  { id: 'all',      label: 'Усі',         emoji: '🔄' },
+  { id: 'board',    label: 'Дошка',       emoji: '🛒' },
+  { id: 'chat',     label: 'Розмови',     emoji: '💬' },
+  { id: 'greeting', label: 'Вітання',     emoji: '🎉' },
+  { id: 'saved',    label: 'Мої',         emoji: '💾' },
+];
+
+const BOARD_CATEGORIES = [
+  { id: 'all',         label: 'Всі',          emoji: '✦' },
+  { id: 'продам',      label: 'Продам',       emoji: '💰' },
+  { id: 'куплю',       label: 'Куплю',        emoji: '🛒' },
+  { id: 'шукаю',       label: 'Шукаю',        emoji: '🔍' },
+  { id: 'послуга',     label: 'Послуги',      emoji: '🔧' },
+  { id: 'знайдено',    label: 'Знайдено',     emoji: '🎁' },
+  { id: 'загубилось',  label: 'Загубилось',   emoji: '😟' },
+  { id: 'подяка',      label: 'Подяки',       emoji: '❤️' },
+  { id: 'оголошення',  label: 'Оголошення',   emoji: '📢' },
+];
+
+const CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES.map(c => [c.id, c.emoji]));
+
+const REACTIONS = ['❤️', '👍', '😂', '😢'];
+
+// SVG слухавки (для кнопки виклика)
 const PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 
-// Контакт = телефон (починається з + або цифри). Інакше — текст (Telegram, email).
+// ── Стан (зберігається в межах сесії, фільтри у localStorage) ────────────────
+
+let allPosts       = [];   // [{id, type, ...}]
+let allAnnouncements = []; // офіційні з community.json
+let activeType     = 'all';
+let activeCategory = 'all';
+let searchQuery    = '';
+
+// ── localStorage: реакції і збережене ────────────────────────────────────────
+
+const LS_REACTIONS = 'cstl-reactions-v1';   // { [postId]: { '❤️': true, ... } }
+const LS_SAVED     = 'cstl-saved-v1';        // [postId, postId, ...]
+
+function lsGet(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch { return fallback; }
+}
+function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+function getUserReactions(postId) {
+  const all = lsGet(LS_REACTIONS, {});
+  return all[postId] || {};
+}
+function toggleUserReaction(postId, emoji) {
+  const all = lsGet(LS_REACTIONS, {});
+  const post = all[postId] || {};
+  post[emoji] = !post[emoji];
+  if (!post[emoji]) delete post[emoji];
+  all[postId] = post;
+  lsSet(LS_REACTIONS, all);
+}
+
+function getSavedIds() {
+  return new Set(lsGet(LS_SAVED, []));
+}
+function isSaved(postId) {
+  return getSavedIds().has(postId);
+}
+function toggleSaved(postId) {
+  const arr = lsGet(LS_SAVED, []);
+  const idx = arr.indexOf(postId);
+  if (idx >= 0) arr.splice(idx, 1);
+  else arr.push(postId);
+  lsSet(LS_SAVED, arr);
+}
+
+// ── Утиліти ──────────────────────────────────────────────────────────────────
+
+// Аватарка для chat — перша буква імені у кружечку, або emoji 👤 для аноніма
+function authorAvatar(author) {
+  const a = String(author || '').trim();
+  if (!a) return '<span class="bd-avatar bd-avatar--anon">👤</span>';
+  const letter = a.charAt(0).toUpperCase();
+  const hue = (a.charCodeAt(0) * 47) % 360;
+  return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
+}
+
+// Контакт-картка (з кнопкою дзвінка для телефонів)
 function renderContact(contact) {
   if (!contact) return '';
   const trimmed = String(contact).trim();
@@ -38,6 +121,262 @@ function renderContact(contact) {
   `;
 }
 
+// ── Реакції + share + bookmark — спільний рядок дій під/над постом ───────────
+
+function actionsRow(post) {
+  const userReactions = getUserReactions(post.id);
+  const saved = isSaved(post.id);
+  const reactionsHtml = REACTIONS.map(em => {
+    const active = userReactions[em] ? ' bd-reaction--active' : '';
+    return `<button class="bd-reaction${active}" type="button" data-react-id="${post.id}" data-react-emoji="${escapeHtml(em)}" aria-label="Реакція ${em}">${em}</button>`;
+  }).join('');
+
+  const shareText = buildShareText(post);
+  const shareTitle = post.type === 'greeting'
+    ? `🎉 ${post.title || 'Вітання'} (CSTL LIFE)`
+    : post.type === 'chat'
+    ? 'Розмова з Дошки громади Олики'
+    : 'Оголошення з Дошки громади Олики';
+
+  return `
+    <div class="bd-actions">
+      <div class="bd-reactions">${reactionsHtml}</div>
+      <div class="bd-actions-right">
+        <button class="bd-bookmark${saved ? ' bd-bookmark--active' : ''}" type="button"
+                data-save-id="${post.id}"
+                aria-label="${saved ? 'Прибрати зі збережених' : 'Зберегти у Мої'}">
+          ${saved ? '💾' : '🤍'}
+        </button>
+        <button class="share-btn share-btn--corner-inline" type="button"
+                data-share-board
+                data-share-title="${escapeHtml(shareTitle)}"
+                data-share-text="${escapeHtml(shareText)}"
+                aria-label="Поділитися">📤</button>
+      </div>
+    </div>
+  `;
+}
+
+function buildShareText(post) {
+  if (post.type === 'board') {
+    const cat = CATEGORY_EMOJI[post.category] || '📌';
+    return `${cat} ${post.category}\n\n${post.text}\n— ${post.author || 'анонімно'}`;
+  }
+  if (post.type === 'chat') {
+    const tags = (post.tags || []).join(' ');
+    return `${post.text}${tags ? '\n\n' + tags : ''}\n— ${post.author || 'анонімно'}`;
+  }
+  if (post.type === 'greeting') {
+    return `${post.cover_emoji || '🎉'} ${post.title ? 'Для ' + post.title + ':\n' : ''}${post.text}${post.author ? '\n— ' + post.author : ''}`;
+  }
+  return post.text || '';
+}
+
+// ── Картки за типом ──────────────────────────────────────────────────────────
+
+// BOARD: стікер на корку (як було, з реакціями і ❤️-зберегти)
+function renderBoardCard(p) {
+  const tilt = ((p.id * 7) % 9) - 4;
+  const emoji = CATEGORY_EMOJI[p.category] || '📌';
+  const contactHtml = renderContact(p.contact);
+  const photoHtml = p.photo
+    ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
+    : '';
+  return `
+    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || 'yellow')}${p.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+      <span class="cm-board-pin"></span>
+      ${photoHtml}
+      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+        <span class="cm-board-time">${formatTime(p.ts)}</span>
+      </div>
+      ${contactHtml}
+      ${actionsRow(p)}
+    </article>
+  `;
+}
+
+// OFFICIAL: офіційне оголошення сільради (для табу «Усі»)
+function renderOfficialCard(a) {
+  const tilt = ((a.id * 5) % 5) - 2;
+  return `
+    <article class="cm-board-note bd-card bd-card--official cm-board-note--official" style="--tilt:${tilt}deg">
+      <span class="cm-board-pin cm-board-pin--gold"></span>
+      <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
+      <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
+      <p class="cm-board-text">${escapeHtml(a.body)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">— ${escapeHtml(a.author || '—')}</span>
+        <span class="cm-board-time">${formatTime(a.ts)}</span>
+      </div>
+    </article>
+  `;
+}
+
+// CHAT: горизонтальна картка, аватарка зліва, текст справа, хештеги внизу
+function renderChatCard(p) {
+  const tagsHtml = (p.tags || []).length
+    ? `<div class="bd-chat-tags">${p.tags.map(t => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(' ')}</div>`
+    : '';
+  const photoHtml = p.photo
+    ? `<img class="bd-chat-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+    : '';
+  return `
+    <article class="bd-card bd-card--chat" data-post-id="${p.id}">
+      <div class="bd-chat-head">
+        ${authorAvatar(p.author)}
+        <div class="bd-chat-meta">
+          <span class="bd-chat-author">${escapeHtml(p.author || 'анонімно')}</span>
+          <span class="bd-chat-time">${formatTime(p.ts)}</span>
+        </div>
+      </div>
+      <p class="bd-chat-text">${escapeHtml(p.text)}</p>
+      ${photoHtml}
+      ${tagsHtml}
+      ${actionsRow(p)}
+    </article>
+  `;
+}
+
+// GREETING: святкова картка з кольоровою обкладинкою-emoji
+function renderGreetingCard(p) {
+  const grad = p.cover_gradient || 'linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)';
+  const emoji = p.cover_emoji || '🎉';
+  const titleLine = p.title
+    ? `<div class="bd-greet-to">Для ${escapeHtml(p.title)}</div>`
+    : '';
+  return `
+    <article class="bd-card bd-card--greeting" data-post-id="${p.id}">
+      <div class="bd-greet-cover" style="background:${escapeHtml(grad)}">
+        <span class="bd-greet-emoji">${emoji}</span>
+      </div>
+      <div class="bd-greet-body">
+        ${titleLine}
+        <p class="bd-greet-text">${escapeHtml(p.text)}</p>
+        <div class="bd-greet-footer">
+          <span class="bd-greet-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+          <span class="bd-greet-time">${formatTime(p.ts)}</span>
+        </div>
+      </div>
+      ${actionsRow(p)}
+    </article>
+  `;
+}
+
+function renderCard(post) {
+  if (post.type === 'chat')     return renderChatCard(post);
+  if (post.type === 'greeting') return renderGreetingCard(post);
+  return renderBoardCard(post);
+}
+
+// ── Фільтрація і пошук ───────────────────────────────────────────────────────
+
+function getFilteredPosts() {
+  const q = searchQuery.trim().toLowerCase();
+  const savedIds = activeType === 'saved' ? getSavedIds() : null;
+
+  return allPosts.filter(p => {
+    // Фільтр по типу
+    if (activeType === 'saved') {
+      if (!savedIds.has(p.id)) return false;
+    } else if (activeType !== 'all' && p.type !== activeType) {
+      return false;
+    }
+    // Фільтр по категорії — тільки для board
+    if (activeType === 'board' && activeCategory !== 'all') {
+      if (p.category !== activeCategory) return false;
+    }
+    // Пошук — text + tags + author + title
+    if (q) {
+      const hay = [
+        p.text, p.title, p.author,
+        ...(p.tags || []),
+      ].filter(Boolean).join(' ').toLowerCase();
+      if (!hay.includes(q)) return false;
+    }
+    return true;
+  });
+}
+
+// ── Рендеринг панелі ─────────────────────────────────────────────────────────
+
+function renderHeader() {
+  const tabs = TYPE_TABS.map(t => `
+    <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}" type="button" data-bd-tab="${t.id}">
+      <span class="bd-tab-emoji">${t.emoji}</span>
+      <span class="bd-tab-label">${escapeHtml(t.label)}</span>
+    </button>
+  `).join('');
+
+  const showCategories = activeType === 'board';
+  const categoriesHtml = showCategories ? `
+    <div class="bd-categories">
+      ${BOARD_CATEGORIES.map(c => `
+        <button class="bd-cat-chip${c.id === activeCategory ? ' bd-cat-chip--active' : ''}" type="button" data-bd-cat="${c.id}">
+          <span class="bd-cat-emoji">${c.emoji}</span>
+          ${escapeHtml(c.label)}
+        </button>
+      `).join('')}
+    </div>
+  ` : '';
+
+  return `
+    <div class="bd-controls">
+      <div class="bd-search">
+        <span class="bd-search-icon">🔍</span>
+        <input class="bd-search-input" id="bd-search-input" type="search"
+               placeholder="Пошук по дошці..." value="${escapeHtml(searchQuery)}">
+        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
+      </div>
+      <div class="bd-tabs">${tabs}</div>
+      ${categoriesHtml}
+    </div>
+  `;
+}
+
+function renderBody() {
+  const filtered = getFilteredPosts();
+
+  if (!filtered.length) {
+    const msg = activeType === 'saved'
+      ? 'У «Моїх» поки нічого. Тапніть 🤍 на пості щоб зберегти.'
+      : searchQuery
+      ? `За запитом «${escapeHtml(searchQuery)}» нічого не знайдено`
+      : 'У цій категорії поки порожньо';
+    return `<div class="bd-empty">${msg}</div>`;
+  }
+
+  // Сортування за часом — нові зверху
+  const sorted = [...filtered].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+
+  // Окремий лейаут для board (корок з нахилами) vs chat/greeting (стрічка)
+  if (activeType === 'board') {
+    // BOARD-only — корок зі стікерами
+    const cards = sorted.map(renderBoardCard).join('');
+    return `
+      <div class="board-backdrop" id="board-backdrop"></div>
+      <div class="cm-board-corkboard board-corkboard--full">${cards}</div>
+    `;
+  }
+
+  if (activeType === 'all') {
+    // Усі — змішане з офіційними зверху на корку + chat/greeting у стрічці
+    const officialCards = allAnnouncements.map(renderOfficialCard).join('');
+    const boardOnly = sorted.filter(p => p.type === 'board').map(renderBoardCard).join('');
+    const others    = sorted.filter(p => p.type !== 'board').map(renderCard).join('');
+    return `
+      <div class="board-backdrop" id="board-backdrop"></div>
+      ${(officialCards || boardOnly) ? `<div class="cm-board-corkboard board-corkboard--full">${officialCards}${boardOnly}</div>` : ''}
+      ${others ? `<div class="bd-stream">${others}</div>` : ''}
+    `;
+  }
+
+  // chat / greeting / saved — вертикальна стрічка карток
+  return `<div class="bd-stream">${sorted.map(renderCard).join('')}</div>`;
+}
+
 export async function renderBoard() {
   const el = document.getElementById('board-content');
   if (!el) return;
@@ -49,113 +388,83 @@ export async function renderBoard() {
     ]);
     const boardData     = await boardRes.json();
     const communityData = await communityRes.json();
-
-    const userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    const official  = (communityData.announcements || []).slice().sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.ts || 0) - (a.ts || 0);
-    });
-
-    if (!official.length && !userPosts.length) {
-      el.innerHTML = `
-        <div class="board-empty">
-          <p>На дошці поки порожньо.</p>
-          <p>Будь першим — натисни кнопку нижче.</p>
-        </div>
-        <button class="cm-board-trigger" id="board-trigger" type="button">
-          <span class="cm-board-trigger-icon">✏️</span>
-          <span class="cm-board-trigger-text">Подати оголошення</span>
-        </button>
-      `;
-      document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
-      return;
-    }
-
-    const officialHtml = official.map(a => {
-      const tilt = ((a.id * 5) % 5) - 2;
-      return `
-        <article class="cm-board-note cm-board-note--official" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin cm-board-pin--gold"></span>
-          <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
-          <h4 class="cm-board-official-title">${escapeHtml(a.title)}</h4>
-          <p class="cm-board-text">${escapeHtml(a.body)}</p>
-          <div class="cm-board-footer">
-            <span class="cm-board-author">— ${escapeHtml(a.author || '—')}</span>
-            <span class="cm-board-time">${formatTime(a.ts)}</span>
-          </div>
-        </article>
-      `;
-    }).join('');
-
-    const userHtml = userPosts.map(p => {
-      const tilt = ((p.id * 7) % 9) - 4;
-      const emoji = CATEGORY_EMOJI[p.category] || '📌';
-      const contactHtml = renderContact(p.contact);
-      // Фото (якщо є) — на стікері зверху, як на Polaroid.
-      // onerror — ховаємо обгортку щоб не лишилася біла плашка з alt-текстом
-      const photoHtml = p.photo
-        ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
-        : '';
-      // Кнопка 📤 — Web Share API (Viber/Telegram/SMS одним тапом)
-      // Текст для шеру збираємо тут, бо потім innerHTML клонується у zoom-модалку.
-      const shareText = `${emoji} ${p.category}\n\n${p.text}\n— ${p.author || 'анонімно'}`;
-      const shareBtn = `
-        <button class="cm-board-share share-btn share-btn--corner" type="button"
-                data-share-board
-                data-share-title="Оголошення з Дошки громади Олики"
-                data-share-text="${escapeHtml(shareText)}"
-                aria-label="Поділитися оголошенням">📤</button>`;
-      return `
-        <article class="cm-board-note cm-board-note--${escapeHtml(p.color || 'yellow')}${p.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
-          <span class="cm-board-pin"></span>
-          ${shareBtn}
-          ${photoHtml}
-          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-          <p class="cm-board-text">${escapeHtml(p.text)}</p>
-          <div class="cm-board-footer">
-            <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-            <span class="cm-board-time">${formatTime(p.ts)}</span>
-          </div>
-          ${contactHtml}
-        </article>
-      `;
-    }).join('');
-
-    el.innerHTML = `
-      <div class="board-backdrop" id="board-backdrop"></div>
-      <div class="cm-board-corkboard board-corkboard--full">
-        ${officialHtml}
-        ${userHtml}
-      </div>
-
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
-        <span class="cm-board-trigger-icon">✏️</span>
-        <span class="cm-board-trigger-text">Подати оголошення</span>
-      </button>
-    `;
-
-    document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
-    initBoardNoteExpand(el);
-    // Кнопки виклика — окремий handler, щоб клік не "ловився" батьківським стікером
-    // (інакше стікер реагує на тап і кнопка href="tel:" не встигає спрацювати).
-    // capture: true — перехоплюємо до того як click дійде до стікера.
-    el.querySelectorAll('.cm-board-call').forEach(btn => {
-      btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
-    });
+    allPosts         = boardData.posts || [];
+    allAnnouncements = communityData.announcements || [];
   } catch {
     el.innerHTML = '<div class="empty-state">Дошка тимчасово недоступна</div>';
+    return;
   }
+
+  renderAll(el);
 }
 
-// Zoom-перегляд стікера через окрему модалку (16.05.2026):
-// - Тап на стікер → створюється МОДАЛКА-копія по центру з більшим font-size
-// - Оригінальний стікер плавно зникає (opacity: 0) щоб виглядав «знятим з дошки»
-// - Інші картки не рухаються, не зникають — backdrop їх просто димає
-// - Тап на backdrop → модалка зникає, оригінал повертається
-//
-// Чому не FLIP/scale: transform:scale() на iOS завжди розмиває текст
-// (растеризує bitmap-шар і масштабує), плюс матрична інтерполяція ламає
-// траєкторію. Окрема модалка з більшим font-size — чіткий рендер без проблем.
+// Перерендер тільки контейнера дошки (без перезавантаження даних)
+function renderAll(el) {
+  el.innerHTML = `
+    ${renderHeader()}
+    <div class="bd-body" id="bd-body">${renderBody()}</div>
+    <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
+      <span class="cm-board-trigger-icon">✏️</span>
+      <span class="cm-board-trigger-text">Подати оголошення</span>
+    </button>
+  `;
+
+  // Submit-форма
+  document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
+
+  // Пошук
+  const searchInput = document.getElementById('bd-search-input');
+  if (searchInput) {
+    let debounce = null;
+    searchInput.addEventListener('input', e => {
+      searchQuery = e.target.value;
+      clearTimeout(debounce);
+      debounce = setTimeout(() => renderBodyOnly(el), 180);
+    });
+  }
+  document.getElementById('bd-search-clear')?.addEventListener('click', () => {
+    searchQuery = '';
+    renderAll(el);
+  });
+
+  // Таби
+  el.querySelectorAll('[data-bd-tab]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeType = btn.dataset.bdTab;
+      activeCategory = 'all';   // скидаємо категорію при зміні табу
+      renderAll(el);
+    });
+  });
+
+  // Категорії-чіпи (тільки для board)
+  el.querySelectorAll('[data-bd-cat]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      activeCategory = btn.dataset.bdCat;
+      renderAll(el);
+    });
+  });
+
+  // Кнопки виклика — окремий handler (capture щоб клік не лизнув на стікер)
+  el.querySelectorAll('.cm-board-call').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
+  });
+
+  // Zoom-перегляд тільки для board-стікерів
+  initBoardNoteExpand(el);
+}
+
+function renderBodyOnly(el) {
+  const body = document.getElementById('bd-body');
+  if (!body) return renderAll(el);
+  body.innerHTML = renderBody();
+  // Перепідключаємо handlers для cm-board-call всередині нового HTML
+  body.querySelectorAll('.cm-board-call').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
+  });
+  initBoardNoteExpand(el);
+}
+
+// Zoom-перегляд стікера через окрему модалку (тільки board)
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
@@ -169,13 +478,11 @@ function initBoardNoteExpand(root) {
     if (isAnimating || activeNote) return;
     isAnimating = true;
 
-    // Створюємо модалку-клон з тими ж класами (для кольору й категорії)
     const modal = document.createElement('article');
     modal.className = note.className + ' cm-board-modal-note';
     modal.innerHTML = note.innerHTML;
     document.body.appendChild(modal);
 
-    // Кнопка виклика всередині модалки — окремий handler
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });
@@ -183,10 +490,8 @@ function initBoardNoteExpand(root) {
     activeNote = note;
     activeModal = modal;
 
-    // Ховаємо оригінал плавно (opacity 1→0)
     note.classList.add('cm-board-note--hidden');
 
-    // Запускаємо backdrop і модалку (наступний frame щоб transition спрацював)
     requestAnimationFrame(() => {
       backdrop.classList.add('visible');
       modal.classList.add('visible');
@@ -214,7 +519,8 @@ function initBoardNoteExpand(root) {
     }, DURATION);
   };
 
-  root.querySelectorAll('.cm-board-note').forEach(note => {
+  // Тільки cm-board-note (стікери) розгортаються — chat/greeting не клонуються
+  root.querySelectorAll('.cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)').forEach(note => {
     note.addEventListener('click', e => {
       e.stopPropagation();
       if (isAnimating) return;
@@ -225,26 +531,58 @@ function initBoardNoteExpand(root) {
   backdrop.addEventListener('click', collapse);
 }
 
-// Document-level listener для кнопок 📤 — щоб охопити і оригінальні стікери,
-// і клон у zoom-модалці (`expand()` копіює innerHTML у новий вузол на body).
-// `once` нема — listener живе весь час життя сторінки.
-let _shareListenerAttached = false;
-function attachBoardShareListener() {
-  if (_shareListenerAttached) return;
-  _shareListenerAttached = true;
+// ── Document-level listener для реакцій + збережене + share ──────────────────
+// Один раз при initBoard. Працює і для оригінальних, і для клонів у zoom-модалці.
+
+let _delegationAttached = false;
+function attachBoardDelegation() {
+  if (_delegationAttached) return;
+  _delegationAttached = true;
+
   document.addEventListener('click', e => {
-    const btn = e.target.closest('[data-share-board]');
-    if (!btn) return;
-    // Не даємо кліку «лизнути» на стікер (інакше відкриється zoom-модалка)
-    e.stopPropagation();
-    sharePost({
-      title: btn.dataset.shareTitle,
-      text:  btn.dataset.shareText,
-    });
+    // Реакція ❤️👍😂😢
+    const reactBtn = e.target.closest('[data-react-id]');
+    if (reactBtn) {
+      e.stopPropagation();
+      const id = Number(reactBtn.dataset.reactId);
+      const emoji = reactBtn.dataset.reactEmoji;
+      toggleUserReaction(id, emoji);
+      reactBtn.classList.toggle('bd-reaction--active');
+      return;
+    }
+
+    // Зберегти / прибрати 💾
+    const saveBtn = e.target.closest('[data-save-id]');
+    if (saveBtn) {
+      e.stopPropagation();
+      const id = Number(saveBtn.dataset.saveId);
+      toggleSaved(id);
+      const nowSaved = isSaved(id);
+      saveBtn.textContent = nowSaved ? '💾' : '🤍';
+      saveBtn.classList.toggle('bd-bookmark--active', nowSaved);
+      saveBtn.setAttribute('aria-label', nowSaved ? 'Прибрати зі збережених' : 'Зберегти у Мої');
+      // Якщо ми у табі «Мої» і прибираємо — перерендерити (щоб картка зникла)
+      if (activeType === 'saved' && !nowSaved) {
+        const el = document.getElementById('board-content');
+        if (el) renderBodyOnly(el);
+      }
+      return;
+    }
+
+    // Share 📤
+    const shareBtn = e.target.closest('[data-share-board]');
+    if (shareBtn) {
+      e.stopPropagation();
+      sharePost({
+        title: shareBtn.dataset.shareTitle,
+        text:  shareBtn.dataset.shareText,
+      });
+      return;
+    }
   }, { capture: true });
 }
 
 export function initBoard() {
-  attachBoardShareListener();
+  attachBoardDelegation();
   renderBoard();
 }
