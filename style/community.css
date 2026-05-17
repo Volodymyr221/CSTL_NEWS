@@ -1515,11 +1515,14 @@
    (17.05.2026, план з docs/COMMUNITY_BOARD_VISION.md)
    ============================================================================ */
 
-/* Контролі зверху: пошук + таби + категорії */
+/* Контролі зверху: пошук + таби + категорії — fixed (sticky ламається
+   на iOS Safari через height:100% на body, як і у filters-bar) */
 .bd-controls {
-  position: sticky;
-  top: 0;
-  z-index: 30;
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 90;
   background: var(--paper);
   padding: 10px 14px 8px;
   border-bottom: 1px solid var(--paper-deep);
@@ -1527,6 +1530,11 @@
   flex-direction: column;
   gap: 8px;
 }
+/* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
+   Висота без категорій: search 40 + gap 8 + tabs 38 + padding 18 ≈ 110
+   Висота з категоріями (тип board): +8 gap +30 chip ≈ 142 */
+.bd-body { padding-top: 110px; }
+.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 142px; }
 
 /* Пошук */
 .bd-search {
