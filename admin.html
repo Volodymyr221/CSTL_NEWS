@@ -66,7 +66,7 @@
       text-overflow: ellipsis;
       white-space: nowrap;
     }
-    .btn-logout {
+    .btn-logout, .btn-minimize {
       background: rgba(255,255,255,0.18);
       border: none;
       color: white;
@@ -75,8 +75,10 @@
       font-size: 12px;
       cursor: pointer;
       font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
     }
-    .btn-logout:active { background: rgba(255,255,255,0.30); }
+    .btn-logout:active, .btn-minimize:active { background: rgba(255,255,255,0.30); }
+    .btn-minimize { background: rgba(255,255,255,0.10); }
 
     /* ── MAIN ────────────────────────────────────────────────────────── */
     .main {
@@ -356,6 +358,7 @@
   </div>
   <div class="header-user" id="header-user" style="display:none">
     <span class="header-email" id="header-email"></span>
+    <button class="btn-minimize" id="btn-minimize" title="Повернутись на сайт без виходу з адмінки">← На сайт</button>
     <button class="btn-logout" id="btn-logout">Вийти</button>
   </div>
 </header>
@@ -857,6 +860,13 @@ window.supabase_logout = async () => {
   location.reload();
 };
 document.getElementById('btn-logout').addEventListener('click', window.supabase_logout);
+
+// «← На сайт» — повертає на index.html БЕЗ виходу з адмінки.
+// Сесія Supabase лишається у localStorage, при наступному відкритті admin.html
+// одразу всередині без введення пароля.
+document.getElementById('btn-minimize').addEventListener('click', () => {
+  window.location.href = './';
+});
 
 // Старт
 init();
