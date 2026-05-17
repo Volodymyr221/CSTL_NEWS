@@ -7,7 +7,7 @@
 //   Hero фото → Greeting (дата + Добрий ранок/вечір) → Дошка → Погода
 //   → Світло → Автобус → Подія громади → Контакти.
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, attachSwipe } from '../core/utils.js';
 import {
   renderWeatherBlock,
   renderPowerBlock,
@@ -27,21 +27,47 @@ const HERO_IMAGES = [
 let _heroInterval = null;
 let _heroIndex = 0;
 
-function startHeroRotator() {
+function showHeroSlide(idx) {
+  const wrap = document.querySelector('.cm-hero');
+  if (!wrap) return;
+  _heroIndex = (idx + HERO_IMAGES.length) % HERO_IMAGES.length;
+  wrap.querySelectorAll('.cm-hero-img').forEach((img, i) => {
+    img.classList.toggle('active', i === _heroIndex);
+  });
+  wrap.querySelectorAll('.cm-hero-dot').forEach((d, i) => {
+    d.classList.toggle('active', i === _heroIndex);
+  });
+}
+
+function restartHeroAutoRotate() {
   if (_heroInterval) clearInterval(_heroInterval);
   if (HERO_IMAGES.length < 2) return;
-  _heroIndex = 0;
   _heroInterval = setInterval(() => {
     const wrap = document.querySelector('.cm-hero');
     if (!wrap) { clearInterval(_heroInterval); _heroInterval = null; return; }
-    _heroIndex = (_heroIndex + 1) % HERO_IMAGES.length;
-    wrap.querySelectorAll('.cm-hero-img').forEach((img, i) => {
-      img.classList.toggle('active', i === _heroIndex);
-    });
-    wrap.querySelectorAll('.cm-hero-dot').forEach((d, i) => {
-      d.classList.toggle('active', i === _heroIndex);
-    });
+    showHeroSlide(_heroIndex + 1);
   }, 6000);
+}
+
+function startHeroRotator() {
+  _heroIndex = 0;
+  restartHeroAutoRotate();
+  // Свайп — ручна зміна фото. Скидає авто-таймер щоб одразу не перескочило.
+  const wrap = document.querySelector('.cm-hero');
+  if (wrap) {
+    attachSwipe(wrap,
+      () => { showHeroSlide(_heroIndex + 1); restartHeroAutoRotate(); },
+      () => { showHeroSlide(_heroIndex - 1); restartHeroAutoRotate(); }
+    );
+    // Клік на dot — переходить на той слайд
+    wrap.querySelectorAll('.cm-hero-dot').forEach((d, i) => {
+      d.style.cursor = 'pointer';
+      d.addEventListener('click', () => {
+        showHeroSlide(i);
+        restartHeroAutoRotate();
+      });
+    });
+  }
 }
 
 // ── Greeting + Дата (заголовок вкладки) ──────────────────────────────────────

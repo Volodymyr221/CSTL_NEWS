@@ -98,6 +98,26 @@
       return "\u041E\u043B\u0438\u043A\u0430";
     }
   }
+  function attachSwipe(el, onLeft, onRight) {
+    let startX = null, startY = null;
+    el.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    el.addEventListener("touchend", (e) => {
+      if (startX == null)
+        return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      startX = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0 && onLeft)
+          onLeft();
+        if (dx > 0 && onRight)
+          onRight();
+      }
+    }, { passive: true });
+  }
   async function sharePost({ title, text, url }) {
     const shareData = {
       title: title || "CSTL LIFE",
@@ -710,12 +730,23 @@
   ];
   var _heroInterval = null;
   var _heroIndex = 0;
-  function startHeroRotator() {
+  function showHeroSlide(idx) {
+    const wrap = document.querySelector(".cm-hero");
+    if (!wrap)
+      return;
+    _heroIndex = (idx + HERO_IMAGES.length) % HERO_IMAGES.length;
+    wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
+      img.classList.toggle("active", i === _heroIndex);
+    });
+    wrap.querySelectorAll(".cm-hero-dot").forEach((d, i) => {
+      d.classList.toggle("active", i === _heroIndex);
+    });
+  }
+  function restartHeroAutoRotate() {
     if (_heroInterval)
       clearInterval(_heroInterval);
     if (HERO_IMAGES.length < 2)
       return;
-    _heroIndex = 0;
     _heroInterval = setInterval(() => {
       const wrap = document.querySelector(".cm-hero");
       if (!wrap) {
@@ -723,14 +754,33 @@
         _heroInterval = null;
         return;
       }
-      _heroIndex = (_heroIndex + 1) % HERO_IMAGES.length;
-      wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
-        img.classList.toggle("active", i === _heroIndex);
-      });
-      wrap.querySelectorAll(".cm-hero-dot").forEach((d, i) => {
-        d.classList.toggle("active", i === _heroIndex);
-      });
+      showHeroSlide(_heroIndex + 1);
     }, 6e3);
+  }
+  function startHeroRotator() {
+    _heroIndex = 0;
+    restartHeroAutoRotate();
+    const wrap = document.querySelector(".cm-hero");
+    if (wrap) {
+      attachSwipe(
+        wrap,
+        () => {
+          showHeroSlide(_heroIndex + 1);
+          restartHeroAutoRotate();
+        },
+        () => {
+          showHeroSlide(_heroIndex - 1);
+          restartHeroAutoRotate();
+        }
+      );
+      wrap.querySelectorAll(".cm-hero-dot").forEach((d, i) => {
+        d.style.cursor = "pointer";
+        d.addEventListener("click", () => {
+          showHeroSlide(i);
+          restartHeroAutoRotate();
+        });
+      });
+    }
   }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
