@@ -138,6 +138,25 @@ function initModalSwipe() {
   });
 }
 
+// Прихований доступ до адмінки: 5 тапів на лого «CSTL LIFE» у шапці
+// протягом 2 секунд → відкривається ./admin.html у тій самій PWA.
+// Адмін знає, звичайний юзер не зрозуміє.
+function initAdminShortcut() {
+  const logo = document.querySelector('.header-logo');
+  if (!logo) return;
+  let taps = [];
+  logo.style.cursor = 'pointer';
+  logo.addEventListener('click', () => {
+    const now = Date.now();
+    taps = taps.filter(t => now - t < 2000);
+    taps.push(now);
+    if (taps.length >= 5) {
+      taps = [];
+      window.location.href = './admin.html';
+    }
+  });
+}
+
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
@@ -149,6 +168,7 @@ function init() {
   initBuses();
   initPower();
   initBoard();
+  initAdminShortcut();
 
   // Splash screen — прибираємо після завантаження
   setTimeout(() => {
