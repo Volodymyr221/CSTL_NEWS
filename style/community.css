@@ -480,19 +480,25 @@
 .cm-block--power .cm-power-status.cm-power-off   { background: rgba(196,30,58,0.18); }
 .cm-block--power .cm-power-status.cm-power-maybe { background: rgba(255,255,255,0.35); }
 
-/* Автобус — медовий */
+/* Автобус — нейтральний фон, табло-стиль у bus-hero всередині (18.05.2026).
+   Раніше був зелений gradient, тепер темний hero як на вкладці Автобуси. */
 .cm-block--bus {
-  background: linear-gradient(135deg, var(--bus) 0%, var(--bus-deep) 100%);
+  background: var(--card-cream);
+  padding: 14px;
 }
-.cm-block--bus .cm-block-title  { color: var(--bus-text); }
-.cm-block--bus .cm-bus-time     { color: var(--bus-text); }
-.cm-block--bus .cm-bus-route    { color: var(--bus-text); }
-.cm-block--bus .cm-bus-meta     { color: var(--bus-text); opacity: 0.75; }
-.cm-block--bus .cm-bus-countdown {
-  background: rgba(255,255,255,0.70);
-  color: var(--bus-text);
+.cm-block--bus .cm-block-header {
+  margin-bottom: 10px;
 }
-.cm-block--bus .cm-bus-countdown.urgent { background: var(--red); color: white; }
+.cm-block--bus .cm-block-body {
+  padding: 0;
+}
+/* bus-hero всередині блоку — без додаткових margin (вже у padding блоку) */
+.cm-block--bus .bus-hero {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.cm-block--bus .bus-hero:active { transform: scale(0.985); }
 
 /* Подія — теракот */
 .cm-block--event {

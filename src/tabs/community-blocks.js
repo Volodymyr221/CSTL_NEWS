@@ -265,14 +265,47 @@ export async function renderBusBlock() {
           return m ? `через ${h} год ${m} хв` : `через ${h} год`;
         })();
 
+    // Прогрес дня: від поточної хвилини до часу відправлення (1440 хв доба)
+    const dayTotal = 24 * 60;
+    const progress = Math.max(0, Math.min(100, (nowMin / dayTotal) * 100));
+
+    // Метадані: тривалість + ціна + водій (як у вкладці Автобусів)
+    const durationMin = toMin - fromMin;
+    const durationStr = durationMin < 60
+      ? `${durationMin} хв`
+      : (() => {
+          const h = Math.floor(durationMin / 60), m = durationMin % 60;
+          return m ? `${h} год ${m} хв` : `${h} год`;
+        })();
+    const priceStr = next.price ? `${next.price} грн` : '';
+    const driverStr = next.driver || '';
+    const metaParts = [priceStr, durationStr, driverStr].filter(Boolean);
+    const metaHtml = metaParts.map((p, i) => i === 0
+      ? `<span>${escapeHtml(p)}</span>`
+      : `<span class="bus-hero-meta-sep">·</span><span>${escapeHtml(p)}</span>`
+    ).join('');
+
+    // Hero-блок як на вкладці Автобусів (темний табло-стиль).
+    // Тапаєш — переходить на повну вкладку.
     el.innerHTML = `
-      <div class="cm-bus-main ${urgent ? 'urgent' : ''}">
-        <div class="cm-bus-time">${escapeHtml(fromHHMM)}</div>
-        <div class="cm-bus-info">
-          <div class="cm-bus-route">${escapeHtml(fromName)} → ${escapeHtml(toName)}</div>
-          <div class="cm-bus-meta">${escapeHtml(next.name)} · прибуття ${escapeHtml(toHHMM)}</div>
+      <div class="bus-hero${urgent ? ' bus-hero--urgent' : ''}" data-switch-tab="buses">
+        <div class="bus-hero-top">
+          ${urgent
+            ? `<span class="bus-hero-urgent">через ${minsLeft} хв</span>`
+            : `<span class="bus-hero-countdown">${escapeHtml(countdown)}</span>`}
         </div>
-        <div class="cm-bus-countdown ${urgent ? 'urgent' : ''}">${escapeHtml(countdown)}</div>
+        <div class="bus-hero-row">
+          <div class="bus-hero-times">
+            <span class="bus-hero-time">${escapeHtml(fromHHMM)}</span>
+            <span class="bus-hero-arrow">→</span>
+            <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM)}</span>
+          </div>
+        </div>
+        <div class="bus-hero-route">${escapeHtml(fromName)} → ${escapeHtml(toName)}</div>
+        <div class="bus-hero-meta">${metaHtml}</div>
+        <div class="bus-hero-progress">
+          <div class="bus-hero-progress-fill" style="width:${progress}%"></div>
+        </div>
       </div>
     `;
   } catch {
