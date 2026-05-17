@@ -451,7 +451,15 @@ async function handleSession(session) {
   userEl.style.display = 'flex';
 
   if (!isAdmin) {
-    renderNoAccess();
+    // DEBUG: показуємо що повертає API щоб діагностувати catch-22 vs реальне «нема у списку»
+    const debugInfo = {
+      authEmail:  currentUser.email,
+      dataLength: data ? data.length : 'data=null',
+      dataValue:  JSON.stringify(data),
+      errorMsg:   error ? error.message : 'нема помилки',
+      errorCode:  error ? error.code : '—',
+    };
+    renderNoAccess(debugInfo);
     return;
   }
   await loadAll();
@@ -506,12 +514,22 @@ function renderLogin() {
   });
 }
 
-function renderNoAccess() {
+function renderNoAccess(debug) {
   mainEl.innerHTML = `
     <div class="login-card">
       <div class="login-icon">🚫</div>
       <h1 class="login-title">Немає доступу</h1>
       <p class="login-sub">Твоя пошта <strong>${escapeHtml(currentUser.email)}</strong> не у списку адмінів.</p>
+      ${debug ? `
+        <div class="login-info" style="background:#FFF3CD;border-left-color:#FF9800;font-family:monospace;font-size:11px">
+          <strong>DEBUG (для діагностики):</strong><br>
+          authEmail: ${escapeHtml(debug.authEmail)}<br>
+          dataLength: ${escapeHtml(debug.dataLength)}<br>
+          dataValue: ${escapeHtml(debug.dataValue)}<br>
+          errorMsg: ${escapeHtml(debug.errorMsg)}<br>
+          errorCode: ${escapeHtml(debug.errorCode)}
+        </div>
+      ` : ''}
       <div class="login-info">
         Якщо це помилка — попроси існуючого адміна додати твою пошту через SQL:
         <code style="display:block;background:#fff;padding:8px;border-radius:6px;margin-top:8px;font-family:monospace;font-size:12px">INSERT INTO admins (email, name)
