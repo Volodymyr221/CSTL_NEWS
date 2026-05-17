@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-05-17 (cleanup хвостів: BACKLOG/ROADMAP/CSTL_BUGS/START_HERE синхронізовано + B-15 закрито через event delegation у `news.js`)
+**Оновлено:** 2026-05-17 (підготовка до Supabase: B-15+B-21 закриті, дані під схему `posts`, Web Share API, `/install.html`, `scripts/migrate_to_supabase.py`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,7 +14,7 @@
 | **Робоча гілка (поточна сесія)** | `claude/start-session-XXX` — створюється автоматично при старті |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260517-1313` (оновити при наступній зміні коду) |
+| **CACHE_NAME у `sw.js`** | `cstl-20260517-1330` (оновити при наступній зміні коду) |
 
 ### Видимі вкладки (порядок у tab-bar)
 **Громада** (головна-дашборд) · **Дошка** · **Новини** · **Події** · **Автобуси**
@@ -46,17 +46,28 @@
 
 ## 🔜 Що далі (за пріоритетом)
 
-### 🔴 Зараз
-1. **Фаза 9 Спринт 1 — Дошка громади 2.0**
-   - Підняти Supabase (чекає на твою реєстрацію + URL+anon-key)
-   - SQL-схеми: `posts`, `reactions`, RLS policies
-   - Адмін-панель `/admin` для модерації pending → published
-   - Submit-форма дошки реально POST у Supabase (зараз заглушка)
-   - Перенести `data/community-board.json` + `data/community.json` у Supabase
-2. **Фаза 3 Supabase для Світла** (паралельно — той самий проект)
-   - Таблиці `queues`, `cities`, `streets`, `schedules`
-   - Адмін-форма оновлення розкладу без GitHub
-3. **B-21** — переписати 6× `onclick="switchTab(...)"` у `src/tabs/community-blocks.js` на event delegation (аналогічно B-15)
+### 🔴 Зараз — підготовка до Supabase ЗАВЕРШЕНА ✅
+Усі код-хвости перед Supabase закриті за сесію 17.05:
+- B-15 + B-21 (event delegation замість inline onclick)
+- Picsum URL прибрані з `community-board.json`
+- JSON-схема узгоджена з майбутньою таблицею `posts` (поля `type`/`status`/`location`/`published_at`)
+- Web Share API + кнопки 📤 на 3 поверхнях (стаття/Дошка/подія)
+- `/install.html` для PWA-інструкції на iPhone/Android
+- `scripts/migrate_to_supabase.py` з SQL-схемами `posts`+`announcements`+`ads`
+
+### ⛔ Заблоковано тобою — потрібні дії Вови щоб рухатись далі
+1. **Зареєструватись на Supabase** (https://supabase.com) — створити проект, дати:
+   - `SUPABASE_URL` (https://xxxxxx.supabase.co)
+   - `anon-key` (public — для фронтенду)
+   - `service_role-key` (admin — для адмінки та міграції)
+2. **Архітектурні рішення** перед Спринтом 1 (4 питання — описано окремо)
+3. **Plausible.io / Goatcounter** — зареєструватись для аналітики DAU/MAU
+4. **Контактний email** для форми `/реклама` (Pre-revenue groundwork)
+5. **5 стратегічних питань** з `docs/PRODUCT_STRATEGY.md`
+
+### 🟡 Можу зробити паралельно (поки чекаю Supabase)
+6. **Сторінка `/реклама`** — статичний HTML з прайсом (потребує твого email для контакту)
+7. **Адмінка `/admin` UI** — макет HTML/CSS без бекенду (підключимо Supabase коли буде ключ)
 
 ### 🟡 Незабаром
 4. **Pre-revenue groundwork** — Plausible.io або Goatcounter (аналітика DAU/MAU). Без цифр нема перших переговорів з рекламодавцями. Деталі: `docs/MONETIZATION.md`
