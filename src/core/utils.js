@@ -69,6 +69,27 @@ export async function getCityName(lat, lon) {
   }
 }
 
+// Горизонтальний свайп на елементі. Викликає onLeft при свайпі вліво,
+// onRight при свайпі вправо. Поріг 50px, врахування Y щоб не плутати зі скролом.
+export function attachSwipe(el, onLeft, onRight) {
+  let startX = null, startY = null;
+  el.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+  }, { passive: true });
+  el.addEventListener('touchend', e => {
+    if (startX == null) return;
+    const dx = e.changedTouches[0].clientX - startX;
+    const dy = e.changedTouches[0].clientY - startY;
+    startX = null;
+    // Тільки якщо горизонтальний рух більший за вертикальний (це не скрол)
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+      if (dx < 0 && onLeft)  onLeft();
+      if (dx > 0 && onRight) onRight();
+    }
+  }, { passive: true });
+}
+
 // Web Share API — поділитись контентом через рідне меню iOS/Android.
 // iOS Safari відкриває меню з Viber/Telegram/Messenger/SMS одним тапом.
 // Fallback: copy URL у clipboard + toast «Скопійовано».
