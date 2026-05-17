@@ -679,6 +679,46 @@
   var allArticles = [];
   var activeGeo = "\u0412\u0441\u0456";
   var GEO_FILTERS = ["\u0412\u0441\u0456", "\u041E\u043B\u0438\u043A\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430", "\u0421\u0432\u0456\u0442"];
+  var CATEGORY_COLORS = {
+    "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
+    // темно-сірий (новинний)
+    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
+    // navy
+    "\u0412\u0456\u0439\u043D\u0430": "#722F37",
+    // бордо
+    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F",
+    // зелений (гроші)
+    "\u0411\u0456\u0437\u043D\u0435\u0441": "#2E5E1F",
+    // зелений
+    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
+    // синій
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#B45309",
+    // теракот
+    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "#455a64",
+    // сіро-синій
+    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#C2185B",
+    // медичний
+    "\u041E\u0441\u0432\u0456\u0442\u0430": "#6a1b9a",
+    // фіолетовий
+    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "#2e7d32"
+    // природний зелений
+  };
+  var GEO_COLORS = {
+    "\u041E\u043B\u0438\u043A\u0430": "#722F37",
+    // бордо — наш бренд
+    "\u0412\u043E\u043B\u0438\u043D\u044C": "#9e7508",
+    // золотий
+    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
+    // синій
+    "\u0421\u0432\u0456\u0442": "#546e7a"
+    // нейтрально-сірий
+  };
+  function catColor(c) {
+    return CATEGORY_COLORS[c] || "#546e7a";
+  }
+  function geoColor(g) {
+    return GEO_COLORS[g] || "#546e7a";
+  }
   async function initNews() {
     try {
       const res = await fetch("./data/articles.json");
@@ -711,17 +751,20 @@
     }
     el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
   }
+  function badgesHtml(a) {
+    return `
+    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
+    ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+  `;
+  }
   function renderFeatured(a) {
     const hasImage = !!a.image;
     return `
     <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" onclick="openArticle(${a.id})">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ""}
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
       <div class="news-card-featured-overlay">
-        <div class="news-card-meta">
-          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
-          <span class="news-card-category">${escapeHtml(a.category)}</span>
-          ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-        </div>
+        <div class="news-card-meta">${badgesHtml(a)}</div>
         <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
         ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
         <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
@@ -732,13 +775,9 @@
   function renderRow(a) {
     return `
     <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ""}
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
       <div class="news-card-row-body">
-        <div class="news-card-meta">
-          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
-          <span class="news-card-category">${escapeHtml(a.category)}</span>
-          ${a.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-        </div>
+        <div class="news-card-meta">${badgesHtml(a)}</div>
         <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
         <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
@@ -811,7 +850,7 @@
 
   // src/tabs/events.js
   var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u0421\u0432\u044F\u0442\u0430", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
-  var CATEGORY_COLORS = {
+  var CATEGORY_COLORS2 = {
     "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
     "Kino_Castle": "#722F37",
     "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
@@ -836,8 +875,8 @@
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
-  function catColor(category) {
-    return CATEGORY_COLORS[category] || "#722F37";
+  function catColor2(category) {
+    return CATEGORY_COLORS2[category] || "#722F37";
   }
   function buildIcsContent(ev) {
     const pad2 = (n) => String(n).padStart(2, "0");
@@ -893,7 +932,7 @@
   `).join("");
   }
   function cardHtml(ev) {
-    const bg = catColor(ev.category);
+    const bg = catColor2(ev.category);
     let coverBlock = "";
     if (ev.image) {
       coverBlock = `

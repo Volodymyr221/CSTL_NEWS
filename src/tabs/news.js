@@ -5,6 +5,32 @@ let activeGeo = 'Всі';
 
 const GEO_FILTERS = ['Всі', 'Олика', 'Волинь', 'Україна', 'Світ'];
 
+// Кольори категорій — pill-бейдж на картці новини (Tier 6 — 17.05.2026)
+const CATEGORY_COLORS = {
+  'Суспільство':  '#37474f',  // темно-сірий (новинний)
+  'Політика':     '#1a237e',  // navy
+  'Війна':        '#722F37',  // бордо
+  'Економіка':    '#2E5E1F',  // зелений (гроші)
+  'Бізнес':       '#2E5E1F',  // зелений
+  'Спорт':        '#1565C0',  // синій
+  'Культура':     '#B45309',  // теракот
+  'Технології':   '#455a64',  // сіро-синій
+  'Здоровʼя':     '#C2185B',  // медичний
+  'Освіта':       '#6a1b9a',  // фіолетовий
+  'Природа':      '#2e7d32',  // природний зелений
+};
+
+// Кольори гео-бейджів — звідки новина (наш бренд Олика — найвиразніший)
+const GEO_COLORS = {
+  'Олика':   '#722F37',  // бордо — наш бренд
+  'Волинь':  '#9e7508',  // золотий
+  'Україна': '#0057B7',  // синій
+  'Світ':    '#546e7a',  // нейтрально-сірий
+};
+
+function catColor(c) { return CATEGORY_COLORS[c] || '#546e7a'; }
+function geoColor(g) { return GEO_COLORS[g]      || '#546e7a'; }
+
 export async function initNews() {
   try {
     const res = await fetch('./data/articles.json');
@@ -46,17 +72,22 @@ export function renderNews() {
   el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
 }
 
+// HTML для двох кольорових бейджів (geo + category) — використовується у обох картках
+function badgesHtml(a) {
+  return `
+    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
+    ${a.exclusive ? '<span class="news-badge news-badge--excl">⭐ Ексклюзив</span>' : ''}
+  `;
+}
+
 function renderFeatured(a) {
   const hasImage = !!a.image;
   return `
     <article class="news-card-featured ${hasImage ? '' : 'no-image'}${a.exclusive ? ' exclusive' : ''}" onclick="openArticle(${a.id})">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="">` : ''}
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
       <div class="news-card-featured-overlay">
-        <div class="news-card-meta">
-          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
-          <span class="news-card-category">${escapeHtml(a.category)}</span>
-          ${a.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
-        </div>
+        <div class="news-card-meta">${badgesHtml(a)}</div>
         <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
         ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
         <div class="news-card-featured-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
@@ -68,13 +99,9 @@ function renderFeatured(a) {
 function renderRow(a) {
   return `
     <article class="news-card-row ${a.exclusive ? 'exclusive' : ''}" onclick="openArticle(${a.id})">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="">` : ''}
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
       <div class="news-card-row-body">
-        <div class="news-card-meta">
-          <span class="news-card-geo">${escapeHtml(a.geo)}</span>
-          <span class="news-card-category">${escapeHtml(a.category)}</span>
-          ${a.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
-        </div>
+        <div class="news-card-meta">${badgesHtml(a)}</div>
         <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
         ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
         <div class="news-card-row-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
