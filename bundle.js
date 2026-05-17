@@ -48,7 +48,12 @@
   }
 
   // src/core/utils.js
-  function formatTime(ts) {
+  function formatTime(value) {
+    if (!value)
+      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
+    const ts = typeof value === "string" ? new Date(value).getTime() : value;
+    if (!ts || isNaN(ts))
+      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
     const diff = Date.now() - ts;
     if (diff < 6e4)
       return "\u0449\u043E\u0439\u043D\u043E";
@@ -57,6 +62,11 @@
     if (diff < 864e5)
       return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+  }
+  function postTime(p) {
+    if (!p)
+      return null;
+    return p.ts || p.published_at || p.created_at || null;
   }
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -319,6 +329,28 @@
     if (error)
       return { ok: false, error: error.message };
     return { ok: true, comment: data };
+  }
+  function subscribeReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
+  function subscribeComments(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("comments-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "comments" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
   }
 
   // src/tabs/community-blocks.js
@@ -3047,15 +3079,17 @@ END:VEVENT`
     const myReaction = getMyReaction(post.id);
     const counts = getReactionCounts(post.id);
     const total = getTotalReactionCount(post.id);
-    const top3 = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 3).map(([emoji]) => emoji);
+    const top3 = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
     let content;
     if (total === 0) {
       content = `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
     } else {
-      const emojiHtml = top3.map(
-        (em) => `<span class="bd-react-trigger-emoji${em === myReaction ? " bd-react-trigger-emoji--mine" : ""}">${em}</span>`
-      ).join("");
-      content = emojiHtml + `<span class="bd-react-trigger-count">${total}</span>`;
+      content = top3.map(([em, n]) => `
+      <span class="bd-react-trigger-group${em === myReaction ? " bd-react-trigger-group--mine" : ""}">
+        <span class="bd-react-trigger-emoji">${em}</span>
+        <span class="bd-react-trigger-count">${n}</span>
+      </span>
+    `).join("");
     }
     return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
           data-react-trigger="${post.id}" aria-label="\u0420\u0435\u0430\u043A\u0446\u0456\u0457 (${total})">${content}</button>`;
@@ -3112,7 +3146,7 @@ END:VEVENT`
         <div class="bd-inline-comment">
           <span class="bd-inline-comment-author">${escapeHtml(c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
           <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
-          <span class="bd-inline-comment-time">${formatTime(c.ts || new Date(c.created_at).getTime())}</span>
+          <span class="bd-inline-comment-time">${formatTime(postTime(c))}</span>
         </div>
       `).join("") : "";
     return `
@@ -3130,12 +3164,20 @@ END:VEVENT`
   function openReactionPopup(triggerBtn, postId) {
     closeReactionPopup();
     const myReaction = getMyReaction(postId);
+    const counts = getReactionCounts(postId);
     const popup = document.createElement("div");
     popup.className = "bd-react-popup";
     popup.id = "bd-react-popup";
-    popup.innerHTML = REACTIONS.map((em) => `
-    <button class="bd-react-opt${myReaction === em ? " bd-react-opt--active" : ""}" type="button" data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">${em}</button>
-  `).join("");
+    popup.innerHTML = REACTIONS.map((em) => {
+      const n = counts[em] || 0;
+      return `
+      <button class="bd-react-opt${myReaction === em ? " bd-react-opt--active" : ""}" type="button"
+              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
+        <span class="bd-react-opt-emoji">${em}</span>
+        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ""}
+      </button>
+    `;
+    }).join("");
     document.body.appendChild(popup);
     const rect = triggerBtn.getBoundingClientRect();
     const popupRect = popup.getBoundingClientRect();
@@ -3190,7 +3232,7 @@ ${post.text}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       <div class="cm-board-footer">
         <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-        <span class="cm-board-time">${formatTime(p.ts)}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
       </div>
       ${contactHtml}
       ${boardActionsHtml(p)}
@@ -3207,7 +3249,7 @@ ${post.text}
       <p class="cm-board-text">${escapeHtml(a.body)}</p>
       <div class="cm-board-footer">
         <span class="cm-board-author">\u2014 ${escapeHtml(a.author || "\u2014")}</span>
-        <span class="cm-board-time">${formatTime(a.ts)}</span>
+        <span class="cm-board-time">${formatTime(postTime(a))}</span>
       </div>
     </article>
   `;
@@ -3221,7 +3263,7 @@ ${post.text}
         ${authorAvatar(p.author)}
         <div class="bd-chat-meta">
           <span class="bd-chat-author">${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-chat-time">${formatTime(p.ts)}</span>
+          <span class="bd-chat-time">${formatTime(postTime(p))}</span>
         </div>
       </div>
       <p class="bd-chat-text">${escapeHtml(p.text)}</p>
@@ -3245,7 +3287,7 @@ ${post.text}
         <p class="bd-greet-text">${escapeHtml(p.text)}</p>
         <div class="bd-greet-footer">
           <span class="bd-greet-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-greet-time">${formatTime(p.ts)}</span>
+          <span class="bd-greet-time">${formatTime(postTime(p))}</span>
         </div>
       </div>
       ${greetingActionsHtml(p)}
@@ -3631,8 +3673,45 @@ ${post.text}
       }
     }, { capture: true });
   }
+  function onReactionRealtimeEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || !row.post_id)
+      return;
+    const postId = row.post_id;
+    const anonId = getAnonId();
+    fetchAllReactions(anonId).then((fresh) => {
+      const r = fresh.get(postId) || { counts: {}, my: null };
+      reactionsByPost.set(postId, r);
+      document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
+        btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === postId) || { id: postId });
+      });
+    });
+  }
+  function onCommentRealtimeEvent(payload) {
+    const postId = (payload.new || payload.old || {}).post_id;
+    if (!postId)
+      return;
+    fetchAllComments().then((fresh) => {
+      commentsByPost = fresh;
+      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+      if (wrap) {
+        const post = allPosts.find((p) => p.id === postId);
+        if (post)
+          wrap.outerHTML = chatCommentsHtml(post);
+      }
+    });
+  }
+  var _realtimeAttached = false;
+  function attachRealtime() {
+    if (_realtimeAttached || !isSupabaseReady())
+      return;
+    _realtimeAttached = true;
+    subscribeReactions(onReactionRealtimeEvent);
+    subscribeComments(onCommentRealtimeEvent);
+  }
   function initBoard() {
     attachBoardDelegation();
+    attachRealtime();
     renderBoard();
   }
 
