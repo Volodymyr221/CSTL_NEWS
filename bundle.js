@@ -833,12 +833,13 @@
 
   // src/tabs/board.js
   var TYPE_TABS2 = [
-    { id: "all", label: "\u0423\u0441\u0456", emoji: "\u{1F504}" },
+    { id: "all", label: "\u0410\u043A\u0442\u0443\u0430\u043B\u044C\u043D\u0456", emoji: "\u26A1" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
     { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" },
     { id: "greeting", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F", emoji: "\u{1F389}" },
     { id: "saved", label: "\u041C\u043E\u0457", emoji: "\u{1F4BE}" }
   ];
+  var FRESH_WINDOW_MS = 3 * 24 * 60 * 60 * 1e3;
   var BOARD_CATEGORIES2 = [
     { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726" },
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}" },
@@ -1163,11 +1164,16 @@ ${post.text}
   function getFilteredPosts() {
     const q = searchQuery.trim().toLowerCase();
     const savedIds = activeType === "saved" ? getSavedIds() : null;
+    const freshCutoff = Date.now() - FRESH_WINDOW_MS;
     return allPosts.filter((p) => {
       if (activeType === "saved") {
         if (!savedIds.has(p.id))
           return false;
-      } else if (activeType !== "all" && p.type !== activeType) {
+      } else if (activeType === "all") {
+        const t = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime() || 0;
+        if (t < freshCutoff)
+          return false;
+      } else if (p.type !== activeType) {
         return false;
       }
       if (activeType === "board" && activeCategory !== "all") {
@@ -1185,6 +1191,13 @@ ${post.text}
           return false;
       }
       return true;
+    });
+  }
+  function getFreshAnnouncements() {
+    const cutoff = Date.now() - FRESH_WINDOW_MS;
+    return allAnnouncements.filter((a) => {
+      const t = a.ts || a.published_at && new Date(a.published_at).getTime() || a.created_at && new Date(a.created_at).getTime() || 0;
+      return t >= cutoff;
     });
   }
   function renderHeader() {
@@ -1220,11 +1233,16 @@ ${post.text}
   }
   function renderBody() {
     const filtered = getFilteredPosts();
-    if (!filtered.length) {
-      const msg = activeType === "saved" ? "\u0423 \xAB\u041C\u043E\u0457\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u0422\u0430\u043F\u043D\u0456\u0442\u044C \u{1F90D} \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438." : searchQuery ? `\u0417\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery)}\xBB \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E` : "\u0423 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
+    const annsForView = activeType === "all" ? getFreshAnnouncements() : allAnnouncements;
+    if (!filtered.length && !(activeType === "all" && annsForView.length)) {
+      const msg = activeType === "saved" ? "\u0423 \xAB\u041C\u043E\u0457\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u0422\u0430\u043F\u043D\u0456\u0442\u044C \u{1F90D} \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438." : activeType === "all" ? "\u0417\u0430 \u043E\u0441\u0442\u0430\u043D\u043D\u0456 3 \u0434\u043D\u0456 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E. \u0417\u0430\u0433\u043B\u044F\u0434\u0430\u0439\u0442\u0435 \u0443 \u0414\u043E\u0448\u043A\u0443 / \u0420\u043E\u0437\u043C\u043E\u0432\u0438 / \u0412\u0456\u0442\u0430\u043D\u043D\u044F." : searchQuery ? `\u0417\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery)}\xBB \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E` : "\u0423 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
       return `<div class="bd-empty">${msg}</div>`;
     }
-    const sorted = [...filtered].sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    const sorted = [...filtered].sort((a, b) => {
+      const ta = a.ts || a.published_at && new Date(a.published_at).getTime() || 0;
+      const tb = b.ts || b.published_at && new Date(b.published_at).getTime() || 0;
+      return tb - ta;
+    });
     if (activeType === "board") {
       const cards = sorted.map(renderBoardCard).join("");
       return `
@@ -1233,7 +1251,7 @@ ${post.text}
     `;
     }
     if (activeType === "all") {
-      const officialCards = allAnnouncements.map(renderOfficialCard).join("");
+      const officialCards = annsForView.map(renderOfficialCard).join("");
       const boardOnly = sorted.filter((p) => p.type === "board").map(renderBoardCard).join("");
       const others = sorted.filter((p) => p.type !== "board").map(renderCard).join("");
       return `
