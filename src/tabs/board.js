@@ -201,13 +201,14 @@ function boardActionsHtml(post) {
   `;
 }
 
-// GREETING: реакція + save + share (без коментарів)
+// GREETING: реакція + save + share + inline коментарі (як chat)
 function greetingActionsHtml(post) {
   return `
     <div class="bd-actions">
       <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
       <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
     </div>
+    ${chatCommentsHtml(post)}
   `;
 }
 
