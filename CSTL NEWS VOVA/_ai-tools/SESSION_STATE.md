@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-05-17 22:30 (друга половина сесії: popup-реакції з 8 emoji, SVG-іконки save/share, кнопка коментарів 💬 N з bottom-sheet модалкою, повна адмінка `/admin.html` з 3 табами — модерація / оголошення / адміни)
+**Оновлено:** 2026-05-18 (Supabase production-live: адмінка, реалтайм лайки/коментарі, рідизайн Автобусів і блоку Громади у табло-стилі)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,7 +14,7 @@
 | **Робоча гілка (поточна сесія)** | `claude/start-session-XXX` — створюється автоматично при старті |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260517-2136` (оновити при наступній зміні коду) |
+| **CACHE_NAME у `sw.js`** | `cstl-20260518-0132` (оновити при наступній зміні коду) |
 
 ### Видимі вкладки (порядок у tab-bar)
 **Громада** (головна-дашборд) · **Дошка** · **Новини** · **Події** · **Автобуси**
@@ -44,30 +44,96 @@
 
 ---
 
-## 🔜 Що далі (за пріоритетом)
+## 🟢 Фаза 9 Спринт 1 — ЗАВЕРШЕНО (18.05.2026)
 
-### 🔴 Зараз — підготовка до Supabase ЗАВЕРШЕНА ✅
-Усі код-хвости перед Supabase закриті за сесію 17.05:
-- B-15 + B-21 (event delegation замість inline onclick)
-- Picsum URL прибрані з `community-board.json`
-- JSON-схема узгоджена з майбутньою таблицею `posts` (поля `type`/`status`/`location`/`published_at`)
-- Web Share API + кнопки 📤 на 3 поверхнях (стаття/Дошка/подія)
-- `/install.html` для PWA-інструкції на iPhone/Android
-- `scripts/migrate_to_supabase.py` з SQL-схемами `posts`+`announcements`+`ads`
+Supabase production-live з реальною модерацією, реалтайм-синхронізацією і
+підключеними фронт+адмінкою. Дошка громади 2.0 повноцінно працює.
 
-### ⛔ Заблоковано тобою — потрібні дії Вови щоб рухатись далі
-1. **Зареєструватись на Supabase** (https://supabase.com) — створити проект, дати:
-   - `SUPABASE_URL` (https://xxxxxx.supabase.co)
-   - `anon-key` (public — для фронтенду)
-   - `service_role-key` (admin — для адмінки та міграції)
-2. **Архітектурні рішення** перед Спринтом 1 (4 питання — описано окремо)
-3. **Plausible.io / Goatcounter** — зареєструватись для аналітики DAU/MAU
-4. **Контактний email** для форми `/реклама` (Pre-revenue groundwork)
-5. **5 стратегічних питань** з `docs/PRODUCT_STRATEGY.md`
+### Підсумок 36 комітів за 17-18.05.2026
 
-### 🟡 Можу зробити паралельно (поки чекаю Supabase)
-6. **Сторінка `/реклама`** — статичний HTML з прайсом (потребує твого email для контакту)
-7. **Адмінка `/admin` UI** — макет HTML/CSS без бекенду (підключимо Supabase коли буде ключ)
+**Supabase інфраструктура:**
+- Проект `uabyfecseqnemvcqhdem.supabase.co` (Frankfurt, Free) піднятий
+- SQL-схема: `posts`, `announcements`, `ads`, `ad_events`, `admins`,
+  `comments`, `reactions` + RLS policies + Storage bucket
+- 5 SQL-патчів у `scripts/`:
+  - `supabase_schema.sql` — повна ідемпотентна схема
+  - `supabase_fix_rls.sql` — фікс catch-22 (рекурсивний `auth.email() IN admins`)
+  - `supabase_comments_reactions.sql` — таблиці + cover_emoji/cover_gradient
+  - `supabase_realtime.sql` — `ALTER PUBLICATION supabase_realtime ADD TABLE`
+  - `supabase_set_admin_password.sql` — bcrypt пароль через SQL без email
+- `scripts/migrate_to_supabase.py` — одноразова міграція JSON → posts/announcements
+- Whitelist 2 адмінів у `admins`: haranin.ukraine + volodymyrshevchuk19
+
+**Адмінка `/admin.html`** (окрема сторінка, Supabase SDK з CDN):
+- Email+password auth (signInWithPassword) — спочатку був magic-link
+  але впирався у Supabase rate limit (~4 листи/год на Free)
+- Forgot password через magic-link → нова сторінка → Налаштування
+- 4 таби: 📋 Модерація / 🏛️ Оголошення / 👥 Адміни / ⚙️ Налаштування
+- Кнопка «← На сайт» (без logout, сесія тримається ~30 днів)
+- Прихований вхід: 5 тапів на лого `CSTL LIFE` у шапці → /admin.html
+
+**Реальні дані у Дошці громади 2.0:**
+- localStorage реакції/коментарі → Supabase БД (всі юзери бачать спільно)
+- Анонімні юзери ідентифікуються через UUID у localStorage
+- Single emoji per user per post (UNIQUE post_id+user_id)
+- Топ-3 emoji + лічильники на тригері, окремі лічильники у попапі
+- **Supabase Realtime** через WebSocket — лайки/коментарі оновлюються
+  миттєво у всіх юзерів без перезавантаження
+- Optimistic updates — миттєвий UI-feedback, фоном sync з БД
+
+**UX/UI Дошки:**
+- Свайп hero фото Олики (3 фото, плавна fade 0.55s)
+- Свайп міні-блоку Дошки на Громаді: 4 типи (Офіційні/Дошка/Розмови/Вітання)
+- Плавна slide-in анімація (0.6s cubic-bezier easeOutQuint)
+- CTA «Перейти на ...» з підхопленням активного типу
+- Таб «Усі» → «Актуальні» (фільтр пости за останні 3 доби)
+- Фіксований pos-bar (search+tabs+chips) — sticky→fixed (iOS Safari fix)
+- iOS Safari zoom-fix для inline коментарів (font-size 14→16)
+
+**Стиль Автобусів — серйозний табло-стиль (УЗ-станція):**
+- Темний #2F3E36 фон, SF Mono бурштин для часу (#FBBF24)
+- «ЧЕРЕЗ X ГОД X ХВ» — капсула з border + monospace
+- border-radius 22→12, прибрано Georgia serif
+- Урgent state #6B1F2A замість рожевого
+- Той самий стиль перенесено у блок Громади (cm-block--bus)
+
+**Реакції — UI:**
+- 4 emoji завжди показуються → один тригер «🙂+» з попапом 8 emoji
+- На тригері: топ-3 emoji з окремими лічильниками + моя виділена
+- SVG-іконки save/share замість emoji (видно на всіх кольорах стікерів)
+- Кнопка коментарів → inline-форма (без модалки) тільки у chat/greeting
+- На board: тільки реакція в куті, save/share — у zoom-modal
+
+**Безпека:**
+- Service_role key випадково leak → ROTATE через Supabase Dashboard
+- В код тільки publishable (anon) — RLS policies захищають усе
+- Admin-функції через `is_admin()` SECURITY DEFINER (обходить catch-22)
+
+**Аналітика:** GoatCounter `cstl-life.goatcounter.com` (безкоштовно)
+
+**Фікси:**
+- formatTime для null/ISO string (раніше `new Date(null) = 1 січня 1970`)
+- postTime() helper — fallback ts → published_at → created_at
+- cover_emoji+cover_gradient додано у posts (Вітання тепер публікуються)
+
+### 🔜 Що далі (за пріоритетом)
+
+**🔴 Найкорисніше зараз** (тільки моя робота):
+1. **Модерація коментарів у адмінці** — додати 5-й таб у `/admin.html` з
+   delete-кнопками. Зараз можна видалити коментар тільки через SQL.
+2. **Розширити модерацію постів** — фільтр «Опубліковані» → видалити
+   неприйнятне якщо щось пропустив через approve.
+3. **Той самий табло-стиль для Подій / Світла** — узгодженість дизайну.
+
+**🟡 Розвиток (потребує дій Вови):**
+4. Сторінка `/реклама` — статичний прайс + контактна форма (потрібен email)
+5. Перевстановити PWA на iPhone (іконка CSTL NEWS → CSTL LIFE)
+6. 5 стратегічних питань з `docs/PRODUCT_STRATEGY.md`
+
+**🟢 Опційно:**
+7. Cross-fade для дошки (2 контейнери одночасно як у hero)
+8. Cleanup 11 старих гілок на GitHub
+9. Купити власний домен `olyka.news` / `cstl.news`
 
 ### 🟡 Незабаром
 4. **Pre-revenue groundwork** — Plausible.io або Goatcounter (аналітика DAU/MAU). Без цифр нема перших переговорів з рекламодавцями. Деталі: `docs/MONETIZATION.md`
