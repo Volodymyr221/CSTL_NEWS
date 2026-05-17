@@ -32,7 +32,7 @@
 | # | Файл | Опис | Рішення |
 |---|------|------|---------|
 | ~~**B-15**~~ | ~~`src/tabs/news.js`~~ | ~~Патерн `onclick="fn('${data}')"` — XSS-ризик.~~ | **Закрито 2026-05-17.** 3 inline onclick → event delegation (`#geo-filters` + `#news-list`) + `data-geo` / `data-article-id` атрибути. `setGeoFilter` / `openArticle` більше не у `window`. |
-| **B-21** | `src/tabs/community-blocks.js` | 6× `onclick="switchTab('...')"` — той самий патерн що B-15, тільки на іншій вкладці. XSS-ризик якщо назва табу прийде з неконтрольованого джерела. | Переписати аналогічно B-15: `data-tab="${name}"` + один делегований listener. (Знайдено під час закриття B-15) |
+| ~~**B-21**~~ | ~~`src/tabs/community-blocks.js` + `community.js`~~ | ~~7× `onclick="switchTab('...')"`~~ | **Закрито 2026-05-17.** `data-switch-tab="X"` атрибути + один делегований listener у `attachSwitchTabDelegation()` на `#cm-content`. Аналогічно B-15. |
 
 ---
 
@@ -56,3 +56,4 @@
 | **B-20** | `sync.sh` робив `git pull origin main --no-rebase -X ours` — мовчки відкидав чужі зміни. | 2026-05-13 | Файл `sync.sh` видалено. Workflow тепер через робочу гілку → auto-merge → deploy. |
 | **B-08** | `sw.js` — `logo.png` мав не бути в `STATIC_ASSETS`. | 2026-05-17 | Фактично закрито давно — `sw.js:22` має `'./logo.png'` у списку precache. Аудит підтвердив, перенесено у Закриті. |
 | **B-15** | `src/tabs/news.js` — 3× inline `onclick`. | 2026-05-17 | Event delegation: один listener на `#geo-filters` (через `data-geo`) і один на `#news-list` (через `data-article-id`). `setGeoFilter` / `openArticle` прибрано з `window.*`. |
+| **B-21** | `src/tabs/community.js` + `community-blocks.js` — 7× inline `onclick="switchTab(...)"`. | 2026-05-17 | `data-switch-tab="X"` атрибути + один делегований listener у `attachSwitchTabDelegation()` на `#cm-content`. `switchTab` лишається глобальною (потрібна tab-bar). |

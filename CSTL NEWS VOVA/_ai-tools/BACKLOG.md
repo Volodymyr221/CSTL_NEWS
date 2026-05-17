@@ -41,7 +41,7 @@
 | ✅ | ~~Видалити мертвий CSS `.news-card`~~ (закрито 2026-05-13 при розбитті style.css) | B-09 |
 | ✅ | ~~Додати AbortController у `weather.js`~~ (закрито 2026-05-13) | B-13 |
 | ✅ | ~~Замінити inline onclick на addEventListener (3× у `news.js`)~~ (закрито 2026-05-17, event delegation) | B-15 |
-| ☐ | Замінити 6× `onclick="switchTab(...)"` у `community-blocks.js` (знайдено при B-15, аналогічна задача) | B-21 |
+| ✅ | ~~Замінити 7× `onclick="switchTab(...)"` у `community-blocks.js` + `community.js`~~ (закрито 2026-05-17, `data-switch-tab` + делегований listener) | B-21 |
 | ✅ | ~~Додати сортування подій за часом~~ (закрито 2026-05-13, вторинне сортування за `time`) | B-17 |
 
 ---

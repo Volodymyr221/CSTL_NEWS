@@ -110,7 +110,7 @@ function renderSkeleton() {
     <section class="cm-block cm-block--power">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Світло зараз</h3>
-        <button class="cm-block-link" onclick="switchTab('power')">Графік →</button>
+        <button class="cm-block-link" data-switch-tab="power">Графік →</button>
       </header>
       <div id="cm-power-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
@@ -119,7 +119,7 @@ function renderSkeleton() {
     <section class="cm-block cm-block--bus">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Наступний автобус</h3>
-        <button class="cm-block-link" onclick="switchTab('buses')">Розклад →</button>
+        <button class="cm-block-link" data-switch-tab="buses">Розклад →</button>
       </header>
       <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
@@ -127,7 +127,7 @@ function renderSkeleton() {
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Найближча подія громади</h3>
-        <button class="cm-block-link" onclick="switchTab('events')">Афіша →</button>
+        <button class="cm-block-link" data-switch-tab="events">Афіша →</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
@@ -145,6 +145,7 @@ function renderSkeleton() {
 
 export function initCommunity() {
   renderSkeleton();
+  attachSwitchTabDelegation();
   startHeroRotator();
   // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
   renderWeatherBlock();
@@ -153,4 +154,17 @@ export function initCommunity() {
   renderBoardBlock();
   renderEventBlock();
   renderContactsBlock();
+}
+
+// B-21 fix: event delegation замість inline onclick="switchTab(...)" (XSS hardening).
+// Один listener на #cm-content ловить click на будь-якому [data-switch-tab] всередині блоків.
+function attachSwitchTabDelegation() {
+  const root = document.getElementById('cm-content');
+  if (!root) return;
+  root.addEventListener('click', e => {
+    const target = e.target.closest('[data-switch-tab]');
+    if (!target) return;
+    const tab = target.dataset.switchTab;
+    if (tab && typeof window.switchTab === 'function') window.switchTab(tab);
+  });
 }

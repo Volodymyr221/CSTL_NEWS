@@ -110,7 +110,7 @@ export async function renderPowerBlock() {
     el.innerHTML = `
       <div class="cm-block-empty">
         Налаштуйте вашу вулицю у вкладці «Світло»
-        <button class="cm-block-cta" onclick="switchTab('power')">Перейти →</button>
+        <button class="cm-block-cta" data-switch-tab="power">Перейти →</button>
       </div>`;
     return;
   }
@@ -231,7 +231,7 @@ export async function renderBusBlock() {
       el.innerHTML = `
         <div class="cm-block-empty">
           Рейсів сьогодні більше немає
-          <button class="cm-block-cta" onclick="switchTab('buses')">Розклад →</button>
+          <button class="cm-block-cta" data-switch-tab="buses">Розклад →</button>
         </div>`;
       return;
     }
@@ -345,7 +345,7 @@ export async function renderBoardBlock() {
     }).join('');
 
     el.innerHTML = `
-      <div class="cm-board-preview" onclick="switchTab('board')">
+      <div class="cm-board-preview" data-switch-tab="board">
         <div class="cm-board-corkboard cm-board-corkboard--mini">
           ${stickersHtml}
         </div>
@@ -394,7 +394,7 @@ export async function renderEventBlock() {
     const months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
 
     el.innerHTML = `
-      <article class="cm-event-card" onclick="switchTab('events')">
+      <article class="cm-event-card" data-switch-tab="events">
         <div class="cm-event-date">
           <span class="cm-event-day">${d.getDate()}</span>
           <span class="cm-event-month">${months[d.getMonth()].slice(0, 3)}</span>

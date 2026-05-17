@@ -309,7 +309,7 @@
         el.innerHTML = `
         <div class="cm-block-empty">
           \u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454
-          <button class="cm-block-cta" onclick="switchTab('buses')">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
+          <button class="cm-block-cta" data-switch-tab="buses">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
         </div>`;
         return;
       }
@@ -402,7 +402,7 @@
       `;
       }).join("");
       el.innerHTML = `
-      <div class="cm-board-preview" onclick="switchTab('board')">
+      <div class="cm-board-preview" data-switch-tab="board">
         <div class="cm-board-corkboard cm-board-corkboard--mini">
           ${stickersHtml}
         </div>
@@ -455,7 +455,7 @@
       const d = /* @__PURE__ */ new Date(next.date + "T00:00:00");
       const months = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
       el.innerHTML = `
-      <article class="cm-event-card" onclick="switchTab('events')">
+      <article class="cm-event-card" data-switch-tab="events">
         <div class="cm-event-date">
           <span class="cm-event-day">${d.getDate()}</span>
           <span class="cm-event-month">${months[d.getMonth()].slice(0, 3)}</span>
@@ -635,7 +635,7 @@
     <section class="cm-block cm-block--power">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u0421\u0432\u0456\u0442\u043B\u043E \u0437\u0430\u0440\u0430\u0437</h3>
-        <button class="cm-block-link" onclick="switchTab('power')">\u0413\u0440\u0430\u0444\u0456\u043A \u2192</button>
+        <button class="cm-block-link" data-switch-tab="power">\u0413\u0440\u0430\u0444\u0456\u043A \u2192</button>
       </header>
       <div id="cm-power-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
@@ -644,7 +644,7 @@
     <section class="cm-block cm-block--bus">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0431\u0443\u0441</h3>
-        <button class="cm-block-link" onclick="switchTab('buses')">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
+        <button class="cm-block-link" data-switch-tab="buses">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
       </header>
       <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
@@ -652,7 +652,7 @@
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-        <button class="cm-block-link" onclick="switchTab('events')">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
+        <button class="cm-block-link" data-switch-tab="events">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
@@ -667,12 +667,26 @@
   }
   function initCommunity() {
     renderSkeleton();
+    attachSwitchTabDelegation();
     startHeroRotator();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();
     renderEventBlock();
     renderContactsBlock();
+  }
+  function attachSwitchTabDelegation() {
+    const root = document.getElementById("cm-content");
+    if (!root)
+      return;
+    root.addEventListener("click", (e) => {
+      const target = e.target.closest("[data-switch-tab]");
+      if (!target)
+        return;
+      const tab = target.dataset.switchTab;
+      if (tab && typeof window.switchTab === "function")
+        window.switchTab(tab);
+    });
   }
 
   // src/tabs/news.js
