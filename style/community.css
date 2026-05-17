@@ -1739,17 +1739,20 @@
   pointer-events: auto;
 }
 .bd-react-opt {
-  width: 36px;
-  height: 36px;
+  position: relative;
+  min-width: 40px;
+  height: 40px;
+  padding: 0 4px;
   border: none;
-  border-radius: 50%;
+  border-radius: 20px;
   background: transparent;
-  font-size: 22px;
   line-height: 1;
   cursor: pointer;
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 1px;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s, background 0.12s;
 }
@@ -1759,6 +1762,32 @@
   background: var(--mint);
   transform: scale(1.05);
 }
+.bd-react-opt-emoji {
+  font-size: 20px;
+  line-height: 1;
+}
+.bd-react-opt-count {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray);
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+.bd-react-opt--active .bd-react-opt-count { color: var(--red); }
+
+/* Тригер реакції — група (emoji + count) для топ-3 */
+.bd-react-trigger-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-right: 5px;
+}
+.bd-react-trigger-group:last-child { margin-right: 0; }
+.bd-react-trigger-group--mine .bd-react-trigger-emoji {
+  filter: drop-shadow(0 0 2px rgba(114, 47, 55, 0.55));
+  transform: scale(1.12);
+}
+.bd-react-trigger-group--mine .bd-react-trigger-count { color: var(--red); }
 
 /* Save + Share — однаковий круглий стиль з SVG-іконкою всередині */
 .bd-actions-right {

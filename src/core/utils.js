@@ -1,10 +1,21 @@
 // Форматування часу: "щойно", "5 хв тому", "2 год тому", "12 квітня"
-export function formatTime(ts) {
+// Приймає або number (мс), або ISO string ("2026-05-18T..."), або null.
+export function formatTime(value) {
+  if (!value) return 'недавно';
+  const ts = typeof value === 'string' ? new Date(value).getTime() : value;
+  if (!ts || isNaN(ts)) return 'недавно';
   const diff = Date.now() - ts;
-  if (diff < 60000) return 'щойно';
-  if (diff < 3600000) return Math.floor(diff / 60000) + ' хв тому';
+  if (diff < 60000)    return 'щойно';
+  if (diff < 3600000)  return Math.floor(diff / 60000) + ' хв тому';
   if (diff < 86400000) return Math.floor(diff / 3600000) + ' год тому';
   return new Date(ts).toLocaleDateString('uk-UA', { day: 'numeric', month: 'long' });
+}
+
+// Беремо найкращу дату посту: ts (legacy у JSON) → published_at → created_at.
+// Для коментарів з БД — created_at; для JSON-демо — ts.
+export function postTime(p) {
+  if (!p) return null;
+  return p.ts || p.published_at || p.created_at || null;
 }
 
 // Захист від XSS (підставлення шкідливого HTML коду)

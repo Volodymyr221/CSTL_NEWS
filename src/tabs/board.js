@@ -9,12 +9,13 @@
 //
 // Реакції і збережені поки у localStorage (без auth). У Фазі 9 Спринт 3 — у Supabase.
 
-import { escapeHtml, formatTime, sharePost } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost, postTime } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   getAnonId, fetchAllReactions, setReaction,
   fetchAllComments, addComment,
+  subscribeReactions, subscribeComments,
 } from '../core/supabase.js';
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
@@ -167,20 +168,22 @@ function reactTriggerHtml(post) {
 
   // Топ-3 emoji за кількістю натискань усіх юзерів
   const top3 = Object.entries(counts)
+    .filter(([, n]) => n > 0)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([emoji]) => emoji);
+    .slice(0, 3);
 
   let content;
   if (total === 0) {
     // Ніхто ще не реагував — показуємо запрошення
     content = `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
   } else {
-    // Топ-3 emoji + загальний counter. Моя виділена.
-    const emojiHtml = top3.map(em =>
-      `<span class="bd-react-trigger-emoji${em === myReaction ? ' bd-react-trigger-emoji--mine' : ''}">${em}</span>`
-    ).join('');
-    content = emojiHtml + `<span class="bd-react-trigger-count">${total}</span>`;
+    // Топ-3 emoji кожна зі своїм лічильником. Моя виділена.
+    content = top3.map(([em, n]) => `
+      <span class="bd-react-trigger-group${em === myReaction ? ' bd-react-trigger-group--mine' : ''}">
+        <span class="bd-react-trigger-emoji">${em}</span>
+        <span class="bd-react-trigger-count">${n}</span>
+      </span>
+    `).join('');
   }
 
   return `<button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
@@ -254,7 +257,7 @@ function chatCommentsHtml(post) {
         <div class="bd-inline-comment">
           <span class="bd-inline-comment-author">${escapeHtml(c.author || 'анонімно')}</span>
           <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
-          <span class="bd-inline-comment-time">${formatTime(c.ts || new Date(c.created_at).getTime())}</span>
+          <span class="bd-inline-comment-time">${formatTime(postTime(c))}</span>
         </div>
       `).join('')
     : '';
@@ -276,12 +279,20 @@ function openReactionPopup(triggerBtn, postId) {
   closeReactionPopup();   // якщо вже відкритий — закрити
 
   const myReaction = getMyReaction(postId);
+  const counts     = getReactionCounts(postId);
   const popup = document.createElement('div');
   popup.className = 'bd-react-popup';
   popup.id = 'bd-react-popup';
-  popup.innerHTML = REACTIONS.map(em => `
-    <button class="bd-react-opt${myReaction === em ? ' bd-react-opt--active' : ''}" type="button" data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">${em}</button>
-  `).join('');
+  popup.innerHTML = REACTIONS.map(em => {
+    const n = counts[em] || 0;
+    return `
+      <button class="bd-react-opt${myReaction === em ? ' bd-react-opt--active' : ''}" type="button"
+              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
+        <span class="bd-react-opt-emoji">${em}</span>
+        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ''}
+      </button>
+    `;
+  }).join('');
 
   document.body.appendChild(popup);
 
@@ -345,7 +356,7 @@ function renderBoardCard(p) {
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       <div class="cm-board-footer">
         <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-        <span class="cm-board-time">${formatTime(p.ts)}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
       </div>
       ${contactHtml}
       ${boardActionsHtml(p)}
@@ -364,7 +375,7 @@ function renderOfficialCard(a) {
       <p class="cm-board-text">${escapeHtml(a.body)}</p>
       <div class="cm-board-footer">
         <span class="cm-board-author">— ${escapeHtml(a.author || '—')}</span>
-        <span class="cm-board-time">${formatTime(a.ts)}</span>
+        <span class="cm-board-time">${formatTime(postTime(a))}</span>
       </div>
     </article>
   `;
@@ -384,7 +395,7 @@ function renderChatCard(p) {
         ${authorAvatar(p.author)}
         <div class="bd-chat-meta">
           <span class="bd-chat-author">${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="bd-chat-time">${formatTime(p.ts)}</span>
+          <span class="bd-chat-time">${formatTime(postTime(p))}</span>
         </div>
       </div>
       <p class="bd-chat-text">${escapeHtml(p.text)}</p>
@@ -412,7 +423,7 @@ function renderGreetingCard(p) {
         <p class="bd-greet-text">${escapeHtml(p.text)}</p>
         <div class="bd-greet-footer">
           <span class="bd-greet-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="bd-greet-time">${formatTime(p.ts)}</span>
+          <span class="bd-greet-time">${formatTime(postTime(p))}</span>
         </div>
       </div>
       ${greetingActionsHtml(p)}
@@ -871,7 +882,51 @@ function attachBoardDelegation() {
   }, { capture: true });
 }
 
+// Realtime — підписки чіпляємо ОДИН раз при initBoard. При подіях БД
+// перерахуємо in-memory map і точково перерендеримо DOM-елементи.
+
+function onReactionRealtimeEvent(payload) {
+  // payload.new / payload.old містить рядок (post_id, user_id, emoji)
+  const row = payload.new || payload.old;
+  if (!row || !row.post_id) return;
+  const postId = row.post_id;
+  // Найпростіше — повний refetch цього поста для коректних counts/my
+  const anonId = getAnonId();
+  fetchAllReactions(anonId).then(fresh => {
+    // Беремо тільки запис для цього post_id, мерджимо у локальну map
+    const r = fresh.get(postId) || { counts: {}, my: null };
+    reactionsByPost.set(postId, r);
+    // Точково перерендеримо всі тригери цього поста
+    document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach(btn => {
+      btn.outerHTML = reactTriggerHtml(allPosts.find(p => p.id === postId) || { id: postId });
+    });
+  });
+}
+
+function onCommentRealtimeEvent(payload) {
+  const postId = (payload.new || payload.old || {}).post_id;
+  if (!postId) return;
+  // Просто refetch усіх коментарів і перерендеримо блок
+  fetchAllComments().then(fresh => {
+    commentsByPost = fresh;
+    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+    if (wrap) {
+      const post = allPosts.find(p => p.id === postId);
+      if (post) wrap.outerHTML = chatCommentsHtml(post);
+    }
+  });
+}
+
+let _realtimeAttached = false;
+function attachRealtime() {
+  if (_realtimeAttached || !isSupabaseReady()) return;
+  _realtimeAttached = true;
+  subscribeReactions(onReactionRealtimeEvent);
+  subscribeComments(onCommentRealtimeEvent);
+}
+
 export function initBoard() {
   attachBoardDelegation();
+  attachRealtime();
   renderBoard();
 }

@@ -180,3 +180,27 @@ export async function addComment(postId, author, text) {
   if (error) return { ok: false, error: error.message };
   return { ok: true, comment: data };
 }
+
+// ── REALTIME — підписка на зміни таблиць ─────────────────────────────────
+// Викликає callback при INSERT/UPDATE/DELETE у відповідній таблиці.
+// Повертає функцію-unsubscribe.
+
+export function subscribeReactions(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('reactions-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'reactions' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
+export function subscribeComments(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('comments-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'comments' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
