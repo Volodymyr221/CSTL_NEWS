@@ -728,13 +728,36 @@
     }
     renderGeoFilters();
     renderNews();
+    attachNewsListeners();
+  }
+  function attachNewsListeners() {
+    const filters = document.getElementById("geo-filters");
+    if (filters) {
+      filters.addEventListener("click", (e) => {
+        const chip = e.target.closest(".chip[data-geo]");
+        if (!chip)
+          return;
+        setGeoFilter(chip.dataset.geo);
+      });
+    }
+    const list = document.getElementById("news-list");
+    if (list) {
+      list.addEventListener("click", (e) => {
+        const card = e.target.closest("[data-article-id]");
+        if (!card)
+          return;
+        const id = Number(card.dataset.articleId);
+        if (Number.isFinite(id))
+          openArticle(id);
+      });
+    }
   }
   function renderGeoFilters() {
     const el = document.getElementById("geo-filters");
     if (!el)
       return;
     el.innerHTML = GEO_FILTERS.map((g) => `
-    <button class="chip ${g === activeGeo ? "active" : ""}" onclick="setGeoFilter('${g}')">${g}</button>
+    <button class="chip ${g === activeGeo ? "active" : ""}" data-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
   `).join("");
   }
   function getFiltered() {
@@ -761,7 +784,7 @@
   function renderFeatured(a) {
     const hasImage = !!a.image;
     return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" onclick="openArticle(${a.id})">
+    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
       ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
       <div class="news-card-featured-overlay">
         <div class="news-card-meta">${badgesHtml(a)}</div>
@@ -774,7 +797,7 @@
   }
   function renderRow(a) {
     return `
-    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" onclick="openArticle(${a.id})">
+    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" data-article-id="${a.id}">
       ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
       <div class="news-card-row-body">
         <div class="news-card-meta">${badgesHtml(a)}</div>
@@ -785,11 +808,11 @@
     </article>
   `;
   }
-  window.setGeoFilter = function(geo) {
+  function setGeoFilter(geo) {
     activeGeo = geo;
     renderGeoFilters();
     renderNews();
-  };
+  }
   function decodeEntities(str) {
     const ta = document.createElement("textarea");
     ta.innerHTML = str || "";
@@ -802,7 +825,7 @@
       return "";
     return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
   }
-  window.openArticle = function(id) {
+  function openArticle(id) {
     const article = allArticles.find((a) => a.id === id);
     if (!article)
       return;
@@ -846,7 +869,7 @@
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
-  };
+  }
 
   // src/tabs/events.js
   var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u0421\u0432\u044F\u0442\u0430", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];

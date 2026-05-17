@@ -40,7 +40,8 @@
 | ✅ | ~~Виправити `events.js` — надійний парсинг дат на iOS~~ (закрито 2026-05-13) | B-06 |
 | ✅ | ~~Видалити мертвий CSS `.news-card`~~ (закрито 2026-05-13 при розбитті style.css) | B-09 |
 | ✅ | ~~Додати AbortController у `weather.js`~~ (закрито 2026-05-13) | B-13 |
-| ☐ | Замінити inline onclick на addEventListener (3× у `news.js`) | B-15 |
+| ✅ | ~~Замінити inline onclick на addEventListener (3× у `news.js`)~~ (закрито 2026-05-17, event delegation) | B-15 |
+| ☐ | Замінити 6× `onclick="switchTab(...)"` у `community-blocks.js` (знайдено при B-15, аналогічна задача) | B-21 |
 | ✅ | ~~Додати сортування подій за часом~~ (закрито 2026-05-13, вторинне сортування за `time`) | B-17 |
 
 ---
@@ -170,3 +171,5 @@
 | 2026-05-17 | **Tier 5: 📅 Події** — календарна стрічка 21 день + 25 свят 2026 (`data/holidays.json`) + cover_emoji+gradient | *(серія)* |
 | 2026-05-17 | **Дати свят за новим стилем** (ПЦУ реформа 2023) — Йордан 6.01, Різдво 24.12, Великдень 12.04, Трійця 31.05 | *(серія)* |
 | 2026-05-17 | **Tier 6: 📰 Новини** — magazine-cover featured (Georgia serif 22px) + 8 CATEGORY_COLORS + 4 GEO_COLORS + ексклюзив золотий | *(серія)* |
+| 2026-05-17 | **B-15 закрито** — event delegation у `news.js` (3 inline onclick → `data-geo` + `data-article-id` + 2 listener-и на батьках). `setGeoFilter`/`openArticle` прибрано з `window.*` | — |
+| 2026-05-17 | **Cleanup хвостів документації** — синхронізовано BACKLOG/SESSION_STATE/ROADMAP/BUGS/START_HERE з реальним станом (Tier-и закриті, дублі прибрані, CACHE_NAME актуалізовано) | `edcb379` |

@@ -31,7 +31,8 @@
 
 | # | Файл | Опис | Рішення |
 |---|------|------|---------|
-| **B-15** | `src/tabs/news.js` | Патерн `onclick="fn('${data}')"` — XSS-ризик у майбутньому якщо дані прийдуть з неконтрольованого джерела. | Переписати на `addEventListener` + `data-`-атрибути. У buses.js уже закрито (0 onclick), у news.js — 3 використання залишається. |
+| ~~**B-15**~~ | ~~`src/tabs/news.js`~~ | ~~Патерн `onclick="fn('${data}')"` — XSS-ризик.~~ | **Закрито 2026-05-17.** 3 inline onclick → event delegation (`#geo-filters` + `#news-list`) + `data-geo` / `data-article-id` атрибути. `setGeoFilter` / `openArticle` більше не у `window`. |
+| **B-21** | `src/tabs/community-blocks.js` | 6× `onclick="switchTab('...')"` — той самий патерн що B-15, тільки на іншій вкладці. XSS-ризик якщо назва табу прийде з неконтрольованого джерела. | Переписати аналогічно B-15: `data-tab="${name}"` + один делегований listener. (Знайдено під час закриття B-15) |
 
 ---
 
@@ -54,3 +55,4 @@
 | **B-19** | Граматика "Вови" у документації: `"Воваа"`, `"Вовау"`, `"Воваом"`. | 2026-05-13 | `sed` по `docs/RULES.md` і `docs/CONCEPT.md`. Виправлено на правильні відмінки. |
 | **B-20** | `sync.sh` робив `git pull origin main --no-rebase -X ours` — мовчки відкидав чужі зміни. | 2026-05-13 | Файл `sync.sh` видалено. Workflow тепер через робочу гілку → auto-merge → deploy. |
 | **B-08** | `sw.js` — `logo.png` мав не бути в `STATIC_ASSETS`. | 2026-05-17 | Фактично закрито давно — `sw.js:22` має `'./logo.png'` у списку precache. Аудит підтвердив, перенесено у Закриті. |
+| **B-15** | `src/tabs/news.js` — 3× inline `onclick`. | 2026-05-17 | Event delegation: один listener на `#geo-filters` (через `data-geo`) і один на `#news-list` (через `data-article-id`). `setGeoFilter` / `openArticle` прибрано з `window.*`. |

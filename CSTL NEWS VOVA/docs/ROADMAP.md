@@ -39,9 +39,10 @@
 - [ ] Замінити `mailto:` на Web3Forms/Formspree
 - [ ] Виправити оманливий toast
 
-### 2.4 — Закриття багів аудиту 🟢 МАЙЖЕ ВСЕ ЗАКРИТО
+### 2.4 — Закриття багів аудиту 🟢 ЗАВЕРШЕНО
 - [x] B-05 (buses.js дні тижня), B-06 (events.js дати iOS), B-09 (мертвий CSS), B-13 (AbortController), B-17 (сортування подій) — закриті 2026-04-18..2026-05-13
-- [ ] B-15 — `onclick` → `addEventListener` у `news.js` (3 використання, XSS hardening)
+- [x] B-15 — `onclick` → event delegation у `news.js` — закрито 2026-05-17
+- [ ] B-21 — `onclick="switchTab(...)"` → event delegation у `community-blocks.js` (6 використань, знайдено при B-15)
 
 ---
 

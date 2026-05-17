@@ -40,13 +40,37 @@ export async function initNews() {
   }
   renderGeoFilters();
   renderNews();
+  attachNewsListeners();
+}
+
+// B-15 fix: event delegation замість inline onclick (XSS hardening).
+// Один listener на батьківському контейнері ловить клік на дочірніх .chip / .news-card-*.
+function attachNewsListeners() {
+  const filters = document.getElementById('geo-filters');
+  if (filters) {
+    filters.addEventListener('click', e => {
+      const chip = e.target.closest('.chip[data-geo]');
+      if (!chip) return;
+      setGeoFilter(chip.dataset.geo);
+    });
+  }
+
+  const list = document.getElementById('news-list');
+  if (list) {
+    list.addEventListener('click', e => {
+      const card = e.target.closest('[data-article-id]');
+      if (!card) return;
+      const id = Number(card.dataset.articleId);
+      if (Number.isFinite(id)) openArticle(id);
+    });
+  }
 }
 
 function renderGeoFilters() {
   const el = document.getElementById('geo-filters');
   if (!el) return;
   el.innerHTML = GEO_FILTERS.map(g => `
-    <button class="chip ${g === activeGeo ? 'active' : ''}" onclick="setGeoFilter('${g}')">${g}</button>
+    <button class="chip ${g === activeGeo ? 'active' : ''}" data-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
   `).join('');
 }
 
@@ -84,7 +108,7 @@ function badgesHtml(a) {
 function renderFeatured(a) {
   const hasImage = !!a.image;
   return `
-    <article class="news-card-featured ${hasImage ? '' : 'no-image'}${a.exclusive ? ' exclusive' : ''}" onclick="openArticle(${a.id})">
+    <article class="news-card-featured ${hasImage ? '' : 'no-image'}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
       ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
       <div class="news-card-featured-overlay">
         <div class="news-card-meta">${badgesHtml(a)}</div>
@@ -98,7 +122,7 @@ function renderFeatured(a) {
 
 function renderRow(a) {
   return `
-    <article class="news-card-row ${a.exclusive ? 'exclusive' : ''}" onclick="openArticle(${a.id})">
+    <article class="news-card-row ${a.exclusive ? 'exclusive' : ''}" data-article-id="${a.id}">
       ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
       <div class="news-card-row-body">
         <div class="news-card-meta">${badgesHtml(a)}</div>
@@ -110,11 +134,11 @@ function renderRow(a) {
   `;
 }
 
-window.setGeoFilter = function(geo) {
+function setGeoFilter(geo) {
   activeGeo = geo;
   renderGeoFilters();
   renderNews();
-};
+}
 
 // Декодує HTML entities (&laquo; → «) без ризику XSS через textarea
 function decodeEntities(str) {
@@ -131,7 +155,7 @@ function renderArticleBody(content) {
   return paragraphs.map(p => `<p class="article-p">${escapeHtml(p)}</p>`).join('');
 }
 
-window.openArticle = function(id) {
+function openArticle(id) {
   const article = allArticles.find(a => a.id === id);
   if (!article) return;
 

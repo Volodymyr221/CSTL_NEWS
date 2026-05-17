@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-05-17 (cleanup хвостів: BACKLOG/ROADMAP/CSTL_BUGS/START_HERE синхронізовано з реальним станом після завершення Tier 0-6)
+**Оновлено:** 2026-05-17 (cleanup хвостів: BACKLOG/ROADMAP/CSTL_BUGS/START_HERE синхронізовано + B-15 закрито через event delegation у `news.js`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,7 +14,7 @@
 | **Робоча гілка (поточна сесія)** | `claude/start-session-XXX` — створюється автоматично при старті |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260517-1246` (оновити при наступній зміні коду) |
+| **CACHE_NAME у `sw.js`** | `cstl-20260517-1313` (оновити при наступній зміні коду) |
 
 ### Видимі вкладки (порядок у tab-bar)
 **Громада** (головна-дашборд) · **Дошка** · **Новини** · **Події** · **Автобуси**
@@ -56,7 +56,7 @@
 2. **Фаза 3 Supabase для Світла** (паралельно — той самий проект)
    - Таблиці `queues`, `cities`, `streets`, `schedules`
    - Адмін-форма оновлення розкладу без GitHub
-3. **B-15** — переписати 3× `onclick` у `src/tabs/news.js:49,87,101` на `addEventListener` (XSS hardening)
+3. **B-21** — переписати 6× `onclick="switchTab(...)"` у `src/tabs/community-blocks.js` на event delegation (аналогічно B-15)
 
 ### 🟡 Незабаром
 4. **Pre-revenue groundwork** — Plausible.io або Goatcounter (аналітика DAU/MAU). Без цифр нема перших переговорів з рекламодавцями. Деталі: `docs/MONETIZATION.md`
