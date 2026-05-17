@@ -1,84 +1,124 @@
 {
   "_meta": {
     "description": "Дошка громади — публічні оголошення від мешканців, після модерації",
-    "moderation": "наразі DEMO-дані, у Фазі 3 переїдемо на Supabase + адмінку /admin",
-    "last_updated": "2026-05-12"
+    "moderation": "DEMO-дані. Фаза 9 Спринт 1: переїдемо на Supabase + адмінку /admin",
+    "supabase_target_table": "posts",
+    "supabase_target_fields": "id, type, category, text, author, contact, color, photo, location, status, published_at",
+    "note_picsum": "Прибрано тестові https://picsum.photos URL 2026-05-17 (періодично 404-или). Фото додаються користувачами через submit-форму (compressImage → base64).",
+    "last_updated": "2026-05-17"
   },
   "posts": [
     {
       "id": 1,
+      "type": "board",
       "category": "продам",
       "text": "Продам молоду корову, тільне, 3 роки. Орієнтовно 18 тис.",
       "author": "Іван",
       "contact": "+38 050 123 45 67",
       "ts": 1747044000000,
       "color": "yellow",
-      "photo": "https://picsum.photos/seed/olyka-cow/400/300"
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "published_at": "2026-05-12T10:00:00+03:00"
     },
     {
       "id": 2,
+      "type": "board",
       "category": "шукаю",
       "text": "Шукаю людину з трактором — переорати город перед садінням картоплі. Терміново.",
       "author": "Марія",
       "contact": "+38 067 555 11 22",
       "ts": 1747000000000,
-      "color": "blue"
+      "color": "blue",
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "published_at": "2026-05-11T21:46:40+03:00"
     },
     {
       "id": 3,
+      "type": "board",
       "category": "загубилось",
       "text": "Загубився рудий пес з білою латкою на грудях, відгукується на «Рекс». Околиці Дерна. Хто бачив — напишіть.",
       "author": "Олена",
       "contact": "Telegram @olena_dn",
       "ts": 1746940000000,
       "color": "pink",
-      "photo": "https://picsum.photos/id/237/400/300"
+      "photo": null,
+      "location": "Дерно",
+      "status": "published",
+      "published_at": "2026-05-11T05:06:40+03:00"
     },
     {
       "id": 4,
+      "type": "board",
       "category": "подяка",
       "text": "Велике дякую сусідам зі Ставка які допомогли з дровами після буревію! Ви справжні люди ❤️",
       "author": "анонімно",
       "contact": null,
       "ts": 1746850000000,
-      "color": "white"
+      "color": "white",
+      "photo": null,
+      "location": "Ставок",
+      "status": "published",
+      "published_at": "2026-05-10T04:13:20+03:00"
     },
     {
       "id": 5,
+      "type": "board",
       "category": "куплю",
       "text": "Куплю старі книги до 1960 року, особливо релігійні чи з історії Волині. Самовивіз з Олики.",
       "author": "Петро",
       "contact": "+38 098 777 88 99",
       "ts": 1746780000000,
-      "color": "green"
+      "color": "green",
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "published_at": "2026-05-09T08:40:00+03:00"
     },
     {
       "id": 6,
+      "type": "board",
       "category": "знайдено",
       "text": "Біля магазину «Колос» знайдено ключі на брелку у вигляді футбольного мʼяча. Заберіть.",
       "author": "Тетяна",
       "contact": "+38 063 222 33 44",
       "ts": 1746700000000,
       "color": "yellow",
-      "photo": "https://picsum.photos/seed/olyka-keys/400/300"
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "published_at": "2026-05-08T10:26:40+03:00"
     },
     {
       "id": 7,
+      "type": "board",
       "category": "послуга",
       "text": "Стрижу газонокосаркою сади. Виїжджаю по всій ОТГ. Олика, Дерно, Ставок, Жорнище.",
       "author": "Андрій",
       "contact": "+38 095 444 55 66",
       "ts": 1746600000000,
-      "color": "blue"
+      "color": "blue",
+      "photo": null,
+      "location": null,
+      "status": "published",
+      "published_at": "2026-05-07T06:40:00+03:00"
     },
     {
       "id": 8,
+      "type": "board",
       "category": "оголошення",
       "text": "Завтра о 18:00 — суботник на цвинтарі. Приходьте з граблями. Зустрічаємось біля воріт.",
       "author": "анонімно",
       "contact": null,
       "ts": 1746500000000,
-      "color": "pink"
+      "color": "pink",
+      "photo": null,
+      "location": "Олика",
+      "status": "published",
+      "published_at": "2026-05-06T03:53:20+03:00"
     }
   ]
 }
