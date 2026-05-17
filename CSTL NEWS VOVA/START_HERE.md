@@ -61,13 +61,15 @@
 
 ---
 
-## 🚀 Поточний стан проекту (на 2026-04-18)
+## 🚀 Поточний стан проекту (на 2026-05-17)
 
 - **Фаза 1 А+ — ЗАВЕРШЕНА ✅** Сайт живий, автодеплой, лічильник версії
-- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, **8 джерел** (+Район.Ківерці), фільтри, cron кожні 30 хв, `fetch_full_article()`, класифікатор новини/події
-- **Фаза 2 (Модалка) — ЗАВЕРШЕНА ✅** Повна стаття, чорне посилання, свайп, анімація, футер з автором
-- **Фаза 3 MVP (Світло) — ЗАВЕРШЕНА ✅** Таймлайн, 11 сіл ОТГ, DEMO дані
-- **Наступне 🔜** — 1) Перевірити фіксовані фільтри новин. 2) Перевірити новини з Олицька громади (перший парсинг). 3) Supabase для «Світло»
+- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, **7 джерел** (Волинь×2, Україна×1, Світ×1, Район.Ківерці, Олицька громада×2 через Cloudflare Worker), cron кожні 30 хв
+- **Фаза 2 (Модалка) — ЗАВЕРШЕНА ✅** Повна стаття, свайп, анімація, футер з автором
+- **Фаза 3 MVP (Світло) — ЗАВЕРШЕНА ✅** Таймлайн, 11 сіл ОТГ, DEMO дані. Зараз приховано з tab-bar (Tier 1)
+- **Фаза 8 (Громада) — ЗАВЕРШЕНА ✅** головна вкладка-дашборд, 7 блоків, дизайн D2 «Поле»
+- **Фаза 8.5 (Редизайн усіх вкладок, Tier 0-6) — ЗАВЕРШЕНА ✅** бордо-бренд, CSTL NEWS → CSTL LIFE, Подати оголошення з фото, 25 свят, magazine-cover Новин
+- **Наступне 🔜** — Фаза 9 (Дошка громади 2.0 + Supabase): чекає твоїх URL+anon-key
 
 **URL сайту:** https://volodymyr221.github.io/CSTL_NEWS/
 **Робоча гілка (поточна сесія):** `claude/start-session-XXX` — створюється автоматично
@@ -119,65 +121,89 @@ gh workflow run deploy.yml → сайт оновлюється
 ```
 CSTL_NEWS/
 ├── index.html                    # UI + плейсхолдер лічильника версії
-├── style.css                     # Всі стилі
-├── sw.js                         # Service Worker, CACHE_NAME: cstl-20260418-1545
-├── build.js                      # esbuild конфіг (8 рядків)
+├── style.css                     # legacy-стилі (більшість винесено у style/*.css)
+├── style/                        # 8 модулів CSS після рефактору 13.05
+│   ├── base.css, filters.css, news.css, events.css
+│   ├── buses.css, power.css, modal.css, tabbar.css, community.css
+├── sw.js                         # Service Worker, CACHE_NAME: cstl-20260517-1246
+├── build.js                      # esbuild конфіг + check-imports.js
 ├── bundle.js                     # Згенерований, у git як робоча база
 ├── logo.png                      # Логотип
+├── manifest.json                 # PWA manifest з PNG-іконками
+├── icons/                        # PWA іконки 192/512 + maskable
+├── photos/                       # Реальні фото Олики (olyka-1/2/3.jpg)
+├── images/                       # Зображення під hero блоки (kino-castle, volleyball)
 ├── package.json                  # Одна залежність: esbuild
 │
 ├── .github/workflows/
 │   ├── deploy.yml                # GitHub Pages Deploy (А+)
-│   └── rss-parser.yml            # RSS парсер — cron щогодини
+│   ├── rss-parser.yml            # RSS парсер — cron 30 хв
+│   └── auto-merge.yml            # claude/** → main, BUILD_NUM з --no-merges
 │
-├── cloudflare/
-│   └── worker.js                 # Proxy для olytska-gromada.gov.ua (потребує CF акаунту Вови)
+├── cloudflare/worker.js          # Proxy для olytska-gromada.gov.ua
 ├── scripts/
-│   ├── parse_rss.py              # Python RSS парсер (8 джерел, фільтри, fetch_full_article, класифікатор)
+│   ├── parse_rss.py              # 7 джерел, fetch_full_article, класифікатор news/event
 │   └── test_worker.py            # Тест Cloudflare Worker
 │
 ├── data/
-│   ├── articles.json             # Статті (авто RSS + ручні ексклюзиви)
-│   ├── events.json               # Події афіші
+│   ├── articles.json             # Статті (авто RSS + ручні)
+│   ├── events.json               # Події (RSS auto:true виключено зі стрічки Подій)
+│   ├── holidays.json             # 25 свят 2026 з cover_emoji + cover_gradient
 │   ├── schedule.json             # Розклад автобусів (10 рейсів VOPAS)
-│   └── power.json                # Графік відключень (DEMO, 11 міст ОТГ)
+│   ├── power.json                # Графік відключень (DEMO, 11 міст ОТГ)
+│   ├── community.json            # Офіційні оголошення + контакти
+│   └── community-board.json      # Пости мешканців (Дошка)
 │
 ├── src/
 │   ├── app.js                    # Точка входу
 │   ├── core/
 │   │   ├── boot.js               # PWA + Service Worker init
-│   │   ├── utils.js              # formatTime, escapeHtml, showToast
+│   │   ├── utils.js              # formatTime, escapeHtml, showToast, pad, todayKey, getCoords, getCityName
 │   │   └── weather.js            # Погода у шапці (Open-Meteo API)
 │   └── tabs/
-│       ├── news.js               # Новини + фільтри geo + модалка
-│       ├── events.js             # Афіша подій
-│       ├── buses.js              # Розклад + трекінг «В дорозі»
-│       └── power.js              # Графік відключень світла
+│       ├── community.js          # Громада — entry: рендерить вкладку + блоки
+│       ├── community-blocks.js   # Блоки Громади (board, weather, bus, event, contacts)
+│       ├── community-modal.js    # Bottom-sheet "Подати оголошення" з категоріями+фото
+│       ├── news.js               # Новини: featured magazine-cover + кольорові бейджі
+│       ├── events.js             # Події: календарна стрічка 21 день + 25 свят
+│       ├── buses.js              # Розклад + smart-row + isDayActive
+│       └── power.js              # Світло (приховано з tab-bar, код збережений)
+│
+├── backup/                       # Точки відкату (design-v1, design-v2-pre-D2, style-D2-pre-split, community-pre-split)
+│   └── CHECKPOINTS.md            # SHA точки після кожного Tier
 │
 └── CSTL NEWS VOVA/               # Документація і AI-інструменти
     ├── START_HERE.md             # Цей файл — точка входу
     ├── CLAUDE.md                 # Повні правила
+    ├── HOT_RULES.md              # 8 болючих правил (читати першим)
     ├── ВОВА_ПРОФІЛЬ.md           # Хто такий Вова
     ├── CSTL_BUGS.md              # Список багів
     ├── _ai-tools/
     │   ├── SESSION_STATE.md      # Поточний стан сесії
     │   ├── BACKLOG.md            # Єдиний список задач
-    │   └── SESSION_ARCHIVE.md    # Архів попередніх сесій
-    ├── docs/
-    │   ├── CONCEPT.md, ROADMAP.md, ARCHITECTURE.md
-    │   ├── CONTENT_STRATEGY.md, RULES.md, DESIGN_SYSTEM.md
-    │   └── NEVERMIND_PATTERNS.md
-    └── .claude/
-        ├── settings.json         # Дозволи + хуки (JS syntax, контекст-моніторинг)
-        └── hooks/
-            └── context-warning.sh # ⚠️/🔴 при 800K/900K токенів сесії
+    │   ├── SESSION_ARCHIVE.md    # Архів попередніх сесій
+    │   └── NEW_SESSION_PROMPT.md # Промпт для /startuem
+    └── docs/
+        ├── CONCEPT.md, ROADMAP.md, ARCHITECTURE.md
+        ├── CONTENT_STRATEGY.md, RULES.md, DESIGN_SYSTEM.md
+        ├── NEVERMIND_PATTERNS.md
+        ├── PRODUCT_STRATEGY.md         # 5 стратегічних питань до Вови
+        ├── COMMUNITY_BOARD_VISION.md   # План Дошки 2.0, 5 спринтів
+        ├── MONETIZATION.md             # 4 джерела доходу
+        └── REDESIGN_OTHER_TABS_VISION.md  # План Tier 0-6 (завершено)
+
+.claude/hooks/
+├── pre-edit-read-check.js     # Блокує Edit без попереднього Read
+├── cache-name-reminder.sh     # Нагадує bump CACHE_NAME після критичних змін
+├── context-warning.sh         # ⚠️ 800K / 🔴 900K токенів
+└── check-imports.js           # Запускається перед esbuild у build.js
 ```
 
 ---
 
 ## 💬 Перша репліка Claude після читання
 
-> "Прочитав. CSTL NEWS, робоча гілка `claude/<сесія>`. 5 вкладок: Громада (головна, дашборд) · Новини · Події · Автобуси · Світло. Дизайн v3 «Поле» (теплі землі, ред. 12.05). RSS-парсер кожні 30 хв, 7 активних джерел. Наступне з BACKLOG: …. Що робимо?"
+> "Прочитав. CSTL LIFE, робоча гілка `claude/<сесія>` (production: `main`). Вкладки видимі: Громада (головна, дашборд) · Дошка · Новини · Події · Автобуси (Світло приховано з tab-bar, код збережено). Дизайн D2 «Поле» з бордовим брендом `#722F37`. RSS-парсер кожні 30 хв, 7 активних джерел. Наступне з BACKLOG: …. Що робимо?"
 
 ---
 
