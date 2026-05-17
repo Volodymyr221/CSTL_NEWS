@@ -451,15 +451,7 @@ async function handleSession(session) {
   userEl.style.display = 'flex';
 
   if (!isAdmin) {
-    // DEBUG: показуємо що повертає API щоб діагностувати catch-22 vs реальне «нема у списку»
-    const debugInfo = {
-      authEmail:  currentUser.email,
-      dataLength: data ? data.length : 'data=null',
-      dataValue:  JSON.stringify(data),
-      errorMsg:   error ? error.message : 'нема помилки',
-      errorCode:  error ? error.code : '—',
-    };
-    renderNoAccess(debugInfo);
+    renderNoAccess();
     return;
   }
   await loadAll();
@@ -472,64 +464,43 @@ function renderLogin() {
     <div class="login-card">
       <div class="login-icon">🔐</div>
       <h1 class="login-title">Вхід у адмінку</h1>
-      <p class="login-sub">Введи свою пошту — на неї прийде посилання для входу.</p>
+      <p class="login-sub">Увійди поштою і паролем.</p>
       <form class="login-form" id="login-form">
         <input class="login-input" id="login-email" type="email" placeholder="ваша@пошта.com" required autocomplete="email">
-        <button class="login-btn" id="login-btn" type="submit">Надіслати посилання</button>
+        <input class="login-input" id="login-password" type="password" placeholder="пароль" required autocomplete="current-password">
+        <button class="login-btn" id="login-btn" type="submit">Увійти</button>
       </form>
       <div class="login-info">
-        Без пароля. Безпечно: лише власник пошти зможе зайти.
-        Якщо твоя пошта не у списку адмінів — увійти зможеш, але адмінку не побачиш.
+        Якщо пароля ще немає — створи його у Supabase Dashboard:<br>
+        <strong>Authentication → Users</strong> → клік на свою пошту →
+        <strong>«Send password reset»</strong> або встановити пароль через SQL.
       </div>
     </div>
   `;
   document.getElementById('login-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
     const btn = document.getElementById('login-btn');
-    if (!email) return;
+    if (!email || !password) return;
     btn.disabled = true;
-    btn.textContent = 'Надсилаємо…';
-    const { error } = await supa.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: window.location.href }
-    });
+    btn.textContent = 'Входимо…';
+    const { error } = await supa.auth.signInWithPassword({ email, password });
     btn.disabled = false;
-    btn.textContent = 'Надіслати посилання';
+    btn.textContent = 'Увійти';
     if (error) {
-      showToast('Помилка: ' + error.message, 4000);
-    } else {
-      mainEl.innerHTML = `
-        <div class="login-card">
-          <div class="login-icon">📬</div>
-          <h1 class="login-title">Перевір пошту</h1>
-          <p class="login-sub">Надіслали посилання на <strong>${escapeHtml(email)}</strong>.<br>
-          Клікни — і будеш у адмінці.</p>
-          <div class="login-info">
-            Не прийшло? Перевір спам. Або повторно введи пошту і надішли ще раз.
-          </div>
-        </div>
-      `;
+      showToast('Помилка: ' + error.message, 4500);
     }
+    // При успіху onAuthStateChange сам перерендерить view (handleSession → renderApp)
   });
 }
 
-function renderNoAccess(debug) {
+function renderNoAccess() {
   mainEl.innerHTML = `
     <div class="login-card">
       <div class="login-icon">🚫</div>
       <h1 class="login-title">Немає доступу</h1>
       <p class="login-sub">Твоя пошта <strong>${escapeHtml(currentUser.email)}</strong> не у списку адмінів.</p>
-      ${debug ? `
-        <div class="login-info" style="background:#FFF3CD;border-left-color:#FF9800;font-family:monospace;font-size:11px">
-          <strong>DEBUG (для діагностики):</strong><br>
-          authEmail: ${escapeHtml(debug.authEmail)}<br>
-          dataLength: ${escapeHtml(debug.dataLength)}<br>
-          dataValue: ${escapeHtml(debug.dataValue)}<br>
-          errorMsg: ${escapeHtml(debug.errorMsg)}<br>
-          errorCode: ${escapeHtml(debug.errorCode)}
-        </div>
-      ` : ''}
       <div class="login-info">
         Якщо це помилка — попроси існуючого адміна додати твою пошту через SQL:
         <code style="display:block;background:#fff;padding:8px;border-radius:6px;margin-top:8px;font-family:monospace;font-size:12px">INSERT INTO admins (email, name)
