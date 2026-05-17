@@ -18,6 +18,7 @@ const BOARD_MINI_TYPES = [
 ];
 let _boardMiniTypeIdx = 0;   // індекс активного типу
 let _boardMiniData    = { userPosts: [], official: [] };   // кеш даних щоб не запитувати при свайпі
+let _boardMiniDir     = 1;   // 1 = свайп вліво (наступний), -1 = свайп вправо (попередній)
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
@@ -380,10 +381,14 @@ function renderBoardMiniSlide(el) {
     ? `<div class="cm-board-corkboard cm-board-corkboard--mini">${cardsHtml}</div>`
     : `<div class="cm-board-mini-stream">${cardsHtml}</div>`;
 
+  // Напрям анімації залежить від свайпу: вліво (наступний) = новий слайд
+  // приходить справа, вправо (попередній) = слайд приходить зліва
+  const slideClass = _boardMiniDir < 0 ? ' bd-mini-slide-back' : '';
+
   el.innerHTML = `
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
       ${labelHtml}
-      <div class="cm-board-mini-content">${innerHtml}</div>
+      <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
       <button class="cm-board-preview-cta" type="button" data-switch-tab="board">
         Перейти на дошку →
       </button>
@@ -394,14 +399,16 @@ function renderBoardMiniSlide(el) {
   const wrap = document.getElementById('cm-board-preview');
   if (wrap) {
     attachSwipe(wrap,
-      () => { _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); },
-      () => { _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); }
+      () => { _boardMiniDir = 1;  _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); },
+      () => { _boardMiniDir = -1; _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); }
     );
-    // Клік на dot — перехід на відповідний тип
+    // Клік на dot — перехід на відповідний тип з напрямком
     wrap.querySelectorAll('.cm-board-mini-dot').forEach(dot => {
       dot.addEventListener('click', e => {
         e.stopPropagation();
-        _boardMiniTypeIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
+        const newIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
+        _boardMiniDir = newIdx > _boardMiniTypeIdx ? 1 : -1;
+        _boardMiniTypeIdx = newIdx;
         renderBoardMiniSlide(el);
       });
     });
