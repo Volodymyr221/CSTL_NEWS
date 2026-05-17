@@ -8,6 +8,7 @@
 // Submit-handler наразі заглушка (Фаза 9 Спринт 1 → Supabase POST у posts).
 
 import { showToast, escapeHtml } from '../core/utils.js';
+import { submitPost, isSupabaseReady } from '../core/supabase.js';
 
 const TYPE_TABS = [
   { id: 'board',    emoji: '🛒', label: 'Оголошення' },
@@ -440,7 +441,7 @@ export function openBoardModal() {
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
 
   // ── Submit ──
-  wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', (e) => {
+  wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!state.text.trim()) {
       showToast('Будь ласка, заповніть текст', 2500);
@@ -452,10 +453,31 @@ export function openBoardModal() {
       wrap.querySelector('#bm-title')?.focus();
       return;
     }
-    // TODO Supabase (Фаза 9 Спринт 1): POST у таблицю posts зі статусом 'pending'.
-    // Payload готується нижче залежно від типу:
+
+    const submitBtn = wrap.querySelector('.cm-board-submit');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Надсилаємо…';
+    }
+
     const payload = buildPayload(state);
-    console.info('[submit] payload готовий для Supabase:', payload);
+
+    // Якщо Supabase підключений — реальний POST у таблицю posts.
+    // Якщо ні (offline / SDK не завантажився) — показуємо заглушку як було.
+    if (isSupabaseReady()) {
+      const result = await submitPost(payload);
+      if (!result.ok) {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Опублікувати';
+        }
+        showToast('Помилка: ' + (result.error || 'не вдалось надіслати'), 4500);
+        return;
+      }
+    } else {
+      console.info('[submit] Supabase не готовий — payload збережено лише локально:', payload);
+    }
+
     close();
     showToast('Дякуємо! Запит надіслано модератору.', 4000);
   });

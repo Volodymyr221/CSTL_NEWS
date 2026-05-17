@@ -11,6 +11,7 @@
 
 import { escapeHtml, formatTime, sharePost } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
+import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
@@ -563,6 +564,21 @@ export async function renderBoard() {
   const el = document.getElementById('board-content');
   if (!el) return;
 
+  // 1. Спочатку пробуємо Supabase (production data — те що пройшло модерацію)
+  if (isSupabaseReady()) {
+    const [posts, anns] = await Promise.all([
+      fetchPublishedPosts(),
+      fetchPublishedAnnouncements(),
+    ]);
+    if (posts !== null) {
+      allPosts         = posts;
+      allAnnouncements = anns || [];
+      renderAll(el);
+      return;
+    }
+  }
+
+  // 2. Fallback: JSON (поки БД порожня або немає мережі — показуємо демо-дані)
   try {
     const [boardRes, communityRes] = await Promise.all([
       fetch('./data/community-board.json'),

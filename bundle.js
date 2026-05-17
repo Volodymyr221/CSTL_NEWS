@@ -186,6 +186,51 @@
     }
   }
 
+  // src/core/supabase.js
+  var SUPABASE_URL = "https://uabyfecseqnemvcqhdem.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_sbV0XNktCiTK0iA4659P9g_Y3sT0mDv";
+  var supa = null;
+  if (typeof window !== "undefined" && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      auth: { persistSession: false }
+      // на основному сайті auth не потрібна — тільки публічне читання + INSERT pending
+    });
+  }
+  function isSupabaseReady() {
+    return supa !== null;
+  }
+  async function fetchPublishedPosts() {
+    if (!supa)
+      return null;
+    const { data, error } = await supa.from("posts").select("*").eq("status", "published").order("published_at", { ascending: false, nullsLast: true }).limit(200);
+    if (error) {
+      console.warn("[supabase] fetchPublishedPosts error:", error.message);
+      return null;
+    }
+    return data;
+  }
+  async function submitPost(payload) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const row = { ...payload, status: "pending" };
+    const { error } = await supa.from("posts").insert(row);
+    if (error) {
+      console.warn("[supabase] submitPost error:", error);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  }
+  async function fetchPublishedAnnouncements() {
+    if (!supa)
+      return null;
+    const { data, error } = await supa.from("announcements").select("*").eq("status", "published").order("pinned", { ascending: false }).order("published_at", { ascending: false, nullsLast: true }).limit(50);
+    if (error) {
+      console.warn("[supabase] fetchPublishedAnnouncements error:", error.message);
+      return null;
+    }
+    return data;
+  }
+
   // src/tabs/community-blocks.js
   var BUS_PREFS_KEY = "bus_prefs_v2";
   function weatherCodeInfo(code) {
@@ -377,19 +422,39 @@
     const el = document.getElementById("cm-board-content");
     if (!el)
       return;
+    let userPosts = [];
+    let official = [];
     try {
-      const [boardRes, communityRes] = await Promise.all([
-        fetch("./data/community-board.json"),
-        fetch("./data/community.json")
-      ]);
-      const boardData = await boardRes.json();
-      const communityData = await communityRes.json();
-      const userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      const official = (communityData.announcements || []).slice().sort((a, b) => {
-        if (a.pinned !== b.pinned)
-          return a.pinned ? -1 : 1;
-        return (b.ts || 0) - (a.ts || 0);
-      });
+      let usedSupabase = false;
+      if (isSupabaseReady()) {
+        const [posts, anns] = await Promise.all([
+          fetchPublishedPosts(),
+          fetchPublishedAnnouncements()
+        ]);
+        if (posts !== null) {
+          userPosts = posts.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+          official = (anns || []).slice().sort((a, b) => {
+            if (a.pinned !== b.pinned)
+              return a.pinned ? -1 : 1;
+            return (b.ts || 0) - (a.ts || 0);
+          });
+          usedSupabase = true;
+        }
+      }
+      if (!usedSupabase) {
+        const [boardRes, communityRes] = await Promise.all([
+          fetch("./data/community-board.json"),
+          fetch("./data/community.json")
+        ]);
+        const boardData = await boardRes.json();
+        const communityData = await communityRes.json();
+        userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        official = (communityData.announcements || []).slice().sort((a, b) => {
+          if (a.pinned !== b.pinned)
+            return a.pinned ? -1 : 1;
+          return (b.ts || 0) - (a.ts || 0);
+        });
+      }
       const totalCount = official.length + userPosts.length;
       if (!totalCount) {
         el.innerHTML = `<div class="cm-board-preview-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
@@ -2598,7 +2663,7 @@ END:VEVENT`
     renderDynamic();
     renderPreview();
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
-    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", (e) => {
+    wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!state.text.trim()) {
         showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
@@ -2610,8 +2675,25 @@ END:VEVENT`
         wrap.querySelector("#bm-title")?.focus();
         return;
       }
+      const submitBtn = wrap.querySelector(".cm-board-submit");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "\u041D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u043C\u043E\u2026";
+      }
       const payload = buildPayload(state);
-      console.info("[submit] payload \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u0434\u043B\u044F Supabase:", payload);
+      if (isSupabaseReady()) {
+        const result = await submitPost(payload);
+        if (!result.ok) {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+          }
+          showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (result.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438"), 4500);
+          return;
+        }
+      } else {
+        console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
+      }
       close();
       showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
     });
@@ -3124,6 +3206,18 @@ ${post.text}
     const el = document.getElementById("board-content");
     if (!el)
       return;
+    if (isSupabaseReady()) {
+      const [posts, anns] = await Promise.all([
+        fetchPublishedPosts(),
+        fetchPublishedAnnouncements()
+      ]);
+      if (posts !== null) {
+        allPosts = posts;
+        allAnnouncements = anns || [];
+        renderAll(el);
+        return;
+      }
+    }
     try {
       const [boardRes, communityRes] = await Promise.all([
         fetch("./data/community-board.json"),
