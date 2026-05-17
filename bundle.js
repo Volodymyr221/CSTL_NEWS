@@ -2888,6 +2888,7 @@ END:VEVENT`
       <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
       <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
     </div>
+    ${chatCommentsHtml(post)}
   `;
   }
   function chatActionsHtml(post) {
