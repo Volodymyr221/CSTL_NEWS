@@ -5,7 +5,8 @@
     "calendar": "Новоюліанський (= Григоріанський для сучасних дат). Нерухомі релігійні свята зсунуті на 13 днів назад порівняно зі старим стилем. Пасхалія залишається Олександрійською.",
     "easter_orthodox_2026": "12 квітня",
     "pentecost_2026": "31 травня (Великдень + 49 днів)",
-    "wartime_note": "Під час воєнного стану ст. 73 КЗпП не застосовується — формально вихідних на час війни немає, але дати свят залишаються."
+    "wartime_note": "Під час воєнного стану ст. 73 КЗпП не застосовується — формально вихідних на час війни немає, але дати свят залишаються.",
+    "covers": "Замість фото використовуються тематичні cover-картки: великий emoji + градієнт-фон. Wikipedia блокує hotlinking з референсом сторонніх сайтів (403), тому власні дизайнерські обкладинки."
   },
   "holidays": [
     {
@@ -15,7 +16,8 @@
       "date": "2026-01-01",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3c/Fireworks_in_Kyiv_-_2014.jpg/600px-Fireworks_in_Kyiv_-_2014.jpg"
+      "cover_emoji": "🎆",
+      "cover_gradient": "linear-gradient(135deg, #1a237e 0%, #311b92 50%, #6a1b9a 100%)"
     },
     {
       "id": 9002,
@@ -24,7 +26,8 @@
       "date": "2026-01-06",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8f/Baptism-of-Christ-xx-Pietro-Perugino.JPG/600px-Baptism-of-Christ-xx-Pietro-Perugino.JPG"
+      "cover_emoji": "💧",
+      "cover_gradient": "linear-gradient(135deg, #b3e5fc 0%, #4fc3f7 50%, #0277bd 100%)"
     },
     {
       "id": 9003,
@@ -33,7 +36,8 @@
       "date": "2026-01-07",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Nativity_tree2011.jpg/600px-Nativity_tree2011.jpg"
+      "cover_emoji": "🎄",
+      "cover_gradient": "linear-gradient(135deg, #b71c1c 0%, #1b5e20 100%)"
     },
     {
       "id": 9004,
@@ -42,7 +46,8 @@
       "date": "2026-02-02",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/5/5b/Meister_des_Perikopenbuches_von_St._Erentrud_001.jpg/600px-Meister_des_Perikopenbuches_von_St._Erentrud_001.jpg"
+      "cover_emoji": "🕯️",
+      "cover_gradient": "linear-gradient(135deg, #fff3e0 0%, #ffe0b2 50%, #ff9800 100%)"
     },
     {
       "id": 9005,
@@ -51,7 +56,8 @@
       "date": "2026-03-08",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Mimosa_flowers.jpg/600px-Mimosa_flowers.jpg"
+      "cover_emoji": "🌷",
+      "cover_gradient": "linear-gradient(135deg, #fce4ec 0%, #f8bbd0 50%, #ec407a 100%)"
     },
     {
       "id": 9006,
@@ -60,7 +66,8 @@
       "date": "2026-03-25",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/40/Annunciation_-_Leonardo_da_Vinci.jpg/600px-Annunciation_-_Leonardo_da_Vinci.jpg"
+      "cover_emoji": "🕊️",
+      "cover_gradient": "linear-gradient(135deg, #e3f2fd 0%, #bbdefb 50%, #64b5f6 100%)"
     },
     {
       "id": 9007,
@@ -69,7 +76,8 @@
       "date": "2026-04-12",
       "category": "Свято",
       "kind": "державне+релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/0/06/Pysanky2008.JPG/600px-Pysanky2008.JPG"
+      "cover_emoji": "🥚",
+      "cover_gradient": "linear-gradient(135deg, #fff9c4 0%, #f8bbd0 50%, #ffcc80 100%)"
     },
     {
       "id": 9008,
@@ -78,7 +86,8 @@
       "date": "2026-05-01",
       "category": "Свято",
       "kind": "державне",
-      "image": null
+      "cover_emoji": "🌿",
+      "cover_gradient": "linear-gradient(135deg, #c8e6c9 0%, #81c784 50%, #388e3c 100%)"
     },
     {
       "id": 9009,
@@ -87,7 +96,8 @@
       "date": "2026-05-08",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/4c/Red_poppy_-_HDR.jpg/600px-Red_poppy_-_HDR.jpg"
+      "cover_emoji": "🌺",
+      "cover_gradient": "linear-gradient(135deg, #424242 0%, #b71c1c 100%)"
     },
     {
       "id": 9010,
@@ -96,7 +106,8 @@
       "date": "2026-05-09",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Saint_Nicholas_Icon_Sinai_13th_century.jpg/600px-Saint_Nicholas_Icon_Sinai_13th_century.jpg"
+      "cover_emoji": "⛪",
+      "cover_gradient": "linear-gradient(135deg, #e1bee7 0%, #ba68c8 50%, #6a1b9a 100%)"
     },
     {
       "id": 9011,
@@ -105,7 +116,8 @@
       "date": "2026-05-31",
       "category": "Свято",
       "kind": "державне+релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e5/Angelos_Akotantos_-_Pentecost_-_Google_Art_Project.jpg/600px-Angelos_Akotantos_-_Pentecost_-_Google_Art_Project.jpg"
+      "cover_emoji": "🌿",
+      "cover_gradient": "linear-gradient(135deg, #a5d6a7 0%, #66bb6a 50%, #2e7d32 100%)"
     },
     {
       "id": 9012,
@@ -114,7 +126,8 @@
       "date": "2026-06-24",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a0/Bilibin_Kupala_Night_postcard.jpg/600px-Bilibin_Kupala_Night_postcard.jpg"
+      "cover_emoji": "🔥",
+      "cover_gradient": "linear-gradient(135deg, #ff6f00 0%, #d84315 50%, #4a148c 100%)"
     },
     {
       "id": 9013,
@@ -123,7 +136,8 @@
       "date": "2026-06-28",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Flag_of_Ukraine.svg/600px-Flag_of_Ukraine.svg.png"
+      "cover_emoji": "📜",
+      "cover_gradient": "linear-gradient(135deg, #0057B7 0%, #FFD700 100%)"
     },
     {
       "id": 9014,
@@ -132,7 +146,8 @@
       "date": "2026-06-29",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e3/El_Greco_-_Saints_Peter_and_Paul_-_WGA10422.jpg/600px-El_Greco_-_Saints_Peter_and_Paul_-_WGA10422.jpg"
+      "cover_emoji": "🗝️",
+      "cover_gradient": "linear-gradient(135deg, #fff8e1 0%, #ffd54f 50%, #f57c00 100%)"
     },
     {
       "id": 9015,
@@ -141,7 +156,8 @@
       "date": "2026-07-15",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/9d/Coat_of_arms_of_Ukraine.svg/600px-Coat_of_arms_of_Ukraine.svg.png"
+      "cover_emoji": "👑",
+      "cover_gradient": "linear-gradient(135deg, #0057B7 0%, #1565c0 50%, #FFD700 100%)"
     },
     {
       "id": 9016,
@@ -150,7 +166,8 @@
       "date": "2026-07-28",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3a/Vasnetsov_Bapt_Vladimir_fresco_in_Kiev.jpg/600px-Vasnetsov_Bapt_Vladimir_fresco_in_Kiev.jpg"
+      "cover_emoji": "✝️",
+      "cover_gradient": "linear-gradient(135deg, #4a148c 0%, #0057B7 100%)"
     },
     {
       "id": 9017,
@@ -159,7 +176,8 @@
       "date": "2026-08-06",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/1/1a/Transfiguration_by_fra_Angelico_%28San_Marco_Cell_6%29.jpg/600px-Transfiguration_by_fra_Angelico_%28San_Marco_Cell_6%29.jpg"
+      "cover_emoji": "🍎",
+      "cover_gradient": "linear-gradient(135deg, #ffe0b2 0%, #ff8a65 50%, #c62828 100%)"
     },
     {
       "id": 9018,
@@ -168,7 +186,8 @@
       "date": "2026-08-15",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a8/El_Greco_-_The_Dormition_of_the_Virgin.jpg/600px-El_Greco_-_The_Dormition_of_the_Virgin.jpg"
+      "cover_emoji": "🌸",
+      "cover_gradient": "linear-gradient(135deg, #f3e5f5 0%, #ce93d8 50%, #7b1fa2 100%)"
     },
     {
       "id": 9019,
@@ -177,7 +196,8 @@
       "date": "2026-08-24",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/4/49/Flag_of_Ukraine.svg/600px-Flag_of_Ukraine.svg.png"
+      "cover_emoji": "🇺🇦",
+      "cover_gradient": "linear-gradient(180deg, #0057B7 0%, #0057B7 50%, #FFD700 50%, #FFD700 100%)"
     },
     {
       "id": 9020,
@@ -186,16 +206,18 @@
       "date": "2026-09-01",
       "category": "Свято",
       "kind": "державне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cb/Last_Bell_Lyceum_22.jpg/600px-Last_Bell_Lyceum_22.jpg"
+      "cover_emoji": "🎒",
+      "cover_gradient": "linear-gradient(135deg, #ffecb3 0%, #ffa726 50%, #e65100 100%)"
     },
     {
       "id": 9021,
-      "title": "🇺🇦⛪ День захисників і захисниць України / Покрова Пресвятої Богородиці",
+      "title": "🇺🇦⛪ День захисників і захисниць України / Покрова",
       "description": "Два свята в один день — і не випадково. Указом Президента №455/2023 від 28 липня 2023 року дату Дня захисників перенесено з 14 на 1 жовтня, щоб збігатись з Покровою за новим календарем ПЦУ.\n\nПокрова — Богородиця простягає омофор (покрив) над землею і людьми. Покровителька козацтва, Українського війська, ЗСУ.\n\nОфіційний неробочий день згідно ст. 73 КЗпП.",
       "date": "2026-10-01",
       "category": "Свято",
       "kind": "державне+релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/c/c3/Pokrov.jpg/600px-Pokrov.jpg"
+      "cover_emoji": "🛡️",
+      "cover_gradient": "linear-gradient(135deg, #1a237e 0%, #0057B7 50%, #FFD700 100%)"
     },
     {
       "id": 9022,
@@ -204,7 +226,8 @@
       "date": "2026-11-08",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/97/Archangel_Michael_icon_%2814th_c.%29.jpg/600px-Archangel_Michael_icon_%2814th_c.%29.jpg"
+      "cover_emoji": "⚔️",
+      "cover_gradient": "linear-gradient(135deg, #263238 0%, #455a64 50%, #b71c1c 100%)"
     },
     {
       "id": 9023,
@@ -213,7 +236,8 @@
       "date": "2026-12-06",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/e/e8/Saint_Nicholas_Icon_Sinai_13th_century.jpg/600px-Saint_Nicholas_Icon_Sinai_13th_century.jpg"
+      "cover_emoji": "🎁",
+      "cover_gradient": "linear-gradient(135deg, #b71c1c 0%, #d32f2f 50%, #fff3e0 100%)"
     },
     {
       "id": 9024,
@@ -222,7 +246,8 @@
       "date": "2026-12-24",
       "category": "Свято",
       "kind": "релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8d/Kutia_Christmas_Eve_Ukraine.jpg/600px-Kutia_Christmas_Eve_Ukraine.jpg"
+      "cover_emoji": "🕯️",
+      "cover_gradient": "linear-gradient(135deg, #1a237e 0%, #311b92 50%, #ff8f00 100%)"
     },
     {
       "id": 9025,
@@ -231,7 +256,8 @@
       "date": "2026-12-25",
       "category": "Свято",
       "kind": "державне+релігійне",
-      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/3/3e/Nativity_tree2011.jpg/600px-Nativity_tree2011.jpg"
+      "cover_emoji": "🎄",
+      "cover_gradient": "linear-gradient(135deg, #b71c1c 0%, #1b5e20 50%, #FFD700 100%)"
     }
   ]
 }

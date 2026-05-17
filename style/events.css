@@ -135,6 +135,34 @@
   background: linear-gradient(135deg, #ebebeb 0%, #d8d8d8 100%);
 }
 
+/* Art-обкладинка для свят: великий emoji на тематичному градієнті
+   (замість реального фото — Wikipedia блокує hotlinking) */
+.ev-card-cover--art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+}
+.ev-card-cover--art::before {
+  /* Тонка текстура крапок зверху градієнту для глибини */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,0.18) 1px, transparent 2px),
+    radial-gradient(circle at 80% 80%, rgba(0,0,0,0.10) 1px, transparent 2px);
+  background-size: 18px 18px, 18px 18px;
+  pointer-events: none;
+}
+.ev-card-cover-emoji {
+  font-size: 88px;
+  line-height: 1;
+  filter: drop-shadow(0 4px 12px rgba(0,0,0,0.30));
+  position: relative;
+  z-index: 1;
+  transform: rotate(-4deg);
+}
+
 /* Бейдж з датою і категорією */
 .ev-card-badge {
   position: absolute;
