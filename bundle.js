@@ -894,10 +894,19 @@
   }
   function cardHtml(ev) {
     const bg = catColor(ev.category);
-    const coverBlock = ev.image ? `
-    <div class="ev-card-cover">
-      <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
-    </div>` : "";
+    let coverBlock = "";
+    if (ev.image) {
+      coverBlock = `
+      <div class="ev-card-cover">
+        <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
+      </div>`;
+    } else if (ev.cover_emoji) {
+      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
+      coverBlock = `
+      <div class="ev-card-cover ev-card-cover--art" style="background:${escapeHtml(grad)}">
+        <span class="ev-card-cover-emoji">${ev.cover_emoji}</span>
+      </div>`;
+    }
     const locationBlock = ev.location ? `
     <span class="ev-meta-item">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">

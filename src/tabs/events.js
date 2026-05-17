@@ -113,10 +113,22 @@ function renderSkeleton(el) {
 function cardHtml(ev) {
   const bg = catColor(ev.category);
 
-  const coverBlock = ev.image ? `
-    <div class="ev-card-cover">
-      <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
-    </div>` : '';
+  // Обкладинка: фото (звичайні події) АБО emoji+gradient (свята).
+  // Wikipedia блокує hotlinking, тому свята мають дизайнерські cover-ри з великим
+  // emoji і тематичним градієнтом — завжди працює, ніяких 404.
+  let coverBlock = '';
+  if (ev.image) {
+    coverBlock = `
+      <div class="ev-card-cover">
+        <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
+      </div>`;
+  } else if (ev.cover_emoji) {
+    const grad = ev.cover_gradient || 'linear-gradient(135deg, #999 0%, #555 100%)';
+    coverBlock = `
+      <div class="ev-card-cover ev-card-cover--art" style="background:${escapeHtml(grad)}">
+        <span class="ev-card-cover-emoji">${ev.cover_emoji}</span>
+      </div>`;
+  }
 
   const locationBlock = ev.location ? `
     <span class="ev-meta-item">
