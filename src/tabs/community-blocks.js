@@ -7,6 +7,7 @@
 // Помилка одного блоку не ламає інші.
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey } from '../core/utils.js';
+import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
@@ -286,19 +287,41 @@ export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
   if (!el) return;
 
-  try {
-    const [boardRes, communityRes] = await Promise.all([
-      fetch('./data/community-board.json'),
-      fetch('./data/community.json'),
-    ]);
-    const boardData     = await boardRes.json();
-    const communityData = await communityRes.json();
+  let userPosts = [];
+  let official = [];
 
-    const userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    const official  = (communityData.announcements || []).slice().sort((a, b) => {
-      if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-      return (b.ts || 0) - (a.ts || 0);
-    });
+  try {
+    // 1. Supabase спочатку (published posts + announcements)
+    let usedSupabase = false;
+    if (isSupabaseReady()) {
+      const [posts, anns] = await Promise.all([
+        fetchPublishedPosts(),
+        fetchPublishedAnnouncements(),
+      ]);
+      if (posts !== null) {
+        userPosts = posts.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        official  = (anns || []).slice().sort((a, b) => {
+          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+          return (b.ts || 0) - (a.ts || 0);
+        });
+        usedSupabase = true;
+      }
+    }
+
+    // 2. Fallback на JSON якщо БД не дала даних
+    if (!usedSupabase) {
+      const [boardRes, communityRes] = await Promise.all([
+        fetch('./data/community-board.json'),
+        fetch('./data/community.json'),
+      ]);
+      const boardData     = await boardRes.json();
+      const communityData = await communityRes.json();
+      userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+      official  = (communityData.announcements || []).slice().sort((a, b) => {
+        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
+        return (b.ts || 0) - (a.ts || 0);
+      });
+    }
     const totalCount = official.length + userPosts.length;
 
     if (!totalCount) {
