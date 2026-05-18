@@ -1,0 +1,34 @@
+# Тест доступу до vopas.com.ua з GitHub Actions runner.
+# Запускати ВРУЧНУ через UI (Actions → "Test VOPAS access" → Run workflow).
+# Один прогін → дізнаємось чи рунер бачить розклад. На основі цього
+# вирішуємо чи писати повноцінний парсер чи шукати інший шлях.
+
+name: Test VOPAS access
+
+on:
+  workflow_dispatch: {}  # тільки ручний запуск
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run VOPAS access probe
+        run: python scripts/test_vopas_access.py
+        continue-on-error: true  # навіть якщо exit 1 — хочемо побачити artifact
+
+      - name: Upload HTML response (if any was saved)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vopas-response
+          path: tmp_vopas_response.html
+          if-no-files-found: ignore
+          retention-days: 7
