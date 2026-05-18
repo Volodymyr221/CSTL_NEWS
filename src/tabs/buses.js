@@ -1,4 +1,4 @@
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, busHeroProgress } from '../core/utils.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 
@@ -233,9 +233,8 @@ function selectStop(stop, field) {
 
 // ── Hero-картка «Наступний автобус» (v2 редизайн 15.05) ────────────────────
 // Замість компактного рядка тепер велика картка з countdown + прогрес-баром.
-// Прогрес-бар спустошується по мірі наближення часу відправки.
-
-const HERO_MAX_WAIT_MIN = 60; // вікно орієнтиру: коли minsLeft <60 — бар починає рости
+// Прогрес-бар заповнюється по мірі наближення часу відправки.
+// Формула винесена у utils.js (busHeroProgress) — використовується і блоком Громади.
 
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
@@ -261,10 +260,8 @@ function renderSmartRow() {
   const price = getSegmentPrice(next, effFrom, effTo);
   const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: '0332 224 500' };
 
-  // Прогрес: бар спустошується від MAX до 0 коли minsLeft = 0
-  const progress = mins !== null
-    ? Math.max(0, Math.min(1, 1 - mins / HERO_MAX_WAIT_MIN))
-    : 0;
+  // Прогрес: бар заповнюється від 0 до 1 по мірі наближення відправлення
+  const progress = busHeroProgress(mins);
 
   const countdownText = mins !== null
     ? (mins < 60 ? `ЧЕРЕЗ ${mins} ХВ` : `ЧЕРЕЗ ${Math.floor(mins/60)} ГОД ${mins%60 ? (mins%60) + ' ХВ' : ''}`)

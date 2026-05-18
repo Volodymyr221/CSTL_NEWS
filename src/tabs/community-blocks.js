@@ -6,7 +6,7 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, busHeroProgress } from '../core/utils.js';
 import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType } from './board.js';
 
@@ -265,9 +265,8 @@ export async function renderBusBlock() {
           return m ? `через ${h} год ${m} хв` : `через ${h} год`;
         })();
 
-    // Прогрес дня: від поточної хвилини до часу відправлення (1440 хв доба)
-    const dayTotal = 24 * 60;
-    const progress = Math.max(0, Math.min(100, (nowMin / dayTotal) * 100));
+    // Прогрес-бар синхронний з вкладкою Автобуси (busHeroProgress у utils.js)
+    const progress = busHeroProgress(minsLeft) * 100;
 
     // Метадані: тривалість + ціна + водій (як у вкладці Автобусів)
     const durationMin = toMin - fromMin;
