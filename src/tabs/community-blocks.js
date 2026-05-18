@@ -6,9 +6,16 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, busHeroProgress } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType } from './board.js';
+import {
+  nowMinutes,
+  getStopMins as scheduleGetStopMins,
+  minsToHHMM  as scheduleMinsToHHMM,
+  getRouteState, getRouteTimings,
+  formatCountdownUpper,
+} from '../core/bus-schedule.js';
 
 // Типи у міні-блоці Дошки — свайп циклічно
 const BOARD_MINI_TYPES = [
@@ -183,15 +190,6 @@ export async function renderPowerBlock() {
 
 // ── Блок 3: Наступний автобус ────────────────────────────────────────────────
 
-function busToMinutes(hhmm) {
-  const [h, m] = hhmm.split(':').map(Number);
-  return h * 60 + m;
-}
-function busMinsToHHMM(total) {
-  const h = Math.floor(total / 60) % 24;
-  const m = total % 60;
-  return `${pad(h)}:${pad(m)}`;
-}
 function busIsDayActive(days) {
   const d = new Date().getDay();
   if (days === 'щодня') return true;
@@ -199,12 +197,31 @@ function busIsDayActive(days) {
   if (days === 'пн-пт') return d >= 1 && d <= 5;
   return true;
 }
-function busGetStopMins(route, stopName) {
-  const stop = route.stops.find(s => s.name === stopName);
-  if (!stop) return null;
-  const totalKm = route.stops[route.stops.length - 1].km;
-  if (totalKm === 0) return busToMinutes(route.departure_time);
-  return busToMinutes(route.departure_time) + Math.round((stop.km / totalKm) * route.duration_min);
+
+// Маршрутна шкала з зупинками-крапками і маркером 🚌 на позиції автобуса.
+// Точна копія функції з buses.js — обидві використовують одні CSS-класи (.bhm-*).
+function renderBusRouteMap(route, timings) {
+  const stops    = route.stops;
+  const totalKm  = stops[stops.length - 1].km || 1;
+  const progress = (timings.progress * 100).toFixed(1);
+  const stopsHtml = stops.map(s => {
+    const pct = totalKm ? (s.km / totalKm) * 100 : 0;
+    const isCurrent = s.name === timings.currentStop;
+    return `<span class="bhm-stop${isCurrent ? ' bhm-stop--current' : ''}" style="left:${pct.toFixed(1)}%"></span>`;
+  }).join('');
+  return `
+    <div class="bus-hero-map" aria-hidden="true">
+      <div class="bhm-track">
+        <div class="bhm-fill" style="width:${progress}%"></div>
+        ${stopsHtml}
+        <span class="bhm-marker" style="left:${progress}%">🚌</span>
+      </div>
+      <div class="bhm-ends">
+        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
+        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
+      </div>
+    </div>
+  `;
 }
 
 export async function renderBusBlock() {
@@ -215,10 +232,10 @@ export async function renderBusBlock() {
     const res  = await fetch('./data/schedule.json');
     const data = await res.json();
     const prefs = loadBusPrefs();
+    const nowMin = nowMinutes();
 
-    const now    = new Date();
-    const nowMin = now.getHours() * 60 + now.getMinutes();
-
+    // Кандидати: відповідають дню тижня, мають обидві зупинки prefs.from/to,
+    // і ще не завершились (state !== 'past').
     const candidates = data.routes.filter(r => {
       if (!busIsDayActive(r.days)) return false;
       if (prefs.from && !r.stops.some(s => s.name === prefs.from)) return false;
@@ -228,18 +245,19 @@ export async function renderBusBlock() {
         const ti = r.stops.findIndex(s => s.name === prefs.to);
         if (fi >= ti) return false;
       }
-      const startName = prefs.from || r.stops[0].name;
-      const m = busGetStopMins(r, startName);
-      return m !== null && m > nowMin;
+      return getRouteState(r, nowMin) !== 'past';
     });
 
-    candidates.sort((a, b) => {
-      const aFrom = prefs.from || a.stops[0].name;
-      const bFrom = prefs.from || b.stops[0].name;
-      return (busGetStopMins(a, aFrom) || 0) - (busGetStopMins(b, bFrom) || 0);
-    });
+    // Пріоритезація: enroute (їде зараз) > waiting (ще буде).
+    // У межах кожної категорії — найближчий по часу.
+    const enroute = candidates.filter(r => getRouteState(r, nowMin) === 'enroute');
+    const waiting = candidates.filter(r => getRouteState(r, nowMin) === 'waiting');
+    enroute.sort((a, b) => (getRouteTimings(a, nowMin).minsToArrival   ?? Infinity)
+                         - (getRouteTimings(b, nowMin).minsToArrival   ?? Infinity));
+    waiting.sort((a, b) => (getRouteTimings(a, nowMin).minsToDeparture ?? Infinity)
+                         - (getRouteTimings(b, nowMin).minsToDeparture ?? Infinity));
+    const next = enroute[0] || waiting[0];
 
-    const next = candidates[0];
     if (!next) {
       el.innerHTML = `
         <div class="cm-block-empty">
@@ -251,24 +269,39 @@ export async function renderBusBlock() {
 
     const fromName = prefs.from || next.stops[0].name;
     const toName   = prefs.to   || next.stops[next.stops.length - 1].name;
-    const fromMin  = busGetStopMins(next, fromName);
-    const toMin    = busGetStopMins(next, toName);
-    const fromHHMM = busMinsToHHMM(fromMin);
-    const toHHMM   = busMinsToHHMM(toMin);
-    const minsLeft = fromMin - nowMin;
-    const urgent   = minsLeft <= 10;
+    const fromMin  = scheduleGetStopMins(next, fromName);
+    const toMin    = scheduleGetStopMins(next, toName);
+    const fromHHMM = scheduleMinsToHHMM(fromMin);
+    const toHHMM   = scheduleMinsToHHMM(toMin);
+    const timings  = getRouteTimings(next, nowMin);
+    const isEnroute = timings.state === 'enroute';
+    const urgent   = timings.state === 'waiting' && timings.minsToDeparture <= 10;
 
-    const countdown = minsLeft < 60
-      ? `через ${minsLeft} хв`
-      : (() => {
-          const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
-          return m ? `через ${h} год ${m} хв` : `через ${h} год`;
-        })();
+    // Верх: countdown капсула (waiting) або «🚌 ЗАРАЗ У ...» (enroute)
+    let topLabel;
+    if (isEnroute) {
+      topLabel = `🚌 ЗАРАЗ У ${(timings.currentStop || '—').toUpperCase()}`;
+    } else if (urgent) {
+      topLabel = `ЧЕРЕЗ ${timings.minsToDeparture} ХВ`;
+    } else {
+      topLabel = formatCountdownUpper(timings.minsToDeparture);
+    }
 
-    // Прогрес-бар синхронний з вкладкою Автобуси (busHeroProgress у utils.js)
-    const progress = busHeroProgress(minsLeft) * 100;
+    // Рядок часу:
+    //   waiting → 19:00 → 20:20
+    //   enroute → ⏱ X ХВ · до 20:20
+    const timeRow = isEnroute
+      ? `<div class="bus-hero-times">
+           <span class="bus-hero-time">⏱ ${timings.minsToArrival} ХВ</span>
+           <span class="bus-hero-arrow">·</span>
+           <span class="bus-hero-time bus-hero-time--to">до ${escapeHtml(toHHMM || '—')}</span>
+         </div>`
+      : `<div class="bus-hero-times">
+           <span class="bus-hero-time">${escapeHtml(fromHHMM || '—')}</span>
+           <span class="bus-hero-arrow">→</span>
+           <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM || '—')}</span>
+         </div>`;
 
-    // Метадані: тривалість + ціна + водій (як у вкладці Автобусів)
     const durationMin = toMin - fromMin;
     const durationStr = durationMin < 60
       ? `${durationMin} хв`
@@ -276,35 +309,23 @@ export async function renderBusBlock() {
           const h = Math.floor(durationMin / 60), m = durationMin % 60;
           return m ? `${h} год ${m} хв` : `${h} год`;
         })();
-    const priceStr = next.price ? `${next.price} грн` : '';
-    const driverStr = next.driver || '';
-    const metaParts = [priceStr, durationStr, driverStr].filter(Boolean);
+    const carrier = data.carriers?.[next.carrier]?.name || '';
+    const metaParts = [durationStr, carrier].filter(Boolean);
     const metaHtml = metaParts.map((p, i) => i === 0
       ? `<span>${escapeHtml(p)}</span>`
       : `<span class="bus-hero-meta-sep">·</span><span>${escapeHtml(p)}</span>`
     ).join('');
 
-    // Hero-блок як на вкладці Автобусів (темний табло-стиль).
-    // Тапаєш — переходить на повну вкладку.
     el.innerHTML = `
-      <div class="bus-hero${urgent ? ' bus-hero--urgent' : ''}" data-switch-tab="buses">
+      <div class="bus-hero${urgent ? ' bus-hero--urgent' : ''}${isEnroute ? ' bus-hero--enroute' : ''}" data-switch-tab="buses">
         <div class="bus-hero-top">
-          ${urgent
-            ? `<span class="bus-hero-urgent">через ${minsLeft} хв</span>`
-            : `<span class="bus-hero-countdown">${escapeHtml(countdown)}</span>`}
+          <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
+          ${urgent ? '<span class="bus-hero-urgent">⚡ Поспішай!</span>' : ''}
         </div>
-        <div class="bus-hero-row">
-          <div class="bus-hero-times">
-            <span class="bus-hero-time">${escapeHtml(fromHHMM)}</span>
-            <span class="bus-hero-arrow">→</span>
-            <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM)}</span>
-          </div>
-        </div>
+        <div class="bus-hero-row">${timeRow}</div>
         <div class="bus-hero-route">${escapeHtml(fromName)} → ${escapeHtml(toName)}</div>
         <div class="bus-hero-meta">${metaHtml}</div>
-        <div class="bus-hero-progress">
-          <div class="bus-hero-progress-fill" style="width:${progress}%"></div>
-        </div>
+        ${renderBusRouteMap(next, timings)}
       </div>
     `;
   } catch {
