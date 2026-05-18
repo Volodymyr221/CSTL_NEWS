@@ -30,6 +30,19 @@
     "image": null
   },
   {
+    "id": 96,
+    "title": "ЗМІ: Тілоохоронці, що забирали Єрмака із СІЗО, раніше охороняли Зеленського",
+    "description": "Тілоохоронці, які забрали Єрмака із СІЗО 18 травня, раніше з'являлися на офіційних заходах з Зеленським.",
+    "date": "2026-05-18",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/5/830750/056e9de2866b43afde38c211e0bdce30.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/18/8035210/",
+    "auto": true
+  },
+  {
     "id": 94,
     "title": "Лайнер, де стався спалах хантавірусу, повернувся до Нідерландів, на борту є 4 українців",
     "description": "Круїзний лайнер MV Hondius, де стався спалах хантавірусу, завершив перехід з Карибських островів до Нідерландів; серед членів екіпажу є чотири громадяни України.",
@@ -66,6 +79,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/a/828588/aaeaa86dede26e24c5be4604649cea44.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/14/8034732/",
+    "auto": true
+  },
+  {
+    "id": 97,
+    "title": "В Кремлі розповіли деталі вояжу Путіна в Китай: прив'язки до візиту Трампа відкидають",
+    "description": "Російський правитель Володимир Путін прибуде до Пекіна ввечері 19 травня, зустрічати його буде міністр закордонних справ КНР Ван І.",
+    "date": "2026-05-19",
+    "time": "11:00",
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/2/830812/a265b3235657f685af5a4b69dea8876e.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/18/8035239/",
     "auto": true
   },
   {
