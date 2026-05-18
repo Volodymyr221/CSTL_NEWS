@@ -330,6 +330,27 @@
       return { ok: false, error: error.message };
     return { ok: true, comment: data };
   }
+  async function uploadPhotoToStorage(blob) {
+    if (!supa)
+      return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!blob)
+      return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
+    const ext = blob.type && blob.type.split("/")[1] || "jpg";
+    const rand = Math.random().toString(36).slice(2, 10);
+    const path = `${getAnonId()}/${Date.now()}-${rand}.${ext}`;
+    const { error: uploadError } = await supa.storage.from("community-photos").upload(path, blob, {
+      contentType: blob.type || "image/jpeg",
+      cacheControl: "31536000",
+      // 1 рік — фото незмінне
+      upsert: false
+    });
+    if (uploadError) {
+      console.warn("[supabase] uploadPhotoToStorage error:", uploadError.message);
+      return { url: null, error: uploadError.message };
+    }
+    const { data } = supa.storage.from("community-photos").getPublicUrl(path);
+    return { url: data?.publicUrl || null, error: null };
+  }
   function subscribeReactions(onChange) {
     if (!supa)
       return () => {
@@ -404,7 +425,11 @@
           canvas.width = Math.round(w);
           canvas.height = Math.round(h);
           canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-          resolve(canvas.toDataURL("image/jpeg", 0.78));
+          canvas.toBlob(
+            (blob) => blob ? resolve(blob) : reject(new Error("toBlob failed")),
+            "image/jpeg",
+            0.78
+          );
         };
         img.onerror = reject;
         img.src = e.target.result;
@@ -421,6 +446,9 @@
       // SPILNI
       text: "",
       photos: [],
+      // URL-и фото: blob: під час upload, https: після
+      uploadingCount: 0,
+      // скільки фото зараз заливаються у Storage — блокує submit
       author: "",
       // BOARD
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
@@ -653,23 +681,52 @@
           const file = input.files[0];
           if (!file)
             return;
+          let blob;
           try {
-            const dataUrl = await compressImage(file);
-            state.photos[idx] = dataUrl;
-            slot.classList.add("filled");
-            slot.style.backgroundImage = `url("${dataUrl}")`;
-            slot.querySelector(".bm-photo-plus").textContent = "\u2715";
-            slot.querySelector(".bm-photo-plus").classList.add("bm-photo-remove");
-            renderPreview();
+            blob = await compressImage(file);
           } catch {
-            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E", 3e3);
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0431\u0440\u043E\u0431\u0438\u0442\u0438 \u0444\u043E\u0442\u043E", 3e3);
+            return;
           }
+          const localUrl = URL.createObjectURL(blob);
+          state.photos[idx] = localUrl;
+          slot.classList.add("filled", "uploading");
+          slot.style.backgroundImage = `url("${localUrl}")`;
+          slot.querySelector(".bm-photo-plus").textContent = "\u2715";
+          slot.querySelector(".bm-photo-plus").classList.add("bm-photo-remove");
+          renderPreview();
+          state.uploadingCount++;
+          updateSubmitState();
+          const { url, error } = await uploadPhotoToStorage(blob);
+          state.uploadingCount--;
+          updateSubmitState();
+          if (error || !url) {
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0444\u043E\u0442\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 3500);
+            URL.revokeObjectURL(localUrl);
+            state.photos[idx] = null;
+            slot.classList.remove("filled", "uploading");
+            slot.style.backgroundImage = "";
+            const span = slot.querySelector(".bm-photo-plus");
+            span.textContent = "\uFF0B";
+            span.classList.remove("bm-photo-remove");
+            input.value = "";
+            renderPreview();
+            return;
+          }
+          if (state.photos[idx] === localUrl) {
+            state.photos[idx] = url;
+            slot.classList.remove("uploading");
+          }
+          URL.revokeObjectURL(localUrl);
         });
         slot.querySelector(".bm-photo-plus").addEventListener("click", (e) => {
           if (slot.classList.contains("filled")) {
             e.preventDefault();
+            const old = state.photos[idx];
+            if (old && old.startsWith("blob:"))
+              URL.revokeObjectURL(old);
             state.photos[idx] = null;
-            slot.classList.remove("filled");
+            slot.classList.remove("filled", "uploading");
             slot.style.backgroundImage = "";
             const span = slot.querySelector(".bm-photo-plus");
             span.textContent = "\uFF0B";
@@ -679,6 +736,18 @@
           }
         });
       });
+    }
+    function updateSubmitState() {
+      const btn = wrap.querySelector(".cm-board-submit");
+      if (!btn)
+        return;
+      if (state.uploadingCount > 0) {
+        btn.disabled = true;
+        btn.textContent = `\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0444\u043E\u0442\u043E\u2026`;
+      } else {
+        btn.disabled = false;
+        btn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+      }
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
@@ -767,6 +836,10 @@
       if (state.type === "greeting" && !state.title.trim()) {
         showToast("\u0412\u043A\u0430\u0436\u0456\u0442\u044C \u043A\u043E\u043C\u0443 \u0432\u0456\u0442\u0430\u043D\u043D\u044F", 2500);
         wrap.querySelector("#bm-title")?.focus();
+        return;
+      }
+      if (state.uploadingCount > 0 || state.photos.some((p) => p && p.startsWith("blob:"))) {
+        showToast("\u0417\u0430\u0447\u0435\u043A\u0430\u0439, \u0444\u043E\u0442\u043E \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0454\u0442\u044C\u0441\u044F\u2026", 2500);
         return;
       }
       const submitBtn = wrap.querySelector(".cm-board-submit");
