@@ -34,44 +34,6 @@ function ymd(d) {
   return `${y}-${m}-${dd}`;
 }
 
-// Українська плюралізація (1 день, 2 дні, 5 днів)
-function pluralUA(n, one, few, many) {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return one;
-  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
-  return many;
-}
-
-// Текст countdown-капсули для hero «Найближча подія»
-// Сьогодні з часом → "ЧЕРЕЗ X ГОД Y ХВ" / "ЧЕРЕЗ X ХВ"
-// Сьогодні без часу (свято) → "СЬОГОДНІ"
-// Завтра → "ЗАВТРА", 2-6 днів → "ЧЕРЕЗ N ДНІВ", 7-13 → "ЧЕРЕЗ ТИЖДЕНЬ" etc.
-function countdownText(ev, now) {
-  const eventDay = new Date(ev.date + 'T00:00:00');
-  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
-  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
-
-  if (dayDiff === 0) {
-    if (!ev.time) return 'СЬОГОДНІ';
-    const eventDt = new Date(ev.date + 'T' + ev.time + ':00');
-    const diffMs  = eventDt - now;
-    if (diffMs <= 0)            return 'ЗАРАЗ';
-    if (diffMs < 60 * 60000)    return `ЧЕРЕЗ ${Math.max(1, Math.floor(diffMs / 60000))} ХВ`;
-    const h = Math.floor(diffMs / 3600000);
-    const m = Math.floor((diffMs % 3600000) / 60000);
-    return m > 0 ? `ЧЕРЕЗ ${h} ГОД ${m} ХВ` : `ЧЕРЕЗ ${h} ГОД`;
-  }
-  if (dayDiff === 1)  return 'ЗАВТРА';
-  if (dayDiff < 7)    return `ЧЕРЕЗ ${dayDiff} ${pluralUA(dayDiff, 'ДЕНЬ', 'ДНІ', 'ДНІВ')}`;
-  if (dayDiff < 14)   return 'ЧЕРЕЗ ТИЖДЕНЬ';
-  if (dayDiff < 30)   { const w = Math.floor(dayDiff / 7); return `ЧЕРЕЗ ${w} ${pluralUA(w, 'ТИЖДЕНЬ', 'ТИЖНІ', 'ТИЖНІВ')}`; }
-  const months = Math.floor(dayDiff / 30);
-  return `ЧЕРЕЗ ${months} ${pluralUA(months, 'МІСЯЦЬ', 'МІСЯЦІ', 'МІСЯЦІВ')}`;
-}
-
-// pad для 2-значного формату
-function pad2(n) { return String(n).padStart(2, '0'); }
 
 // Форматує повну дату: "3 травня 2026"
 function formatFullDate(dateStr) {
@@ -241,7 +203,6 @@ function renderFilters() {
     btn.addEventListener('click', () => {
       activeFilter = btn.dataset.f;
       renderFilters();
-      renderHero();
       renderList();
     });
   });
@@ -296,7 +257,6 @@ function renderCalendar() {
     btn.addEventListener('click', () => {
       selectedDate = btn.dataset.date || null;
       renderCalendar();
-      renderHero();
       renderList();
     });
   });
@@ -324,63 +284,6 @@ function getFiltered() {
       if (byDate !== 0) return byDate;
       return (a.time || '').localeCompare(b.time || '');
     });
-}
-
-// Hero «Найближча подія» — табло-стиль (countdown капсула + моноширна дата+час).
-// Прихований при вибраній даті у календарі (тоді у списку і так одна-дві події),
-// при пустому списку, або якщо найближча подія далі ніж 60 днів (нерелевантна).
-function renderHero() {
-  const el = document.getElementById('events-hero');
-  if (!el) return;
-
-  if (selectedDate) { el.innerHTML = ''; return; }
-
-  const list = getFiltered();
-  const next = list[0];
-  if (!next) { el.innerHTML = ''; return; }
-
-  const now      = new Date();
-  const eventDay = new Date(next.date + 'T00:00:00');
-  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
-  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
-
-  // Не показуємо hero для подій далі ніж 60 днів — це вже не «найближча»
-  if (dayDiff > 60) { el.innerHTML = ''; return; }
-
-  // Urgent (бордовий) — сьогодні або завтра
-  const isUrgent = dayDiff <= 1;
-
-  const dateStr  = `${pad2(eventDay.getDate())}.${pad2(eventDay.getMonth() + 1)}`;
-  const timeStr  = next.time ? next.time : '';
-  const locStr   = next.location ? escapeHtml(next.location) : '';
-  const catStr   = escapeHtml(next.category || '');
-  const titleStr = escapeHtml(next.title);
-
-  el.innerHTML = `
-    <div class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}" data-id="${next.id}" role="button" tabindex="0">
-      <div class="evh-top">
-        <span class="tablo-countdown">${escapeHtml(countdownText(next, now))}</span>
-        ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
-      </div>
-      <div class="evh-time tablo-time-mono">
-        <span class="evh-date tablo-time-accent">${dateStr}</span>
-        ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ''}
-      </div>
-      <div class="evh-title">${titleStr}</div>
-      ${locStr ? `<div class="evh-meta tablo-soft">📍 ${locStr}</div>` : ''}
-    </div>
-  `;
-
-  // Тап на hero → scroll до картки у списку і її розкриття
-  const card = el.querySelector('.evh-card');
-  if (card) {
-    card.addEventListener('click', () => {
-      const target = document.querySelector(`#events-list .ev-card[data-id="${next.id}"]`);
-      if (!target) return;
-      target.classList.add('expanded');
-      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  }
 }
 
 // Рендер списку відфільтрованих подій
@@ -498,6 +401,5 @@ export async function initEvents() {
 
   renderFilters();
   renderCalendar();
-  renderHero();
   renderList();
 }
