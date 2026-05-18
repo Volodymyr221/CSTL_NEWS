@@ -2589,49 +2589,6 @@ ${post.text}
     const dd = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${dd}`;
   }
-  function pluralUA2(n, one, few, many) {
-    const m10 = n % 10;
-    const m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20))
-      return few;
-    return many;
-  }
-  function countdownText(ev, now) {
-    const eventDay = /* @__PURE__ */ new Date(ev.date + "T00:00:00");
-    const todayDay = new Date(now);
-    todayDay.setHours(0, 0, 0, 0);
-    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
-    if (dayDiff === 0) {
-      if (!ev.time)
-        return "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406";
-      const eventDt = /* @__PURE__ */ new Date(ev.date + "T" + ev.time + ":00");
-      const diffMs = eventDt - now;
-      if (diffMs <= 0)
-        return "\u0417\u0410\u0420\u0410\u0417";
-      if (diffMs < 60 * 6e4)
-        return `\u0427\u0415\u0420\u0415\u0417 ${Math.max(1, Math.floor(diffMs / 6e4))} \u0425\u0412`;
-      const h = Math.floor(diffMs / 36e5);
-      const m = Math.floor(diffMs % 36e5 / 6e4);
-      return m > 0 ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
-    }
-    if (dayDiff === 1)
-      return "\u0417\u0410\u0412\u0422\u0420\u0410";
-    if (dayDiff < 7)
-      return `\u0427\u0415\u0420\u0415\u0417 ${dayDiff} ${pluralUA2(dayDiff, "\u0414\u0415\u041D\u042C", "\u0414\u041D\u0406", "\u0414\u041D\u0406\u0412")}`;
-    if (dayDiff < 14)
-      return "\u0427\u0415\u0420\u0415\u0417 \u0422\u0418\u0416\u0414\u0415\u041D\u042C";
-    if (dayDiff < 30) {
-      const w = Math.floor(dayDiff / 7);
-      return `\u0427\u0415\u0420\u0415\u0417 ${w} ${pluralUA2(w, "\u0422\u0418\u0416\u0414\u0415\u041D\u042C", "\u0422\u0418\u0416\u041D\u0406", "\u0422\u0418\u0416\u041D\u0406\u0412")}`;
-    }
-    const months = Math.floor(dayDiff / 30);
-    return `\u0427\u0415\u0420\u0415\u0417 ${months} ${pluralUA2(months, "\u041C\u0406\u0421\u042F\u0426\u042C", "\u041C\u0406\u0421\u042F\u0426\u0406", "\u041C\u0406\u0421\u042F\u0426\u0406\u0412")}`;
-  }
-  function pad2(n) {
-    return String(n).padStart(2, "0");
-  }
   function formatFullDate(dateStr) {
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
@@ -2640,10 +2597,10 @@ ${post.text}
     return CATEGORY_COLORS2[category] || "#722F37";
   }
   function buildIcsContent(ev) {
-    const pad3 = (n) => String(n).padStart(2, "0");
+    const pad2 = (n) => String(n).padStart(2, "0");
     const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
     const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad3(d.getMonth() + 1)}${pad3(d.getDate())}T${pad3(d.getHours())}${pad3(d.getMinutes())}00`;
+    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
     const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
     return [
       "BEGIN:VCALENDAR",
@@ -2773,7 +2730,6 @@ ${post.text}
       btn.addEventListener("click", () => {
         activeFilter = btn.dataset.f;
         renderFilters();
-        renderHero();
         renderList();
       });
     });
@@ -2819,7 +2775,6 @@ ${post.text}
       btn.addEventListener("click", () => {
         selectedDate = btn.dataset.date || null;
         renderCalendar();
-        renderHero();
         renderList();
       });
     });
@@ -2846,60 +2801,6 @@ ${post.text}
         return byDate;
       return (a.time || "").localeCompare(b.time || "");
     });
-  }
-  function renderHero() {
-    const el = document.getElementById("events-hero");
-    if (!el)
-      return;
-    if (selectedDate) {
-      el.innerHTML = "";
-      return;
-    }
-    const list = getFiltered2();
-    const next = list[0];
-    if (!next) {
-      el.innerHTML = "";
-      return;
-    }
-    const now = /* @__PURE__ */ new Date();
-    const eventDay = /* @__PURE__ */ new Date(next.date + "T00:00:00");
-    const todayDay = new Date(now);
-    todayDay.setHours(0, 0, 0, 0);
-    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
-    if (dayDiff > 60) {
-      el.innerHTML = "";
-      return;
-    }
-    const isUrgent = dayDiff <= 1;
-    const dateStr = `${pad2(eventDay.getDate())}.${pad2(eventDay.getMonth() + 1)}`;
-    const timeStr = next.time ? next.time : "";
-    const locStr = next.location ? escapeHtml(next.location) : "";
-    const catStr = escapeHtml(next.category || "");
-    const titleStr = escapeHtml(next.title);
-    el.innerHTML = `
-    <div class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}" data-id="${next.id}" role="button" tabindex="0">
-      <div class="evh-top">
-        <span class="tablo-countdown">${escapeHtml(countdownText(next, now))}</span>
-        ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
-      </div>
-      <div class="evh-time tablo-time-mono">
-        <span class="evh-date tablo-time-accent">${dateStr}</span>
-        ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ""}
-      </div>
-      <div class="evh-title">${titleStr}</div>
-      ${locStr ? `<div class="evh-meta tablo-soft">\u{1F4CD} ${locStr}</div>` : ""}
-    </div>
-  `;
-    const card = el.querySelector(".evh-card");
-    if (card) {
-      card.addEventListener("click", () => {
-        const target = document.querySelector(`#events-list .ev-card[data-id="${next.id}"]`);
-        if (!target)
-          return;
-        target.classList.add("expanded");
-        target.scrollIntoView({ behavior: "smooth", block: "start" });
-      });
-    }
   }
   function renderList() {
     const el = document.getElementById("events-list");
@@ -2998,7 +2899,6 @@ ${ev.description}`
     }
     renderFilters();
     renderCalendar();
-    renderHero();
     renderList();
   }
 
@@ -3221,11 +3121,11 @@ ${ev.description}`
     const price = getSegmentPrice(next, effFrom, effTo);
     const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: "0332 224 500" };
     const progress = mins !== null ? Math.max(0, Math.min(1, 1 - mins / HERO_MAX_WAIT_MIN)) : 0;
-    const countdownText2 = mins !== null ? mins < 60 ? `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${Math.floor(mins / 60)} \u0413\u041E\u0414 ${mins % 60 ? mins % 60 + " \u0425\u0412" : ""}` : "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
+    const countdownText = mins !== null ? mins < 60 ? `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${Math.floor(mins / 60)} \u0413\u041E\u0414 ${mins % 60 ? mins % 60 + " \u0425\u0412" : ""}` : "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
     el.innerHTML = `
     <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}">
       <div class="bus-hero-top">
-        <span class="bus-hero-countdown">${escapeHtml(countdownText2)}</span>
+        <span class="bus-hero-countdown">${escapeHtml(countdownText)}</span>
         ${urgent ? '<span class="bus-hero-urgent">\u26A1 \u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>' : ""}
       </div>
       <div class="bus-hero-row">

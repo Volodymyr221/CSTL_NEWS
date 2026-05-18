@@ -102,63 +102,6 @@
 .cal-pill--has-events.active .cal-pill-dot { background: white; }
 .cal-pill--all .cal-pill-dot { display: none; }
 
-/* ── Hero «Найближча подія» (табло-стиль, 18.05.2026) ──
-   Темна countdown-картка над списком — у тон з .bus-hero на Автобусах.
-   Використовує токени .tablo-hero / .tablo-countdown / .tablo-time-mono з base.css. */
-.events-hero { padding: 12px 14px 4px; }
-.events-hero:empty { padding: 0; }  /* ховаємо контейнер коли пусто (фільтр) */
-
-.evh-card {
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s;
-}
-.evh-card:active { transform: scale(0.985); }
-
-.evh-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.evh-cat {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-
-/* Рядок з датою+часом — головний акцент картки */
-.evh-time {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-bottom: 6px;
-}
-.evh-date {
-  font-size: 28px;
-  font-weight: 600;
-  line-height: 1;
-}
-.evh-clock {
-  font-size: 22px;
-  font-weight: 500;
-  line-height: 1;
-}
-
-.evh-title {
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.3;
-  margin-bottom: 4px;
-  color: #ffffff;
-}
-.evh-meta {
-  font-size: 12px;
-  font-weight: 500;
-}
-
 /* Картка події */
 .ev-card {
   background: var(--bg-card);
