@@ -348,11 +348,13 @@ function renderBoardCard(p) {
   const tilt = ((p.id * 7) % 9) - 4;
   const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const contactHtml = renderContact(p.contact);
-  const photoHtml = p.photo
-    ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
+  // posts.photos[] (масив у Supabase) АБО p.photo (старі демо-дані з community-board.json)
+  const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
+  const photoHtml = photo
+    ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
     : '';
   return `
-    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || 'yellow')}${p.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || 'yellow')}${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
@@ -389,8 +391,9 @@ function renderChatCard(p) {
   const tagsHtml = (p.tags || []).length
     ? `<div class="bd-chat-tags">${p.tags.map(t => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(' ')}</div>`
     : '';
-  const photoHtml = p.photo
-    ? `<img class="bd-chat-photo" src="${escapeHtml(p.photo)}" alt="" loading="lazy" onerror="this.style.display='none'">`
+  const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
+  const photoHtml = photo
+    ? `<img class="bd-chat-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.style.display='none'">`
     : '';
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}">

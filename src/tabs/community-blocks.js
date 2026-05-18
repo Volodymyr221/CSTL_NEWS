@@ -407,7 +407,8 @@ function renderBoardMiniSlide(el) {
       .slice(0, 2)
       .map(p => ({
         kind: cfg.id, id: p.id, ts: p.ts || (p.created_at && new Date(p.created_at).getTime()),
-        category: p.category, text: p.text, title: p.title, color: p.color, photo: p.photo,
+        category: p.category, text: p.text, title: p.title, color: p.color,
+        photo: (Array.isArray(p.photos) && p.photos[0]) || p.photo,
         cover_emoji: p.cover_emoji, cover_gradient: p.cover_gradient, author: p.author,
       }));
   }
