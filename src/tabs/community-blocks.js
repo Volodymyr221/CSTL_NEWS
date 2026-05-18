@@ -538,6 +538,37 @@ function isLocalEvent(ev) {
   return OTG_VILLAGES.some(v => loc.includes(v.toLowerCase()));
 }
 
+// Українська плюралізація (1 день, 2 дні, 5 днів) — локальна копія з events.js
+function pluralUA(n, one, few, many) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
+// Countdown-текст «через X днів / завтра / сьогодні» для табло-капсули у блоку Громади
+function eventCountdown(ev, now) {
+  const eventDay = new Date(ev.date + 'T00:00:00');
+  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
+  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
+  if (dayDiff === 0) {
+    if (!ev.time) return 'СЬОГОДНІ';
+    const dt = new Date(ev.date + 'T' + ev.time + ':00');
+    const diffMs = dt - now;
+    if (diffMs <= 0) return 'ЗАРАЗ';
+    if (diffMs < 60 * 60000) return `ЧЕРЕЗ ${Math.max(1, Math.floor(diffMs / 60000))} ХВ`;
+    const h = Math.floor(diffMs / 3600000);
+    const m = Math.floor((diffMs % 3600000) / 60000);
+    return m > 0 ? `ЧЕРЕЗ ${h} ГОД ${m} ХВ` : `ЧЕРЕЗ ${h} ГОД`;
+  }
+  if (dayDiff === 1) return 'ЗАВТРА';
+  if (dayDiff < 7)   return `ЧЕРЕЗ ${dayDiff} ${pluralUA(dayDiff, 'ДЕНЬ', 'ДНІ', 'ДНІВ')}`;
+  if (dayDiff < 14)  return 'ЧЕРЕЗ ТИЖДЕНЬ';
+  if (dayDiff < 30)  { const w = Math.floor(dayDiff / 7); return `ЧЕРЕЗ ${w} ${pluralUA(w, 'ТИЖДЕНЬ', 'ТИЖНІ', 'ТИЖНІВ')}`; }
+  const months = Math.floor(dayDiff / 30);
+  return `ЧЕРЕЗ ${months} ${pluralUA(months, 'МІСЯЦЬ', 'МІСЯЦІ', 'МІСЯЦІВ')}`;
+}
+
 export async function renderEventBlock() {
   const el = document.getElementById('cm-event-content');
   if (!el) return;
@@ -556,20 +587,29 @@ export async function renderEventBlock() {
       return;
     }
 
-    const d = new Date(next.date + 'T00:00:00');
-    const months = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
+    const now      = new Date();
+    const eventDay = new Date(next.date + 'T00:00:00');
+    const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
+    const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
+    const isUrgent = dayDiff <= 1;
+
+    const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
+    const timeStr = next.time ? escapeHtml(next.time) : '';
+    const locStr  = next.location ? escapeHtml(next.location) : '';
+    const catStr  = escapeHtml(next.category || '');
 
     el.innerHTML = `
-      <article class="cm-event-card" data-switch-tab="events">
-        <div class="cm-event-date">
-          <span class="cm-event-day">${d.getDate()}</span>
-          <span class="cm-event-month">${months[d.getMonth()].slice(0, 3)}</span>
+      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}" data-switch-tab="events">
+        <div class="evh-top">
+          <span class="tablo-countdown">${escapeHtml(eventCountdown(next, now))}</span>
+          ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
         </div>
-        <div class="cm-event-body">
-          <div class="cm-event-cat">${escapeHtml(next.category)}</div>
-          <h4 class="cm-event-title">${escapeHtml(next.title)}</h4>
-          <div class="cm-event-meta">📍 ${escapeHtml(next.location)} · ⏰ ${escapeHtml(next.time)}</div>
+        <div class="evh-time tablo-time-mono">
+          <span class="evh-date tablo-time-accent">${dateStr}</span>
+          ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ''}
         </div>
+        <div class="evh-title">${escapeHtml(next.title)}</div>
+        ${locStr ? `<div class="evh-meta tablo-soft">📍 ${locStr}</div>` : ''}
       </article>
     `;
   } catch {

@@ -237,50 +237,9 @@
 }
 .cm-news-footer { font-size: 11px; color: var(--gray); }
 
-/* ── Блок 6: Подія ── */
-.cm-event-card {
-  display: flex;
-  gap: 12px;
-  padding: 8px 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-}
-.cm-event-date {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  width: 60px;
-  height: 64px;
-  background: var(--red);
-  color: white;
-  border-radius: 10px;
-  flex-shrink: 0;
-}
-.cm-event-day { font-size: 26px; font-weight: 800; line-height: 1; }
-.cm-event-month {
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-top: 2px;
-}
-.cm-event-body { flex: 1; min-width: 0; display: flex; flex-direction: column; justify-content: center; }
-.cm-event-cat {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--red);
-  text-transform: uppercase;
-  letter-spacing: 0.3px;
-}
-.cm-event-title {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--black);
-  line-height: 1.3;
-  margin: 3px 0 4px;
-}
-.cm-event-meta { font-size: 11.5px; color: var(--gray); }
+/* Блок 6 «Подія» тепер використовує .evh-card з табло-токенами (style/base.css)
+   на нейтральному фоні .cm-block--event (див. нижче ~рядок 503). Стилі .cm-event-*
+   видалені 18.05.2026 разом з рідизайном renderEventBlock(). */
 
 /* ── Блок 7: Контакти v2 — Tier 3 (16.05.2026) ── */
 /* Ієрархія: HERO (Швидка 103) + Аварійні 2×2 + Місцеві рядками */
@@ -500,14 +459,25 @@
 }
 .cm-block--bus .bus-hero:active { transform: scale(0.985); }
 
-/* Подія — теракот */
+/* Подія — нейтральний кремовий фон, табло-стиль усередині (18.05.2026).
+   Раніше був теракотовий gradient. Тепер так само як .cm-block--bus —
+   щоб два countdown-блоки на головному екрані говорили одною мовою. */
 .cm-block--event {
-  background: linear-gradient(135deg, var(--peach) 0%, var(--peach-deep) 100%);
+  background: var(--card-cream);
+  padding: 14px;
 }
-.cm-block--event .cm-block-title { color: var(--peach-text); }
-.cm-block--event .cm-event-cat   { color: var(--peach-text); }
-.cm-block--event .cm-event-title { color: var(--peach-text); }
-.cm-block--event .cm-event-meta  { color: var(--peach-text); opacity: 0.75; }
+.cm-block--event .cm-block-header { margin-bottom: 10px; }
+.cm-block--event .cm-block-body   { padding: 0; }
+.cm-block--event .tablo-hero {
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.1s;
+}
+.cm-block--event .tablo-hero:active { transform: scale(0.985); }
+/* Внутрішні елементи у блоку Громади трохи компактніші ніж на вкладці Подій */
+.cm-block--event .evh-date  { font-size: 24px; }
+.cm-block--event .evh-clock { font-size: 19px; }
+.cm-block--event .evh-title { font-size: 15px; }
 
 /* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
