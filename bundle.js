@@ -163,6 +163,12 @@
     toast.classList.add("visible");
     setTimeout(() => toast.classList.remove("visible"), duration);
   }
+  var HERO_MAX_WAIT_MIN = 60;
+  function busHeroProgress(minsLeft) {
+    if (minsLeft === null || minsLeft === void 0)
+      return 0;
+    return Math.max(0, Math.min(1, 1 - minsLeft / HERO_MAX_WAIT_MIN));
+  }
 
   // src/core/weather.js
   function codeToIcon(code) {
@@ -1774,8 +1780,7 @@ ${post.text}
         const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
         return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
       })();
-      const dayTotal = 24 * 60;
-      const progress = Math.max(0, Math.min(100, nowMin / dayTotal * 100));
+      const progress = busHeroProgress(minsLeft) * 100;
       const durationMin = toMin - fromMin;
       const durationStr = durationMin < 60 ? `${durationMin} \u0445\u0432` : (() => {
         const h = Math.floor(durationMin / 60), m = durationMin % 60;
@@ -3075,7 +3080,6 @@ ${ev.description}`
     renderSmartRow();
     renderRouteList();
   }
-  var HERO_MAX_WAIT_MIN = 60;
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
@@ -3097,7 +3101,7 @@ ${ev.description}`
     const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
     const price = getSegmentPrice(next, effFrom, effTo);
     const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: "0332 224 500" };
-    const progress = mins !== null ? Math.max(0, Math.min(1, 1 - mins / HERO_MAX_WAIT_MIN)) : 0;
+    const progress = busHeroProgress(mins);
     const countdownText = mins !== null ? mins < 60 ? `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${Math.floor(mins / 60)} \u0413\u041E\u0414 ${mins % 60 ? mins % 60 + " \u0425\u0412" : ""}` : "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
     el.innerHTML = `
     <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}">
