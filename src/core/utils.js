@@ -145,17 +145,3 @@ export function showToast(msg, duration = 3000) {
   toast.classList.add('visible');
   setTimeout(() => toast.classList.remove('visible'), duration);
 }
-
-// Вікно орієнтиру для прогрес-бара на bus-hero — за стільки хвилин до автобуса
-// шкала починає заповнюватись (від 0 до 100% по мірі наближення).
-export const HERO_MAX_WAIT_MIN = 60;
-
-// Прогрес-бар "Наступний автобус" — спільний для вкладки Автобуси і блоку Громади.
-// minsLeft — скільки хвилин до відправлення. Повертає число 0..1.
-// При minsLeft >= 60 → 0 (рейс далеко, шкала пуста)
-// При minsLeft = 30 → 0.5 (півшкали)
-// При minsLeft = 0  → 1 (повна шкала)
-export function busHeroProgress(minsLeft) {
-  if (minsLeft === null || minsLeft === undefined) return 0;
-  return Math.max(0, Math.min(1, 1 - minsLeft / HERO_MAX_WAIT_MIN));
-}

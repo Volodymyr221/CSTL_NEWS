@@ -57,6 +57,16 @@
   background: linear-gradient(135deg, #6B1F2A 0%, #4A1118 100%);
   color: white;
 }
+/* En-route (рейс у дорозі прямо зараз) — золотисто-зелений gradient
+   щоб відрізнявся від waiting (звичайний темний). 18.05.2026 */
+.bus-hero--enroute {
+  background: linear-gradient(135deg, #2B4A3A 0%, #1A3025 100%);
+}
+.bus-hero--enroute .bus-hero-countdown {
+  background: rgba(251,191,36,0.15);
+  border-color: rgba(251,191,36,0.55);
+  color: #FBBF24;
+}
 .bus-hero--empty {
   color: var(--ink-soft);
   background: var(--bg-card);
@@ -135,19 +145,81 @@
 }
 .bus-hero-meta-sep { color: rgba(255,255,255,0.30); }
 
-.bus-hero-progress {
-  height: 3px;
+/* ── Маршрутна шкала з зупинками-крапками і маркером 🚌 (v3, 18.05.2026) ──
+   Замість простого progress bar — повноцінна "мапа маршруту":
+   - track    — горизонтальна лінія від 1-ї зупинки до останньої
+   - fill     — пройдена частина (бурштинова)
+   - stops    — крапки на лінії за пропорційним km кожної зупинки
+   - marker   — 🚌 на позиції прогресу (анімується при оновленні таймера) */
+.bus-hero-map { margin-top: 14px; }
+.bhm-track {
+  position: relative;
+  height: 4px;
   background: rgba(255,255,255,0.18);
   border-radius: 2px;
-  overflow: hidden;
+  margin: 12px 8px 6px;  /* по 8px справа/зліва — місце для крайніх крапок */
 }
-.bus-hero-progress-fill {
+.bhm-fill {
+  position: absolute;
+  top: 0; left: 0;
   height: 100%;
   background: #FBBF24;
   border-radius: 2px;
   transition: width 0.6s ease;
 }
-.bus-hero--urgent .bus-hero-progress-fill { background: white; }
+.bus-hero--urgent .bhm-fill { background: white; }
+.bus-hero--enroute .bhm-fill { background: #FBBF24; }
+
+/* Крапки-зупинки */
+.bhm-stop {
+  position: absolute;
+  top: 50%;
+  width: 6px;
+  height: 6px;
+  margin-left: -3px;
+  margin-top: -3px;
+  background: rgba(255,255,255,0.45);
+  border-radius: 50%;
+  z-index: 1;
+}
+.bhm-stop--current {
+  background: white;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  margin-top: -4px;
+  box-shadow: 0 0 0 2px rgba(251,191,36,0.6);
+}
+
+/* Маркер 🚌 — над лінією, з абсолютною позицією */
+.bhm-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 18px;
+  line-height: 1;
+  z-index: 2;
+  transition: left 0.6s ease;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
+}
+.bus-hero--enroute .bhm-marker {
+  animation: bhm-bus-bob 1.8s ease-in-out infinite;
+}
+@keyframes bhm-bus-bob {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50%      { transform: translate(-50%, -65%); }
+}
+
+/* Підписи кінцевих зупинок (під шкалою) */
+.bhm-ends {
+  display: flex;
+  justify-content: space-between;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.65);
+  letter-spacing: 0.3px;
+  padding: 0 2px;
+}
 
 /* Список рейсів */
 .bus-list { padding: 0; }

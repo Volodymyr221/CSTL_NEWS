@@ -163,12 +163,6 @@
     toast.classList.add("visible");
     setTimeout(() => toast.classList.remove("visible"), duration);
   }
-  var HERO_MAX_WAIT_MIN = 60;
-  function busHeroProgress(minsLeft) {
-    if (minsLeft === null || minsLeft === void 0)
-      return 0;
-    return Math.max(0, Math.min(1, 1 - minsLeft / HERO_MAX_WAIT_MIN));
-  }
 
   // src/core/weather.js
   function codeToIcon(code) {
@@ -1608,6 +1602,103 @@ ${post.text}
     renderBoard();
   }
 
+  // src/core/bus-schedule.js
+  var HERO_MAX_WAIT_MIN = 60;
+  function toMinutes(hhmm) {
+    if (!hhmm || typeof hhmm !== "string")
+      return 0;
+    const [h, m] = hhmm.split(":").map(Number);
+    return h * 60 + m;
+  }
+  function minsToHHMM(mins) {
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
+  }
+  function nowMinutes(date = /* @__PURE__ */ new Date()) {
+    return date.getHours() * 60 + date.getMinutes();
+  }
+  function getStopMins(route, stopName) {
+    const stop = route.stops.find((s) => s.name === stopName);
+    if (!stop)
+      return null;
+    const totalKm = route.stops[route.stops.length - 1].km;
+    if (totalKm === 0)
+      return toMinutes(route.departure_time);
+    return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
+  }
+  function getStopHHMM(route, stopName) {
+    const m = getStopMins(route, stopName);
+    return m !== null ? minsToHHMM(m) : null;
+  }
+  function getRouteState(route, nowMin = nowMinutes()) {
+    const fromMin = getStopMins(route, route.stops[0].name);
+    const toMin = getStopMins(route, route.stops[route.stops.length - 1].name);
+    if (fromMin === null || toMin === null)
+      return "waiting";
+    if (nowMin < fromMin)
+      return "waiting";
+    if (nowMin > toMin)
+      return "past";
+    return "enroute";
+  }
+  function getCurrentPosition(route, nowMin = nowMinutes()) {
+    const stops = route.stops;
+    const first = stops[0].name;
+    const last = stops[stops.length - 1].name;
+    const state = getRouteState(route, nowMin);
+    if (state === "waiting")
+      return { current: first, next: stops[1]?.name || last };
+    if (state === "past")
+      return { current: last, next: null };
+    let current = first, next = last, currentIdx = 0;
+    for (let i = 0; i < stops.length; i++) {
+      const m = getStopMins(route, stops[i].name);
+      if (m !== null && m <= nowMin) {
+        current = stops[i].name;
+        currentIdx = i;
+      }
+    }
+    if (currentIdx < stops.length - 1)
+      next = stops[currentIdx + 1].name;
+    return { current, next };
+  }
+  function getRouteTimings(route, nowMin = nowMinutes()) {
+    const stops = route.stops;
+    const fromMin = getStopMins(route, stops[0].name);
+    const toMin = getStopMins(route, stops[stops.length - 1].name);
+    const state = getRouteState(route, nowMin);
+    const { current, next } = getCurrentPosition(route, nowMin);
+    const minsToDeparture = fromMin !== null ? Math.max(0, fromMin - nowMin) : null;
+    const minsToArrival = toMin !== null ? Math.max(0, toMin - nowMin) : null;
+    let progress = 0;
+    if (state === "enroute" && toMin !== null && fromMin !== null && toMin > fromMin) {
+      progress = (nowMin - fromMin) / (toMin - fromMin);
+    } else if (state === "past") {
+      progress = 1;
+    } else if (state === "waiting" && minsToDeparture !== null) {
+      progress = Math.max(0, Math.min(1, 1 - minsToDeparture / HERO_MAX_WAIT_MIN));
+    }
+    return {
+      state,
+      fromMin,
+      toMin,
+      minsToDeparture,
+      minsToArrival,
+      currentStop: current,
+      nextStop: next,
+      progress: Math.max(0, Math.min(1, progress))
+    };
+  }
+  function formatCountdownUpper(mins) {
+    if (mins == null)
+      return "";
+    if (mins < 60)
+      return `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412`;
+    const h = Math.floor(mins / 60), m = mins % 60;
+    return m ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
+  }
+
   // src/tabs/community-blocks.js
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
@@ -1699,15 +1790,6 @@ ${post.text}
       el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
   }
-  function busToMinutes(hhmm) {
-    const [h, m] = hhmm.split(":").map(Number);
-    return h * 60 + m;
-  }
-  function busMinsToHHMM(total) {
-    const h = Math.floor(total / 60) % 24;
-    const m = total % 60;
-    return `${pad(h)}:${pad(m)}`;
-  }
   function busIsDayActive(days) {
     const d = (/* @__PURE__ */ new Date()).getDay();
     if (days === "\u0449\u043E\u0434\u043D\u044F")
@@ -1718,14 +1800,28 @@ ${post.text}
       return d >= 1 && d <= 5;
     return true;
   }
-  function busGetStopMins(route, stopName) {
-    const stop = route.stops.find((s) => s.name === stopName);
-    if (!stop)
-      return null;
-    const totalKm = route.stops[route.stops.length - 1].km;
-    if (totalKm === 0)
-      return busToMinutes(route.departure_time);
-    return busToMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
+  function renderBusRouteMap(route, timings) {
+    const stops = route.stops;
+    const totalKm = stops[stops.length - 1].km || 1;
+    const progress = (timings.progress * 100).toFixed(1);
+    const stopsHtml = stops.map((s) => {
+      const pct = totalKm ? s.km / totalKm * 100 : 0;
+      const isCurrent = s.name === timings.currentStop;
+      return `<span class="bhm-stop${isCurrent ? " bhm-stop--current" : ""}" style="left:${pct.toFixed(1)}%"></span>`;
+    }).join("");
+    return `
+    <div class="bus-hero-map" aria-hidden="true">
+      <div class="bhm-track">
+        <div class="bhm-fill" style="width:${progress}%"></div>
+        ${stopsHtml}
+        <span class="bhm-marker" style="left:${progress}%">\u{1F68C}</span>
+      </div>
+      <div class="bhm-ends">
+        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
+        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
+      </div>
+    </div>
+  `;
   }
   async function renderBusBlock() {
     const el = document.getElementById("cm-bus-content");
@@ -1735,8 +1831,7 @@ ${post.text}
       const res = await fetch("./data/schedule.json");
       const data = await res.json();
       const prefs = loadBusPrefs();
-      const now = /* @__PURE__ */ new Date();
-      const nowMin = now.getHours() * 60 + now.getMinutes();
+      const nowMin = nowMinutes();
       const candidates = data.routes.filter((r) => {
         if (!busIsDayActive(r.days))
           return false;
@@ -1750,16 +1845,13 @@ ${post.text}
           if (fi >= ti)
             return false;
         }
-        const startName = prefs.from || r.stops[0].name;
-        const m = busGetStopMins(r, startName);
-        return m !== null && m > nowMin;
+        return getRouteState(r, nowMin) !== "past";
       });
-      candidates.sort((a, b) => {
-        const aFrom = prefs.from || a.stops[0].name;
-        const bFrom = prefs.from || b.stops[0].name;
-        return (busGetStopMins(a, aFrom) || 0) - (busGetStopMins(b, bFrom) || 0);
-      });
-      const next = candidates[0];
+      const enroute = candidates.filter((r) => getRouteState(r, nowMin) === "enroute");
+      const waiting = candidates.filter((r) => getRouteState(r, nowMin) === "waiting");
+      enroute.sort((a, b) => (getRouteTimings(a, nowMin).minsToArrival ?? Infinity) - (getRouteTimings(b, nowMin).minsToArrival ?? Infinity));
+      waiting.sort((a, b) => (getRouteTimings(a, nowMin).minsToDeparture ?? Infinity) - (getRouteTimings(b, nowMin).minsToDeparture ?? Infinity));
+      const next = enroute[0] || waiting[0];
       if (!next) {
         el.innerHTML = `
         <div class="cm-block-empty">
@@ -1770,45 +1862,50 @@ ${post.text}
       }
       const fromName = prefs.from || next.stops[0].name;
       const toName = prefs.to || next.stops[next.stops.length - 1].name;
-      const fromMin = busGetStopMins(next, fromName);
-      const toMin = busGetStopMins(next, toName);
-      const fromHHMM = busMinsToHHMM(fromMin);
-      const toHHMM = busMinsToHHMM(toMin);
-      const minsLeft = fromMin - nowMin;
-      const urgent = minsLeft <= 10;
-      const countdown = minsLeft < 60 ? `\u0447\u0435\u0440\u0435\u0437 ${minsLeft} \u0445\u0432` : (() => {
-        const h = Math.floor(minsLeft / 60), m = minsLeft % 60;
-        return m ? `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `\u0447\u0435\u0440\u0435\u0437 ${h} \u0433\u043E\u0434`;
-      })();
-      const progress = busHeroProgress(minsLeft) * 100;
+      const fromMin = getStopMins(next, fromName);
+      const toMin = getStopMins(next, toName);
+      const fromHHMM = minsToHHMM(fromMin);
+      const toHHMM = minsToHHMM(toMin);
+      const timings = getRouteTimings(next, nowMin);
+      const isEnroute = timings.state === "enroute";
+      const urgent = timings.state === "waiting" && timings.minsToDeparture <= 10;
+      let topLabel;
+      if (isEnroute) {
+        topLabel = `\u{1F68C} \u0417\u0410\u0420\u0410\u0417 \u0423 ${(timings.currentStop || "\u2014").toUpperCase()}`;
+      } else if (urgent) {
+        topLabel = `\u0427\u0415\u0420\u0415\u0417 ${timings.minsToDeparture} \u0425\u0412`;
+      } else {
+        topLabel = formatCountdownUpper(timings.minsToDeparture);
+      }
+      const timeRow = isEnroute ? `<div class="bus-hero-times">
+           <span class="bus-hero-time">\u23F1 ${timings.minsToArrival} \u0425\u0412</span>
+           <span class="bus-hero-arrow">\xB7</span>
+           <span class="bus-hero-time bus-hero-time--to">\u0434\u043E ${escapeHtml(toHHMM || "\u2014")}</span>
+         </div>` : `<div class="bus-hero-times">
+           <span class="bus-hero-time">${escapeHtml(fromHHMM || "\u2014")}</span>
+           <span class="bus-hero-arrow">\u2192</span>
+           <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM || "\u2014")}</span>
+         </div>`;
       const durationMin = toMin - fromMin;
       const durationStr = durationMin < 60 ? `${durationMin} \u0445\u0432` : (() => {
         const h = Math.floor(durationMin / 60), m = durationMin % 60;
         return m ? `${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
       })();
-      const priceStr = next.price ? `${next.price} \u0433\u0440\u043D` : "";
-      const driverStr = next.driver || "";
-      const metaParts = [priceStr, durationStr, driverStr].filter(Boolean);
+      const carrier = data.carriers?.[next.carrier]?.name || "";
+      const metaParts = [durationStr, carrier].filter(Boolean);
       const metaHtml = metaParts.map(
         (p, i) => i === 0 ? `<span>${escapeHtml(p)}</span>` : `<span class="bus-hero-meta-sep">\xB7</span><span>${escapeHtml(p)}</span>`
       ).join("");
       el.innerHTML = `
-      <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}" data-switch-tab="buses">
+      <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}${isEnroute ? " bus-hero--enroute" : ""}" data-switch-tab="buses">
         <div class="bus-hero-top">
-          ${urgent ? `<span class="bus-hero-urgent">\u0447\u0435\u0440\u0435\u0437 ${minsLeft} \u0445\u0432</span>` : `<span class="bus-hero-countdown">${escapeHtml(countdown)}</span>`}
+          <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
+          ${urgent ? '<span class="bus-hero-urgent">\u26A1 \u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>' : ""}
         </div>
-        <div class="bus-hero-row">
-          <div class="bus-hero-times">
-            <span class="bus-hero-time">${escapeHtml(fromHHMM)}</span>
-            <span class="bus-hero-arrow">\u2192</span>
-            <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM)}</span>
-          </div>
-        </div>
+        <div class="bus-hero-row">${timeRow}</div>
         <div class="bus-hero-route">${escapeHtml(fromName)} \u2192 ${escapeHtml(toName)}</div>
         <div class="bus-hero-meta">${metaHtml}</div>
-        <div class="bus-hero-progress">
-          <div class="bus-hero-progress-fill" style="width:${progress}%"></div>
-        </div>
+        ${renderBusRouteMap(next, timings)}
       </div>
     `;
     } catch {
@@ -2906,20 +3003,6 @@ ${ev.description}`
     } catch {
     }
   }
-  function toMinutes(hhmm) {
-    const [h, m] = hhmm.split(":").map(Number);
-    return h * 60 + m;
-  }
-  function minsToHHMM(total) {
-    const h = Math.floor(total / 60) % 24;
-    const m = total % 60;
-    return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
-  }
-  function minutesUntil(hhmm) {
-    const now = /* @__PURE__ */ new Date();
-    const diff = toMinutes(hhmm) - (now.getHours() * 60 + now.getMinutes());
-    return diff > 0 ? diff : null;
-  }
   function isDayActive(days) {
     const d = (/* @__PURE__ */ new Date()).getDay();
     if (days === "\u0449\u043E\u0434\u043D\u044F")
@@ -2929,19 +3012,6 @@ ${ev.description}`
     if (days === "\u043F\u043D-\u043F\u0442")
       return d >= 1 && d <= 5;
     return true;
-  }
-  function getStopMins(route, stopName) {
-    const stop = route.stops.find((s) => s.name === stopName);
-    if (!stop)
-      return null;
-    const totalKm = route.stops[route.stops.length - 1].km;
-    if (totalKm === 0)
-      return toMinutes(route.departure_time);
-    return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
-  }
-  function getStopHHMM(route, stopName) {
-    const m = getStopMins(route, stopName);
-    return m !== null ? minsToHHMM(m) : null;
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
@@ -2975,11 +3045,7 @@ ${ev.description}`
     return true;
   }
   function isPastRoute(route) {
-    const m = getStopMins(route, getEffectiveFrom(route));
-    if (m === null)
-      return true;
-    const now = /* @__PURE__ */ new Date();
-    return m < now.getHours() * 60 + now.getMinutes();
+    return getRouteState(route) === "past";
   }
   function getFilteredRoutes() {
     if (!busData)
@@ -2991,7 +3057,16 @@ ${ev.description}`
     });
   }
   function findNextRoute() {
-    return getFilteredRoutes().find((r) => !isPastRoute(r)) || null;
+    const all = getFilteredRoutes();
+    const enroute = all.filter((r) => getRouteState(r) === "enroute");
+    if (enroute.length) {
+      return enroute.sort((a, b) => {
+        const aT = getRouteTimings(a).minsToArrival ?? Infinity;
+        const bT = getRouteTimings(b).minsToArrival ?? Infinity;
+        return aT - bT;
+      })[0];
+    }
+    return all.find((r) => getRouteState(r) === "waiting") || null;
   }
   function getAllStops() {
     if (!busData)
@@ -3080,6 +3155,29 @@ ${ev.description}`
     renderSmartRow();
     renderRouteList();
   }
+  function renderRouteMap(route, timings) {
+    const stops = route.stops;
+    const totalKm = stops[stops.length - 1].km || 1;
+    const progress = (timings.progress * 100).toFixed(1);
+    const stopsHtml = stops.map((s, i) => {
+      const pct = totalKm ? s.km / totalKm * 100 : 0;
+      const isCurrent = s.name === timings.currentStop;
+      return `<span class="bhm-stop${isCurrent ? " bhm-stop--current" : ""}" style="left:${pct.toFixed(1)}%"></span>`;
+    }).join("");
+    return `
+    <div class="bus-hero-map" aria-hidden="true">
+      <div class="bhm-track">
+        <div class="bhm-fill" style="width:${progress}%"></div>
+        ${stopsHtml}
+        <span class="bhm-marker" style="left:${progress}%">\u{1F68C}</span>
+      </div>
+      <div class="bhm-ends">
+        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
+        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
+      </div>
+    </div>
+  `;
+  }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
@@ -3093,40 +3191,42 @@ ${ev.description}`
     const effTo = getEffectiveTo(next);
     const fromTime = getStopHHMM(next, effFrom);
     const toTime = getStopHHMM(next, effTo);
-    const mins = minutesUntil(fromTime);
-    const urgent = mins !== null && mins <= 10;
-    const fromMins = getStopMins(next, effFrom) || 0;
-    const toMins = getStopMins(next, effTo) || 0;
-    const segDur = toMins - fromMins;
-    const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
-    const price = getSegmentPrice(next, effFrom, effTo);
+    const timings = getRouteTimings(next);
     const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: "0332 224 500" };
-    const progress = busHeroProgress(mins);
-    const countdownText = mins !== null ? mins < 60 ? `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${Math.floor(mins / 60)} \u0413\u041E\u0414 ${mins % 60 ? mins % 60 + " \u0425\u0412" : ""}` : "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
+    const price = getSegmentPrice(next, effFrom, effTo);
+    const urgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
+    const isEnroute = timings.state === "enroute";
+    let topLabel;
+    if (isEnroute) {
+      topLabel = `\u{1F68C} \u0417\u0410\u0420\u0410\u0417 \u0423 ${(timings.currentStop || "\u2014").toUpperCase()}`;
+    } else if (urgent) {
+      topLabel = `\u0427\u0415\u0420\u0415\u0417 ${timings.minsToDeparture} \u0425\u0412`;
+    } else {
+      topLabel = formatCountdownUpper(timings.minsToDeparture) || "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
+    }
+    const timeRow = isEnroute ? `<div class="bus-hero-times">
+         <span class="bus-hero-time">\u23F1 ${timings.minsToArrival} \u0425\u0412</span>
+         <span class="bus-hero-arrow">\xB7</span>
+         <span class="bus-hero-time bus-hero-time--to">\u0434\u043E ${escapeHtml(toTime || "\u2014")}</span>
+       </div>` : `<div class="bus-hero-times">
+         <span class="bus-hero-time">${escapeHtml(fromTime || "\u2014")}</span>
+         <span class="bus-hero-arrow">\u2192</span>
+         <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || "\u2014")}</span>
+       </div>`;
     el.innerHTML = `
-    <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}">
+    <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}${isEnroute ? " bus-hero--enroute" : ""}">
       <div class="bus-hero-top">
-        <span class="bus-hero-countdown">${escapeHtml(countdownText)}</span>
+        <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
         ${urgent ? '<span class="bus-hero-urgent">\u26A1 \u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>' : ""}
       </div>
-      <div class="bus-hero-row">
-        <div class="bus-hero-times">
-          <span class="bus-hero-time">${escapeHtml(fromTime || "\u2014")}</span>
-          <span class="bus-hero-arrow">\u2192</span>
-          <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || "\u2014")}</span>
-        </div>
-      </div>
+      <div class="bus-hero-row">${timeRow}</div>
       <div class="bus-hero-route">${escapeHtml(effFrom)} \u2192 ${escapeHtml(effTo)}</div>
       <div class="bus-hero-meta">
         <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
         <span class="bus-hero-meta-sep">\xB7</span>
-        <span>${escapeHtml(durStr)}</span>
-        <span class="bus-hero-meta-sep">\xB7</span>
         <span>${escapeHtml(carrier.name)}</span>
       </div>
-      <div class="bus-hero-progress" aria-hidden="true">
-        <div class="bus-hero-progress-fill" style="width: ${(progress * 100).toFixed(1)}%"></div>
-      </div>
+      ${renderRouteMap(next, timings)}
     </div>
   `;
   }
