@@ -28,7 +28,7 @@ spільним станом для всіх юзерів.
 | ✅ | ~~Inline-коментарі у chat/greeting~~ |
 | ✅ | ~~Supabase Realtime — миттєва синхронізація реакцій/коментарів~~ |
 
-| ☐ | **Спринт 2.** Supabase Storage + upload фото з форми (зараз base64) |
+| ✅ | ~~**Спринт 2.** Supabase Storage + upload фото з форми~~ — **DONE 2026-05-18**. `uploadPhotoToStorage(blob)` у `supabase.js` → bucket `community-photos` (SQL уже був у `supabase_schema.sql`). `community-modal.js` тепер upload-ить blob у фоні з blob:URL preview + spinner поки заливається. Кнопка submit блокується через `uploadingCount`. Захист від race на rare випадок blob:URL у payload. Backward-compat: старі пости з base64 у `posts.photos[]` показуються як є |
 
 ### Фаза 3 — Supabase + «Світло» (паралельно з Фазою 9 — той самий Supabase)
 

@@ -8,7 +8,7 @@
 // Submit-handler наразі заглушка (Фаза 9 Спринт 1 → Supabase POST у posts).
 
 import { showToast, escapeHtml } from '../core/utils.js';
-import { submitPost, isSupabaseReady } from '../core/supabase.js';
+import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 
 const TYPE_TABS = [
   { id: 'board',    emoji: '🛒', label: 'Оголошення' },
@@ -52,7 +52,9 @@ function parseTags(str) {
     .map(s => s.startsWith('#') ? s : '#' + s);
 }
 
-// Стискаємо фото на клієнті
+// Стискаємо фото на клієнті → повертаємо Blob (JPEG ~50-200KB).
+// Раніше повертали dataURL (base64) — лишило ~150KB тексту у БД на кожне фото.
+// Тепер blob йде у Supabase Storage, у БД зберігається тільки публічний URL.
 function compressImage(file) {
   return new Promise(function executor(resolve, reject) {
     const reader = new FileReader();
@@ -67,7 +69,11 @@ function compressImage(file) {
         canvas.width = Math.round(w);
         canvas.height = Math.round(h);
         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL('image/jpeg', 0.78));
+        canvas.toBlob(
+          blob => blob ? resolve(blob) : reject(new Error('toBlob failed')),
+          'image/jpeg',
+          0.78,
+        );
       };
       img.onerror = reject;
       img.src = e.target.result;
@@ -85,7 +91,8 @@ export function openBoardModal() {
     type: 'board',
     // SPILNI
     text: '',
-    photos: [],
+    photos: [],         // URL-и фото: blob: під час upload, https: після
+    uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
     author: '',
     // BOARD
     category: 'оголошення',
@@ -330,23 +337,58 @@ export function openBoardModal() {
       input.addEventListener('change', async () => {
         const file = input.files[0];
         if (!file) return;
+
+        // 1. Стискаємо у Blob і показуємо одразу через blob:URL — preview миттєвий
+        let blob;
         try {
-          const dataUrl = await compressImage(file);
-          state.photos[idx] = dataUrl;
-          slot.classList.add('filled');
-          slot.style.backgroundImage = `url("${dataUrl}")`;
-          slot.querySelector('.bm-photo-plus').textContent = '✕';
-          slot.querySelector('.bm-photo-plus').classList.add('bm-photo-remove');
-          renderPreview();
+          blob = await compressImage(file);
         } catch {
-          showToast('Не вдалось завантажити фото', 3000);
+          showToast('Не вдалось обробити фото', 3000);
+          return;
         }
+        const localUrl = URL.createObjectURL(blob);
+        state.photos[idx] = localUrl;
+        slot.classList.add('filled', 'uploading');
+        slot.style.backgroundImage = `url("${localUrl}")`;
+        slot.querySelector('.bm-photo-plus').textContent = '✕';
+        slot.querySelector('.bm-photo-plus').classList.add('bm-photo-remove');
+        renderPreview();
+
+        // 2. У фоні заливаємо у Supabase Storage, замінюємо blob:URL на https:URL
+        state.uploadingCount++;
+        updateSubmitState();
+        const { url, error } = await uploadPhotoToStorage(blob);
+        state.uploadingCount--;
+        updateSubmitState();
+
+        if (error || !url) {
+          showToast('Не вдалось зберегти фото — спробуй ще раз', 3500);
+          URL.revokeObjectURL(localUrl);
+          state.photos[idx] = null;
+          slot.classList.remove('filled', 'uploading');
+          slot.style.backgroundImage = '';
+          const span = slot.querySelector('.bm-photo-plus');
+          span.textContent = '＋';
+          span.classList.remove('bm-photo-remove');
+          input.value = '';
+          renderPreview();
+          return;
+        }
+
+        // Slot все ще цей самий і користувач не видалив його за час upload
+        if (state.photos[idx] === localUrl) {
+          state.photos[idx] = url;
+          slot.classList.remove('uploading');
+        }
+        URL.revokeObjectURL(localUrl);
       });
       slot.querySelector('.bm-photo-plus').addEventListener('click', e => {
         if (slot.classList.contains('filled')) {
           e.preventDefault();
+          const old = state.photos[idx];
+          if (old && old.startsWith('blob:')) URL.revokeObjectURL(old);
           state.photos[idx] = null;
-          slot.classList.remove('filled');
+          slot.classList.remove('filled', 'uploading');
           slot.style.backgroundImage = '';
           const span = slot.querySelector('.bm-photo-plus');
           span.textContent = '＋';
@@ -356,6 +398,19 @@ export function openBoardModal() {
         }
       });
     });
+  }
+
+  // Disable кнопки «Опублікувати» поки хоч одне фото вантажиться у Storage
+  function updateSubmitState() {
+    const btn = wrap.querySelector('.cm-board-submit');
+    if (!btn) return;
+    if (state.uploadingCount > 0) {
+      btn.disabled = true;
+      btn.textContent = `Завантаження фото…`;
+    } else {
+      btn.disabled = false;
+      btn.textContent = 'Опублікувати';
+    }
   }
 
   // ── LIVE-preview залежно від типу ──
@@ -451,6 +506,12 @@ export function openBoardModal() {
     if (state.type === 'greeting' && !state.title.trim()) {
       showToast('Вкажіть кому вітання', 2500);
       wrap.querySelector('#bm-title')?.focus();
+      return;
+    }
+    // Захист: не пускаємо blob:URL у БД (фото ще не завантажилось у Storage).
+    // updateSubmitState() блокує кнопку, але це підстраховка на випадок race.
+    if (state.uploadingCount > 0 || state.photos.some(p => p && p.startsWith('blob:'))) {
+      showToast('Зачекай, фото завантажується…', 2500);
       return;
     }
 

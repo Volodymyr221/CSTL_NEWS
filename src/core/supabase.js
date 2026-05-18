@@ -181,6 +181,40 @@ export async function addComment(postId, author, text) {
   return { ok: true, comment: data };
 }
 
+// ── STORAGE: завантаження фото у bucket community-photos ─────────────────
+// Раніше фото зберігались як base64 у posts.photos[] (TEXT[]) — кожне ~150KB
+// тексту у БД, max 3 фото = 450KB на пост. При 100+ постах таблиця посту
+// роздувалась. Тепер фото йдуть у Supabase Storage, у БД — тільки публічні
+// URL (короткі рядки). Bucket створено у scripts/supabase_schema.sql.
+//
+// Аргумент: Blob (зазвичай 50-200KB після canvas-стиснення).
+// Шлях у бакеті: <anonId>/<timestamp>-<random>.jpg (анонімні юзери розділяються).
+// Повертає: { url, error }. url — публічний URL для <img src>.
+export async function uploadPhotoToStorage(blob) {
+  if (!supa) return { url: null, error: 'Supabase не підключений' };
+  if (!blob) return { url: null, error: 'Порожній blob' };
+
+  const ext  = (blob.type && blob.type.split('/')[1]) || 'jpg';
+  const rand = Math.random().toString(36).slice(2, 10);
+  const path = `${getAnonId()}/${Date.now()}-${rand}.${ext}`;
+
+  const { error: uploadError } = await supa.storage
+    .from('community-photos')
+    .upload(path, blob, {
+      contentType: blob.type || 'image/jpeg',
+      cacheControl: '31536000',  // 1 рік — фото незмінне
+      upsert: false,
+    });
+
+  if (uploadError) {
+    console.warn('[supabase] uploadPhotoToStorage error:', uploadError.message);
+    return { url: null, error: uploadError.message };
+  }
+
+  const { data } = supa.storage.from('community-photos').getPublicUrl(path);
+  return { url: data?.publicUrl || null, error: null };
+}
+
 // ── REALTIME — підписка на зміни таблиць ─────────────────────────────────
 // Викликає callback при INSERT/UPDATE/DELETE у відповідній таблиці.
 // Повертає функцію-unsubscribe.

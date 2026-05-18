@@ -1015,6 +1015,34 @@
   justify-content: center;
 }
 
+/* Стан upload — фото локально показане, але ще заливається у Supabase Storage.
+   Темна напівпрозора плівка + spinner. Завантажилось → клас знімається. */
+.bm-photo-slot.uploading::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  border-radius: inherit;
+  z-index: 1;
+}
+.bm-photo-slot.uploading::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 24px;
+  margin: -12px 0 0 -12px;
+  border: 2.5px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: bm-spin 0.8s linear infinite;
+  z-index: 2;
+}
+@keyframes bm-spin {
+  to { transform: rotate(360deg); }
+}
+
 /* Live-preview секція */
 .bm-preview-section {
   margin: 18px -18px 14px;
