@@ -279,3 +279,63 @@ html, body {
   flex-wrap: wrap;
 }
 
+/* ===== TABLO DESIGN TOKENS (табло-стиль УЗ-станції, 18.05.2026) =====
+   Спільні класи для «countdown / найближча подія» сценаріїв.
+   Використовуються у Автобусах (.bus-hero — окремий, не чіпаємо),
+   на вкладці Подій (.events-hero), у блоку Громади (.cm-block--event).
+   Темний сталево-зелений фон + бурштинові цифри + моноширний шрифт =
+   функціональна мова «скільки лишилось до». */
+.tablo-hero {
+  background: linear-gradient(135deg, #2F3E36 0%, #1F2B25 100%);
+  border-radius: 12px;
+  padding: 16px 18px 14px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  color: #ffffff;
+  position: relative;
+}
+.tablo-hero--urgent {
+  background: linear-gradient(135deg, #6B1F2A 0%, #4A1118 100%);
+}
+.tablo-hero--empty {
+  background: var(--bg-card);
+  color: var(--ink-soft);
+  text-align: center;
+  padding: 22px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Капсула countdown — «ЧЕРЕЗ 3 ДНІ» / «ЗАВТРА» / «СЬОГОДНІ» */
+.tablo-countdown {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.28);
+  color: #FBBF24;
+  padding: 3px 9px;
+  border-radius: 4px;
+  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
+  display: inline-block;
+  white-space: nowrap;
+}
+.tablo-hero--urgent .tablo-countdown {
+  color: #ffffff;
+  background: rgba(255,255,255,0.10);
+  border-color: rgba(255,255,255,0.35);
+}
+
+/* Моноширні цифри (час/дата) — як на справжньому табло */
+.tablo-time-mono {
+  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0;
+}
+.tablo-time-accent { color: #FBBF24; }
+
+/* Прозорості тексту на темному фоні */
+.tablo-soft { color: rgba(255,255,255,0.65); }
+.tablo-mid  { color: rgba(255,255,255,0.85); }
+.tablo-sep  { color: rgba(255,255,255,0.30); }
+
