@@ -60,8 +60,8 @@ spільним станом для всіх юзерів.
 
 | ✓ | Задача |
 |---|--------|
-| ☐ | Підключити **Plausible.io** (9$/міс) або **Goatcounter** (безкоштовний) — аналітика DAU/MAU. Без неї нема цифр для перших переговорів з рекламодавцями |
-| ☐ | Таблиця `ads` у Supabase зі схемою з `docs/MONETIZATION.md` (закласти у Фазі 9 Спринт 1, навіть якщо ще не використовуємо) |
+| ✅ | ~~Підключити **Plausible.io** або **Goatcounter**~~ — **DONE 2026-05-18**. Goatcounter `cstl-life.goatcounter.com` у `index.html:154-155` (безкоштовно, privacy-first, без cookies) |
+| ✅ | ~~Таблиця `ads` у Supabase~~ — **DONE 2026-05-17/18**. `ads` + `ad_events` створені у `scripts/supabase_schema.sql` (закладені, поки не використовуються у фронті) |
 | ☐ | Сторінка `/реклама` — статичний HTML з прайс-листом + контактна форма (email на Вову) |
 | ☐ | Прайс-лист PDF (200-800 грн/міс залежно від формату). Роздати власникам бізнесу в Олиці на касах |
 | ☐ | Перші 3-5 безкоштовних реклам як кейси (Smoke_Castle, Kino_Castle, друзі-підприємці) |
@@ -188,3 +188,11 @@ spільним станом для всіх юзерів.
 | 2026-05-17 | **Popup-реакції (як iMessage)** — замість 4 постійних emoji одна кнопка «🙂+» зліва → тап відкриває бабл з 8 emoji (❤️👍👏🔥😂😮😢🙏). Single emoji per post. SVG-іконки save/share (BOOKMARK_OUTLINE/FILLED + iOS-style SHARE_ICON) замість 🤍/💾/📤 — видно на всіх кольорах стікерів | `d1abc49` |
 | 2026-05-17 | **Кнопка коментарів 💬 N** — поряд з реакціями, лічильник кількості. Тап → bottom-sheet з полем введення + список коментарів (chat-style з кольоровими аватарками). localStorage `cstl-comments-v1`. Лічильник синхронізується на ВСІХ кнопках з тим самим post-id (включно zoom-модалку board-стікера) | `e8a0570` |
 | 2026-05-17 | **Адмінка `/admin.html`** — повна окрема сторінка з 3 табами (Модерація / Оголошення / Адміни). Supabase SDK з CDN, magic-link auth, whitelist через таблицю `admins`. Якщо ключі не задані — показує інструкцію як заповнити (не-blocking) | `4aa33ec` |
+| 2026-05-17 | **Supabase live підключення** — Дошка і submit-форма реально POST у `posts`, прихований вхід в адмінку через 5 тапів на лого, debug-вивід при no-access, SQL-патч `supabase_fix_rls.sql` (catch-22 RLS), ідемпотентний schema.sql | `0705a3d` · `2bc666a` · `1c149aa` · `5f0dea6` |
+| 2026-05-18 | **Адмінка — email+password auth** замість magic-link (rate limit Supabase Free ~4 листи/год), додано вкладку Налаштування з recovery flow, кнопка «← На сайт» без logout | `7b1d395` · `fb4a406` · `f040992` |
+| 2026-05-18 | **Дошка через Supabase** — реакції/коментарі у БД (раніше localStorage), single-emoji-per-user, inline коментарі і у greeting, різні actions для типів (реакція в куті board, inline тільки у chat/greeting), `cover_emoji`/`cover_gradient` у posts | `751892c` · `af5b41b` · `8badfed` |
+| 2026-05-18 | **Supabase Realtime** через WebSocket — лайки/коментарі оновлюються миттєво у всіх юзерів. Optimistic updates у UI, фоном sync з БД. Топ-3 emoji з окремими лічильниками на тригері. Фікс `formatTime(null)` (раніше 1.01.1970) | `17d1cf2` |
+| 2026-05-18 | **Дошка UX** — свайп hero фото Олики (3 фото, fade 0.55s), свайп міні-блоку на Громаді (4 типи), таб «Усі» → «Актуальні» (3 доби), CTA «Перейти на …» з підхопленням активного типу, controls-bar fixed (iOS Safari fix), iOS zoom-fix для inline коментарів (font-size 16) | `d18e2e9` · `f879adc` · `57b6512` · `57f7034` · `22304c3` · `70d0f56` · `7cf72f8` · `6aea0f1` · `db575e3` |
+| 2026-05-18 | **Автобуси — табло-стиль (УЗ-станція)** — темний `#2F3E36` фон, SF Mono бурштин `#FBBF24` для часу, «ЧЕРЕЗ X ГОД X ХВ» капсула з border, border-radius 22→12, urgent `#6B1F2A` замість рожевого. Той самий стиль перенесено у блок Громади (`cm-block--bus`) | `ff40e17` · `1c3b7c9` |
+| 2026-05-18 | **GoatCounter аналітика** — `cstl-life.goatcounter.com` підключено у `index.html` (privacy-first, без cookies, безкоштовно). Закриває п.1 Pre-revenue groundwork | `549dc9d` |
+| 2026-05-18 | **Адмінка — 2 нові таби: Опубліковані пости + Коментарі** — фільтр `status='published'` з delete-кнопками + список з `comments` з delete-кнопками. Тепер 6 табів усього. Закриває обидві задачі з SESSION_STATE «🔜 що далі» | `0552b53` |
