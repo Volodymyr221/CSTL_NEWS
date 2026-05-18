@@ -525,18 +525,12 @@ function renderMiniCard(item, type) {
   return '';
 }
 
-// ── Блок 5: Найближча подія громади (фільтр по 17 селах ОТГ) ─────────────────
-
-const OTG_VILLAGES = [
-  'Олика', 'Горянівка', 'Дерно', 'Дідичі', 'Жорнище', 'Залісоче',
-  'Котів', 'Личани', 'Метельне', 'Мощаниця', 'Носовичі', 'Одеради',
-  'Покащів', 'Путилівка', 'Ставок', 'Хромяків', 'Чемерин',
-];
-
-function isLocalEvent(ev) {
-  const loc = (ev.location || '').toLowerCase();
-  return OTG_VILLAGES.some(v => loc.includes(v.toLowerCase()));
-}
+// ── Блок 5: Найближча подія громади ───────────────────────────────────────────
+// Раніше тут був фільтр isLocalEvent() по списку OTG_VILLAGES — він шукав
+// підрядок «олика» у location, але ламався на відмінках («Олицький замок» не
+// містить «олика», а лише «олиц»). Прибрано 18.05.2026.
+// У data/events.json і так зберігаються ТІЛЬКИ локальні події (RSS-новини
+// мають auto:true і виключаються тут само як у вкладці Подій).
 
 // Українська плюралізація (1 день, 2 дні, 5 днів) — локальна копія з events.js
 function pluralUA(n, one, few, many) {
@@ -578,8 +572,8 @@ export async function renderEventBlock() {
     const events = await res.json();
     const today  = new Date(); today.setHours(0, 0, 0, 0);
     const next = events
+      .filter(e => !e.auto)  // виключаємо RSS-новини (auto:true) — як у вкладці Подій
       .filter(e => new Date(e.date + 'T00:00:00') >= today)
-      .filter(isLocalEvent)
       .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
 
     if (!next) {

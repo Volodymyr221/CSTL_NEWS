@@ -1996,29 +1996,6 @@ ${post.text}
     }
     return "";
   }
-  var OTG_VILLAGES = [
-    "\u041E\u043B\u0438\u043A\u0430",
-    "\u0413\u043E\u0440\u044F\u043D\u0456\u0432\u043A\u0430",
-    "\u0414\u0435\u0440\u043D\u043E",
-    "\u0414\u0456\u0434\u0438\u0447\u0456",
-    "\u0416\u043E\u0440\u043D\u0438\u0449\u0435",
-    "\u0417\u0430\u043B\u0456\u0441\u043E\u0447\u0435",
-    "\u041A\u043E\u0442\u0456\u0432",
-    "\u041B\u0438\u0447\u0430\u043D\u0438",
-    "\u041C\u0435\u0442\u0435\u043B\u044C\u043D\u0435",
-    "\u041C\u043E\u0449\u0430\u043D\u0438\u0446\u044F",
-    "\u041D\u043E\u0441\u043E\u0432\u0438\u0447\u0456",
-    "\u041E\u0434\u0435\u0440\u0430\u0434\u0438",
-    "\u041F\u043E\u043A\u0430\u0449\u0456\u0432",
-    "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
-    "\u0421\u0442\u0430\u0432\u043E\u043A",
-    "\u0425\u0440\u043E\u043C\u044F\u043A\u0456\u0432",
-    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D"
-  ];
-  function isLocalEvent(ev) {
-    const loc = (ev.location || "").toLowerCase();
-    return OTG_VILLAGES.some((v) => loc.includes(v.toLowerCase()));
-  }
   function pluralUA(n, one, few, many) {
     const m10 = n % 10, m100 = n % 100;
     if (m10 === 1 && m100 !== 11)
@@ -2067,7 +2044,7 @@ ${post.text}
       const events = await res.json();
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const next = events.filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).filter(isLocalEvent).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+      const next = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
       if (!next) {
         el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
         return;
