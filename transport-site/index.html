@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ВантажХаб — вантажоперевезення по Україні та Європі. Вантажі від 50 кг до 100 т. Власний парк, GPS-контроль, страхування." />
+  <meta name="theme-color" content="#0a1628" />
+  <title>ВантажХаб — вантажоперевезення Україна / Європа</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Manrope:wght@500;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- ──────────────── HEADER ──────────────── -->
+<header class="site-header" id="top">
+  <div class="container header-row">
+    <a href="#top" class="brand" aria-label="ВантажХаб — на головну">
+      <span class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="2" y="11" width="18" height="12" rx="1.5" fill="currentColor"/>
+          <path d="M20 14h6l4 4v5h-10V14z" fill="currentColor" opacity=".6"/>
+          <circle cx="9" cy="25" r="3" fill="#0a1628" stroke="currentColor" stroke-width="2"/>
+          <circle cx="24" cy="25" r="3" fill="#0a1628" stroke="currentColor" stroke-width="2"/>
+        </svg>
+      </span>
+      <span class="brand-text">Вантаж<span>Хаб</span></span>
+    </a>
+
+    <nav class="nav-main" aria-label="Основна навігація">
+      <a href="#services">Послуги</a>
+      <a href="#fleet">Парк</a>
+      <a href="#routes">Маршрути</a>
+      <a href="#why">Чому ми</a>
+      <a href="#contact">Контакти</a>
+    </nav>
+
+    <a href="tel:+380999701001" class="header-phone">
+      <span class="dot"></span>
+      +380 99 970 10 01
+    </a>
+
+    <button class="burger" aria-label="Меню" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
+  </div>
+</header>
+
+<!-- ──────────────── HERO ──────────────── -->
+<section class="hero">
+  <div class="container hero-grid">
+    <div class="hero-text">
+      <div class="hero-eyebrow">
+        <span class="pulse"></span> Диспетчер на лінії · 24/7
+      </div>
+      <h1 class="hero-title">
+        Вантажі<br/>
+        <span class="accent">будь-якої складності.</span><br/>
+        Без зайвих рухів.
+      </h1>
+      <p class="hero-sub">
+        Власний парк від 2 до 22 тонн, низькорамні трали для спецтехніки,
+        міжнародні рейси по ЄС. Беремо вантаж від 50 кг до 100 т.
+      </p>
+      <div class="hero-cta">
+        <a href="#contact" class="btn btn-primary">Замовити рейс</a>
+        <a href="#calc" class="btn btn-ghost">Розрахувати вартість →</a>
+      </div>
+
+      <ul class="hero-stats">
+        <li><strong>12+</strong><span>років на ринку</span></li>
+        <li><strong>250+</strong><span>одиниць техніки</span></li>
+        <li><strong>18 000</strong><span>виконаних рейсів</span></li>
+        <li><strong>24/7</strong><span>диспетчерська</span></li>
+      </ul>
+    </div>
+
+    <div class="hero-visual" aria-hidden="true">
+      <div class="hero-card">
+        <div class="hero-card-head">
+          <span class="route-badge">LIVE</span>
+          <span class="route-id">#VH-21847</span>
+        </div>
+        <div class="route-line">
+          <div class="route-point">
+            <span class="point-city">Луцьк</span>
+            <span class="point-time">08:40</span>
+          </div>
+          <div class="route-arrow">
+            <div class="route-track"><div class="route-progress"></div></div>
+            <span class="route-distance">612 км</span>
+          </div>
+          <div class="route-point right">
+            <span class="point-city">Варшава</span>
+            <span class="point-time">17:20</span>
+          </div>
+        </div>
+        <div class="hero-card-grid">
+          <div>
+            <span class="lbl">Вантаж</span>
+            <span class="val">Електроніка · 4.2 т</span>
+          </div>
+          <div>
+            <span class="lbl">Транспорт</span>
+            <span class="val">MAN TGX · тент</span>
+          </div>
+          <div>
+            <span class="lbl">GPS</span>
+            <span class="val ok">● у дорозі</span>
+          </div>
+          <div>
+            <span class="lbl">Страхування</span>
+            <span class="val">CMR · €200k</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="hero-truck">
+        <svg viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
+          <!-- кузов -->
+          <rect x="8" y="40" width="190" height="70" rx="4" fill="#142339" stroke="#f5a623" stroke-width="2"/>
+          <rect x="20" y="52" width="166" height="46" rx="2" fill="#0a1628"/>
+          <!-- кабіна -->
+          <path d="M198 50 L256 50 L286 78 L286 110 L198 110 Z" fill="#1a2d4a" stroke="#f5a623" stroke-width="2"/>
+          <rect x="216" y="58" width="50" height="22" rx="2" fill="#7dd3fc" opacity=".25"/>
+          <!-- бампер -->
+          <rect x="266" y="98" width="22" height="6" fill="#f5a623"/>
+          <!-- колеса -->
+          <circle cx="56" cy="112" r="14" fill="#0a1628" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="56" cy="112" r="5" fill="#f5a623"/>
+          <circle cx="124" cy="112" r="14" fill="#0a1628" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="124" cy="112" r="5" fill="#f5a623"/>
+          <circle cx="236" cy="112" r="14" fill="#0a1628" stroke="#f5a623" stroke-width="2"/>
+          <circle cx="236" cy="112" r="5" fill="#f5a623"/>
+          <!-- логотип на кузові -->
+          <text x="100" y="80" text-anchor="middle" fill="#f5a623" font-family="Manrope" font-weight="800" font-size="20" letter-spacing="2">ВАНТАЖ•ХАБ</text>
+        </svg>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────── SERVICES ──────────────── -->
+<section class="section services" id="services">
+  <div class="container">
+    <header class="section-head">
+      <span class="kicker">01 — Що ми возимо</span>
+      <h2>Шість напрямків. Один диспетчер.</h2>
+      <p>Підбираємо транспорт під вантаж за 15 хвилин. Перевіряємо документи, страхуємо, виходимо на маршрут.</p>
+    </header>
+
+    <div class="services-grid">
+      <article class="service-card">
+        <div class="service-num">01</div>
+        <h3>Міські перевезення</h3>
+        <p>Газель, бус, 5-тонник для доставки по місту. Вантажники за бажанням.</p>
+        <ul class="tags"><li>від 2 год</li><li>з вантажниками</li></ul>
+      </article>
+
+      <article class="service-card featured">
+        <div class="service-num">02</div>
+        <h3>Міжміські рейси</h3>
+        <p>Україна — від Луцька до Маріуполя. Сборні вантажі, окремі авто.</p>
+        <ul class="tags"><li>до 22 т</li><li>тент / реф / ізотерм</li></ul>
+      </article>
+
+      <article class="service-card">
+        <div class="service-num">03</div>
+        <h3>Міжнародні</h3>
+        <p>Польща, Німеччина, Чехія, Італія. Митниця, CMR, дозвільні документи.</p>
+        <ul class="tags"><li>ЄС</li><li>CMR €200k</li></ul>
+      </article>
+
+      <article class="service-card">
+        <div class="service-num">04</div>
+        <h3>Великогабаритні</h3>
+        <p>Низькорамні трали, телескопічні платформи. До 100 тонн.</p>
+        <ul class="tags"><li>трал 60т</li><li>супровід</li></ul>
+      </article>
+
+      <article class="service-card">
+        <div class="service-num">05</div>
+        <h3>Спецтехніка</h3>
+        <p>Перевезення тракторів, комбайнів, бульдозерів, баштових кранів.</p>
+        <ul class="tags"><li>погодинно</li><li>під ключ</li></ul>
+      </article>
+
+      <article class="service-card">
+        <div class="service-num">06</div>
+        <h3>Переїзди</h3>
+        <p>Квартирні та офісні переїзди. Пакування, демонтаж меблів.</p>
+        <ul class="tags"><li>пакування</li><li>збирання</li></ul>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────── FLEET ──────────────── -->
+<section class="section fleet" id="fleet">
+  <div class="container">
+    <header class="section-head">
+      <span class="kicker">02 — Парк техніки</span>
+      <h2>Власні авто. Свої водії. Без посередників.</h2>
+      <p>Тримаємо парк у власному автопарку — 250+ одиниць. Це означає прогнозовану ціну і відповідальність за кожен рейс.</p>
+    </header>
+
+    <div class="fleet-grid">
+      <article class="fleet-card">
+        <div class="fleet-image fleet-image-1">
+          <svg viewBox="0 0 200 100"><rect x="10" y="30" width="120" height="50" fill="#142339" stroke="#f5a623" stroke-width="1.5"/><path d="M130 38 L170 38 L185 58 L185 80 L130 80 Z" fill="#1a2d4a" stroke="#f5a623" stroke-width="1.5"/><circle cx="40" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="80" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="155" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/></svg>
+        </div>
+        <div class="fleet-body">
+          <h3>MAN TGX</h3>
+          <p class="fleet-meta">Тент · 22 тонни · 92 м³</p>
+          <ul class="fleet-specs">
+            <li><span>Довжина</span><b>13.6 м</b></li>
+            <li><span>Євро</span><b>6</b></li>
+            <li><span>GPS</span><b>так</b></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="fleet-card">
+        <div class="fleet-image fleet-image-2">
+          <svg viewBox="0 0 200 100"><rect x="10" y="35" width="110" height="45" fill="#0f2a3a" stroke="#7dd3fc" stroke-width="1.5"/><path d="M120 42 L165 42 L180 60 L180 80 L120 80 Z" fill="#1a2d4a" stroke="#7dd3fc" stroke-width="1.5"/><circle cx="35" cy="82" r="9" fill="#0a1628" stroke="#7dd3fc" stroke-width="1.5"/><circle cx="75" cy="82" r="9" fill="#0a1628" stroke="#7dd3fc" stroke-width="1.5"/><circle cx="150" cy="82" r="9" fill="#0a1628" stroke="#7dd3fc" stroke-width="1.5"/><text x="60" y="60" fill="#7dd3fc" font-size="10" font-family="Manrope" font-weight="800">-18°C</text></svg>
+        </div>
+        <div class="fleet-body">
+          <h3>DAF XF · реф</h3>
+          <p class="fleet-meta">Рефрижератор · 20 тонн</p>
+          <ul class="fleet-specs">
+            <li><span>Температура</span><b>−25…+25°C</b></li>
+            <li><span>Євро</span><b>6</b></li>
+            <li><span>ATP</span><b>FRC</b></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="fleet-card">
+        <div class="fleet-image fleet-image-3">
+          <svg viewBox="0 0 200 100"><rect x="20" y="50" width="60" height="30" fill="#142339" stroke="#f5a623" stroke-width="1.5"/><rect x="80" y="40" width="100" height="20" fill="#1a2d4a" stroke="#f5a623" stroke-width="1.5"/><rect x="78" y="58" width="105" height="6" fill="#f5a623"/><circle cx="40" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="60" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="100" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="125" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="150" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/></svg>
+        </div>
+        <div class="fleet-body">
+          <h3>Низькорамний трал</h3>
+          <p class="fleet-meta">Спецтехніка · 60 тонн</p>
+          <ul class="fleet-specs">
+            <li><span>Висота</span><b>0.45 м</b></li>
+            <li><span>Розширення</span><b>так</b></li>
+            <li><span>Супровід</span><b>так</b></li>
+          </ul>
+        </div>
+      </article>
+
+      <article class="fleet-card">
+        <div class="fleet-image fleet-image-4">
+          <svg viewBox="0 0 200 100"><rect x="40" y="35" width="80" height="45" rx="4" fill="#142339" stroke="#f5a623" stroke-width="1.5"/><path d="M120 42 L160 42 L175 60 L175 80 L120 80 Z" fill="#1a2d4a" stroke="#f5a623" stroke-width="1.5"/><circle cx="60" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="100" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/><circle cx="150" cy="82" r="9" fill="#0a1628" stroke="#f5a623" stroke-width="1.5"/></svg>
+        </div>
+        <div class="fleet-body">
+          <h3>Renault Master</h3>
+          <p class="fleet-meta">Бус · 1.5 тонни</p>
+          <ul class="fleet-specs">
+            <li><span>Об'єм</span><b>17 м³</b></li>
+            <li><span>Євро</span><b>6</b></li>
+            <li><span>Палети</span><b>4</b></li>
+          </ul>
+        </div>
+      </article>
+    </div>
+
+    <div class="fleet-foot">
+      <span>Також у парку: Volvo, Mercedes-Actros, IVECO, MAZ, ISUZU</span>
+      <a href="#contact" class="btn btn-ghost">Підібрати авто →</a>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────── ROUTES ──────────────── -->
+<section class="section routes" id="routes">
+  <div class="container">
+    <header class="section-head">
+      <span class="kicker">03 — Маршрути</span>
+      <h2>Україна. Європа. Куди скажете.</h2>
+    </header>
+
+    <div class="routes-grid">
+      <div class="routes-col">
+        <h3>По Україні</h3>
+        <ul class="route-list">
+          <li><b>Луцьк</b><span>—</span><b>Київ</b><em>380 км · від 8 год</em></li>
+          <li><b>Львів</b><span>—</span><b>Одеса</b><em>790 км · від 14 год</em></li>
+          <li><b>Київ</b><span>—</span><b>Дніпро</b><em>480 км · від 9 год</em></li>
+          <li><b>Харків</b><span>—</span><b>Львів</b><em>1050 км · від 18 год</em></li>
+          <li><b>Чернівці</b><span>—</span><b>Запоріжжя</b><em>1180 км · від 22 год</em></li>
+        </ul>
+      </div>
+      <div class="routes-col">
+        <h3>Європа</h3>
+        <ul class="route-list">
+          <li><b>Київ</b><span>—</span><b>Варшава</b><em>800 км · 2 доби</em></li>
+          <li><b>Львів</b><span>—</span><b>Берлін</b><em>1240 км · 3 доби</em></li>
+          <li><b>Луцьк</b><span>—</span><b>Прага</b><em>1080 км · 3 доби</em></li>
+          <li><b>Одеса</b><span>—</span><b>Мілан</b><em>2100 км · 5 діб</em></li>
+          <li><b>Київ</b><span>—</span><b>Амстердам</b><em>1860 км · 4 доби</em></li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────── WHY ──────────────── -->
+<section class="section why" id="why">
+  <div class="container">
+    <header class="section-head">
+      <span class="kicker">04 — Чому з нами</span>
+      <h2>Чотири причини передати рейс нам.</h2>
+    </header>
+
+    <div class="why-grid">
+      <article class="why-card">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+        </div>
+        <h3>GPS у режимі реального часу</h3>
+        <p>Бачите авто в дорозі через посилання. Знаєте час прибуття з точністю ±15 хв.</p>
+      </article>
+
+      <article class="why-card">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7l8-4z"/></svg>
+        </div>
+        <h3>Страхування вантажу</h3>
+        <p>CMR на €200 000 для міжнародних рейсів. Внутрішнє страхування для України.</p>
+      </article>
+
+      <article class="why-card">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>
+        </div>
+        <h3>Договір та документи</h3>
+        <p>ФОП, ТОВ, ПДВ — оформимо як зручно. Закриваючі документи на e-mail.</p>
+      </article>
+
+      <article class="why-card">
+        <div class="why-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 7l9 5 9-5"/><path d="M3 7v10l9 5 9-5V7"/><path d="M12 12v10"/></svg>
+        </div>
+        <h3>Прозоре ціноутворення</h3>
+        <p>Фіксована сума в договорі. Без «прихованих» доплат за пальне, простій чи документи.</p>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ──────────────── CONTACT FORM ──────────────── -->
+<section class="section contact" id="contact">
+  <div class="container contact-grid">
+    <div class="contact-text">
+      <span class="kicker">05 — Залишити заявку</span>
+      <h2>Розрахуємо вартість за 15 хвилин</h2>
+      <p>Заповніть форму або зателефонуйте. Менеджер передзвонить, уточнить деталі та підбере транспорт під вантаж.</p>
+
+      <ul class="contact-list">
+        <li>
+          <span class="ic">☎</span>
+          <a href="tel:+380999701001">+380 99 970 10 01</a>
+          <em>цілодобово</em>
+        </li>
+        <li>
+          <span class="ic">✉</span>
+          <a href="mailto:order@vantazhhub.ua">order@vantazhhub.ua</a>
+          <em>заявки</em>
+        </li>
+        <li>
+          <span class="ic">⌖</span>
+          <span>Луцьк, вул. Володимирська 89</span>
+          <em>офіс</em>
+        </li>
+      </ul>
+    </div>
+
+    <form class="contact-form" id="calc" novalidate>
+      <div class="field">
+        <label for="f-name">Ім'я</label>
+        <input id="f-name" name="name" type="text" required placeholder="Як до вас звертатись" />
+      </div>
+      <div class="field">
+        <label for="f-phone">Телефон</label>
+        <input id="f-phone" name="phone" type="tel" required placeholder="+380 ___ __ __ ___" />
+      </div>
+      <div class="field field-half">
+        <label for="f-from">Звідки</label>
+        <input id="f-from" name="from" type="text" placeholder="Місто відправлення" />
+      </div>
+      <div class="field field-half">
+        <label for="f-to">Куди</label>
+        <input id="f-to" name="to" type="text" placeholder="Місто призначення" />
+      </div>
+      <div class="field">
+        <label for="f-cargo">Опис вантажу</label>
+        <textarea id="f-cargo" name="cargo" rows="3" placeholder="Що везти, скільки тонн, габарити"></textarea>
+      </div>
+      <button type="submit" class="btn btn-primary btn-block">
+        Замовити дзвінок
+      </button>
+      <p class="form-note">Натискаючи кнопку, ви погоджуєтесь з обробкою персональних даних.</p>
+      <div class="form-success" hidden>
+        ✓ Заявку прийнято. Зателефонуємо протягом 15 хвилин.
+      </div>
+    </form>
+  </div>
+</section>
+
+<!-- ──────────────── FOOTER ──────────────── -->
+<footer class="site-footer">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true">
+          <svg viewBox="0 0 32 32" fill="none"><rect x="2" y="11" width="18" height="12" rx="1.5" fill="currentColor"/><path d="M20 14h6l4 4v5h-10V14z" fill="currentColor" opacity=".6"/><circle cx="9" cy="25" r="3" fill="#0a1628" stroke="currentColor" stroke-width="2"/><circle cx="24" cy="25" r="3" fill="#0a1628" stroke="currentColor" stroke-width="2"/></svg>
+        </span>
+        <span class="brand-text">Вантаж<span>Хаб</span></span>
+      </div>
+      <p>Вантажоперевезення по Україні та Європі. Власний парк. GPS-контроль. Страхування.</p>
+    </div>
+
+    <div class="footer-col">
+      <h4>Послуги</h4>
+      <a href="#services">Міські</a>
+      <a href="#services">Міжміські</a>
+      <a href="#services">Європа</a>
+      <a href="#services">Спецтехніка</a>
+    </div>
+
+    <div class="footer-col">
+      <h4>Контакти</h4>
+      <a href="tel:+380999701001">+380 99 970 10 01</a>
+      <a href="mailto:order@vantazhhub.ua">order@vantazhhub.ua</a>
+      <span>Луцьк, Володимирська 89</span>
+    </div>
+
+    <div class="footer-col">
+      <h4>Соцмережі</h4>
+      <a href="#" target="_blank" rel="noopener">Telegram</a>
+      <a href="#" target="_blank" rel="noopener">Viber</a>
+      <a href="#" target="_blank" rel="noopener">Instagram</a>
+    </div>
+  </div>
+  <div class="footer-bottom container">
+    <span>© 2026 ВантажХаб. Усі права захищено.</span>
+    <span>Натхнення дизайну · CSTL NEWS</span>
+  </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>
