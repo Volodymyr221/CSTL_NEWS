@@ -21,6 +21,7 @@
 
 import datetime
 import re
+import ssl
 import sys
 import urllib.error
 import urllib.parse
@@ -73,25 +74,66 @@ def fetch(url: str, ua_name: str) -> tuple[int, bytes, str]:
     """Робить GET-запит. Повертає (status_code, body_bytes, error_msg).
 
     error_msg = "" якщо успіх; інакше — текст помилки.
+
+    Стратегія SSL:
+      1. Спершу пробуємо звичайний контекст (з системним CA bundle Ubuntu).
+      2. Якщо SSLError (наприклад VOPAS має сертифікат від UA-CA якого
+         немає у системному store) — повторюємо з unverified context.
+         Для парсера публічного розкладу це прийнятно (читаємо HTML, не
+         передаємо чутливих даних).
     """
-    req = urllib.request.Request(url, headers={
+    headers = {
         "User-Agent":      USER_AGENTS[ua_name],
         "Accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
         "Accept-Language": "uk-UA,uk;q=0.9,en;q=0.8",
         "Cache-Control":   "no-cache",
         "Referer":         "https://vopas.com.ua/",
-    })
+    }
+    req = urllib.request.Request(url, headers=headers)
+
+    def _do(ctx) -> tuple[int, bytes, str]:
+        try:
+            with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                return resp.getcode(), resp.read(), ""
+        except urllib.error.HTTPError as e:
+            body = e.read() if hasattr(e, "read") else b""
+            return e.code, body, f"HTTPError {e.code}: {e.reason}"
+        except urllib.error.URLError as e:
+            return 0, b"", f"URLError: {e.reason}"
+        except Exception as e:  # noqa: BLE001
+            return 0, b"", f"{type(e).__name__}: {e}"
+
+    # 1. Звичайний SSL
+    status, body, err = _do(ssl.create_default_context())
+    if not err or "CERTIFICATE" not in err.upper():
+        return status, body, err
+
+    # 2. Fallback — unverified SSL (тільки якщо була saturate CERT-помилка)
+    print(f"    ⚠️  SSL verify failed, повтор без verify ({err})")
+    status, body, err = _do(ssl._create_unverified_context())
+    if not err:
+        return status, body, "[SSL_UNVERIFIED] " + "OK на повторі без verify"
+    return status, body, err
+
+
+def probe_cert() -> str:
+    """Дістає issuer сертифіката vopas.com.ua — щоб зрозуміти хто видав
+    (Let's Encrypt / UA-CA / самопідписаний)."""
     try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            body = resp.read()
-            return resp.getcode(), body, ""
-    except urllib.error.HTTPError as e:
-        body = e.read() if hasattr(e, "read") else b""
-        return e.code, body, f"HTTPError {e.code}: {e.reason}"
-    except urllib.error.URLError as e:
-        return 0, b"", f"URLError: {e.reason}"
+        import socket
+        ctx = ssl.create_default_context()
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE  # дістати cert навіть якщо невалідний
+        with socket.create_connection(("vopas.com.ua", 443), timeout=10) as sock:
+            with ctx.wrap_socket(sock, server_hostname="vopas.com.ua") as ssock:
+                cert = ssock.getpeercert(binary_form=False) or ssock.getpeercert(binary_form=True)
+                if isinstance(cert, dict) and cert:
+                    issuer = dict(x[0] for x in cert.get("issuer", []))
+                    subject = dict(x[0] for x in cert.get("subject", []))
+                    return f"issuer={issuer}, subject={subject}, notAfter={cert.get('notAfter')}"
+                return "cert returned in binary form (нема дешифровки без verify) — означає сервер має cert але system store йому не довіряє"
     except Exception as e:  # noqa: BLE001
-        return 0, b"", f"{type(e).__name__}: {e}"
+        return f"cert probe failed: {type(e).__name__}: {e}"
 
 
 def assess(body: bytes) -> dict:
@@ -137,6 +179,9 @@ def main() -> int:
     Інакше — 1 (треба інший підхід)."""
     today = datetime.date.today().strftime("%d.%m.%Y")
     print(f"=== VOPAS access test ({today}) ===\n")
+
+    print(f"🔐 Діагностика сертифіката vopas.com.ua:")
+    print(f"   {probe_cert()}\n")
 
     any_ok = False
     saved_html_path: Path | None = None
