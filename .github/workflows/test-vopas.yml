@@ -32,20 +32,7 @@ jobs:
             wc -c tmp_vopas_response.html
             echo ""
             echo "=== СТРУКТУРА КАРТКИ РЕЙСУ (3500 символів навколо першого result-date) ==="
-            python3 -c "
-            import re
-            with open('tmp_vopas_response.html', 'r', encoding='utf-8') as f:
-                text = f.read()
-            for marker in ['result-date', 'result-cols', 'result-time', '06:50', 'class=\"row']:
-                m = re.search(re.escape(marker), text)
-                if m:
-                    start = max(0, m.start() - 500)
-                    print(f'-- знайдено маркер: {marker} на позиції {m.start()} --')
-                    print(text[start:start+3500])
-                    break
-            else:
-                print('Жоден маркер не знайдено')
-            "
+            python3 scripts/dump_vopas_html.py
             echo ""
             echo "=== ВСІ УНІКАЛЬНІ result-* КЛАСИ ==="
             grep -oE 'class="[^"]*result-[^"]*"' tmp_vopas_response.html | sort -u | head -30
