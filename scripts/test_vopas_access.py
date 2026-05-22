@@ -108,11 +108,13 @@ def fetch(url: str, ua_name: str) -> tuple[int, bytes, str]:
     if not err or "CERTIFICATE" not in err.upper():
         return status, body, err
 
-    # 2. Fallback — unverified SSL (тільки якщо була saturate CERT-помилка)
+    # 2. Fallback — unverified SSL (тільки якщо була CERT-помилка)
     print(f"    ⚠️  SSL verify failed, повтор без verify ({err})")
     status, body, err = _do(ssl._create_unverified_context())
     if not err:
-        return status, body, "[SSL_UNVERIFIED] " + "OK на повторі без verify"
+        # Повертаємо порожній err — щоб main() пішов у assess(),
+        # а позначку про unverified виводимо окремим print'ом
+        print(f"    🔓 [SSL_UNVERIFIED] retry успішний, аналізуємо тіло")
     return status, body, err
 
 
