@@ -31,16 +31,27 @@ jobs:
             echo "=== РОЗМІР HTML ==="
             wc -c tmp_vopas_response.html
             echo ""
-            echo "=== ПЕРШІ 3000 СИМВОЛІВ (head/doctype/meta) ==="
-            head -c 3000 tmp_vopas_response.html
+            echo "=== СТРУКТУРА КАРТКИ РЕЙСУ (3500 символів навколо першого result-date) ==="
+            python3 -c "
+            import re
+            with open('tmp_vopas_response.html', 'r', encoding='utf-8') as f:
+                text = f.read()
+            for marker in ['result-date', 'result-cols', 'result-time', '06:50', 'class=\"row']:
+                m = re.search(re.escape(marker), text)
+                if m:
+                    start = max(0, m.start() - 500)
+                    print(f'-- знайдено маркер: {marker} на позиції {m.start()} --')
+                    print(text[start:start+3500])
+                    break
+            else:
+                print('Жоден маркер не знайдено')
+            "
             echo ""
+            echo "=== ВСІ УНІКАЛЬНІ result-* КЛАСИ ==="
+            grep -oE 'class="[^"]*result-[^"]*"' tmp_vopas_response.html | sort -u | head -30
             echo ""
-            echo "=== ОДНА КАРТКА РЕЙСУ (фрагмент навколо 'Відправлення') ==="
-            grep -o '.\{0,800\}Відправлення.\{0,2500\}' tmp_vopas_response.html | head -c 4000 || echo "(не знайдено)"
-            echo ""
-            echo ""
-            echo "=== КЛАСИ CSS навколо рейсів (унікальні) ==="
-            grep -oE 'class="[^"]*"' tmp_vopas_response.html | sort -u | head -40
+            echo "=== ВСІ УНІКАЛЬНІ title-state-* КЛАСИ ==="
+            grep -oE 'class="[^"]*title-state-[^"]*"' tmp_vopas_response.html | sort -u | head -20
           else
             echo "HTML файл не знайдено — щось пішло не так у Python скрипті"
           fi
