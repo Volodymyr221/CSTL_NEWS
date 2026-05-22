@@ -1,0 +1,60 @@
+# Парсер розкладу автобусів з vopas.com.ua → data/vopas-fetched.json.
+# Перший етап інтеграції — зберігаємо окремо від data/schedule.json
+# щоб не зламати робочий розклад. Перевіряємо що дані правильні, потім
+# наступний коміт зробить мапінг → schedule.json.
+
+name: VOPAS parser
+
+on:
+  workflow_dispatch: {}   # ручний запуск з UI
+  # schedule:             # cron вимкнено — увімкнемо після перевірки
+  #   - cron: '0 4 * * *' # щодня о 04:00 UTC (= 06:00 Київ, перед першим рейсом)
+
+permissions:
+  contents: write   # для git push data/vopas-fetched.json
+  actions:  write   # для gh workflow run deploy.yml (потім, коли інтегруємо)
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    concurrency:
+      group: vopas-parser
+      cancel-in-progress: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install --quiet beautifulsoup4
+
+      - name: Run VOPAS parser
+        run: python scripts/parse_vopas.py
+
+      - name: Dump parsed JSON (preview)
+        if: always()
+        run: |
+          if [ -f data/vopas-fetched.json ]; then
+            echo "=== data/vopas-fetched.json (перші 80 рядків) ==="
+            head -80 data/vopas-fetched.json
+            echo ""
+            echo "=== Кількість рейсів ==="
+            python3 -c "import json; d=json.load(open('data/vopas-fetched.json')); print(f'routes: {len(d[\"routes\"])}'); print(f'errors: {len(d[\"errors\"])}')"
+          fi
+
+      - name: Commit if changed
+        run: |
+          if [ -n "$(git status --porcelain data/vopas-fetched.json)" ]; then
+            git config user.name  "vopas-parser-bot"
+            git config user.email "vopas-parser@cstl-news.local"
+            git add data/vopas-fetched.json
+            git -c commit.gpgsign=false commit -m "auto(vopas): оновлення розкладу $(date -u +'%d.%m %H:%M UTC')"
+            git push origin HEAD:main
+          else
+            echo "Без змін у data/vopas-fetched.json — нічого комітити"
+          fi
