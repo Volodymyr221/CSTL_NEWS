@@ -145,24 +145,24 @@ def assess(body: bytes) -> dict:
     except Exception:  # noqa: BLE001
         text = ""
 
-    keyword_hits = {kw: text.count(kw) for kw in EXPECTED_KEYWORDS}
+    # Case-insensitive пошук: у HTML слова можуть бути з малої («рейсів»),
+    # а CSS робить uppercase. Тому шукаємо у text.lower().
+    text_lower = text.lower()
+    keyword_hits = {kw: text_lower.count(kw.lower()) for kw in EXPECTED_KEYWORDS}
     times_found  = TIME_RE.findall(text)
 
-    # Емпіричні ознаки реального розкладу:
-    has_routes_word = keyword_hits["РЕЙСІВ"] >= 1
     has_table_headers = keyword_hits["Відправлення"] >= 1 and keyword_hits["Перевізник"] >= 1
-    has_prices = keyword_hits["грн"] >= 3
+    has_prices       = keyword_hits["грн"] >= 3
     has_enough_times = len(times_found) >= 5
 
     verdict = "EMPTY"
-    if has_routes_word and has_table_headers and has_prices and has_enough_times:
+    # Достатньо щоб був формат таблиці + ціни + часи — це гарантує реальний розклад.
+    # Слово «рейсів» не обов'язкове (може бути по-різному оформлене).
+    if has_table_headers and has_prices and has_enough_times:
         verdict = "OK"
-    elif "captcha" in text.lower() or "cloudflare" in text.lower() or "challenge" in text.lower():
+    elif "captcha" in text_lower or "cloudflare" in text_lower or "challenge" in text_lower:
         verdict = "BLOCK"
     elif len(text) < 5000:
-        verdict = "EMPTY"
-    else:
-        # HTML є, але немає розкладу — можливо SPA або зміна структури
         verdict = "EMPTY"
 
     return {
@@ -172,7 +172,7 @@ def assess(body: bytes) -> dict:
         "keyword_hits": keyword_hits,
         "times_found_count": len(times_found),
         "times_sample": times_found[:8],
-        "has_captcha_marker": "captcha" in text.lower() or "challenge" in text.lower(),
+        "has_captcha_marker": "captcha" in text_lower or "challenge" in text_lower,
     }
 
 
@@ -208,12 +208,15 @@ def main() -> int:
                 f"times={result['times_found_count']} (sample {result['times_sample']})"
             )
 
-            # Зберігаємо HTML першого OK-результату для аналізу структури
-            if result["verdict"] == "OK" and saved_html_path is None:
-                any_ok = True
+            # ЗАВЖДИ зберігаємо першу нетривіальну відповідь — навіть якщо verdict
+            # помилково EMPTY (наприклад через зміну ключових слів). Так у артефакті
+            # буде HTML для аналізу структури.
+            if status == 200 and len(body) > 50000 and saved_html_path is None:
                 saved_html_path = Path(__file__).parent.parent / "tmp_vopas_response.html"
                 saved_html_path.write_bytes(body)
                 print(f"  💾 Збережено HTML у {saved_html_path}")
+            if result["verdict"] == "OK":
+                any_ok = True
 
         print()
 
