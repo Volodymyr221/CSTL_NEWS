@@ -24,6 +24,27 @@ jobs:
         run: python scripts/test_vopas_access.py
         continue-on-error: true  # навіть якщо exit 1 — хочемо побачити artifact
 
+      - name: Dump HTML preview to logs
+        if: always()
+        run: |
+          if [ -f tmp_vopas_response.html ]; then
+            echo "=== РОЗМІР HTML ==="
+            wc -c tmp_vopas_response.html
+            echo ""
+            echo "=== ПЕРШІ 3000 СИМВОЛІВ (head/doctype/meta) ==="
+            head -c 3000 tmp_vopas_response.html
+            echo ""
+            echo ""
+            echo "=== ОДНА КАРТКА РЕЙСУ (фрагмент навколо 'Відправлення') ==="
+            grep -o '.\{0,800\}Відправлення.\{0,2500\}' tmp_vopas_response.html | head -c 4000 || echo "(не знайдено)"
+            echo ""
+            echo ""
+            echo "=== КЛАСИ CSS навколо рейсів (унікальні) ==="
+            grep -oE 'class="[^"]*"' tmp_vopas_response.html | sort -u | head -40
+          else
+            echo "HTML файл не знайдено — щось пішло не так у Python скрипті"
+          fi
+
       - name: Upload HTML response (if any was saved)
         if: always()
         uses: actions/upload-artifact@v4
