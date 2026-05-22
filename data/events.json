@@ -30,45 +30,6 @@
     "image": null
   },
   {
-    "id": 115,
-    "title": "У Кремлі заявили, що ядерні навчання в Білорусі – це сигнал для НАТО",
-    "description": "Пєсков назвав спільні ядерні навчання Росії та Білорусі сигналом для Європи та НАТО.",
-    "date": "2026-05-21",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/e/833002/0ea75fa39c41c7bdc735e46467dbfcc8.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/21/8035755/",
-    "auto": true
-  },
-  {
-    "id": 114,
-    "title": "СБУ і військові почали посилені перевірки громадян на півночі країни",
-    "description": "СБУ проводить перевірки у п’яти північних областях України через ядерні навчання РФ у Білорусі. Посилено контроль і безпеку.",
-    "date": "2026-05-21",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/b/832795/6b059d757509f5513eed73034c6713c4.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/21/8035709/",
-    "auto": true
-  },
-  {
-    "id": 105,
-    "title": "Апеляцію Єрмака на запобіжний захід розглянуть 21 травня",
-    "description": "Апеляційна палата ВАКС 21 травня розгляне скаргу захисту колишнього керівника Офісу президента Андрія Єрмака на запобіжний захід, який йому обрав слідчий суддя ВАКС.",
-    "date": "2026-05-21",
-    "time": "13:10",
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/b/831523/1b423a4b3bfb7b37127ffe198b514540.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/19/8035395/",
-    "auto": true
-  },
-  {
     "id": 116,
     "title": "Сибіга розповів генсеку НАТО про загрози з боку Росії та Білорусі",
     "description": "Міністр закордонних справ Андрій Сибіга обговорив військові загрози із генеральним секретарем НАТО Марком Рютте на полях міністерської зустрічі Альянсу у шведському Гельсінгборзі.",
@@ -102,6 +63,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/9/829504/f9de303876387152c897cb6584e6abe4.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/16/8034977/",
+    "auto": true
+  },
+  {
+    "id": 119,
+    "title": "На форум у Петербурзі за участю Путіна вперше за кілька років приїде представник США – росЗМІ",
+    "description": "Офіційний представник США вперше за кілька років приїде на Міжнародний економічним форум у російському Петербурзі.",
+    "date": "2026-06-06",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/5/833545/556cc134918112ddc5ade92596357f4e.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/22/8035882/",
     "auto": true
   },
   {
