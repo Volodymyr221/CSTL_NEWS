@@ -1,9 +1,9 @@
 {
   "version": "23.05.2026",
   "verifiedAt": "23.05.2026",
-  "verifiedTime": "17:13",
+  "verifiedTime": "17:22",
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:13 Київ.",
+  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:22 Київ.",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -597,7 +597,7 @@
       "carrier": "під_яцишин_м_м",
       "bus": "Баз  А 091",
       "days": "щодня",
-      "status": "cancelled",
+      "status": "scheduled",
       "sale_active": false,
       "departure_time": "17:15",
       "arrival_time": "18:55",

@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-23T14:13:01.603493+00:00",
+  "fetched_at": "2026-05-23T14:22:36.629230+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -4903,8 +4903,8 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4918,8 +4918,8 @@
       "carrier": "Алексєєв І. Ю. 45500 смт.Локач",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4933,9 +4933,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "Баз  А 091",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
     },
@@ -4948,8 +4948,8 @@
       "carrier": "Прибиш П.Я. заїзд",
       "bus": "ГАЛАЗ-3209.10",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4963,8 +4963,8 @@
       "carrier": "Зінюк Л.Л. заїзд",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4978,8 +4978,8 @@
       "carrier": "Мірчук А.І.",
       "bus": "Фольсваген Крафтер",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
