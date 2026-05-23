@@ -24,6 +24,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0   # повна історія — потрібна для rebase перед push
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -54,7 +57,18 @@ jobs:
             git config user.email "vopas-parser@cstl-news.local"
             git add data/vopas-fetched.json
             git -c commit.gpgsign=false commit -m "auto(vopas): оновлення розкладу $(date -u +'%d.%m %H:%M UTC')"
-            git push origin HEAD:main
+            # main міг зрушити поки парсер працював (auto-news cron / auto-merge).
+            # Підтягуємо свіжий main, rebase наш коміт зверху, push. Retry x3.
+            for i in 1 2 3; do
+              git fetch origin main
+              if git rebase origin/main && git push origin HEAD:main; then
+                echo "✓ push успішний (спроба $i)"
+                break
+              fi
+              echo "⚠️ спроба $i не вдалась, повтор..."
+              git rebase --abort 2>/dev/null || true
+              sleep 3
+            done
           else
             echo "Без змін у data/vopas-fetched.json — нічого комітити"
           fi
