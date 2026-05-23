@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-23T14:03:04.606280+00:00",
+  "fetched_at": "2026-05-23T14:13:01.603493+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -4843,8 +4843,8 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4858,8 +4858,8 @@
       "carrier": "під.Прибиш П.Я.",
       "bus": "ГАЛАЗ-3209.10",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4873,8 +4873,8 @@
       "carrier": "Дяков Г.Г.-",
       "bus": "МЕРСЕДЕС-БЕНЦ  711",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -4888,8 +4888,8 @@
       "carrier": "Нагорник С.Р.-",
       "bus": "Фольксваген LT",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
