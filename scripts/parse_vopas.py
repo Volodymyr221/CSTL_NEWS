@@ -112,56 +112,58 @@ def fetch_html(url: str) -> str:
 
 # ── ДІАГНОСТИКА: як VOPAS віддає зупинки рейсу (тимчасово) ─────────────────
 def probe_stops(vopas_id: str) -> None:
-    """Пробує кілька endpoint-ів щоб знайти де VOPAS віддає зупинки рейсу.
-    Дампить статус/розмір/фрагмент. Запуститься для 1 рейсу — побачимо
-    структуру, потім напишемо повний парсер зупинок."""
+    """Endpoint зупинок невідомий — мої здогадки дали 404. Тому читаємо
+    JS-код VOPAS і шукаємо обробник кнопки .go (data-id) — там буде
+    справжній URL/ajax виклик за зупинками."""
     if not vopas_id:
         print("   probe_stops: немає vopas_id")
         return
 
-    candidates = [
-        ("GET",  f"https://vopas.com.ua/flight/{vopas_id}/", None),
-        ("GET",  f"https://vopas.com.ua/flight/?id={vopas_id}", None),
-        ("POST", "https://vopas.com.ua/flight/", {"id": vopas_id}),
-        ("GET",  f"https://vopas.com.ua/search/stops/?id={vopas_id}", None),
-        ("GET",  f"https://vopas.com.ua/flight/stops/{vopas_id}/", None),
+    print(f"\n=== PROBE: шукаю обробник зупинок у JS VOPAS (рейс id={vopas_id}) ===")
+
+    js_files = [
+        "https://vopas.com.ua/js/configPage.js",
+        "https://vopas.com.ua/js/config-fast-filter.js",
+        "https://vopas.com.ua/js/jquery.navigate.js",
     ]
-    headers = {
-        "User-Agent": BROWSER_UA,
-        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
-        "Accept-Language": "uk-UA,uk;q=0.9",
-        "Referer": "https://vopas.com.ua/search/",
-        "X-Requested-With": "XMLHttpRequest",
-    }
-    print(f"\n=== PROBE STOPS для рейсу id={vopas_id} ===")
-    for method, url, data in candidates:
-        body = urllib.parse.urlencode(data).encode() if data else None
-        req = urllib.request.Request(url, data=body, headers=headers, method=method)
-        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
-            try:
-                with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
-                    html = resp.read().decode("utf-8", errors="ignore")
-                    has_stops = "зупин" in html.lower() or "result-stop" in html or "stop" in html.lower()
-                    print(f"  [{method}] {url}")
-                    print(f"    → status={resp.getcode()} size={len(html)} має_зупинки={has_stops}")
-                    # Якщо схоже на зупинки — дамп фрагмента
-                    if has_stops and 500 < len(html) < 200000:
-                        m = re.search(r"зупин", html, re.IGNORECASE)
-                        if m:
-                            s = max(0, m.start() - 300)
-                            print(f"    фрагмент: ...{html[s:s+1500]}...")
-                    break
-            except urllib.error.HTTPError as e:
-                print(f"  [{method}] {url} → HTTP {e.code}")
-                break
-            except urllib.error.URLError as e:
-                if "CERTIFICATE" in str(e).upper():
-                    continue  # retry unverified
-                print(f"  [{method}] {url} → {e.reason}")
-                break
-            except Exception as e:  # noqa: BLE001
-                print(f"  [{method}] {url} → {type(e).__name__}: {e}")
-                break
+    markers = ["data-id", ".go", "stops", "зупин", "flight", "ajax",
+               "$.post", "$.get", "$.ajax", "load(", "getJSON"]
+
+    for js_url in js_files:
+        try:
+            req = urllib.request.Request(js_url, headers={"User-Agent": BROWSER_UA})
+            html = None
+            for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+                try:
+                    with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                        html = resp.read().decode("utf-8", errors="ignore")
+                        break
+                except urllib.error.URLError as e:
+                    if "CERTIFICATE" in str(e).upper():
+                        continue
+                    raise
+            if html is None:
+                print(f"  {js_url} — не вдалось завантажити")
+                continue
+            print(f"\n  ── {js_url} ({len(html)} байт) ──")
+            found_any = False
+            seen_positions = set()
+            for marker in markers:
+                for m in re.finditer(re.escape(marker), html, re.IGNORECASE):
+                    pos = m.start()
+                    # не дублюємо близькі збіги
+                    if any(abs(pos - p) < 150 for p in seen_positions):
+                        continue
+                    seen_positions.add(pos)
+                    s = max(0, pos - 120)
+                    frag = html[s:pos + 200].replace("\n", " ")
+                    print(f"    [{marker}] …{frag}…")
+                    found_any = True
+                    break  # перший збіг кожного маркера досить
+            if not found_any:
+                print("    (маркерів не знайдено)")
+        except Exception as e:  # noqa: BLE001
+            print(f"  {js_url} → {type(e).__name__}: {e}")
     print("=== кінець probe ===\n")
 
 
