@@ -42,14 +42,25 @@ from bs4 import BeautifulSoup
 
 # ── Конфіг ────────────────────────────────────────────────────────────────
 
-MARSHRUTI: list[tuple[str, str]] = [
-    ("Луцьк",   "Олика"),
-    ("Луцьк",   "Личани"),
-    ("Олика",   "Луцьк"),
-    ("Личани",  "Луцьк"),
-    ("Ківерці", "Носовичі"),
-    ("Носовичі", "Ківерці"),
+# Олика — проміжна точка (хаб) на маршрутах. Щоб витягти ВСІ рейси що
+# проходять через Олику в обидва боки — запитуємо Олику в парі з кожною
+# кінцевою станцією (туди і назад). Дедуплікація прибере повтори.
+#
+# Кінцеві станції маршрутів через Олику:
+#   Захід: Луцьк, Ківерці
+#   Схід:  Личани, Носовичі, Жорнище, Метельне, Чемерин
+# Якщо VOPAS не знає міста — поверне 0 рейсів (не помилка), безпечно додавати.
+HUB = "Олика"
+ENDPOINTS: list[str] = [
+    "Луцьк", "Ківерці",
+    "Личани", "Носовичі", "Жорнище", "Метельне", "Чемерин",
 ]
+
+# Усі пари: Олика→endpoint (рейси що йдуть з Олики) +
+#           endpoint→Олика (рейси що прибувають в Олику)
+MARSHRUTI: list[tuple[str, str]] = (
+    [(HUB, e) for e in ENDPOINTS] + [(e, HUB) for e in ENDPOINTS]
+)
 
 BROWSER_UA = (
     "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
@@ -134,11 +145,15 @@ def parse_card(card_el) -> dict[str, Any] | None:
         return None
     route_name = title_el.get_text(strip=True)
 
-    # Статус продажу: title-state-sale (продаж) / title-state-sale-stop (припинено)
+    # Статус: «в продажі» (sale) / «продаж припинено» (sale-stop, рейс їде) /
+    # «Рейс зірваний» (cancelled — рейс ВІДМІНЕНО, не їде)
     status_el = card_el.select_one('[class*="title-state-"]')
     status_text = status_el.get_text(strip=True) if status_el else None
     status_classes = " ".join(status_el.get("class", [])) if status_el else ""
-    sale_active = "sale-stop" not in status_classes
+    status_lower = (status_text or "").lower()
+    cancelled = "зірван" in status_lower or "відмін" in status_lower or "canceled" in status_classes
+    # sale_active=True тільки якщо квитки реально продаються онлайн і рейс не відмінено
+    sale_active = (not cancelled) and ("sale-stop" not in status_classes)
 
     date_el = card_el.select_one(".result-date span")
     date_text = date_el.get_text(strip=True) if date_el else None
@@ -177,6 +192,7 @@ def parse_card(card_el) -> dict[str, Any] | None:
         "price":          price,
         "status":         status_text,
         "sale_active":    sale_active,
+        "cancelled":      cancelled,
     }
 
 
