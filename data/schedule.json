@@ -1,9 +1,9 @@
 {
   "version": "23.05.2026",
   "verifiedAt": "23.05.2026",
-  "verifiedTime": "16:23",
+  "verifiedTime": "16:56",
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 16:23 Київ.",
+  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 16:56 Київ.",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -36,6 +36,7 @@
       "arrival_time": "07:49",
       "duration_min": 59,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -62,6 +63,7 @@
       "arrival_time": "08:30",
       "duration_min": 85,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -88,6 +90,7 @@
       "arrival_time": "09:00",
       "duration_min": 70,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -114,6 +117,7 @@
       "arrival_time": "10:50",
       "duration_min": 100,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -140,6 +144,7 @@
       "arrival_time": "10:15",
       "duration_min": 55,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -166,6 +171,7 @@
       "arrival_time": "12:05",
       "duration_min": 119,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -192,6 +198,7 @@
       "arrival_time": "11:45",
       "duration_min": 95,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -218,6 +225,7 @@
       "arrival_time": "12:03",
       "duration_min": 93,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -244,6 +252,7 @@
       "arrival_time": "13:10",
       "duration_min": 100,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -270,6 +279,7 @@
       "arrival_time": "14:10",
       "duration_min": 105,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -296,6 +306,7 @@
       "arrival_time": "14:10",
       "duration_min": 90,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -322,6 +333,7 @@
       "arrival_time": "14:30",
       "duration_min": 85,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -348,6 +360,7 @@
       "arrival_time": "14:42",
       "duration_min": 72,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -374,6 +387,7 @@
       "arrival_time": "15:35",
       "duration_min": 95,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -400,6 +414,7 @@
       "arrival_time": "15:45",
       "duration_min": 95,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -426,6 +441,7 @@
       "arrival_time": "16:05",
       "duration_min": 100,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -452,6 +468,7 @@
       "arrival_time": "16:35",
       "duration_min": 100,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -478,6 +495,7 @@
       "arrival_time": "17:15",
       "duration_min": 105,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -504,6 +522,7 @@
       "arrival_time": "17:20",
       "duration_min": 100,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -525,11 +544,12 @@
       "bus": "БОГДАН А0902",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": true,
+      "sale_active": false,
       "departure_time": "16:40",
       "arrival_time": "18:30",
       "duration_min": 110,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -551,11 +571,12 @@
       "bus": "БАЗ А 079.24",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": true,
+      "sale_active": false,
       "departure_time": "16:50",
       "arrival_time": "18:00",
       "duration_min": 70,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -582,6 +603,7 @@
       "arrival_time": "18:55",
       "duration_min": 100,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -608,6 +630,7 @@
       "arrival_time": "19:05",
       "duration_min": 95,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -634,6 +657,7 @@
       "arrival_time": "19:20",
       "duration_min": 80,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -660,6 +684,7 @@
       "arrival_time": "19:42",
       "duration_min": 72,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -686,6 +711,7 @@
       "arrival_time": "20:20",
       "duration_min": 80,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
@@ -712,6 +738,7 @@
       "arrival_time": "21:30",
       "duration_min": 85,
       "auto_generated": false,
+      "price": null,
       "stops": [
         {
           "name": "Олика",
