@@ -1,185 +1,25 @@
 {
-  "fetched_at": "2026-05-23T10:35:43.304103+00:00",
+  "fetched_at": "2026-05-23T12:38:29.118124+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
   "pairs_queried": [
-    "Луцьк→Олика",
-    "Луцьк→Личани",
     "Олика→Луцьк",
-    "Личани→Луцьк",
-    "Ківерці→Носовичі",
-    "Носовичі→Ківерці"
+    "Олика→Ківерці",
+    "Олика→Личани",
+    "Олика→Носовичі",
+    "Олика→Жорнище",
+    "Олика→Метельне",
+    "Олика→Чемерин",
+    "Луцьк→Олика",
+    "Ківерці→Олика",
+    "Личани→Олика",
+    "Носовичі→Олика",
+    "Жорнище→Олика",
+    "Метельне→Олика",
+    "Чемерин→Олика"
   ],
   "errors": [],
   "routes": [
-    {
-      "vopas_id": "1936030",
-      "route_name": "Ківерці Олика",
-      "date": "23.05.2026",
-      "departure_time": "06:50",
-      "arrival_time": "07:49",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.24",
-      "price": 157.3,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935841",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "07:05",
-      "arrival_time": "08:30",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.25",
-      "price": 173.8,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935946",
-      "route_name": "Луцьк Олика",
-      "date": "23.05.2026",
-      "departure_time": "09:20",
-      "arrival_time": "10:15",
-      "carrier": "Черняк П.К.-43018 Волинська об",
-      "bus": "БОГДАН А0902",
-      "price": 132.0,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935909",
-      "route_name": "Луцьк Жорнище",
-      "date": "23.05.2026",
-      "departure_time": "10:06",
-      "arrival_time": "12:05",
-      "carrier": "Черняк П.К.-43018 Волинська об",
-      "bus": "БАЗ 079-23",
-      "price": 132.0,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935842",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "10:30",
-      "arrival_time": "12:03",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.25",
-      "price": 173.8,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935838",
-      "route_name": "Луцьк- Личани ч/з Покащів",
-      "date": "23.05.2026",
-      "departure_time": "12:40",
-      "arrival_time": "14:10",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "Баз  А  079.17",
-      "price": 173.8,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935947",
-      "route_name": "Луцьк Олика",
-      "date": "23.05.2026",
-      "departure_time": "13:30",
-      "arrival_time": "14:42",
-      "carrier": "Черняк П.К.-43018 Волинська об",
-      "bus": "БОГДАН А0902",
-      "price": 132.0,
-      "status": "продаж припинено",
-      "sale_active": false
-    },
-    {
-      "vopas_id": "1935843",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "14:10",
-      "arrival_time": "15:45",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.24",
-      "price": 173.8,
-      "status": "Рейс зірваний",
-      "sale_active": true
-    },
-    {
-      "vopas_id": "1935910",
-      "route_name": "Луцьк Жорнище",
-      "date": "23.05.2026",
-      "departure_time": "15:30",
-      "arrival_time": "17:15",
-      "carrier": "Черняк П.К.-43018 Волинська об",
-      "bus": "",
-      "price": 132.0,
-      "status": "в продажі",
-      "sale_active": true
-    },
-    {
-      "vopas_id": "1936031",
-      "route_name": "Ківерці Олика",
-      "date": "23.05.2026",
-      "departure_time": "16:50",
-      "arrival_time": "18:00",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.24",
-      "price": 157.3,
-      "status": "в продажі",
-      "sale_active": true
-    },
-    {
-      "vopas_id": "1935839",
-      "route_name": "Луцьк- Личани ч/з Покащів",
-      "date": "23.05.2026",
-      "departure_time": "18:00",
-      "arrival_time": "19:20",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ-А 0 79",
-      "price": 173.8,
-      "status": "в продажі",
-      "sale_active": true
-    },
-    {
-      "vopas_id": "1935948",
-      "route_name": "Луцьк Олика",
-      "date": "23.05.2026",
-      "departure_time": "18:30",
-      "arrival_time": "19:42",
-      "carrier": "Черняк П.К.-43018 Волинська об",
-      "bus": "БОГДАН А0902",
-      "price": 132.0,
-      "status": "в продажі",
-      "sale_active": true
-    },
-    {
-      "vopas_id": "1935844",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "19:00",
-      "arrival_time": "20:20",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.24",
-      "price": 173.8,
-      "status": "Рейс зірваний",
-      "sale_active": true
-    },
-    {
-      "vopas_id": "1935911",
-      "route_name": "Луцьк Жорнище",
-      "date": "23.05.2026",
-      "departure_time": "20:05",
-      "arrival_time": "21:30",
-      "carrier": "Черняк П.К.-43018 Волинська об",
-      "bus": "БАЗ-А 0 79",
-      "price": 132.0,
-      "status": "в продажі",
-      "sale_active": true
-    },
     {
       "vopas_id": "1936137",
       "route_name": "Запоріжжя Херсон Варшава",
@@ -190,7 +30,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936096",
@@ -202,7 +43,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936104",
@@ -214,7 +56,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936138",
@@ -226,7 +69,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936130",
@@ -238,7 +82,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936113",
@@ -250,7 +95,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935762",
@@ -262,7 +108,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936141",
@@ -274,7 +121,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936119",
@@ -286,7 +134,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935924",
@@ -298,7 +147,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936111",
@@ -310,7 +160,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936129",
@@ -322,7 +173,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936120",
@@ -334,7 +186,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935985",
@@ -346,7 +199,8 @@
       "bus": "Баз  А  079.20",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935944",
@@ -358,7 +212,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936017",
@@ -370,7 +225,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936131",
@@ -382,7 +238,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935973",
@@ -394,7 +251,8 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936052",
@@ -406,7 +264,8 @@
       "bus": "БОГДАН А 09212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935812",
@@ -418,7 +277,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935979",
@@ -430,7 +290,8 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936132",
@@ -442,7 +303,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935932",
@@ -454,7 +316,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935893",
@@ -466,7 +329,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935867",
@@ -478,7 +342,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935958",
@@ -490,7 +355,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935976",
@@ -502,7 +368,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935734",
@@ -514,7 +381,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935957",
@@ -526,7 +394,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935768",
@@ -538,7 +407,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935785",
@@ -550,7 +420,8 @@
       "bus": "БОГДАН А 09212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935978",
@@ -562,7 +433,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935813",
@@ -574,7 +446,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936112",
@@ -586,7 +459,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935873",
@@ -598,7 +472,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1937840",
@@ -610,7 +485,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935829",
@@ -622,7 +498,8 @@
       "bus": "Богдан А20210",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935887",
@@ -634,7 +511,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935735",
@@ -646,7 +524,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936053",
@@ -658,7 +537,21 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1936030",
+      "route_name": "Ківерці Олика",
+      "date": "23.05.2026",
+      "departure_time": "06:50",
+      "arrival_time": "07:49",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.24",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935996",
@@ -670,7 +563,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ 609",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935953",
@@ -682,7 +576,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935736",
@@ -694,7 +589,8 @@
       "bus": "Баз  А  079.20",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935789",
@@ -706,7 +602,8 @@
       "bus": "ІСУЗУ Turkuaz",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936054",
@@ -718,7 +615,8 @@
       "bus": "ІСУЗУ Turkuaz",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935963",
@@ -730,7 +628,21 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935841",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "07:05",
+      "arrival_time": "08:30",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.25",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936015",
@@ -742,7 +654,8 @@
       "bus": "Фольксваген LT",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936126",
@@ -754,7 +667,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936073",
@@ -766,7 +680,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  711",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935763",
@@ -778,7 +693,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936062",
@@ -790,7 +706,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936008",
@@ -802,7 +719,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935869",
@@ -814,7 +732,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935871",
@@ -826,7 +745,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935984",
@@ -838,7 +758,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935885",
@@ -850,7 +771,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935737",
@@ -862,7 +784,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936039",
@@ -874,7 +797,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935814",
@@ -886,7 +810,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935918",
@@ -898,7 +823,8 @@
       "bus": "БАЗ-А079.19",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936095",
@@ -910,7 +836,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935895",
@@ -922,7 +849,8 @@
       "bus": "АТАМАН А-09216",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936091",
@@ -934,7 +862,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935738",
@@ -946,7 +875,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  312 D",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936059",
@@ -958,7 +888,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935987",
@@ -970,7 +901,8 @@
       "bus": "Деніс",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935815",
@@ -982,7 +914,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935739",
@@ -994,7 +927,8 @@
       "bus": "БОГДАН А 09212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936123",
@@ -1006,7 +940,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936083",
@@ -1018,7 +953,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936043",
@@ -1030,7 +966,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  312 D",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935825",
@@ -1042,7 +979,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936125",
@@ -1054,7 +992,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935740",
@@ -1066,7 +1005,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935927",
@@ -1078,7 +1018,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936013",
@@ -1090,7 +1031,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935850",
@@ -1102,7 +1044,8 @@
       "bus": "Богдан А 091",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935816",
@@ -1114,7 +1057,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936070",
@@ -1126,7 +1070,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936023",
@@ -1138,7 +1083,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936037",
@@ -1150,7 +1096,8 @@
       "bus": "Баз А 079.14",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935991",
@@ -1162,7 +1109,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935783",
@@ -1174,7 +1122,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935896",
@@ -1186,7 +1135,8 @@
       "bus": "Баз  А 091",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935817",
@@ -1198,7 +1148,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935862",
@@ -1210,7 +1161,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935741",
@@ -1222,7 +1174,21 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935946",
+      "route_name": "Луцьк Олика",
+      "date": "23.05.2026",
+      "departure_time": "09:20",
+      "arrival_time": "10:15",
+      "carrier": "Черняк П.К.-43018 Волинська об",
+      "bus": "БОГДАН А0902",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936090",
@@ -1234,7 +1200,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936115",
@@ -1246,7 +1213,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936078",
@@ -1258,7 +1226,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935969",
@@ -1270,7 +1239,8 @@
       "bus": "Баз  А  079.09",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935769",
@@ -1282,7 +1252,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936063",
@@ -1294,7 +1265,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935800",
@@ -1306,7 +1278,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935939",
@@ -1318,7 +1291,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935859",
@@ -1330,7 +1304,8 @@
       "bus": "І  VAN А 07",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935875",
@@ -1342,7 +1317,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935742",
@@ -1354,7 +1330,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935937",
@@ -1366,7 +1343,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935792",
@@ -1378,7 +1356,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935942",
@@ -1390,7 +1369,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935992",
@@ -1402,7 +1382,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936000",
@@ -1414,7 +1395,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935967",
@@ -1426,7 +1408,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935849",
@@ -1438,7 +1421,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935960",
@@ -1450,7 +1434,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935997",
@@ -1462,7 +1447,21 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  612 D",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935909",
+      "route_name": "Луцьк Жорнище",
+      "date": "23.05.2026",
+      "departure_time": "10:06",
+      "arrival_time": "12:05",
+      "carrier": "Черняк П.К.-43018 Волинська об",
+      "bus": "БАЗ 079-23",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935775",
@@ -1474,7 +1473,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936092",
@@ -1486,7 +1486,8 @@
       "bus": "Неоплан",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935897",
@@ -1498,7 +1499,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935794",
@@ -1510,7 +1512,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935884",
@@ -1522,7 +1525,8 @@
       "bus": "І-VAN A-07A -22",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936044",
@@ -1534,7 +1538,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936010",
@@ -1546,7 +1551,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935949",
@@ -1558,7 +1564,8 @@
       "bus": "Баз  А  079.20",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935823",
@@ -1570,7 +1577,21 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935842",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "10:30",
+      "arrival_time": "12:03",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.25",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935880",
@@ -1582,7 +1603,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935891",
@@ -1594,7 +1616,8 @@
       "bus": "БОГДАН А 09212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936071",
@@ -1606,7 +1629,8 @@
       "bus": "БОГДАН А 09212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936026",
@@ -1618,7 +1642,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936005",
@@ -1630,7 +1655,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935743",
@@ -1642,7 +1668,8 @@
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935766",
@@ -1654,7 +1681,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935787",
@@ -1666,7 +1694,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935779",
@@ -1678,7 +1707,8 @@
       "bus": "ПАЗ З205",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935801",
@@ -1690,7 +1720,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936055",
@@ -1702,7 +1733,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936097",
@@ -1714,7 +1746,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936048",
@@ -1726,7 +1759,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935990",
@@ -1738,7 +1772,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935832",
@@ -1750,7 +1785,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935928",
@@ -1762,7 +1798,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936109",
@@ -1774,7 +1811,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936049",
@@ -1786,7 +1824,8 @@
       "bus": "Фольсваген Крафтер",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935962",
@@ -1798,7 +1837,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935826",
@@ -1810,7 +1850,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935971",
@@ -1822,7 +1863,8 @@
       "bus": "Баз  А  079.17",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936088",
@@ -1834,7 +1876,8 @@
       "bus": "Іveko Daіly",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935797",
@@ -1846,7 +1889,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936032",
@@ -1858,7 +1902,8 @@
       "bus": "Фольсваген Крафтер",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935872",
@@ -1870,7 +1915,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935830",
@@ -1882,7 +1928,8 @@
       "bus": "Богдан А20210",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936068",
@@ -1894,7 +1941,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935964",
@@ -1906,7 +1954,8 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936021",
@@ -1918,7 +1967,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935845",
@@ -1930,7 +1980,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936114",
@@ -1942,7 +1993,8 @@
       "bus": "Сканія",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936056",
@@ -1954,7 +2006,8 @@
       "bus": "БАЗ  А 079.21",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936040",
@@ -1966,7 +2019,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936033",
@@ -1978,7 +2032,8 @@
       "bus": "Неоплан",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935898",
@@ -1990,7 +2045,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935933",
@@ -2002,7 +2058,8 @@
       "bus": "ЮТОНГ - ZK 6100",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935780",
@@ -2014,7 +2071,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935881",
@@ -2026,7 +2084,8 @@
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935877",
@@ -2038,7 +2097,8 @@
       "bus": "МАН-11.230 HOLCL",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935744",
@@ -2050,7 +2110,8 @@
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936069",
@@ -2062,7 +2123,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936028",
@@ -2074,7 +2136,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  410",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936018",
@@ -2086,7 +2149,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935802",
@@ -2098,7 +2162,8 @@
       "bus": "Баз  А  079.20",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935851",
@@ -2110,7 +2175,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935883",
@@ -2122,7 +2188,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935943",
@@ -2134,7 +2201,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936001",
@@ -2146,7 +2214,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935793",
@@ -2158,7 +2227,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935764",
@@ -2170,7 +2240,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935998",
@@ -2182,7 +2253,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  614",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935745",
@@ -2194,7 +2266,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935938",
@@ -2206,7 +2279,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935982",
@@ -2218,7 +2292,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  410",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936139",
@@ -2230,7 +2305,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935925",
@@ -2242,7 +2318,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935899",
@@ -2254,7 +2331,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935860",
@@ -2266,7 +2344,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935889",
@@ -2278,7 +2357,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936064",
@@ -2290,7 +2370,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935941",
@@ -2302,7 +2383,21 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  614",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935838",
+      "route_name": "Луцьк- Личани ч/з Покащів",
+      "date": "23.05.2026",
+      "departure_time": "12:40",
+      "arrival_time": "14:10",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "Баз  А  079.17",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935855",
@@ -2314,7 +2409,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935934",
@@ -2326,7 +2422,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936079",
@@ -2338,7 +2435,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935759",
@@ -2350,7 +2448,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935980",
@@ -2362,7 +2461,8 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935913",
@@ -2374,7 +2474,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935863",
@@ -2386,7 +2487,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936060",
@@ -2398,7 +2500,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936024",
@@ -2410,7 +2513,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935770",
@@ -2422,7 +2526,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935833",
@@ -2434,7 +2539,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935954",
@@ -2446,7 +2552,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935900",
@@ -2458,7 +2565,8 @@
       "bus": "АТАМАН А-09216",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935972",
@@ -2470,7 +2578,8 @@
       "bus": "Баз  А  079.20",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935746",
@@ -2482,7 +2591,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935848",
@@ -2494,7 +2604,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935919",
@@ -2506,7 +2617,8 @@
       "bus": "БАЗ А 079.04",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936036",
@@ -2518,7 +2630,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935974",
@@ -2530,7 +2643,8 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936009",
@@ -2542,7 +2656,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935857",
@@ -2554,7 +2669,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935929",
@@ -2566,7 +2682,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936076",
@@ -2578,7 +2695,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935818",
@@ -2590,7 +2708,21 @@
       "bus": "Фольсваген Крафтер",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935947",
+      "route_name": "Луцьк Олика",
+      "date": "23.05.2026",
+      "departure_time": "13:30",
+      "arrival_time": "14:42",
+      "carrier": "Черняк П.К.-43018 Волинська об",
+      "bus": "БОГДАН А0902",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936084",
@@ -2602,7 +2734,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936046",
@@ -2614,7 +2747,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935914",
@@ -2626,7 +2760,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935747",
@@ -2638,7 +2773,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935882",
@@ -2649,8 +2785,9 @@
       "carrier": "ТзОВ \"АТП Луцьк\"-",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936007",
@@ -2661,8 +2798,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "ІСУЗУ Turkuaz",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935968",
@@ -2673,8 +2811,9 @@
       "carrier": "під.Коровицький Рожище",
       "bus": "БОГДАН А0902",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935916",
@@ -2685,8 +2824,9 @@
       "carrier": "Кирилюк С.Л.",
       "bus": "ПАЗ-4234",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935988",
@@ -2697,8 +2837,9 @@
       "carrier": "Гламазда В.В. Волинська обл.",
       "bus": "Деніс",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936003",
@@ -2709,8 +2850,9 @@
       "carrier": "Фелось І.В.-",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935761",
@@ -2721,8 +2863,9 @@
       "carrier": "Приходько Н.В.",
       "bus": "МАЗ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936041",
@@ -2733,8 +2876,9 @@
       "carrier": "Нагорник С.Р.-",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935790",
@@ -2745,8 +2889,9 @@
       "carrier": "Яницька В.С. 43018 Волинська о",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935901",
@@ -2757,8 +2902,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935748",
@@ -2769,8 +2915,9 @@
       "carrier": "Величко  М.П. 14",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935986",
@@ -2781,8 +2928,22 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "МЕРСЕДЕС-БЕНЦ  312 D",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935843",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "14:10",
+      "arrival_time": "15:45",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.24",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935950",
@@ -2793,8 +2954,9 @@
       "carrier": "Коляда О.Г.-",
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935786",
@@ -2805,8 +2967,9 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0902",
       "price": 0.0,
-      "status": "Рейс зірваний",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935935",
@@ -2817,8 +2980,9 @@
       "carrier": "Кузнецовске АТП 15637 м.Вараш",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935977",
@@ -2829,8 +2993,9 @@
       "carrier": "Небось М.І.-",
       "bus": "МЕРСЕДЕС-БЕНЦ  312 D",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935749",
@@ -2841,8 +3006,9 @@
       "carrier": "Процик О.Є.-",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935798",
@@ -2853,8 +3019,9 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935920",
@@ -2865,8 +3032,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А079.19",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936006",
@@ -2877,8 +3045,9 @@
       "carrier": "Матрунчик С.С.",
       "bus": "БАЗ 079-23",
       "price": 0.0,
-      "status": "Рейс зірваний",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935902",
@@ -2889,8 +3058,9 @@
       "carrier": "САНРАЙЗ Л.Т.Д.",
       "bus": "",
       "price": 0.0,
-      "status": "Рейс зірваний",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935810",
@@ -2901,8 +3071,9 @@
       "carrier": "Приходько Н.В.",
       "bus": "МЕРСЕДЕС-БЕНЦ 303",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935750",
@@ -2913,8 +3084,9 @@
       "carrier": "Процик О.Є.-",
       "bus": "МЕРСЕДЕС-БЕНЦ 413C",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935846",
@@ -2925,8 +3097,9 @@
       "carrier": "Гламазда В.В. Волинська обл.",
       "bus": "ІВЕКО ТУРБ DAІLV3510",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936038",
@@ -2937,8 +3110,9 @@
       "carrier": "Коляда О.Г.-",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935771",
@@ -2949,8 +3123,9 @@
       "carrier": "Нагорник С.Р.-",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935781",
@@ -2961,8 +3136,9 @@
       "carrier": "Потапчук В.І.-",
       "bus": "ПАЗ-4234",
       "price": 0.0,
-      "status": "Рейс зірваний",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935772",
@@ -2973,8 +3149,9 @@
       "carrier": "Величко  М.П. 14",
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935835",
@@ -2985,8 +3162,9 @@
       "carrier": "\"АВТО-ЕКСПЕРТ\"",
       "bus": "І-VAN A-07A -22",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936134",
@@ -2997,8 +3175,9 @@
       "carrier": "Савчук В.С. ПДВ",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936016",
@@ -3009,8 +3188,9 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935903",
@@ -3021,8 +3201,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935751",
@@ -3033,8 +3214,9 @@
       "carrier": "Процик О.Є.-",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936075",
@@ -3045,8 +3227,9 @@
       "carrier": "Фелось І.В.-",
       "bus": "МАН TEMSA BG824E",
       "price": 0.0,
-      "status": "Рейс зірваний",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936029",
@@ -3057,8 +3240,9 @@
       "carrier": "Небось М.І.-",
       "bus": "БОГДАН А0902",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935965",
@@ -3069,8 +3253,9 @@
       "carrier": "Мрочко Р.С. 43006",
       "bus": "ПАЗ-4234",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935955",
@@ -3081,8 +3266,9 @@
       "carrier": "Шворак С.Г.- м. Луцьк",
       "bus": "ПАЗ 32054",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936020",
@@ -3093,8 +3279,9 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935874",
@@ -3105,8 +3292,9 @@
       "carrier": "Мельник О.М.0%  34062",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "Рейс зірваний",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935784",
@@ -3117,8 +3305,9 @@
       "carrier": "Миколаївське АТП 14627Львів",
       "bus": "БАЗ А 079.25",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936065",
@@ -3129,8 +3318,9 @@
       "carrier": "Яницька В.С. 43018 Волинська о",
       "bus": "БОГДАН А0902",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935970",
@@ -3141,8 +3331,9 @@
       "carrier": "Нагорник С.Р.-",
       "bus": "БАЗ А 079.25",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935870",
@@ -3153,8 +3344,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935864",
@@ -3165,8 +3357,9 @@
       "carrier": "Прибиш П.Я. заїзд",
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936080",
@@ -3177,8 +3370,9 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936011",
@@ -3189,8 +3383,9 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "БАЗ-А079.19",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935894",
@@ -3201,8 +3396,9 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936077",
@@ -3213,8 +3409,9 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936045",
@@ -3225,8 +3422,9 @@
       "carrier": "Нагорник С.Р.-",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935777",
@@ -3237,8 +3435,9 @@
       "carrier": "Котельчук С.М.-",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935890",
@@ -3249,8 +3448,9 @@
       "carrier": "Фелось І.В.-",
       "bus": "БАЗ 079-23",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935752",
@@ -3261,8 +3461,9 @@
       "carrier": "ТДВ \"Ковельське АТП \"",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935796",
@@ -3273,8 +3474,9 @@
       "carrier": "Коляда О.Г.-",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935824",
@@ -3285,8 +3487,9 @@
       "carrier": "Кирилюк С.Л.",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935852",
@@ -3297,8 +3500,9 @@
       "carrier": "Алексєєв І. Ю. 45500 смт.Локач",
       "bus": "Богдан А 091",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936085",
@@ -3309,8 +3513,22 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "",
       "price": 0.0,
-      "status": "з платформи",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935910",
+      "route_name": "Луцьк Жорнище",
+      "date": "23.05.2026",
+      "departure_time": "15:30",
+      "arrival_time": "17:15",
+      "carrier": "Черняк П.К.-43018 Волинська об",
+      "bus": "",
+      "price": 0.0,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936027",
@@ -3321,8 +3539,9 @@
       "carrier": "Демчук Ю.Д. м.Рівне",
       "bus": "БАЗ 079-23",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1935753",
@@ -3334,7 +3553,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935819",
@@ -3345,8 +3565,9 @@
       "carrier": "ТзОВ \"АТП Луцьк\"-",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1936142",
@@ -3358,7 +3579,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935904",
@@ -3370,7 +3592,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935831",
@@ -3382,7 +3605,8 @@
       "bus": "Богдан А20210",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935940",
@@ -3394,7 +3618,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935879",
@@ -3406,7 +3631,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  410",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935803",
@@ -3418,7 +3644,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935930",
@@ -3430,7 +3657,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936057",
@@ -3442,7 +3670,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935866",
@@ -3454,7 +3683,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936025",
@@ -3466,7 +3696,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935754",
@@ -3478,7 +3709,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935767",
@@ -3490,7 +3722,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935811",
@@ -3502,7 +3735,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936110",
@@ -3514,7 +3748,8 @@
       "bus": "",
       "price": 0.0,
       "status": "продаж припинено",
-      "sale_active": false
+      "sale_active": false,
+      "cancelled": false
     },
     {
       "vopas_id": "1936012",
@@ -3526,7 +3761,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ 814",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935993",
@@ -3538,7 +3774,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935773",
@@ -3550,7 +3787,8 @@
       "bus": "Баз А 079.14",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936127",
@@ -3562,7 +3800,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936022",
@@ -3574,7 +3813,8 @@
       "bus": "ПАЗ 32053 СПГ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935951",
@@ -3586,7 +3826,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935755",
@@ -3598,7 +3839,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935778",
@@ -3610,7 +3852,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936133",
@@ -3622,7 +3865,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936108",
@@ -3634,7 +3878,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936019",
@@ -3646,7 +3891,8 @@
       "bus": "ПАЗ З205",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935820",
@@ -3658,7 +3904,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936072",
@@ -3670,7 +3917,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935804",
@@ -3682,7 +3930,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935959",
@@ -3693,8 +3942,9 @@
       "carrier": "Приходько Н.В.",
       "bus": "Баз А 079.14",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935912",
@@ -3706,7 +3956,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935795",
@@ -3718,7 +3969,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  709 D",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936051",
@@ -3730,7 +3982,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935760",
@@ -3742,7 +3995,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935765",
@@ -3754,7 +4008,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936099",
@@ -3766,7 +4021,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936004",
@@ -3778,7 +4034,8 @@
       "bus": "ФОЛЬКСВАГЕН LT28",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935981",
@@ -3790,7 +4047,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935905",
@@ -3802,7 +4060,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936050",
@@ -3814,7 +4073,21 @@
       "bus": "Фольсваген Крафтер",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1936031",
+      "route_name": "Ківерці Олика",
+      "date": "23.05.2026",
+      "departure_time": "16:50",
+      "arrival_time": "18:00",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.24",
+      "price": 0.0,
+      "status": "в продажі",
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935876",
@@ -3826,7 +4099,8 @@
       "bus": "МАН-11.230 HOLCL",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935854",
@@ -3838,7 +4112,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935892",
@@ -3850,7 +4125,8 @@
       "bus": "БОГДАН А 09212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935821",
@@ -3862,7 +4138,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935926",
@@ -3874,7 +4151,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936089",
@@ -3886,7 +4164,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936066",
@@ -3898,7 +4177,8 @@
       "bus": "БОГДАН А0902",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936058",
@@ -3910,7 +4190,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935908",
@@ -3922,7 +4203,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935776",
@@ -3934,7 +4216,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935827",
@@ -3946,7 +4229,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936074",
@@ -3958,7 +4242,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  711",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935923",
@@ -3970,7 +4255,8 @@
       "bus": "Фольксваген LT",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935834",
@@ -3982,7 +4268,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935853",
@@ -3994,7 +4281,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935906",
@@ -4006,7 +4294,8 @@
       "bus": "Баз  А 091",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935865",
@@ -4018,7 +4307,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1938668",
@@ -4030,7 +4320,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936034",
@@ -4042,7 +4333,8 @@
       "bus": "Фольсваген Крафтер",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935868",
@@ -4054,7 +4346,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935995",
@@ -4066,7 +4359,8 @@
       "bus": "БАЗ 079-23",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936081",
@@ -4078,7 +4372,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936047",
@@ -4090,7 +4385,8 @@
       "bus": "БОГДАН А0921",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935915",
@@ -4102,7 +4398,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935907",
@@ -4114,7 +4411,8 @@
       "bus": "БАЗ-А079.19",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935756",
@@ -4126,7 +4424,8 @@
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935952",
@@ -4138,7 +4437,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935788",
@@ -4150,7 +4450,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935861",
@@ -4162,7 +4463,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935917",
@@ -4174,7 +4476,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936014",
@@ -4186,7 +4489,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935822",
@@ -4198,7 +4502,21 @@
       "bus": "Баз  А  079.20",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935839",
+      "route_name": "Луцьк- Личани ч/з Покащів",
+      "date": "23.05.2026",
+      "departure_time": "18:00",
+      "arrival_time": "19:20",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ-А 0 79",
+      "price": 0.0,
+      "status": "в продажі",
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936136",
@@ -4210,7 +4528,8 @@
       "bus": "Ванхул",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1936135",
@@ -4222,7 +4541,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936116",
@@ -4234,7 +4554,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935931",
@@ -4246,7 +4567,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936035",
@@ -4258,7 +4580,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935994",
@@ -4270,7 +4593,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  410",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935799",
@@ -4282,7 +4606,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935836",
@@ -4294,7 +4619,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935921",
@@ -4306,7 +4632,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935975",
@@ -4318,7 +4645,8 @@
       "bus": "ПАЗ-4234",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935828",
@@ -4330,7 +4658,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935945",
@@ -4342,7 +4671,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936093",
@@ -4354,7 +4684,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935989",
@@ -4366,7 +4697,8 @@
       "bus": "Деніс",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936098",
@@ -4378,7 +4710,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ  614",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935757",
@@ -4390,7 +4723,21 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935948",
+      "route_name": "Луцьк Олика",
+      "date": "23.05.2026",
+      "departure_time": "18:30",
+      "arrival_time": "19:42",
+      "carrier": "Черняк П.К.-43018 Волинська об",
+      "bus": "БОГДАН А0902",
+      "price": 0.0,
+      "status": "в продажі",
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936042",
@@ -4402,7 +4749,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935774",
@@ -4414,7 +4762,8 @@
       "bus": "YOUYІ ZGT 6710",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935936",
@@ -4426,7 +4775,8 @@
       "bus": "ЮТОНГ - ZK 6100",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935961",
@@ -4438,7 +4788,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936105",
@@ -4450,7 +4801,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1936067",
@@ -4462,7 +4814,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935956",
@@ -4474,7 +4827,8 @@
       "bus": "ПАЗ 3205",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935805",
@@ -4486,7 +4840,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936100",
@@ -4498,7 +4853,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935878",
@@ -4510,7 +4866,8 @@
       "bus": "МІЦУБІСІ prestіj",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935782",
@@ -4522,7 +4879,8 @@
       "bus": "ЛАЗ 695",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935791",
@@ -4534,7 +4892,8 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935806",
@@ -4546,7 +4905,8 @@
       "bus": "Фольксваген LT",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935999",
@@ -4558,7 +4918,21 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935844",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "19:00",
+      "arrival_time": "20:20",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.24",
+      "price": 0.0,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1935888",
@@ -4570,7 +4944,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935807",
@@ -4582,7 +4957,8 @@
       "bus": "БАЗ А 079.24",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935758",
@@ -4594,7 +4970,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935808",
@@ -4606,7 +4983,8 @@
       "bus": "МІЦУБІСІ prenses m",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936002",
@@ -4618,7 +4996,8 @@
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935856",
@@ -4630,7 +5009,8 @@
       "bus": "ГАЛАЗ-3209.10",
       "price": 0.0,
       "status": "Рейс зірваний",
-      "sale_active": true
+      "sale_active": false,
+      "cancelled": true
     },
     {
       "vopas_id": "1936086",
@@ -4642,7 +5022,8 @@
       "bus": "",
       "price": 0.0,
       "status": "з платформи",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935840",
@@ -4654,7 +5035,8 @@
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935847",
@@ -4666,7 +5048,8 @@
       "bus": "ІВЕКО ТУРБ DAІLV3510",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936082",
@@ -4678,7 +5061,8 @@
       "bus": "ПАЗ 32054",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935922",
@@ -4690,7 +5074,8 @@
       "bus": "БАЗ-А079.19",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936061",
@@ -4702,7 +5087,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935966",
@@ -4714,7 +5100,21 @@
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
+    },
+    {
+      "vopas_id": "1935911",
+      "route_name": "Луцьк Жорнище",
+      "date": "23.05.2026",
+      "departure_time": "20:05",
+      "arrival_time": "21:30",
+      "carrier": "Черняк П.К.-43018 Волинська об",
+      "bus": "БАЗ-А 0 79",
+      "price": 0.0,
+      "status": "в продажі",
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936087",
@@ -4726,7 +5126,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936121",
@@ -4738,7 +5139,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935886",
@@ -4750,7 +5152,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935809",
@@ -4762,7 +5165,8 @@
       "bus": "Фольксваген LT",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936106",
@@ -4774,7 +5178,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936103",
@@ -4786,7 +5191,8 @@
       "bus": "Неоплан",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1939107",
@@ -4798,7 +5204,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936140",
@@ -4810,7 +5217,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1935837",
@@ -4822,7 +5230,8 @@
       "bus": "БАЗ А 079.25",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936102",
@@ -4834,7 +5243,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936101",
@@ -4846,7 +5256,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936128",
@@ -4858,7 +5269,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936124",
@@ -4870,7 +5282,8 @@
       "bus": "МАН В 3212",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936143",
@@ -4882,7 +5295,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936118",
@@ -4894,7 +5308,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936117",
@@ -4906,7 +5321,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936094",
@@ -4918,7 +5334,8 @@
       "bus": "Сканія",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     },
     {
       "vopas_id": "1936122",
@@ -4930,7 +5347,8 @@
       "bus": "",
       "price": 0.0,
       "status": "в продажі",
-      "sale_active": true
+      "sale_active": true,
+      "cancelled": false
     }
   ]
 }
