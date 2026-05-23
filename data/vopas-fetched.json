@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-23T14:42:32.493127+00:00",
+  "fetched_at": "2026-05-23T14:48:43.340688+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -5143,8 +5143,8 @@
       "carrier": "ТОВ РОЛАНД-ТРАНС",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5158,8 +5158,8 @@
       "carrier": "Котельчук С.М.-",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"

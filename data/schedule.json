@@ -1,9 +1,9 @@
 {
   "version": "23.05.2026",
   "verifiedAt": "23.05.2026",
-  "verifiedTime": "17:42",
+  "verifiedTime": "17:48",
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:42 Київ.",
+  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:48 Київ.",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -45,7 +45,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935841",
@@ -69,7 +70,8 @@
           "name": "Личани",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935895",
@@ -93,7 +95,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935896",
@@ -117,7 +120,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935946",
@@ -141,7 +145,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935909",
@@ -165,7 +170,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935897",
@@ -189,7 +195,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935842",
@@ -213,7 +220,8 @@
           "name": "Личани",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935898",
@@ -237,7 +245,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935899",
@@ -261,7 +270,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935838",
@@ -285,7 +295,8 @@
           "name": "Личани",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935900",
@@ -309,7 +320,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935947",
@@ -333,7 +345,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935901",
@@ -357,7 +370,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935843",
@@ -381,7 +395,8 @@
           "name": "Личани",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935902",
@@ -405,7 +420,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935903",
@@ -429,7 +445,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935910",
@@ -453,7 +470,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935904",
@@ -477,7 +495,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935905",
@@ -501,7 +520,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1936031",
@@ -525,7 +545,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935906",
@@ -549,7 +570,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935907",
@@ -573,7 +595,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935839",
@@ -597,7 +620,8 @@
           "name": "Личани",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935948",
@@ -621,7 +645,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935844",
@@ -645,7 +670,8 @@
           "name": "Личани",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
     },
     {
       "id": "vopas_1935911",
@@ -669,7 +695,8 @@
           "name": "Луцьк",
           "km": 100
         }
-      ]
+      ],
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
     }
   ]
 }
