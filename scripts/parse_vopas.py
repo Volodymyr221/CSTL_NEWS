@@ -121,49 +121,37 @@ def probe_stops(vopas_id: str) -> None:
 
     print(f"\n=== PROBE: шукаю обробник зупинок у JS VOPAS (рейс id={vopas_id}) ===")
 
-    js_files = [
-        "https://vopas.com.ua/js/configPage.js",
-        "https://vopas.com.ua/js/config-fast-filter.js",
-        "https://vopas.com.ua/js/jquery.navigate.js",
-    ]
-    markers = ["data-id", ".go", "stops", "зупин", "flight", "ajax",
-               "$.post", "$.get", "$.ajax", "load(", "getJSON"]
-
-    for js_url in js_files:
-        try:
-            req = urllib.request.Request(js_url, headers={"User-Agent": BROWSER_UA})
-            html = None
-            for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
-                try:
-                    with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
-                        html = resp.read().decode("utf-8", errors="ignore")
-                        break
-                except urllib.error.URLError as e:
-                    if "CERTIFICATE" in str(e).upper():
-                        continue
-                    raise
-            if html is None:
-                print(f"  {js_url} — не вдалось завантажити")
-                continue
-            print(f"\n  ── {js_url} ({len(html)} байт) ──")
-            found_any = False
-            seen_positions = set()
-            for marker in markers:
-                for m in re.finditer(re.escape(marker), html, re.IGNORECASE):
-                    pos = m.start()
-                    # не дублюємо близькі збіги
-                    if any(abs(pos - p) < 150 for p in seen_positions):
-                        continue
-                    seen_positions.add(pos)
-                    s = max(0, pos - 120)
-                    frag = html[s:pos + 200].replace("\n", " ")
-                    print(f"    [{marker}] …{frag}…")
-                    found_any = True
-                    break  # перший збіг кожного маркера досить
-            if not found_any:
-                print("    (маркерів не знайдено)")
-        except Exception as e:  # noqa: BLE001
-            print(f"  {js_url} → {type(e).__name__}: {e}")
+    # Завантажуємо головний JS і шукаємо обробник кнопки .go (кнопка зупинок рейсу).
+    # Знаємо патерн: VOPAS робить $.ajax POST на /module/ajaxXXX.php.
+    # Треба знайти який саме endpoint викликає клік по .go з data-id.
+    js_url = "https://vopas.com.ua/js/configPage.js"
+    try:
+        req = urllib.request.Request(js_url, headers={"User-Agent": BROWSER_UA})
+        js = None
+        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+            try:
+                with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                    js = resp.read().decode("utf-8", errors="ignore")
+                    break
+            except urllib.error.URLError as e:
+                if "CERTIFICATE" in str(e).upper():
+                    continue
+                raise
+        if js:
+            print(f"  configPage.js завантажено ({len(js)} байт)")
+            # 1. Усі endpoint-и /module/*.php
+            endpoints = sorted(set(re.findall(r"/module/[\w]+\.php", js)))
+            print(f"  Знайдені endpoint-и /module/*.php: {endpoints}")
+            # 2. Контекст навколо обробника .go (клік по кнопці зупинок)
+            for m in re.finditer(r"\.go\b|'\.go'|\"\.go\"|data-id|getStops|showStops|Stops", js):
+                pos = m.start()
+                s = max(0, pos - 200)
+                frag = js[s:pos + 400].replace("\n", " ").replace("  ", " ")
+                print(f"    [{m.group()}@{pos}] …{frag}…")
+        else:
+            print("  configPage.js — не завантажився")
+    except Exception as e:  # noqa: BLE001
+        print(f"  помилка: {type(e).__name__}: {e}")
     print("=== кінець probe ===\n")
 
 
