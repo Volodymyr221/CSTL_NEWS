@@ -196,15 +196,97 @@ def parse_card(card_el) -> dict[str, Any] | None:
     }
 
 
-def parse_search_page(html: str) -> list[dict[str, Any]]:
+def parse_search_page(html: str, from_city: str = "", to_city: str = "") -> list[dict[str, Any]]:
     soup = BeautifulSoup(html, "html.parser")
     cards = soup.select("div.result-cols")
     routes = []
     for card in cards:
         info = parse_card(card)
         if info and info.get("departure_time"):  # skip empty
+            # Зберігаємо точки сегмента з запиту (route_name — повна назва маршруту)
+            info["from"] = from_city
+            info["to"] = to_city
             routes.append(info)
     return routes
+
+
+# ── Конвертація у формат data/schedule.json (для UI вкладки Автобуси) ──────
+
+CARRIER_PHONE = "0332 224 500"  # єдиний диспетчер VOPAS
+
+def hhmm_to_min(hhmm: str | None) -> int | None:
+    if not hhmm or ":" not in hhmm:
+        return None
+    h, m = hhmm.split(":")
+    return int(h) * 60 + int(m)
+
+def make_carrier_id(name: str) -> str:
+    """«під.Яцишин М.М.» → 'yatsyshyn_mm' (стабільний slug для carriers{})."""
+    base = re.sub(r"[^\wа-яіїєґА-ЯІЇЄҐ]+", "_", (name or "").lower()).strip("_")
+    return base[:40] or "unknown"
+
+def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
+    """Конвертує розпарсені рейси VOPAS у формат data/schedule.json
+    який очікує src/core/bus-schedule.js (routes[] зі stops[], carriers{}).
+
+    Проміжні зупинки поки НЕ доступні (треба окремий запит VOPAS за vopas_id) —
+    кожен рейс має 2 точки [from, to]. Шкала покаже старт→фініш з рухом 🚌 за часом.
+    """
+    carriers: dict[str, dict[str, str]] = {}
+    out_routes = []
+
+    for r in routes:
+        dep = r.get("departure_time")
+        arr = r.get("arrival_time")
+        dep_min = hhmm_to_min(dep)
+        arr_min = hhmm_to_min(arr)
+        if dep_min is None or arr_min is None:
+            continue
+        duration = max(0, arr_min - dep_min)
+
+        carrier_name = r.get("carrier") or "Перевізник"
+        cid = make_carrier_id(carrier_name)
+        carriers.setdefault(cid, {"name": carrier_name, "phone": CARRIER_PHONE})
+
+        frm = r.get("from") or (r.get("route_name") or "").split()[0]
+        to = r.get("to") or (r.get("route_name") or "—")
+        price = r.get("price")
+
+        # Статус для UI: cancelled (відмінено) має пріоритет
+        status = "cancelled" if r.get("cancelled") else "scheduled"
+
+        out_routes.append({
+            "id": f"vopas_{r.get('vopas_id') or dep.replace(':', '')}",
+            "vopas_id": r.get("vopas_id"),
+            "name": r.get("route_name") or f"{frm} → {to}",
+            "carrier": cid,
+            "bus": r.get("bus"),
+            "days": "щодня",  # VOPAS дає на конкретну дату; cron щодня тримає актуальним
+            "status": status,
+            "sale_active": r.get("sale_active", True),
+            "departure_time": dep,
+            "arrival_time": arr,
+            "duration_min": duration,
+            "auto_generated": False,
+            "stops": [
+                {"name": frm, "km": 0,   "price_from_start": 0},
+                {"name": to,  "km": 100, "price_from_start": price or 0},
+            ],
+        })
+
+    # Сортуємо за часом відправлення
+    out_routes.sort(key=lambda x: hhmm_to_min(x["departure_time"]) or 0)
+
+    now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
+    return {
+        "version": today,
+        "verifiedAt": now_kyiv.strftime("%d.%m.%Y"),
+        "verifiedTime": now_kyiv.strftime("%H:%M"),
+        "source": "VOPAS — vopas.com.ua (авто-оновлення)",
+        "note": f"Авто-парсинг vopas.com.ua. Оновлено {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ.",
+        "carriers": carriers,
+        "routes": out_routes,
+    }
 
 
 # ── Main ──────────────────────────────────────────────────────────────────
@@ -237,7 +319,7 @@ def main() -> int:
         print(f"→ {from_city} → {to_city}")
         try:
             html = fetch_html(url)
-            routes = parse_search_page(html)
+            routes = parse_search_page(html, from_city, to_city)
             print(f"  ✓ знайдено {len(routes)} рейсів (HTML {len(html)} байт)")
             all_routes.extend(routes)
         except Exception as e:  # noqa: BLE001
@@ -253,23 +335,31 @@ def main() -> int:
         for e in errors:
             print(f"   - {e}")
 
-    # Зберігаємо у data/vopas-fetched.json (поки окремо від schedule.json)
-    output = {
-        "fetched_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "date":       today,
-        "source":     "vopas.com.ua",
-        "pairs_queried": [f"{a}→{b}" for a, b in MARSHRUTI],
-        "errors":     errors,
-        "routes":     unique,
-    }
+    # ЗАХИСТ: якщо нічого не знайшли (сайт ліг / усі запити з помилкою) —
+    # НЕ перезаписуємо schedule.json, щоб не обнулити робочий розклад.
+    if not unique:
+        print("\n⚠️  Жодного рейсу не отримано — schedule.json НЕ оновлюємо (зберігаємо старий)")
+        return 0
+
+    # Діагностичний дамп (сирі дані) — поки лишаємо для перевірки
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUTPUT_PATH.write_text(
-        json.dumps(output, ensure_ascii=False, indent=2),
+    OUTPUT_PATH.write_text(json.dumps({
+        "fetched_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "date": today, "source": "vopas.com.ua",
+        "errors": errors, "routes": unique,
+    }, ensure_ascii=False, indent=2), encoding="utf-8")
+
+    # ГОЛОВНЕ: пишемо data/schedule.json у форматі для UI вкладки Автобуси
+    schedule = build_schedule(unique, today)
+    schedule_path = Path(__file__).parent.parent / "data" / "schedule.json"
+    schedule_path.write_text(
+        json.dumps(schedule, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print(f"\n💾 Записано у {OUTPUT_PATH}")
+    print(f"💾 Оновлено {schedule_path}: {len(schedule['routes'])} рейсів, "
+          f"{len(schedule['carriers'])} перевізників, "
+          f"verifiedAt={schedule['verifiedAt']} {schedule['verifiedTime']}")
 
-    # exit 0 — навіть з помилками, бо часткові дані теж корисні
     return 0
 
 

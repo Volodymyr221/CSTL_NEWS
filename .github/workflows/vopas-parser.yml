@@ -52,23 +52,31 @@ jobs:
 
       - name: Commit if changed
         run: |
-          if [ -n "$(git status --porcelain data/vopas-fetched.json)" ]; then
+          if [ -n "$(git status --porcelain data/schedule.json data/vopas-fetched.json)" ]; then
             git config user.name  "vopas-parser-bot"
             git config user.email "vopas-parser@cstl-news.local"
-            git add data/vopas-fetched.json
-            git -c commit.gpgsign=false commit -m "auto(vopas): оновлення розкладу $(date -u +'%d.%m %H:%M UTC')"
+            git add data/schedule.json data/vopas-fetched.json
+            git -c commit.gpgsign=false commit -m "auto(vopas): розклад автобусів $(date -u +'%d.%m %H:%M UTC')"
             # main міг зрушити поки парсер працював (auto-news cron / auto-merge).
             # Підтягуємо свіжий main, rebase наш коміт зверху, push. Retry x3.
+            pushed=false
             for i in 1 2 3; do
               git fetch origin main
               if git rebase origin/main && git push origin HEAD:main; then
                 echo "✓ push успішний (спроба $i)"
+                pushed=true
                 break
               fi
               echo "⚠️ спроба $i не вдалась, повтор..."
               git rebase --abort 2>/dev/null || true
               sleep 3
             done
+            # Тригеримо деплой щоб сайт показав свіжий розклад
+            if [ "$pushed" = true ]; then
+              gh workflow run deploy.yml --ref main || echo "deploy trigger failed (не критично)"
+            fi
           else
-            echo "Без змін у data/vopas-fetched.json — нічого комітити"
+            echo "Розклад без змін — нічого комітити"
           fi
+        env:
+          GH_TOKEN: ${{ github.token }}
