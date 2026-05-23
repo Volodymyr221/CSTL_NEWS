@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-05-23T14:22:36.629230+00:00",
+  "fetched_at": "2026-05-23T14:31:37.440248+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -4993,8 +4993,8 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -5008,8 +5008,8 @@
       "carrier": "Мірчук А.І.",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -5023,8 +5023,8 @@
       "carrier": "Новак М.Б. 45607 Волинська обл",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -5038,9 +5038,9 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
     },
@@ -5053,8 +5053,8 @@
       "carrier": "Зінюк Л.Л. заїзд",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
@@ -5068,8 +5068,8 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БАЗ-А079.19",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Олика",
       "to": "Луцьк"
