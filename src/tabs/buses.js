@@ -395,12 +395,14 @@ function renderRouteList() {
             ${autoNote}
           </div>
         </div>
-        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-          ${expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾'}
-        </button>
-        <div class="bs-stops-body"${expanded ? '' : ' hidden'}>
-          ${stopsHtml}
-        </div>
+        ${route.stops && route.stops.length > 2
+          ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
+               ${expanded ? 'Сховати зупинки ▴' : 'Всі зупинки ▾'}
+             </button>
+             <div class="bs-stops-body"${expanded ? '' : ' hidden'}>${stopsHtml}</div>`
+          : route.vopas_url
+          ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">Усі зупинки рейсу на VOPAS →</a>`
+          : ''}
       </div>`;
   }).join('');
 
