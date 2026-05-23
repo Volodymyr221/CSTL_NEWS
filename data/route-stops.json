@@ -1,0 +1,795 @@
+{
+  "note": "Статична карта трас через Олику зі зупинками (км+ціна). База — офіційні квитки VOPAS. Зупинки стабільні роками. Парсер parse_vopas.py бере звідси зупинки, а час/статус — з vopas.com.ua.",
+  "carriers": {
+    "yatsyshyn": {
+      "name": "під.Яцишин М.М.",
+      "phone": "0332 224 500"
+    },
+    "chernyak": {
+      "name": "Черняк П.К.-43018 Волинська об",
+      "phone": "0332 224 500"
+    }
+  },
+  "routes": [
+    {
+      "id": "kiv_nos",
+      "name": "Ківерці → Носовичі",
+      "stops": [
+        {
+          "name": "Ківерці",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Піддубці",
+          "km": 20,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Струмівка",
+          "km": 20,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Гараджа",
+          "km": 20,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Звірів",
+          "km": 21,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Арматнів",
+          "km": 23,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Пальче",
+          "km": 24,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Котів пов.",
+          "km": 28,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Дерно",
+          "km": 32,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Одеради АЗ",
+          "km": 36,
+          "price_from_start": 145.2
+        },
+        {
+          "name": "Дідичі",
+          "km": 38,
+          "price_from_start": 152.9
+        },
+        {
+          "name": "Олика",
+          "km": 42,
+          "price_from_start": 157.3
+        },
+        {
+          "name": "Чемерин",
+          "km": 45,
+          "price_from_start": 173.8
+        },
+        {
+          "name": "Жорнище",
+          "km": 49,
+          "price_from_start": 181.5
+        },
+        {
+          "name": "Носовичі",
+          "km": 51,
+          "price_from_start": 188.1
+        }
+      ]
+    },
+    {
+      "id": "lut_lic_1",
+      "name": "Луцьк → Личани",
+      "stops": [
+        {
+          "name": "Луцьк",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Струмівка",
+          "km": 10,
+          "price_from_start": 110.0
+        },
+        {
+          "name": "Гараджа",
+          "km": 11,
+          "price_from_start": 110.0
+        },
+        {
+          "name": "Піддубці",
+          "km": 14,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Звірів",
+          "km": 20,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Арматнів",
+          "km": 22,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Пальче",
+          "km": 25,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Хорлупи",
+          "km": 30,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Покащів",
+          "km": 34,
+          "price_from_start": 145.2
+        },
+        {
+          "name": "Одеради АЗ",
+          "km": 36,
+          "price_from_start": 145.2
+        },
+        {
+          "name": "Хромяків",
+          "km": 38,
+          "price_from_start": 152.9
+        },
+        {
+          "name": "Дідичі",
+          "km": 41,
+          "price_from_start": 159.5
+        },
+        {
+          "name": "Олика",
+          "km": 44,
+          "price_from_start": 173.8
+        },
+        {
+          "name": "Метельне",
+          "km": 47,
+          "price_from_start": 181.5
+        },
+        {
+          "name": "Личани",
+          "km": 51,
+          "price_from_start": 188.1
+        }
+      ]
+    },
+    {
+      "id": "nos_kiv",
+      "name": "Носовичі → Ківерці",
+      "stops": [
+        {
+          "name": "Носовичі",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Жорнище",
+          "km": 2,
+          "price_from_start": 6.6
+        },
+        {
+          "name": "Чемерин",
+          "km": 6,
+          "price_from_start": 14.3
+        },
+        {
+          "name": "Олика",
+          "km": 9,
+          "price_from_start": 30.8
+        },
+        {
+          "name": "Дідичі",
+          "km": 13,
+          "price_from_start": 35.2
+        },
+        {
+          "name": "Одеради АЗ",
+          "km": 15,
+          "price_from_start": 42.9
+        },
+        {
+          "name": "Дерно",
+          "km": 19,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Котів пов.",
+          "km": 23,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Пальче",
+          "km": 27,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Арматнів",
+          "km": 28,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Звірів",
+          "km": 30,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Гараджа",
+          "km": 31,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Струмівка",
+          "km": 31,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Піддубці",
+          "km": 31,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Ківерці",
+          "km": 51,
+          "price_from_start": 188.1
+        }
+      ]
+    },
+    {
+      "id": "lic_lut_1",
+      "name": "Личани → Луцьк",
+      "stops": [
+        {
+          "name": "Личани",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Метельне",
+          "km": 4,
+          "price_from_start": 6.6
+        },
+        {
+          "name": "Олика",
+          "km": 7,
+          "price_from_start": 14.3
+        },
+        {
+          "name": "Дідичі",
+          "km": 10,
+          "price_from_start": 28.6
+        },
+        {
+          "name": "Хромяків",
+          "km": 13,
+          "price_from_start": 35.2
+        },
+        {
+          "name": "Одеради АЗ",
+          "km": 15,
+          "price_from_start": 42.9
+        },
+        {
+          "name": "Покащів",
+          "km": 17,
+          "price_from_start": 42.9
+        },
+        {
+          "name": "Хорлупи",
+          "km": 21,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Пальче",
+          "km": 26,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Арматнів",
+          "km": 29,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Звірів",
+          "km": 31,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Піддубці",
+          "km": 37,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Гараджа",
+          "km": 40,
+          "price_from_start": 78.1
+        },
+        {
+          "name": "Струмівка",
+          "km": 41,
+          "price_from_start": 78.1
+        },
+        {
+          "name": "Луцьк",
+          "km": 51,
+          "price_from_start": 188.1
+        }
+      ]
+    },
+    {
+      "id": "lut_oly_1",
+      "name": "Луцьк → Олика",
+      "stops": [
+        {
+          "name": "Луцьк",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Струмівка",
+          "km": 10,
+          "price_from_start": 33.0
+        },
+        {
+          "name": "Гараджа",
+          "km": 12,
+          "price_from_start": 44.0
+        },
+        {
+          "name": "Піддубці",
+          "km": 16,
+          "price_from_start": 55.0
+        },
+        {
+          "name": "Звірів",
+          "km": 21,
+          "price_from_start": 60.5
+        },
+        {
+          "name": "Арматнів",
+          "km": 23,
+          "price_from_start": 66.0
+        },
+        {
+          "name": "Пальче",
+          "km": 26,
+          "price_from_start": 82.5
+        },
+        {
+          "name": "Котів пов.",
+          "km": 28,
+          "price_from_start": 77.0
+        },
+        {
+          "name": "Дерно",
+          "km": 32,
+          "price_from_start": 88.0
+        },
+        {
+          "name": "Хромяків",
+          "km": 37,
+          "price_from_start": 104.5
+        },
+        {
+          "name": "Одеради",
+          "km": 38,
+          "price_from_start": 110.0
+        },
+        {
+          "name": "Хромяків пов.",
+          "km": 41,
+          "price_from_start": 115.5
+        },
+        {
+          "name": "Олика",
+          "km": 44,
+          "price_from_start": 132.0
+        }
+      ]
+    },
+    {
+      "id": "oly_lut_1",
+      "name": "Олика → Луцьк",
+      "stops": [
+        {
+          "name": "Олика",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Хромяків пов.",
+          "km": 3,
+          "price_from_start": 16.5
+        },
+        {
+          "name": "Одеради",
+          "km": 6,
+          "price_from_start": 22.0
+        },
+        {
+          "name": "Хромяків",
+          "km": 7,
+          "price_from_start": 27.5
+        },
+        {
+          "name": "Дерно",
+          "km": 12,
+          "price_from_start": 44.0
+        },
+        {
+          "name": "Котів пов.",
+          "km": 16,
+          "price_from_start": 55.0
+        },
+        {
+          "name": "Пальче",
+          "km": 18,
+          "price_from_start": 49.5
+        },
+        {
+          "name": "Арматнів",
+          "km": 21,
+          "price_from_start": 66.0
+        },
+        {
+          "name": "Звірів",
+          "km": 23,
+          "price_from_start": 71.5
+        },
+        {
+          "name": "Піддубці",
+          "km": 28,
+          "price_from_start": 77.0
+        },
+        {
+          "name": "Гараджа",
+          "km": 32,
+          "price_from_start": 88.0
+        },
+        {
+          "name": "Струмівка",
+          "km": 34,
+          "price_from_start": 99.0
+        },
+        {
+          "name": "Луцьк",
+          "km": 44,
+          "price_from_start": 132.0
+        }
+      ]
+    },
+    {
+      "id": "lut_zho_1",
+      "name": "Луцьк → Жорнище",
+      "stops": [
+        {
+          "name": "Луцьк",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Струмівка",
+          "km": 10,
+          "price_from_start": 33.0
+        },
+        {
+          "name": "Гараджа",
+          "km": 12,
+          "price_from_start": 44.0
+        },
+        {
+          "name": "Піддубці",
+          "km": 16,
+          "price_from_start": 55.0
+        },
+        {
+          "name": "Звірів",
+          "km": 21,
+          "price_from_start": 60.5
+        },
+        {
+          "name": "Арматнів",
+          "km": 23,
+          "price_from_start": 66.0
+        },
+        {
+          "name": "Пальче",
+          "km": 25,
+          "price_from_start": 77.0
+        },
+        {
+          "name": "Хорлупи",
+          "km": 30,
+          "price_from_start": 88.0
+        },
+        {
+          "name": "Покащів",
+          "km": 34,
+          "price_from_start": 99.0
+        },
+        {
+          "name": "Одеради",
+          "km": 37,
+          "price_from_start": 104.5
+        },
+        {
+          "name": "Хромяків",
+          "km": 38,
+          "price_from_start": 110.0
+        },
+        {
+          "name": "Дідичі",
+          "km": 43,
+          "price_from_start": 126.5
+        },
+        {
+          "name": "Олика",
+          "km": 44,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Чемерин",
+          "km": 47,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Носовичі",
+          "km": 51,
+          "price_from_start": 154.0
+        },
+        {
+          "name": "Жорнище",
+          "km": 54,
+          "price_from_start": 165.0
+        }
+      ]
+    },
+    {
+      "id": "zho_lut_1",
+      "name": "Жорнище → Луцьк",
+      "stops": [
+        {
+          "name": "Жорнище",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Носовичі",
+          "km": 3,
+          "price_from_start": 11.0
+        },
+        {
+          "name": "Чемерин",
+          "km": 7,
+          "price_from_start": 33.0
+        },
+        {
+          "name": "Олика",
+          "km": 10,
+          "price_from_start": 33.0
+        },
+        {
+          "name": "Дідичі",
+          "km": 11,
+          "price_from_start": 38.5
+        },
+        {
+          "name": "Хромяків",
+          "km": 16,
+          "price_from_start": 55.0
+        },
+        {
+          "name": "Одеради",
+          "km": 17,
+          "price_from_start": 60.5
+        },
+        {
+          "name": "Покащів",
+          "km": 20,
+          "price_from_start": 66.0
+        },
+        {
+          "name": "Хорлупи",
+          "km": 24,
+          "price_from_start": 77.0
+        },
+        {
+          "name": "Пальче",
+          "km": 29,
+          "price_from_start": 88.0
+        },
+        {
+          "name": "Арматнів",
+          "km": 31,
+          "price_from_start": 99.0
+        },
+        {
+          "name": "Звірів",
+          "km": 33,
+          "price_from_start": 104.5
+        },
+        {
+          "name": "Піддубці",
+          "km": 38,
+          "price_from_start": 110.0
+        },
+        {
+          "name": "Гараджа",
+          "km": 42,
+          "price_from_start": 121.0
+        },
+        {
+          "name": "Струмівка",
+          "km": 44,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Луцьк",
+          "km": 54,
+          "price_from_start": 165.0
+        }
+      ]
+    },
+    {
+      "id": "lut_lic_4",
+      "name": "Луцьк → Личани",
+      "stops": [
+        {
+          "name": "Луцьк",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Гараджа",
+          "km": 20,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Піддубці",
+          "km": 20,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Звірів",
+          "km": 21,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Арматнів",
+          "km": 23,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Пальче",
+          "km": 26,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Котів",
+          "km": 29,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Дерно",
+          "km": 32,
+          "price_from_start": 132.0
+        },
+        {
+          "name": "Хромяків",
+          "km": 37,
+          "price_from_start": 145.2
+        },
+        {
+          "name": "Дідичі",
+          "km": 38,
+          "price_from_start": 152.9
+        },
+        {
+          "name": "Олика",
+          "km": 44,
+          "price_from_start": 173.8
+        },
+        {
+          "name": "Метельне",
+          "km": 47,
+          "price_from_start": 181.5
+        },
+        {
+          "name": "Личани",
+          "km": 51,
+          "price_from_start": 188.1
+        }
+      ]
+    },
+    {
+      "id": "lic_lut_4",
+      "name": "Личани → Луцьк",
+      "stops": [
+        {
+          "name": "Личани",
+          "km": 0,
+          "price_from_start": 0
+        },
+        {
+          "name": "Метельне",
+          "km": 4,
+          "price_from_start": 6.6
+        },
+        {
+          "name": "Олика",
+          "km": 7,
+          "price_from_start": 14.3
+        },
+        {
+          "name": "Дідичі",
+          "km": 13,
+          "price_from_start": 35.2
+        },
+        {
+          "name": "Хромяків",
+          "km": 14,
+          "price_from_start": 42.9
+        },
+        {
+          "name": "Дерно",
+          "km": 19,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Котів",
+          "km": 22,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Пальче",
+          "km": 25,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Арматнів",
+          "km": 28,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Звірів",
+          "km": 30,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Піддубці",
+          "km": 31,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Гараджа",
+          "km": 31,
+          "price_from_start": 56.1
+        },
+        {
+          "name": "Луцьк",
+          "km": 51,
+          "price_from_start": 188.1
+        }
+      ]
+    }
+  ]
+}

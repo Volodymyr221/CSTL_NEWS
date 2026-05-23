@@ -110,31 +110,48 @@ def fetch_html(url: str) -> str:
     raise RuntimeError(f"fetch failed: {last_err}")
 
 
-# ── ДІАГНОСТИКА: де зупинки рейсу в HTML (тимчасово) ──────────────────────
-def probe_stops(html: str) -> None:
-    """Вова показав: клік «(i)» відкриває модалку зі зупинками (Гараджа, Піддубці...
-    км + ціна). Отже зупинки АБО вже в HTML сторінки (приховані), АБО ajax.
-    Шукаємо в HTML сторінки пошуку маркери зупинок."""
-    print(f"\n=== PROBE: шукаю зупинки в HTML сторінки ({len(html)} байт) ===")
+# ── Статична карта трас зі зупинками (data/route-stops.json) ──────────────
+# Зупинки маршрутів стабільні (фізична дорога). База — офіційні квитки VOPAS.
+# Парсер бере звідси зупинки+км+ціну, а час/статус — з vopas.com.ua (актуальне).
+_ROUTE_MAP_CACHE = None
 
-    markers = ["Зупинки маршруту", "Гараджа", "Піддубці", "придбати онлайн",
-               "result-stop", "stops-table", "stopsTable", "modal-stops",
-               "data-stops", "route-stops"]
-    for marker in markers:
-        idx = html.find(marker)
-        cnt = html.count(marker)
-        print(f"  '{marker}': {cnt} збігів" + (f" (перший @{idx})" if idx >= 0 else ""))
-        if idx >= 0 and marker in ("Зупинки маршруту", "Гараджа", "придбати онлайн"):
-            s = max(0, idx - 400)
-            frag = html[s:idx + 1200].replace("\n", " ")
-            print(f"    фрагмент: …{frag}…")
+def load_route_map() -> list[dict]:
+    global _ROUTE_MAP_CACHE
+    if _ROUTE_MAP_CACHE is None:
+        path = Path(__file__).parent.parent / "data" / "route-stops.json"
+        try:
+            _ROUTE_MAP_CACHE = json.loads(path.read_text(encoding="utf-8")).get("routes", [])
+        except Exception:  # noqa: BLE001
+            _ROUTE_MAP_CACHE = []
+    return _ROUTE_MAP_CACHE
 
-    # Можливо зупинки у прихованих div з id що містить vopas_id рейсу
-    hidden = re.findall(r'<div[^>]*(?:id|class)="[^"]*stop[^"]*"[^>]*>', html, re.IGNORECASE)
-    print(f"  div зі 'stop' у class/id: {len(hidden)}")
-    for h in hidden[:5]:
-        print(f"    {h[:150]}")
-    print("=== кінець probe ===\n")
+
+def match_stops(from_city: str, to_city: str) -> list[dict] | None:
+    """Знаходить підмаршрут зупинок між from і to у статичній карті трас.
+    Повертає список stops (name, km нормалізований від 0, price_from_start
+    нормалізована) або None якщо траси немає (тоді UI покаже 2 точки)."""
+    fl, tl = (from_city or "").lower(), (to_city or "").lower()
+    best = None
+    for route in load_route_map():
+        stops = route.get("stops", [])
+        names = [s["name"].lower() for s in stops]
+        # шукаємо from перед to (підрядок — бо «Хромяків пов.» містить «хромяків»)
+        fi = next((i for i, n in enumerate(names) if fl in n or n in fl), None)
+        ti = next((i for i, n in enumerate(names) if tl in n or n in tl), None)
+        if fi is not None and ti is not None and fi < ti:
+            seg = stops[fi:ti + 1]
+            if best is None or len(seg) > len(best):
+                best = seg  # найдовший підмаршрут (найбільше проміжних зупинок)
+    if not best:
+        return None
+    # Нормалізуємо км і ціну від початку сегмента (0)
+    base_km = best[0].get("km", 0)
+    base_price = best[0].get("price_from_start", 0)
+    return [{
+        "name": s["name"],
+        "km": s.get("km", 0) - base_km,
+        "price_from_start": round(max(0, s.get("price_from_start", 0) - base_price), 2),
+    } for s in best]
 
 
 # ── Парсинг HTML ──────────────────────────────────────────────────────────
@@ -343,6 +360,16 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
         # Статус для UI: cancelled (відмінено) має пріоритет
         status = "cancelled" if r.get("cancelled") else "scheduled"
 
+        # ЗУПИНКИ зі статичної карти трас (назви + км). Якщо траси немає —
+        # 2 точки (from→to). Ціну з карти НЕ беремо (квиткова, могла застаріти) —
+        # UI показує ЧАС прибуття на кожну зупинку (рахується з км + departure).
+        mapped = match_stops(frm, to)
+        if mapped and len(mapped) >= 2:
+            total_km = mapped[-1]["km"] or 1
+            stops = [{"name": s["name"], "km": s["km"]} for s in mapped]
+        else:
+            stops = [{"name": frm, "km": 0}, {"name": to, "km": 100}]
+
         out_routes.append({
             "id": f"vopas_{r.get('vopas_id') or dep.replace(':', '')}",
             "vopas_id": r.get("vopas_id"),
@@ -356,11 +383,7 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
             "arrival_time": arr,
             "duration_min": duration,
             "auto_generated": False,
-            "price": price,  # None якщо тарифу немає → UI покаже «—»
-            "stops": [
-                {"name": frm, "km": 0,   "price_from_start": 0},
-                {"name": to,  "km": 100, "price_from_start": price or 0},
-            ],
+            "stops": stops,
         })
 
     # Сортуємо за часом відправлення
@@ -403,15 +426,12 @@ def main() -> int:
 
     all_routes: list[dict[str, Any]] = []
     errors: list[str] = []
-    first_html = None  # для probe зупинок
 
     for from_city, to_city in MARSHRUTI:
         url = build_url(from_city, to_city, today)
         print(f"→ {from_city} → {to_city}")
         try:
             html = fetch_html(url)
-            if first_html is None and len(html) > 50000:
-                first_html = html
             routes = parse_search_page(html, from_city, to_city)
             print(f"  ✓ знайдено {len(routes)} рейсів (HTML {len(html)} байт)")
             all_routes.extend(routes)
@@ -422,10 +442,6 @@ def main() -> int:
 
     unique = dedupe(all_routes)
     print(f"\n→ Усього: {len(all_routes)} рейсів, унікальних: {len(unique)}")
-
-    # ДІАГНОСТИКА (тимчасово): шукаємо зупинки рейсу в HTML сторінки
-    if first_html:
-        probe_stops(first_html)
 
     if errors:
         print(f"\n⚠️  Помилок: {len(errors)}")

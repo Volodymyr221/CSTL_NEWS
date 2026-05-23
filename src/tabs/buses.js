@@ -351,19 +351,18 @@ function renderRouteList() {
       : `${segDur} хв`;
     const c        = carrierInfo(route.carrier);
     const expanded = expandedIds.has(route.id);
-    const basePrice = route.stops.find(s => s.name === effFrom)?.price_from_start ?? 0;
 
     const stopsHtml = route.stops.map(s => {
       const isFrom = s.name === effFrom;
       const isTo   = s.name === effTo;
       const hl     = isFrom || isTo;
       const t      = getStopHHMM(route, s.name);
-      const seg    = Math.max(0, s.price_from_start - basePrice).toFixed(2);
+      // Час прибуття на зупинку (з км + час відправлення). Ціну прибрано —
+      // квиткова застаріває, час корисніший для пасажира.
       return `
         <div class="bs-stop-row${hl ? ' hl' : ''}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
           <span class="bs-stop-name">${isFrom ? '▶\u202f' : isTo ? '◀\u202f' : ''}${escapeHtml(s.name)}</span>
-          <span class="bs-stop-price">${escapeHtml(seg)} грн</span>
         </div>`;
     }).join('');
 

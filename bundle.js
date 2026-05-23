@@ -3346,18 +3346,15 @@ ${ev.description}`
       const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
       const c = carrierInfo(route.carrier);
       const expanded = expandedIds.has(route.id);
-      const basePrice = route.stops.find((s) => s.name === effFrom)?.price_from_start ?? 0;
       const stopsHtml = route.stops.map((s) => {
         const isFrom = s.name === effFrom;
         const isTo = s.name === effTo;
         const hl = isFrom || isTo;
         const t = getStopHHMM(route, s.name);
-        const seg = Math.max(0, s.price_from_start - basePrice).toFixed(2);
         return `
         <div class="bs-stop-row${hl ? " hl" : ""}">
           <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
           <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
-          <span class="bs-stop-price">${escapeHtml(seg)} \u0433\u0440\u043D</span>
         </div>`;
       }).join("");
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
