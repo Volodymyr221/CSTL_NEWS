@@ -110,48 +110,30 @@ def fetch_html(url: str) -> str:
     raise RuntimeError(f"fetch failed: {last_err}")
 
 
-# ── ДІАГНОСТИКА: як VOPAS віддає зупинки рейсу (тимчасово) ─────────────────
-def probe_stops(vopas_id: str) -> None:
-    """Endpoint зупинок невідомий — мої здогадки дали 404. Тому читаємо
-    JS-код VOPAS і шукаємо обробник кнопки .go (data-id) — там буде
-    справжній URL/ajax виклик за зупинками."""
-    if not vopas_id:
-        print("   probe_stops: немає vopas_id")
-        return
+# ── ДІАГНОСТИКА: де зупинки рейсу в HTML (тимчасово) ──────────────────────
+def probe_stops(html: str) -> None:
+    """Вова показав: клік «(i)» відкриває модалку зі зупинками (Гараджа, Піддубці...
+    км + ціна). Отже зупинки АБО вже в HTML сторінки (приховані), АБО ajax.
+    Шукаємо в HTML сторінки пошуку маркери зупинок."""
+    print(f"\n=== PROBE: шукаю зупинки в HTML сторінки ({len(html)} байт) ===")
 
-    print(f"\n=== PROBE: шукаю обробник зупинок у JS VOPAS (рейс id={vopas_id}) ===")
+    markers = ["Зупинки маршруту", "Гараджа", "Піддубці", "придбати онлайн",
+               "result-stop", "stops-table", "stopsTable", "modal-stops",
+               "data-stops", "route-stops"]
+    for marker in markers:
+        idx = html.find(marker)
+        cnt = html.count(marker)
+        print(f"  '{marker}': {cnt} збігів" + (f" (перший @{idx})" if idx >= 0 else ""))
+        if idx >= 0 and marker in ("Зупинки маршруту", "Гараджа", "придбати онлайн"):
+            s = max(0, idx - 400)
+            frag = html[s:idx + 1200].replace("\n", " ")
+            print(f"    фрагмент: …{frag}…")
 
-    # Завантажуємо головний JS і шукаємо обробник кнопки .go (кнопка зупинок рейсу).
-    # Знаємо патерн: VOPAS робить $.ajax POST на /module/ajaxXXX.php.
-    # Треба знайти який саме endpoint викликає клік по .go з data-id.
-    js_url = "https://vopas.com.ua/js/configPage.js"
-    try:
-        req = urllib.request.Request(js_url, headers={"User-Agent": BROWSER_UA})
-        js = None
-        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
-            try:
-                with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
-                    js = resp.read().decode("utf-8", errors="ignore")
-                    break
-            except urllib.error.URLError as e:
-                if "CERTIFICATE" in str(e).upper():
-                    continue
-                raise
-        if js:
-            print(f"  configPage.js завантажено ({len(js)} байт)")
-            # 1. Усі endpoint-и /module/*.php
-            endpoints = sorted(set(re.findall(r"/module/[\w]+\.php", js)))
-            print(f"  Знайдені endpoint-и /module/*.php: {endpoints}")
-            # 2. Контекст навколо обробника .go (клік по кнопці зупинок)
-            for m in re.finditer(r"\.go\b|'\.go'|\"\.go\"|data-id|getStops|showStops|Stops", js):
-                pos = m.start()
-                s = max(0, pos - 200)
-                frag = js[s:pos + 400].replace("\n", " ").replace("  ", " ")
-                print(f"    [{m.group()}@{pos}] …{frag}…")
-        else:
-            print("  configPage.js — не завантажився")
-    except Exception as e:  # noqa: BLE001
-        print(f"  помилка: {type(e).__name__}: {e}")
+    # Можливо зупинки у прихованих div з id що містить vopas_id рейсу
+    hidden = re.findall(r'<div[^>]*(?:id|class)="[^"]*stop[^"]*"[^>]*>', html, re.IGNORECASE)
+    print(f"  div зі 'stop' у class/id: {len(hidden)}")
+    for h in hidden[:5]:
+        print(f"    {h[:150]}")
     print("=== кінець probe ===\n")
 
 
@@ -421,12 +403,15 @@ def main() -> int:
 
     all_routes: list[dict[str, Any]] = []
     errors: list[str] = []
+    first_html = None  # для probe зупинок
 
     for from_city, to_city in MARSHRUTI:
         url = build_url(from_city, to_city, today)
         print(f"→ {from_city} → {to_city}")
         try:
             html = fetch_html(url)
+            if first_html is None and len(html) > 50000:
+                first_html = html
             routes = parse_search_page(html, from_city, to_city)
             print(f"  ✓ знайдено {len(routes)} рейсів (HTML {len(html)} байт)")
             all_routes.extend(routes)
@@ -438,10 +423,9 @@ def main() -> int:
     unique = dedupe(all_routes)
     print(f"\n→ Усього: {len(all_routes)} рейсів, унікальних: {len(unique)}")
 
-    # ДІАГНОСТИКА (тимчасово): пробуємо знайти endpoint зупинок на 1 рейсі
-    first_with_id = next((r for r in unique if r.get("vopas_id")), None)
-    if first_with_id:
-        probe_stops(first_with_id["vopas_id"])
+    # ДІАГНОСТИКА (тимчасово): шукаємо зупинки рейсу в HTML сторінки
+    if first_html:
+        probe_stops(first_html)
 
     if errors:
         print(f"\n⚠️  Помилок: {len(errors)}")
