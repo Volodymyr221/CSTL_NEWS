@@ -580,6 +580,23 @@
 }
 .bs-toggle:active { background: var(--gray-light); }
 
+/* Посилання на повні зупинки рейсу на vopas.com.ua (коли точних зупинок
+   у нас немає — endpoint VOPAS обфускований). Веде на офіційний розклад. */
+.bs-vopas-link {
+  display: block;
+  width: 100%;
+  padding: 9px 16px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--navy);
+  text-align: center;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background 0.12s;
+}
+.bs-vopas-link:active { background: var(--gray-light); }
+
 /* Тіло акордеону (accordion body — список зупинок, прихований за замовчуванням) */
 .bs-stops-body {
   background: var(--gray-light);

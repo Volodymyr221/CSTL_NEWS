@@ -3378,12 +3378,10 @@ ${ev.description}`
             ${autoNote}
           </div>
         </div>
-        <button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-          ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
-        </button>
-        <div class="bs-stops-body"${expanded ? "" : " hidden"}>
-          ${stopsHtml}
-        </div>
+        ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
+               ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
+             </button>
+             <div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>` : route.vopas_url ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">\u0423\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u0440\u0435\u0439\u0441\u0443 \u043D\u0430 VOPAS \u2192</a>` : ""}
       </div>`;
     }).join("");
     let toggleHtml = "";
