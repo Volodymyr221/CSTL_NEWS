@@ -3093,7 +3093,8 @@ ${ev.description}`
     const t = route.stops.find((s) => s.name === toName);
     if (!f || !t)
       return null;
-    return Math.abs(t.price_from_start - f.price_from_start).toFixed(2);
+    const diff = Math.abs((t.price_from_start || 0) - (f.price_from_start || 0));
+    return diff > 0 ? diff.toFixed(2) : null;
   }
   function getEffectiveFrom(route) {
     if (fromStop && route.stops.some((s) => s.name === fromStop))
