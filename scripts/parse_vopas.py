@@ -131,11 +131,16 @@ def extract_span_value(cell, label: str) -> str | None:
 
 
 def parse_price(text: str) -> float | None:
-    """«157.30 грн.» → 157.30"""
+    """«157.30 грн.» → 157.30. «0.00 грн» / «—» / порожньо → None
+    (для напрямку «з Олики» VOPAS не дає тариф — Олика проміжна станція,
+    ціна рахується від кінцевого терміналу). None → UI покаже «—»."""
     if not text:
         return None
     m = re.search(r"(\d+[.,]\d+|\d+)", text.replace(",", "."))
-    return float(m.group(1)) if m else None
+    if not m:
+        return None
+    val = float(m.group(1))
+    return val if val > 0 else None
 
 
 def parse_card(card_el) -> dict[str, Any] | None:
@@ -324,6 +329,7 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
             "arrival_time": arr,
             "duration_min": duration,
             "auto_generated": False,
+            "price": price,  # None якщо тарифу немає → UI покаже «—»
             "stops": [
                 {"name": frm, "km": 0,   "price_from_start": 0},
                 {"name": to,  "km": 100, "price_from_start": price or 0},
