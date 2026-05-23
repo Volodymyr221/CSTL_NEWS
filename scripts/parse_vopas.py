@@ -110,6 +110,61 @@ def fetch_html(url: str) -> str:
     raise RuntimeError(f"fetch failed: {last_err}")
 
 
+# ── ДІАГНОСТИКА: як VOPAS віддає зупинки рейсу (тимчасово) ─────────────────
+def probe_stops(vopas_id: str) -> None:
+    """Пробує кілька endpoint-ів щоб знайти де VOPAS віддає зупинки рейсу.
+    Дампить статус/розмір/фрагмент. Запуститься для 1 рейсу — побачимо
+    структуру, потім напишемо повний парсер зупинок."""
+    if not vopas_id:
+        print("   probe_stops: немає vopas_id")
+        return
+
+    candidates = [
+        ("GET",  f"https://vopas.com.ua/flight/{vopas_id}/", None),
+        ("GET",  f"https://vopas.com.ua/flight/?id={vopas_id}", None),
+        ("POST", "https://vopas.com.ua/flight/", {"id": vopas_id}),
+        ("GET",  f"https://vopas.com.ua/search/stops/?id={vopas_id}", None),
+        ("GET",  f"https://vopas.com.ua/flight/stops/{vopas_id}/", None),
+    ]
+    headers = {
+        "User-Agent": BROWSER_UA,
+        "Accept": "text/html,application/xhtml+xml,*/*;q=0.8",
+        "Accept-Language": "uk-UA,uk;q=0.9",
+        "Referer": "https://vopas.com.ua/search/",
+        "X-Requested-With": "XMLHttpRequest",
+    }
+    print(f"\n=== PROBE STOPS для рейсу id={vopas_id} ===")
+    for method, url, data in candidates:
+        body = urllib.parse.urlencode(data).encode() if data else None
+        req = urllib.request.Request(url, data=body, headers=headers, method=method)
+        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+            try:
+                with urllib.request.urlopen(req, timeout=20, context=ctx) as resp:
+                    html = resp.read().decode("utf-8", errors="ignore")
+                    has_stops = "зупин" in html.lower() or "result-stop" in html or "stop" in html.lower()
+                    print(f"  [{method}] {url}")
+                    print(f"    → status={resp.getcode()} size={len(html)} має_зупинки={has_stops}")
+                    # Якщо схоже на зупинки — дамп фрагмента
+                    if has_stops and 500 < len(html) < 200000:
+                        m = re.search(r"зупин", html, re.IGNORECASE)
+                        if m:
+                            s = max(0, m.start() - 300)
+                            print(f"    фрагмент: ...{html[s:s+1500]}...")
+                    break
+            except urllib.error.HTTPError as e:
+                print(f"  [{method}] {url} → HTTP {e.code}")
+                break
+            except urllib.error.URLError as e:
+                if "CERTIFICATE" in str(e).upper():
+                    continue  # retry unverified
+                print(f"  [{method}] {url} → {e.reason}")
+                break
+            except Exception as e:  # noqa: BLE001
+                print(f"  [{method}] {url} → {type(e).__name__}: {e}")
+                break
+    print("=== кінець probe ===\n")
+
+
 # ── Парсинг HTML ──────────────────────────────────────────────────────────
 
 def extract_span_value(cell, label: str) -> str | None:
@@ -392,6 +447,11 @@ def main() -> int:
 
     unique = dedupe(all_routes)
     print(f"\n→ Усього: {len(all_routes)} рейсів, унікальних: {len(unique)}")
+
+    # ДІАГНОСТИКА (тимчасово): пробуємо знайти endpoint зупинок на 1 рейсі
+    first_with_id = next((r for r in unique if r.get("vopas_id")), None)
+    if first_with_id:
+        probe_stops(first_with_id["vopas_id"])
 
     if errors:
         print(f"\n⚠️  Помилок: {len(errors)}")
