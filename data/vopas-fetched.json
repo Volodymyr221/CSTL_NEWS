@@ -1,9 +1,99 @@
 {
-  "fetched_at": "2026-05-23T14:39:12.646494+00:00",
+  "fetched_at": "2026-05-23T14:42:32.493127+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
   "errors": [],
   "routes": [
+    {
+      "vopas_id": "1935841",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "07:05",
+      "arrival_time": "08:30",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.25",
+      "price": 188.1,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Луцьк",
+      "to": "Личани"
+    },
+    {
+      "vopas_id": "1935842",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "10:30",
+      "arrival_time": "12:03",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.25",
+      "price": 188.1,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Луцьк",
+      "to": "Личани"
+    },
+    {
+      "vopas_id": "1935838",
+      "route_name": "Луцьк- Личани ч/з Покащів",
+      "date": "23.05.2026",
+      "departure_time": "12:40",
+      "arrival_time": "14:10",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "Баз  А  079.17",
+      "price": 188.1,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Луцьк",
+      "to": "Личани"
+    },
+    {
+      "vopas_id": "1935843",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "14:10",
+      "arrival_time": "15:45",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.24",
+      "price": 188.1,
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Луцьк",
+      "to": "Личани"
+    },
+    {
+      "vopas_id": "1935839",
+      "route_name": "Луцьк- Личани ч/з Покащів",
+      "date": "23.05.2026",
+      "departure_time": "18:00",
+      "arrival_time": "19:20",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ-А 0 79",
+      "price": 188.1,
+      "status": "в продажі",
+      "sale_active": true,
+      "cancelled": false,
+      "from": "Луцьк",
+      "to": "Личани"
+    },
+    {
+      "vopas_id": "1935844",
+      "route_name": "Луцьк- Личани",
+      "date": "23.05.2026",
+      "departure_time": "19:00",
+      "arrival_time": "20:20",
+      "carrier": "під.Яцишин М.М.",
+      "bus": "БАЗ А 079.24",
+      "price": 188.1,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
+      "from": "Луцьк",
+      "to": "Личани"
+    },
     {
       "vopas_id": "1936137",
       "route_name": "Запоріжжя Херсон Варшава",
@@ -16,7 +106,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -31,7 +121,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -46,7 +136,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -61,7 +151,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -76,7 +166,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -91,7 +181,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -106,7 +196,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -121,7 +211,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -136,7 +226,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -151,7 +241,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -166,7 +256,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -181,7 +271,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -196,7 +286,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -211,7 +301,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -226,7 +316,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -241,7 +331,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -256,7 +346,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -271,7 +361,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -286,7 +376,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -301,7 +391,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -316,7 +406,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -331,7 +421,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -346,7 +436,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -361,7 +451,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -376,7 +466,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -391,7 +481,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -406,7 +496,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -421,7 +511,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -436,7 +526,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -451,7 +541,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -466,7 +556,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -481,7 +571,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -496,7 +586,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -511,7 +601,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -526,7 +616,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -541,7 +631,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -556,7 +646,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -571,7 +661,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -586,7 +676,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -601,7 +691,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -616,7 +706,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -631,7 +721,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -646,7 +736,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -661,7 +751,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -676,7 +766,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -691,7 +781,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -706,22 +796,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
-      "to": "Луцьк"
-    },
-    {
-      "vopas_id": "1935841",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "07:05",
-      "arrival_time": "08:30",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.25",
-      "price": null,
-      "status": "продаж припинено",
-      "sale_active": false,
-      "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -736,7 +811,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -751,7 +826,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -766,7 +841,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -781,7 +856,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -796,7 +871,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -811,7 +886,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -826,7 +901,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -841,7 +916,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -856,7 +931,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -871,7 +946,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -886,7 +961,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -901,7 +976,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -916,7 +991,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -931,7 +1006,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -946,7 +1021,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -961,7 +1036,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -976,7 +1051,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -991,7 +1066,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1006,7 +1081,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1021,7 +1096,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1036,7 +1111,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1051,7 +1126,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1066,7 +1141,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1081,7 +1156,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1096,7 +1171,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1111,7 +1186,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1126,7 +1201,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1141,7 +1216,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1156,7 +1231,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1171,7 +1246,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1186,7 +1261,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1201,7 +1276,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1216,7 +1291,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1231,7 +1306,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1246,7 +1321,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1261,7 +1336,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1276,7 +1351,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1291,7 +1366,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1306,7 +1381,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1321,7 +1396,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1336,7 +1411,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1351,7 +1426,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1366,7 +1441,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1381,7 +1456,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1396,7 +1471,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1411,7 +1486,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1426,7 +1501,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1441,7 +1516,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1456,7 +1531,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1471,7 +1546,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1486,7 +1561,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1501,7 +1576,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1516,7 +1591,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1531,7 +1606,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1546,7 +1621,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1561,7 +1636,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1576,7 +1651,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1591,7 +1666,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1606,7 +1681,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1621,7 +1696,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1636,7 +1711,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1651,7 +1726,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1666,7 +1741,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1681,7 +1756,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1696,7 +1771,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1711,7 +1786,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1726,7 +1801,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1741,7 +1816,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1756,7 +1831,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1771,7 +1846,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1786,7 +1861,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1801,22 +1876,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
-      "to": "Луцьк"
-    },
-    {
-      "vopas_id": "1935842",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "10:30",
-      "arrival_time": "12:03",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.25",
-      "price": null,
-      "status": "продаж припинено",
-      "sale_active": false,
-      "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1831,7 +1891,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1846,7 +1906,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1861,7 +1921,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1876,7 +1936,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1891,7 +1951,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1906,7 +1966,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1921,7 +1981,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1936,7 +1996,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1951,7 +2011,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1966,7 +2026,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1981,7 +2041,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -1996,7 +2056,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2011,7 +2071,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2026,7 +2086,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2041,7 +2101,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2056,7 +2116,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2071,7 +2131,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2086,7 +2146,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2101,7 +2161,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2116,7 +2176,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2131,7 +2191,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2146,7 +2206,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2161,7 +2221,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2176,7 +2236,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2191,7 +2251,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2206,7 +2266,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2221,7 +2281,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2236,7 +2296,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2251,7 +2311,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2266,7 +2326,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2281,7 +2341,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2296,7 +2356,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2311,7 +2371,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2326,7 +2386,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2341,7 +2401,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2356,7 +2416,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2371,7 +2431,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2386,7 +2446,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2401,7 +2461,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2416,7 +2476,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2431,7 +2491,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2446,7 +2506,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2461,7 +2521,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2476,7 +2536,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2491,7 +2551,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2506,7 +2566,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2521,7 +2581,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2536,7 +2596,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2551,7 +2611,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2566,7 +2626,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2581,7 +2641,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2596,7 +2656,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2611,7 +2671,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2626,7 +2686,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2641,7 +2701,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2656,7 +2716,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2671,7 +2731,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2686,7 +2746,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2701,7 +2761,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2716,7 +2776,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2731,22 +2791,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
-      "to": "Луцьк"
-    },
-    {
-      "vopas_id": "1935838",
-      "route_name": "Луцьк- Личани ч/з Покащів",
-      "date": "23.05.2026",
-      "departure_time": "12:40",
-      "arrival_time": "14:10",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "Баз  А  079.17",
-      "price": null,
-      "status": "продаж припинено",
-      "sale_active": false,
-      "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2761,7 +2806,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2776,7 +2821,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2791,7 +2836,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2806,7 +2851,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2821,7 +2866,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2836,7 +2881,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2851,7 +2896,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2866,7 +2911,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2881,7 +2926,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2896,7 +2941,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2911,7 +2956,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2926,7 +2971,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2941,7 +2986,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2956,7 +3001,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2971,7 +3016,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -2986,7 +3031,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3001,7 +3046,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3016,7 +3061,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3031,7 +3076,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3046,7 +3091,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3061,7 +3106,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3076,7 +3121,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3091,7 +3136,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3106,7 +3151,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3121,7 +3166,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3136,7 +3181,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3151,7 +3196,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3166,7 +3211,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3181,7 +3226,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3196,7 +3241,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3211,7 +3256,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3226,7 +3271,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3241,7 +3286,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3256,7 +3301,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3271,7 +3316,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3286,7 +3331,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3301,7 +3346,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3316,7 +3361,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3331,7 +3376,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3346,7 +3391,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3361,22 +3406,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
-      "to": "Луцьк"
-    },
-    {
-      "vopas_id": "1935843",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "14:10",
-      "arrival_time": "15:45",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.24",
-      "price": null,
-      "status": "продаж припинено",
-      "sale_active": false,
-      "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3391,7 +3421,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3406,7 +3436,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3421,7 +3451,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3436,7 +3466,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3451,7 +3481,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3466,7 +3496,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3481,7 +3511,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3496,7 +3526,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3511,7 +3541,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3526,7 +3556,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3541,7 +3571,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3556,7 +3586,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3571,7 +3601,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3586,7 +3616,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3601,7 +3631,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3616,7 +3646,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3631,7 +3661,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3646,7 +3676,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3661,7 +3691,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3676,7 +3706,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3691,7 +3721,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3706,7 +3736,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3721,7 +3751,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3736,7 +3766,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3751,7 +3781,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3766,7 +3796,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3781,7 +3811,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3796,7 +3826,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3811,7 +3841,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3826,7 +3856,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3841,7 +3871,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3856,7 +3886,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3871,7 +3901,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3886,7 +3916,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3901,7 +3931,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3916,7 +3946,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3931,7 +3961,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3946,7 +3976,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3961,7 +3991,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3976,7 +4006,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -3991,7 +4021,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4006,7 +4036,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4021,7 +4051,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4036,7 +4066,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4051,7 +4081,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4066,7 +4096,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4081,7 +4111,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4096,7 +4126,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4111,7 +4141,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4126,7 +4156,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4141,7 +4171,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4156,7 +4186,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4171,7 +4201,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4186,7 +4216,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4201,7 +4231,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4216,7 +4246,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4231,7 +4261,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4246,7 +4276,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4261,7 +4291,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4276,7 +4306,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4291,7 +4321,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4306,7 +4336,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4321,7 +4351,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4336,7 +4366,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4351,7 +4381,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4366,7 +4396,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4381,7 +4411,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4396,7 +4426,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4411,7 +4441,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4426,7 +4456,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4441,7 +4471,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4456,7 +4486,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4471,7 +4501,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4486,7 +4516,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4501,7 +4531,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4516,7 +4546,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4531,7 +4561,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4546,7 +4576,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4561,7 +4591,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4576,7 +4606,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4591,7 +4621,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4606,7 +4636,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4621,7 +4651,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4636,7 +4666,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4651,7 +4681,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4666,7 +4696,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4681,7 +4711,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4696,7 +4726,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4711,7 +4741,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4726,7 +4756,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4741,7 +4771,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4756,7 +4786,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4771,7 +4801,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4786,7 +4816,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4801,7 +4831,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4816,7 +4846,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4831,7 +4861,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4846,7 +4876,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4861,7 +4891,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4876,7 +4906,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4891,7 +4921,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4906,7 +4936,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4921,7 +4951,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4936,7 +4966,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4951,7 +4981,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4966,7 +4996,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4981,7 +5011,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -4996,7 +5026,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5011,7 +5041,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5026,7 +5056,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5041,7 +5071,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5056,7 +5086,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5071,7 +5101,7 @@
       "status": "продаж припинено",
       "sale_active": false,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5083,10 +5113,10 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
-      "from": "Олика",
+      "cancelled": false,
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5098,10 +5128,10 @@
       "carrier": "ТОВ РОЛАНД-ТРАНС",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
-      "from": "Олика",
+      "cancelled": false,
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5116,7 +5146,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5131,7 +5161,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5146,7 +5176,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5161,7 +5191,7 @@
       "status": "Рейс зірваний",
       "sale_active": false,
       "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5176,22 +5206,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
-      "to": "Луцьк"
-    },
-    {
-      "vopas_id": "1935839",
-      "route_name": "Луцьк- Личани ч/з Покащів",
-      "date": "23.05.2026",
-      "departure_time": "18:00",
-      "arrival_time": "19:20",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ-А 0 79",
-      "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5206,7 +5221,7 @@
       "status": "Рейс зірваний",
       "sale_active": false,
       "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5221,7 +5236,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5236,7 +5251,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5251,7 +5266,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5266,7 +5281,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5281,7 +5296,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5296,7 +5311,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5311,7 +5326,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5326,7 +5341,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5341,7 +5356,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5356,7 +5371,7 @@
       "status": "Рейс зірваний",
       "sale_active": false,
       "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5371,7 +5386,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5386,7 +5401,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5401,7 +5416,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5416,7 +5431,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5431,7 +5446,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5446,7 +5461,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5461,7 +5476,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5476,7 +5491,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5491,7 +5506,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5506,7 +5521,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5521,7 +5536,7 @@
       "status": "Рейс зірваний",
       "sale_active": false,
       "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5536,7 +5551,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5551,7 +5566,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5566,7 +5581,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5581,7 +5596,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5596,7 +5611,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5611,7 +5626,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5626,7 +5641,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5641,7 +5656,7 @@
       "status": "Рейс зірваний",
       "sale_active": false,
       "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5656,22 +5671,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
-      "to": "Луцьк"
-    },
-    {
-      "vopas_id": "1935844",
-      "route_name": "Луцьк- Личани",
-      "date": "23.05.2026",
-      "departure_time": "19:00",
-      "arrival_time": "20:20",
-      "carrier": "під.Яцишин М.М.",
-      "bus": "БАЗ А 079.24",
-      "price": null,
-      "status": "Рейс зірваний",
-      "sale_active": false,
-      "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5686,7 +5686,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5701,7 +5701,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5716,7 +5716,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5731,7 +5731,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5746,7 +5746,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5761,7 +5761,7 @@
       "status": "Рейс зірваний",
       "sale_active": false,
       "cancelled": true,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5776,7 +5776,7 @@
       "status": "з платформи",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5791,7 +5791,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5806,7 +5806,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5821,7 +5821,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5836,7 +5836,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5851,7 +5851,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5866,7 +5866,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5881,7 +5881,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5896,7 +5896,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5911,7 +5911,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5926,7 +5926,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5941,7 +5941,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5956,7 +5956,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5971,7 +5971,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -5986,7 +5986,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6001,7 +6001,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6016,7 +6016,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6031,7 +6031,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6046,7 +6046,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6061,7 +6061,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6076,7 +6076,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6091,7 +6091,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6106,7 +6106,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6121,7 +6121,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6136,7 +6136,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     },
     {
@@ -6151,7 +6151,7 @@
       "status": "в продажі",
       "sale_active": true,
       "cancelled": false,
-      "from": "Олика",
+      "from": "Личани",
       "to": "Луцьк"
     }
   ]

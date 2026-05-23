@@ -1,9 +1,9 @@
 {
   "version": "23.05.2026",
   "verifiedAt": "23.05.2026",
-  "verifiedTime": "17:39",
+  "verifiedTime": "17:42",
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:39 Київ.",
+  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:42 Київ.",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -38,7 +38,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -62,11 +62,11 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Луцьк",
           "km": 0
         },
         {
-          "name": "Луцьк",
+          "name": "Личани",
           "km": 100
         }
       ]
@@ -86,7 +86,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -110,7 +110,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -134,7 +134,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -158,7 +158,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -182,7 +182,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -206,11 +206,11 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Луцьк",
           "km": 0
         },
         {
-          "name": "Луцьк",
+          "name": "Личани",
           "km": 100
         }
       ]
@@ -230,7 +230,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -254,7 +254,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -278,11 +278,11 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Луцьк",
           "km": 0
         },
         {
-          "name": "Луцьк",
+          "name": "Личани",
           "km": 100
         }
       ]
@@ -302,7 +302,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -326,7 +326,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -350,7 +350,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -374,11 +374,11 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Луцьк",
           "km": 0
         },
         {
-          "name": "Луцьк",
+          "name": "Личани",
           "km": 100
         }
       ]
@@ -398,7 +398,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -422,7 +422,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -446,7 +446,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -470,7 +470,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -494,7 +494,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -518,7 +518,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -542,7 +542,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -566,7 +566,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -590,11 +590,11 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Луцьк",
           "km": 0
         },
         {
-          "name": "Луцьк",
+          "name": "Личани",
           "km": 100
         }
       ]
@@ -614,7 +614,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
@@ -638,11 +638,11 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Луцьк",
           "km": 0
         },
         {
-          "name": "Луцьк",
+          "name": "Личани",
           "km": 100
         }
       ]
@@ -662,7 +662,7 @@
       "auto_generated": false,
       "stops": [
         {
-          "name": "Олика",
+          "name": "Личани",
           "km": 0
         },
         {
