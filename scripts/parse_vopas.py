@@ -234,6 +234,7 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
     """
     carriers: dict[str, dict[str, str]] = {}
     out_routes = []
+    skipped_transit = 0
 
     for r in routes:
         dep = r.get("departure_time")
@@ -243,6 +244,18 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
         if dep_min is None or arr_min is None:
             continue
         duration = max(0, arr_min - dep_min)
+        price = r.get("price")
+
+        # ФІЛЬТР ЛОКАЛЬНИХ РЕЙСІВ — відсікаємо транзитні далекобійні.
+        # Транзитні (Рига-Одеса, Варшава-Херсон, Полтава-Щецин) проходять
+        # Олику, але: тривалість 13-21 год + ціна 0.00 (локальний сегмент
+        # не продається). Локальні приміські: до ~2.5 год + реальна ціна.
+        if duration > 150:
+            skipped_transit += 1
+            continue
+        if price is None or price <= 0:
+            skipped_transit += 1
+            continue
 
         carrier_name = r.get("carrier") or "Перевізник"
         cid = make_carrier_id(carrier_name)
@@ -250,7 +263,6 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
 
         frm = r.get("from") or (r.get("route_name") or "").split()[0]
         to = r.get("to") or (r.get("route_name") or "—")
-        price = r.get("price")
 
         # Статус для UI: cancelled (відмінено) має пріоритет
         status = "cancelled" if r.get("cancelled") else "scheduled"
@@ -276,6 +288,7 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
 
     # Сортуємо за часом відправлення
     out_routes.sort(key=lambda x: hhmm_to_min(x["departure_time"]) or 0)
+    print(f"   build_schedule: {len(out_routes)} локальних, {skipped_transit} транзитних відсіяно")
 
     now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
     return {
