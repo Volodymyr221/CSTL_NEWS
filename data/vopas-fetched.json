@@ -1,23 +1,7 @@
 {
-  "fetched_at": "2026-05-23T12:38:29.118124+00:00",
+  "fetched_at": "2026-05-23T13:06:53.240621+00:00",
   "date": "23.05.2026",
   "source": "vopas.com.ua",
-  "pairs_queried": [
-    "Олика→Луцьк",
-    "Олика→Ківерці",
-    "Олика→Личани",
-    "Олика→Носовичі",
-    "Олика→Жорнище",
-    "Олика→Метельне",
-    "Олика→Чемерин",
-    "Луцьк→Олика",
-    "Ківерці→Олика",
-    "Личани→Олика",
-    "Носовичі→Олика",
-    "Жорнище→Олика",
-    "Метельне→Олика",
-    "Чемерин→Олика"
-  ],
   "errors": [],
   "routes": [
     {
@@ -31,7 +15,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936096",
@@ -44,7 +30,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936104",
@@ -57,7 +45,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936138",
@@ -70,7 +60,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936130",
@@ -83,7 +75,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936113",
@@ -96,7 +90,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935762",
@@ -109,7 +105,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936141",
@@ -122,7 +120,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936119",
@@ -135,7 +135,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935924",
@@ -148,7 +150,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936111",
@@ -161,7 +165,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936129",
@@ -174,7 +180,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936120",
@@ -187,7 +195,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935985",
@@ -200,7 +210,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935944",
@@ -213,7 +225,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936017",
@@ -226,7 +240,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936131",
@@ -239,7 +255,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935973",
@@ -252,7 +270,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936052",
@@ -265,7 +285,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935812",
@@ -278,7 +300,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935979",
@@ -291,7 +315,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936132",
@@ -304,7 +330,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935932",
@@ -317,7 +345,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935893",
@@ -330,7 +360,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935867",
@@ -343,7 +375,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935958",
@@ -356,7 +390,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935976",
@@ -369,7 +405,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935734",
@@ -382,7 +420,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935957",
@@ -395,7 +435,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935768",
@@ -408,7 +450,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935785",
@@ -421,7 +465,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935978",
@@ -434,7 +480,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935813",
@@ -447,7 +495,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936112",
@@ -460,7 +510,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935873",
@@ -473,7 +525,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1937840",
@@ -486,7 +540,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935829",
@@ -499,7 +555,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935887",
@@ -512,7 +570,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935735",
@@ -525,7 +585,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936053",
@@ -538,7 +600,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936030",
@@ -551,7 +615,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935996",
@@ -564,7 +630,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935953",
@@ -577,7 +645,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935736",
@@ -590,7 +660,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935789",
@@ -603,7 +675,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936054",
@@ -616,7 +690,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935963",
@@ -629,7 +705,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935841",
@@ -642,7 +720,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936015",
@@ -655,7 +735,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936126",
@@ -668,7 +750,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936073",
@@ -681,7 +765,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935763",
@@ -694,7 +780,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936062",
@@ -707,7 +795,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936008",
@@ -720,7 +810,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935869",
@@ -733,7 +825,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935871",
@@ -746,7 +840,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935984",
@@ -759,7 +855,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935885",
@@ -772,7 +870,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935737",
@@ -785,7 +885,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936039",
@@ -798,7 +900,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935814",
@@ -811,7 +915,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935918",
@@ -824,7 +930,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936095",
@@ -837,7 +945,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935895",
@@ -850,7 +960,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936091",
@@ -863,7 +975,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935738",
@@ -876,7 +990,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936059",
@@ -889,7 +1005,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935987",
@@ -902,7 +1020,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935815",
@@ -915,7 +1035,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935739",
@@ -928,7 +1050,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936123",
@@ -941,7 +1065,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936083",
@@ -954,7 +1080,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936043",
@@ -967,7 +1095,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935825",
@@ -980,7 +1110,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936125",
@@ -993,7 +1125,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935740",
@@ -1006,7 +1140,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935927",
@@ -1019,7 +1155,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936013",
@@ -1032,7 +1170,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935850",
@@ -1045,7 +1185,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935816",
@@ -1058,7 +1200,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936070",
@@ -1071,7 +1215,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936023",
@@ -1084,7 +1230,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936037",
@@ -1097,7 +1245,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935991",
@@ -1110,7 +1260,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935783",
@@ -1123,7 +1275,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935896",
@@ -1136,7 +1290,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935817",
@@ -1149,7 +1305,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935862",
@@ -1162,7 +1320,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935741",
@@ -1175,7 +1335,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935946",
@@ -1188,7 +1350,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936090",
@@ -1201,7 +1365,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936115",
@@ -1214,7 +1380,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936078",
@@ -1227,7 +1395,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935969",
@@ -1240,7 +1410,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935769",
@@ -1253,7 +1425,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936063",
@@ -1266,7 +1440,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935800",
@@ -1279,7 +1455,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935939",
@@ -1292,7 +1470,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935859",
@@ -1305,7 +1485,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935875",
@@ -1318,7 +1500,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935742",
@@ -1331,7 +1515,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935937",
@@ -1344,7 +1530,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935792",
@@ -1357,7 +1545,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935942",
@@ -1370,7 +1560,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935992",
@@ -1383,7 +1575,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936000",
@@ -1396,7 +1590,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935967",
@@ -1409,7 +1605,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935849",
@@ -1422,7 +1620,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935960",
@@ -1435,7 +1635,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935997",
@@ -1448,7 +1650,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935909",
@@ -1461,7 +1665,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935775",
@@ -1474,7 +1680,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936092",
@@ -1487,7 +1695,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935897",
@@ -1500,7 +1710,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935794",
@@ -1513,7 +1725,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935884",
@@ -1526,7 +1740,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936044",
@@ -1539,7 +1755,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936010",
@@ -1552,7 +1770,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935949",
@@ -1565,7 +1785,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935823",
@@ -1578,7 +1800,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935842",
@@ -1591,7 +1815,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935880",
@@ -1604,7 +1830,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935891",
@@ -1617,7 +1845,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936071",
@@ -1630,7 +1860,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936026",
@@ -1643,7 +1875,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936005",
@@ -1656,7 +1890,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935743",
@@ -1669,7 +1905,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935766",
@@ -1682,7 +1920,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935787",
@@ -1695,7 +1935,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935779",
@@ -1708,7 +1950,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935801",
@@ -1721,7 +1965,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936055",
@@ -1734,7 +1980,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936097",
@@ -1747,7 +1995,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936048",
@@ -1760,7 +2010,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935990",
@@ -1773,7 +2025,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935832",
@@ -1786,7 +2040,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935928",
@@ -1799,7 +2055,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936109",
@@ -1812,7 +2070,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936049",
@@ -1825,7 +2085,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935962",
@@ -1838,7 +2100,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935826",
@@ -1851,7 +2115,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935971",
@@ -1864,7 +2130,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936088",
@@ -1877,7 +2145,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935797",
@@ -1890,7 +2160,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936032",
@@ -1903,7 +2175,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935872",
@@ -1916,7 +2190,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935830",
@@ -1929,7 +2205,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936068",
@@ -1942,7 +2220,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935964",
@@ -1955,7 +2235,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936021",
@@ -1968,7 +2250,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935845",
@@ -1981,7 +2265,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936114",
@@ -1994,7 +2280,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936056",
@@ -2007,7 +2295,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936040",
@@ -2020,7 +2310,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936033",
@@ -2033,7 +2325,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935898",
@@ -2046,7 +2340,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935933",
@@ -2059,7 +2355,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935780",
@@ -2072,7 +2370,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935881",
@@ -2085,7 +2385,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935877",
@@ -2098,7 +2400,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935744",
@@ -2111,7 +2415,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936069",
@@ -2124,7 +2430,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936028",
@@ -2137,7 +2445,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936018",
@@ -2150,7 +2460,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935802",
@@ -2163,7 +2475,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935851",
@@ -2176,7 +2490,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935883",
@@ -2189,7 +2505,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935943",
@@ -2202,7 +2520,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936001",
@@ -2215,7 +2535,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935793",
@@ -2228,7 +2550,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935764",
@@ -2241,7 +2565,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935998",
@@ -2254,7 +2580,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935745",
@@ -2267,7 +2595,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935938",
@@ -2280,7 +2610,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935982",
@@ -2293,7 +2625,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936139",
@@ -2306,7 +2640,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935925",
@@ -2319,7 +2655,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935899",
@@ -2332,7 +2670,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935860",
@@ -2345,7 +2685,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935889",
@@ -2358,7 +2700,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936064",
@@ -2371,7 +2715,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935941",
@@ -2384,7 +2730,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935838",
@@ -2397,7 +2745,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935855",
@@ -2410,7 +2760,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935934",
@@ -2423,7 +2775,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936079",
@@ -2436,7 +2790,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935759",
@@ -2449,7 +2805,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935980",
@@ -2462,7 +2820,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935913",
@@ -2475,7 +2835,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935863",
@@ -2488,7 +2850,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936060",
@@ -2501,7 +2865,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936024",
@@ -2514,7 +2880,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935770",
@@ -2527,7 +2895,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935833",
@@ -2540,7 +2910,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935954",
@@ -2553,7 +2925,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935900",
@@ -2566,7 +2940,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935972",
@@ -2579,7 +2955,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935746",
@@ -2592,7 +2970,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935848",
@@ -2605,7 +2985,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935919",
@@ -2618,7 +3000,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936036",
@@ -2631,7 +3015,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935974",
@@ -2644,7 +3030,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936009",
@@ -2657,7 +3045,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935857",
@@ -2670,7 +3060,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935929",
@@ -2683,7 +3075,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936076",
@@ -2696,7 +3090,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935818",
@@ -2709,7 +3105,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935947",
@@ -2722,7 +3120,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936084",
@@ -2735,7 +3135,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936046",
@@ -2748,7 +3150,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935914",
@@ -2761,7 +3165,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935747",
@@ -2774,7 +3180,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935882",
@@ -2787,7 +3195,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936007",
@@ -2800,7 +3210,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935968",
@@ -2813,7 +3225,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935916",
@@ -2826,7 +3240,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935988",
@@ -2839,7 +3255,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936003",
@@ -2852,7 +3270,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935761",
@@ -2865,7 +3285,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936041",
@@ -2878,7 +3300,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935790",
@@ -2891,7 +3315,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935901",
@@ -2904,7 +3330,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935748",
@@ -2917,7 +3345,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935986",
@@ -2930,7 +3360,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935843",
@@ -2943,7 +3375,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935950",
@@ -2956,7 +3390,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935786",
@@ -2969,7 +3405,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935935",
@@ -2982,7 +3420,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935977",
@@ -2995,7 +3435,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935749",
@@ -3008,7 +3450,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935798",
@@ -3021,7 +3465,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935920",
@@ -3034,7 +3480,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936006",
@@ -3047,7 +3495,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935902",
@@ -3060,7 +3510,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935810",
@@ -3073,7 +3525,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935750",
@@ -3086,7 +3540,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935846",
@@ -3099,7 +3555,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936038",
@@ -3112,7 +3570,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935771",
@@ -3125,7 +3585,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935781",
@@ -3138,7 +3600,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935772",
@@ -3151,7 +3615,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935835",
@@ -3164,7 +3630,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936134",
@@ -3177,7 +3645,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936016",
@@ -3190,7 +3660,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935903",
@@ -3203,7 +3675,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935751",
@@ -3216,7 +3690,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936075",
@@ -3229,7 +3705,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936029",
@@ -3242,7 +3720,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935965",
@@ -3255,7 +3735,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935955",
@@ -3268,7 +3750,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936020",
@@ -3281,7 +3765,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935874",
@@ -3294,7 +3780,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935784",
@@ -3307,7 +3795,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936065",
@@ -3320,7 +3810,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935970",
@@ -3333,7 +3825,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935870",
@@ -3346,7 +3840,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935864",
@@ -3359,7 +3855,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936080",
@@ -3372,7 +3870,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936011",
@@ -3385,7 +3885,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935894",
@@ -3398,7 +3900,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936077",
@@ -3411,7 +3915,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936045",
@@ -3424,7 +3930,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935777",
@@ -3437,7 +3945,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935890",
@@ -3450,7 +3960,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935752",
@@ -3463,7 +3975,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935796",
@@ -3476,7 +3990,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935824",
@@ -3489,7 +4005,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935852",
@@ -3502,7 +4020,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936085",
@@ -3515,7 +4035,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935910",
@@ -3528,7 +4050,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936027",
@@ -3541,7 +4065,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935753",
@@ -3552,9 +4078,11 @@
       "carrier": "Подлевський Ю.І. 45400",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935819",
@@ -3565,9 +4093,11 @@
       "carrier": "ТзОВ \"АТП Луцьк\"-",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936142",
@@ -3578,9 +4108,11 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935904",
@@ -3591,9 +4123,11 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "БОГДАН А0921",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935831",
@@ -3604,9 +4138,11 @@
       "carrier": "під.Коровицький Рожище",
       "bus": "Богдан А20210",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935940",
@@ -3617,9 +4153,11 @@
       "carrier": "Мандзюк В.І",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935879",
@@ -3630,9 +4168,11 @@
       "carrier": "Зінюк Л.Л. заїзд",
       "bus": "МЕРСЕДЕС-БЕНЦ  410",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935803",
@@ -3643,9 +4183,11 @@
       "carrier": "Мірчук А.І.",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935930",
@@ -3656,9 +4198,11 @@
       "carrier": "Гоменюк В.П. 43017 м. Луцьк",
       "bus": "БАЗ А 079.25",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936057",
@@ -3669,9 +4213,11 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935866",
@@ -3682,9 +4228,11 @@
       "carrier": "Валечний М. П.",
       "bus": "",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936025",
@@ -3695,9 +4243,11 @@
       "carrier": "Гламазда В.В. Волинська обл.",
       "bus": "БАЗ А 079.24",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935754",
@@ -3708,9 +4258,11 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "БАЗ А 079.25",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935767",
@@ -3721,9 +4273,11 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935811",
@@ -3734,9 +4288,11 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "МЕРСЕДЕС-БЕНЦ  512",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936110",
@@ -3749,7 +4305,9 @@
       "price": 0.0,
       "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936012",
@@ -3760,9 +4318,11 @@
       "carrier": "Володимирецьтранссервіс",
       "bus": "МЕРСЕДЕС-БЕНЦ 814",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935993",
@@ -3773,9 +4333,11 @@
       "carrier": "Цимбалюк І.І.-",
       "bus": "БАЗ-А 0 79",
       "price": 0.0,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false
+      "status": "продаж припинено",
+      "sale_active": false,
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935773",
@@ -3788,7 +4350,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936127",
@@ -3801,7 +4365,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936022",
@@ -3814,7 +4380,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935951",
@@ -3827,7 +4395,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935755",
@@ -3840,7 +4410,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935778",
@@ -3853,7 +4425,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936133",
@@ -3866,7 +4440,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936108",
@@ -3879,7 +4455,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936019",
@@ -3892,7 +4470,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935820",
@@ -3905,7 +4485,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936072",
@@ -3918,7 +4500,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935804",
@@ -3931,7 +4515,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935959",
@@ -3944,7 +4530,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935912",
@@ -3957,7 +4545,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935795",
@@ -3970,7 +4560,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936051",
@@ -3983,7 +4575,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935760",
@@ -3996,7 +4590,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935765",
@@ -4009,7 +4605,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936099",
@@ -4022,7 +4620,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936004",
@@ -4035,7 +4635,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935981",
@@ -4048,7 +4650,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935905",
@@ -4061,7 +4665,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936050",
@@ -4074,7 +4680,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936031",
@@ -4087,7 +4695,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935876",
@@ -4100,7 +4710,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935854",
@@ -4113,7 +4725,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935892",
@@ -4126,7 +4740,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935821",
@@ -4139,7 +4755,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935926",
@@ -4152,7 +4770,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936089",
@@ -4165,7 +4785,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936066",
@@ -4178,7 +4800,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936058",
@@ -4191,7 +4815,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935908",
@@ -4204,7 +4830,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935776",
@@ -4217,7 +4845,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935827",
@@ -4230,7 +4860,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936074",
@@ -4243,7 +4875,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935923",
@@ -4256,7 +4890,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935834",
@@ -4269,7 +4905,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935853",
@@ -4282,7 +4920,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935906",
@@ -4295,7 +4935,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935865",
@@ -4308,7 +4950,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1938668",
@@ -4321,7 +4965,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936034",
@@ -4334,7 +4980,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935868",
@@ -4347,7 +4995,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935995",
@@ -4360,7 +5010,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936081",
@@ -4373,7 +5025,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936047",
@@ -4386,7 +5040,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935915",
@@ -4399,7 +5055,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935907",
@@ -4412,7 +5070,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935756",
@@ -4425,7 +5085,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935952",
@@ -4438,7 +5100,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935788",
@@ -4451,7 +5115,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935861",
@@ -4464,7 +5130,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935917",
@@ -4477,7 +5145,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936014",
@@ -4490,7 +5160,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935822",
@@ -4503,7 +5175,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935839",
@@ -4516,7 +5190,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936136",
@@ -4529,7 +5205,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936135",
@@ -4542,7 +5220,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936116",
@@ -4555,7 +5235,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935931",
@@ -4568,7 +5250,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936035",
@@ -4581,7 +5265,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935994",
@@ -4594,7 +5280,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935799",
@@ -4607,7 +5295,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935836",
@@ -4620,7 +5310,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935921",
@@ -4633,7 +5325,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935975",
@@ -4646,7 +5340,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935828",
@@ -4659,7 +5355,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935945",
@@ -4672,7 +5370,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936093",
@@ -4685,7 +5385,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935989",
@@ -4698,7 +5400,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936098",
@@ -4711,7 +5415,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935757",
@@ -4724,7 +5430,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935948",
@@ -4737,7 +5445,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936042",
@@ -4750,7 +5460,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935774",
@@ -4763,7 +5475,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935936",
@@ -4776,7 +5490,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935961",
@@ -4789,7 +5505,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936105",
@@ -4802,7 +5520,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936067",
@@ -4815,7 +5535,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935956",
@@ -4828,7 +5550,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935805",
@@ -4841,7 +5565,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936100",
@@ -4854,7 +5580,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935878",
@@ -4867,7 +5595,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935782",
@@ -4880,7 +5610,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935791",
@@ -4893,7 +5625,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935806",
@@ -4906,7 +5640,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935999",
@@ -4919,7 +5655,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935844",
@@ -4932,7 +5670,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935888",
@@ -4945,7 +5685,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935807",
@@ -4958,7 +5700,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935758",
@@ -4971,7 +5715,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935808",
@@ -4984,7 +5730,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936002",
@@ -4997,7 +5745,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935856",
@@ -5010,7 +5760,9 @@
       "price": 0.0,
       "status": "Рейс зірваний",
       "sale_active": false,
-      "cancelled": true
+      "cancelled": true,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936086",
@@ -5023,7 +5775,9 @@
       "price": 0.0,
       "status": "з платформи",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935840",
@@ -5036,7 +5790,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935847",
@@ -5049,7 +5805,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936082",
@@ -5062,7 +5820,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935922",
@@ -5075,7 +5835,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936061",
@@ -5088,7 +5850,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935966",
@@ -5101,7 +5865,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935911",
@@ -5114,7 +5880,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936087",
@@ -5127,7 +5895,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936121",
@@ -5140,7 +5910,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935886",
@@ -5153,7 +5925,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935809",
@@ -5166,7 +5940,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936106",
@@ -5179,7 +5955,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936103",
@@ -5192,7 +5970,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1939107",
@@ -5205,7 +5985,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936140",
@@ -5218,7 +6000,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1935837",
@@ -5231,7 +6015,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936102",
@@ -5244,7 +6030,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936101",
@@ -5257,7 +6045,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936128",
@@ -5270,7 +6060,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936124",
@@ -5283,7 +6075,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936143",
@@ -5296,7 +6090,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936118",
@@ -5309,7 +6105,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936117",
@@ -5322,7 +6120,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936094",
@@ -5335,7 +6135,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     },
     {
       "vopas_id": "1936122",
@@ -5348,7 +6150,9 @@
       "price": 0.0,
       "status": "в продажі",
       "sale_active": true,
-      "cancelled": false
+      "cancelled": false,
+      "from": "Олика",
+      "to": "Луцьк"
     }
   ]
 }
