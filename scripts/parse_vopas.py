@@ -110,6 +110,65 @@ def fetch_html(url: str) -> str:
     raise RuntimeError(f"fetch failed: {last_err}")
 
 
+# ── ДІАГНОСТИКА endpoint зупинок VOPAS (тимчасово) ────────────────────────
+def probe_vopas_endpoint(vopas_id: str) -> None:
+    """Карта вгадує маршрут (різні рейси Олика-Луцьк йдуть різними дорогами).
+    Для ТОЧНИХ зупинок треба VOPAS ajax. Патерн VOPAS: /module/ajaxXXX.php POST.
+    Пробуємо ймовірні імена + читаємо config-fast-filter.js (обробник .go)."""
+    print(f"\n=== PROBE endpoint зупинок VOPAS (id={vopas_id}) ===")
+    names = ["ajaxStops", "ajaxRouteStops", "ajaxGetStops", "ajaxFlightStops",
+             "ajaxStopsRoute", "getStops", "ajaxShowStops", "ajaxStop",
+             "moduleGet_Stops", "ajaxRoute"]
+    headers = {"User-Agent": BROWSER_UA, "X-Requested-With": "XMLHttpRequest",
+               "Referer": "https://vopas.com.ua/search/",
+               "Content-Type": "application/x-www-form-urlencoded"}
+    for name in names:
+        url = f"https://vopas.com.ua/module/{name}.php"
+        for payload in (f"id={vopas_id}", f"id={vopas_id}&phoneDevice=0"):
+            try:
+                req = urllib.request.Request(url, data=payload.encode(),
+                                             headers=headers, method="POST")
+                for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+                    try:
+                        with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                            body = resp.read().decode("utf-8", errors="ignore")
+                            hit = any(w in body for w in ("Гараджа", "Дерно", "Олика", "км", "Зупинк"))
+                            if resp.getcode() == 200 and len(body) > 50:
+                                print(f"  [{name}] payload='{payload}' → {resp.getcode()} size={len(body)} зупинки={hit}")
+                                if hit:
+                                    print(f"    !!! ЗНАЙДЕНО: {body[:1500]}")
+                            break
+                    except urllib.error.URLError as e:
+                        if "CERTIFICATE" in str(e).upper():
+                            continue
+                        break
+            except urllib.error.HTTPError:
+                pass
+            except Exception:  # noqa: BLE001
+                pass
+    # config-fast-filter.js — обробник .go
+    try:
+        req = urllib.request.Request("https://vopas.com.ua/js/config-fast-filter.js",
+                                     headers={"User-Agent": BROWSER_UA})
+        for ctx in (ssl.create_default_context(), ssl._create_unverified_context()):
+            try:
+                with urllib.request.urlopen(req, timeout=15, context=ctx) as resp:
+                    js = resp.read().decode("utf-8", errors="ignore")
+                    eps = sorted(set(re.findall(r"/module/[\w]+\.php", js)))
+                    print(f"  config-fast-filter.js endpoint-и: {eps}")
+                    for m in re.finditer(r"\.go|data-id|stops|Stops|ajax", js, re.IGNORECASE):
+                        s = max(0, m.start() - 80)
+                        print(f"    [{m.group()}] …{js[s:m.start()+150]}…".replace(chr(10), ' '))
+                    break
+            except urllib.error.URLError as e:
+                if "CERTIFICATE" in str(e).upper():
+                    continue
+                break
+    except Exception as e:  # noqa: BLE001
+        print(f"  config-fast-filter.js → {e}")
+    print("=== кінець probe ===\n")
+
+
 # ── Статична карта трас зі зупинками (data/route-stops.json) ──────────────
 # Зупинки маршрутів стабільні (фізична дорога). База — офіційні квитки VOPAS.
 # Парсер бере звідси зупинки+км+ціну, а час/статус — з vopas.com.ua (актуальне).
@@ -360,15 +419,12 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
         # Статус для UI: cancelled (відмінено) має пріоритет
         status = "cancelled" if r.get("cancelled") else "scheduled"
 
-        # ЗУПИНКИ зі статичної карти трас (назви + км). Якщо траси немає —
-        # 2 точки (from→to). Ціну з карти НЕ беремо (квиткова, могла застаріти) —
-        # UI показує ЧАС прибуття на кожну зупинку (рахується з км + departure).
-        mapped = match_stops(frm, to)
-        if mapped and len(mapped) >= 2:
-            total_km = mapped[-1]["km"] or 1
-            stops = [{"name": s["name"], "km": s["km"]} for s in mapped]
-        else:
-            stops = [{"name": frm, "km": 0}, {"name": to, "km": 100}]
+        # ЗУПИНКИ: статична карта ВИМКНЕНА — вона вгадувала маршрут хибно
+        # (рейс Луцьк-Рівне показував дорогу на Луцьк, бо різні рейси йдуть
+        # різними дорогами, а карта брала найдовший варіант). Неправильні
+        # зупинки гірші за відсутні. Поки — 2 точки (from→to), чекаємо точне
+        # джерело VOPAS ajax (probe_vopas_endpoint шукає endpoint).
+        stops = [{"name": frm, "km": 0}, {"name": to, "km": 100}]
 
         out_routes.append({
             "id": f"vopas_{r.get('vopas_id') or dep.replace(':', '')}",
@@ -442,6 +498,11 @@ def main() -> int:
 
     unique = dedupe(all_routes)
     print(f"\n→ Усього: {len(all_routes)} рейсів, унікальних: {len(unique)}")
+
+    # ДІАГНОСТИКА (тимчасово): шукаємо точний endpoint зупинок VOPAS
+    first_id = next((r["vopas_id"] for r in unique if r.get("vopas_id")), None)
+    if first_id:
+        probe_vopas_endpoint(first_id)
 
     if errors:
         print(f"\n⚠️  Помилок: {len(errors)}")
