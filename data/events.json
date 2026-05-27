@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 139,
+    "title": "Зеленський провів нараду з Сирським та Гнатовим: погодив нові далекобійні операції",
+    "description": "Президент України Володимир Зеленський на нараді з Головнокомандувачем ЗСУ Олександром Сирським та начальником Генштабу Андрієм Гнатовим погодили нові далекобійні операції.",
+    "date": "2026-05-27",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/c/837425/5c3fc0e827ad85f29ff1fa0c72997e11.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036680/",
+    "auto": true
+  },
+  {
     "id": 136,
     "title": "Елітний підрозділ ССО отримав найменування на честь Героїв УПА",
     "description": "Президент Володимир Зеленський присвоїв почесне найменування \"імені Героїв УПА\" Окремому центру спеціальних операцій \"Північ\" Сил спеціальних операцій ЗСУ.",
@@ -76,6 +89,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/8/837405/98469a01ac8a4956a2103671272fe7c8.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036671/",
+    "auto": true
+  },
+  {
+    "id": 138,
+    "title": "Мадяр повідомив, що зустрінеться з фон дер Ляєн 29 травня",
+    "description": "Зустріч у Брюсселі премʼєр-міністра Угорщини Петера Мадяра та президентки Єврокомісії Урсули фон дер Ляєн відбудеться у пʼятницю, 29 травня.",
+    "date": "2026-05-29",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/0/837427/a0029d86011a9cfed2064bc641254a62.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036682/",
     "auto": true
   },
   {
@@ -297,6 +323,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/3/826309/8341a8b686c182af9cd6d4ec44e03abb.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/11/8034119/",
+    "auto": true
+  },
+  {
+    "id": 140,
+    "title": "В \"Євросолідарності\" розповіли, про що Порошенко розмовляв із Зеленським",
+    "description": "П'ятий президент України, лідер \"Європейської солідарності\" Петро Порошенко під час зустрічі з чинним президентом Володимиром Зеленським обговорював ключові теми порядку денного держави і \"нічого не просив\".",
+    "date": "2027-02-13",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/8/837418/d8b28602a4365e714f50eb02ead7aa45.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036678/",
     "auto": true
   },
   {
