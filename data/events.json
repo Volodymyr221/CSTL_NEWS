@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 159,
+    "title": "Зеленський: Попередження розвідок про масований удар росіян залишаються в силі",
+    "description": "Президент Володимир Зеленський повідомив, що попередження розвідок щодо російських ударів залишаються в силі, росіяни готові до нового масованого удару.",
+    "date": "2026-06-01",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/2/840369/e29a3217013e4291a8fefe655e62557b.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037344/",
+    "auto": true
+  },
+  {
     "id": 158,
     "title": "У Путіна обурились затриманням танкера \"тіньового флоту\" РФ та назвали це \"піратством\"",
     "description": "Пєсков заявив, що дії Франції щодо російського танкера Tagor межують з піратством і незаконні.",
@@ -544,6 +557,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/b/820314/3b539237fa4dcd47b7444824f286d2dc.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/01/8032617/",
+    "auto": true
+  },
+  {
+    "id": 160,
+    "title": "Буданов: Президент доручив якнайшвидше спробувати закінчити війну, бажано до зими",
+    "description": "Голова Офісу президента України Кирило Буданов заявив, що Володимир Зеленський доручив якнайшвидше спробувати закінчити війну.",
+    "date": "2027-05-09",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/f/840358/2f490abc3b93bd61a3443954dbd290cc.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037332/",
     "auto": true
   },
   {
