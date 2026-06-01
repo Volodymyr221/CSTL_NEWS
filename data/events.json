@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 158,
+    "title": "У Путіна обурились затриманням танкера \"тіньового флоту\" РФ та назвали це \"піратством\"",
+    "description": "Пєсков заявив, що дії Франції щодо російського танкера Tagor межують з піратством і незаконні.",
+    "date": "2026-06-01",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/8/840096/5818c31973e2fd3d5e27107a80954cdc.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037284/",
+    "auto": true
+  },
+  {
     "id": 119,
     "title": "На форум у Петербурзі за участю Путіна вперше за кілька років приїде представник США – росЗМІ",
     "description": "Офіційний представник США вперше за кілька років приїде на Міжнародний економічним форум у російському Петербурзі.",
@@ -63,6 +76,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/1/838268/a1e33191e9c7ce52308e862b961dcde4.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/29/8036910/",
+    "auto": true
+  },
+  {
+    "id": 157,
+    "title": "Bloomberg: Мерц хоче зібрати лідерів Європи перед зустріччю з Трампом на саміті НАТО",
+    "description": "Канцлер Німеччини Фрідріх Мерц планує наприкінці червня провести зустріч із європейськими лідерами, щоб узгодити підхід до переговорів із президентом США Дональдом Трампом на липневому саміті НАТО.",
+    "date": "2026-06-12",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/a/840300/3a3cc2c7730aeb46eaadc83d384521c9.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037309/",
     "auto": true
   },
   {
