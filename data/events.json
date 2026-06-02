@@ -40,29 +40,16 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 159,
-    "title": "Зеленський: Попередження розвідок про масований удар росіян залишаються в силі",
-    "description": "Президент Володимир Зеленський повідомив, що попередження розвідок щодо російських ударів залишаються в силі, росіяни готові до нового масованого удару.",
-    "date": "2026-06-01",
+    "id": 162,
+    "title": "Росіяни вдарили по Києву: пошкоджені житлові будинки, є перебої зі світлом",
+    "description": "Росіяни вдарили по Києву: ракета ймовірно влучила в багатоповерхівку, є перебої зі світлом",
+    "date": "2026-06-02",
     "time": null,
     "location": null,
     "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/2/840369/e29a3217013e4291a8fefe655e62557b.jpeg",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/4/f/840485/4fe14be35a8faf84f5cb9174412538fd.jpeg",
     "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037344/",
-    "auto": true
-  },
-  {
-    "id": 158,
-    "title": "У Путіна обурились затриманням танкера \"тіньового флоту\" РФ та назвали це \"піратством\"",
-    "description": "Пєсков заявив, що дії Франції щодо російського танкера Tagor межують з піратством і незаконні.",
-    "date": "2026-06-01",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/8/840096/5818c31973e2fd3d5e27107a80954cdc.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037284/",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/02/8037363/",
     "auto": true
   },
   {
