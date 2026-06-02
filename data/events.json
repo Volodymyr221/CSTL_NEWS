@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 171,
+    "title": "Американські військові заявили про ураження ракетою танкера, який прямував до порту Ірану",
+    "description": "CENTCOM заявив, що військові США уразили ракетою танкер, який рухався до острова Харг.",
+    "date": "2026-06-02",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/b/841146/7bd38c74348251cb63b6e2b62e8338ec.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037516/",
+    "auto": true
+  },
+  {
     "id": 168,
     "title": "Трамп каже, що переговори США з Іраном тривають безперервно",
     "description": "Американський президент Дональд Трамп заявив, що переговори США з Іраном \"тривають безперервно\".",
@@ -167,6 +180,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/4/818992/14d7bb0aa7820f6e40722787c775f9f1.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/04/29/8032272/",
+    "auto": true
+  },
+  {
+    "id": 170,
+    "title": "Зеленський долучиться до саміту G7 у Франції – Politico",
+    "description": "Politico пише, що Зеленський візьме участь у саміті G7 у Франції наприкінці червня.",
+    "date": "2026-06-17",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/a/841153/da94baae981c72de0daac8c50a07f37b.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037517/",
     "auto": true
   },
   {
@@ -609,32 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/a/832304/0a7976e5d91c84fe32a4bddc4938addd.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/20/8035618/",
-    "auto": true
-  },
-  {
-    "id": 49,
-    "title": "Нетаньягу провів телефонну розмову з Трампом на тлі відповіді Ірану про мирну угоду – CNN",
-    "description": "Нетаньягу і Трамп провели телефонну розмову на тлі відповіді Ірану про мирну угоду.",
-    "date": "2027-04-30",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/b/7/826306/b717151c0abc064a13a8795d223c58f0.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/11/8034116/",
-    "auto": true
-  },
-  {
-    "id": 17,
-    "title": "Глава МЗС Китаю закликав США \"зробити правильний вибір\" щодо Тайваню задля миру у світі",
-    "description": "Міністр закордонних справ Китаю Ван Ї під час розмови з державним секретарем США Марко Рубіо закликав Вашингтон \"зробити правильний вибір\" у питанні Тайваню, наголосивши, що це необхідно для зміцнення співпраці та забезпечення миру в усьому світі.",
-    "date": "2027-04-30",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/b/820314/3b539237fa4dcd47b7444824f286d2dc.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/01/8032617/",
     "auto": true
   }
 ]
