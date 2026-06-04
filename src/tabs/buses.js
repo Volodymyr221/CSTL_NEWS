@@ -294,7 +294,8 @@ function renderSmartRow() {
 
   el.innerHTML = `
     <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}">
-      <div class="bhv4-bg-castle" aria-hidden="true"></div>
+      <img class="bhv4-bg-img" src="./images/bus-hero.png" alt="" aria-hidden="true">
+      <div class="bhv4-overlay"></div>
 
       <div class="bhv4-topbar">
         <span class="bhv4-status">
@@ -319,7 +320,6 @@ function renderSmartRow() {
           </div>
           ${nextStopLine}
         </div>
-        <img class="bhv4-bus-img" src="images/bus-hero.png" alt="" aria-hidden="true">
       </div>
 
       ${renderRouteMapV4(next, timings)}
