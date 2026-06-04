@@ -94,29 +94,6 @@
 
   <!-- Нижня навігація (tab bar) -->
   <nav class="tab-bar">
-    <button class="tab-item active" data-tab="community" onclick="switchTab('community')">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M3 12l9-9 9 9"/>
-        <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>
-      </svg>
-      <span class="tab-label">Громада</span>
-    </button>
-    <button class="tab-item" data-tab="board" onclick="switchTab('board')">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="5" width="18" height="16" rx="2"/>
-        <path d="M9 5V3h6v2"/>
-        <path d="M7 10h10M7 14h10M7 18h6"/>
-      </svg>
-      <span class="tab-label">Дошка</span>
-    </button>
-    <button class="tab-item" data-tab="events" onclick="switchTab('events')">
-      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-        <rect x="3" y="4" width="18" height="18" rx="2"/>
-        <path d="M3 10h18M8 2v4M16 2v4"/>
-        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
-      </svg>
-      <span class="tab-label">Події</span>
-    </button>
     <button class="tab-item" data-tab="buses" onclick="switchTab('buses')">
       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M3 8h18M3 14h18M5 8v8M19 8v8"/>
@@ -126,6 +103,31 @@
         <path d="M7 18v2M17 18v2"/>
       </svg>
       <span class="tab-label">Автобуси</span>
+    </button>
+    <button class="tab-item" data-tab="board" onclick="switchTab('board')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="5" width="18" height="16" rx="2"/>
+        <path d="M9 5V3h6v2"/>
+        <path d="M7 10h10M7 14h10M7 18h6"/>
+      </svg>
+      <span class="tab-label">Дошка</span>
+    </button>
+    <button class="tab-item tab-item--home active" data-tab="community" onclick="switchTab('community')">
+      <div class="tab-home-circle">
+        <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M3 12l9-9 9 9"/>
+          <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10"/>
+        </svg>
+      </div>
+      <span class="tab-label">Громада</span>
+    </button>
+    <button class="tab-item" data-tab="events" onclick="switchTab('events')">
+      <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2"/>
+        <path d="M3 10h18M8 2v4M16 2v4"/>
+        <path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01"/>
+      </svg>
+      <span class="tab-label">Події</span>
     </button>
     <!-- Кнопка «Світло» прихована 16.05.2026 (не актуально, світло не відключають).
          Щоб повернути — розкоментуй блок нижче.

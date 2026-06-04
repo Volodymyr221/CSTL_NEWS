@@ -2,16 +2,16 @@
 .tab-bar {
   position: fixed;
   bottom: 0; left: 0; right: 0;
-  /* БЕЗ фіксованої висоти — висота = items + safe area знизу */
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--white);
   border-top: 1px solid var(--border);
   display: flex;
-  align-items: flex-end; /* items притиснуті до низу, вище safe area */
+  align-items: flex-end;
   z-index: 1000;
-  /* translateZ(0) — окремий GPU-шар, виправляє баг position:fixed в iOS PWA */
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
+  /* overflow visible щоб центральна кнопка виступала вверх */
+  overflow: visible;
 }
 .tab-item {
   flex: 1;
@@ -20,7 +20,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  height: var(--tabbar-h); /* фіксована висота ТІЛЬКИ на item, не на bar */
+  height: var(--tabbar-h);
   background: none;
   border: none;
   cursor: pointer;
@@ -31,4 +31,46 @@
 .tab-item.active { color: var(--red); }
 .tab-icon { width: 22px; height: 22px; flex-shrink: 0; }
 .tab-label { font-size: 10px; font-weight: 600; letter-spacing: 0.3px; }
+
+/* Центральна кнопка «Громада» — піднятий бордовий круг */
+.tab-item--home {
+  position: relative;
+  color: var(--gray);
+  /* піднімаємо кнопку над баром */
+  margin-top: -16px;
+  height: calc(var(--tabbar-h) + 16px);
+  justify-content: flex-end;
+  padding-bottom: 6px;
+}
+.tab-home-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.45);
+  transition: transform 0.15s, box-shadow 0.15s;
+  /* біла рамка щоб круг "відривався" від бару */
+  outline: 3px solid var(--white);
+}
+.tab-home-circle .tab-icon {
+  width: 24px;
+  height: 24px;
+  color: var(--white);
+  stroke: var(--white);
+}
+/* активний стан — трохи яскравіша тінь */
+.tab-item--home.active .tab-home-circle {
+  box-shadow: 0 6px 18px rgba(114, 47, 55, 0.6);
+  transform: translateY(-2px);
+}
+.tab-item--home.active {
+  color: var(--red);
+}
+.tab-item--home:active .tab-home-circle {
+  transform: scale(0.93);
+}
 
