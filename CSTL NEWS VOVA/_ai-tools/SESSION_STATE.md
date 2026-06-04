@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-04 (Таб-бар зафіксовано: порядок Автобуси·Дошка·ГРОМАДА·Події·Новини, центральна кнопка — бордовий круг 52px, іконка 77px castle-icon.png, біла дуга зверху з clip-path, тінь кола (box-shadow вгору) зливає дугу з баром)
+**Оновлено:** 2026-06-04 (ТАБ-БАР ФІНАЛ ✅ — всі параметри збережені нижче)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,12 +14,52 @@
 | **Робоча гілка (поточна сесія)** | `claude/start-session-XXX` — створюється автоматично при старті |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260604-2145` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260604-2330` |
 
 ### Видимі вкладки (порядок у tab-bar)
 **Автобуси** · **Дошка** · **ГРОМАДА** (центр, піднята кнопка) · **Події** · **Новини**
 
 Світло — приховано з tab-bar 16.05 (наразі не актуально, код у `src/tabs/power.js` збережено, повертається розкоментуванням у `src/app.js` і у nav-меню).
+
+### 🔒 ТАБ-БАР — ФІНАЛЬНІ ПАРАМЕТРИ (04.06.2026)
+
+**Загальний таббар (`.tab-bar`):**
+- `border-radius: 20px 20px 0 0` — заокруглені верхні кути
+- `border-top: 1px solid var(--border)` — тонка сіра лінія зверху
+- `box-shadow: 0 -2px 16px rgba(0,0,0,0.08)` — м'яка тінь вгору
+- `overflow: visible` — щоб коло ГРОМАДИ виступало над баром
+
+**Звичайні вкладки (`.tab-item`):**
+- Іконка: 22×22px, підпис: 10px, font-weight 600, uppercase
+- Неактивні: `color: var(--gray)`
+- Активні: `color: var(--red)`
+
+**Центральна кнопка ГРОМАДА (`.tab-item--home`):**
+- `height: var(--tabbar-h)`, `justify-content: flex-end`, `padding-bottom: 8px`
+
+**Коло (`.tab-home-circle`):**
+- Розмір: `52×52px`, `border-radius: 50%`
+- Колір: `background: var(--red)`
+- Позиція: `position: absolute; bottom: 28px`
+- Тінь неактивна: `box-shadow: 0 4px 14px rgba(114,47,55,0.5), 0 -5px 18px rgba(114,47,55,0.25)`
+- Тінь активна: `box-shadow: 0 5px 14px rgba(114,47,55,0.6), 0 -6px 18px rgba(114,47,55,0.25)`
+- `z-index: 1001`
+
+**Іконка замку всередині кола:**
+- Файл: `icons/castle-icon.png`
+- Розмір: `77×77px`, `object-fit: contain`
+- `overflow: hidden` на колі — обрізає іконку по формі кола
+
+**Біла дуга зверху кола (`::after`):**
+- `width: 58px; height: 58px; border-radius: 50%`
+- `border: 3px solid var(--white)`
+- `position: absolute; bottom: 25px` — центрується по колу
+- `clip-path: inset(0 0 31px 0)` — обрізає рівно на рівні верху таббару
+- `z-index: 1000` (нижче кола, щоб тінь кола перекривала основу дуги)
+
+**Підпис ГРОМАДА (`.tab-label--home`):**
+- `font-weight: 800`, `font-size: 12px`, `letter-spacing: 0.5px`, uppercase
+- Колір: успадковує від `.tab-item` (сірий/бордовий як всі інші)
 
 ### Дизайн
 **D2 «Поле»** — натуральні землі (paper/sky/mint/honey/peach), кольорові градієнти блоків, м'які тіні, радіус 22px. **Бренд бордо `#722F37`** (theme-color iOS, splash, лого, активна вкладка, CTA). CSTL NEWS → CSTL LIFE у всіх user-facing.
