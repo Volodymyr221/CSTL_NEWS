@@ -50,7 +50,7 @@
   overflow: hidden;
   color: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
-  min-height: 160px;
+  min-height: 210px;
   background: #722F37;
 }
 
@@ -179,7 +179,7 @@
 .bhv4-map {
   position: relative;
   z-index: 1;
-  margin-top: 16px;
+  margin-top: 60px;
   padding-bottom: 16px;
 }
 .bhv4-track {
