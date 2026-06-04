@@ -64,8 +64,8 @@
   stroke: var(--white);
 }
 .tab-castle-icon {
-  width: 62px;
-  height: 62px;
+  width: 74px;
+  height: 74px;
   object-fit: contain;
 }
 .tab-item--home.active .tab-home-circle {
