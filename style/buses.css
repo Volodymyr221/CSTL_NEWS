@@ -46,7 +46,7 @@
 .bhv4 {
   position: relative;
   border-radius: 16px;
-  padding: 14px 16px 90px;
+  padding: 14px 16px 0;
   overflow: hidden;
   color: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
@@ -174,14 +174,12 @@
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
 }
 
-/* ── Маршрутна шкала (v4) — прибита до низу картки ── */
+/* ── Маршрутна шкала (v4) — в нормальному потоці після тексту ── */
 .bhv4-map {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  position: relative;
   z-index: 1;
-  padding: 0 16px 28px;
+  margin-top: 12px;
+  padding-bottom: 16px;
 }
 .bhv4-track {
   position: relative;
