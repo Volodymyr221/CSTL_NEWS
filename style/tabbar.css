@@ -12,7 +12,7 @@
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   overflow: visible;
-  box-shadow: 0 -3px 0 var(--white), 0 -2px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 -3px 0 rgba(0,0,0,0.06), 0 -2px 16px rgba(0,0,0,0.08);
 }
 .tab-item {
   flex: 1;
@@ -38,40 +38,25 @@
   position: relative;
   height: var(--tabbar-h);
   justify-content: flex-end;
-  padding-bottom: 7px;
+  padding-bottom: 8px;
 }
 /* Круг — абсолютно підіймається над баром */
 .tab-home-circle {
   position: absolute;
-  bottom: 31px;
+  bottom: 28px;          /* відступ від низу item — підіймає коло вверх */
   left: 50%;
   transform: translateX(-50%);
-  width: 49px;
-  height: 49px;
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--red);
   display: flex;
   align-items: center;
   justify-content: center;
-  overflow: hidden;
+  overflow: hidden;      /* іконка обрізається по колу */
   box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
-}
-/* Біла рамка тільки на верхній дузі — там де коло виступає над баром */
-.tab-item--home::after {
-  content: '';
-  position: absolute;
-  bottom: 28px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 55px;
-  height: 55px;
-  border-radius: 50%;
-  border: 3px solid var(--white);
-  clip-path: inset(0 0 50% 0);
-  pointer-events: none;
-  z-index: 1002;
-}
+  outline: 3px solid var(--white);
 }
 .tab-home-circle .tab-icon {
   width: 26px;
@@ -80,8 +65,8 @@
   stroke: var(--white);
 }
 .tab-castle-icon {
-  width: 73px;
-  height: 73px;
+  width: 77px;
+  height: 77px;
   object-fit: contain;
 }
 .tab-item--home.active .tab-home-circle {
@@ -98,8 +83,4 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--red);
-  transition: text-shadow 0.15s;
-}
-.tab-item--home.active .tab-label--home {
-  text-shadow: 0 2px 8px rgba(114, 47, 55, 0.45);
 }
