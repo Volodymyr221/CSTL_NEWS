@@ -210,9 +210,14 @@
   background: white;
 }
 .bhv4-dot--current {
-  background: #7DDA58;
+  background: white;
   width: 10px; height: 10px;
   margin-left: -5px; margin-top: -5px;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+}
+/* Зелений кружечок і анімація — тільки коли автобус їде (enroute) */
+.bhv4--enroute .bhv4-dot--current {
+  background: #7DDA58;
   box-shadow: 0 0 0 3px rgba(125,218,88,0.4);
   animation: bhv4-dot-pulse 1.4s ease-in-out infinite;
 }
