@@ -57,7 +57,7 @@
   box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
 }
-/* Біла рамка тільки на верхній дузі — краї плавно зникають */
+/* Біла рамка тільки на верхній дузі */
 .tab-item--home::after {
   content: '';
   position: absolute;
@@ -69,8 +69,7 @@
   border-radius: 50%;
   border: 3px solid var(--white);
   clip-path: inset(0 0 50% 0);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, white 22%, white 78%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0%, white 22%, white 78%, transparent 100%);
+  filter: drop-shadow(0 3px 4px rgba(114, 47, 55, 0.35));
   pointer-events: none;
   z-index: 1002;
 }
