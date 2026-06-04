@@ -3231,28 +3231,36 @@ ${ev.description}`
     renderSmartRow();
     renderRouteList();
   }
-  function renderRouteMap(route, timings) {
+  function renderRouteMapV4(route, timings) {
     const stops = route.stops;
     const totalKm = stops[stops.length - 1].km || 1;
-    const progress = (timings.progress * 100).toFixed(1);
-    const stopsHtml = stops.map((s, i) => {
-      const pct = totalKm ? s.km / totalKm * 100 : 0;
+    const pct = (timings.progress * 100).toFixed(1);
+    const labelStops = stops.length <= 5 ? stops : [stops[0], ...stops.slice(1, -1).filter((_, i, arr) => {
+      const step = Math.floor(arr.length / 3);
+      return i % step === 0;
+    }).slice(0, 3), stops[stops.length - 1]];
+    const dotsHtml = stops.map((s) => {
+      const dotPct = totalKm ? s.km / totalKm * 100 : 0;
       const isCurrent = s.name === timings.currentStop;
-      return `<span class="bhm-stop${isCurrent ? " bhm-stop--current" : ""}" style="left:${pct.toFixed(1)}%"></span>`;
+      const isPassed = totalKm ? s.km / totalKm <= timings.progress + 0.01 : false;
+      return `<span class="bhv4-dot${isCurrent ? " bhv4-dot--current" : ""}${isPassed ? " bhv4-dot--passed" : ""}"
+                  style="left:${dotPct.toFixed(1)}%"></span>`;
+    }).join("");
+    const labelsHtml = labelStops.map((s) => {
+      const lPct = totalKm ? s.km / totalKm * 100 : 0;
+      const isCurrent = s.name === timings.currentStop;
+      return `<span class="bhv4-label${isCurrent ? " bhv4-label--current" : ""}"
+                  style="left:${lPct.toFixed(1)}%">${escapeHtml(s.name)}</span>`;
     }).join("");
     return `
-    <div class="bus-hero-map" aria-hidden="true">
-      <div class="bhm-track">
-        <div class="bhm-fill" style="width:${progress}%"></div>
-        ${stopsHtml}
-        <span class="bhm-marker" style="left:${progress}%">\u{1F68C}</span>
+    <div class="bhv4-map" aria-hidden="true">
+      <div class="bhv4-track">
+        <div class="bhv4-fill" style="width:${pct}%"></div>
+        ${dotsHtml}
+        <span class="bhv4-bus-marker" style="left:${pct}%">\u{1F68C}</span>
       </div>
-      <div class="bhm-ends">
-        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
-        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
-      </div>
-    </div>
-  `;
+      <div class="bhv4-labels">${labelsHtml}</div>
+    </div>`;
   }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
@@ -3260,7 +3268,7 @@ ${ev.description}`
       return;
     const next = findNextRoute();
     if (!next) {
-      el.innerHTML = `<div class="bus-hero bus-hero--empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
+      el.innerHTML = `<div class="bhv4-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
       return;
     }
     const effFrom = getEffectiveFrom(next);
@@ -3268,41 +3276,46 @@ ${ev.description}`
     const fromTime = getStopHHMM(next, effFrom);
     const toTime = getStopHHMM(next, effTo);
     const timings = getRouteTimings(next);
-    const carrier = busData.carriers?.[next.carrier] || { name: next.carrier, phone: "0332 224 500" };
-    const price = getSegmentPrice(next, effFrom, effTo);
-    const urgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
     const isEnroute = timings.state === "enroute";
-    let topLabel;
-    if (isEnroute) {
-      topLabel = `\u{1F68C} \u0417\u0410\u0420\u0410\u0417 \u0423 ${(timings.currentStop || "\u2014").toUpperCase()}`;
-    } else if (urgent) {
-      topLabel = `\u0427\u0415\u0420\u0415\u0417 ${timings.minsToDeparture} \u0425\u0412`;
-    } else {
-      topLabel = formatCountdownUpper(timings.minsToDeparture) || "\u0412\u0416\u0415 \u0417\u0410\u0420\u0410\u0417";
-    }
-    const timeRow = isEnroute ? `<div class="bus-hero-times">
-         <span class="bus-hero-time">\u23F1 ${timings.minsToArrival} \u0425\u0412</span>
-         <span class="bus-hero-arrow">\xB7</span>
-         <span class="bus-hero-time bus-hero-time--to">\u0434\u043E ${escapeHtml(toTime || "\u2014")}</span>
-       </div>` : `<div class="bus-hero-times">
-         <span class="bus-hero-time">${escapeHtml(fromTime || "\u2014")}</span>
-         <span class="bus-hero-arrow">\u2192</span>
-         <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || "\u2014")}</span>
-       </div>`;
+    const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
+    const fromMin = timings.fromMin;
+    const toMin = timings.toMin;
+    const durMins = fromMin !== null && toMin !== null ? toMin - fromMin : null;
+    const durStr = durMins !== null ? durMins >= 60 ? `${Math.floor(durMins / 60)} \u0433\u043E\u0434${durMins % 60 ? " " + durMins % 60 + " \u0445\u0432" : ""}` : `${durMins} \u0445\u0432` : "";
+    const statusDot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
+    const statusText = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
+    const nextStopLine = isEnroute && timings.nextStop ? `<div class="bhv4-next-stop">\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(timings.nextStop.toUpperCase())}</div>` : timings.state === "waiting" && timings.minsToDeparture !== null ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>` : "";
     el.innerHTML = `
-    <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}${isEnroute ? " bus-hero--enroute" : ""}">
-      <div class="bus-hero-top">
-        <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
-        ${urgent ? '<span class="bus-hero-urgent">\u26A1 \u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>' : ""}
+    <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}">
+      <div class="bhv4-bg-castle" aria-hidden="true"></div>
+
+      <div class="bhv4-topbar">
+        <span class="bhv4-status">
+          <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="6" width="22" height="13" rx="2"/>
+            <path d="M16 6V4a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"/>
+            <circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>
+            <line x1="7" y1="17" x2="17" y2="17"/>
+          </svg>
+          <span class="bhv4-status-text">${statusText}</span>
+          <span class="bhv4-status-dot">${statusDot}</span>
+        </span>
+        <span class="bhv4-chevron">\u203A</span>
       </div>
-      <div class="bus-hero-row">${timeRow}</div>
-      <div class="bus-hero-route">${escapeHtml(effFrom)} \u2192 ${escapeHtml(effTo)}</div>
-      <div class="bus-hero-meta">
-        <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
-        <span class="bus-hero-meta-sep">\xB7</span>
-        <span>${escapeHtml(carrier.name)}</span>
+
+      <div class="bhv4-body">
+        <div class="bhv4-left">
+          <div class="bhv4-route-name">${escapeHtml(effFrom.toUpperCase())} \u2013 ${escapeHtml(effTo.toUpperCase())}</div>
+          <div class="bhv4-times-row">
+            <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
+            ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
+          </div>
+          ${nextStopLine}
+        </div>
+        <img class="bhv4-bus-img" src="images/bus-hero.png" alt="" aria-hidden="true">
       </div>
-      ${renderRouteMap(next, timings)}
+
+      ${renderRouteMapV4(next, timings)}
     </div>
   `;
   }

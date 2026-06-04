@@ -37,188 +37,223 @@
 }
 
 /* Smart-рядок наступного рейсу */
-/* ── Hero-картка «Наступний автобус» (v2 — 15.05.2026) ─────────────────── */
 .bus-smart-row {
-  /* контейнер тепер — порожній wrapper, всю розмітку малює .bus-hero всередині */
   padding: 14px 14px 14px;
 }
-/* HERO — серйозний транспортний стиль (табло автостанції). 18.05.2026
-   Темний сталево-сіро-зелений фон, бурштиновий accent для часу,
-   моноширинний шрифт цифр як на справжніх табло УЗ/АТП. */
-.bus-hero {
-  background: linear-gradient(135deg, #2F3E36 0%, #1F2B25 100%);
-  border-radius: 12px;
-  padding: 16px 18px 14px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
-  color: white;
+
+/* ── Hero-картка v4 (05.06.2026) ─────────────────────────────────────────
+   Бордовий бренд #722F37, ілюстрація автобуса справа, велика назва маршруту,
+   капсула часу, «НАСТУПНА ЗУПИНКА», маршрутна шкала з підписами зупинок. */
+.bhv4 {
   position: relative;
-}
-.bus-hero--urgent {
-  background: linear-gradient(135deg, #6B1F2A 0%, #4A1118 100%);
+  background: linear-gradient(135deg, #722F37 0%, #4D1F26 100%);
+  border-radius: 16px;
+  padding: 14px 16px 0;
+  overflow: hidden;
   color: white;
+  box-shadow: 0 4px 20px rgba(114,47,55,0.45);
+  min-height: 160px;
 }
-/* En-route (рейс у дорозі прямо зараз) — золотисто-зелений gradient
-   щоб відрізнявся від waiting (звичайний темний). 18.05.2026 */
-.bus-hero--enroute {
-  background: linear-gradient(135deg, #2B4A3A 0%, #1A3025 100%);
+.bhv4--urgent {
+  background: linear-gradient(135deg, #9B2335 0%, #6B1020 100%);
 }
-.bus-hero--enroute .bus-hero-countdown {
-  background: rgba(251,191,36,0.15);
-  border-color: rgba(251,191,36,0.55);
-  color: #FBBF24;
+
+/* Силует замку у фоні — декоративний псевдоелемент */
+.bhv4-bg-castle {
+  position: absolute;
+  right: -10px;
+  top: 0;
+  bottom: 0;
+  width: 55%;
+  opacity: 0.07;
+  background: url('../images/bus-hero.png') right center / contain no-repeat;
+  pointer-events: none;
+  z-index: 0;
 }
-.bus-hero--empty {
-  color: var(--ink-soft);
+
+/* Верхній рядок: іконка + статус + шеврон */
+.bhv4-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  position: relative;
+  z-index: 1;
+}
+.bhv4-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: rgba(255,255,255,0.9);
+}
+.bhv4-bus-icon {
+  width: 18px;
+  height: 18px;
+  color: white;
+  flex-shrink: 0;
+}
+.bhv4-status-dot { font-size: 10px; }
+.bhv4-chevron {
+  font-size: 22px;
+  color: rgba(255,255,255,0.5);
+  line-height: 1;
+  font-weight: 300;
+}
+
+/* Тіло: текст зліва + ілюстрація автобуса справа */
+.bhv4-body {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 14px;
+}
+.bhv4-left { flex: 1; min-width: 0; }
+
+/* Велика назва маршруту */
+.bhv4-route-name {
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  line-height: 1.15;
+  margin-bottom: 8px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+
+/* Рядок з капсулою часу і тривалістю */
+.bhv4-times-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 7px;
+  flex-wrap: wrap;
+}
+.bhv4-time-capsule {
+  display: inline-block;
+  background: rgba(255,255,255,0.15);
+  border: 1px solid rgba(255,255,255,0.3);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 15px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.5px;
+}
+.bhv4-duration {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.8);
+}
+
+/* «НАСТУПНА ЗУПИНКА — МІСТО ОЛИКА» */
+.bhv4-next-stop {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.85);
+}
+
+/* Ілюстрація автобуса справа */
+.bhv4-bus-img {
+  width: 130px;
+  height: 80px;
+  object-fit: contain;
+  object-position: right bottom;
+  flex-shrink: 0;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
+}
+
+/* ── Маршрутна шкала (v4) ── */
+.bhv4-map {
+  position: relative;
+  z-index: 1;
+  padding-bottom: 28px;
+}
+.bhv4-track {
+  position: relative;
+  height: 4px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 2px;
+  margin: 0 8px;
+}
+.bhv4-fill {
+  position: absolute;
+  top: 0; left: 0; height: 100%;
+  background: white;
+  border-radius: 2px;
+  transition: width 0.6s ease;
+}
+
+/* Крапки зупинок */
+.bhv4-dot {
+  position: absolute;
+  top: 50%;
+  width: 8px; height: 8px;
+  margin-left: -4px; margin-top: -4px;
+  background: rgba(255,255,255,0.35);
+  border-radius: 50%;
+  z-index: 1;
+}
+.bhv4-dot--passed {
+  background: white;
+}
+.bhv4-dot--current {
+  background: white;
+  width: 10px; height: 10px;
+  margin-left: -5px; margin-top: -5px;
+  box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+}
+
+/* Маркер 🚌 */
+.bhv4-bus-marker {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -160%);
+  font-size: 20px;
+  line-height: 1;
+  z-index: 2;
+  transition: left 0.6s ease;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
+}
+
+/* Підписи зупинок під шкалою */
+.bhv4-labels {
+  position: relative;
+  height: 24px;
+  margin: 6px 8px 0;
+}
+.bhv4-label {
+  position: absolute;
+  transform: translateX(-50%);
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.2px;
+  white-space: nowrap;
+  text-align: center;
+}
+.bhv4-label--current {
+  color: #7DDA58;
+  font-weight: 800;
+}
+/* Перша і остання — вирівнювання до країв */
+.bhv4-label:first-child { transform: translateX(0); }
+.bhv4-label:last-child  { transform: translateX(-100%); }
+
+/* Порожній стан */
+.bhv4-empty {
   background: var(--bg-card);
+  border-radius: 16px;
   text-align: center;
   padding: 28px;
   font-size: 15px;
   font-weight: 600;
-}
-.bus-hero-top {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 10px;
-}
-.bus-hero-countdown {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-  background: transparent;
-  border: 1px solid rgba(255,255,255,0.28);
-  color: #FBBF24;
-  padding: 3px 9px;
-  border-radius: 4px;
-  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
-}
-.bus-hero-urgent {
-  font-size: 11px;
-  font-weight: 700;
-  color: white;
-  background: var(--red);
-  padding: 3px 9px;
-  border-radius: 4px;
-  letter-spacing: 1px;
-  text-transform: uppercase;
-  animation: pulse 1s ease-in-out infinite;
-}
-.bus-hero-row {
-  display: flex; align-items: center; gap: 12px;
-  margin-bottom: 6px;
-}
-.bus-hero-times {
-  display: flex; align-items: baseline; gap: 10px;
-  flex: 1; min-width: 0;
-}
-.bus-hero-time {
-  font-family: 'SF Mono', Menlo, Consolas, 'Roboto Mono', monospace;
-  font-size: 34px;
-  font-weight: 600;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0;
-  color: #FBBF24;
-}
-.bus-hero-time--to {
-  font-size: 26px;
-  color: rgba(255,255,255,0.85);
-}
-.bus-hero-arrow {
-  font-size: 20px;
-  color: rgba(255,255,255,0.4);
-  font-weight: 400;
-}
-.bus-hero-route {
-  font-size: 15px;
-  font-weight: 500;
-  margin-bottom: 4px;
-  letter-spacing: 0.2px;
-}
-.bus-hero-meta {
-  font-size: 12px;
-  color: rgba(255,255,255,0.65);
-  display: flex;
-  gap: 6px;
-  align-items: center;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
-.bus-hero-meta-sep { color: rgba(255,255,255,0.30); }
-
-/* ── Маршрутна шкала з зупинками-крапками і маркером 🚌 (v3, 18.05.2026) ──
-   Замість простого progress bar — повноцінна "мапа маршруту":
-   - track    — горизонтальна лінія від 1-ї зупинки до останньої
-   - fill     — пройдена частина (бурштинова)
-   - stops    — крапки на лінії за пропорційним km кожної зупинки
-   - marker   — 🚌 на позиції прогресу (анімується при оновленні таймера) */
-.bus-hero-map { margin-top: 14px; }
-.bhm-track {
-  position: relative;
-  height: 4px;
-  background: rgba(255,255,255,0.18);
-  border-radius: 2px;
-  margin: 12px 8px 6px;  /* по 8px справа/зліва — місце для крайніх крапок */
-}
-.bhm-fill {
-  position: absolute;
-  top: 0; left: 0;
-  height: 100%;
-  background: #FBBF24;
-  border-radius: 2px;
-  transition: width 0.6s ease;
-}
-.bus-hero--urgent .bhm-fill { background: white; }
-.bus-hero--enroute .bhm-fill { background: #FBBF24; }
-
-/* Крапки-зупинки */
-.bhm-stop {
-  position: absolute;
-  top: 50%;
-  width: 6px;
-  height: 6px;
-  margin-left: -3px;
-  margin-top: -3px;
-  background: rgba(255,255,255,0.45);
-  border-radius: 50%;
-  z-index: 1;
-}
-.bhm-stop--current {
-  background: white;
-  width: 8px;
-  height: 8px;
-  margin-left: -4px;
-  margin-top: -4px;
-  box-shadow: 0 0 0 2px rgba(251,191,36,0.6);
-}
-
-/* Маркер 🚌 — над лінією, з абсолютною позицією */
-.bhm-marker {
-  position: absolute;
-  top: 50%;
-  transform: translate(-50%, -50%);
-  font-size: 18px;
-  line-height: 1;
-  z-index: 2;
-  transition: left 0.6s ease;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.35));
-}
-.bus-hero--enroute .bhm-marker {
-  animation: bhm-bus-bob 1.8s ease-in-out infinite;
-}
-@keyframes bhm-bus-bob {
-  0%, 100% { transform: translate(-50%, -50%); }
-  50%      { transform: translate(-50%, -65%); }
-}
-
-/* Підписи кінцевих зупинок (під шкалою) */
-.bhm-ends {
-  display: flex;
-  justify-content: space-between;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.65);
-  letter-spacing: 0.3px;
-  padding: 0 2px;
+  color: var(--ink-soft);
 }
 
 /* Список рейсів */

@@ -211,35 +211,48 @@ function selectStop(stop, field) {
   renderRouteList();
 }
 
-// ── Hero-картка «Наступний автобус» (v3 редизайн 18.05) ────────────────────
-// 3 стани: waiting (чекає відправки) / enroute (їде зараз) / past (приїхав).
-// Шкала bus-hero-map — маршрутна лінія з зупинками-крапками і маркером 🚌.
-// Логіка станів і прогресу — у src/core/bus-schedule.js (getRouteTimings).
+// ── Hero-картка «Наступний автобус» (v4 редизайн 05.06) ────────────────────
+// Дизайн: бордовий фон (#722F37 бренд), велика назва маршруту, капсула часу,
+// "НАСТУПНА ЗУПИНКА", маршрутна шкала з підписами, ілюстрація автобуса справа.
+// 3 стани: waiting / enroute / past. Логіка — bus-schedule.js.
 
-// HTML маршрутної шкали з зупинками-крапками і маркером 🚌 на позиції автобуса.
-// Підпис під маркером — назва поточної зупинки (en-route) або початкової (waiting).
-function renderRouteMap(route, timings) {
-  const stops    = route.stops;
-  const totalKm  = stops[stops.length - 1].km || 1;
-  const progress = (timings.progress * 100).toFixed(1);
-  const stopsHtml = stops.map((s, i) => {
-    const pct = totalKm ? (s.km / totalKm) * 100 : 0;
-    const isCurrent = s.name === timings.currentStop;
-    return `<span class="bhm-stop${isCurrent ? ' bhm-stop--current' : ''}" style="left:${pct.toFixed(1)}%"></span>`;
+function renderRouteMapV4(route, timings) {
+  const stops   = route.stops;
+  const totalKm = stops[stops.length - 1].km || 1;
+  const pct     = (timings.progress * 100).toFixed(1);
+
+  // Показуємо максимум 5 зупинок під шкалою (перша, остання і до 3 проміжних)
+  const labelStops = stops.length <= 5
+    ? stops
+    : [stops[0], ...stops.slice(1, -1).filter((_, i, arr) => {
+        const step = Math.floor(arr.length / 3);
+        return i % step === 0;
+      }).slice(0, 3), stops[stops.length - 1]];
+
+  const dotsHtml = stops.map(s => {
+    const dotPct     = totalKm ? (s.km / totalKm) * 100 : 0;
+    const isCurrent  = s.name === timings.currentStop;
+    const isPassed   = totalKm ? (s.km / totalKm) <= timings.progress + 0.01 : false;
+    return `<span class="bhv4-dot${isCurrent ? ' bhv4-dot--current' : ''}${isPassed ? ' bhv4-dot--passed' : ''}"
+                  style="left:${dotPct.toFixed(1)}%"></span>`;
   }).join('');
+
+  const labelsHtml = labelStops.map(s => {
+    const lPct      = totalKm ? (s.km / totalKm) * 100 : 0;
+    const isCurrent = s.name === timings.currentStop;
+    return `<span class="bhv4-label${isCurrent ? ' bhv4-label--current' : ''}"
+                  style="left:${lPct.toFixed(1)}%">${escapeHtml(s.name)}</span>`;
+  }).join('');
+
   return `
-    <div class="bus-hero-map" aria-hidden="true">
-      <div class="bhm-track">
-        <div class="bhm-fill" style="width:${progress}%"></div>
-        ${stopsHtml}
-        <span class="bhm-marker" style="left:${progress}%">🚌</span>
+    <div class="bhv4-map" aria-hidden="true">
+      <div class="bhv4-track">
+        <div class="bhv4-fill" style="width:${pct}%"></div>
+        ${dotsHtml}
+        <span class="bhv4-bus-marker" style="left:${pct}%">🚌</span>
       </div>
-      <div class="bhm-ends">
-        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
-        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
-      </div>
-    </div>
-  `;
+      <div class="bhv4-labels">${labelsHtml}</div>
+    </div>`;
 }
 
 function renderSmartRow() {
@@ -247,59 +260,69 @@ function renderSmartRow() {
   if (!el) return;
   const next = findNextRoute();
   if (!next) {
-    el.innerHTML = `<div class="bus-hero bus-hero--empty">Рейсів сьогодні більше немає</div>`;
+    el.innerHTML = `<div class="bhv4-empty">Рейсів сьогодні більше немає</div>`;
     return;
   }
 
-  const effFrom  = getEffectiveFrom(next);
-  const effTo    = getEffectiveTo(next);
-  const fromTime = getStopHHMM(next, effFrom);
-  const toTime   = getStopHHMM(next, effTo);
-  const timings  = getRouteTimings(next);
-  const carrier  = busData.carriers?.[next.carrier] || { name: next.carrier, phone: '0332 224 500' };
-  const price    = getSegmentPrice(next, effFrom, effTo);
-  const urgent   = timings.state === 'waiting' && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
+  const effFrom   = getEffectiveFrom(next);
+  const effTo     = getEffectiveTo(next);
+  const fromTime  = getStopHHMM(next, effFrom);
+  const toTime    = getStopHHMM(next, effTo);
+  const timings   = getRouteTimings(next);
   const isEnroute = timings.state === 'enroute';
+  const isUrgent  = timings.state === 'waiting' && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
 
-  // ── ВЕРХ: countdown капсула (waiting) або «🚌 ЗАРАЗ У ...» (enroute) ──
-  let topLabel;
-  if (isEnroute) {
-    topLabel = `🚌 ЗАРАЗ У ${(timings.currentStop || '—').toUpperCase()}`;
-  } else if (urgent) {
-    topLabel = `ЧЕРЕЗ ${timings.minsToDeparture} ХВ`;
-  } else {
-    topLabel = formatCountdownUpper(timings.minsToDeparture) || 'ВЖЕ ЗАРАЗ';
-  }
+  const fromMin  = timings.fromMin;
+  const toMin    = timings.toMin;
+  const durMins  = (fromMin !== null && toMin !== null) ? toMin - fromMin : null;
+  const durStr   = durMins !== null
+    ? (durMins >= 60
+        ? `${Math.floor(durMins / 60)} год${durMins % 60 ? ' ' + durMins % 60 + ' хв' : ''}`
+        : `${durMins} хв`)
+    : '';
 
-  // ── РЯДОК ЧАСУ ──
-  // waiting: 19:00 → 20:20 (відправлення → прибуття)
-  // enroute: ⏱ ЗАЛИШИЛОСЬ X · до 20:20
-  const timeRow = isEnroute
-    ? `<div class="bus-hero-times">
-         <span class="bus-hero-time">⏱ ${timings.minsToArrival} ХВ</span>
-         <span class="bus-hero-arrow">·</span>
-         <span class="bus-hero-time bus-hero-time--to">до ${escapeHtml(toTime || '—')}</span>
-       </div>`
-    : `<div class="bus-hero-times">
-         <span class="bus-hero-time">${escapeHtml(fromTime || '—')}</span>
-         <span class="bus-hero-arrow">→</span>
-         <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toTime || '—')}</span>
-       </div>`;
+  // Статус-рядок
+  const statusDot  = isEnroute ? '🟢' : isUrgent ? '🔴' : '🔵';
+  const statusText = isEnroute ? 'в дорозі' : isUrgent ? 'відправляється' : 'очікується';
+
+  // Наступна зупинка
+  const nextStopLine = isEnroute && timings.nextStop
+    ? `<div class="bhv4-next-stop">НАСТУПНА ЗУПИНКА — ${escapeHtml(timings.nextStop.toUpperCase())}</div>`
+    : timings.state === 'waiting' && timings.minsToDeparture !== null
+    ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>`
+    : '';
 
   el.innerHTML = `
-    <div class="bus-hero${urgent ? ' bus-hero--urgent' : ''}${isEnroute ? ' bus-hero--enroute' : ''}">
-      <div class="bus-hero-top">
-        <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
-        ${urgent ? '<span class="bus-hero-urgent">⚡ Поспішай!</span>' : ''}
+    <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}">
+      <div class="bhv4-bg-castle" aria-hidden="true"></div>
+
+      <div class="bhv4-topbar">
+        <span class="bhv4-status">
+          <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="1" y="6" width="22" height="13" rx="2"/>
+            <path d="M16 6V4a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"/>
+            <circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>
+            <line x1="7" y1="17" x2="17" y2="17"/>
+          </svg>
+          <span class="bhv4-status-text">${statusText}</span>
+          <span class="bhv4-status-dot">${statusDot}</span>
+        </span>
+        <span class="bhv4-chevron">›</span>
       </div>
-      <div class="bus-hero-row">${timeRow}</div>
-      <div class="bus-hero-route">${escapeHtml(effFrom)} → ${escapeHtml(effTo)}</div>
-      <div class="bus-hero-meta">
-        <span>${escapeHtml(price || '—')} грн</span>
-        <span class="bus-hero-meta-sep">·</span>
-        <span>${escapeHtml(carrier.name)}</span>
+
+      <div class="bhv4-body">
+        <div class="bhv4-left">
+          <div class="bhv4-route-name">${escapeHtml(effFrom.toUpperCase())} – ${escapeHtml(effTo.toUpperCase())}</div>
+          <div class="bhv4-times-row">
+            <span class="bhv4-time-capsule">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span>
+            ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ''}
+          </div>
+          ${nextStopLine}
+        </div>
+        <img class="bhv4-bus-img" src="images/bus-hero.png" alt="" aria-hidden="true">
       </div>
-      ${renderRouteMap(next, timings)}
+
+      ${renderRouteMapV4(next, timings)}
     </div>
   `;
 }
