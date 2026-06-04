@@ -3287,7 +3287,8 @@ ${ev.description}`
     const nextStopLine = isEnroute && timings.nextStop ? `<div class="bhv4-next-stop">\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(timings.nextStop.toUpperCase())}</div>` : timings.state === "waiting" && timings.minsToDeparture !== null ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>` : "";
     el.innerHTML = `
     <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}">
-      <div class="bhv4-bg-castle" aria-hidden="true"></div>
+      <img class="bhv4-bg-img" src="./images/bus-hero.png" alt="" aria-hidden="true">
+      <div class="bhv4-overlay"></div>
 
       <div class="bhv4-topbar">
         <span class="bhv4-status">
@@ -3312,7 +3313,6 @@ ${ev.description}`
           </div>
           ${nextStopLine}
         </div>
-        <img class="bhv4-bus-img" src="images/bus-hero.png" alt="" aria-hidden="true">
       </div>
 
       ${renderRouteMapV4(next, timings)}

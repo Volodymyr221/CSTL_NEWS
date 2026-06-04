@@ -42,28 +42,36 @@
 }
 
 /* ── Hero-картка v4 (05.06.2026) ─────────────────────────────────────────
-   Фото як фон, весь текст зверху на ньому. */
+   Фото як абсолютний <img> що покриває всю картку. Текст поверх через z-index. */
 .bhv4 {
   position: relative;
-  background: url('../images/bus-hero.png') center / cover no-repeat;
   border-radius: 16px;
   padding: 14px 16px 0;
   overflow: hidden;
   color: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   min-height: 160px;
+  background: #722F37; /* fallback поки фото завантажується */
 }
-/* Темний overlay зверху фото — щоб текст читався */
-.bhv4::before {
-  content: '';
+
+/* Фото — розтягується на всю картку */
+.bhv4-bg-img {
   position: absolute;
   inset: 0;
-  background: linear-gradient(160deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 100%);
-  border-radius: 16px;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
   z-index: 0;
+  display: block;
 }
-.bhv4--urgent::before {
-  background: linear-gradient(160deg, rgba(100,10,20,0.6) 0%, rgba(60,5,10,0.4) 100%);
+
+/* Легкий overlay — щоб текст читався на фото */
+.bhv4-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 100%);
+  z-index: 1;
 }
 
 /* Псевдоелемент більше не потрібен */
