@@ -293,7 +293,7 @@ function renderSmartRow() {
 
   el.innerHTML = `
     <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}">
-      <img class="bhv4-bg-img" src="./images/bus-hero.png" alt="" aria-hidden="true">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
       <div class="bhv4-topbar">
