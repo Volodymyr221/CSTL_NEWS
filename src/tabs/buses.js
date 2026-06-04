@@ -470,17 +470,24 @@ function renderSearchPanel() {
 
   el.innerHTML = `
     <div class="bs-search-row">
-      <div class="bs-search-field">
-        <label class="bs-search-label" for="bs-from-input">Від</label>
+      <div class="bs-search-field" id="bs-from-field">
+        <span class="bs-field-icon bs-field-icon--from">●</span>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
-               type="text" placeholder="Звідки…"
+               type="text" placeholder="Від"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
-      <button class="bs-swap-btn" id="bs-swap-btn" title="Поміняти напрямок">⇌</button>
-      <div class="bs-search-field">
-        <label class="bs-search-label" for="bs-to-input">До</label>
+      <button class="bs-swap-btn" id="bs-swap-btn" title="Поміняти напрямок">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+      </button>
+      <div class="bs-search-field" id="bs-to-field">
+        <svg class="bs-field-icon bs-field-icon--to" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
+        </svg>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
-               type="text" placeholder="Куди…"
+               type="text" placeholder="До"
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>

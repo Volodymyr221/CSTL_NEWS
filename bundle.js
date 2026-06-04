@@ -3434,17 +3434,24 @@ ${ev.description}`
     const hasFilter = fromStop || toStop;
     el.innerHTML = `
     <div class="bs-search-row">
-      <div class="bs-search-field">
-        <label class="bs-search-label" for="bs-from-input">\u0412\u0456\u0434</label>
+      <div class="bs-search-field" id="bs-from-field">
+        <span class="bs-field-icon bs-field-icon--from">\u25CF</span>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
-               type="text" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438\u2026"
+               type="text" placeholder="\u0412\u0456\u0434"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
-      <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">\u21CC</button>
-      <div class="bs-search-field">
-        <label class="bs-search-label" for="bs-to-input">\u0414\u043E</label>
+      <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round">
+          <path d="M7 16V4m0 0L3 8m4-4l4 4"/><path d="M17 8v12m0 0l4-4m-4 4l-4-4"/>
+        </svg>
+      </button>
+      <div class="bs-search-field" id="bs-to-field">
+        <svg class="bs-field-icon bs-field-icon--to" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
+        </svg>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
-               type="text" placeholder="\u041A\u0443\u0434\u0438\u2026"
+               type="text" placeholder="\u0414\u043E"
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
