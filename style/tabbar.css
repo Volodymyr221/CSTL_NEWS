@@ -46,8 +46,8 @@
   bottom: 28px;
   left: 50%;
   transform: translateX(-50%);
-  width: 52px;
-  height: 52px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--red);
   display: flex;
@@ -65,8 +65,8 @@
   stroke: var(--white);
 }
 .tab-castle-icon {
-  width: 77px;
-  height: 77px;
+  width: 68px;
+  height: 68px;
   object-fit: contain;
 }
 .tab-item--home.active .tab-home-circle {
