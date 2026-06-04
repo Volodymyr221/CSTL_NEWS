@@ -57,6 +57,22 @@
   box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
 }
+/* Біла рамка тільки на верхній дузі — там де коло виступає над баром */
+.tab-item--home::after {
+  content: '';
+  position: absolute;
+  bottom: 28px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 55px;
+  height: 55px;
+  border-radius: 50%;
+  border: 3px solid var(--white);
+  clip-path: inset(0 0 50% 0);
+  pointer-events: none;
+  z-index: 1002;
+}
+}
 .tab-home-circle .tab-icon {
   width: 26px;
   height: 26px;
