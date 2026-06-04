@@ -42,34 +42,32 @@
 }
 
 /* ── Hero-картка v4 (05.06.2026) ─────────────────────────────────────────
-   Бордовий бренд #722F37, ілюстрація автобуса справа, велика назва маршруту,
-   капсула часу, «НАСТУПНА ЗУПИНКА», маршрутна шкала з підписами зупинок. */
+   Фото як фон, весь текст зверху на ньому. */
 .bhv4 {
   position: relative;
-  background: linear-gradient(135deg, #722F37 0%, #4D1F26 100%);
+  background: url('../images/bus-hero.png') center / cover no-repeat;
   border-radius: 16px;
   padding: 14px 16px 0;
   overflow: hidden;
   color: white;
-  box-shadow: 0 4px 20px rgba(114,47,55,0.45);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   min-height: 160px;
 }
-.bhv4--urgent {
-  background: linear-gradient(135deg, #9B2335 0%, #6B1020 100%);
-}
-
-/* Силует замку у фоні — декоративний псевдоелемент */
-.bhv4-bg-castle {
+/* Темний overlay зверху фото — щоб текст читався */
+.bhv4::before {
+  content: '';
   position: absolute;
-  right: -10px;
-  top: 0;
-  bottom: 0;
-  width: 55%;
-  opacity: 0.07;
-  background: url('../images/bus-hero.png') right center / contain no-repeat;
-  pointer-events: none;
+  inset: 0;
+  background: linear-gradient(160deg, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 100%);
+  border-radius: 16px;
   z-index: 0;
 }
+.bhv4--urgent::before {
+  background: linear-gradient(160deg, rgba(100,10,20,0.6) 0%, rgba(60,5,10,0.4) 100%);
+}
+
+/* Псевдоелемент більше не потрібен */
+.bhv4-bg-castle { display: none; }
 
 /* Верхній рядок: іконка + статус + шеврон */
 .bhv4-topbar {
