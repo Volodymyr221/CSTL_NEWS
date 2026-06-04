@@ -77,7 +77,7 @@
   transform: translateX(-50%) scale(0.93);
 }
 /* Підпис ГРОМАДА — жирніший і більший */
-.tab-label--home {
+.tab-bar .tab-label--home {
   font-weight: 800;
   font-size: 13px;
   letter-spacing: 0.5px;
