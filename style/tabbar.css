@@ -38,12 +38,12 @@
   position: relative;
   height: var(--tabbar-h);
   justify-content: flex-end;
-  padding-bottom: 8px;
+  padding-bottom: 5px;
 }
 /* Круг — абсолютно підіймається над баром */
 .tab-home-circle {
   position: absolute;
-  bottom: 28px;
+  bottom: 31px;
   left: 50%;
   transform: translateX(-50%);
   width: 49px;
