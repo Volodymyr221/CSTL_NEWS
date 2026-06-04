@@ -38,7 +38,7 @@
   position: relative;
   height: var(--tabbar-h);
   justify-content: flex-end;
-  padding-bottom: 5px;
+  padding-bottom: 7px;
 }
 /* Круг — абсолютно підіймається над баром */
 .tab-home-circle {
