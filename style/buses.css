@@ -178,7 +178,7 @@
 .bhv4-map {
   position: relative;
   z-index: 1;
-  margin-top: 12px;
+  margin-top: 22px;
   padding-bottom: 16px;
 }
 .bhv4-track {
@@ -210,10 +210,15 @@
   background: white;
 }
 .bhv4-dot--current {
-  background: white;
+  background: #7DDA58;
   width: 10px; height: 10px;
   margin-left: -5px; margin-top: -5px;
-  box-shadow: 0 0 0 3px rgba(255,255,255,0.3);
+  box-shadow: 0 0 0 3px rgba(125,218,88,0.4);
+  animation: bhv4-dot-pulse 1.4s ease-in-out infinite;
+}
+@keyframes bhv4-dot-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(125,218,88,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(125,218,88,0.15); }
 }
 
 /* Маркер 🚌 */
