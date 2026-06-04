@@ -3257,7 +3257,6 @@ ${ev.description}`
       <div class="bhv4-track">
         <div class="bhv4-fill" style="width:${pct}%"></div>
         ${dotsHtml}
-        <span class="bhv4-bus-marker" style="left:${pct}%">\u{1F68C}</span>
       </div>
       <div class="bhv4-labels">${labelsHtml}</div>
     </div>`;
