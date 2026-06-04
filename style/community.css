@@ -1366,17 +1366,22 @@
   overflow: visible;
 }
 
-/* Зафіксована знизу кнопка «Подати оголошення» — завжди видно при скролі */
+/* FAB кнопка «Подати оголошення» — кругла, справа знизу */
 .board-trigger--fixed {
   position: fixed;
-  left: 14px;
-  right: 14px;
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
-  width: auto;
+  right: 18px;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+  left: auto;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   margin: 0;
+  padding: 0;
   z-index: 80;
-  box-shadow: 0 6px 20px rgba(114, 47, 55, 0.40), 0 2px 6px rgba(0,0,0,0.18);
+  box-shadow: 0 6px 20px rgba(114, 47, 55, 0.45), 0 2px 6px rgba(0,0,0,0.18);
 }
+.board-trigger--fixed .cm-board-trigger-text { display: none; }
+.board-trigger--fixed .cm-board-trigger-icon { font-size: 22px; line-height: 1; }
 
 /* ── Зум розгортання картки оголошення ── */
 /* Backdrop — плавне затемнення фону при відкритому стікері */
