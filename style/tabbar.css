@@ -4,7 +4,7 @@
   bottom: 0; left: 0; right: 0;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--white);
-  border-top: 3px solid var(--white);
+  border-top: 1px solid var(--border);
   border-radius: 20px 20px 0 0;
   display: flex;
   align-items: flex-end;
@@ -12,7 +12,7 @@
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
   overflow: visible;
-  box-shadow: 0 -3px 0 rgba(0,0,0,0.06), 0 -2px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
 }
 .tab-item {
   flex: 1;
