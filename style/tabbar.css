@@ -56,7 +56,6 @@
   overflow: hidden;
   box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
-  outline: 3px solid var(--white);
 }
 .tab-home-circle .tab-icon {
   width: 26px;
