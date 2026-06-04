@@ -5,13 +5,14 @@
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--white);
   border-top: 1px solid var(--border);
+  border-radius: 20px 20px 0 0;
   display: flex;
   align-items: flex-end;
   z-index: 1000;
   -webkit-transform: translateZ(0);
   transform: translateZ(0);
-  /* overflow visible щоб центральна кнопка виступала вверх */
   overflow: visible;
+  box-shadow: 0 -2px 16px rgba(0,0,0,0.08);
 }
 .tab-item {
   flex: 1;
@@ -36,41 +37,43 @@
 .tab-item--home {
   position: relative;
   color: var(--gray);
-  /* піднімаємо кнопку над баром */
-  margin-top: -16px;
-  height: calc(var(--tabbar-h) + 16px);
+  margin-top: -22px;
+  height: calc(var(--tabbar-h) + 22px);
   justify-content: flex-end;
   padding-bottom: 6px;
 }
 .tab-home-circle {
-  width: 52px;
-  height: 52px;
+  width: 58px;
+  height: 58px;
   border-radius: 50%;
   background: var(--red);
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-bottom: 4px;
-  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.45);
+  margin-bottom: 5px;
+  box-shadow: 0 4px 16px rgba(114, 47, 55, 0.5);
   transition: transform 0.15s, box-shadow 0.15s;
-  /* біла рамка щоб круг "відривався" від бару */
-  outline: 3px solid var(--white);
+  outline: 4px solid var(--white);
 }
 .tab-home-circle .tab-icon {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   color: var(--white);
   stroke: var(--white);
 }
-/* активний стан — трохи яскравіша тінь */
 .tab-item--home.active .tab-home-circle {
-  box-shadow: 0 6px 18px rgba(114, 47, 55, 0.6);
-  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(114, 47, 55, 0.65);
 }
 .tab-item--home.active {
   color: var(--red);
 }
 .tab-item--home:active .tab-home-circle {
   transform: scale(0.93);
+}
+/* Жирний підпис тільки для ГРОМАДА */
+.tab-label--home {
+  font-weight: 800;
+  font-size: 10px;
+  letter-spacing: 0.4px;
 }
 
