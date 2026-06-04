@@ -57,7 +57,7 @@
   box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
 }
-/* Біла рамка тільки на верхній дузі — там де коло виступає над баром */
+/* Біла рамка тільки на верхній дузі — краї плавно зникають */
 .tab-item--home::after {
   content: '';
   position: absolute;
@@ -69,6 +69,8 @@
   border-radius: 50%;
   border: 3px solid var(--white);
   clip-path: inset(0 0 50% 0);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, white 22%, white 78%, transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0%, white 22%, white 78%, transparent 100%);
   pointer-events: none;
   z-index: 1002;
 }
