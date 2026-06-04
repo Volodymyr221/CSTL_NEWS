@@ -51,7 +51,9 @@
   color: white;
   box-shadow: 0 4px 20px rgba(0,0,0,0.35);
   min-height: 160px;
-  background: #722F37; /* fallback поки фото завантажується */
+  background: #722F37;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Фото — розтягується на всю картку */
@@ -174,11 +176,13 @@
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
 }
 
-/* ── Маршрутна шкала (v4) ── */
+/* ── Маршрутна шкала (v4) — завжди знизу картки ── */
 .bhv4-map {
   position: relative;
   z-index: 1;
   padding-bottom: 28px;
+  margin-top: auto;
+  padding-top: 12px;
 }
 .bhv4-track {
   position: relative;
@@ -219,7 +223,7 @@
 .bhv4-bus-marker {
   position: absolute;
   top: 50%;
-  transform: translate(-50%, -160%);
+  transform: translate(-50%, -120%);
   font-size: 20px;
   line-height: 1;
   z-index: 2;
