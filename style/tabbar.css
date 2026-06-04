@@ -43,19 +43,19 @@
 /* Круг — абсолютно підіймається над баром */
 .tab-home-circle {
   position: absolute;
-  top: -26px;
+  top: -22px;
   left: 50%;
   transform: translateX(-50%);
-  width: 58px;
-  height: 58px;
+  width: 46px;
+  height: 46px;
   border-radius: 50%;
   background: var(--red);
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 4px 16px rgba(114, 47, 55, 0.5);
+  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
-  outline: 4px solid var(--white);
+  outline: 3px solid var(--white);
 }
 .tab-home-circle .tab-icon {
   width: 26px;
@@ -64,8 +64,8 @@
   stroke: var(--white);
 }
 .tab-castle-icon {
-  width: 86px;
-  height: 86px;
+  width: 68px;
+  height: 68px;
   object-fit: contain;
 }
 .tab-item--home.active .tab-home-circle {
