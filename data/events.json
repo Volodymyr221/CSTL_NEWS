@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 188,
+    "title": "Трамп каже, що \"було б чудово\", якби Зеленський і Путін зустрілися",
+    "description": "Президент США Дональд Трамп прокоментував відкритий лист Володимира Зеленського Володимиру Путіну й заявив, що підтримує ідею їхньої зустрічі.",
+    "date": "2026-06-04",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/a/842455/ca8e026386e2338cf05048931b66e6a9.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/04/8037834/",
+    "auto": true
+  },
+  {
     "id": 184,
     "title": "Зеленський знає від розвідки про плани РФ затягнути війну на 2027 і 2028 роки",
     "description": "Президент України Володимир Зеленський закликає правителя Кремля Володимира Путіна не продовжувати війну на 2027 та 2028 роки.",
@@ -622,19 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/b/841841/abfe0f9d5f85692f2554e4e6befea0e7.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/04/8037680/",
-    "auto": true
-  },
-  {
-    "id": 183,
-    "title": "Лавров заявив, що \"війна Байдена\" стала \"війною Трампа\"",
-    "description": "Глава російського МЗС Сергій Лавров заявив, що США виступають не як посередник у російсько-українській війні, а як країна, що підтримує Україну.",
-    "date": "2027-05-25",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/a/842295/ea45c21677d561b4078169a7bfbf441a.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/04/8037792/",
     "auto": true
   }
 ]
