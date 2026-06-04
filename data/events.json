@@ -40,97 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 177,
-    "title": "Зеленський: Ми очікуємо на переговорну групу США дуже довго. Іран для них – це питання номер один",
-    "description": "Президент України Володимир Зеленський розчарований тим, що приїзд американської делегації до Києва затягується, але Україна розраховує на цей візит.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/8/841665/a8ff8fc094fbfdec8702a108647254e2.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037647/",
-    "auto": true
-  },
-  {
-    "id": 178,
-    "title": "У Києві відбулося засідання Ради Україна-НАТО",
-    "description": "3 червня у Києві відбулася зустріч представників України та Північноатлантичного Альянсу у форматі Ради Україна-НАТО, що вперше пройшла в Україні.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/6/841634/369f63c781a0277057d2cebf389ae8ed.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037642/",
-    "auto": true
-  },
-  {
-    "id": 179,
-    "title": "Рютте натякнув, що в обстрілі Петербурга у дні форуму Путіна в НАТО не бачать проблем",
-    "description": "У НАТО не бачать проблем в обстрілі Україною Санкт-Петербурга у день, коли там стартує Петербурзький міжнародний економічний форум (ПМЕФ) – ключова міжнародна подія праителя РФ Володимира Путіна.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/5/841572/05ead313390ae58d3026b91a5d17e799.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037628/",
-    "auto": true
-  },
-  {
-    "id": 174,
-    "title": "Генсек НАТО прибув до Києва",
-    "description": "Генеральний секретар НАТО Марк Рютте прибув з візитом до України вранці 3 червня.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/4/841325/343f3251c5bbb653a688e332ebffeefa.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037557/",
-    "auto": true
-  },
-  {
-    "id": 175,
-    "title": "Зеленський заявив про удари по військово-морській базі у Петербурзі, Генштаб каже – уразили кораблі",
-    "description": "Сили оборони України атакували базу ВМС РФ у Кронштадті та військовий завод у Тамбовській області, – повідомив Зеленський.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/7/841319/571a61330a405c0a551f83c30d6d5996.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037555/",
-    "auto": true
-  },
-  {
-    "id": 176,
-    "title": "Українські сили атакували нафтовий термінал у Санкт-Петербурзі потужністю 12,5 млн тонн на рік",
-    "description": "У ніч на 3 червня українські Сили спеціальних операцій спільно з іншими складовими Сил безпеки та оборони завдали ударів по Петербурзькому нафтовому терміналу.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/b/f/841295/bfa7d425e3cf099873180bcf9eedd561.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037554/",
-    "auto": true
-  },
-  {
-    "id": 173,
-    "title": "Атака дронів і вибухи: у російському Петербурзі палає нафтотермінал – соцмережі",
-    "description": "Після атаки десятків безпілотників у російському Санкт-Петербурзі виникла пожежа, за даними пабліків, горить нафтовий термінал.",
-    "date": "2026-06-03",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/c/841174/2c295e4bbadd4854d4a26811c4a0675d.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037523/",
-    "auto": true
-  },
-  {
     "id": 167,
     "title": "ЗМІ: Польща виступає за виключення українських чоловіків призовного віку зі схеми захисту ЄС",
     "description": "Польська влада схвально ставиться до ідеї обмежити доступ до тимчасового захисту в ЄС для українських чоловіків призовного віку, повідомляють польські медіа з посиланням на дипломатичні джерела.",
@@ -271,6 +180,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/0/827834/90e4e844017d5d940009901e325d96a2.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/13/8034537/",
+    "auto": true
+  },
+  {
+    "id": 181,
+    "title": "Держдеп США оприлюднив спільну заяву про перемир’я між Ізраїлем і Ліваном",
+    "description": "Після багатогодинних перемовин Держдеп США оприлюднив спільну заяву про перемир’я між Ізраїлем і Ліваном.",
+    "date": "2026-06-22",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/5/841844/6550a2bc96a5fae65deeb8dfebc192ed.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/04/8037683/",
     "auto": true
   },
   {
@@ -635,6 +557,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/a/837610/0a14a6cf88aa844b43ca0a3e15ea086c.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036701/",
+    "auto": true
+  },
+  {
+    "id": 180,
+    "title": "Сибіга: Представив союзникам НАТО пропозиції для практичних результатів саміту в Анкарі",
+    "description": "Сибіга спільно з Рютте провели зустріч із союзниками НАТО у \"Софії Київській\".",
+    "date": "2027-05-09",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/b/841841/abfe0f9d5f85692f2554e4e6befea0e7.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/04/8037680/",
     "auto": true
   }
 ]
