@@ -83,4 +83,8 @@
   letter-spacing: 0.5px;
   text-transform: uppercase;
   color: var(--red);
+  transition: text-shadow 0.15s;
+}
+.tab-item--home.active .tab-label--home {
+  text-shadow: 0 2px 8px rgba(114, 47, 55, 0.45);
 }
