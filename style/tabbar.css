@@ -54,25 +54,9 @@
   align-items: center;
   justify-content: center;
   overflow: hidden;      /* іконка обрізається по колу */
-  box-shadow: 0 4px 18px rgba(114, 47, 55, 0.55), 0 0 10px rgba(114, 47, 55, 0.2);
+  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.5);
   transition: box-shadow 0.15s, transform 0.15s;
-}
-/* Біла рамка тільки на верхній дузі — краї зникають у тінь кола */
-.tab-item--home::after {
-  content: '';
-  position: absolute;
-  bottom: 25px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 58px;
-  height: 58px;
-  border-radius: 50%;
-  border: 3px solid var(--white);
-  clip-path: inset(0 0 50% 0);
-  -webkit-mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.9) 16%, black 30%, black 70%, rgba(0,0,0,0.9) 84%, transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.9) 16%, black 30%, black 70%, rgba(0,0,0,0.9) 84%, transparent 100%);
-  pointer-events: none;
-  z-index: 1002;
+  outline: 3px solid var(--white);
 }
 .tab-home-circle .tab-icon {
   width: 26px;
