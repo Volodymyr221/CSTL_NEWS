@@ -61,14 +61,14 @@
 .tab-item--home::after {
   content: '';
   position: absolute;
-  bottom: 27px;
+  bottom: 25px;
   left: 50%;
   transform: translateX(-50%);
   width: 58px;
   height: 58px;
   border-radius: 50%;
   border: 3px solid var(--white);
-  clip-path: inset(0 0 50% 0);
+  clip-path: inset(0 0 31px 0);
   pointer-events: none;
   z-index: 1002;
 }
