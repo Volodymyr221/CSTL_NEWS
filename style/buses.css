@@ -541,55 +541,60 @@
   flex: 1;
   min-width: 0;
   display: flex;
-  flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 8px;
+  background: var(--white);
+  border-radius: 10px;
+  padding: 0 12px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  height: 44px;
 }
 
-.bs-search-label {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--gray);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+/* Іконка зліва у полі */
+.bs-field-icon--from {
+  font-size: 11px;
+  color: var(--red);
+  flex-shrink: 0;
+  line-height: 1;
+}
+.bs-field-icon--to {
+  width: 16px;
+  height: 16px;
+  color: var(--red);
+  flex-shrink: 0;
 }
 
 .bs-search-input {
-  width: 100%;
-  padding: 9px 10px;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: none;
   font-size: 14px;
   font-family: inherit;
+  font-weight: 500;
   color: var(--black);
-  background: var(--gray-light);
+  background: transparent;
   outline: none;
-  transition: border-color 0.15s;
-  box-sizing: border-box;
-}
-.bs-search-input:focus {
-  border-color: var(--navy);
-  background: var(--white);
 }
 .bs-search-input::placeholder { color: var(--gray); }
 
-/* Кнопка "⇌" — поміняти місцями (swap button) */
+/* Кнопка swap — стрілки вгору/вниз */
 .bs-swap-btn {
   flex-shrink: 0;
   width: 36px;
   height: 36px;
-  background: none;
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  font-size: 18px;
-  color: var(--navy);
+  background: var(--white);
+  border: none;
+  border-radius: 50%;
+  color: var(--gray);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.15s, border-color 0.15s;
-  margin-bottom: 1px;
+  box-shadow: 0 1px 6px rgba(0,0,0,0.08);
+  transition: background 0.15s;
 }
-.bs-swap-btn:active { background: var(--gray-light); border-color: var(--navy); }
+.bs-swap-btn:active { background: var(--gray-light); }
 
 /* Блок часу (відправлення + прибуття) */
 .bs-time-block {
