@@ -16,6 +16,10 @@ import {
   getRouteState, getRouteTimings,
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
+import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints } from './buses.js';
+
+let cmBusIndex = 0;
+let cmBusRoutes = [];
 
 // Типи у міні-блоці Дошки — свайп циклічно
 const BOARD_MINI_TYPES = [
@@ -231,106 +235,88 @@ export async function renderBusBlock() {
   try {
     const res  = await fetch('./data/schedule.json');
     const data = await res.json();
-    const prefs = loadBusPrefs();
-    const nowMin = nowMinutes();
 
-    // Кандидати: відповідають дню тижня, мають обидві зупинки prefs.from/to,
-    // і ще не завершились (state !== 'past').
-    const candidates = data.routes.filter(r => {
-      if (!busIsDayActive(r.days)) return false;
-      if (prefs.from && !r.stops.some(s => s.name === prefs.from)) return false;
-      if (prefs.to   && !r.stops.some(s => s.name === prefs.to))   return false;
-      if (prefs.from && prefs.to) {
-        const fi = r.stops.findIndex(s => s.name === prefs.from);
-        const ti = r.stops.findIndex(s => s.name === prefs.to);
-        if (fi >= ti) return false;
-      }
-      return getRouteState(r, nowMin) !== 'past';
-    });
+    // Актуальні рейси: enroute + waiting в межах 90 хв, сортування за відправленням
+    cmBusRoutes = data.routes
+      .filter(r => {
+        if (!busIsDayActive(r.days)) return false;
+        const state = getRouteState(r);
+        if (state === 'enroute') return true;
+        if (state === 'waiting') {
+          const t = getRouteTimings(r);
+          return t.minsToDeparture !== null && t.minsToDeparture <= 90;
+        }
+        return false;
+      })
+      .sort((a, b) => {
+        const aM = scheduleGetStopMins(a, a.stops[0].name) || 0;
+        const bM = scheduleGetStopMins(b, b.stops[0].name) || 0;
+        return aM - bM;
+      });
 
-    // Пріоритезація: enroute (їде зараз) > waiting (ще буде).
-    // У межах кожної категорії — найближчий по часу.
-    const enroute = candidates.filter(r => getRouteState(r, nowMin) === 'enroute');
-    const waiting = candidates.filter(r => getRouteState(r, nowMin) === 'waiting');
-    enroute.sort((a, b) => (getRouteTimings(a, nowMin).minsToArrival   ?? Infinity)
-                         - (getRouteTimings(b, nowMin).minsToArrival   ?? Infinity));
-    waiting.sort((a, b) => (getRouteTimings(a, nowMin).minsToDeparture ?? Infinity)
-                         - (getRouteTimings(b, nowMin).minsToDeparture ?? Infinity));
-    const next = enroute[0] || waiting[0];
+    if (!cmBusRoutes.length) {
+      // Показуємо наступний рейс якщо активних нема
+      const next = data.routes
+        .filter(r => busIsDayActive(r.days) && getRouteState(r) === 'waiting')
+        .sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
+      if (next) cmBusRoutes = [next];
+    }
 
-    if (!next) {
-      el.innerHTML = `
-        <div class="cm-block-empty">
-          Рейсів сьогодні більше немає
-          <button class="cm-block-cta" data-switch-tab="buses">Розклад →</button>
-        </div>`;
+    if (!cmBusRoutes.length) {
+      el.innerHTML = `<div class="cm-block-empty">Рейсів сьогодні більше немає<button class="cm-block-cta" data-switch-tab="buses">Розклад →</button></div>`;
       return;
     }
 
-    const fromName = prefs.from || next.stops[0].name;
-    const toName   = prefs.to   || next.stops[next.stops.length - 1].name;
-    const fromMin  = scheduleGetStopMins(next, fromName);
-    const toMin    = scheduleGetStopMins(next, toName);
-    const fromHHMM = scheduleMinsToHHMM(fromMin);
-    const toHHMM   = scheduleMinsToHHMM(toMin);
-    const timings  = getRouteTimings(next, nowMin);
-    const isEnroute = timings.state === 'enroute';
-    const urgent   = timings.state === 'waiting' && timings.minsToDeparture <= 10;
-
-    // Верх: countdown капсула (waiting) або «🚌 ЗАРАЗ У ...» (enroute)
-    let topLabel;
-    if (isEnroute) {
-      topLabel = `🚌 ЗАРАЗ У ${(timings.currentStop || '—').toUpperCase()}`;
-    } else if (urgent) {
-      topLabel = `ЧЕРЕЗ ${timings.minsToDeparture} ХВ`;
-    } else {
-      topLabel = formatCountdownUpper(timings.minsToDeparture);
-    }
-
-    // Рядок часу:
-    //   waiting → 19:00 → 20:20
-    //   enroute → ⏱ X ХВ · до 20:20
-    const timeRow = isEnroute
-      ? `<div class="bus-hero-times">
-           <span class="bus-hero-time">⏱ ${timings.minsToArrival} ХВ</span>
-           <span class="bus-hero-arrow">·</span>
-           <span class="bus-hero-time bus-hero-time--to">до ${escapeHtml(toHHMM || '—')}</span>
-         </div>`
-      : `<div class="bus-hero-times">
-           <span class="bus-hero-time">${escapeHtml(fromHHMM || '—')}</span>
-           <span class="bus-hero-arrow">→</span>
-           <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM || '—')}</span>
-         </div>`;
-
-    const durationMin = toMin - fromMin;
-    const durationStr = durationMin < 60
-      ? `${durationMin} хв`
-      : (() => {
-          const h = Math.floor(durationMin / 60), m = durationMin % 60;
-          return m ? `${h} год ${m} хв` : `${h} год`;
-        })();
-    const carrier = data.carriers?.[next.carrier]?.name || '';
-    const metaParts = [durationStr, carrier].filter(Boolean);
-    const metaHtml = metaParts.map((p, i) => i === 0
-      ? `<span>${escapeHtml(p)}</span>`
-      : `<span class="bus-hero-meta-sep">·</span><span>${escapeHtml(p)}</span>`
-    ).join('');
-
-    el.innerHTML = `
-      <div class="bus-hero${urgent ? ' bus-hero--urgent' : ''}${isEnroute ? ' bus-hero--enroute' : ''}" data-switch-tab="buses">
-        <div class="bus-hero-top">
-          <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
-          ${urgent ? '<span class="bus-hero-urgent">⚡ Поспішай!</span>' : ''}
-        </div>
-        <div class="bus-hero-row">${timeRow}</div>
-        <div class="bus-hero-route">${escapeHtml(fromName)} → ${escapeHtml(toName)}</div>
-        <div class="bus-hero-meta">${metaHtml}</div>
-        ${renderBusRouteMap(next, timings)}
-      </div>
-    `;
+    if (cmBusIndex >= cmBusRoutes.length) cmBusIndex = 0;
+    renderCmBusCard(el);
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
   }
+}
+
+function renderCmBusCard(el) {
+  if (!el || !cmBusRoutes.length) return;
+  const route   = cmBusRoutes[cmBusIndex];
+  const timings = getRouteTimings(route);
+  el.innerHTML  = buildHeroCard(route, timings, cmBusIndex, cmBusRoutes.length);
+
+  // Свайп
+  let touchStartX = 0;
+  const card = el.firstElementChild;
+  if (!card) return;
+  card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  card.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) < 40) return;
+    cmBusIndex = dx < 0
+      ? (cmBusIndex + 1) % cmBusRoutes.length
+      : (cmBusIndex - 1 + cmBusRoutes.length) % cmBusRoutes.length;
+    switchCmBusCard(el);
+  }, { passive: true });
+
+  // Тап по крапках
+  el.querySelectorAll('.bhv4-dot-nav').forEach(dot => {
+    dot.addEventListener('click', e => {
+      cmBusIndex = parseInt(e.target.dataset.idx, 10);
+      switchCmBusCard(el);
+    });
+  });
+}
+
+function switchCmBusCard(el) {
+  const content = el.querySelector('.bhv4-content');
+  if (!content) { renderCmBusCard(el); return; }
+  content.style.transition = 'opacity 0.08s ease';
+  content.style.opacity    = '0';
+  setTimeout(() => {
+    renderCmBusCard(el);
+    const newContent = el.querySelector('.bhv4-content');
+    if (newContent) {
+      newContent.style.opacity    = '0';
+      newContent.style.transition = 'opacity 0.1s ease';
+      requestAnimationFrame(() => requestAnimationFrame(() => { newContent.style.opacity = '1'; }));
+    }
+  }, 80);
 }
 
 // ── Блок 4: Дошка громади (мешканці + офіційні в одному блоці) ───────────────

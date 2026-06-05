@@ -234,15 +234,14 @@ function selectStop(stop, field) {
 // 3 стани: waiting / enroute / past. Логіка — bus-schedule.js.
 
 // Витягує [cityA, cityB] з назви маршруту VOPAS:
-// "Луцьк Рівне" → ["Луцьк","Рівне"], "Луцьк- Личани ч/з Покащів" → ["Луцьк","Личани"]
-function parseRouteEndpoints(name) {
+export function parseRouteEndpoints(name) {
   const clean  = name.replace(/-\s*/g, ' ').replace(/\s+/g, ' ').trim();
   const noVia  = clean.split(' ч/з ')[0].trim();
   const parts  = noVia.split(' ');
   return [parts[0], parts[parts.length - 1]];
 }
 
-function renderRouteMapV4(route, timings) {
+export function renderRouteMapV4(route, timings) {
   const stops   = route.stops;
   const totalKm = stops[stops.length - 1].km || 1;
   const pct     = (timings.progress * 100).toFixed(1);
@@ -277,7 +276,7 @@ function renderRouteMapV4(route, timings) {
     </div>`;
 }
 
-function buildHeroCard(route, timings, index, total) {
+export function buildHeroCard(route, timings, index, total) {
   const effFrom   = getEffectiveFrom(route);
   const effTo     = getEffectiveTo(route);
   const fromTime  = getStopHHMM(route, effFrom);
