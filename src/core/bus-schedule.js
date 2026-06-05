@@ -96,17 +96,15 @@ export function getRouteTimings(route, nowMin = nowMinutes()) {
   const minsToDeparture = fromMin !== null ? Math.max(0, fromMin - nowMin) : null;
   const minsToArrival   = toMin   !== null ? Math.max(0, toMin   - nowMin) : null;
 
-  // Прогрес шкали — залежить від стану:
-  // waiting: 0..1 від (now до fromMin) у вікні HERO_MAX_WAIT_MIN (countdown)
-  // enroute: 0..1 від fromMin до toMin (позиція автобуса на маршруті)
+  // Прогрес шкали:
+  // waiting: 0 — автобус ще не виїхав, шкала порожня
+  // enroute: 0..1 — відносно пройденого маршруту (fromMin → toMin)
   // past:    1
   let progress = 0;
   if (state === 'enroute' && toMin !== null && fromMin !== null && toMin > fromMin) {
     progress = (nowMin - fromMin) / (toMin - fromMin);
   } else if (state === 'past') {
     progress = 1;
-  } else if (state === 'waiting' && minsToDeparture !== null) {
-    progress = Math.max(0, Math.min(1, 1 - minsToDeparture / HERO_MAX_WAIT_MIN));
   }
 
   return {
