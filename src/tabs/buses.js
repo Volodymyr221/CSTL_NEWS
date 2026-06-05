@@ -297,8 +297,14 @@ function buildHeroCard(route, timings, index, total) {
   const statusDot  = isEnroute ? '🟢' : isUrgent ? '🔴' : '🔵';
   const statusText = isEnroute ? 'в дорозі' : isUrgent ? 'відправляється' : 'очікується';
 
-  const nextStopLine = isEnroute && timings.nextStop
-    ? `<div class="bhv4-next-stop">НАСТУПНА ЗУПИНКА — ${escapeHtml(timings.nextStop.toUpperCase())}</div>`
+  const [, labelB] = parseRouteEndpoints(route.name || '');
+  const lastKnownStop = route.stops[route.stops.length - 1].name;
+  // Якщо nextStop = остання зупинка в даних (кінець відомого відрізку),
+  // показуємо реальну кінцеву з назви маршруту (наприклад Жорнище замість Луцьк)
+  const displayNext = timings.nextStop === lastKnownStop ? labelB : (timings.nextStop || labelB);
+
+  const nextStopLine = isEnroute
+    ? `<div class="bhv4-next-stop">НАСТУПНА ЗУПИНКА — ${escapeHtml(displayNext.toUpperCase())}</div>`
     : timings.state === 'waiting' && timings.minsToDeparture !== null
     ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>`
     : '';
