@@ -13,12 +13,13 @@
   --tabbar-h: 56px;  /* висота контентної зони таб-бару, без safe area */
   --navy: #1B2A4A;
 
-  /* ===== ДИЗАЙН v3 — D3 «СІРЕ» (05.06.2026) =====
-     Нейтральна матово-сіра палітра замість бежевого паперу.
-     Бекап D2 «ПОЛЕ»: --paper: #F4F1E6; --paper-deep: #EAE4D2; --card-cream: #FAF8EF */
-  --paper:       #F0F0F3;
-  --paper-deep:  #E4E4E8;
-  --card-cream:  #F8F8FA;
+  /* ===== ДИЗАЙН v3 — D2 «ПОЛЕ» (12.05.2026) =====
+     Натуральна палітра: бежевий папір + шавлія/теракот/мед/горіх.
+     Бекап попереднього (v2 «iOS Settings»): backup/design-v2-pre-D2/.
+     Бекап оригінального (v1): backup/design-v1/. */
+  --paper:       #F4F1E6;
+  --paper-deep:  #EAE4D2;
+  --card-cream:  #FAF8EF;
   --sky:         #C5DDFB;     /* Погода — небесний синій */
   --sky-deep:    #8AB7E8;
   --sky-text:    #14365C;
@@ -28,21 +29,21 @@
   --honey:       #E6CC8F;     /* Світло (pill вибору вулиці) — медовий */
   --honey-deep:  #C9A85B;
   --honey-text:  #4E380E;
-  --bus:         #B5C99F;     /* Автобус — шавлія/зелений */
+  --bus:         #B5C99F;     /* Автобус — шавлія/зелений (16.05.2026, було honey) */
   --bus-deep:    #6F8E51;
   --bus-text:    #1F3A14;
   --peach:       #E5B89A;     /* Подія — теракот */
   --peach-deep:  #C68E6A;
   --peach-text:  #4E2C12;
   --brand-tint:  #FAE2E6;
-  --ink:         #1C1C1E;
-  --ink-soft:    #48484A;
-  --ink-mute:    #8E8E93;
-  --hairline:    rgba(0, 0, 0, 0.09);
+  --ink:         #2A2520;
+  --ink-soft:    #5F5448;
+  --ink-mute:    #9C9080;
+  --hairline:    rgba(60, 50, 30, 0.10);
 
   --bg-page: var(--paper);
   --bg-card: var(--card-cream);
-  --card-shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 8px 24px rgba(0, 0, 0, 0.07);
+  --card-shadow: 0 1px 2px rgba(70, 45, 20, 0.05), 0 8px 24px rgba(70, 45, 20, 0.08);
   --card-radius: 22px;
 }
 
