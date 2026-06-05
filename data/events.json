@@ -79,6 +79,19 @@
     "auto": true
   },
   {
+    "id": 196,
+    "title": "РФ вдарила по підприємству та автостоянці у Чернігові: 8 людей постраждали, 37 авто понівечені",
+    "description": "Вдень 5 червня окупанти влучили по підприємству та автостоянці в Чернігові, поранивши вісьмох людей і пошкодивши десятки автомобілів.",
+    "date": "2026-06-05",
+    "time": "20:00",
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/3/842722/d3dca1504128869717e0f889abdf7d81.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/06/8037903/",
+    "auto": true
+  },
+  {
     "id": 119,
     "title": "На форум у Петербурзі за участю Путіна вперше за кілька років приїде представник США – росЗМІ",
     "description": "Офіційний представник США вперше за кілька років приїде на Міжнародний економічним форум у російському Петербурзі.",
@@ -622,19 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/a/837610/0a14a6cf88aa844b43ca0a3e15ea086c.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036701/",
-    "auto": true
-  },
-  {
-    "id": 180,
-    "title": "Сибіга: Представив союзникам НАТО пропозиції для практичних результатів саміту в Анкарі",
-    "description": "Сибіга спільно з Рютте провели зустріч із союзниками НАТО у \"Софії Київській\".",
-    "date": "2027-05-09",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/b/841841/abfe0f9d5f85692f2554e4e6befea0e7.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/04/8037680/",
     "auto": true
   }
 ]
