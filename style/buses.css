@@ -171,6 +171,9 @@
   margin-bottom: 7px;
   flex-wrap: wrap;
 }
+/* Текст всередині капсули — окремий span щоб фейдити тільки цифри, рамка залишається */
+.bhv4-capsule-inner { display: inline; }
+
 .bhv4-time-capsule {
   display: inline-block;
   background: rgba(255,255,255,0.15);

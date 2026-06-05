@@ -2040,23 +2040,22 @@ ${post.text}
               <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
               <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
             </svg>
-            <span class="bhv4-status-text">${statusText}</span>
-            <span class="bhv4-status-dot">${statusDot}</span>
+            <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
         </div>
 
         <div class="bhv4-body">
           <div class="bhv4-left">
-            <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
+            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
             <div class="bhv4-times-row">
-              <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
-              ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
+              <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span></span>
+              <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
             </div>
-            ${nextStopLine}
+            <div class="bhv4-next-stop bhv4-dyn">${isEnroute ? `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(displayNext.toUpperCase())}` : timings.state === "waiting" && timings.minsToDeparture !== null ? escapeHtml(formatCountdownUpper(timings.minsToDeparture)) : ""}</div>
           </div>
         </div>
 
-        ${renderRouteMapV4(route, timings)}
+        <div class="bhv4-map-outer bhv4-dyn">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
   }
@@ -2097,27 +2096,82 @@ ${post.text}
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
-    const content = el.querySelector(".bhv4-content");
-    if (!content) {
+    const card = el.querySelector(".bhv4");
+    if (!card) {
       renderSmartRow();
       renderRouteList();
       return;
     }
-    content.style.transition = "opacity 0.08s ease";
-    content.style.opacity = "0";
+    const dyns = card.querySelectorAll(".bhv4-dyn");
+    dyns.forEach((d) => {
+      d.style.transition = "opacity 0.08s ease";
+      d.style.opacity = "0";
+    });
     setTimeout(() => {
-      renderSmartRow();
-      renderRouteList();
-      const newContent = el.querySelector(".bhv4-content");
-      if (newContent) {
-        newContent.style.opacity = "0";
-        newContent.style.transition = "opacity 0.1s ease";
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            newContent.style.opacity = "1";
-          });
-        });
+      const routes = findActiveRoutes();
+      if (!routes.length) {
+        renderSmartRow();
+        renderRouteList();
+        return;
       }
+      if (smartRowIndex >= routes.length)
+        smartRowIndex = 0;
+      const route = routes[smartRowIndex];
+      const timings = getRouteTimings(route);
+      const isEnroute = timings.state === "enroute";
+      const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
+      card.className = `bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}`;
+      const dotsNav = card.querySelector(".bhv4-dots-nav");
+      if (dotsNav) {
+        dotsNav.innerHTML = routes.length > 1 ? Array.from(
+          { length: routes.length },
+          (_, i) => `<span class="bhv4-dot-nav${i === smartRowIndex ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
+        ).join("") : "";
+        dotsNav.querySelectorAll(".bhv4-dot-nav").forEach(
+          (dot) => dot.addEventListener("click", (e) => {
+            smartRowIndex = +e.target.dataset.idx;
+            switchHeroCard();
+          })
+        );
+      }
+      const statusWrap = card.querySelector(".bhv4-status .bhv4-dyn");
+      if (statusWrap) {
+        const txt = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
+        const dot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
+        statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
+      }
+      const nameEl = card.querySelector(".bhv4-route-name");
+      if (nameEl)
+        nameEl.textContent = (route.name || "").toUpperCase();
+      const capsuleEl = card.querySelector(".bhv4-capsule-inner");
+      if (capsuleEl) {
+        const effFrom = getEffectiveFrom(route);
+        const effTo = getEffectiveTo(route);
+        capsuleEl.textContent = `${getStopHHMM(route, effFrom) || "\u2014"} \u2192 ${getStopHHMM(route, effTo) || "\u2014"}`;
+      }
+      const durEl = card.querySelector(".bhv4-duration");
+      if (durEl) {
+        const d = timings.toMin !== null && timings.fromMin !== null ? timings.toMin - timings.fromMin : null;
+        durEl.textContent = d !== null ? d >= 60 ? `${Math.floor(d / 60)} \u0433\u043E\u0434${d % 60 ? " " + d % 60 + " \u0445\u0432" : ""}` : `${d} \u0445\u0432` : "";
+      }
+      const nextEl = card.querySelector(".bhv4-next-stop");
+      if (nextEl) {
+        const [, labelB] = parseRouteEndpoints(route.name || "");
+        const lastStop = route.stops[route.stops.length - 1].name;
+        const dispNext = timings.nextStop === lastStop ? labelB : timings.nextStop || labelB;
+        nextEl.textContent = isEnroute ? `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${dispNext.toUpperCase()}` : isUrgent || timings.state === "waiting" && timings.minsToDeparture !== null ? formatCountdownUpper(timings.minsToDeparture) : "";
+      }
+      const mapOuter = card.querySelector(".bhv4-map-outer");
+      if (mapOuter)
+        mapOuter.innerHTML = renderRouteMapV4(route, timings);
+      renderRouteList();
+      card.querySelectorAll(".bhv4-dyn").forEach((d) => {
+        d.style.opacity = "0";
+        d.style.transition = "opacity 0.12s ease";
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          d.style.opacity = "1";
+        }));
+      });
     }, 80);
   }
   function renderRouteList() {

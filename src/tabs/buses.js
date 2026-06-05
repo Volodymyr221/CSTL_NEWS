@@ -329,6 +329,9 @@ export function buildHeroCard(route, timings, index, total) {
       ).join('')
     : '';
 
+  // Статичні елементи (не фейдяться при свайпі): іконка автобуса, рамка капсули часу
+  // Динамічні (клас bhv4-dyn, фейдяться): назва, час всередині капсули, тривалість,
+  // наступна зупинка/відлік, шкала прогресу
   return `
     <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}">
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
@@ -346,23 +349,22 @@ export function buildHeroCard(route, timings, index, total) {
               <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
               <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
             </svg>
-            <span class="bhv4-status-text">${statusText}</span>
-            <span class="bhv4-status-dot">${statusDot}</span>
+            <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
         </div>
 
         <div class="bhv4-body">
           <div class="bhv4-left">
-            <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} – ${effTo}`).toUpperCase())}</div>
+            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((route.name || `${effFrom} – ${effTo}`).toUpperCase())}</div>
             <div class="bhv4-times-row">
-              <span class="bhv4-time-capsule">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span>
-              ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ''}
+              <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span></span>
+              <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
             </div>
-            ${nextStopLine}
+            <div class="bhv4-next-stop bhv4-dyn">${isEnroute ? `НАСТУПНА ЗУПИНКА — ${escapeHtml(displayNext.toUpperCase())}` : timings.state === 'waiting' && timings.minsToDeparture !== null ? escapeHtml(formatCountdownUpper(timings.minsToDeparture)) : ''}</div>
           </div>
         </div>
 
-        ${renderRouteMapV4(route, timings)}
+        <div class="bhv4-map-outer bhv4-dyn">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
 }
@@ -406,27 +408,97 @@ function renderSmartRow() {
   });
 }
 
-// Заміна тексту: крапки миттєво, контент — коротке зникнення/появлення
+/// Свайп: фейдяться тільки .bhv4-dyn елементи (назва, час, стоп, шкала).
+// Іконка автобуса і рамка капсули — зафіксовані, не зникають.
 function switchHeroCard() {
-  const el      = document.getElementById('bus-smart-row');
+  const el   = document.getElementById('bus-smart-row');
   if (!el) return;
-  const content = el.querySelector('.bhv4-content');
-  if (!content) { renderSmartRow(); renderRouteList(); return; }
+  const card = el.querySelector('.bhv4');
+  if (!card) { renderSmartRow(); renderRouteList(); return; }
 
-  content.style.transition = 'opacity 0.08s ease';
-  content.style.opacity    = '0';
+  const dyns = card.querySelectorAll('.bhv4-dyn');
+  dyns.forEach(d => { d.style.transition = 'opacity 0.08s ease'; d.style.opacity = '0'; });
 
   setTimeout(() => {
-    renderSmartRow();
-    renderRouteList();
-    const newContent = el.querySelector('.bhv4-content');
-    if (newContent) {
-      newContent.style.opacity    = '0';
-      newContent.style.transition = 'opacity 0.1s ease';
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => { newContent.style.opacity = '1'; });
-      });
+    const routes = findActiveRoutes();
+    if (!routes.length) { renderSmartRow(); renderRouteList(); return; }
+    if (smartRowIndex >= routes.length) smartRowIndex = 0;
+
+    const route   = routes[smartRowIndex];
+    const timings = getRouteTimings(route);
+    const isEnroute = timings.state === 'enroute';
+    const isUrgent  = timings.state === 'waiting' && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
+
+    // Оновлюємо клас картки (urgent/enroute для кольору і анімації крапки)
+    card.className = `bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}`;
+
+    // Крапки-індикатори — миттєво
+    const dotsNav = card.querySelector('.bhv4-dots-nav');
+    if (dotsNav) {
+      dotsNav.innerHTML = routes.length > 1
+        ? Array.from({ length: routes.length }, (_, i) =>
+            `<span class="bhv4-dot-nav${i === smartRowIndex ? ' bhv4-dot-nav--active' : ''}" data-idx="${i}"></span>`
+          ).join('')
+        : '';
+      dotsNav.querySelectorAll('.bhv4-dot-nav').forEach(dot =>
+        dot.addEventListener('click', e => { smartRowIndex = +e.target.dataset.idx; switchHeroCard(); })
+      );
     }
+
+    // Статус (текст + крапка)
+    const statusWrap = card.querySelector('.bhv4-status .bhv4-dyn');
+    if (statusWrap) {
+      const txt = isEnroute ? 'в дорозі' : isUrgent ? 'відправляється' : 'очікується';
+      const dot = isEnroute ? '🟢' : isUrgent ? '🔴' : '🔵';
+      statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
+    }
+
+    // Назва маршруту
+    const nameEl = card.querySelector('.bhv4-route-name');
+    if (nameEl) nameEl.textContent = (route.name || '').toUpperCase();
+
+    // Час всередині капсули
+    const capsuleEl = card.querySelector('.bhv4-capsule-inner');
+    if (capsuleEl) {
+      const effFrom = getEffectiveFrom(route);
+      const effTo   = getEffectiveTo(route);
+      capsuleEl.textContent = `${getStopHHMM(route, effFrom) || '—'} → ${getStopHHMM(route, effTo) || '—'}`;
+    }
+
+    // Тривалість
+    const durEl = card.querySelector('.bhv4-duration');
+    if (durEl) {
+      const d = timings.toMin !== null && timings.fromMin !== null ? timings.toMin - timings.fromMin : null;
+      durEl.textContent = d !== null
+        ? (d >= 60 ? `${Math.floor(d/60)} год${d%60 ? ' '+d%60+' хв':''}` : `${d} хв`)
+        : '';
+    }
+
+    // Наступна зупинка / відлік
+    const nextEl = card.querySelector('.bhv4-next-stop');
+    if (nextEl) {
+      const [, labelB] = parseRouteEndpoints(route.name || '');
+      const lastStop   = route.stops[route.stops.length - 1].name;
+      const dispNext   = timings.nextStop === lastStop ? labelB : (timings.nextStop || labelB);
+      nextEl.textContent = isEnroute
+        ? `НАСТУПНА ЗУПИНКА — ${dispNext.toUpperCase()}`
+        : isUrgent || timings.state === 'waiting' && timings.minsToDeparture !== null
+          ? formatCountdownUpper(timings.minsToDeparture)
+          : '';
+    }
+
+    // Шкала прогресу
+    const mapOuter = card.querySelector('.bhv4-map-outer');
+    if (mapOuter) mapOuter.innerHTML = renderRouteMapV4(route, timings);
+
+    renderRouteList();
+
+    // Фейд-ін тільки динамічних елементів
+    card.querySelectorAll('.bhv4-dyn').forEach(d => {
+      d.style.opacity = '0';
+      d.style.transition = 'opacity 0.12s ease';
+      requestAnimationFrame(() => requestAnimationFrame(() => { d.style.opacity = '1'; }));
+    });
   }, 80);
 }
 
