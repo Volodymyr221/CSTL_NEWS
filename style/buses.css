@@ -192,7 +192,7 @@
 .bhv4-fill {
   position: absolute;
   top: 0; left: 0; height: 100%;
-  background: white;
+  background: #7DDA58;
   border-radius: 2px;
   transition: width 0.6s ease;
 }
