@@ -120,6 +120,7 @@ function findNextRoute() {
 function findActiveRoutes() {
   const all    = getFilteredRoutes(); // вже відсортовані за часом відправлення
   const result = all.filter(r => {
+    if (r.status === 'cancelled') return false; // скасований — не показуємо в каруселі
     const state = getRouteState(r);
     if (state === 'enroute') return true;
     if (state === 'waiting') {

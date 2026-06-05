@@ -1873,6 +1873,8 @@ ${post.text}
   function findActiveRoutes() {
     const all = getFilteredRoutes();
     const result = all.filter((r) => {
+      if (r.status === "cancelled")
+        return false;
       const state = getRouteState(r);
       if (state === "enroute")
         return true;
@@ -2438,6 +2440,8 @@ ${post.text}
       const data = await res.json();
       cmBusRoutes = data.routes.filter((r) => {
         if (!busIsDayActive(r.days))
+          return false;
+        if (r.status === "cancelled")
           return false;
         const state = getRouteState(r);
         if (state === "enroute")
