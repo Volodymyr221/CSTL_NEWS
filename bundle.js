@@ -3351,11 +3351,13 @@ ${ev.description}`
         return;
       smartRowIndex = dx < 0 ? (smartRowIndex + 1) % routes.length : (smartRowIndex - 1 + routes.length) % routes.length;
       renderSmartRow();
+      renderRouteList();
     }, { passive: true });
     el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
       dot.addEventListener("click", (e) => {
         smartRowIndex = parseInt(e.target.dataset.idx, 10);
         renderSmartRow();
+        renderRouteList();
       });
     });
   }
@@ -3383,11 +3385,12 @@ ${ev.description}`
       });
       return;
     }
-    const next = findNextRoute();
+    const activeRoutes = findActiveRoutes();
+    const highlighted = activeRoutes[smartRowIndex] || findNextRoute();
     const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
     const cards = toRender.map((route) => {
       const isPast = isPastRoute(route);
-      const isNext = next && route.id === next.id;
+      const isNext = highlighted && route.id === highlighted.id;
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
       const fromTime = getStopHHMM(route, effFrom);
