@@ -26,12 +26,12 @@
   min-width: 0;
 }
 .cm-block-title--bus-link {
-  background-image: linear-gradient(to right, transparent 0%, var(--red) 18%, var(--red) 82%, transparent 100%);
-  background-size: 100% 1px;
+  background-image: linear-gradient(to right, transparent 0%, var(--red) 15%, var(--red) 85%, transparent 100%);
+  background-size: 100% 2px;
   background-position: 0 100%;
   background-repeat: no-repeat;
   border: none;
-  padding-bottom: 3px;
+  padding-bottom: 4px;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
