@@ -463,14 +463,19 @@
 /* Автобус — нейтральний фон, табло-стиль у bus-hero всередині (18.05.2026).
    Раніше був зелений gradient, тепер темний hero як на вкладці Автобуси. */
 .cm-block--bus {
-  background: #ECEEF2;
-  padding: 14px;
+  background: var(--card-cream);
+  padding: 0;
+  overflow: hidden;
 }
 .cm-block--bus .cm-block-header {
   margin-bottom: 10px;
 }
 .cm-block--bus .cm-block-body {
   padding: 0;
+}
+/* Віджет на всю ширину блоку — кути обрізаються overflow:hidden блоку */
+.cm-block--bus .bhv4 {
+  border-radius: 0;
 }
 /* bus-hero всередині блоку — без додаткових margin (вже у padding блоку) */
 .cm-block--bus .bus-hero {
