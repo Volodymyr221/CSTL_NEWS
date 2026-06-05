@@ -103,11 +103,22 @@
   flex-shrink: 0;
 }
 .bhv4-status-dot { font-size: 10px; }
-.bhv4-chevron {
-  font-size: 22px;
-  color: rgba(255,255,255,0.5);
-  line-height: 1;
-  font-weight: 300;
+.bhv4-dots-nav {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.bhv4-dot-nav {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.35);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.bhv4-dot-nav--active {
+  background: #fff;
+  transform: scale(1.3);
 }
 
 /* Тіло: текст зліва + ілюстрація автобуса справа */

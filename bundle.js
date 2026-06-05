@@ -3062,6 +3062,7 @@ ${ev.description}`
   var timerInterval = null;
   var expandedIds = /* @__PURE__ */ new Set();
   var activeField = null;
+  var smartRowIndex = 0;
   function savePrefs() {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
   }
@@ -3140,6 +3141,19 @@ ${ev.description}`
       })[0];
     }
     return all.find((r) => getRouteState(r) === "waiting") || null;
+  }
+  function findActiveRoutes() {
+    const all = getFilteredRoutes();
+    const now = nowMinutes();
+    const enroute = all.filter((r) => getRouteState(r) === "enroute").sort((a, b) => (getRouteTimings(a).minsToArrival ?? Infinity) - (getRouteTimings(b).minsToArrival ?? Infinity));
+    const waiting = all.filter((r) => {
+      if (getRouteState(r) !== "waiting")
+        return false;
+      const t = getRouteTimings(r);
+      return t.minsToDeparture !== null && t.minsToDeparture <= 90;
+    }).sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity));
+    const result = [...enroute, ...waiting];
+    return result.length ? result : findNextRoute() ? [findNextRoute()] : [];
   }
   function getAllStops() {
     if (!busData)
@@ -3259,20 +3273,11 @@ ${ev.description}`
       </div>
     </div>`;
   }
-  function renderSmartRow() {
-    const el = document.getElementById("bus-smart-row");
-    if (!el)
-      return;
-    const next = findNextRoute();
-    if (!next) {
-      el.innerHTML = `<div class="bhv4-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
-      return;
-    }
-    const effFrom = getEffectiveFrom(next);
-    const effTo = getEffectiveTo(next);
-    const fromTime = getStopHHMM(next, effFrom);
-    const toTime = getStopHHMM(next, effTo);
-    const timings = getRouteTimings(next);
+  function buildHeroCard(route, timings, index, total) {
+    const effFrom = getEffectiveFrom(route);
+    const effTo = getEffectiveTo(route);
+    const fromTime = getStopHHMM(route, effFrom);
+    const toTime = getStopHHMM(route, effTo);
     const isEnroute = timings.state === "enroute";
     const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
     const fromMin = timings.fromMin;
@@ -3282,7 +3287,11 @@ ${ev.description}`
     const statusDot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
     const statusText = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
     const nextStopLine = isEnroute && timings.nextStop ? `<div class="bhv4-next-stop">\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(timings.nextStop.toUpperCase())}</div>` : timings.state === "waiting" && timings.minsToDeparture !== null ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>` : "";
-    el.innerHTML = `
+    const dotsHtml = total > 1 ? Array.from(
+      { length: total },
+      (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
+    ).join("") : "";
+    return `
     <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}">
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
@@ -3299,7 +3308,7 @@ ${ev.description}`
           <span class="bhv4-status-text">${statusText}</span>
           <span class="bhv4-status-dot">${statusDot}</span>
         </span>
-        <span class="bhv4-chevron">\u203A</span>
+        <span class="bhv4-dots-nav">${dotsHtml}</span>
       </div>
 
       <div class="bhv4-body">
@@ -3313,9 +3322,41 @@ ${ev.description}`
         </div>
       </div>
 
-      ${renderRouteMapV4(next, timings)}
-    </div>
-  `;
+      ${renderRouteMapV4(route, timings)}
+    </div>`;
+  }
+  function renderSmartRow() {
+    const el = document.getElementById("bus-smart-row");
+    if (!el)
+      return;
+    const routes = findActiveRoutes();
+    if (!routes.length) {
+      el.innerHTML = `<div class="bhv4-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
+      return;
+    }
+    if (smartRowIndex >= routes.length)
+      smartRowIndex = 0;
+    const route = routes[smartRowIndex];
+    const timings = getRouteTimings(route);
+    el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length);
+    let touchStartX = 0;
+    const card = el.firstElementChild;
+    card.addEventListener("touchstart", (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) < 40)
+        return;
+      smartRowIndex = dx < 0 ? (smartRowIndex + 1) % routes.length : (smartRowIndex - 1 + routes.length) % routes.length;
+      renderSmartRow();
+    }, { passive: true });
+    el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        smartRowIndex = parseInt(e.target.dataset.idx, 10);
+        renderSmartRow();
+      });
+    });
   }
   function renderRouteList() {
     const el = document.getElementById("bus-list");

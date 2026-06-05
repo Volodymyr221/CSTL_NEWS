@@ -14,6 +14,7 @@ let showAll       = false;
 let timerInterval = null;
 let expandedIds   = new Set();
 let activeField   = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
+let smartRowIndex = 0;    // поточна картка у каруселі hero
 
 // ── Preferences (localStorage — збереження налаштувань у браузері) ────
 function savePrefs() {
@@ -98,6 +99,21 @@ function findNextRoute() {
     })[0];
   }
   return all.find(r => getRouteState(r) === 'waiting') || null;
+}
+
+// Усі актуальні рейси для каруселі: enroute + waiting в межах 90 хв
+function findActiveRoutes() {
+  const all     = getFilteredRoutes();
+  const now     = nowMinutes();
+  const enroute = all.filter(r => getRouteState(r) === 'enroute')
+    .sort((a, b) => (getRouteTimings(a).minsToArrival ?? Infinity) - (getRouteTimings(b).minsToArrival ?? Infinity));
+  const waiting = all.filter(r => {
+    if (getRouteState(r) !== 'waiting') return false;
+    const t = getRouteTimings(r);
+    return t.minsToDeparture !== null && t.minsToDeparture <= 90;
+  }).sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity));
+  const result = [...enroute, ...waiting];
+  return result.length ? result : (findNextRoute() ? [findNextRoute()] : []);
 }
 
 function getAllStops() {
@@ -259,44 +275,39 @@ function renderRouteMapV4(route, timings) {
     </div>`;
 }
 
-function renderSmartRow() {
-  const el = document.getElementById('bus-smart-row');
-  if (!el) return;
-  const next = findNextRoute();
-  if (!next) {
-    el.innerHTML = `<div class="bhv4-empty">Рейсів сьогодні більше немає</div>`;
-    return;
-  }
-
-  const effFrom   = getEffectiveFrom(next);
-  const effTo     = getEffectiveTo(next);
-  const fromTime  = getStopHHMM(next, effFrom);
-  const toTime    = getStopHHMM(next, effTo);
-  const timings   = getRouteTimings(next);
+function buildHeroCard(route, timings, index, total) {
+  const effFrom   = getEffectiveFrom(route);
+  const effTo     = getEffectiveTo(route);
+  const fromTime  = getStopHHMM(route, effFrom);
+  const toTime    = getStopHHMM(route, effTo);
   const isEnroute = timings.state === 'enroute';
   const isUrgent  = timings.state === 'waiting' && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
 
-  const fromMin  = timings.fromMin;
-  const toMin    = timings.toMin;
-  const durMins  = (fromMin !== null && toMin !== null) ? toMin - fromMin : null;
-  const durStr   = durMins !== null
+  const fromMin = timings.fromMin;
+  const toMin   = timings.toMin;
+  const durMins = (fromMin !== null && toMin !== null) ? toMin - fromMin : null;
+  const durStr  = durMins !== null
     ? (durMins >= 60
         ? `${Math.floor(durMins / 60)} год${durMins % 60 ? ' ' + durMins % 60 + ' хв' : ''}`
         : `${durMins} хв`)
     : '';
 
-  // Статус-рядок
   const statusDot  = isEnroute ? '🟢' : isUrgent ? '🔴' : '🔵';
   const statusText = isEnroute ? 'в дорозі' : isUrgent ? 'відправляється' : 'очікується';
 
-  // Наступна зупинка
   const nextStopLine = isEnroute && timings.nextStop
     ? `<div class="bhv4-next-stop">НАСТУПНА ЗУПИНКА — ${escapeHtml(timings.nextStop.toUpperCase())}</div>`
     : timings.state === 'waiting' && timings.minsToDeparture !== null
     ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>`
     : '';
 
-  el.innerHTML = `
+  const dotsHtml = total > 1
+    ? Array.from({ length: total }, (_, i) =>
+        `<span class="bhv4-dot-nav${i === index ? ' bhv4-dot-nav--active' : ''}" data-idx="${i}"></span>`
+      ).join('')
+    : '';
+
+  return `
     <div class="bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}">
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
@@ -313,7 +324,7 @@ function renderSmartRow() {
           <span class="bhv4-status-text">${statusText}</span>
           <span class="bhv4-status-dot">${statusDot}</span>
         </span>
-        <span class="bhv4-chevron">›</span>
+        <span class="bhv4-dots-nav">${dotsHtml}</span>
       </div>
 
       <div class="bhv4-body">
@@ -327,9 +338,47 @@ function renderSmartRow() {
         </div>
       </div>
 
-      ${renderRouteMapV4(next, timings)}
-    </div>
-  `;
+      ${renderRouteMapV4(route, timings)}
+    </div>`;
+}
+
+function renderSmartRow() {
+  const el = document.getElementById('bus-smart-row');
+  if (!el) return;
+
+  const routes = findActiveRoutes();
+  if (!routes.length) {
+    el.innerHTML = `<div class="bhv4-empty">Рейсів сьогодні більше немає</div>`;
+    return;
+  }
+
+  // Коригуємо індекс якщо кількість рейсів змінилась
+  if (smartRowIndex >= routes.length) smartRowIndex = 0;
+
+  const route   = routes[smartRowIndex];
+  const timings = getRouteTimings(route);
+  el.innerHTML  = buildHeroCard(route, timings, smartRowIndex, routes.length);
+
+  // Свайп (touch — дотик)
+  let touchStartX = 0;
+  const card = el.firstElementChild;
+  card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  card.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchStartX;
+    if (Math.abs(dx) < 40) return;
+    smartRowIndex = dx < 0
+      ? (smartRowIndex + 1) % routes.length
+      : (smartRowIndex - 1 + routes.length) % routes.length;
+    renderSmartRow();
+  }, { passive: true });
+
+  // Тап по крапках
+  el.querySelectorAll('.bhv4-dot-nav').forEach(dot => {
+    dot.addEventListener('click', e => {
+      smartRowIndex = parseInt(e.target.dataset.idx, 10);
+      renderSmartRow();
+    });
+  });
 }
 
 // ── Route list (список рейсів) ─────────────────────────────────────────
