@@ -18,6 +18,8 @@ window.switchTab = function(tab) {
   const newPage = document.getElementById(`page-${tab}`);
   if (!oldPage || !newPage) return;
 
+  const main = document.querySelector('.app-main');
+
   // Плавний fade перехід
   newPage.style.opacity = '0';
   newPage.style.display = 'block';
@@ -25,8 +27,8 @@ window.switchTab = function(tab) {
   requestAnimationFrame(() => {
     requestAnimationFrame(() => {
       oldPage.style.opacity = '0';
-      oldPage.style.transition = 'opacity 0.18s ease';
-      newPage.style.transition = 'opacity 0.22s ease';
+      oldPage.style.transition = 'opacity 0.22s ease';
+      newPage.style.transition = 'opacity 0.28s ease';
       newPage.style.opacity = '1';
 
       setTimeout(() => {
@@ -34,6 +36,8 @@ window.switchTab = function(tab) {
         oldPage.style.opacity = '';
         oldPage.style.transition = '';
         newPage.style.transition = '';
+        // Скидаємо скрол після завершення fade — без видимого ривка
+        if (main) main.scrollTop = 0;
       }, 220);
     });
   });
@@ -43,14 +47,8 @@ window.switchTab = function(tab) {
   const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
   if (activeTab) activeTab.classList.add('active');
 
-  // Скидаємо скрол вгору щоб нова вкладка відкривалась з початку
-  // (інакше при перемиканні з довгої Громади на Дошку — її контент видно з середини)
-  const main = document.querySelector('.app-main');
-  if (main) {
-    main.scrollTop = 0;
-    // data-tab на .app-main — щоб CSS міг задати правильний фон для overscroll bounce
-    main.dataset.tab = tab;
-  }
+  // data-tab на .app-main — щоб CSS міг задати правильний фон для overscroll bounce
+  if (main) main.dataset.tab = tab;
 
   currentTab = tab;
 };
