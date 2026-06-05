@@ -3295,6 +3295,8 @@ ${ev.description}`
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
+      <span class="bhv4-dots-nav">${dotsHtml}</span>
+
       <div class="bhv4-content">
         <div class="bhv4-topbar">
           <span class="bhv4-status">
@@ -3308,7 +3310,6 @@ ${ev.description}`
             <span class="bhv4-status-text">${statusText}</span>
             <span class="bhv4-status-dot">${statusDot}</span>
           </span>
-          <span class="bhv4-dots-nav">${dotsHtml}</span>
         </div>
 
         <div class="bhv4-body">
@@ -3369,7 +3370,7 @@ ${ev.description}`
       renderRouteList();
       return;
     }
-    content.style.transition = "opacity 0.15s ease";
+    content.style.transition = "opacity 0.08s ease";
     content.style.opacity = "0";
     setTimeout(() => {
       renderSmartRow();
@@ -3377,14 +3378,14 @@ ${ev.description}`
       const newContent = el.querySelector(".bhv4-content");
       if (newContent) {
         newContent.style.opacity = "0";
-        newContent.style.transition = "opacity 0.2s ease";
+        newContent.style.transition = "opacity 0.1s ease";
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
             newContent.style.opacity = "1";
           });
         });
       }
-    }, 150);
+    }, 80);
   }
   function renderRouteList() {
     const el = document.getElementById("bus-list");
