@@ -725,26 +725,24 @@
 .bs-search-input--tap { cursor: pointer; }
 .bs-search-input--tap:focus { outline: none; }
 
-/* Рядок кнопки "✕ Скинути маршрут" (з'являється коли є активний фільтр) */
-.bs-reset-row {
-  margin-top: 8px;
-  display: flex;
-  justify-content: center;
-}
-.bs-reset-btn {
-  background: rgba(114,47,55,0.08);
-  border: 1px solid rgba(114,47,55,0.2);
-  border-radius: 20px;
-  font-size: 13px;
-  font-weight: 600;
-  font-family: inherit;
-  color: var(--red);
+/* Маленька кнопка ✕ в рядку пошуку (з'являється коли є активний фільтр) */
+.bs-clear-btn {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(114,47,55,0.10);
+  color: rgba(114,47,55,0.85);
+  font-size: 14px;
+  line-height: 1;
   cursor: pointer;
-  padding: 5px 14px;
-  letter-spacing: 0.1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   transition: background 0.15s;
 }
-.bs-reset-btn:active { background: rgba(114,47,55,0.16); }
+.bs-clear-btn:active { background: rgba(114,47,55,0.22); }
 
 /* ===== DROPDOWN — кастомний список вибору зупинки ===== */
 /* position:fixed — прив'язаний до екрана, не залежить від скролу */

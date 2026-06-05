@@ -580,11 +580,8 @@ function renderSearchPanel() {
                type="text" placeholder="Куди"
                value="${escapeHtml(toStop)}" readonly>
       </div>
+      ${hasFilter ? `<button class="bs-clear-btn" id="bs-reset-btn" title="Скинути маршрут">✕</button>` : ''}
     </div>
-    ${hasFilter ? `
-    <div class="bs-reset-row">
-      <button class="bs-reset-btn" id="bs-reset-btn">✕ Скинути маршрут</button>
-    </div>` : ''}
   `;
 
   document.getElementById('bs-from-input').addEventListener('click', () => openDropdown('from'));
