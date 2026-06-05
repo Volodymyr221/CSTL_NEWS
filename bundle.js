@@ -1678,7 +1678,6 @@ ${post.text}
   }
 
   // src/core/bus-schedule.js
-  var HERO_MAX_WAIT_MIN = 60;
   function toMinutes(hhmm) {
     if (!hhmm || typeof hhmm !== "string")
       return 0;
@@ -1751,8 +1750,6 @@ ${post.text}
       progress = (nowMin - fromMin) / (toMin - fromMin);
     } else if (state === "past") {
       progress = 1;
-    } else if (state === "waiting" && minsToDeparture !== null) {
-      progress = Math.max(0, Math.min(1, 1 - minsToDeparture / HERO_MAX_WAIT_MIN));
     }
     return {
       state,
