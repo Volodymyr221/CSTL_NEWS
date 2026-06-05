@@ -3437,7 +3437,7 @@ ${ev.description}`
       <div class="bs-search-field" id="bs-from-field">
         <span class="bs-field-icon bs-field-icon--from">\u25CF</span>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
-               type="text" placeholder="\u0412\u0456\u0434"
+               type="text" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">
@@ -3451,7 +3451,7 @@ ${ev.description}`
           <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
         </svg>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
-               type="text" placeholder="\u0414\u043E"
+               type="text" placeholder="\u041A\u0443\u0434\u0438"
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>

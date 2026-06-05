@@ -473,7 +473,7 @@ function renderSearchPanel() {
       <div class="bs-search-field" id="bs-from-field">
         <span class="bs-field-icon bs-field-icon--from">●</span>
         <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
-               type="text" placeholder="Від"
+               type="text" placeholder="Звідки"
                value="${escapeHtml(fromStop)}" readonly>
       </div>
       <button class="bs-swap-btn" id="bs-swap-btn" title="Поміняти напрямок">
@@ -487,7 +487,7 @@ function renderSearchPanel() {
           <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
         </svg>
         <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
-               type="text" placeholder="До"
+               type="text" placeholder="Куди"
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
