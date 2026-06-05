@@ -1,14 +1,13 @@
-# Парсер розкладу автобусів з vopas.com.ua → data/vopas-fetched.json.
-# Перший етап інтеграції — зберігаємо окремо від data/schedule.json
-# щоб не зламати робочий розклад. Перевіряємо що дані правильні, потім
-# наступний коміт зробить мапінг → schedule.json.
+# Парсер розкладу автобусів з vopas.com.ua → data/schedule.json
+# Запускається кожні 30 хвилин: підхоплює скасування рейсів і зміни статусу.
+# Якщо VOPAS не відповів — schedule.json НЕ перезаписується (захист від обнулення).
 
 name: VOPAS parser
 
 on:
   workflow_dispatch: {}   # ручний запуск з UI
-  # schedule:             # cron вимкнено — увімкнемо після перевірки
-  #   - cron: '0 4 * * *' # щодня о 04:00 UTC (= 06:00 Київ, перед першим рейсом)
+  schedule:
+    - cron: '*/30 * * * *'  # кожні 30 хвилин (UTC)
 
 permissions:
   contents: write   # для git push data/vopas-fetched.json
