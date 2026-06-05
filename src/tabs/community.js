@@ -143,10 +143,10 @@ function renderSkeleton() {
     -->
 
     <section class="cm-block cm-block--bus">
-      <header class="cm-block-header">
-        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ →</button>
-      </header>
       <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
+      <footer class="cm-block-footer">
+        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ →</button>
+      </footer>
     </section>
 
     <section class="cm-block cm-block--event">

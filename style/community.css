@@ -17,6 +17,11 @@
   gap: 12px;
   padding: 14px 16px 10px;
 }
+.cm-block-footer {
+  display: flex;
+  align-items: center;
+  padding: 10px 16px 14px;
+}
 .cm-block-title {
   font-size: 15px;
   font-weight: 700;
