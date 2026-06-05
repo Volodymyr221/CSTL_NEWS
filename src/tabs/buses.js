@@ -583,7 +583,7 @@ function renderSearchPanel() {
     </div>
     ${hasFilter ? `
     <div class="bs-reset-row">
-      <button class="bs-reset-btn" id="bs-reset-btn">✕ Всі маршрути</button>
+      <button class="bs-reset-btn" id="bs-reset-btn">✕ Скинути маршрут</button>
     </div>` : ''}
   `;
 

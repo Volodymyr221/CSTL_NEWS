@@ -725,23 +725,26 @@
 .bs-search-input--tap { cursor: pointer; }
 .bs-search-input--tap:focus { outline: none; }
 
-/* Рядок кнопки "✕ Всі маршрути" (з'являється коли є активний фільтр) */
+/* Рядок кнопки "✕ Скинути маршрут" (з'являється коли є активний фільтр) */
 .bs-reset-row {
-  margin-top: 6px;
+  margin-top: 8px;
   display: flex;
-  justify-content: flex-end;
+  justify-content: center;
 }
 .bs-reset-btn {
-  background: none;
-  border: none;
-  font-size: 12px;
+  background: rgba(114,47,55,0.08);
+  border: 1px solid rgba(114,47,55,0.2);
+  border-radius: 20px;
+  font-size: 13px;
   font-weight: 600;
   font-family: inherit;
   color: var(--red);
   cursor: pointer;
-  padding: 2px 0;
+  padding: 5px 14px;
   letter-spacing: 0.1px;
+  transition: background 0.15s;
 }
+.bs-reset-btn:active { background: rgba(114,47,55,0.16); }
 
 /* ===== DROPDOWN — кастомний список вибору зупинки ===== */
 /* position:fixed — прив'язаний до екрана, не залежить від скролу */

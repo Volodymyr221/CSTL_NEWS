@@ -2248,7 +2248,7 @@ ${post.text}
     </div>
     ${hasFilter ? `
     <div class="bs-reset-row">
-      <button class="bs-reset-btn" id="bs-reset-btn">\u2715 \u0412\u0441\u0456 \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0438</button>
+      <button class="bs-reset-btn" id="bs-reset-btn">\u2715 \u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442</button>
     </div>` : ""}
   `;
     document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
