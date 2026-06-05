@@ -3041,8 +3041,7 @@ ${post.text}
 
     <section class="cm-block cm-block--bus">
       <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041D\u0430\u0441\u0442\u0443\u043F\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0431\u0443\u0441</h3>
-        <button class="cm-block-link" data-switch-tab="buses">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
+        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412 \u2192</button>
       </header>
       <div id="cm-bus-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
