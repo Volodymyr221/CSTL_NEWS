@@ -2,12 +2,12 @@
 
 /* Фон тільки для вкладки Автобуси — нейтральний матовий сірий */
 #page-buses {
-  background: #F0F2F5;
+  background: #ECEEF2;
 }
 #page-buses .bus-search,
 #page-buses .bus-list,
 #page-buses .bus-card {
-  background: #F0F2F5;
+  background: #ECEEF2;
 }
 .buses-updated {
   font-size: 11px;
@@ -327,7 +327,7 @@
     #D8DBE0 0%,
     #DDE0E5 40%,
     #E6E9EC 70%,
-    #F0F2F5 100%
+    #ECEEF2 100%
   );
   border-radius: 16px;
   text-align: center;
@@ -490,11 +490,11 @@
 .bus-card {
   padding: 14px 16px;
   border-bottom: 1px solid var(--hairline);
-  background: #F0F2F5;
+  background: #ECEEF2;
 }
 .bus-card.past { opacity: 0.32; }
 .bus-card.next {
-  background: #F0F2F5;
+  background: #ECEEF2;
 }
 
 .bus-card-main {
@@ -584,7 +584,7 @@
 .bus-search {
   margin: 0;
   padding: 6px 14px 10px;
-  background: #F0F2F5;
+  background: #ECEEF2;
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
