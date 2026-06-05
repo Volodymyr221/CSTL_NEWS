@@ -324,9 +324,9 @@
 /* Порожній стан — темніший центр, насиченість спадає до країв */
 .bhv4-empty {
   background: radial-gradient(ellipse at center,
-    #C8CDD5 0%,
-    #D4D8DE 40%,
-    #E0E3E8 70%,
+    #D8DBE0 0%,
+    #DDE0E5 40%,
+    #E6E9EC 70%,
     #F0F2F5 100%
   );
   border-radius: 16px;
@@ -336,7 +336,7 @@
   font-weight: 700;
   letter-spacing: 1px;
   text-transform: uppercase;
-  color: #6B7280;
+  color: #722F37;
 }
 
 /* Список рейсів */
