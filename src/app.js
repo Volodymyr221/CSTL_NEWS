@@ -36,8 +36,11 @@ window.switchTab = function(tab) {
         oldPage.style.opacity = '';
         oldPage.style.transition = '';
         newPage.style.transition = '';
-        // Скидаємо скрол після завершення fade — без видимого ривка
-        if (main) main.scrollTop = 0;
+        // Скидаємо скрол і міняємо фон після завершення fade — без ривків
+        if (main) {
+          main.scrollTop = 0;
+          main.dataset.tab = tab;
+        }
       }, 220);
     });
   });
@@ -46,9 +49,6 @@ window.switchTab = function(tab) {
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
   const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
   if (activeTab) activeTab.classList.add('active');
-
-  // data-tab на .app-main — щоб CSS міг задати правильний фон для overscroll bounce
-  if (main) main.dataset.tab = tab;
 
   currentTab = tab;
 };
