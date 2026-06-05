@@ -655,7 +655,7 @@ export async function initBuses() {
   }, true);
 
   try {
-    const res = await fetch('./data/schedule.json');
+    const res = await fetch(`./data/schedule.json?v=${Math.floor(Date.now() / 60000)}`); // cache-bust кожну хвилину
     if (!res.ok) throw new Error(res.status);
     busData = await res.json();
   } catch {

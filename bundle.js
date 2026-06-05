@@ -2303,7 +2303,7 @@ ${post.text}
       }
     }, true);
     try {
-      const res = await fetch("./data/schedule.json");
+      const res = await fetch(`./data/schedule.json?v=${Math.floor(Date.now() / 6e4)}`);
       if (!res.ok)
         throw new Error(res.status);
       busData = await res.json();
