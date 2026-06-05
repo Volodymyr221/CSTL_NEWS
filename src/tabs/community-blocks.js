@@ -240,6 +240,7 @@ export async function renderBusBlock() {
     cmBusRoutes = data.routes
       .filter(r => {
         if (!busIsDayActive(r.days)) return false;
+        if (r.status === 'cancelled') return false;
         const state = getRouteState(r);
         if (state === 'enroute') return true;
         if (state === 'waiting') {
