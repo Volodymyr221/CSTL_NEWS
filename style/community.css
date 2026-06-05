@@ -463,7 +463,7 @@
 /* Автобус — нейтральний фон, табло-стиль у bus-hero всередині (18.05.2026).
    Раніше був зелений gradient, тепер темний hero як на вкладці Автобуси. */
 .cm-block--bus {
-  background: var(--card-cream);
+  background: #ECEEF2;
   padding: 14px;
 }
 .cm-block--bus .cm-block-header {
