@@ -1771,7 +1771,563 @@ ${post.text}
     return m ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
   }
 
+  // src/tabs/buses.js
+  var PREFS_KEY = "bus_prefs_v2";
+  var busData = null;
+  var fromStop = "";
+  var toStop = "";
+  var showAll = false;
+  var timerInterval = null;
+  var expandedIds = /* @__PURE__ */ new Set();
+  var activeField = null;
+  var smartRowIndex = 0;
+  function savePrefs() {
+    localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
+  }
+  function loadPrefs() {
+    try {
+      const p = JSON.parse(localStorage.getItem(PREFS_KEY));
+      if (p?.from)
+        fromStop = p.from;
+      if (p?.to)
+        toStop = p.to;
+    } catch {
+    }
+  }
+  function isDayActive(days) {
+    const d = (/* @__PURE__ */ new Date()).getDay();
+    if (days === "\u0449\u043E\u0434\u043D\u044F")
+      return true;
+    if (days === "\u043F\u043D-\u0441\u0431")
+      return d >= 1 && d <= 6;
+    if (days === "\u043F\u043D-\u043F\u0442")
+      return d >= 1 && d <= 5;
+    return true;
+  }
+  function getSegmentPrice(route, fromName, toName) {
+    const f = route.stops.find((s) => s.name === fromName);
+    const t = route.stops.find((s) => s.name === toName);
+    if (!f || !t)
+      return null;
+    const diff = Math.abs((t.price_from_start || 0) - (f.price_from_start || 0));
+    return diff > 0 ? diff.toFixed(2) : null;
+  }
+  function getEffectiveFrom(route) {
+    if (fromStop && route.stops.some((s) => s.name === fromStop))
+      return fromStop;
+    return route.stops[0].name;
+  }
+  function getEffectiveTo(route) {
+    if (toStop && route.stops.some((s) => s.name === toStop))
+      return toStop;
+    return route.stops[route.stops.length - 1].name;
+  }
+  function matchesSearch(route) {
+    if (!isDayActive(route.days))
+      return false;
+    const stops = route.stops;
+    const fromIdx = fromStop ? stops.findIndex((s) => s.name === fromStop) : 0;
+    const toIdx = toStop ? stops.findIndex((s) => s.name === toStop) : stops.length - 1;
+    if (fromStop && fromIdx === -1)
+      return false;
+    if (toStop && toIdx === -1)
+      return false;
+    if (fromStop && toStop && fromIdx >= toIdx)
+      return false;
+    return true;
+  }
+  function isPastRoute(route) {
+    return getRouteState(route) === "past";
+  }
+  function getFilteredRoutes() {
+    if (!busData)
+      return [];
+    return busData.routes.filter(matchesSearch).sort((a, b) => {
+      const aM = getStopMins(a, getEffectiveFrom(a)) || 0;
+      const bM = getStopMins(b, getEffectiveFrom(b)) || 0;
+      return aM - bM;
+    });
+  }
+  function findNextRoute() {
+    const all = getFilteredRoutes();
+    const enroute = all.filter((r) => getRouteState(r) === "enroute");
+    if (enroute.length) {
+      return enroute.sort((a, b) => {
+        const aT = getRouteTimings(a).minsToArrival ?? Infinity;
+        const bT = getRouteTimings(b).minsToArrival ?? Infinity;
+        return aT - bT;
+      })[0];
+    }
+    return all.find((r) => getRouteState(r) === "waiting") || null;
+  }
+  function findActiveRoutes() {
+    const all = getFilteredRoutes();
+    const result = all.filter((r) => {
+      const state = getRouteState(r);
+      if (state === "enroute")
+        return true;
+      if (state === "waiting") {
+        const t = getRouteTimings(r);
+        return t.minsToDeparture !== null && t.minsToDeparture <= 90;
+      }
+      return false;
+    });
+    return result.length ? result : findNextRoute() ? [findNextRoute()] : [];
+  }
+  function getAllStops() {
+    if (!busData)
+      return [];
+    const seen = /* @__PURE__ */ new Set();
+    busData.routes.forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
+    return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
+  }
+  function openDropdown(field) {
+    activeField = field;
+    const panel = document.getElementById("bus-search-panel");
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd || !panel)
+      return;
+    const rect = panel.getBoundingClientRect();
+    dd.style.top = rect.bottom + "px";
+    renderDropdownItems("");
+    dd.hidden = false;
+    const filterEl = document.getElementById("bs-dd-filter");
+    if (filterEl)
+      setTimeout(() => filterEl.focus(), 80);
+  }
+  function renderDropdownItems(query) {
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd)
+      return;
+    const all = getAllStops();
+    const q = query.trim().toLowerCase();
+    const filtered = q ? all.filter((s) => s.toLowerCase().includes(q)) : all;
+    const current = activeField === "from" ? fromStop : toStop;
+    const title = activeField === "from" ? "\u0417\u0432\u0456\u0434\u043A\u0438 \u0457\u0434\u0435\u0442\u0435?" : "\u041A\u0443\u0434\u0438 \u0457\u0434\u0435\u0442\u0435?";
+    const clearHtml = current ? `<button class="bs-dd-clear" id="bs-dd-clear">\u2715 \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0438\u0431\u0456\u0440 (${escapeHtml(current)})</button>` : "";
+    const itemsHtml = filtered.length ? filtered.map(
+      (s) => `<button class="bs-dd-item${s === current ? " sel" : ""}" data-stop="${escapeHtml(s)}">
+           ${escapeHtml(s)}
+         </button>`
+    ).join("") : `<div class="bs-dd-empty">\u0417\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
+    dd.innerHTML = `
+    <div class="bs-dd-head">
+      <span class="bs-dd-title">${escapeHtml(title)}</span>
+      <button class="bs-dd-x" id="bs-dd-x">\u2715</button>
+    </div>
+    <div class="bs-dd-search">
+      <input class="bs-dd-filter" id="bs-dd-filter"
+             placeholder="\u041F\u043E\u0448\u0443\u043A \u0437\u0443\u043F\u0438\u043D\u043A\u0438\u2026" value="${escapeHtml(query)}"
+             autocomplete="off" autocorrect="off" spellcheck="false">
+    </div>
+    <div class="bs-dd-list">
+      ${clearHtml}
+      ${itemsHtml}
+    </div>
+  `;
+    document.getElementById("bs-dd-filter")?.addEventListener("input", (e) => {
+      renderDropdownItems(e.target.value);
+    });
+    document.getElementById("bs-dd-x")?.addEventListener("click", closeDropdown);
+    document.getElementById("bs-dd-clear")?.addEventListener("click", () => {
+      selectStop("", activeField);
+    });
+    dd.querySelectorAll(".bs-dd-item").forEach((btn) => {
+      btn.addEventListener("mousedown", (e) => e.preventDefault());
+      btn.addEventListener("click", () => selectStop(btn.dataset.stop, activeField));
+    });
+  }
+  function closeDropdown() {
+    activeField = null;
+    const dd = document.getElementById("bs-dropdown");
+    if (dd)
+      dd.hidden = true;
+  }
+  function selectStop(stop, field) {
+    if (field === "from") {
+      fromStop = stop;
+      const inp = document.getElementById("bs-from-input");
+      if (inp)
+        inp.value = stop;
+    } else {
+      toStop = stop;
+      const inp = document.getElementById("bs-to-input");
+      if (inp)
+        inp.value = stop;
+    }
+    closeDropdown();
+    showAll = false;
+    savePrefs();
+    renderSmartRow();
+    renderRouteList();
+  }
+  function parseRouteEndpoints(name) {
+    const clean = name.replace(/-\s*/g, " ").replace(/\s+/g, " ").trim();
+    const noVia = clean.split(" \u0447/\u0437 ")[0].trim();
+    const parts = noVia.split(" ");
+    return [parts[0], parts[parts.length - 1]];
+  }
+  function renderRouteMapV4(route, timings) {
+    const stops = route.stops;
+    const totalKm = stops[stops.length - 1].km || 1;
+    const pct = (timings.progress * 100).toFixed(1);
+    const [labelA, labelB] = parseRouteEndpoints(route.name || "");
+    const movingDot = timings.state === "enroute" ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : "";
+    const dotsHtml = stops.map((s) => {
+      const dotPct = totalKm ? s.km / totalKm * 100 : 0;
+      const isPassed = totalKm ? s.km / totalKm <= timings.progress + 0.01 : false;
+      return `<span class="bhv4-dot${isPassed ? " bhv4-dot--passed" : ""}"
+                  style="left:${dotPct.toFixed(1)}%"></span>`;
+    }).join("");
+    const labelsHtml = `<span class="bhv4-label bhv4-label--a">${escapeHtml(labelA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(labelB.toUpperCase())}</span>`;
+    return `
+    <div class="bhv4-map" aria-hidden="true">
+      <div class="bhv4-labels">${labelsHtml}</div>
+      <div class="bhv4-track">
+        <div class="bhv4-fill" style="width:${pct}%"></div>
+        ${dotsHtml}
+        ${movingDot}
+      </div>
+    </div>`;
+  }
+  function buildHeroCard(route, timings, index, total) {
+    const effFrom = getEffectiveFrom(route);
+    const effTo = getEffectiveTo(route);
+    const fromTime = getStopHHMM(route, effFrom);
+    const toTime = getStopHHMM(route, effTo);
+    const isEnroute = timings.state === "enroute";
+    const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
+    const fromMin = timings.fromMin;
+    const toMin = timings.toMin;
+    const durMins = fromMin !== null && toMin !== null ? toMin - fromMin : null;
+    const durStr = durMins !== null ? durMins >= 60 ? `${Math.floor(durMins / 60)} \u0433\u043E\u0434${durMins % 60 ? " " + durMins % 60 + " \u0445\u0432" : ""}` : `${durMins} \u0445\u0432` : "";
+    const statusDot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
+    const statusText = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
+    const [, labelB] = parseRouteEndpoints(route.name || "");
+    const lastKnownStop = route.stops[route.stops.length - 1].name;
+    const displayNext = timings.nextStop === lastKnownStop ? labelB : timings.nextStop || labelB;
+    const nextStopLine = isEnroute ? `<div class="bhv4-next-stop">\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(displayNext.toUpperCase())}</div>` : timings.state === "waiting" && timings.minsToDeparture !== null ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>` : "";
+    const dotsHtml = total > 1 ? Array.from(
+      { length: total },
+      (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
+    ).join("") : "";
+    return `
+    <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <div class="bhv4-overlay"></div>
+
+      <span class="bhv4-dots-nav">${dotsHtml}</span>
+
+      <div class="bhv4-content">
+        <div class="bhv4-topbar">
+          <span class="bhv4-status">
+            <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="13" rx="2"/>
+              <path d="M2 9h20"/>
+              <path d="M8 4v5M16 4v5"/>
+              <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
+              <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
+            </svg>
+            <span class="bhv4-status-text">${statusText}</span>
+            <span class="bhv4-status-dot">${statusDot}</span>
+          </span>
+        </div>
+
+        <div class="bhv4-body">
+          <div class="bhv4-left">
+            <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
+            <div class="bhv4-times-row">
+              <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
+              ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
+            </div>
+            ${nextStopLine}
+          </div>
+        </div>
+
+        ${renderRouteMapV4(route, timings)}
+      </div>
+    </div>`;
+  }
+  function renderSmartRow() {
+    const el = document.getElementById("bus-smart-row");
+    if (!el)
+      return;
+    const routes = findActiveRoutes();
+    if (!routes.length) {
+      el.innerHTML = `<div class="bhv4-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
+      return;
+    }
+    if (smartRowIndex >= routes.length)
+      smartRowIndex = 0;
+    const route = routes[smartRowIndex];
+    const timings = getRouteTimings(route);
+    el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length);
+    let touchStartX = 0;
+    const card = el.firstElementChild;
+    card.addEventListener("touchstart", (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) < 40)
+        return;
+      smartRowIndex = dx < 0 ? (smartRowIndex + 1) % routes.length : (smartRowIndex - 1 + routes.length) % routes.length;
+      switchHeroCard();
+    }, { passive: true });
+    el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        smartRowIndex = parseInt(e.target.dataset.idx, 10);
+        switchHeroCard();
+      });
+    });
+  }
+  function switchHeroCard() {
+    const el = document.getElementById("bus-smart-row");
+    if (!el)
+      return;
+    const content = el.querySelector(".bhv4-content");
+    if (!content) {
+      renderSmartRow();
+      renderRouteList();
+      return;
+    }
+    content.style.transition = "opacity 0.08s ease";
+    content.style.opacity = "0";
+    setTimeout(() => {
+      renderSmartRow();
+      renderRouteList();
+      const newContent = el.querySelector(".bhv4-content");
+      if (newContent) {
+        newContent.style.opacity = "0";
+        newContent.style.transition = "opacity 0.1s ease";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            newContent.style.opacity = "1";
+          });
+        });
+      }
+    }, 80);
+  }
+  function renderRouteList() {
+    const el = document.getElementById("bus-list");
+    if (!el)
+      return;
+    const all = getFilteredRoutes();
+    const future = all.filter((r) => !isPastRoute(r));
+    const past = all.filter((r) => isPastRoute(r));
+    const toRender = showAll ? all : future;
+    if (!all.length) {
+      el.innerHTML = `<div class="empty-state">\u0417\u0430 \u0446\u0438\u043C \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u043E\u043C \u0440\u0435\u0439\u0441\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
+      return;
+    }
+    if (!toRender.length) {
+      el.innerHTML = `
+      <div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>
+      <button class="bus-show-all" id="bus-show-all-btn">
+        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u2193
+      </button>`;
+      document.getElementById("bus-show-all-btn").addEventListener("click", () => {
+        showAll = true;
+        renderRouteList();
+      });
+      return;
+    }
+    const activeRoutes = findActiveRoutes();
+    const highlighted = activeRoutes[smartRowIndex] || findNextRoute();
+    const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
+    const cards = toRender.map((route) => {
+      const isPast = isPastRoute(route);
+      const isNext = highlighted && route.id === highlighted.id;
+      const effFrom = getEffectiveFrom(route);
+      const effTo = getEffectiveTo(route);
+      const fromTime = getStopHHMM(route, effFrom);
+      const toTime = getStopHHMM(route, effTo);
+      const price = getSegmentPrice(route, effFrom, effTo);
+      const fromMins = getStopMins(route, effFrom) || 0;
+      const toMins = getStopMins(route, effTo) || 0;
+      const segDur = toMins - fromMins;
+      const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
+      const c = carrierInfo(route.carrier);
+      const expanded = expandedIds.has(route.id);
+      const stopsHtml = route.stops.map((s) => {
+        const isFrom = s.name === effFrom;
+        const isTo = s.name === effTo;
+        const hl = isFrom || isTo;
+        const t = getStopHHMM(route, s.name);
+        return `
+        <div class="bs-stop-row${hl ? " hl" : ""}">
+          <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
+          <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
+        </div>`;
+      }).join("");
+      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
+      const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
+      return `
+      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
+        <div class="bus-card-main">
+          <div class="bs-time-block">
+            <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
+            <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
+          </div>
+          <div class="bus-card-info">
+            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
+            <div class="bus-card-meta">
+              <span>${escapeHtml(durStr)}</span>
+              <span class="bus-meta-sep">\xB7</span>
+              <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
+              <span class="bus-meta-sep">\xB7</span>
+              <span>${escapeHtml(c.name)}</span>
+            </div>
+            ${autoNote}
+          </div>
+        </div>
+        ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
+               ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
+             </button>
+             <div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>` : route.vopas_url ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">\u0423\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u0440\u0435\u0439\u0441\u0443 \u043D\u0430 VOPAS \u2192</a>` : ""}
+      </div>`;
+    }).join("");
+    let toggleHtml = "";
+    if (!showAll && past.length > 0) {
+      toggleHtml = `
+      <button class="bus-show-all" id="bus-show-all-btn">
+        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
+      </button>`;
+    } else if (showAll && past.length > 0) {
+      toggleHtml = `
+      <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
+        \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
+      </button>`;
+    }
+    el.innerHTML = cards + toggleHtml;
+    el.querySelectorAll(".bs-toggle").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const id = btn.dataset.id;
+        if (expandedIds.has(id))
+          expandedIds.delete(id);
+        else
+          expandedIds.add(id);
+        renderRouteList();
+      });
+    });
+    const showAllBtn = document.getElementById("bus-show-all-btn");
+    if (showAllBtn) {
+      showAllBtn.addEventListener("click", () => {
+        showAll = !showAll;
+        renderRouteList();
+      });
+    }
+  }
+  function renderSearchPanel() {
+    const el = document.getElementById("bus-search-panel");
+    if (!el)
+      return;
+    const hasFilter = fromStop || toStop;
+    el.innerHTML = `
+    <div class="bs-search-row">
+      <div class="bs-search-field" id="bs-from-field">
+        <span class="bs-field-icon bs-field-icon--from">\u25CF</span>
+        <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
+               type="text" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438"
+               value="${escapeHtml(fromStop)}" readonly>
+      </div>
+      <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M5 8l-4 4 4 4"/><path d="M19 8l4 4-4 4"/><line x1="1" y1="12" x2="23" y2="12"/>
+        </svg>
+      </button>
+      <div class="bs-search-field" id="bs-to-field">
+        <svg class="bs-field-icon bs-field-icon--to" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
+          <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
+        </svg>
+        <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
+               type="text" placeholder="\u041A\u0443\u0434\u0438"
+               value="${escapeHtml(toStop)}" readonly>
+      </div>
+    </div>
+    ${hasFilter ? `
+    <div class="bs-reset-row">
+      <button class="bs-reset-btn" id="bs-reset-btn">\u2715 \u0412\u0441\u0456 \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0438</button>
+    </div>` : ""}
+  `;
+    document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
+    document.getElementById("bs-to-input").addEventListener("click", () => openDropdown("to"));
+    document.getElementById("bs-reset-btn")?.addEventListener("click", () => {
+      fromStop = "";
+      toStop = "";
+      showAll = false;
+      savePrefs();
+      renderSearchPanel();
+      renderSmartRow();
+      renderRouteList();
+    });
+    document.getElementById("bs-swap-btn").addEventListener("click", () => {
+      [fromStop, toStop] = [toStop, fromStop];
+      document.getElementById("bs-from-input").value = fromStop;
+      document.getElementById("bs-to-input").value = toStop;
+      closeDropdown();
+      showAll = false;
+      savePrefs();
+      renderSmartRow();
+      renderRouteList();
+    });
+  }
+  async function initBuses() {
+    const el = document.getElementById("buses-content");
+    if (!el)
+      return;
+    loadPrefs();
+    if (!document.getElementById("bs-dropdown")) {
+      const dd = document.createElement("div");
+      dd.id = "bs-dropdown";
+      dd.className = "bs-dropdown";
+      dd.hidden = true;
+      document.body.appendChild(dd);
+    }
+    document.addEventListener("click", (e) => {
+      const dd = document.getElementById("bs-dropdown");
+      if (!dd || dd.hidden)
+        return;
+      if (!dd.contains(e.target) && e.target.id !== "bs-from-input" && e.target.id !== "bs-to-input") {
+        closeDropdown();
+      }
+    }, true);
+    try {
+      const res = await fetch("./data/schedule.json");
+      if (!res.ok)
+        throw new Error(res.status);
+      busData = await res.json();
+    } catch {
+      busData = null;
+    }
+    if (!busData) {
+      el.innerHTML = '<div class="empty-state">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
+      return;
+    }
+    el.innerHTML = `
+    <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-smart-row" class="bus-smart-row"></div>
+    <div id="bus-list" class="bus-list"></div>
+    <div class="buses-updated">
+      ${escapeHtml(busData.source)}<br>
+      \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
+    </div>
+  `;
+    renderSearchPanel();
+    renderSmartRow();
+    renderRouteList();
+    if (timerInterval)
+      clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+      renderSmartRow();
+      renderRouteList();
+    }, 6e4);
+  }
+
   // src/tabs/community-blocks.js
+  var cmBusIndex = 0;
+  var cmBusRoutes = [];
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
@@ -1781,7 +2337,6 @@ ${post.text}
   var _boardMiniTypeIdx = 0;
   var _boardMiniData = { userPosts: [], official: [] };
   var _boardMiniDir = 1;
-  var BUS_PREFS_KEY = "bus_prefs_v2";
   function weatherCodeInfo(code) {
     if (code === 0)
       return { icon: "\u2600\uFE0F", text: "\u042F\u0441\u043D\u043E" };
@@ -1802,13 +2357,6 @@ ${post.text}
     if (code >= 95)
       return { icon: "\u26C8\uFE0F", text: "\u0413\u0440\u043E\u0437\u0430" };
     return { icon: "\u{1F321}\uFE0F", text: "\u2014" };
-  }
-  function loadBusPrefs() {
-    try {
-      return JSON.parse(localStorage.getItem(BUS_PREFS_KEY) || "{}");
-    } catch {
-      return {};
-    }
   }
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
   function setWeatherTitle(cityName) {
@@ -1872,29 +2420,6 @@ ${post.text}
       return d >= 1 && d <= 5;
     return true;
   }
-  function renderBusRouteMap(route, timings) {
-    const stops = route.stops;
-    const totalKm = stops[stops.length - 1].km || 1;
-    const progress = (timings.progress * 100).toFixed(1);
-    const stopsHtml = stops.map((s) => {
-      const pct = totalKm ? s.km / totalKm * 100 : 0;
-      const isCurrent = s.name === timings.currentStop;
-      return `<span class="bhm-stop${isCurrent ? " bhm-stop--current" : ""}" style="left:${pct.toFixed(1)}%"></span>`;
-    }).join("");
-    return `
-    <div class="bus-hero-map" aria-hidden="true">
-      <div class="bhm-track">
-        <div class="bhm-fill" style="width:${progress}%"></div>
-        ${stopsHtml}
-        <span class="bhm-marker" style="left:${progress}%">\u{1F68C}</span>
-      </div>
-      <div class="bhm-ends">
-        <span class="bhm-end-from">${escapeHtml(stops[0].name)}</span>
-        <span class="bhm-end-to">${escapeHtml(stops[stops.length - 1].name)}</span>
-      </div>
-    </div>
-  `;
-  }
   async function renderBusBlock() {
     const el = document.getElementById("cm-bus-content");
     if (!el)
@@ -1902,87 +2427,84 @@ ${post.text}
     try {
       const res = await fetch("./data/schedule.json");
       const data = await res.json();
-      const prefs = loadBusPrefs();
-      const nowMin = nowMinutes();
-      const candidates = data.routes.filter((r) => {
+      cmBusRoutes = data.routes.filter((r) => {
         if (!busIsDayActive(r.days))
           return false;
-        if (prefs.from && !r.stops.some((s) => s.name === prefs.from))
-          return false;
-        if (prefs.to && !r.stops.some((s) => s.name === prefs.to))
-          return false;
-        if (prefs.from && prefs.to) {
-          const fi = r.stops.findIndex((s) => s.name === prefs.from);
-          const ti = r.stops.findIndex((s) => s.name === prefs.to);
-          if (fi >= ti)
-            return false;
+        const state = getRouteState(r);
+        if (state === "enroute")
+          return true;
+        if (state === "waiting") {
+          const t = getRouteTimings(r);
+          return t.minsToDeparture !== null && t.minsToDeparture <= 90;
         }
-        return getRouteState(r, nowMin) !== "past";
+        return false;
+      }).sort((a, b) => {
+        const aM = getStopMins(a, a.stops[0].name) || 0;
+        const bM = getStopMins(b, b.stops[0].name) || 0;
+        return aM - bM;
       });
-      const enroute = candidates.filter((r) => getRouteState(r, nowMin) === "enroute");
-      const waiting = candidates.filter((r) => getRouteState(r, nowMin) === "waiting");
-      enroute.sort((a, b) => (getRouteTimings(a, nowMin).minsToArrival ?? Infinity) - (getRouteTimings(b, nowMin).minsToArrival ?? Infinity));
-      waiting.sort((a, b) => (getRouteTimings(a, nowMin).minsToDeparture ?? Infinity) - (getRouteTimings(b, nowMin).minsToDeparture ?? Infinity));
-      const next = enroute[0] || waiting[0];
-      if (!next) {
-        el.innerHTML = `
-        <div class="cm-block-empty">
-          \u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454
-          <button class="cm-block-cta" data-switch-tab="buses">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button>
-        </div>`;
+      if (!cmBusRoutes.length) {
+        const next = data.routes.filter((r) => busIsDayActive(r.days) && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
+        if (next)
+          cmBusRoutes = [next];
+      }
+      if (!cmBusRoutes.length) {
+        el.innerHTML = `<div class="cm-block-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454<button class="cm-block-cta" data-switch-tab="buses">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button></div>`;
         return;
       }
-      const fromName = prefs.from || next.stops[0].name;
-      const toName = prefs.to || next.stops[next.stops.length - 1].name;
-      const fromMin = getStopMins(next, fromName);
-      const toMin = getStopMins(next, toName);
-      const fromHHMM = minsToHHMM(fromMin);
-      const toHHMM = minsToHHMM(toMin);
-      const timings = getRouteTimings(next, nowMin);
-      const isEnroute = timings.state === "enroute";
-      const urgent = timings.state === "waiting" && timings.minsToDeparture <= 10;
-      let topLabel;
-      if (isEnroute) {
-        topLabel = `\u{1F68C} \u0417\u0410\u0420\u0410\u0417 \u0423 ${(timings.currentStop || "\u2014").toUpperCase()}`;
-      } else if (urgent) {
-        topLabel = `\u0427\u0415\u0420\u0415\u0417 ${timings.minsToDeparture} \u0425\u0412`;
-      } else {
-        topLabel = formatCountdownUpper(timings.minsToDeparture);
-      }
-      const timeRow = isEnroute ? `<div class="bus-hero-times">
-           <span class="bus-hero-time">\u23F1 ${timings.minsToArrival} \u0425\u0412</span>
-           <span class="bus-hero-arrow">\xB7</span>
-           <span class="bus-hero-time bus-hero-time--to">\u0434\u043E ${escapeHtml(toHHMM || "\u2014")}</span>
-         </div>` : `<div class="bus-hero-times">
-           <span class="bus-hero-time">${escapeHtml(fromHHMM || "\u2014")}</span>
-           <span class="bus-hero-arrow">\u2192</span>
-           <span class="bus-hero-time bus-hero-time--to">${escapeHtml(toHHMM || "\u2014")}</span>
-         </div>`;
-      const durationMin = toMin - fromMin;
-      const durationStr = durationMin < 60 ? `${durationMin} \u0445\u0432` : (() => {
-        const h = Math.floor(durationMin / 60), m = durationMin % 60;
-        return m ? `${h} \u0433\u043E\u0434 ${m} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
-      })();
-      const carrier = data.carriers?.[next.carrier]?.name || "";
-      const metaParts = [durationStr, carrier].filter(Boolean);
-      const metaHtml = metaParts.map(
-        (p, i) => i === 0 ? `<span>${escapeHtml(p)}</span>` : `<span class="bus-hero-meta-sep">\xB7</span><span>${escapeHtml(p)}</span>`
-      ).join("");
-      el.innerHTML = `
-      <div class="bus-hero${urgent ? " bus-hero--urgent" : ""}${isEnroute ? " bus-hero--enroute" : ""}" data-switch-tab="buses">
-        <div class="bus-hero-top">
-          <span class="bus-hero-countdown">${escapeHtml(topLabel)}</span>
-          ${urgent ? '<span class="bus-hero-urgent">\u26A1 \u041F\u043E\u0441\u043F\u0456\u0448\u0430\u0439!</span>' : ""}
-        </div>
-        <div class="bus-hero-row">${timeRow}</div>
-        <div class="bus-hero-route">${escapeHtml(fromName)} \u2192 ${escapeHtml(toName)}</div>
-        <div class="bus-hero-meta">${metaHtml}</div>
-        ${renderBusRouteMap(next, timings)}
-      </div>
-    `;
+      if (cmBusIndex >= cmBusRoutes.length)
+        cmBusIndex = 0;
+      renderCmBusCard(el);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
     }
+  }
+  function renderCmBusCard(el) {
+    if (!el || !cmBusRoutes.length)
+      return;
+    const route = cmBusRoutes[cmBusIndex];
+    const timings = getRouteTimings(route);
+    el.innerHTML = buildHeroCard(route, timings, cmBusIndex, cmBusRoutes.length);
+    let touchStartX = 0;
+    const card = el.firstElementChild;
+    if (!card)
+      return;
+    card.addEventListener("touchstart", (e) => {
+      touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    card.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - touchStartX;
+      if (Math.abs(dx) < 40)
+        return;
+      cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusRoutes.length : (cmBusIndex - 1 + cmBusRoutes.length) % cmBusRoutes.length;
+      switchCmBusCard(el);
+    }, { passive: true });
+    el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        cmBusIndex = parseInt(e.target.dataset.idx, 10);
+        switchCmBusCard(el);
+      });
+    });
+  }
+  function switchCmBusCard(el) {
+    const content = el.querySelector(".bhv4-content");
+    if (!content) {
+      renderCmBusCard(el);
+      return;
+    }
+    content.style.transition = "opacity 0.08s ease";
+    content.style.opacity = "0";
+    setTimeout(() => {
+      renderCmBusCard(el);
+      const newContent = el.querySelector(".bhv4-content");
+      if (newContent) {
+        newContent.style.opacity = "0";
+        newContent.style.transition = "opacity 0.1s ease";
+        requestAnimationFrame(() => requestAnimationFrame(() => {
+          newContent.style.opacity = "1";
+        }));
+      }
+    }, 80);
   }
   var CATEGORY_EMOJI2 = {
     "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
@@ -3051,560 +3573,6 @@ ${ev.description}`
     renderFilters();
     renderCalendar();
     renderList();
-  }
-
-  // src/tabs/buses.js
-  var PREFS_KEY = "bus_prefs_v2";
-  var busData = null;
-  var fromStop = "";
-  var toStop = "";
-  var showAll = false;
-  var timerInterval = null;
-  var expandedIds = /* @__PURE__ */ new Set();
-  var activeField = null;
-  var smartRowIndex = 0;
-  function savePrefs() {
-    localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
-  }
-  function loadPrefs() {
-    try {
-      const p = JSON.parse(localStorage.getItem(PREFS_KEY));
-      if (p?.from)
-        fromStop = p.from;
-      if (p?.to)
-        toStop = p.to;
-    } catch {
-    }
-  }
-  function isDayActive(days) {
-    const d = (/* @__PURE__ */ new Date()).getDay();
-    if (days === "\u0449\u043E\u0434\u043D\u044F")
-      return true;
-    if (days === "\u043F\u043D-\u0441\u0431")
-      return d >= 1 && d <= 6;
-    if (days === "\u043F\u043D-\u043F\u0442")
-      return d >= 1 && d <= 5;
-    return true;
-  }
-  function getSegmentPrice(route, fromName, toName) {
-    const f = route.stops.find((s) => s.name === fromName);
-    const t = route.stops.find((s) => s.name === toName);
-    if (!f || !t)
-      return null;
-    const diff = Math.abs((t.price_from_start || 0) - (f.price_from_start || 0));
-    return diff > 0 ? diff.toFixed(2) : null;
-  }
-  function getEffectiveFrom(route) {
-    if (fromStop && route.stops.some((s) => s.name === fromStop))
-      return fromStop;
-    return route.stops[0].name;
-  }
-  function getEffectiveTo(route) {
-    if (toStop && route.stops.some((s) => s.name === toStop))
-      return toStop;
-    return route.stops[route.stops.length - 1].name;
-  }
-  function matchesSearch(route) {
-    if (!isDayActive(route.days))
-      return false;
-    const stops = route.stops;
-    const fromIdx = fromStop ? stops.findIndex((s) => s.name === fromStop) : 0;
-    const toIdx = toStop ? stops.findIndex((s) => s.name === toStop) : stops.length - 1;
-    if (fromStop && fromIdx === -1)
-      return false;
-    if (toStop && toIdx === -1)
-      return false;
-    if (fromStop && toStop && fromIdx >= toIdx)
-      return false;
-    return true;
-  }
-  function isPastRoute(route) {
-    return getRouteState(route) === "past";
-  }
-  function getFilteredRoutes() {
-    if (!busData)
-      return [];
-    return busData.routes.filter(matchesSearch).sort((a, b) => {
-      const aM = getStopMins(a, getEffectiveFrom(a)) || 0;
-      const bM = getStopMins(b, getEffectiveFrom(b)) || 0;
-      return aM - bM;
-    });
-  }
-  function findNextRoute() {
-    const all = getFilteredRoutes();
-    const enroute = all.filter((r) => getRouteState(r) === "enroute");
-    if (enroute.length) {
-      return enroute.sort((a, b) => {
-        const aT = getRouteTimings(a).minsToArrival ?? Infinity;
-        const bT = getRouteTimings(b).minsToArrival ?? Infinity;
-        return aT - bT;
-      })[0];
-    }
-    return all.find((r) => getRouteState(r) === "waiting") || null;
-  }
-  function findActiveRoutes() {
-    const all = getFilteredRoutes();
-    const result = all.filter((r) => {
-      const state = getRouteState(r);
-      if (state === "enroute")
-        return true;
-      if (state === "waiting") {
-        const t = getRouteTimings(r);
-        return t.minsToDeparture !== null && t.minsToDeparture <= 90;
-      }
-      return false;
-    });
-    return result.length ? result : findNextRoute() ? [findNextRoute()] : [];
-  }
-  function getAllStops() {
-    if (!busData)
-      return [];
-    const seen = /* @__PURE__ */ new Set();
-    busData.routes.forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
-    return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
-  }
-  function openDropdown(field) {
-    activeField = field;
-    const panel = document.getElementById("bus-search-panel");
-    const dd = document.getElementById("bs-dropdown");
-    if (!dd || !panel)
-      return;
-    const rect = panel.getBoundingClientRect();
-    dd.style.top = rect.bottom + "px";
-    renderDropdownItems("");
-    dd.hidden = false;
-    const filterEl = document.getElementById("bs-dd-filter");
-    if (filterEl)
-      setTimeout(() => filterEl.focus(), 80);
-  }
-  function renderDropdownItems(query) {
-    const dd = document.getElementById("bs-dropdown");
-    if (!dd)
-      return;
-    const all = getAllStops();
-    const q = query.trim().toLowerCase();
-    const filtered = q ? all.filter((s) => s.toLowerCase().includes(q)) : all;
-    const current = activeField === "from" ? fromStop : toStop;
-    const title = activeField === "from" ? "\u0417\u0432\u0456\u0434\u043A\u0438 \u0457\u0434\u0435\u0442\u0435?" : "\u041A\u0443\u0434\u0438 \u0457\u0434\u0435\u0442\u0435?";
-    const clearHtml = current ? `<button class="bs-dd-clear" id="bs-dd-clear">\u2715 \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0438\u0431\u0456\u0440 (${escapeHtml(current)})</button>` : "";
-    const itemsHtml = filtered.length ? filtered.map(
-      (s) => `<button class="bs-dd-item${s === current ? " sel" : ""}" data-stop="${escapeHtml(s)}">
-           ${escapeHtml(s)}
-         </button>`
-    ).join("") : `<div class="bs-dd-empty">\u0417\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
-    dd.innerHTML = `
-    <div class="bs-dd-head">
-      <span class="bs-dd-title">${escapeHtml(title)}</span>
-      <button class="bs-dd-x" id="bs-dd-x">\u2715</button>
-    </div>
-    <div class="bs-dd-search">
-      <input class="bs-dd-filter" id="bs-dd-filter"
-             placeholder="\u041F\u043E\u0448\u0443\u043A \u0437\u0443\u043F\u0438\u043D\u043A\u0438\u2026" value="${escapeHtml(query)}"
-             autocomplete="off" autocorrect="off" spellcheck="false">
-    </div>
-    <div class="bs-dd-list">
-      ${clearHtml}
-      ${itemsHtml}
-    </div>
-  `;
-    document.getElementById("bs-dd-filter")?.addEventListener("input", (e) => {
-      renderDropdownItems(e.target.value);
-    });
-    document.getElementById("bs-dd-x")?.addEventListener("click", closeDropdown);
-    document.getElementById("bs-dd-clear")?.addEventListener("click", () => {
-      selectStop("", activeField);
-    });
-    dd.querySelectorAll(".bs-dd-item").forEach((btn) => {
-      btn.addEventListener("mousedown", (e) => e.preventDefault());
-      btn.addEventListener("click", () => selectStop(btn.dataset.stop, activeField));
-    });
-  }
-  function closeDropdown() {
-    activeField = null;
-    const dd = document.getElementById("bs-dropdown");
-    if (dd)
-      dd.hidden = true;
-  }
-  function selectStop(stop, field) {
-    if (field === "from") {
-      fromStop = stop;
-      const inp = document.getElementById("bs-from-input");
-      if (inp)
-        inp.value = stop;
-    } else {
-      toStop = stop;
-      const inp = document.getElementById("bs-to-input");
-      if (inp)
-        inp.value = stop;
-    }
-    closeDropdown();
-    showAll = false;
-    savePrefs();
-    renderSmartRow();
-    renderRouteList();
-  }
-  function parseRouteEndpoints(name) {
-    const clean = name.replace(/-\s*/g, " ").replace(/\s+/g, " ").trim();
-    const noVia = clean.split(" \u0447/\u0437 ")[0].trim();
-    const parts = noVia.split(" ");
-    return [parts[0], parts[parts.length - 1]];
-  }
-  function renderRouteMapV4(route, timings) {
-    const stops = route.stops;
-    const totalKm = stops[stops.length - 1].km || 1;
-    const pct = (timings.progress * 100).toFixed(1);
-    const [labelA, labelB] = parseRouteEndpoints(route.name || "");
-    const movingDot = timings.state === "enroute" ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : "";
-    const dotsHtml = stops.map((s) => {
-      const dotPct = totalKm ? s.km / totalKm * 100 : 0;
-      const isPassed = totalKm ? s.km / totalKm <= timings.progress + 0.01 : false;
-      return `<span class="bhv4-dot${isPassed ? " bhv4-dot--passed" : ""}"
-                  style="left:${dotPct.toFixed(1)}%"></span>`;
-    }).join("");
-    const labelsHtml = `<span class="bhv4-label bhv4-label--a">${escapeHtml(labelA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(labelB.toUpperCase())}</span>`;
-    return `
-    <div class="bhv4-map" aria-hidden="true">
-      <div class="bhv4-labels">${labelsHtml}</div>
-      <div class="bhv4-track">
-        <div class="bhv4-fill" style="width:${pct}%"></div>
-        ${dotsHtml}
-        ${movingDot}
-      </div>
-    </div>`;
-  }
-  function buildHeroCard(route, timings, index, total) {
-    const effFrom = getEffectiveFrom(route);
-    const effTo = getEffectiveTo(route);
-    const fromTime = getStopHHMM(route, effFrom);
-    const toTime = getStopHHMM(route, effTo);
-    const isEnroute = timings.state === "enroute";
-    const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
-    const fromMin = timings.fromMin;
-    const toMin = timings.toMin;
-    const durMins = fromMin !== null && toMin !== null ? toMin - fromMin : null;
-    const durStr = durMins !== null ? durMins >= 60 ? `${Math.floor(durMins / 60)} \u0433\u043E\u0434${durMins % 60 ? " " + durMins % 60 + " \u0445\u0432" : ""}` : `${durMins} \u0445\u0432` : "";
-    const statusDot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
-    const statusText = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
-    const [, labelB] = parseRouteEndpoints(route.name || "");
-    const lastKnownStop = route.stops[route.stops.length - 1].name;
-    const displayNext = timings.nextStop === lastKnownStop ? labelB : timings.nextStop || labelB;
-    const nextStopLine = isEnroute ? `<div class="bhv4-next-stop">\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(displayNext.toUpperCase())}</div>` : timings.state === "waiting" && timings.minsToDeparture !== null ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>` : "";
-    const dotsHtml = total > 1 ? Array.from(
-      { length: total },
-      (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
-    ).join("") : "";
-    return `
-    <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}">
-      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
-      <div class="bhv4-overlay"></div>
-
-      <span class="bhv4-dots-nav">${dotsHtml}</span>
-
-      <div class="bhv4-content">
-        <div class="bhv4-topbar">
-          <span class="bhv4-status">
-            <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="4" width="20" height="13" rx="2"/>
-              <path d="M2 9h20"/>
-              <path d="M8 4v5M16 4v5"/>
-              <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
-              <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
-            </svg>
-            <span class="bhv4-status-text">${statusText}</span>
-            <span class="bhv4-status-dot">${statusDot}</span>
-          </span>
-        </div>
-
-        <div class="bhv4-body">
-          <div class="bhv4-left">
-            <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
-            <div class="bhv4-times-row">
-              <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
-              ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
-            </div>
-            ${nextStopLine}
-          </div>
-        </div>
-
-        ${renderRouteMapV4(route, timings)}
-      </div>
-    </div>`;
-  }
-  function renderSmartRow() {
-    const el = document.getElementById("bus-smart-row");
-    if (!el)
-      return;
-    const routes = findActiveRoutes();
-    if (!routes.length) {
-      el.innerHTML = `<div class="bhv4-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
-      return;
-    }
-    if (smartRowIndex >= routes.length)
-      smartRowIndex = 0;
-    const route = routes[smartRowIndex];
-    const timings = getRouteTimings(route);
-    el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length);
-    let touchStartX = 0;
-    const card = el.firstElementChild;
-    card.addEventListener("touchstart", (e) => {
-      touchStartX = e.touches[0].clientX;
-    }, { passive: true });
-    card.addEventListener("touchend", (e) => {
-      const dx = e.changedTouches[0].clientX - touchStartX;
-      if (Math.abs(dx) < 40)
-        return;
-      smartRowIndex = dx < 0 ? (smartRowIndex + 1) % routes.length : (smartRowIndex - 1 + routes.length) % routes.length;
-      switchHeroCard();
-    }, { passive: true });
-    el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
-      dot.addEventListener("click", (e) => {
-        smartRowIndex = parseInt(e.target.dataset.idx, 10);
-        switchHeroCard();
-      });
-    });
-  }
-  function switchHeroCard() {
-    const el = document.getElementById("bus-smart-row");
-    if (!el)
-      return;
-    const content = el.querySelector(".bhv4-content");
-    if (!content) {
-      renderSmartRow();
-      renderRouteList();
-      return;
-    }
-    content.style.transition = "opacity 0.08s ease";
-    content.style.opacity = "0";
-    setTimeout(() => {
-      renderSmartRow();
-      renderRouteList();
-      const newContent = el.querySelector(".bhv4-content");
-      if (newContent) {
-        newContent.style.opacity = "0";
-        newContent.style.transition = "opacity 0.1s ease";
-        requestAnimationFrame(() => {
-          requestAnimationFrame(() => {
-            newContent.style.opacity = "1";
-          });
-        });
-      }
-    }, 80);
-  }
-  function renderRouteList() {
-    const el = document.getElementById("bus-list");
-    if (!el)
-      return;
-    const all = getFilteredRoutes();
-    const future = all.filter((r) => !isPastRoute(r));
-    const past = all.filter((r) => isPastRoute(r));
-    const toRender = showAll ? all : future;
-    if (!all.length) {
-      el.innerHTML = `<div class="empty-state">\u0417\u0430 \u0446\u0438\u043C \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u043E\u043C \u0440\u0435\u0439\u0441\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
-      return;
-    }
-    if (!toRender.length) {
-      el.innerHTML = `
-      <div class="empty-state">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>
-      <button class="bus-show-all" id="bus-show-all-btn">
-        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u2193
-      </button>`;
-      document.getElementById("bus-show-all-btn").addEventListener("click", () => {
-        showAll = true;
-        renderRouteList();
-      });
-      return;
-    }
-    const activeRoutes = findActiveRoutes();
-    const highlighted = activeRoutes[smartRowIndex] || findNextRoute();
-    const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
-    const cards = toRender.map((route) => {
-      const isPast = isPastRoute(route);
-      const isNext = highlighted && route.id === highlighted.id;
-      const effFrom = getEffectiveFrom(route);
-      const effTo = getEffectiveTo(route);
-      const fromTime = getStopHHMM(route, effFrom);
-      const toTime = getStopHHMM(route, effTo);
-      const price = getSegmentPrice(route, effFrom, effTo);
-      const fromMins = getStopMins(route, effFrom) || 0;
-      const toMins = getStopMins(route, effTo) || 0;
-      const segDur = toMins - fromMins;
-      const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
-      const c = carrierInfo(route.carrier);
-      const expanded = expandedIds.has(route.id);
-      const stopsHtml = route.stops.map((s) => {
-        const isFrom = s.name === effFrom;
-        const isTo = s.name === effTo;
-        const hl = isFrom || isTo;
-        const t = getStopHHMM(route, s.name);
-        return `
-        <div class="bs-stop-row${hl ? " hl" : ""}">
-          <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
-          <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
-        </div>`;
-      }).join("");
-      const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
-      const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
-      return `
-      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
-        <div class="bus-card-main">
-          <div class="bs-time-block">
-            <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
-            <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
-          </div>
-          <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
-            <div class="bus-card-meta">
-              <span>${escapeHtml(durStr)}</span>
-              <span class="bus-meta-sep">\xB7</span>
-              <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
-              <span class="bus-meta-sep">\xB7</span>
-              <span>${escapeHtml(c.name)}</span>
-            </div>
-            ${autoNote}
-          </div>
-        </div>
-        ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-               ${expanded ? "\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25B4" : "\u0412\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u25BE"}
-             </button>
-             <div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>` : route.vopas_url ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">\u0423\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u0440\u0435\u0439\u0441\u0443 \u043D\u0430 VOPAS \u2192</a>` : ""}
-      </div>`;
-    }).join("");
-    let toggleHtml = "";
-    if (!showAll && past.length > 0) {
-      toggleHtml = `
-      <button class="bus-show-all" id="bus-show-all-btn">
-        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
-      </button>`;
-    } else if (showAll && past.length > 0) {
-      toggleHtml = `
-      <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
-        \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
-      </button>`;
-    }
-    el.innerHTML = cards + toggleHtml;
-    el.querySelectorAll(".bs-toggle").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const id = btn.dataset.id;
-        if (expandedIds.has(id))
-          expandedIds.delete(id);
-        else
-          expandedIds.add(id);
-        renderRouteList();
-      });
-    });
-    const showAllBtn = document.getElementById("bus-show-all-btn");
-    if (showAllBtn) {
-      showAllBtn.addEventListener("click", () => {
-        showAll = !showAll;
-        renderRouteList();
-      });
-    }
-  }
-  function renderSearchPanel() {
-    const el = document.getElementById("bus-search-panel");
-    if (!el)
-      return;
-    const hasFilter = fromStop || toStop;
-    el.innerHTML = `
-    <div class="bs-search-row">
-      <div class="bs-search-field" id="bs-from-field">
-        <span class="bs-field-icon bs-field-icon--from">\u25CF</span>
-        <input class="bs-search-input bs-search-input--tap" id="bs-from-input"
-               type="text" placeholder="\u0417\u0432\u0456\u0434\u043A\u0438"
-               value="${escapeHtml(fromStop)}" readonly>
-      </div>
-      <button class="bs-swap-btn" id="bs-swap-btn" title="\u041F\u043E\u043C\u0456\u043D\u044F\u0442\u0438 \u043D\u0430\u043F\u0440\u044F\u043C\u043E\u043A">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M5 8l-4 4 4 4"/><path d="M19 8l4 4-4 4"/><line x1="1" y1="12" x2="23" y2="12"/>
-        </svg>
-      </button>
-      <div class="bs-search-field" id="bs-to-field">
-        <svg class="bs-field-icon bs-field-icon--to" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-          <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/>
-          <circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/>
-        </svg>
-        <input class="bs-search-input bs-search-input--tap" id="bs-to-input"
-               type="text" placeholder="\u041A\u0443\u0434\u0438"
-               value="${escapeHtml(toStop)}" readonly>
-      </div>
-    </div>
-    ${hasFilter ? `
-    <div class="bs-reset-row">
-      <button class="bs-reset-btn" id="bs-reset-btn">\u2715 \u0412\u0441\u0456 \u043C\u0430\u0440\u0448\u0440\u0443\u0442\u0438</button>
-    </div>` : ""}
-  `;
-    document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
-    document.getElementById("bs-to-input").addEventListener("click", () => openDropdown("to"));
-    document.getElementById("bs-reset-btn")?.addEventListener("click", () => {
-      fromStop = "";
-      toStop = "";
-      showAll = false;
-      savePrefs();
-      renderSearchPanel();
-      renderSmartRow();
-      renderRouteList();
-    });
-    document.getElementById("bs-swap-btn").addEventListener("click", () => {
-      [fromStop, toStop] = [toStop, fromStop];
-      document.getElementById("bs-from-input").value = fromStop;
-      document.getElementById("bs-to-input").value = toStop;
-      closeDropdown();
-      showAll = false;
-      savePrefs();
-      renderSmartRow();
-      renderRouteList();
-    });
-  }
-  async function initBuses() {
-    const el = document.getElementById("buses-content");
-    if (!el)
-      return;
-    loadPrefs();
-    if (!document.getElementById("bs-dropdown")) {
-      const dd = document.createElement("div");
-      dd.id = "bs-dropdown";
-      dd.className = "bs-dropdown";
-      dd.hidden = true;
-      document.body.appendChild(dd);
-    }
-    document.addEventListener("click", (e) => {
-      const dd = document.getElementById("bs-dropdown");
-      if (!dd || dd.hidden)
-        return;
-      if (!dd.contains(e.target) && e.target.id !== "bs-from-input" && e.target.id !== "bs-to-input") {
-        closeDropdown();
-      }
-    }, true);
-    try {
-      const res = await fetch("./data/schedule.json");
-      if (!res.ok)
-        throw new Error(res.status);
-      busData = await res.json();
-    } catch {
-      busData = null;
-    }
-    if (!busData) {
-      el.innerHTML = '<div class="empty-state">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
-      return;
-    }
-    el.innerHTML = `
-    <div id="bus-search-panel" class="bus-search"></div>
-    <div id="bus-smart-row" class="bus-smart-row"></div>
-    <div id="bus-list" class="bus-list"></div>
-    <div class="buses-updated">
-      ${escapeHtml(busData.source)}<br>
-      \u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
-    </div>
-  `;
-    renderSearchPanel();
-    renderSmartRow();
-    renderRouteList();
-    if (timerInterval)
-      clearInterval(timerInterval);
-    timerInterval = setInterval(() => {
-      renderSmartRow();
-      renderRouteList();
-    }, 6e4);
   }
 
   // src/tabs/power.js
