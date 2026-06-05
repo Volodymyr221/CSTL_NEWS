@@ -3348,16 +3348,41 @@ ${ev.description}`
       if (Math.abs(dx) < 40)
         return;
       smartRowIndex = dx < 0 ? (smartRowIndex + 1) % routes.length : (smartRowIndex - 1 + routes.length) % routes.length;
-      renderSmartRow();
-      renderRouteList();
+      switchHeroCard();
     }, { passive: true });
     el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
       dot.addEventListener("click", (e) => {
         smartRowIndex = parseInt(e.target.dataset.idx, 10);
-        renderSmartRow();
-        renderRouteList();
+        switchHeroCard();
       });
     });
+  }
+  function switchHeroCard() {
+    const el = document.getElementById("bus-smart-row");
+    if (!el)
+      return;
+    const card = el.firstElementChild;
+    if (!card) {
+      renderSmartRow();
+      renderRouteList();
+      return;
+    }
+    card.style.transition = "opacity 0.18s ease";
+    card.style.opacity = "0";
+    setTimeout(() => {
+      renderSmartRow();
+      renderRouteList();
+      const newCard = el.firstElementChild;
+      if (newCard) {
+        newCard.style.opacity = "0";
+        newCard.style.transition = "opacity 0.22s ease";
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            newCard.style.opacity = "1";
+          });
+        });
+      }
+    }, 180);
   }
   function renderRouteList() {
     const el = document.getElementById("bus-list");
