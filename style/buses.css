@@ -489,11 +489,11 @@
 .bus-card {
   padding: 14px 16px;
   border-bottom: 1px solid var(--hairline);
-  background: var(--paper);
+  background: #F0F2F5;
 }
 .bus-card.past { opacity: 0.32; }
 .bus-card.next {
-  background: var(--paper); /* медовий 18% — підсвічуємо наступний у списку */
+  background: #F0F2F5;
 }
 
 .bus-card-main {
@@ -583,7 +583,7 @@
 .bus-search {
   margin: 0;
   padding: 6px 14px 10px;
-  background: var(--bg-page);
+  background: #F0F2F5;
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
