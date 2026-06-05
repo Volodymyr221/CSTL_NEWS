@@ -4118,19 +4118,22 @@ END:VEVENT`
     const newPage = document.getElementById(`page-${tab}`);
     if (!oldPage || !newPage)
       return;
+    const main = document.querySelector(".app-main");
     newPage.style.opacity = "0";
     newPage.style.display = "block";
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         oldPage.style.opacity = "0";
-        oldPage.style.transition = "opacity 0.18s ease";
-        newPage.style.transition = "opacity 0.22s ease";
+        oldPage.style.transition = "opacity 0.22s ease";
+        newPage.style.transition = "opacity 0.28s ease";
         newPage.style.opacity = "1";
         setTimeout(() => {
           oldPage.style.display = "none";
           oldPage.style.opacity = "";
           oldPage.style.transition = "";
           newPage.style.transition = "";
+          if (main)
+            main.scrollTop = 0;
         }, 220);
       });
     });
@@ -4138,11 +4141,8 @@ END:VEVENT`
     const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
     if (activeTab)
       activeTab.classList.add("active");
-    const main = document.querySelector(".app-main");
-    if (main) {
-      main.scrollTop = 0;
+    if (main)
       main.dataset.tab = tab;
-    }
     currentTab = tab;
   };
   window.closeArticleModal = function() {
