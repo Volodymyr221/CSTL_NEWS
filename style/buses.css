@@ -46,6 +46,14 @@
   z-index: 49;
 }
 
+/* Sticky-зона: віджет + заголовок прилипають під панеллю пошуку */
+.bus-sticky-zone {
+  position: sticky;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 62px);
+  z-index: 80;
+  background: #ECEEF2;
+}
+
 /* Smart-рядок наступного рейсу */
 .bus-smart-row {
   padding: 16px 14px 4px;
