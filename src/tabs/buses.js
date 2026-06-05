@@ -233,18 +233,15 @@ function selectStop(stop, field) {
 // "НАСТУПНА ЗУПИНКА", маршрутна шкала з підписами, ілюстрація автобуса справа.
 // 3 стани: waiting / enroute / past. Логіка — bus-schedule.js.
 
-function renderRouteMapV4(route, timings) {
+function renderRouteMapV4(route, timings, effFrom, effTo) {
   const stops   = route.stops;
   const totalKm = stops[stops.length - 1].km || 1;
   const pct     = (timings.progress * 100).toFixed(1);
 
-  // Показуємо максимум 5 зупинок під шкалою (перша, остання і до 3 проміжних)
-  const labelStops = stops.length <= 5
-    ? stops
-    : [stops[0], ...stops.slice(1, -1).filter((_, i, arr) => {
-        const step = Math.floor(arr.length / 3);
-        return i % step === 0;
-      }).slice(0, 3), stops[stops.length - 1]];
+  // Підписи: завжди точка A (effFrom) зліва і точка B (effTo) справа
+  const fromStop = stops.find(s => s.name === effFrom) || stops[0];
+  const toStop   = stops.find(s => s.name === effTo)   || stops[stops.length - 1];
+  const labelStops = [fromStop, toStop];
 
   // Рухома крапка прогресу — окремий елемент на точній позиції progress
   const movingDot = timings.state === 'enroute'
@@ -339,7 +336,7 @@ function buildHeroCard(route, timings, index, total) {
         </div>
       </div>
 
-      ${renderRouteMapV4(route, timings)}
+      ${renderRouteMapV4(route, timings, effFrom, effTo)}
     </div>`;
 }
 

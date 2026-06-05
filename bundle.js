@@ -3243,14 +3243,13 @@ ${ev.description}`
     renderSmartRow();
     renderRouteList();
   }
-  function renderRouteMapV4(route, timings) {
+  function renderRouteMapV4(route, timings, effFrom, effTo) {
     const stops = route.stops;
     const totalKm = stops[stops.length - 1].km || 1;
     const pct = (timings.progress * 100).toFixed(1);
-    const labelStops = stops.length <= 5 ? stops : [stops[0], ...stops.slice(1, -1).filter((_, i, arr) => {
-      const step = Math.floor(arr.length / 3);
-      return i % step === 0;
-    }).slice(0, 3), stops[stops.length - 1]];
+    const fromStop2 = stops.find((s) => s.name === effFrom) || stops[0];
+    const toStop2 = stops.find((s) => s.name === effTo) || stops[stops.length - 1];
+    const labelStops = [fromStop2, toStop2];
     const movingDot = timings.state === "enroute" ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : "";
     const dotsHtml = stops.map((s) => {
       const dotPct = totalKm ? s.km / totalKm * 100 : 0;
@@ -3323,7 +3322,7 @@ ${ev.description}`
         </div>
       </div>
 
-      ${renderRouteMapV4(route, timings)}
+      ${renderRouteMapV4(route, timings, effFrom, effTo)}
     </div>`;
   }
   function renderSmartRow() {
