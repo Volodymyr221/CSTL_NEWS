@@ -58,9 +58,23 @@ function getEffectiveTo(route) {
 }
 
 // ── Filtering (фільтрація рейсів) ─────────────────────────────────────
+
+// Зупинки у реальному порядку руху автобуса (деякі маршрути у schedule.json
+// мають зупинки у зворотньому порядку відносно фактичного руху).
+// Використовуємо назву маршруту як джерело правди для визначення напрямку.
+function getOrderedStops(route) {
+  const stops = route.stops;
+  if (stops.length < 2) return stops;
+  const [nameFrom] = parseRouteEndpoints(route.name);
+  const first = stops[0].name.toLowerCase();
+  const nameLow = nameFrom.toLowerCase();
+  const firstMatchesOrigin = nameLow.startsWith(first) || first.startsWith(nameLow);
+  return firstMatchesOrigin ? stops : [...stops].reverse();
+}
+
 function matchesSearch(route) {
   if (!isDayActive(route.days)) return false;
-  const stops   = route.stops;
+  const stops   = getOrderedStops(route);
   const fromIdx = fromStop ? stops.findIndex(s => s.name === fromStop) : 0;
   const toIdx   = toStop   ? stops.findIndex(s => s.name === toStop)   : stops.length - 1;
   if (fromStop && fromIdx === -1) return false;
@@ -426,7 +440,11 @@ function renderRouteList() {
   const toRender = showAll ? all : future;
 
   if (!all.length) {
-    el.innerHTML = `<div class="empty-state">За цим маршрутом рейсів не знайдено</div>`;
+    const hasFilter = fromStop || toStop;
+    const msg = hasFilter
+      ? `На сьогодні рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`
+      : 'Рейсів не знайдено';
+    el.innerHTML = `<div class="empty-state">${msg}</div>`;
     return;
   }
 
