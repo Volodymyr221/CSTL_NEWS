@@ -48,17 +48,18 @@
 
 /* Smart-рядок наступного рейсу */
 .bus-smart-row {
-  padding: 16px 14px 8px;
+  padding: 16px 14px 4px;
 }
 
 /* Заголовок над розкладом */
 .bus-list-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0.8px;
+  letter-spacing: 1px;
   color: var(--ink-mute);
-  padding: 16px 16px 8px;
+  padding: 20px 16px 10px;
   text-transform: uppercase;
+  text-align: center;
 }
 
 /* ── Hero-картка v4 (05.06.2026) ─────────────────────────────────────────
