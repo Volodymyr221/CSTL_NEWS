@@ -5,7 +5,8 @@
   background: #F0F2F5;
 }
 #page-buses .bus-search,
-#page-buses .bus-list {
+#page-buses .bus-list,
+#page-buses .bus-card {
   background: #F0F2F5;
 }
 .buses-updated {
