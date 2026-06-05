@@ -32,11 +32,14 @@
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
-  color: var(--black);
+  color: var(--red);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-align: left;
   flex: 1;
 }
 .cm-block-link {
