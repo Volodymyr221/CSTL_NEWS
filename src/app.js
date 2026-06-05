@@ -36,11 +36,7 @@ window.switchTab = function(tab) {
         oldPage.style.opacity = '';
         oldPage.style.transition = '';
         newPage.style.transition = '';
-        // Скидаємо скрол і міняємо фон після завершення fade — без ривків
-        if (main) {
-          main.scrollTop = 0;
-          main.dataset.tab = tab;
-        }
+        if (main) main.scrollTop = 0;
       }, 220);
     });
   });
@@ -49,6 +45,9 @@ window.switchTab = function(tab) {
   document.querySelectorAll('.tab-item').forEach(t => t.classList.remove('active'));
   const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
   if (activeTab) activeTab.classList.add('active');
+
+  // Фон змінюється разом з анімацією — CSS transition 0.3s згладжує
+  if (main) main.dataset.tab = tab;
 
   currentTab = tab;
 };

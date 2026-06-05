@@ -4132,10 +4132,8 @@ END:VEVENT`
           oldPage.style.opacity = "";
           oldPage.style.transition = "";
           newPage.style.transition = "";
-          if (main) {
+          if (main)
             main.scrollTop = 0;
-            main.dataset.tab = tab;
-          }
         }, 220);
       });
     });
@@ -4143,6 +4141,8 @@ END:VEVENT`
     const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
     if (activeTab)
       activeTab.classList.add("active");
+    if (main)
+      main.dataset.tab = tab;
     currentTab = tab;
   };
   window.closeArticleModal = function() {
