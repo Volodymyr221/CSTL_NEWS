@@ -1,4 +1,13 @@
 /* ===== BUSES v2 ===== */
+
+/* Фон тільки для вкладки Автобуси — нейтральний матовий сірий */
+#page-buses {
+  background: #F0F2F5;
+}
+#page-buses .bus-search,
+#page-buses .bus-list {
+  background: #F0F2F5;
+}
 .buses-updated {
   font-size: 11px;
   color: var(--gray);
