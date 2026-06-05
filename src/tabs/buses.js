@@ -329,7 +329,7 @@ function buildHeroCard(route, timings, index, total) {
 
       <div class="bhv4-body">
         <div class="bhv4-left">
-          <div class="bhv4-route-name">${escapeHtml(effFrom.toUpperCase())} – ${escapeHtml(effTo.toUpperCase())}</div>
+          <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} – ${effTo}`).toUpperCase())}</div>
           <div class="bhv4-times-row">
             <span class="bhv4-time-capsule">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span>
             ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ''}
