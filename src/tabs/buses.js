@@ -233,15 +233,22 @@ function selectStop(stop, field) {
 // "НАСТУПНА ЗУПИНКА", маршрутна шкала з підписами, ілюстрація автобуса справа.
 // 3 стани: waiting / enroute / past. Логіка — bus-schedule.js.
 
-function renderRouteMapV4(route, timings, effFrom, effTo) {
+// Витягує [cityA, cityB] з назви маршруту VOPAS:
+// "Луцьк Рівне" → ["Луцьк","Рівне"], "Луцьк- Личани ч/з Покащів" → ["Луцьк","Личани"]
+function parseRouteEndpoints(name) {
+  const clean  = name.replace(/-\s*/g, ' ').replace(/\s+/g, ' ').trim();
+  const noVia  = clean.split(' ч/з ')[0].trim();
+  const parts  = noVia.split(' ');
+  return [parts[0], parts[parts.length - 1]];
+}
+
+function renderRouteMapV4(route, timings) {
   const stops   = route.stops;
   const totalKm = stops[stops.length - 1].km || 1;
   const pct     = (timings.progress * 100).toFixed(1);
 
-  // Підписи: завжди точка A (effFrom) зліва і точка B (effTo) справа
-  const fromStop = stops.find(s => s.name === effFrom) || stops[0];
-  const toStop   = stops.find(s => s.name === effTo)   || stops[stops.length - 1];
-  const labelStops = [fromStop, toStop];
+  // Підписи A і B — з назви маршруту (відповідають назві рейсу у списку)
+  const [labelA, labelB] = parseRouteEndpoints(route.name || '');
 
   // Рухома крапка прогресу — окремий елемент на точній позиції progress
   const movingDot = timings.state === 'enroute'
@@ -255,12 +262,9 @@ function renderRouteMapV4(route, timings, effFrom, effTo) {
                   style="left:${dotPct.toFixed(1)}%"></span>`;
   }).join('');
 
-  const labelsHtml = labelStops.map(s => {
-    const lPct      = totalKm ? (s.km / totalKm) * 100 : 0;
-    const isCurrent = s.name === timings.currentStop;
-    return `<span class="bhv4-label${isCurrent ? ' bhv4-label--current' : ''}"
-                  style="left:${lPct.toFixed(1)}%">${escapeHtml(s.name)}</span>`;
-  }).join('');
+  const labelsHtml =
+    `<span class="bhv4-label bhv4-label--a">${escapeHtml(labelA.toUpperCase())}</span>` +
+    `<span class="bhv4-label bhv4-label--b">${escapeHtml(labelB.toUpperCase())}</span>`;
 
   return `
     <div class="bhv4-map" aria-hidden="true">
@@ -336,7 +340,7 @@ function buildHeroCard(route, timings, index, total) {
         </div>
       </div>
 
-      ${renderRouteMapV4(route, timings, effFrom, effTo)}
+      ${renderRouteMapV4(route, timings)}
     </div>`;
 }
 
