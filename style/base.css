@@ -177,9 +177,13 @@ html, body {
   overscroll-behavior-y: contain;
   padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  background: var(--bg-page);
 }
+/* Фон скролера відповідає активній вкладці — щоб overscroll-bounce (iOS) не показував body */
+.app-main[data-tab="buses"] { background: #F0F2F5; }
 .page {
   min-height: calc(100svh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-bottom, 0px));
+  padding-bottom: 20px;
 }
 
 /* ===== TOAST ===== */

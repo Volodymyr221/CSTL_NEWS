@@ -4141,8 +4141,10 @@ END:VEVENT`
     if (activeTab)
       activeTab.classList.add("active");
     const main = document.querySelector(".app-main");
-    if (main)
+    if (main) {
       main.scrollTop = 0;
+      main.dataset.tab = tab;
+    }
     currentTab = tab;
   };
   window.closeArticleModal = function() {

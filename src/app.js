@@ -46,7 +46,11 @@ window.switchTab = function(tab) {
   // Скидаємо скрол вгору щоб нова вкладка відкривалась з початку
   // (інакше при перемиканні з довгої Громади на Дошку — її контент видно з середини)
   const main = document.querySelector('.app-main');
-  if (main) main.scrollTop = 0;
+  if (main) {
+    main.scrollTop = 0;
+    // data-tab на .app-main — щоб CSS міг задати правильний фон для overscroll bounce
+    main.dataset.tab = tab;
+  }
 
   currentTab = tab;
 };
