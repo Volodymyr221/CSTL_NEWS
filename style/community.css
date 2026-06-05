@@ -26,20 +26,19 @@
   min-width: 0;
 }
 .cm-block-title--bus-link {
-  background-image: linear-gradient(to right, transparent 0%, var(--red) 15%, var(--red) 85%, transparent 100%);
-  background-size: 100% 2px;
-  background-position: 0 100%;
-  background-repeat: no-repeat;
+  background: none;
   border: none;
-  padding-bottom: 4px;
+  padding: 0;
   font-family: inherit;
   font-size: 13px;
   font-weight: 800;
-  color: var(--black);
+  color: var(--red);
   letter-spacing: 0.5px;
   text-transform: uppercase;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  text-decoration: underline;
+  text-underline-offset: 3px;
   text-align: left;
   flex: 1;
 }
