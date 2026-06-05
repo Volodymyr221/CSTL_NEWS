@@ -3295,33 +3295,35 @@ ${ev.description}`
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
-      <div class="bhv4-topbar">
-        <span class="bhv4-status">
-          <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="2" y="4" width="20" height="13" rx="2"/>
-            <path d="M2 9h20"/>
-            <path d="M8 4v5M16 4v5"/>
-            <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
-            <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
-          </svg>
-          <span class="bhv4-status-text">${statusText}</span>
-          <span class="bhv4-status-dot">${statusDot}</span>
-        </span>
-        <span class="bhv4-dots-nav">${dotsHtml}</span>
-      </div>
-
-      <div class="bhv4-body">
-        <div class="bhv4-left">
-          <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
-          <div class="bhv4-times-row">
-            <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
-            ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
-          </div>
-          ${nextStopLine}
+      <div class="bhv4-content">
+        <div class="bhv4-topbar">
+          <span class="bhv4-status">
+            <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="2" y="4" width="20" height="13" rx="2"/>
+              <path d="M2 9h20"/>
+              <path d="M8 4v5M16 4v5"/>
+              <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
+              <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
+            </svg>
+            <span class="bhv4-status-text">${statusText}</span>
+            <span class="bhv4-status-dot">${statusDot}</span>
+          </span>
+          <span class="bhv4-dots-nav">${dotsHtml}</span>
         </div>
-      </div>
 
-      ${renderRouteMapV4(route, timings)}
+        <div class="bhv4-body">
+          <div class="bhv4-left">
+            <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
+            <div class="bhv4-times-row">
+              <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
+              ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
+            </div>
+            ${nextStopLine}
+          </div>
+        </div>
+
+        ${renderRouteMapV4(route, timings)}
+      </div>
     </div>`;
   }
   function renderSmartRow() {
@@ -3361,28 +3363,28 @@ ${ev.description}`
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
-    const card = el.firstElementChild;
-    if (!card) {
+    const content = el.querySelector(".bhv4-content");
+    if (!content) {
       renderSmartRow();
       renderRouteList();
       return;
     }
-    card.style.transition = "opacity 0.18s ease";
-    card.style.opacity = "0";
+    content.style.transition = "opacity 0.15s ease";
+    content.style.opacity = "0";
     setTimeout(() => {
       renderSmartRow();
       renderRouteList();
-      const newCard = el.firstElementChild;
-      if (newCard) {
-        newCard.style.opacity = "0";
-        newCard.style.transition = "opacity 0.22s ease";
+      const newContent = el.querySelector(".bhv4-content");
+      if (newContent) {
+        newContent.style.opacity = "0";
+        newContent.style.transition = "opacity 0.2s ease";
         requestAnimationFrame(() => {
           requestAnimationFrame(() => {
-            newCard.style.opacity = "1";
+            newContent.style.opacity = "1";
           });
         });
       }
-    }, 180);
+    }, 150);
   }
   function renderRouteList() {
     const el = document.getElementById("bus-list");
