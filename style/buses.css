@@ -239,11 +239,11 @@
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
 }
 
-/* Підписи зупинок під шкалою */
+/* Підписи зупинок над шкалою */
 .bhv4-labels {
   position: relative;
-  height: 24px;
-  margin: 6px 8px 0;
+  height: 20px;
+  margin: 0 8px 6px;
 }
 .bhv4-label {
   position: absolute;
