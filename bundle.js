@@ -3144,15 +3144,16 @@ ${ev.description}`
   }
   function findActiveRoutes() {
     const all = getFilteredRoutes();
-    const now = nowMinutes();
-    const enroute = all.filter((r) => getRouteState(r) === "enroute").sort((a, b) => (getRouteTimings(a).minsToArrival ?? Infinity) - (getRouteTimings(b).minsToArrival ?? Infinity));
-    const waiting = all.filter((r) => {
-      if (getRouteState(r) !== "waiting")
-        return false;
-      const t = getRouteTimings(r);
-      return t.minsToDeparture !== null && t.minsToDeparture <= 90;
-    }).sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity));
-    const result = [...enroute, ...waiting];
+    const result = all.filter((r) => {
+      const state = getRouteState(r);
+      if (state === "enroute")
+        return true;
+      if (state === "waiting") {
+        const t = getRouteTimings(r);
+        return t.minsToDeparture !== null && t.minsToDeparture <= 90;
+      }
+      return false;
+    });
     return result.length ? result : findNextRoute() ? [findNextRoute()] : [];
   }
   function getAllStops() {
