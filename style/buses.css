@@ -75,6 +75,12 @@
   z-index: 1;
 }
 
+/* Контент поверх фото і оверлею — фейдиться при свайпі */
+.bhv4-content {
+  position: relative;
+  z-index: 2;
+}
+
 /* Псевдоелемент більше не потрібен */
 .bhv4-bg-castle { display: none; }
 
