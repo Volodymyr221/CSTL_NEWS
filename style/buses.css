@@ -434,14 +434,15 @@
 .bus-smart-route { font-size: 13px; color: var(--gray); }
 .bus-smart-empty { font-size: 14px; color: var(--gray); padding: 8px 0; }
 
-/* Картка рейсу */
+/* Картка рейсу — Apple-мінімал */
 .bus-card {
-  padding: 10px 16px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--hairline);
+  background: var(--paper);
 }
-.bus-card.past { opacity: 0.35; }
+.bus-card.past { opacity: 0.32; }
 .bus-card.next {
-  background: rgba(230, 204, 143, 0.18); /* медовий 18% — підсвічуємо наступний у списку */
+  background: var(--paper); /* медовий 18% — підсвічуємо наступний у списку */
 }
 
 .bus-card-main {
@@ -450,23 +451,23 @@
   gap: 12px;
 }
 
-/* Час відправлення — головний акцент, компактний */
+/* Час відправлення — Apple-стиль, великий sans */
 .bus-card-time {
-  font-family: Georgia, serif;
-  font-size: 26px;
+  font-size: 30px;
   font-weight: 700;
   color: var(--ink);
-  min-width: 72px;
-  letter-spacing: -0.5px;
+  min-width: 68px;
+  letter-spacing: -1.5px;
   line-height: 1;
   flex-shrink: 0;
+  font-variant-numeric: tabular-nums;
 }
 .bus-card.past .bus-card-time { color: var(--ink-mute); }
 
 .bus-card-info { flex: 1; min-width: 0; }
 
 .bus-card-route {
-  font-size: 13.5px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--ink);
   margin-bottom: 2px;
@@ -477,12 +478,12 @@
 .bus-card-meta {
   display: flex;
   align-items: center;
-  gap: 5px;
-  font-size: 11.5px;
-  color: var(--ink-soft);
+  gap: 4px;
+  font-size: 12px;
+  color: var(--gray);
   margin-bottom: 0;
 }
-.bus-meta-sep { opacity: 0.4; }
+.bus-meta-sep { opacity: 0.35; }
 
 .bus-card-verified {
   font-size: 10px;
@@ -616,20 +617,21 @@
   flex-direction: column;
   align-items: flex-start;
   flex-shrink: 0;
-  min-width: 72px;
+  min-width: 68px;
 }
 
 /* Час прибуття під відправленням */
 .bs-arr {
-  font-size: 11px;
+  font-size: 12px;
   color: var(--gray);
-  margin-top: 1px;
+  margin-top: 2px;
+  letter-spacing: -0.3px;
 }
 
-/* Підсвічування наступного рейсу — медовий тон у тон з hero */
+/* Підсвічування активного рейсу — бордова смуга зліва */
 .bus-card.next {
-  border-left: 3px solid var(--bus-deep);
-  background: rgba(230, 204, 143, 0.18);
+  border-left: 3px solid var(--red);
+  background: rgba(114, 47, 55, 0.05);
   padding-left: 13px;
 }
 .bus-card.next .bus-card-main { padding-left: 0; }
