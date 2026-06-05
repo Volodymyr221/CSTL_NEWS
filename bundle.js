@@ -3313,7 +3313,7 @@ ${ev.description}`
 
       <div class="bhv4-body">
         <div class="bhv4-left">
-          <div class="bhv4-route-name">${escapeHtml(effFrom.toUpperCase())} \u2013 ${escapeHtml(effTo.toUpperCase())}</div>
+          <div class="bhv4-route-name">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
           <div class="bhv4-times-row">
             <span class="bhv4-time-capsule">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span>
             ${durStr ? `<span class="bhv4-duration">${escapeHtml(durStr)}</span>` : ""}
