@@ -314,6 +314,8 @@ function buildHeroCard(route, timings, index, total) {
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
+      <span class="bhv4-dots-nav">${dotsHtml}</span>
+
       <div class="bhv4-content">
         <div class="bhv4-topbar">
           <span class="bhv4-status">
@@ -327,7 +329,6 @@ function buildHeroCard(route, timings, index, total) {
             <span class="bhv4-status-text">${statusText}</span>
             <span class="bhv4-status-dot">${statusDot}</span>
           </span>
-          <span class="bhv4-dots-nav">${dotsHtml}</span>
         </div>
 
         <div class="bhv4-body">
@@ -385,14 +386,14 @@ function renderSmartRow() {
   });
 }
 
-// Плавна заміна тексту: фейдить тільки .bhv4-content, картка (фото) стоїть нерухомо
+// Заміна тексту: крапки миттєво, контент — коротке зникнення/появлення
 function switchHeroCard() {
   const el      = document.getElementById('bus-smart-row');
   if (!el) return;
   const content = el.querySelector('.bhv4-content');
   if (!content) { renderSmartRow(); renderRouteList(); return; }
 
-  content.style.transition = 'opacity 0.15s ease';
+  content.style.transition = 'opacity 0.08s ease';
   content.style.opacity    = '0';
 
   setTimeout(() => {
@@ -401,12 +402,12 @@ function switchHeroCard() {
     const newContent = el.querySelector('.bhv4-content');
     if (newContent) {
       newContent.style.opacity    = '0';
-      newContent.style.transition = 'opacity 0.2s ease';
+      newContent.style.transition = 'opacity 0.1s ease';
       requestAnimationFrame(() => {
         requestAnimationFrame(() => { newContent.style.opacity = '1'; });
       });
     }
-  }, 150);
+  }, 80);
 }
 
 // ── Route list (список рейсів) ─────────────────────────────────────────
