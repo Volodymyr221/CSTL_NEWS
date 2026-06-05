@@ -622,7 +622,7 @@ function renderRouteList() {
       </button>`;
   }
 
-  el.innerHTML = cards + toggleHtml;
+  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ</div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
