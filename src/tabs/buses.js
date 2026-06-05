@@ -229,11 +229,15 @@ function renderRouteMapV4(route, timings) {
         return i % step === 0;
       }).slice(0, 3), stops[stops.length - 1]];
 
+  // Рухома крапка прогресу — окремий елемент на точній позиції progress
+  const movingDot = timings.state === 'enroute'
+    ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>`
+    : '';
+
   const dotsHtml = stops.map(s => {
-    const dotPct     = totalKm ? (s.km / totalKm) * 100 : 0;
-    const isCurrent  = s.name === timings.currentStop;
-    const isPassed   = totalKm ? (s.km / totalKm) <= timings.progress + 0.01 : false;
-    return `<span class="bhv4-dot${isCurrent ? ' bhv4-dot--current' : ''}${isPassed ? ' bhv4-dot--passed' : ''}"
+    const dotPct  = totalKm ? (s.km / totalKm) * 100 : 0;
+    const isPassed = totalKm ? (s.km / totalKm) <= timings.progress + 0.01 : false;
+    return `<span class="bhv4-dot${isPassed ? ' bhv4-dot--passed' : ''}"
                   style="left:${dotPct.toFixed(1)}%"></span>`;
   }).join('');
 
@@ -249,6 +253,7 @@ function renderRouteMapV4(route, timings) {
       <div class="bhv4-track">
         <div class="bhv4-fill" style="width:${pct}%"></div>
         ${dotsHtml}
+        ${movingDot}
       </div>
       <div class="bhv4-labels">${labelsHtml}</div>
     </div>`;
