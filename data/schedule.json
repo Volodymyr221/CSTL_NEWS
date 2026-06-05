@@ -1,9 +1,9 @@
 {
   "version": "05.06.2026",
   "verifiedAt": "05.06.2026",
-  "verifiedTime": "19:32",
+  "verifiedTime": "21:59",
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "note": "Авто-парсинг vopas.com.ua. Оновлено 05.06.2026 19:32 Київ.",
+  "note": "Авто-парсинг vopas.com.ua. Оновлено 05.06.2026 21:59 Київ.",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -681,7 +681,7 @@
       "bus": "БАЗ-А 0 79",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": true,
+      "sale_active": false,
       "departure_time": "20:05",
       "arrival_time": "21:30",
       "duration_min": 85,
