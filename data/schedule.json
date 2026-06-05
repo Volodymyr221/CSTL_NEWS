@@ -1,9 +1,9 @@
 {
-  "version": "23.05.2026",
-  "verifiedAt": "23.05.2026",
-  "verifiedTime": "17:48",
+  "version": "05.06.2026",
+  "verifiedAt": "05.06.2026",
+  "verifiedTime": "13:54",
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "note": "Авто-парсинг vopas.com.ua. Оновлено 23.05.2026 17:48 Київ.",
+  "note": "Авто-парсинг vopas.com.ua. Оновлено 05.06.2026 13:54 Київ.",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -24,8 +24,8 @@
   },
   "routes": [
     {
-      "id": "vopas_1936030",
-      "vopas_id": "1936030",
+      "id": "vopas_1940670",
+      "vopas_id": "1940670",
       "name": "Ківерці Олика",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.24",
@@ -46,11 +46,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935841",
-      "vopas_id": "1935841",
+      "id": "vopas_1940476",
+      "vopas_id": "1940476",
       "name": "Луцьк- Личани",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.25",
@@ -71,11 +71,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935895",
-      "vopas_id": "1935895",
+      "id": "vopas_1940534",
+      "vopas_id": "1940534",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "АТАМАН А-09216",
@@ -96,11 +96,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935896",
-      "vopas_id": "1935896",
+      "id": "vopas_1940535",
+      "vopas_id": "1940535",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "Баз  А 091",
@@ -121,11 +121,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935946",
-      "vopas_id": "1935946",
+      "id": "vopas_1940585",
+      "vopas_id": "1940585",
       "name": "Луцьк Олика",
       "carrier": "черняк_п_к_43018_волинська_об",
       "bus": "БОГДАН А0902",
@@ -146,20 +146,20 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935909",
-      "vopas_id": "1935909",
+      "id": "vopas_1940548",
+      "vopas_id": "1940548",
       "name": "Луцьк Жорнище",
       "carrier": "черняк_п_к_43018_волинська_об",
-      "bus": "БАЗ 079-23",
+      "bus": "БАЗ-А079.19",
       "days": "щодня",
       "status": "scheduled",
       "sale_active": false,
-      "departure_time": "10:06",
+      "departure_time": "10:05",
       "arrival_time": "12:05",
-      "duration_min": 119,
+      "duration_min": 120,
       "auto_generated": false,
       "stops": [
         {
@@ -171,11 +171,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935897",
-      "vopas_id": "1935897",
+      "id": "vopas_1940536",
+      "vopas_id": "1940536",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.25",
@@ -196,11 +196,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935842",
-      "vopas_id": "1935842",
+      "id": "vopas_1940477",
+      "vopas_id": "1940477",
       "name": "Луцьк- Личани",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.25",
@@ -221,11 +221,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935898",
-      "vopas_id": "1935898",
+      "id": "vopas_1940537",
+      "vopas_id": "1940537",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.25",
@@ -246,11 +246,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935899",
-      "vopas_id": "1935899",
+      "id": "vopas_1940538",
+      "vopas_id": "1940538",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.25",
@@ -271,11 +271,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935838",
-      "vopas_id": "1935838",
+      "id": "vopas_1940473",
+      "vopas_id": "1940473",
       "name": "Луцьк- Личани ч/з Покащів",
       "carrier": "під_яцишин_м_м",
       "bus": "Баз  А  079.17",
@@ -296,11 +296,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935900",
-      "vopas_id": "1935900",
+      "id": "vopas_1940539",
+      "vopas_id": "1940539",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "АТАМАН А-09216",
@@ -321,11 +321,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935947",
-      "vopas_id": "1935947",
+      "id": "vopas_1940586",
+      "vopas_id": "1940586",
       "name": "Луцьк Олика",
       "carrier": "черняк_п_к_43018_волинська_об",
       "bus": "БОГДАН А0902",
@@ -346,17 +346,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935901",
-      "vopas_id": "1935901",
+      "id": "vopas_1940540",
+      "vopas_id": "1940540",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.24",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "14:00",
       "arrival_time": "15:35",
       "duration_min": 95,
@@ -371,16 +371,16 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935843",
-      "vopas_id": "1935843",
+      "id": "vopas_1940478",
+      "vopas_id": "1940478",
       "name": "Луцьк- Личани",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.24",
       "days": "щодня",
-      "status": "scheduled",
+      "status": "cancelled",
       "sale_active": false,
       "departure_time": "14:10",
       "arrival_time": "15:45",
@@ -396,16 +396,16 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935902",
-      "vopas_id": "1935902",
+      "id": "vopas_1940541",
+      "vopas_id": "1940541",
       "name": "Луцьк Рівне",
       "carrier": "санрайз_л_т_д",
       "bus": "",
       "days": "щодня",
-      "status": "scheduled",
+      "status": "cancelled",
       "sale_active": false,
       "departure_time": "14:25",
       "arrival_time": "16:05",
@@ -421,17 +421,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935903",
-      "vopas_id": "1935903",
+      "id": "vopas_1940542",
+      "vopas_id": "1940542",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.24",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "14:55",
       "arrival_time": "16:35",
       "duration_min": 100,
@@ -446,17 +446,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935910",
-      "vopas_id": "1935910",
+      "id": "vopas_1940549",
+      "vopas_id": "1940549",
       "name": "Луцьк Жорнище",
       "carrier": "черняк_п_к_43018_волинська_об",
       "bus": "",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "15:30",
       "arrival_time": "17:15",
       "duration_min": 105,
@@ -471,17 +471,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935904",
-      "vopas_id": "1935904",
+      "id": "vopas_1940543",
+      "vopas_id": "1940543",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БОГДАН А0921",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "15:40",
       "arrival_time": "17:20",
       "duration_min": 100,
@@ -496,17 +496,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935905",
-      "vopas_id": "1935905",
+      "id": "vopas_1940544",
+      "vopas_id": "1940544",
       "name": "Луцьк Рівне",
       "carrier": "мохнюк_т_с_волинська_обл",
       "bus": "БОГДАН А0902",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "16:40",
       "arrival_time": "18:30",
       "duration_min": 110,
@@ -521,17 +521,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1936031",
-      "vopas_id": "1936031",
+      "id": "vopas_1940671",
+      "vopas_id": "1940671",
       "name": "Ківерці Олика",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.24",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "16:50",
       "arrival_time": "18:00",
       "duration_min": 70,
@@ -546,16 +546,16 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935906",
-      "vopas_id": "1935906",
+      "id": "vopas_1940545",
+      "vopas_id": "1940545",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "Баз  А 091",
       "days": "щодня",
-      "status": "scheduled",
+      "status": "cancelled",
       "sale_active": false,
       "departure_time": "17:15",
       "arrival_time": "18:55",
@@ -571,17 +571,17 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935907",
-      "vopas_id": "1935907",
+      "id": "vopas_1940546",
+      "vopas_id": "1940546",
       "name": "Луцьк Рівне",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ-А079.19",
       "days": "щодня",
       "status": "scheduled",
-      "sale_active": false,
+      "sale_active": true,
       "departure_time": "17:30",
       "arrival_time": "19:05",
       "duration_min": 95,
@@ -596,11 +596,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935839",
-      "vopas_id": "1935839",
+      "id": "vopas_1940474",
+      "vopas_id": "1940474",
       "name": "Луцьк- Личани ч/з Покащів",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ-А 0 79",
@@ -621,11 +621,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935948",
-      "vopas_id": "1935948",
+      "id": "vopas_1940587",
+      "vopas_id": "1940587",
       "name": "Луцьк Олика",
       "carrier": "черняк_п_к_43018_волинська_об",
       "bus": "БОГДАН А0902",
@@ -646,11 +646,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935844",
-      "vopas_id": "1935844",
+      "id": "vopas_1940479",
+      "vopas_id": "1940479",
       "name": "Луцьк- Личани",
       "carrier": "під_яцишин_м_м",
       "bus": "БАЗ А 079.24",
@@ -671,11 +671,11 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=05.06.2026&time=00+%3A+00"
     },
     {
-      "id": "vopas_1935911",
-      "vopas_id": "1935911",
+      "id": "vopas_1940550",
+      "vopas_id": "1940550",
       "name": "Луцьк Жорнище",
       "carrier": "черняк_п_к_43018_волинська_об",
       "bus": "БАЗ-А 0 79",
@@ -696,7 +696,7 @@
           "km": 100
         }
       ],
-      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.05.2026&time=00+%3A+00"
+      "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.06.2026&time=00+%3A+00"
     }
   ]
 }
