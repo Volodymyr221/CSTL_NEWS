@@ -56,10 +56,29 @@
   font-size: 13px;
   font-weight: 700;
   letter-spacing: 1px;
-  color: var(--ink-mute);
-  padding: 20px 16px 10px;
+  color: #1C1C1E;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+  padding: 20px 16px 18px;
   text-transform: uppercase;
   text-align: center;
+  position: relative;
+}
+.bus-list-title::after {
+  content: '';
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 70%;
+  height: 1.5px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(28,28,30,0.25) 25%,
+    rgba(28,28,30,0.45) 50%,
+    rgba(28,28,30,0.25) 75%,
+    transparent 100%
+  );
+  border-radius: 1px;
 }
 
 /* ── Hero-картка v4 (05.06.2026) ─────────────────────────────────────────
