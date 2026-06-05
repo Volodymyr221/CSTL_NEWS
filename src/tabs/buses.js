@@ -250,12 +250,12 @@ function renderRouteMapV4(route, timings) {
 
   return `
     <div class="bhv4-map" aria-hidden="true">
+      <div class="bhv4-labels">${labelsHtml}</div>
       <div class="bhv4-track">
         <div class="bhv4-fill" style="width:${pct}%"></div>
         ${dotsHtml}
         ${movingDot}
       </div>
-      <div class="bhv4-labels">${labelsHtml}</div>
     </div>`;
 }
 
