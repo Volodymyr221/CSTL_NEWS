@@ -303,11 +303,12 @@ function renderSmartRow() {
 
       <div class="bhv4-topbar">
         <span class="bhv4-status">
-          <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="1" y="6" width="22" height="13" rx="2"/>
-            <path d="M16 6V4a2 2 0 0 0-2-2H10a2 2 0 0 0-2 2v2"/>
-            <circle cx="7" cy="19" r="2"/><circle cx="17" cy="19" r="2"/>
-            <line x1="7" y1="17" x2="17" y2="17"/>
+          <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="2" y="4" width="20" height="13" rx="2"/>
+            <path d="M2 9h20"/>
+            <path d="M8 4v5M16 4v5"/>
+            <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
+            <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
           </svg>
           <span class="bhv4-status-text">${statusText}</span>
           <span class="bhv4-status-dot">${statusDot}</span>
