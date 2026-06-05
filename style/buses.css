@@ -436,6 +436,18 @@
   font-weight: 600;
   transition: background 0.15s;
 }
+
+/* "Сховати минулі" — липне під панеллю пошуку поки скролиш список */
+.bus-show-all--less {
+  position: sticky;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 62px);
+  background: #ECEEF2;
+  border-top: none;
+  border-bottom: 1px solid var(--border);
+  z-index: 80;
+  color: var(--gray);
+  font-weight: 400;
+}
 .bus-show-all:active { background: var(--gray-light); }
 .bus-show-all--less { color: var(--gray); font-weight: 400; }
 
