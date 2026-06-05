@@ -375,7 +375,7 @@ function renderSmartRow() {
 
   const routes = findActiveRoutes();
   if (!routes.length) {
-    el.innerHTML = `<div class="bhv4-empty">Рейсів сьогодні більше немає</div>`;
+    el.innerHTML = `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
     return;
   }
 
@@ -523,7 +523,6 @@ function renderRouteList() {
 
   if (!toRender.length) {
     el.innerHTML = `
-      <div class="empty-state">Рейсів сьогодні більше немає</div>
       <button class="bus-show-all" id="bus-show-all-btn">
         Показати всі ${all.length} рейси ↓
       </button>`;
