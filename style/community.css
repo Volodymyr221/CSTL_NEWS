@@ -20,7 +20,8 @@
 .cm-block-footer {
   display: flex;
   align-items: center;
-  padding: 16px 16px 18px;
+  justify-content: center;
+  padding: 28px 16px 28px;
 }
 .cm-block-title {
   font-size: 15px;
