@@ -2266,7 +2266,7 @@ ${post.text}
         \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
       </button>`;
     }
-    el.innerHTML = toggleHtml + cards;
+    el.innerHTML = toggleHtml + `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412</div>` + cards;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;
@@ -2371,10 +2371,7 @@ ${post.text}
     }
     el.innerHTML = `
     <div id="bus-search-panel" class="bus-search"></div>
-    <div class="bus-sticky-zone">
-      <div id="bus-smart-row" class="bus-smart-row"></div>
-      <div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412</div>
-    </div>
+    <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
