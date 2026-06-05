@@ -250,30 +250,22 @@
   filter: drop-shadow(0 2px 3px rgba(0,0,0,0.4));
 }
 
-/* Підписи зупинок над шкалою */
+/* Підписи A і B над шкалою */
 .bhv4-labels {
-  position: relative;
-  height: 20px;
+  display: flex;
+  justify-content: space-between;
   margin: 0 8px 6px;
 }
 .bhv4-label {
-  position: absolute;
-  transform: translateX(-50%);
   font-size: 10px;
   font-weight: 600;
   color: rgba(255,255,255,0.6);
   letter-spacing: 0.5px;
   white-space: nowrap;
-  text-align: center;
   text-transform: uppercase;
 }
-.bhv4-label--current {
-  color: #7DDA58;
-  font-weight: 800;
-}
-/* Перша і остання — вирівнювання до країв */
-.bhv4-label:first-child { transform: translateX(0); }
-.bhv4-label:last-child  { transform: translateX(-100%); }
+.bhv4-label--a { color: #7DDA58; font-weight: 800; }
+.bhv4-label--b { color: rgba(255,255,255,0.6); }
 
 /* Порожній стан */
 .bhv4-empty {

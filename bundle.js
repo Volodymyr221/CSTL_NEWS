@@ -3243,13 +3243,17 @@ ${ev.description}`
     renderSmartRow();
     renderRouteList();
   }
-  function renderRouteMapV4(route, timings, effFrom, effTo) {
+  function parseRouteEndpoints(name) {
+    const clean = name.replace(/-\s*/g, " ").replace(/\s+/g, " ").trim();
+    const noVia = clean.split(" \u0447/\u0437 ")[0].trim();
+    const parts = noVia.split(" ");
+    return [parts[0], parts[parts.length - 1]];
+  }
+  function renderRouteMapV4(route, timings) {
     const stops = route.stops;
     const totalKm = stops[stops.length - 1].km || 1;
     const pct = (timings.progress * 100).toFixed(1);
-    const fromStop2 = stops.find((s) => s.name === effFrom) || stops[0];
-    const toStop2 = stops.find((s) => s.name === effTo) || stops[stops.length - 1];
-    const labelStops = [fromStop2, toStop2];
+    const [labelA, labelB] = parseRouteEndpoints(route.name || "");
     const movingDot = timings.state === "enroute" ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : "";
     const dotsHtml = stops.map((s) => {
       const dotPct = totalKm ? s.km / totalKm * 100 : 0;
@@ -3257,12 +3261,7 @@ ${ev.description}`
       return `<span class="bhv4-dot${isPassed ? " bhv4-dot--passed" : ""}"
                   style="left:${dotPct.toFixed(1)}%"></span>`;
     }).join("");
-    const labelsHtml = labelStops.map((s) => {
-      const lPct = totalKm ? s.km / totalKm * 100 : 0;
-      const isCurrent = s.name === timings.currentStop;
-      return `<span class="bhv4-label${isCurrent ? " bhv4-label--current" : ""}"
-                  style="left:${lPct.toFixed(1)}%">${escapeHtml(s.name)}</span>`;
-    }).join("");
+    const labelsHtml = `<span class="bhv4-label bhv4-label--a">${escapeHtml(labelA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(labelB.toUpperCase())}</span>`;
     return `
     <div class="bhv4-map" aria-hidden="true">
       <div class="bhv4-labels">${labelsHtml}</div>
@@ -3322,7 +3321,7 @@ ${ev.description}`
         </div>
       </div>
 
-      ${renderRouteMapV4(route, timings, effFrom, effTo)}
+      ${renderRouteMapV4(route, timings)}
     </div>`;
   }
   function renderSmartRow() {
