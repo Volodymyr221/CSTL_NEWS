@@ -1774,6 +1774,7 @@ ${post.text}
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
   var busData = null;
+  var busDay = getTodayISO();
   var fromStop = "";
   var toStop = "";
   var showAll = false;
@@ -1781,6 +1782,24 @@ ${post.text}
   var expandedIds = /* @__PURE__ */ new Set();
   var activeField = null;
   var smartRowIndex = 0;
+  function getTodayISO() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+  function getDayData() {
+    if (busData?.days)
+      return busData.days[busDay] || { routes: [], fetchedAt: "", fetchedTime: "" };
+    if (busDay === getTodayISO())
+      return {
+        routes: busData?.routes || [],
+        fetchedAt: busData?.verifiedAt || "",
+        fetchedTime: busData?.verifiedTime || ""
+      };
+    return { routes: [], fetchedAt: "", fetchedTime: "" };
+  }
+  function isViewingToday() {
+    return busDay === getTodayISO();
+  }
   function savePrefs() {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
   }
@@ -1852,7 +1871,7 @@ ${post.text}
   function getFilteredRoutes() {
     if (!busData)
       return [];
-    return busData.routes.filter(matchesSearch).sort((a, b) => {
+    return (getDayData().routes || []).filter(matchesSearch).sort((a, b) => {
       const aM = getStopMins(a, getEffectiveFrom(a)) || 0;
       const bM = getStopMins(b, getEffectiveFrom(b)) || 0;
       return aM - bM;
@@ -1890,7 +1909,8 @@ ${post.text}
     if (!busData)
       return [];
     const seen = /* @__PURE__ */ new Set();
-    busData.routes.forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
+    const allDays = busData.days ? Object.values(busData.days) : [{ routes: busData.routes || [] }];
+    allDays.forEach((d) => (d.routes || []).forEach((r) => r.stops.forEach((s) => seen.add(s.name))));
     return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
   }
   function openDropdown(field) {
@@ -2066,6 +2086,10 @@ ${post.text}
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
+    if (!isViewingToday()) {
+      el.innerHTML = "";
+      return;
+    }
     const routes = findActiveRoutes();
     if (!routes.length) {
       el.innerHTML = `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>`;
@@ -2197,17 +2221,19 @@ ${post.text}
     const all = getFilteredRoutes();
     const future = all.filter((r) => !isPastRoute(r));
     const past = all.filter((r) => isPastRoute(r));
-    const toRender = showAll ? all : future;
+    const toRender = isViewingToday() ? showAll ? all : future : all;
     if (!all.length) {
       const hasFilter = fromStop || toStop;
       if (hasFilter) {
-        const msg = `\u041D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
+        const dayData = getDayData();
+        const msg = `\u041D\u0430 ${isViewingToday() ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : dayData.fetchedAt || "\u0446\u0435\u0439 \u0434\u0435\u043D\u044C"} \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
         el.innerHTML = `<div class="empty-state">${msg}</div>`;
       } else {
         el.innerHTML = "";
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
-          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime || "")} | ${escapeHtml(busData.verifiedAt || "")}</span>`;
+          const dd2 = getDayData();
+          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd2.fetchedTime || "")} | ${escapeHtml(dd2.fetchedAt || "")}</span>`;
         }
       }
       return;
@@ -2281,21 +2307,24 @@ ${post.text}
       </div>`;
     }).join("");
     let toggleHtml = "";
-    if (!showAll && past.length > 0) {
-      toggleHtml = `
-      <button class="bus-show-all" id="bus-show-all-btn">
-        \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
-      </button>`;
-    } else if (showAll && past.length > 0) {
-      toggleHtml = `
-      <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
-        \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
-      </button>`;
+    if (isViewingToday()) {
+      if (!showAll && past.length > 0) {
+        toggleHtml = `
+        <button class="bus-show-all" id="bus-show-all-btn">
+          \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u0437\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u2193
+        </button>`;
+      } else if (showAll && past.length > 0) {
+        toggleHtml = `
+        <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
+          \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
+        </button>`;
+      }
     }
     const updRow = document.getElementById("buses-updated-row");
     if (updRow && busData)
       updRow.innerHTML = escapeHtml(busData.source);
-    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData?.verifiedTime || "")} | ${escapeHtml(busData?.verifiedAt || "")}</span></div>` + cards + toggleHtml;
+    const dd = getDayData();
+    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime || "")} | ${escapeHtml(dd.fetchedAt || "")}</span></div>` + cards + toggleHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;
@@ -2313,6 +2342,44 @@ ${post.text}
         renderRouteList();
       });
     }
+  }
+  function renderWeekStrip() {
+    const el = document.getElementById("bus-week-strip");
+    if (!el)
+      return;
+    const todayISO = getTodayISO();
+    const now = /* @__PURE__ */ new Date();
+    const monday = new Date(now);
+    const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    monday.setDate(now.getDate() - dow);
+    monday.setHours(0, 0, 0, 0);
+    const dayNames = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
+    let html = '<div class="bus-week-days">';
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(monday);
+      d.setDate(monday.getDate() + i);
+      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const dateNum = String(d.getDate()).padStart(2, "0");
+      const isPast = iso < todayISO;
+      const isTodayD = iso === todayISO;
+      const isActive = iso === busDay;
+      html += `<button class="bus-week-day${isTodayD ? " bus-week-day--today" : ""}${isActive ? " bus-week-day--active" : ""}${isPast ? " bus-week-day--past" : ""}" data-iso="${iso}">
+      <span class="bus-week-day-name">${dayNames[i]}</span>
+      <span class="bus-week-day-num">${dateNum}</span>
+    </button>`;
+    }
+    html += "</div>";
+    el.innerHTML = html;
+    el.querySelectorAll(".bus-week-day").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        busDay = btn.dataset.iso;
+        showAll = false;
+        smartRowIndex = 0;
+        renderWeekStrip();
+        renderSmartRow();
+        renderRouteList();
+      });
+    });
   }
   function renderSearchPanel() {
     const el = document.getElementById("bus-search-panel");
@@ -2400,11 +2467,14 @@ ${post.text}
     }
     el.innerHTML = `
     <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-week-strip" class="bus-week-strip"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
+    busDay = getTodayISO();
     renderSearchPanel();
+    renderWeekStrip();
     renderSmartRow();
     renderRouteList();
     if (timerInterval)

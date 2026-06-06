@@ -8,6 +8,7 @@ import {
 const PREFS_KEY = 'bus_prefs_v2';
 
 let busData       = null;
+let busDay        = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
 let fromStop      = '';
 let toStop        = '';
 let showAll       = false;
@@ -15,6 +16,25 @@ let timerInterval = null;
 let expandedIds   = new Set();
 let activeField   = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
 let smartRowIndex = 0;    // поточна картка у каруселі hero
+
+function getTodayISO() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function getDayData() {
+  // Нова структура: busData.days["2026-06-07"] = { routes, fetchedAt, fetchedTime }
+  // Зворотна сумісність: якщо days відсутній — стара структура з busData.routes
+  if (busData?.days) return busData.days[busDay] || { routes: [], fetchedAt: '', fetchedTime: '' };
+  if (busDay === getTodayISO()) return {
+    routes: busData?.routes || [],
+    fetchedAt: busData?.verifiedAt || '',
+    fetchedTime: busData?.verifiedTime || '',
+  };
+  return { routes: [], fetchedAt: '', fetchedTime: '' };
+}
+
+function isViewingToday() { return busDay === getTodayISO(); }
 
 // ── Preferences (localStorage — збереження налаштувань у браузері) ────
 function savePrefs() {
@@ -90,7 +110,7 @@ function isPastRoute(route) {
 
 function getFilteredRoutes() {
   if (!busData) return [];
-  return busData.routes
+  return (getDayData().routes || [])
     .filter(matchesSearch)
     .sort((a, b) => {
       const aM = getStopMins(a, getEffectiveFrom(a)) || 0;
@@ -135,7 +155,9 @@ function findActiveRoutes() {
 function getAllStops() {
   if (!busData) return [];
   const seen = new Set();
-  busData.routes.forEach(r => r.stops.forEach(s => seen.add(s.name)));
+  // Збираємо зупинки з усіх днів тижня для автодоповнення
+  const allDays = busData.days ? Object.values(busData.days) : [{ routes: busData.routes || [] }];
+  allDays.forEach(d => (d.routes || []).forEach(r => r.stops.forEach(s => seen.add(s.name))));
   return [...seen].sort((a, b) => a.localeCompare(b, 'uk'));
 }
 
@@ -373,6 +395,9 @@ function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
 
+  // Hero-картка тільки для сьогодні — для інших днів порожньо
+  if (!isViewingToday()) { el.innerHTML = ''; return; }
+
   const routes = findActiveRoutes();
   if (!routes.length) {
     el.innerHTML = `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
@@ -525,19 +550,23 @@ function renderRouteList() {
   const all      = getFilteredRoutes();
   const future   = all.filter(r => !isPastRoute(r));
   const past     = all.filter(r => isPastRoute(r));
-  const toRender = showAll ? all : future;
+  // Для сьогодні: за замовчуванням тільки майбутні (можна розгорнути).
+  // Для інших днів: завжди всі — немає сенсу ховати "минулі" вчорашнього дня.
+  const toRender = isViewingToday() ? (showAll ? all : future) : all;
 
   if (!all.length) {
     const hasFilter = fromStop || toStop;
     if (hasFilter) {
-      const msg = `На сьогодні рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
+      const dayData = getDayData();
+      const msg = `На ${isViewingToday() ? 'сьогодні' : dayData.fetchedAt || 'цей день'} рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
       el.innerHTML = `<div class="empty-state">${msg}</div>`;
     } else {
       el.innerHTML = '';
       // "Оновлено" — під рядком джерела VOPAS (коли маршрутів 0)
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
-        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData.verifiedTime || '')} | ${escapeHtml(busData.verifiedAt || '')}</span>`;
+        const dd = getDayData();
+        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(dd.fetchedTime || '')} | ${escapeHtml(dd.fetchedAt || '')}</span>`;
       }
     }
     return;
@@ -634,21 +663,24 @@ function renderRouteList() {
   }).join('');
 
   let toggleHtml = '';
-  if (!showAll && past.length > 0) {
-    toggleHtml = `
-      <button class="bus-show-all" id="bus-show-all-btn">
-        Показати всі ${all.length} рейси за сьогодні ↓
-      </button>`;
-  } else if (showAll && past.length > 0) {
-    toggleHtml = `
-      <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
-        Сховати минулі ↑
-      </button>`;
+  if (isViewingToday()) {
+    if (!showAll && past.length > 0) {
+      toggleHtml = `
+        <button class="bus-show-all" id="bus-show-all-btn">
+          Показати всі ${all.length} рейси за сьогодні ↓
+        </button>`;
+    } else if (showAll && past.length > 0) {
+      toggleHtml = `
+        <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
+          Сховати минулі ↑
+        </button>`;
+    }
   }
 
   const updRow = document.getElementById('buses-updated-row');
   if (updRow && busData) updRow.innerHTML = escapeHtml(busData.source);
-  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData?.verifiedTime || '')} | ${escapeHtml(busData?.verifiedAt || '')}</span></div>` + cards + toggleHtml;
+  const dd = getDayData();
+  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(dd.fetchedTime || '')} | ${escapeHtml(dd.fetchedAt || '')}</span></div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -666,6 +698,50 @@ function renderRouteList() {
       renderRouteList();
     });
   }
+}
+
+// ── Week strip (тижнева смужка Пн–Нд) ───────────────────────────────────
+function renderWeekStrip() {
+  const el = document.getElementById('bus-week-strip');
+  if (!el) return;
+
+  const todayISO = getTodayISO();
+  const now      = new Date();
+  // Понеділок поточного тижня
+  const monday   = new Date(now);
+  const dow      = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Пн … 6=Нд
+  monday.setDate(now.getDate() - dow);
+  monday.setHours(0, 0, 0, 0);
+
+  const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
+
+  let html = '<div class="bus-week-days">';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    const dateNum = String(d.getDate()).padStart(2, '0');
+    const isPast   = iso < todayISO;
+    const isTodayD = iso === todayISO;
+    const isActive = iso === busDay;
+    html += `<button class="bus-week-day${isTodayD ? ' bus-week-day--today' : ''}${isActive ? ' bus-week-day--active' : ''}${isPast ? ' bus-week-day--past' : ''}" data-iso="${iso}">
+      <span class="bus-week-day-name">${dayNames[i]}</span>
+      <span class="bus-week-day-num">${dateNum}</span>
+    </button>`;
+  }
+  html += '</div>';
+  el.innerHTML = html;
+
+  el.querySelectorAll('.bus-week-day').forEach(btn => {
+    btn.addEventListener('click', () => {
+      busDay = btn.dataset.iso;
+      showAll = false;
+      smartRowIndex = 0;
+      renderWeekStrip();
+      renderSmartRow();
+      renderRouteList();
+    });
+  });
 }
 
 // ── Search panel (панель пошуку "Звідки → Куди") ──────────────────────
@@ -768,12 +844,15 @@ export async function initBuses() {
 
   el.innerHTML = `
     <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-week-strip" class="bus-week-strip"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
 
+  busDay = getTodayISO();
   renderSearchPanel();
+  renderWeekStrip();
   renderSmartRow();
   renderRouteList();
 

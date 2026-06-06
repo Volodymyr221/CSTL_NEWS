@@ -17,6 +17,59 @@
   text-align: center;
 }
 
+/* ===== WEEK STRIP (тижнева смужка Пн–Нд) ===== */
+.bus-week-strip {
+  padding: 8px 12px 2px;
+}
+.bus-week-days {
+  display: flex;
+  gap: 4px;
+}
+.bus-week-day {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 0 5px;
+  border: 1.5px solid transparent;
+  border-radius: 8px;
+  background: none;
+  cursor: pointer;
+  font-family: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: background 0.15s;
+}
+.bus-week-day-name {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+.bus-week-day-num {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+/* Сьогодні — обведений бордовою рамкою */
+.bus-week-day--today {
+  border-color: var(--red);
+}
+.bus-week-day--today .bus-week-day-name,
+.bus-week-day--today .bus-week-day-num {
+  color: var(--red);
+}
+/* Обраний день — легкий рожевий фон */
+.bus-week-day--active {
+  background: var(--brand-tint);
+}
+/* Минулі дні — приглушені */
+.bus-week-day--past .bus-week-day-name,
+.bus-week-day--past .bus-week-day-num {
+  opacity: 0.38;
+}
+
 /* Таби напрямку */
 .route-tabs { display: flex; overflow-x: auto; gap: 0; scrollbar-width: none; border-bottom: 2px solid var(--border); }
 .route-tabs::-webkit-scrollbar { display: none; }

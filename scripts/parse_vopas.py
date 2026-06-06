@@ -5,24 +5,15 @@
 (.github/workflows/vopas-parser.yml).
 
 Що робить:
-  1. Робить GET-запити для кожної пари маршрутів (Луцьк↔Олика, тощо)
-  2. Парсить HTML-картки рейсів (BeautifulSoup, селектори .result-cols)
-  3. Витягує: маршрут, дата, відправлення, прибуття, перевізник, автобус,
-     ціна, статус продажу, VOPAS ID рейсу
-  4. На цьому етапі — ПИШЕ результат у data/vopas-fetched.json
-     (не чіпає data/schedule.json — він поки залишається ручною базою)
+  1. Запитує VOPAS для кожного дня поточного тижня (Пн–Нд)
+  2. Кешує минулі дні — не перезапитує якщо вже є дані
+  3. Конвертує у формат data/schedule.json (структура з days{})
+  4. Оновлює data/vopas-fetched.json (діагностичний дамп)
 
-Архітектура така ж як parse_rss.py:
+Архітектура:
   - urllib + browser User-Agent
   - SSL fallback на unverified (CERT_NONE) — vopas має сертифікат від
     UA-CA якого немає у системному store Ubuntu runner
-
-Як розширити:
-  Додай нову пару у MARSHRUTI — рестарт парсер скаже скільки рейсів знайшов.
-
-Як інтегрувати з data/schedule.json:
-  Окремий наступний крок — мапінг VOPAS title-result → внутрішні route ID,
-  carrier name → carrier ID. Поки не робимо щоб не зламати робочу базу.
 """
 
 from __future__ import annotations
@@ -64,6 +55,7 @@ BROWSER_UA = (
 
 VOPAS_BASE = "https://vopas.com.ua/search/"
 OUTPUT_PATH = Path(__file__).parent.parent / "data" / "vopas-fetched.json"
+SCHEDULE_PATH = Path(__file__).parent.parent / "data" / "schedule.json"
 
 
 # ── HTTP fetch з SSL fallback ─────────────────────────────────────────────
@@ -103,50 +95,6 @@ def fetch_html(url: str) -> str:
         except Exception as e:  # noqa: BLE001
             raise RuntimeError(f"fetch error: {type(e).__name__}: {e}") from e
     raise RuntimeError(f"fetch failed: {last_err}")
-
-
-# ── Статична карта трас зі зупинками (data/route-stops.json) ──────────────
-# Зупинки маршрутів стабільні (фізична дорога). База — офіційні квитки VOPAS.
-# Парсер бере звідси зупинки+км+ціну, а час/статус — з vopas.com.ua (актуальне).
-_ROUTE_MAP_CACHE = None
-
-def load_route_map() -> list[dict]:
-    global _ROUTE_MAP_CACHE
-    if _ROUTE_MAP_CACHE is None:
-        path = Path(__file__).parent.parent / "data" / "route-stops.json"
-        try:
-            _ROUTE_MAP_CACHE = json.loads(path.read_text(encoding="utf-8")).get("routes", [])
-        except Exception:  # noqa: BLE001
-            _ROUTE_MAP_CACHE = []
-    return _ROUTE_MAP_CACHE
-
-
-def match_stops(from_city: str, to_city: str) -> list[dict] | None:
-    """Знаходить підмаршрут зупинок між from і to у статичній карті трас.
-    Повертає список stops (name, km нормалізований від 0, price_from_start
-    нормалізована) або None якщо траси немає (тоді UI покаже 2 точки)."""
-    fl, tl = (from_city or "").lower(), (to_city or "").lower()
-    best = None
-    for route in load_route_map():
-        stops = route.get("stops", [])
-        names = [s["name"].lower() for s in stops]
-        # шукаємо from перед to (підрядок — бо «Хромяків пов.» містить «хромяків»)
-        fi = next((i for i, n in enumerate(names) if fl in n or n in fl), None)
-        ti = next((i for i, n in enumerate(names) if tl in n or n in tl), None)
-        if fi is not None and ti is not None and fi < ti:
-            seg = stops[fi:ti + 1]
-            if best is None or len(seg) > len(best):
-                best = seg  # найдовший підмаршрут (найбільше проміжних зупинок)
-    if not best:
-        return None
-    # Нормалізуємо км і ціну від початку сегмента (0)
-    base_km = best[0].get("km", 0)
-    base_price = best[0].get("price_from_start", 0)
-    return [{
-        "name": s["name"],
-        "km": s.get("km", 0) - base_km,
-        "price_from_start": round(max(0, s.get("price_from_start", 0) - base_price), 2),
-    } for s in best]
 
 
 # ── Парсинг HTML ──────────────────────────────────────────────────────────
@@ -196,13 +144,11 @@ def parse_card(card_el) -> dict[str, Any] | None:
     status_classes = " ".join(status_el.get("class", [])) if status_el else ""
     status_lower = (status_text or "").lower()
     cancelled = "зірван" in status_lower or "відмін" in status_lower or "canceled" in status_classes
-    # sale_active=True тільки якщо квитки реально продаються онлайн і рейс не відмінено
     sale_active = (not cancelled) and ("sale-stop" not in status_classes)
 
     date_el = card_el.select_one(".result-date span")
     date_text = date_el.get_text(strip=True) if date_el else None
 
-    # Час відправлення/прибуття — пара <span>Label</span><span>Value</span> у .result-cell
     cells = card_el.select(".result-cell")
     departure = arrival = driver = bus = None
     for cell in cells:
@@ -218,7 +164,6 @@ def parse_card(card_el) -> dict[str, Any] | None:
     cost_el = card_el.select_one(".result-cost")
     price = parse_price(cost_el.get_text(strip=True)) if cost_el else None
 
-    # VOPAS id рейсу — потрібен щоб потім дістати зупинки окремим запитом
     info_link = card_el.select_one("a.go[data-id]")
     vopas_id = info_link.get("data-id") if info_link else None
     if not vopas_id:
@@ -246,50 +191,37 @@ def parse_search_page(html: str, from_city: str = "", to_city: str = "") -> list
     routes = []
     for card in cards:
         info = parse_card(card)
-        if info and info.get("departure_time"):  # skip empty
-            # Зберігаємо точки сегмента з запиту (route_name — повна назва маршруту)
+        if info and info.get("departure_time"):
             info["from"] = from_city
             info["to"] = to_city
             routes.append(info)
     return routes
 
 
-# ── Конвертація у формат data/schedule.json (для UI вкладки Автобуси) ──────
+# ── Фільтр локальних маршрутів ────────────────────────────────────────────
 
-CARRIER_PHONE = "0332 224 500"  # єдиний диспетчер VOPAS
+CARRIER_PHONE = "0332 224 500"
 
 # Whitelist населених пунктів Олицької громади + транспортні вузли + проміжні
 # зупинки на трасах через Олику (з реального квиткового розкладу VOPAS).
-# Рейс ЛОКАЛЬНИЙ тільки якщо ВСІ точки його маршруту тут. Інакше — транзит
-# (Рига-Одеса, Полтава-Щецин і т.д.) → відсікаємо.
 ALLOWED_STOPS = {
-    # Олика — центр громади
     "олика",
-    # Села Олицької громади (16, офіц. перелік decentralization.gov.ua)
     "дідичі", "жорнище", "чемерин", "метельне", "носовичі", "одеради",
     "покащів", "хромяків", "дерно", "котів", "путилівка", "мощаниця",
     "залісоче", "горянівка", "ставок", "личани",
-    # Альтернативні написання (на vopas.com.ua назви можуть відрізнятись)
     "горанівка", "чмерин", "путилика", "одераж", "залісся",
-    # Транспортні вузли — кінцеві/проміжні точки приміських рейсів громади
     "луцьк", "ківерці", "рівне",
-    # Проміжні зупинки на трасі (з квиткового розкладу VOPAS)
     "піддубці", "струмівка", "гараджа", "звірів", "арматнів", "пальче",
     "хорлупи",
 }
 
-# Службові слова у назвах маршрутів VOPAS («ч/з Покащів» = через Покащів)
 ROUTE_STOPWORDS = {"чз", "через", "пов", "аз", "збір", "зб"}
 
 
 def route_is_local(route_name: str | None) -> bool:
-    """True якщо ВСІ населені пункти у назві маршруту — з ALLOWED_STOPS.
-    «Луцьк-Личани ч/з Покащів» → [луцьк, личани, покащів] всі наші → True
-    «Рига Одеса» → рига не наша → False
-    «Краматорськ Єленя-Гура» → False"""
+    """True якщо ВСІ населені пункти у назві маршруту — з ALLOWED_STOPS."""
     if not route_name:
         return False
-    # Нормалізуємо: апострофи (Хром'яків→Хромяків) і службові розділювачі
     normalized = route_name.lower().replace("'", "").replace("'", "").replace("`", "")
     cleaned = re.sub(r"ч/з|через|[\-,()]", " ", normalized)
     tokens = [t.strip() for t in cleaned.split() if len(t.strip()) >= 3]
@@ -297,10 +229,10 @@ def route_is_local(route_name: str | None) -> bool:
     if not place_tokens:
         return False
     for t in place_tokens:
-        # точний збіг або токен є частиною дозволеної назви (Хромяків пов. → хромяків)
         if not any(t == s or t in s or s in t for s in ALLOWED_STOPS):
             return False
     return True
+
 
 def hhmm_to_min(hhmm: str | None) -> int | None:
     if not hhmm or ":" not in hhmm:
@@ -308,23 +240,25 @@ def hhmm_to_min(hhmm: str | None) -> int | None:
     h, m = hhmm.split(":")
     return int(h) * 60 + int(m)
 
+
 def make_carrier_id(name: str) -> str:
-    """«під.Яцишин М.М.» → 'yatsyshyn_mm' (стабільний slug для carriers{})."""
     base = re.sub(r"[^\wа-яіїєґА-ЯІЇЄҐ]+", "_", (name or "").lower()).strip("_")
     return base[:40] or "unknown"
 
-def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
-    """Конвертує розпарсені рейси VOPAS у формат data/schedule.json
-    який очікує src/core/bus-schedule.js (routes[] зі stops[], carriers{}).
 
-    Проміжні зупинки поки НЕ доступні (треба окремий запит VOPAS за vopas_id) —
-    кожен рейс має 2 точки [from, to]. Шкала покаже старт→фініш з рухом 🚌 за часом.
-    """
-    carriers: dict[str, dict[str, str]] = {}
-    out_routes = []
-    skipped_transit = 0
+# ── Конвертація рейсів у формат schedule.json ─────────────────────────────
 
-    for r in routes:
+def build_day_routes(
+    unique: list[dict[str, Any]],
+    query_date: str,
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Конвертує сирі рейси VOPAS у формат schedule.json для одного дня.
+    Повертає (routes_list, carriers_dict)."""
+    routes: list[dict] = []
+    carriers: dict[str, dict] = {}
+    skipped = 0
+
+    for r in unique:
         dep = r.get("departure_time")
         arr = r.get("arrival_time")
         dep_min = hhmm_to_min(dep)
@@ -332,44 +266,31 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
         if dep_min is None or arr_min is None:
             continue
         duration = max(0, arr_min - dep_min)
-        price = r.get("price")
 
-        # ФІЛЬТР ЛОКАЛЬНИХ РЕЙСІВ (надійний — whitelist по населених пунктах).
-        # Рейс лишаємо ТІЛЬКИ якщо всі точки маршруту — села громади / вузли.
-        # Транзитні (Рига-Одеса, Полтава-Щецин) мають чужі міста у назві.
-        # Додатковий sanity-check: тривалість не більше 2.5 год (приміський).
         if not route_is_local(r.get("route_name")):
-            skipped_transit += 1
+            skipped += 1
             continue
         if duration > 150:
-            skipped_transit += 1
+            skipped += 1
             continue
 
         carrier_name = r.get("carrier") or "Перевізник"
         cid = make_carrier_id(carrier_name)
-        carriers.setdefault(cid, {"name": carrier_name, "phone": CARRIER_PHONE})
+        carriers[cid] = {"name": carrier_name, "phone": CARRIER_PHONE}
 
         frm = r.get("from") or (r.get("route_name") or "").split()[0]
         to = r.get("to") or (r.get("route_name") or "—")
-
-        # Статус для UI: cancelled (відмінено) має пріоритет
         status = "cancelled" if r.get("cancelled") else "scheduled"
-
-        # ЗУПИНКИ: точні проміжні зупинки рейсу доступні ТІЛЬКИ на vopas.com.ua
-        # (модалка «(i)» — endpoint обфускований, дістати автоматично не вдалось).
-        # Статична карта вгадувала маршрут хибно (різні рейси різними дорогами).
-        # Тому stops = 2 точки (from→to) для шкали, а за повними зупинками рейсу —
-        # пряме посилання на VOPAS (vopas_url) у UI.
         stops = [{"name": frm, "km": 0}, {"name": to, "km": 100}]
-        vopas_url = build_url(frm, to, today)
+        vopas_url = build_url(frm, to, query_date)
 
-        out_routes.append({
+        routes.append({
             "id": f"vopas_{r.get('vopas_id') or dep.replace(':', '')}",
             "vopas_id": r.get("vopas_id"),
             "name": r.get("route_name") or f"{frm} → {to}",
             "carrier": cid,
             "bus": r.get("bus"),
-            "days": "щодня",  # VOPAS дає на конкретну дату; cron щодня тримає актуальним
+            "days": "щодня",
             "status": status,
             "sale_active": r.get("sale_active", True),
             "departure_time": dep,
@@ -377,31 +298,18 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
             "duration_min": duration,
             "auto_generated": False,
             "stops": stops,
-            "vopas_url": vopas_url,  # повні зупинки рейсу на офіційному сайті
+            "vopas_url": vopas_url,
         })
 
-    # Сортуємо за часом відправлення
-    out_routes.sort(key=lambda x: hhmm_to_min(x["departure_time"]) or 0)
-    print(f"   build_schedule: {len(out_routes)} локальних, {skipped_transit} транзитних відсіяно")
-
-    now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
-    return {
-        "version": today,
-        "verifiedAt": now_kyiv.strftime("%d.%m.%Y"),
-        "verifiedTime": now_kyiv.strftime("%H:%M"),
-        "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-        "note": f"Авто-парсинг vopas.com.ua. Оновлено {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ.",
-        "carriers": carriers,
-        "routes": out_routes,
-    }
+    routes.sort(key=lambda x: hhmm_to_min(x["departure_time"]) or 0)
+    print(f"   → {len(routes)} локальних, {skipped} транзитних відсіяно")
+    return routes, carriers
 
 
-# ── Main ──────────────────────────────────────────────────────────────────
+# ── Дедуплікація ──────────────────────────────────────────────────────────
 
 def dedupe(routes: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Дедуплікація: один і той самий рейс (vopas_id + departure + route_name)
-    може зʼявитись з різних пар (з Луцька до Олики і з Луцька до Личан —
-    бо рейс Луцьк→Личани проходить через Олику)."""
+    """Один рейс може зʼявитись з різних пар (Луцьк→Олика і Луцьк→Личани)."""
     seen = set()
     out = []
     for r in routes:
@@ -413,68 +321,121 @@ def dedupe(routes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def main() -> int:
-    query_date = datetime.date.today().strftime("%d.%m.%Y")
-    print(f"=== VOPAS parser ({query_date}) ===")
-    print(f"Запитую {len(MARSHRUTI)} пар маршрутів...\n")
+# ── Запит одного дня ──────────────────────────────────────────────────────
 
-    all_routes: list[dict[str, Any]] = []
+def query_day(date_str: str) -> tuple[list[dict], list[str]]:
+    """Запитує VOPAS для дати (DD.MM.YYYY). Повертає (unique_routes, errors)."""
+    all_routes: list[dict] = []
     errors: list[str] = []
 
     for from_city, to_city in MARSHRUTI:
-        url = build_url(from_city, to_city, query_date)
-        print(f"→ {from_city} → {to_city}")
+        url = build_url(from_city, to_city, date_str)
         try:
             html = fetch_html(url)
             routes = parse_search_page(html, from_city, to_city)
-            print(f"  ✓ знайдено {len(routes)} рейсів (HTML {len(html)} байт)")
             all_routes.extend(routes)
         except Exception as e:  # noqa: BLE001
             err = f"{from_city}→{to_city}: {type(e).__name__}: {e}"
             errors.append(err)
-            print(f"  ✗ {err}")
 
-    unique = dedupe(all_routes)
-    print(f"\n→ Усього: {len(all_routes)} рейсів, унікальних: {len(unique)}")
+    return dedupe(all_routes), errors
 
 
-    if errors:
-        print(f"\n⚠️  Помилок: {len(errors)}")
-        for e in errors:
-            print(f"   - {e}")
+# ── Main ──────────────────────────────────────────────────────────────────
 
-    # ЗАХИСТ: якщо нічого не знайшли (сайт ліг / усі запити з помилкою) —
-    # НЕ перезаписуємо schedule.json, щоб не обнулити робочий розклад.
-    if not unique:
-        print("\n⚠️  Жодного рейсу не отримано — schedule.json НЕ оновлюємо (зберігаємо старий)")
-        return 0
+def get_week_days() -> list[datetime.date]:
+    """Повертає 7 днів поточного тижня: Пн (0) → Нд (6)."""
+    today = datetime.date.today()
+    # weekday(): Пн=0 … Нд=6
+    monday = today - datetime.timedelta(days=today.weekday())
+    return [monday + datetime.timedelta(days=i) for i in range(7)]
 
-    # Діагностичний дамп (сирі дані) — поки лишаємо для перевірки
+
+def main() -> int:
+    now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
+    today = datetime.date.today()
+    week_days = get_week_days()
+
+    print(f"=== VOPAS parser {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ ===")
+    print(f"Тиждень: {week_days[0]} — {week_days[-1]}\n")
+
+    # Завантажуємо поточний schedule.json щоб зберегти кешовані минулі дні
+    existing: dict[str, Any] = {}
+    if SCHEDULE_PATH.exists():
+        try:
+            existing = json.loads(SCHEDULE_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            pass
+
+    existing_days: dict[str, Any] = existing.get("days", {})
+    all_carriers: dict[str, Any] = dict(existing.get("carriers", {}))
+    days_result: dict[str, Any] = {}
+    raw_today: list[dict] = []  # сирі дані для vopas-fetched.json
+
+    for day in week_days:
+        iso = day.isoformat()           # "2026-06-07"
+        date_str = day.strftime("%d.%m.%Y")  # "07.06.2026"
+
+        # Минулі дні — кешуємо, не перезапитуємо
+        if day < today and iso in existing_days:
+            days_result[iso] = existing_days[iso]
+            print(f"  ↻ {iso}: кешовано ({len(existing_days[iso].get('routes', []))} рейсів)")
+            continue
+
+        print(f"\n=== {iso} ({date_str}) — {len(MARSHRUTI)} пар ===")
+        unique, errors = query_day(date_str)
+        print(f"  Усього: {len(unique)} унікальних рейсів від VOPAS")
+
+        if errors:
+            for e in errors:
+                print(f"  ✗ {e}")
+
+        # ЗАХИСТ: якщо VOPAS взагалі не відповів для сьогодні — зберігаємо старе
+        if not unique and day == today and iso in existing_days:
+            days_result[iso] = existing_days[iso]
+            print(f"  ⚠ VOPAS не відповів — зберігаємо попередні дані")
+            continue
+
+        routes, day_carriers = build_day_routes(unique, date_str)
+        all_carriers.update(day_carriers)
+
+        days_result[iso] = {
+            "routes":      routes,
+            "fetchedAt":   now_kyiv.strftime("%d.%m.%Y"),
+            "fetchedTime": now_kyiv.strftime("%H:%M"),
+        }
+        print(f"  💾 {iso}: {len(routes)} рейсів")
+
+        if day == today:
+            raw_today = unique
+
+    # Діагностичний дамп сьогоднішніх сирих даних
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(json.dumps({
-        "fetched_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "date": query_date, "source": "vopas.com.ua",
-        "errors": errors, "routes": unique,
+        "fetched_at": now_kyiv.isoformat(),
+        "date": today.strftime("%d.%m.%Y"),
+        "source": "vopas.com.ua",
+        "routes": raw_today,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
-    # ГОЛОВНЕ: пишемо data/schedule.json у форматі для UI вкладки Автобуси
-    schedule = build_schedule(unique, query_date)
+    # Записуємо schedule.json
+    schedule = {
+        "version":     2,
+        "source":      "VOPAS — vopas.com.ua (авто-оновлення)",
+        "updatedAt":   now_kyiv.strftime("%d.%m.%Y"),
+        "updatedTime": now_kyiv.strftime("%H:%M"),
+        "carriers":    all_carriers,
+        "days":        days_result,
+    }
 
-    # routes=[] — теж валідний стан: всі рейси вже відправились або не курсують.
-    # UI покаже "Сьогодні рейсів більше не заплановано" з актуальним verifiedTime.
-    if not schedule["routes"]:
-        print(f"\nℹ️  0 місцевих рейсів — всі відправились або тільки транзит "
-              f"({len(unique)} отримано від VOPAS). Пишемо порожній розклад з поточним часом.")
-
-    schedule_path = Path(__file__).parent.parent / "data" / "schedule.json"
-    schedule_path.write_text(
+    SCHEDULE_PATH.write_text(
         json.dumps(schedule, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
-    print(f"💾 Оновлено {schedule_path}: {len(schedule['routes'])} рейсів, "
-          f"{len(schedule['carriers'])} перевізників, "
-          f"verifiedAt={schedule['verifiedAt']} {schedule['verifiedTime']}")
 
+    total_routes = sum(len(d.get("routes", [])) for d in days_result.values())
+    print(f"\n💾 schedule.json: {len(days_result)} днів, {total_routes} рейсів, "
+          f"{len(all_carriers)} перевізників")
     return 0
 
 
