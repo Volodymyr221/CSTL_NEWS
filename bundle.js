@@ -2059,6 +2059,15 @@ ${post.text}
       </div>
     </div>`;
   }
+  function updateFixedPadding() {
+    requestAnimationFrame(() => {
+      const zone = document.getElementById("bus-fixed-zone");
+      const page = document.getElementById("page-buses");
+      if (zone && page) {
+        page.style.paddingTop = zone.getBoundingClientRect().height + "px";
+      }
+    });
+  }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
@@ -2266,7 +2275,10 @@ ${post.text}
         \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
       </button>`;
     }
-    el.innerHTML = toggleHtml + `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412</div>` + cards;
+    const titleBar = document.getElementById("bus-title-bar");
+    if (titleBar)
+      titleBar.textContent = "\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412";
+    el.innerHTML = toggleHtml + cards;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;
@@ -2370,8 +2382,11 @@ ${post.text}
       return;
     }
     el.innerHTML = `
-    <div id="bus-search-panel" class="bus-search"></div>
-    <div id="bus-smart-row" class="bus-smart-row"></div>
+    <div id="bus-fixed-zone">
+      <div id="bus-search-panel" class="bus-search"></div>
+      <div id="bus-smart-row" class="bus-smart-row"></div>
+      <div id="bus-title-bar" class="bus-list-title"></div>
+    </div>
     <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
@@ -2381,11 +2396,13 @@ ${post.text}
     renderSearchPanel();
     renderSmartRow();
     renderRouteList();
+    updateFixedPadding();
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       renderSmartRow();
       renderRouteList();
+      updateFixedPadding();
     }, 6e4);
   }
 
