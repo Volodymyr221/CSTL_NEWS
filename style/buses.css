@@ -90,9 +90,9 @@
 }
 /* Обраний день — та сама форма що й ободок today, краї розмиті */
 .bus-week-day--active {
-  background: #CDD1DC;
+  background: #BEC4D2;
   border-radius: 8px;
-  box-shadow: 0 0 10px 6px rgba(205, 209, 220, 0.9);
+  box-shadow: 0 0 10px 6px rgba(190, 196, 210, 0.9);
 }
 /* Минулі дні — приглушені */
 .bus-week-day--past .bus-week-day-name,
