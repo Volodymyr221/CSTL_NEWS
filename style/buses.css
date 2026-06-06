@@ -18,8 +18,15 @@
 }
 
 /* ===== WEEK STRIP (тижнева смужка Пн–Нд) ===== */
+/* Фіксована зверху, одразу під шапкою — вище панелі пошуку */
 .bus-week-strip {
-  padding: 2px 12px 2px;
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  z-index: 92;
+  background: #ECEEF2;
+  padding: 4px 12px 4px;
 }
 .bus-week-days {
   display: flex;
@@ -656,7 +663,7 @@
   padding: 6px 14px 10px;
   background: #ECEEF2;
   position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 48px);
   left: 0;
   right: 0;
   z-index: 90;
@@ -673,9 +680,9 @@
   pointer-events: none;
 }
 
-/* Компенсація висоти fixed bus-search */
+/* Компенсація висоти: fixed week-strip (~48px) + fixed bus-search (~56px) */
 #page-buses {
-  padding-top: 60px;
+  padding-top: 108px;
 }
 
 /* Рядок з двома полями і кнопкою swap */
