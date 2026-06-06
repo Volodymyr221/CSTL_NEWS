@@ -2271,7 +2271,7 @@ ${post.text}
         el.innerHTML = titleHtml0;
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
-          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updStr0}</span>`;
+          updRow2.innerHTML = escapeHtml(busData.source);
         }
       }
       return;

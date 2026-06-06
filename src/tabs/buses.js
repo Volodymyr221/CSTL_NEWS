@@ -598,7 +598,7 @@ function renderRouteList() {
       el.innerHTML = titleHtml0;
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
-        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updStr0}</span>`;
+        updRow.innerHTML = escapeHtml(busData.source);
       }
     }
     return;
