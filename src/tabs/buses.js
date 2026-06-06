@@ -282,7 +282,7 @@ export function renderRouteMapV4(route, timings) {
 
   return `
     <div class="bhv4-map" aria-hidden="true">
-      <div class="bhv4-labels">${labelsHtml}</div>
+      <div class="bhv4-labels bhv4-dyn">${labelsHtml}</div>
       <div class="bhv4-track">
         <div class="bhv4-fill" style="width:${pct}%"></div>
         ${dotsHtml}
@@ -364,7 +364,7 @@ export function buildHeroCard(route, timings, index, total) {
           </div>
         </div>
 
-        <div class="bhv4-map-outer bhv4-dyn">${renderRouteMapV4(route, timings)}</div>
+        <div class="bhv4-map-outer">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
 }
@@ -490,9 +490,21 @@ function switchHeroCard() {
           : '';
     }
 
-    // Шкала прогресу
+    // Шкала прогресу — трек (сіра лінія) статичний, міняємо тільки fill і крапки
     const mapOuter = card.querySelector('.bhv4-map-outer');
-    if (mapOuter) mapOuter.innerHTML = renderRouteMapV4(route, timings);
+    if (mapOuter) {
+      const pct = (timings.progress * 100).toFixed(1);
+      const totalKm = route.stops[route.stops.length - 1].km || 1;
+      const movingDot = timings.state === 'enroute'
+        ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : '';
+      const dotsHtml = route.stops.map(s => {
+        const dp = totalKm ? (s.km / totalKm) * 100 : 0;
+        const passed = totalKm ? (s.km / totalKm) <= timings.progress + 0.01 : false;
+        return `<span class="bhv4-dot${passed ? ' bhv4-dot--passed' : ''}" style="left:${dp.toFixed(1)}%"></span>`;
+      }).join('');
+      const track = mapOuter.querySelector('.bhv4-track');
+      if (track) track.innerHTML = `<div class="bhv4-fill" style="width:${pct}%"></div>${dotsHtml}${movingDot}`;
+    }
 
     renderRouteList();
 
