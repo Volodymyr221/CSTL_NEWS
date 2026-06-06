@@ -778,6 +778,8 @@
   padding-left: 13px;
 }
 .bus-card.next .bus-card-main { padding-left: 0; }
+.bus-card.selectable { cursor: pointer; }
+.bus-card.selectable:active { opacity: 0.7; }
 
 /* Кнопка "Всі зупинки ▾ / Сховати ▴" */
 .bs-toggle {

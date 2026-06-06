@@ -8,14 +8,15 @@ import {
 const PREFS_KEY = 'bus_prefs_v2';
 
 let busData       = null;
-let busDay        = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
-let fromStop      = '';
-let toStop        = '';
-let showAll       = false;
-let timerInterval = null;
-let expandedIds   = new Set();
-let activeField   = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
-let smartRowIndex = 0;    // поточна картка у каруселі hero
+let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
+let fromStop        = '';
+let toStop          = '';
+let showAll         = false;
+let timerInterval   = null;
+let expandedIds     = new Set();
+let activeField     = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
+let smartRowIndex   = 0;    // поточна картка у каруселі hero
+let selectedRouteId = null; // для майбутніх днів: яку картку показує hero
 
 function getTodayISO() {
   const d = new Date();
@@ -149,8 +150,12 @@ function findNextRoute() {
 // відсортовані за часом відправлення — той самий порядок що й список знизу.
 function findActiveRoutes() {
   const all = getFilteredRoutes(); // вже відсортовані за часом відправлення
-  // Для майбутніх/минулих днів — тільки перший рейс дня
+  // Для майбутніх/минулих днів — вибраний рейс (selectedRouteId) або перший
   if (!isViewingToday()) {
+    if (selectedRouteId) {
+      const sel = all.find(r => r.id === selectedRouteId && r.status !== 'cancelled');
+      if (sel) return [sel];
+    }
     const first = all.find(r => r.status !== 'cancelled') || all[0] || null;
     return first ? [first] : [];
   }
@@ -605,8 +610,9 @@ function renderRouteList() {
   const carrierInfo = id => busData.carriers?.[id] || { name: id, phone: '0332 224 500' };
 
   const cards = toRender.map(route => {
-    const isPast  = isPastRoute(route);
-    const isNext  = highlighted && route.id === highlighted.id;
+    const isPast     = isPastRoute(route);
+    const isNext     = highlighted && route.id === highlighted.id;
+    const isSelectable = !isViewingToday();
     const effFrom = getEffectiveFrom(route);
     const effTo   = getEffectiveTo(route);
     const fromTime = getStopHHMM(route, effFrom);
@@ -649,7 +655,7 @@ function renderRouteList() {
     const routeLabel = `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
 
     return `
-      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}">
+      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
@@ -702,13 +708,29 @@ function renderRouteList() {
   el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
       const id = btn.dataset.id;
       if (expandedIds.has(id)) expandedIds.delete(id);
       else expandedIds.add(id);
       renderRouteList();
     });
   });
+
+  // Для майбутніх днів: тап на картку → показати у hero-віджеті
+  if (!isViewingToday()) {
+    el.querySelectorAll('.bus-card.selectable').forEach(card => {
+      card.addEventListener('click', () => {
+        const rid = card.dataset.routeId;
+        if (!rid) return;
+        selectedRouteId = rid;
+        renderSmartRow();
+        renderRouteList();
+        // Прокручуємо до hero-картки щоб побачити результат
+        document.getElementById('bus-smart-row')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      });
+    });
+  }
 
   const showAllBtn = document.getElementById('bus-show-all-btn');
   if (showAllBtn) {
@@ -756,6 +778,7 @@ function renderWeekStrip() {
       busDay = btn.dataset.iso;
       showAll = false;
       smartRowIndex = 0;
+      selectedRouteId = null;
       renderWeekStrip();
       renderSmartRow();
       renderRouteList();
