@@ -843,8 +843,8 @@ export async function initBuses() {
   }
 
   el.innerHTML = `
-    <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-week-strip" class="bus-week-strip"></div>
+    <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
