@@ -601,7 +601,7 @@ function renderRouteList() {
       el.innerHTML = titleHtml0 + noMoreMsg;
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
-        updRow.innerHTML = escapeHtml(busData.source);
+        updRow.innerHTML = buildSourceHtml();
       }
     }
     return;
@@ -720,7 +720,7 @@ function renderRouteList() {
   }
 
   const updRow = document.getElementById('buses-updated-row');
-  if (updRow && busData) updRow.innerHTML = escapeHtml(busData.source);
+  if (updRow && busData) updRow.innerHTML = buildSourceHtml();
   const dd = getDayData();
   const updatedStr2 = dd.fetchedTime
     ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
@@ -864,7 +864,10 @@ function renderSearchPanel() {
   });
 }
 
-// ── Init (ініціалізація вкладки) ──────────────────────────────────────
+function buildSourceHtml() {
+  if (!busData?.source) return '';
+  return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
+}
 export async function initBuses() {
   const el = document.getElementById('buses-content');
   if (!el) return;
@@ -909,7 +912,7 @@ export async function initBuses() {
     <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
-    <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
+    <div id="buses-updated-row" class="buses-updated"></div>
   `;
 
   busDay = getTodayISO();

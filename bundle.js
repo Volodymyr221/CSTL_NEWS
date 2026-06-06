@@ -2272,7 +2272,7 @@ ${post.text}
         el.innerHTML = titleHtml0 + noMoreMsg;
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
-          updRow2.innerHTML = escapeHtml(busData.source);
+          updRow2.innerHTML = buildSourceHtml();
         }
       }
       return;
@@ -2366,7 +2366,7 @@ ${post.text}
     }
     const updRow = document.getElementById("buses-updated-row");
     if (updRow && busData)
-      updRow.innerHTML = escapeHtml(busData.source);
+      updRow.innerHTML = buildSourceHtml();
     const dd = getDayData();
     const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
     el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml;
@@ -2493,6 +2493,11 @@ ${post.text}
       renderRouteList();
     });
   }
+  function buildSourceHtml() {
+    if (!busData?.source)
+      return "";
+    return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
+  }
   async function initBuses() {
     const el = document.getElementById("buses-content");
     if (!el)
@@ -2530,7 +2535,7 @@ ${post.text}
     <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
-    <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
+    <div id="buses-updated-row" class="buses-updated"></div>
   `;
     busDay = getTodayISO();
     renderSearchPanel();
