@@ -2046,7 +2046,10 @@ ${post.text}
 
         <div class="bhv4-body">
           <div class="bhv4-left">
-            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((route.name || `${effFrom} \u2013 ${effTo}`).toUpperCase())}</div>
+            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((() => {
+      const [a, b] = parseRouteEndpoints(route.name || `${effFrom} \u2013 ${effTo}`);
+      return `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
+    })())}</div>
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span></span>
               <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
@@ -2141,8 +2144,10 @@ ${post.text}
         statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
       }
       const nameEl = card.querySelector(".bhv4-route-name");
-      if (nameEl)
-        nameEl.textContent = (route.name || "").toUpperCase();
+      if (nameEl) {
+        const [n1, n2] = parseRouteEndpoints(route.name || "");
+        nameEl.textContent = `${n1.toUpperCase()} \u2192 ${n2.toUpperCase()}`;
+      }
       const capsuleEl = card.querySelector(".bhv4-capsule-inner");
       if (capsuleEl) {
         const effFrom = getEffectiveFrom(route);

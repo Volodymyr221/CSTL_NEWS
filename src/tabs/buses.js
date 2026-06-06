@@ -355,7 +355,7 @@ export function buildHeroCard(route, timings, index, total) {
 
         <div class="bhv4-body">
           <div class="bhv4-left">
-            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((route.name || `${effFrom} – ${effTo}`).toUpperCase())}</div>
+            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((() => { const [a,b] = parseRouteEndpoints(route.name || `${effFrom} – ${effTo}`); return `${a.toUpperCase()} → ${b.toUpperCase()}`; })())}</div>
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span></span>
               <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
@@ -455,7 +455,10 @@ function switchHeroCard() {
 
     // Назва маршруту
     const nameEl = card.querySelector('.bhv4-route-name');
-    if (nameEl) nameEl.textContent = (route.name || '').toUpperCase();
+    if (nameEl) {
+      const [n1, n2] = parseRouteEndpoints(route.name || '');
+      nameEl.textContent = `${n1.toUpperCase()} → ${n2.toUpperCase()}`;
+    }
 
     // Час всередині капсули
     const capsuleEl = card.querySelector('.bhv4-capsule-inner');
