@@ -459,6 +459,17 @@ def main() -> int:
 
     # ГОЛОВНЕ: пишемо data/schedule.json у форматі для UI вкладки Автобуси
     schedule = build_schedule(unique, today)
+
+    # ЗАХИСТ: якщо після whitelist-фільтрації route_is_local() лишилось 0 рейсів —
+    # НЕ перезаписуємо schedule.json щоб не обнулити робочий розклад.
+    # Таке буває коли VOPAS видає лише транзитні рейси (Луцьк-Львів і т.п.) у яких
+    # кінцева зупинка поза ALLOWED_STOPS — і всі вони відсікаються фільтром.
+    if not schedule["routes"]:
+        print("\n⚠️  Після фільтрації 0 локальних рейсів — schedule.json НЕ оновлюємо (зберігаємо старий)")
+        print(f"   Отримано {len(unique)} рейсів від VOPAS, але всі відсіяні як транзит або >150 хв.")
+        print("   Якщо це помилка — перевір ALLOWED_STOPS або MARSHRUTI у parse_vopas.py")
+        return 0
+
     schedule_path = Path(__file__).parent.parent / "data" / "schedule.json"
     schedule_path.write_text(
         json.dumps(schedule, ensure_ascii=False, indent=2),
