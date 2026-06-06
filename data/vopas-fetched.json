@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-06T14:45:16.853478+00:00",
+  "fetched_at": "2026-06-06T16:10:33.710655+00:00",
   "date": "06.06.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -238,9 +238,9 @@
       "carrier": "ТОВ РОЛАНД-ТРАНС",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -253,8 +253,8 @@
       "carrier": "НОВОВОЛИНСЬК АТП 10708",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -268,8 +268,8 @@
       "carrier": "Коляда О.Г.-",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
