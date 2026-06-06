@@ -1842,16 +1842,6 @@ ${post.text}
     } catch {
     }
   }
-  function isDayActive(days) {
-    const d = (/* @__PURE__ */ new Date()).getDay();
-    if (days === "\u0449\u043E\u0434\u043D\u044F")
-      return true;
-    if (days === "\u043F\u043D-\u0441\u0431")
-      return d >= 1 && d <= 6;
-    if (days === "\u043F\u043D-\u043F\u0442")
-      return d >= 1 && d <= 5;
-    return true;
-  }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
     const t = route.stops.find((s) => s.name === toName);
@@ -1870,27 +1860,17 @@ ${post.text}
       return toStop;
     return route.stops[route.stops.length - 1].name;
   }
-  function getOrderedStops(route) {
-    const stops = route.stops;
-    if (stops.length < 2)
-      return stops;
-    const [nameFrom] = parseRouteEndpoints(route.name);
-    const first = stops[0].name.toLowerCase();
-    const nameLow = nameFrom.toLowerCase();
-    const firstMatchesOrigin = nameLow.startsWith(first) || first.startsWith(nameLow);
-    return firstMatchesOrigin ? stops : [...stops].reverse();
-  }
   function matchesSearch(route) {
-    if (!isDayActive(route.days))
+    if (!fromStop && !toStop)
+      return true;
+    const stops = route.stops;
+    const fStop = fromStop ? stops.find((s) => s.name === fromStop) : null;
+    const tStop = toStop ? stops.find((s) => s.name === toStop) : null;
+    if (fromStop && !fStop)
       return false;
-    const stops = getOrderedStops(route);
-    const fromIdx = fromStop ? stops.findIndex((s) => s.name === fromStop) : 0;
-    const toIdx = toStop ? stops.findIndex((s) => s.name === toStop) : stops.length - 1;
-    if (fromStop && fromIdx === -1)
+    if (toStop && !tStop)
       return false;
-    if (toStop && toIdx === -1)
-      return false;
-    if (fromStop && toStop && fromIdx >= toIdx)
+    if (fromStop && toStop && fStop.km >= tStop.km)
       return false;
     return true;
   }
@@ -2321,7 +2301,10 @@ ${post.text}
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       const [ep1, ep2] = parseRouteEndpoints(route.name);
-      const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
+      const filterActive = fromStop && toStop && route.stops.some((s) => s.name === fromStop) && route.stops.some((s) => s.name === toStop);
+      const segLabel = filterActive ? `${fromStop.toUpperCase()} \u2192 ${toStop.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
+      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(ep1)} \u2192 ${escapeHtml(ep2)}</span>` : "";
+      const routeLabel = segLabel;
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
@@ -2330,7 +2313,7 @@ ${post.text}
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>

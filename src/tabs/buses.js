@@ -114,13 +114,14 @@ function getOrderedStops(route) {
 }
 
 function matchesSearch(route) {
-  if (!isDayActive(route.days)) return false;
-  const stops   = getOrderedStops(route);
-  const fromIdx = fromStop ? stops.findIndex(s => s.name === fromStop) : 0;
-  const toIdx   = toStop   ? stops.findIndex(s => s.name === toStop)   : stops.length - 1;
-  if (fromStop && fromIdx === -1) return false;
-  if (toStop   && toIdx   === -1) return false;
-  if (fromStop && toStop  && fromIdx >= toIdx) return false;
+  if (!fromStop && !toStop) return true;
+  const stops = route.stops;
+  const fStop = fromStop ? stops.find(s => s.name === fromStop) : null;
+  const tStop = toStop   ? stops.find(s => s.name === toStop)   : null;
+  if (fromStop && !fStop) return false;
+  if (toStop   && !tStop) return false;
+  // Напрямок: fromStop повинен бути географічно ДО toStop (за км)
+  if (fromStop && toStop && fStop.km >= tStop.km) return false;
   return true;
 }
 
@@ -668,7 +669,18 @@ function renderRouteList() {
       : '';
 
     const [ep1, ep2] = parseRouteEndpoints(route.name);
-    const routeLabel = `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
+    // Коли фільтр "звідки→куди" активний і зупинки знайдено в маршруті —
+    // показуємо сегмент фільтру, а не повну назву (щоб не плутати пасажира)
+    const filterActive = fromStop && toStop &&
+      route.stops.some(s => s.name === fromStop) &&
+      route.stops.some(s => s.name === toStop);
+    const segLabel  = filterActive
+      ? `${fromStop.toUpperCase()} → ${toStop.toUpperCase()}`
+      : `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
+    const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase())
+      ? `<span class="bs-route-full">${escapeHtml(ep1)} → ${escapeHtml(ep2)}</span>`
+      : '';
+    const routeLabel = segLabel;
 
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}" data-route-id="${escapeHtml(route.id)}">
@@ -678,7 +690,7 @@ function renderRouteList() {
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>
