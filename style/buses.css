@@ -608,6 +608,18 @@
   right: 0;
   z-index: 90;
 }
+/* Плавне затухання знизу панелі пошуку — картки не ріжуться різко */
+.bus-search::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: linear-gradient(to bottom, #ECEEF2, transparent);
+  pointer-events: none;
+}
+
 /* Компенсація висоти fixed bus-search */
 #page-buses {
   padding-top: 78px;
