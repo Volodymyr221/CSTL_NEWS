@@ -785,7 +785,6 @@
 }
 .bs-status.cancelled { background: #fee2e2; color: var(--red); }
 .bs-status.delayed   { background: #fef3c7; color: #92400e; }
-.bs-status.transit   { background: #dbeafe; color: #1e40af; }
 
 /* Підказка "розрахований зворотний рейс" */
 .bs-autogen {

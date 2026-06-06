@@ -334,25 +334,16 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
         duration = max(0, arr_min - dep_min)
         price = r.get("price")
 
-        # ФІЛЬТР: місцеві рейси + транзитні через громаду.
-        # Місцевий — всі міста у назві маршруту з ALLOWED_STOPS.
-        # Транзитний — назва чужа, але пара запиту (from/to) обидва локальні
-        # (автобус їде Луцьк→Львів, але зупиняється в Личанах/Олиці).
-        # Повністю чужі (Рига-Одеса, Щецин-Полтава) — відсікаємо.
-        is_local = route_is_local(r.get("route_name"))
-        if not is_local:
-            frm_l  = (r.get("from") or "").lower().replace("'", "").replace("’", "")
-            to_l   = (r.get("to")   or "").lower().replace("'", "").replace("’", "")
-            frm_ok = any(frm_l == s or frm_l in s or s in frm_l for s in ALLOWED_STOPS)
-            to_ok  = any(to_l  == s or to_l  in s or s in to_l  for s in ALLOWED_STOPS)
-            if not (frm_ok and to_ok):
-                skipped_transit += 1
-                continue
-        # Ліміт тривалості тільки для місцевих — транзитним їдуть далі, нас цікавить їхній сегмент
-        if is_local and duration > 150:
+        # ФІЛЬТР ЛОКАЛЬНИХ РЕЙСІВ (надійний — whitelist по населених пунктах).
+        # Рейс лишаємо ТІЛЬКИ якщо всі точки маршруту — села громади / вузли.
+        # Транзитні (Рига-Одеса, Полтава-Щецин) мають чужі міста у назві.
+        # Додатковий sanity-check: тривалість не більше 2.5 год (приміський).
+        if not route_is_local(r.get("route_name")):
             skipped_transit += 1
             continue
-        is_transit = not is_local
+        if duration > 150:
+            skipped_transit += 1
+            continue
 
         carrier_name = r.get("carrier") or "Перевізник"
         cid = make_carrier_id(carrier_name)
@@ -385,7 +376,6 @@ def build_schedule(routes: list[dict[str, Any]], today: str) -> dict[str, Any]:
             "arrival_time": arr,
             "duration_min": duration,
             "auto_generated": False,
-            "transit": is_transit,  # True = транзит через громаду (кінцева поза нашими містами)
             "stops": stops,
             "vopas_url": vopas_url,  # повні зупинки рейсу на офіційному сайті
         })
@@ -469,13 +459,6 @@ def main() -> int:
 
     # ГОЛОВНЕ: пишемо data/schedule.json у форматі для UI вкладки Автобуси
     schedule = build_schedule(unique, today)
-
-    # ЗАХИСТ: якщо після фільтрації 0 рейсів — не перезаписуємо schedule.json
-    # (щоб не обнулити, якщо раптом всі рейси відсіялись)
-    if not schedule["routes"]:
-        print("\n⚠️  Після фільтрації 0 рейсів — schedule.json НЕ оновлюємо (захист від обнулення)")
-        return 0
-
     schedule_path = Path(__file__).parent.parent / "data" / "schedule.json"
     schedule_path.write_text(
         json.dumps(schedule, ensure_ascii=False, indent=2),
