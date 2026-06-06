@@ -124,18 +124,13 @@ html, body {
   left: 0; right: 0;
   height: var(--header-h);
   background: var(--white);
-  border-radius: 0 0 20px 20px;
+  border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 16px;
   z-index: 100;
   overflow: hidden;
-  box-shadow:
-    0 4px 20px rgba(0,0,0,0.10),
-    4px 0  12px rgba(0,0,0,0.06),
-    -4px 0 12px rgba(0,0,0,0.06),
-    0 -4px 12px rgba(0,0,0,0.06);
 }
 /* Прошарок-заглушка під статусбаром (червоний як theme-color) щоб не була
    прозора смужка між статусом iOS і шапкою. */
