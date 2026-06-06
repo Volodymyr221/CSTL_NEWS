@@ -26,7 +26,7 @@
   right: 0;
   z-index: 92;
   background: #ECEEF2;
-  padding: 4px 12px 4px;
+  padding: 6px 12px 8px;
 }
 .bus-week-days {
   display: flex;
@@ -48,15 +48,15 @@
   transition: background 0.15s;
 }
 .bus-week-day-name {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--ink-mute);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--ink-soft);
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
 .bus-week-day-num {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--ink);
 }
 /* Сьогодні — обведений бордовою рамкою */
@@ -663,7 +663,7 @@
   padding: 6px 14px 10px;
   background: #ECEEF2;
   position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 48px);
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 54px);
   left: 0;
   right: 0;
   z-index: 90;
@@ -680,9 +680,9 @@
   pointer-events: none;
 }
 
-/* Компенсація висоти: fixed week-strip (~48px) + fixed bus-search (~56px) */
+/* Компенсація висоти: fixed week-strip (~54px) + fixed bus-search (~56px) */
 #page-buses {
-  padding-top: 108px;
+  padding-top: 114px;
 }
 
 /* Рядок з двома полями і кнопкою swap */
