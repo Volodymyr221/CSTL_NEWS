@@ -623,7 +623,7 @@ function renderRouteList() {
       </button>`;
   }
 
-  el.innerHTML = toggleHtml + `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData?.verifiedTime || '')} | ${escapeHtml(busData?.verifiedAt || '')}</span></div>` + cards;
+  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData?.verifiedTime || '')} | ${escapeHtml(busData?.verifiedAt || '')}</span></div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {

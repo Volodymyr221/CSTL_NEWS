@@ -446,14 +446,10 @@
   transition: background 0.15s;
 }
 
-/* "Сховати минулі" — липне під панеллю пошуку поки скролиш список */
+/* "Сховати минулі" — тепер знизу списку */
 .bus-show-all--less {
-  position: sticky;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 62px);
   background: #ECEEF2;
-  border-top: none;
-  border-bottom: 1px solid var(--border);
-  z-index: 80;
+  border-top: 1px solid var(--border);
   color: var(--gray);
   font-weight: 400;
 }
