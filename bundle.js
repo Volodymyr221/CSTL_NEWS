@@ -2129,7 +2129,7 @@ ${post.text}
       return;
     const routes = findActiveRoutes();
     if (!routes.length) {
-      el.innerHTML = `<div class="bhv4-empty">${isViewingToday() ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E" : "\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E"}</div>`;
+      el.innerHTML = isViewingToday() ? "" : `<div class="bhv4-empty">\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E</div>`;
       return;
     }
     if (smartRowIndex >= routes.length)
@@ -2277,10 +2277,11 @@ ${post.text}
       return;
     }
     if (!toRender.length) {
+      const noMoreMsg = isViewingToday() ? `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>` : "";
       el.innerHTML = `
       <button class="bus-show-all" id="bus-show-all-btn">
         \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u2193
-      </button>`;
+      </button>${noMoreMsg}`;
       document.getElementById("bus-show-all-btn").addEventListener("click", () => {
         showAll = true;
         renderRouteList();
@@ -2357,6 +2358,9 @@ ${post.text}
         <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
           \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
         </button>`;
+      }
+      if (future.length === 0 && all.length > 0) {
+        toggleHtml += `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>`;
       }
     }
     const updRow = document.getElementById("buses-updated-row");
@@ -2523,8 +2527,8 @@ ${post.text}
     el.innerHTML = `
     <div id="bus-week-strip" class="bus-week-strip"></div>
     <div id="bus-search-panel" class="bus-search"></div>
-    <div id="bus-list" class="bus-list"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
+    <div id="bus-list" class="bus-list"></div>
     <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
     busDay = getTodayISO();
