@@ -88,11 +88,11 @@
 .bus-week-day--today .bus-week-day-num {
   color: var(--red);
 }
-/* Обраний день — бордова закраска, краї плавно розмиваються */
+/* Обраний день — насиченіший фон, краї плавно розмиваються */
 .bus-week-day--active {
-  background: #EECCD0;
+  background: #CDD1DC;
   border-radius: 12px;
-  box-shadow: 0 0 10px 6px rgba(238, 204, 208, 0.9);
+  box-shadow: 0 0 10px 6px rgba(205, 209, 220, 0.9);
 }
 /* Минулі дні — приглушені */
 .bus-week-day--past .bus-week-day-name,
