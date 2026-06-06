@@ -2257,18 +2257,18 @@ ${post.text}
     const past = all.filter((r) => isPastRoute(r));
     const toRender = isViewingToday() ? showAll ? all : future : all;
     if (!all.length) {
+      const dd0 = getDayData();
+      const updStr0 = dd0.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd0.fetchedTime)} | ${escapeHtml(dd0.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
+      const titleHtml0 = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updStr0}</span></div>`;
       const hasFilter = fromStop || toStop;
       if (hasFilter) {
-        const dayData = getDayData();
-        const msg = `\u041D\u0430 ${isViewingToday() ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : dayData.fetchedAt || "\u0446\u0435\u0439 \u0434\u0435\u043D\u044C"} \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
-        el.innerHTML = `<div class="empty-state">${msg}</div>`;
+        const msg = `\u041D\u0430 ${isViewingToday() ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : dd0.fetchedAt || "\u0446\u0435\u0439 \u0434\u0435\u043D\u044C"} \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
+        el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
       } else {
-        el.innerHTML = "";
+        el.innerHTML = titleHtml0;
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
-          const dd2 = getDayData();
-          const updatedStr = dd2.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd2.fetchedTime)} | ${escapeHtml(dd2.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
-          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updatedStr}</span>`;
+          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updStr0}</span>`;
         }
       }
       return;

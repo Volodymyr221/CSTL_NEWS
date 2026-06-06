@@ -580,21 +580,20 @@ function renderRouteList() {
   const toRender = isViewingToday() ? (showAll ? all : future) : all;
 
   if (!all.length) {
+    const dd0 = getDayData();
+    const updStr0 = dd0.fetchedTime
+      ? `Оновлено: ${escapeHtml(dd0.fetchedTime)} | ${escapeHtml(dd0.fetchedAt)}`
+      : 'Дані оновлюються...';
+    const titleHtml0 = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updStr0}</span></div>`;
     const hasFilter = fromStop || toStop;
     if (hasFilter) {
-      const dayData = getDayData();
-      const msg = `На ${isViewingToday() ? 'сьогодні' : dayData.fetchedAt || 'цей день'} рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
-      el.innerHTML = `<div class="empty-state">${msg}</div>`;
+      const msg = `На ${isViewingToday() ? 'сьогодні' : dd0.fetchedAt || 'цей день'} рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
+      el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
     } else {
-      el.innerHTML = '';
-      // "Оновлено" — під рядком джерела VOPAS (коли маршрутів 0)
+      el.innerHTML = titleHtml0;
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
-        const dd = getDayData();
-        const updatedStr = dd.fetchedTime
-          ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
-          : 'Дані оновлюються...';
-        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updatedStr}</span>`;
+        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updStr0}</span>`;
       }
     }
     return;
