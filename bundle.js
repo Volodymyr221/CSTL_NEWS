@@ -2184,8 +2184,12 @@ ${post.text}
     const toRender = showAll ? all : future;
     if (!all.length) {
       const hasFilter = fromStop || toStop;
-      const msg = hasFilter ? `\u041D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E` : "\u0420\u0435\u0439\u0441\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E";
-      el.innerHTML = `<div class="empty-state">${msg}</div>`;
+      if (hasFilter) {
+        const msg = `\u041D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
+        el.innerHTML = `<div class="empty-state">${msg}</div>`;
+      } else {
+        el.innerHTML = "";
+      }
       return;
     }
     if (!toRender.length) {
