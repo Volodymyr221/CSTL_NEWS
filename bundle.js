@@ -1994,7 +1994,7 @@ ${post.text}
     const labelsHtml = `<span class="bhv4-label bhv4-label--a">${escapeHtml(labelA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(labelB.toUpperCase())}</span>`;
     return `
     <div class="bhv4-map" aria-hidden="true">
-      <div class="bhv4-labels">${labelsHtml}</div>
+      <div class="bhv4-labels bhv4-dyn">${labelsHtml}</div>
       <div class="bhv4-track">
         <div class="bhv4-fill" style="width:${pct}%"></div>
         ${dotsHtml}
@@ -2058,7 +2058,7 @@ ${post.text}
           </div>
         </div>
 
-        <div class="bhv4-map-outer bhv4-dyn">${renderRouteMapV4(route, timings)}</div>
+        <div class="bhv4-map-outer">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
   }
@@ -2167,8 +2167,19 @@ ${post.text}
         nextEl.textContent = isEnroute ? `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${dispNext.toUpperCase()}` : isUrgent || timings.state === "waiting" && timings.minsToDeparture !== null ? formatCountdownUpper(timings.minsToDeparture) : "";
       }
       const mapOuter = card.querySelector(".bhv4-map-outer");
-      if (mapOuter)
-        mapOuter.innerHTML = renderRouteMapV4(route, timings);
+      if (mapOuter) {
+        const pct = (timings.progress * 100).toFixed(1);
+        const totalKm = route.stops[route.stops.length - 1].km || 1;
+        const movingDot = timings.state === "enroute" ? `<span class="bhv4-dot bhv4-dot--current" style="left:${pct}%"></span>` : "";
+        const dotsHtml = route.stops.map((s) => {
+          const dp = totalKm ? s.km / totalKm * 100 : 0;
+          const passed = totalKm ? s.km / totalKm <= timings.progress + 0.01 : false;
+          return `<span class="bhv4-dot${passed ? " bhv4-dot--passed" : ""}" style="left:${dp.toFixed(1)}%"></span>`;
+        }).join("");
+        const track = mapOuter.querySelector(".bhv4-track");
+        if (track)
+          track.innerHTML = `<div class="bhv4-fill" style="width:${pct}%"></div>${dotsHtml}${movingDot}`;
+      }
       renderRouteList();
       card.querySelectorAll(".bhv4-dyn").forEach((d) => {
         d.style.opacity = "0";
