@@ -595,7 +595,9 @@ function renderRouteList() {
       const msg = `На ${isViewingToday() ? 'сьогодні' : dd0.fetchedAt || 'цей день'} рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
       el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
     } else {
-      el.innerHTML = titleHtml0;
+      const noMoreMsg = isViewingToday()
+        ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>` : '';
+      el.innerHTML = titleHtml0 + noMoreMsg;
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
         updRow.innerHTML = escapeHtml(busData.source);
