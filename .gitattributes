@@ -1,0 +1,4 @@
+# Parser-managed data files — keep main's version when merging claude/* branches.
+# Prevents our bootstrap/dev commits from overwriting vopas-parser cron data.
+data/schedule.json merge=ours
+data/vopas-fetched.json merge=ours
