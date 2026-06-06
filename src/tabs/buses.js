@@ -849,19 +849,32 @@ function renderWeekStrip() {
   });
 
   // Свайп — трек рухається за пальцем у реальному часі
-  let startX = 0;
+  let startX = 0, startY = 0, isHorizSwipe = null;
+
   track.addEventListener('touchstart', e => {
     startX = e.touches[0].clientX;
+    startY = e.touches[0].clientY;
+    isHorizSwipe = null;
     track.dataset.swiped = '0';
     track.style.transition = 'none';
   }, { passive: true });
 
   track.addEventListener('touchmove', e => {
     const dx = e.touches[0].clientX - startX;
-    // Обмежуємо drag: не можна тягти ліво на 1-й сторінці і вправо на 2-й
+    const dy = e.touches[0].clientY - startY;
+
+    // Визначаємо тип свайпу один раз, як тільки є помітний рух
+    if (isHorizSwipe === null && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+      isHorizSwipe = Math.abs(dx) > Math.abs(dy);
+    }
+    // Вертикальний рух — не чіпаємо, сторінка скролиться штатно
+    if (!isHorizSwipe) return;
+
+    // Горизонтальний — блокуємо вертикальний скрол сторінки
+    e.preventDefault();
     const clamped = weekPage === 0 ? Math.min(dx, 0) : Math.max(dx, 0);
     track.style.transform = `translateX(calc(-${weekPage * 50}% + ${clamped}px))`;
-  }, { passive: true });
+  }, { passive: false }); // passive: false — щоб e.preventDefault() спрацював
 
   track.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - startX;

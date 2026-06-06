@@ -2447,17 +2447,26 @@ ${post.text}
         );
       });
     });
-    let startX = 0;
+    let startX = 0, startY = 0, isHorizSwipe = null;
     track.addEventListener("touchstart", (e) => {
       startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isHorizSwipe = null;
       track.dataset.swiped = "0";
       track.style.transition = "none";
     }, { passive: true });
     track.addEventListener("touchmove", (e) => {
       const dx = e.touches[0].clientX - startX;
+      const dy = e.touches[0].clientY - startY;
+      if (isHorizSwipe === null && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
+        isHorizSwipe = Math.abs(dx) > Math.abs(dy);
+      }
+      if (!isHorizSwipe)
+        return;
+      e.preventDefault();
       const clamped = weekPage === 0 ? Math.min(dx, 0) : Math.max(dx, 0);
       track.style.transform = `translateX(calc(-${weekPage * 50}% + ${clamped}px))`;
-    }, { passive: true });
+    }, { passive: false });
     track.addEventListener("touchend", (e) => {
       const dx = e.changedTouches[0].clientX - startX;
       const newPage = dx < -40 && weekPage === 0 ? 1 : dx > 40 && weekPage === 1 ? 0 : weekPage;
