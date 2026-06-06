@@ -61,7 +61,10 @@
   padding: 26px 16px 20px;
   text-transform: uppercase;
   text-align: center;
-  position: relative;
+  position: sticky;
+  top: 78px; /* висота fixed search bar */
+  z-index: 88;
+  background: #ECEEF2;
 }
 .bus-list-title::after {
   content: '';
