@@ -615,8 +615,8 @@
   top: 100%;
   left: 0;
   right: 0;
-  height: 20px;
-  background: linear-gradient(to bottom, #ECEEF2, transparent);
+  height: 14px;
+  background: linear-gradient(to bottom, rgba(236,238,242,0.7), transparent);
   pointer-events: none;
 }
 
