@@ -2233,7 +2233,8 @@ ${post.text}
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
           const dd2 = getDayData();
-          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd2.fetchedTime || "")} | ${escapeHtml(dd2.fetchedAt || "")}</span>`;
+          const updatedStr = dd2.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd2.fetchedTime)} | ${escapeHtml(dd2.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
+          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updatedStr}</span>`;
         }
       }
       return;
@@ -2324,7 +2325,8 @@ ${post.text}
     if (updRow && busData)
       updRow.innerHTML = escapeHtml(busData.source);
     const dd = getDayData();
-    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime || "")} | ${escapeHtml(dd.fetchedAt || "")}</span></div>` + cards + toggleHtml;
+    const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
+    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
         const id = btn.dataset.id;

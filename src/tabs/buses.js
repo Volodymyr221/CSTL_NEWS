@@ -566,7 +566,10 @@ function renderRouteList() {
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
         const dd = getDayData();
-        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(dd.fetchedTime || '')} | ${escapeHtml(dd.fetchedAt || '')}</span>`;
+        const updatedStr = dd.fetchedTime
+          ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
+          : 'Дані оновлюються...';
+        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">${updatedStr}</span>`;
       }
     }
     return;
@@ -680,7 +683,10 @@ function renderRouteList() {
   const updRow = document.getElementById('buses-updated-row');
   if (updRow && busData) updRow.innerHTML = escapeHtml(busData.source);
   const dd = getDayData();
-  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(dd.fetchedTime || '')} | ${escapeHtml(dd.fetchedAt || '')}</span></div>` + cards + toggleHtml;
+  const updatedStr2 = dd.fetchedTime
+    ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
+    : 'Дані оновлюються...';
+  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
