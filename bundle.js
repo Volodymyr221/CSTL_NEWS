@@ -1800,6 +1800,12 @@ ${post.text}
   function isViewingToday() {
     return busDay === getTodayISO();
   }
+  function getTimingsForDisplay(route) {
+    if (isViewingToday())
+      return getRouteTimings(route);
+    const base = getRouteTimings(route);
+    return { ...base, state: "waiting", progress: 0, minsToDeparture: null, minsToArrival: null };
+  }
   function savePrefs() {
     localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
   }
@@ -1881,6 +1887,8 @@ ${post.text}
   }
   function findNextRoute() {
     const all = getFilteredRoutes();
+    if (!isViewingToday())
+      return all.find((r) => r.status !== "cancelled") || null;
     const enroute = all.filter((r) => getRouteState(r) === "enroute");
     if (enroute.length) {
       return enroute.sort((a, b) => {
@@ -1893,6 +1901,10 @@ ${post.text}
   }
   function findActiveRoutes() {
     const all = getFilteredRoutes();
+    if (!isViewingToday()) {
+      const active = all.filter((r) => r.status !== "cancelled");
+      return active.length ? active : all.length ? [all[0]] : [];
+    }
     const result = all.filter((r) => {
       if (r.status === "cancelled")
         return false;
@@ -2088,19 +2100,15 @@ ${post.text}
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
-    if (!isViewingToday()) {
-      el.innerHTML = "";
-      return;
-    }
     const routes = findActiveRoutes();
     if (!routes.length) {
-      el.innerHTML = `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>`;
+      el.innerHTML = `<div class="bhv4-empty">${isViewingToday() ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E" : "\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E"}</div>`;
       return;
     }
     if (smartRowIndex >= routes.length)
       smartRowIndex = 0;
     const route = routes[smartRowIndex];
-    const timings = getRouteTimings(route);
+    const timings = getTimingsForDisplay(route);
     el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length);
     let touchStartX = 0;
     const card = el.firstElementChild;
@@ -2146,7 +2154,7 @@ ${post.text}
       if (smartRowIndex >= routes.length)
         smartRowIndex = 0;
       const route = routes[smartRowIndex];
-      const timings = getRouteTimings(route);
+      const timings = getTimingsForDisplay(route);
       const isEnroute = timings.state === "enroute";
       const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
       card.className = `bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}`;

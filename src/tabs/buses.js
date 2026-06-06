@@ -36,6 +36,14 @@ function getDayData() {
 
 function isViewingToday() { return busDay === getTodayISO(); }
 
+// Для hero-картки: для не-сьогоднішніх днів скидаємо state→'waiting',
+// progress→0, minsToDeparture/minsToArrival→null (немає відліку).
+function getTimingsForDisplay(route) {
+  if (isViewingToday()) return getRouteTimings(route);
+  const base = getRouteTimings(route);
+  return { ...base, state: 'waiting', progress: 0, minsToDeparture: null, minsToArrival: null };
+}
+
 // ── Preferences (localStorage — збереження налаштувань у браузері) ────
 function savePrefs() {
   localStorage.setItem(PREFS_KEY, JSON.stringify({ from: fromStop, to: toStop }));
@@ -125,6 +133,7 @@ function getFilteredRoutes() {
 // до кінцевої точки маршруту (тобто скоро прибуде). Якщо нема enroute — найближчий waiting.
 function findNextRoute() {
   const all = getFilteredRoutes();
+  if (!isViewingToday()) return all.find(r => r.status !== 'cancelled') || null;
   const enroute = all.filter(r => getRouteState(r) === 'enroute');
   if (enroute.length) {
     return enroute.sort((a, b) => {
@@ -139,9 +148,15 @@ function findNextRoute() {
 /// Усі актуальні рейси для каруселі: enroute + waiting в межах 90 хв,
 // відсортовані за часом відправлення — той самий порядок що й список знизу.
 function findActiveRoutes() {
-  const all    = getFilteredRoutes(); // вже відсортовані за часом відправлення
+  const all = getFilteredRoutes(); // вже відсортовані за часом відправлення
+  // Для майбутніх/минулих днів — всі не-скасовані рейси в каруселі
+  if (!isViewingToday()) {
+    const active = all.filter(r => r.status !== 'cancelled');
+    return active.length ? active : (all.length ? [all[0]] : []);
+  }
+  // Сьогодні: enroute + waiting в межах 90 хв
   const result = all.filter(r => {
-    if (r.status === 'cancelled') return false; // скасований — не показуємо в каруселі
+    if (r.status === 'cancelled') return false;
     const state = getRouteState(r);
     if (state === 'enroute') return true;
     if (state === 'waiting') {
@@ -396,12 +411,9 @@ function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
 
-  // Hero-картка тільки для сьогодні — для інших днів порожньо
-  if (!isViewingToday()) { el.innerHTML = ''; return; }
-
   const routes = findActiveRoutes();
   if (!routes.length) {
-    el.innerHTML = `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
+    el.innerHTML = `<div class="bhv4-empty">${isViewingToday() ? 'СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО' : 'НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО'}</div>`;
     return;
   }
 
@@ -409,7 +421,7 @@ function renderSmartRow() {
   if (smartRowIndex >= routes.length) smartRowIndex = 0;
 
   const route   = routes[smartRowIndex];
-  const timings = getRouteTimings(route);
+  const timings = getTimingsForDisplay(route);
   el.innerHTML  = buildHeroCard(route, timings, smartRowIndex, routes.length);
 
   // Свайп (touch — дотик)
@@ -451,7 +463,7 @@ function switchHeroCard() {
     if (smartRowIndex >= routes.length) smartRowIndex = 0;
 
     const route   = routes[smartRowIndex];
-    const timings = getRouteTimings(route);
+    const timings = getTimingsForDisplay(route);
     const isEnroute = timings.state === 'enroute';
     const isUrgent  = timings.state === 'waiting' && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
 
