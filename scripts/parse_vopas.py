@@ -413,23 +413,9 @@ def dedupe(routes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
-def get_query_date() -> tuple[str, str]:
-    """Повертає (query_date, label) для запиту до VOPAS.
-    Завжди запитуємо ЗАВТРА — бо VOPAS приховує рейси що вже відправились.
-    Якщо запитувати сьогодні після обіду — більшість рейсів вже пройшло і VOPAS
-    повертає 0. Завтра — завжди повний незафільтрований розклад."""
-    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
-    return tomorrow.strftime("%d.%m.%Y"), f"завтра {tomorrow.strftime('%d.%m')}"
-
-
 def main() -> int:
-    query_date, date_label = get_query_date()
-    today = datetime.date.today().strftime("%d.%m.%Y")
-    if query_date != today:
-        print(f"=== VOPAS parser ({today}) ===")
-        print(f"ℹ️  Вихідний день — запитуємо розклад на {date_label} ({query_date})")
-    else:
-        print(f"=== VOPAS parser ({query_date}) ===")
+    query_date = datetime.date.today().strftime("%d.%m.%Y")
+    print(f"=== VOPAS parser ({query_date}) ===")
     print(f"Запитую {len(MARSHRUTI)} пар маршрутів...\n")
 
     all_routes: list[dict[str, Any]] = []
@@ -474,15 +460,11 @@ def main() -> int:
     # ГОЛОВНЕ: пишемо data/schedule.json у форматі для UI вкладки Автобуси
     schedule = build_schedule(unique, query_date)
 
-    # ЗАХИСТ: якщо після whitelist-фільтрації route_is_local() лишилось 0 рейсів —
-    # НЕ перезаписуємо schedule.json щоб не обнулити робочий розклад.
-    # Таке буває коли VOPAS видає лише транзитні рейси (Луцьк-Львів і т.п.) у яких
-    # кінцева зупинка поза ALLOWED_STOPS — і всі вони відсікаються фільтром.
+    # routes=[] — теж валідний стан: всі рейси вже відправились або не курсують.
+    # UI покаже "Сьогодні рейсів більше не заплановано" з актуальним verifiedTime.
     if not schedule["routes"]:
-        print("\n⚠️  Після фільтрації 0 локальних рейсів — schedule.json НЕ оновлюємо (зберігаємо старий)")
-        print(f"   Отримано {len(unique)} рейсів від VOPAS, але всі відсіяні як транзит або >150 хв.")
-        print("   Якщо це помилка — перевір ALLOWED_STOPS або MARSHRUTI у parse_vopas.py")
-        return 0
+        print(f"\nℹ️  0 місцевих рейсів — всі відправились або тільки транзит "
+              f"({len(unique)} отримано від VOPAS). Пишемо порожній розклад з поточним часом.")
 
     schedule_path = Path(__file__).parent.parent / "data" / "schedule.json"
     schedule_path.write_text(
