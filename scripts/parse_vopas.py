@@ -344,7 +344,9 @@ def query_day(date_str: str) -> tuple[list[dict], list[str]]:
 # ── Main ──────────────────────────────────────────────────────────────────
 
 def get_14_days() -> list[datetime.date]:
-    """Повертає 14 днів: поточний тиждень (Пн–Нд) + наступний тиждень (Пн–Нд)."""
+    """Повертає рівно 14 днів календаря: Пн поточного тижня → Нд наступного тижня.
+    ПРАВИЛО: кожне число що є у calendar-смужці у застосунку ПОВИННО бути у цьому списку.
+    Якщо кількість днів у смужці зміниться — змінити range() тут відповідно."""
     today = datetime.date.today()
     monday = today - datetime.timedelta(days=today.weekday())
     return [monday + datetime.timedelta(days=i) for i in range(14)]
