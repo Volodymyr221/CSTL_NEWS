@@ -149,10 +149,10 @@ function findNextRoute() {
 // відсортовані за часом відправлення — той самий порядок що й список знизу.
 function findActiveRoutes() {
   const all = getFilteredRoutes(); // вже відсортовані за часом відправлення
-  // Для майбутніх/минулих днів — всі не-скасовані рейси в каруселі
+  // Для майбутніх/минулих днів — тільки перший рейс дня
   if (!isViewingToday()) {
-    const active = all.filter(r => r.status !== 'cancelled');
-    return active.length ? active : (all.length ? [all[0]] : []);
+    const first = all.find(r => r.status !== 'cancelled') || all[0] || null;
+    return first ? [first] : [];
   }
   // Сьогодні: enroute + waiting в межах 90 хв
   const result = all.filter(r => {
