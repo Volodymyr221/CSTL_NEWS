@@ -62,7 +62,8 @@
   text-transform: uppercase;
   text-align: center;
   position: sticky;
-  top: 78px;
+  top: 78px; /* висота fixed search bar */
+  z-index: 88;
   background: #ECEEF2;
 }
 .bus-list-title::after {
