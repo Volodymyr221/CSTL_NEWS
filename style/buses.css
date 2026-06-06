@@ -92,6 +92,7 @@
 .bus-week-day--active {
   background: #D8DBE4;
   border-radius: 12px;
+  border-color: #A8AEBB;
   box-shadow: 0 0 10px 6px rgba(216, 219, 228, 0.85);
 }
 /* Минулі дні — приглушені */
