@@ -514,10 +514,12 @@ function renderRouteList() {
 
   if (!all.length) {
     const hasFilter = fromStop || toStop;
-    const msg = hasFilter
-      ? `На сьогодні рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`
-      : 'Рейсів не знайдено';
-    el.innerHTML = `<div class="empty-state">${msg}</div>`;
+    if (hasFilter) {
+      const msg = `На сьогодні рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
+      el.innerHTML = `<div class="empty-state">${msg}</div>`;
+    } else {
+      el.innerHTML = ''; // hero вже показує "СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО"
+    }
     return;
   }
 
