@@ -370,6 +370,27 @@ export function buildHeroCard(route, timings, index, total) {
 }
 
 
+let _padObserver = null;
+
+function updateFixedPadding() {
+  const zone = document.getElementById('bus-fixed-zone');
+  const page = document.getElementById('page-buses');
+  if (!zone || !page) return;
+
+  const apply = () => {
+    const h = zone.getBoundingClientRect().height;
+    if (h > 0) page.style.paddingTop = h + 'px';
+  };
+
+  apply();
+
+  // MutationObserver — спрацює коли вкладка стає видимою (display:block)
+  if (!_padObserver) {
+    _padObserver = new MutationObserver(() => requestAnimationFrame(apply));
+    _padObserver.observe(page, { attributes: true, attributeFilter: ['style'] });
+  }
+}
+
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
@@ -744,8 +765,8 @@ export async function initBuses() {
   }
 
   el.innerHTML = `
-    <div id="bus-search-panel" class="bus-search"></div>
-    <div id="bus-sticky-zone">
+    <div id="bus-fixed-zone">
+      <div id="bus-search-panel" class="bus-search"></div>
       <div id="bus-smart-row" class="bus-smart-row"></div>
       <div id="bus-title-bar" class="bus-list-title"></div>
     </div>
@@ -759,10 +780,12 @@ export async function initBuses() {
   renderSearchPanel();
   renderSmartRow();
   renderRouteList();
+  updateFixedPadding();
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     renderSmartRow();
     renderRouteList();
-    }, 60_000);
+    updateFixedPadding();
+  }, 60_000);
 }
