@@ -1866,6 +1866,8 @@ ${post.text}
     return true;
   }
   function isPastRoute(route) {
+    if (!isViewingToday())
+      return false;
     return getRouteState(route) === "past";
   }
   function getFilteredRoutes() {
