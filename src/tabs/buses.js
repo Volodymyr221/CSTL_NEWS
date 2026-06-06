@@ -406,6 +406,15 @@ function renderSmartRow() {
       switchHeroCard();
     });
   });
+
+  // Компенсація: paddingTop сторінки = пошук (78px) + висота віджету
+  requestAnimationFrame(() => {
+    const page = document.getElementById('page-buses');
+    if (page) {
+      const h = el.getBoundingClientRect().height;
+      page.style.paddingTop = (78 + h) + 'px';
+    }
+  });
 }
 
 /// Свайп: фейдяться тільки .bhv4-dyn елементи (назва, час, стоп, шкала).
