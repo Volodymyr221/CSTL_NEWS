@@ -19,7 +19,7 @@
 
 /* ===== WEEK STRIP (тижнева смужка Пн–Нд) ===== */
 .bus-week-strip {
-  padding: 8px 12px 2px;
+  padding: 2px 12px 2px;
 }
 .bus-week-days {
   display: flex;
@@ -675,7 +675,7 @@
 
 /* Компенсація висоти fixed bus-search */
 #page-buses {
-  padding-top: 78px;
+  padding-top: 60px;
 }
 
 /* Рядок з двома полями і кнопкою swap */
