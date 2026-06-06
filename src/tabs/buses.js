@@ -573,7 +573,6 @@ function renderRouteList() {
       : route.status === 'delayed'
       ? `<span class="bs-status delayed">Затримка</span>`
       : '';
-    const transitBadge = route.transit ? `<span class="bs-status transit">транзит</span>` : '';
 
     const autoNote = route.auto_generated
       ? `<div class="bs-autogen">розрахований зворотний рейс</div>`
@@ -587,7 +586,7 @@ function renderRouteList() {
             <span class="bs-arr">→\u202f${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}${transitBadge}</div>
+            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>
