@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-06T03:53:29.175252+00:00",
+  "fetched_at": "2026-06-06T06:56:34.846267+00:00",
   "date": "06.06.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -43,8 +43,8 @@
       "carrier": "Дяков Г.Г.-",
       "bus": "МЕРСЕДЕС-БЕНЦ  711",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -58,8 +58,8 @@
       "carrier": "ГОРОХІВ АТП 10764 45701",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -73,8 +73,8 @@
       "carrier": "Чуй В.А. м.Рівне",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -103,9 +103,9 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
       "from": "Личани",
       "to": "Луцьк"
     },
