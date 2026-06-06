@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-06T06:56:34.846267+00:00",
+  "fetched_at": "2026-06-06T09:29:33.649770+00:00",
   "date": "06.06.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -88,8 +88,8 @@
       "carrier": "Кирилюк С.Л.",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -103,9 +103,9 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -118,8 +118,8 @@
       "carrier": "Львів АТП 14631",
       "bus": "БАЗ  А 079.21",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -133,8 +133,8 @@
       "carrier": "НОВОВОЛИНСЬК АТП 10708",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
