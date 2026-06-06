@@ -413,16 +413,35 @@ def dedupe(routes: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return out
 
 
+def get_query_date() -> tuple[str, str]:
+    """Повертає (query_date, label) для запиту до VOPAS.
+    Місцеві рейси їздять тільки по буднях (пн–пт).
+    Якщо сьогодні субота або неділя — беремо наступний понеділок,
+    щоб показати актуальний розклад майбутнього тижня."""
+    today = datetime.date.today()
+    weekday = today.weekday()  # 0=пн … 4=пт, 5=сб, 6=нд
+    if weekday >= 5:
+        days_ahead = 7 - weekday  # до понеділка: сб+2, нд+1
+        next_monday = today + datetime.timedelta(days=days_ahead)
+        return next_monday.strftime("%d.%m.%Y"), f"наступний пн {next_monday.strftime('%d.%m')}"
+    return today.strftime("%d.%m.%Y"), "сьогодні"
+
+
 def main() -> int:
+    query_date, date_label = get_query_date()
     today = datetime.date.today().strftime("%d.%m.%Y")
-    print(f"=== VOPAS parser ({today}) ===")
+    if query_date != today:
+        print(f"=== VOPAS parser ({today}) ===")
+        print(f"ℹ️  Вихідний день — запитуємо розклад на {date_label} ({query_date})")
+    else:
+        print(f"=== VOPAS parser ({query_date}) ===")
     print(f"Запитую {len(MARSHRUTI)} пар маршрутів...\n")
 
     all_routes: list[dict[str, Any]] = []
     errors: list[str] = []
 
     for from_city, to_city in MARSHRUTI:
-        url = build_url(from_city, to_city, today)
+        url = build_url(from_city, to_city, query_date)
         print(f"→ {from_city} → {to_city}")
         try:
             html = fetch_html(url)
@@ -453,12 +472,12 @@ def main() -> int:
     OUTPUT_PATH.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT_PATH.write_text(json.dumps({
         "fetched_at": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-        "date": today, "source": "vopas.com.ua",
+        "date": query_date, "source": "vopas.com.ua",
         "errors": errors, "routes": unique,
     }, ensure_ascii=False, indent=2), encoding="utf-8")
 
     # ГОЛОВНЕ: пишемо data/schedule.json у форматі для UI вкладки Автобуси
-    schedule = build_schedule(unique, today)
+    schedule = build_schedule(unique, query_date)
 
     # ЗАХИСТ: якщо після whitelist-фільтрації route_is_local() лишилось 0 рейсів —
     # НЕ перезаписуємо schedule.json щоб не обнулити робочий розклад.
