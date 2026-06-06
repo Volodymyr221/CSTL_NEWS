@@ -2059,23 +2059,6 @@ ${post.text}
       </div>
     </div>`;
   }
-  var _padObserver = null;
-  function updateFixedPadding() {
-    const zone = document.getElementById("bus-fixed-zone");
-    const page = document.getElementById("page-buses");
-    if (!zone || !page)
-      return;
-    const apply = () => {
-      const h = zone.getBoundingClientRect().height;
-      if (h > 0)
-        page.style.paddingTop = h + "px";
-    };
-    apply();
-    if (!_padObserver) {
-      _padObserver = new MutationObserver(() => requestAnimationFrame(apply));
-      _padObserver.observe(page, { attributes: true, attributeFilter: ["style"] });
-    }
-  }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
@@ -2390,8 +2373,8 @@ ${post.text}
       return;
     }
     el.innerHTML = `
-    <div id="bus-fixed-zone">
-      <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-sticky-zone">
       <div id="bus-smart-row" class="bus-smart-row"></div>
       <div id="bus-title-bar" class="bus-list-title"></div>
     </div>
@@ -2404,13 +2387,11 @@ ${post.text}
     renderSearchPanel();
     renderSmartRow();
     renderRouteList();
-    updateFixedPadding();
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       renderSmartRow();
       renderRouteList();
-      updateFixedPadding();
     }, 6e4);
   }
 

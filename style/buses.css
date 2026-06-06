@@ -592,25 +592,20 @@
 
 /* ===== BUSES v3 — Пошук "Звідки → Куди" + акордеон зупинок ===== */
 
-/* Фіксована зона: пошук + віджет + заголовок — не рухаються при overscroll */
-#bus-fixed-zone {
+/* Зона пошуку (fixed) + sticky-зона (widget+title) — разом виглядають як одне ціле */
+.bus-search {
+  margin: 0;
+  padding: 6px 14px 10px;
+  background: #ECEEF2;
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
   z-index: 90;
-  background: #ECEEF2;
 }
-
-.bus-search {
-  margin: 0;
-  padding: 6px 14px 10px;
-  background: #ECEEF2;
-}
-
-/* Запасний відступ — JS (updateFixedPadding) встановить точне значення */
+/* Компенсація під fixed search */
 #page-buses {
-  padding-top: 340px;
+  padding-top: 78px;
 }
 
 
