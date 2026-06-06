@@ -105,6 +105,7 @@ function matchesSearch(route) {
 
 // «Past» = рейс завершився (прибув на кінцеву). Рейс у дорозі тепер НЕ past.
 function isPastRoute(route) {
+  if (!isViewingToday()) return false;
   return getRouteState(route) === 'past';
 }
 
