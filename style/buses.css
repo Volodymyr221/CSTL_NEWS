@@ -123,6 +123,14 @@
   text-align: center;
   position: relative;
 }
+.bus-list-date-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  color: var(--ink-soft);
+  margin-top: 3px;
+}
 .bus-list-updated-sub {
   display: block;
   font-size: 10px;
