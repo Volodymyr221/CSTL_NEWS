@@ -580,15 +580,18 @@ function renderRouteList() {
       ? `<div class="bs-autogen">розрахований зворотний рейс</div>`
       : '';
 
+    const [ep1, ep2] = parseRouteEndpoints(route.name);
+    const routeLabel = `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
+
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
-            <span class="bs-arr">→\u202f${escapeHtml(toTime || '—')}</span>
+            <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>

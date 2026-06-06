@@ -520,14 +520,14 @@
   gap: 12px;
 }
 
-/* Час відправлення — Apple-стиль, великий sans */
+/* Час відправлення і прибуття — однаковий розмір */
 .bus-card-time {
-  font-size: 30px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--ink);
-  min-width: 68px;
-  letter-spacing: -1.5px;
-  line-height: 1;
+  min-width: 78px;
+  letter-spacing: -0.5px;
+  line-height: 1.2;
   flex-shrink: 0;
   font-variant-numeric: tabular-nums;
 }
@@ -536,8 +536,8 @@
 .bus-card-info { flex: 1; min-width: 0; }
 
 .bus-card-route {
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 16px;
+  font-weight: 700;
   color: var(--ink);
   margin-bottom: 2px;
   white-space: nowrap;
@@ -689,12 +689,14 @@
   min-width: 68px;
 }
 
-/* Час прибуття під відправленням */
+/* Час прибуття — такий самий розмір як відправлення */
 .bs-arr {
-  font-size: 12px;
-  color: var(--gray);
-  margin-top: 2px;
-  letter-spacing: -0.3px;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--ink-mute);
+  margin-top: 0;
+  letter-spacing: -0.5px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Підсвічування активного рейсу — бордова смуга зліва */

@@ -2233,15 +2233,17 @@ ${post.text}
       }).join("");
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
+      const [ep1, ep2] = parseRouteEndpoints(route.name);
+      const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
-            <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
+            <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>
