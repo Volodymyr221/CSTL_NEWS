@@ -46,15 +46,9 @@
   z-index: 49;
 }
 
-/* Smart-рядок — fixed під пошуком, як сам пошук під шапкою */
+/* Smart-рядок наступного рейсу */
 .bus-smart-row {
-  position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 78px);
-  left: 0;
-  right: 0;
-  z-index: 85;
-  background: #ECEEF2;
-  padding: 0 14px 4px;
+  padding: 16px 14px 4px;
 }
 
 /* Заголовок над розкладом */
