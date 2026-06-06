@@ -1819,6 +1819,11 @@ ${post.text}
     ];
     return `\u041D\u0410 ${day} ${months[month - 1]} ${year}`;
   }
+  function buildListTitleHtml(updatedStr) {
+    const isFuture = busDay > getTodayISO();
+    const dateClass = "bus-list-date-sub" + (isFuture ? " bus-list-date-sub--future" : "");
+    return `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="${dateClass}">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
+  }
   function getTimingsForDisplay(route) {
     if (isViewingToday())
       return getRouteTimings(route);
@@ -2259,7 +2264,7 @@ ${post.text}
     if (!all.length) {
       const dd0 = getDayData();
       const updStr0 = dd0.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd0.fetchedTime)} | ${escapeHtml(dd0.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
-      const titleHtml0 = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updStr0}</span></div>`;
+      const titleHtml0 = buildListTitleHtml(updStr0);
       const hasFilter = fromStop || toStop;
       if (hasFilter) {
         const msg = `\u041D\u0430 ${isViewingToday() ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : dd0.fetchedAt || "\u0446\u0435\u0439 \u0434\u0435\u043D\u044C"} \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
@@ -2361,7 +2366,7 @@ ${post.text}
       updRow.innerHTML = escapeHtml(busData.source);
     const dd = getDayData();
     const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
-    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
+    el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
