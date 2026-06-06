@@ -429,8 +429,8 @@ function renderSmartRow() {
 
   const routes = findActiveRoutes();
   if (!routes.length) {
-    // Для сьогодні: повідомлення виводиться внизу списку, не тут
-    el.innerHTML = isViewingToday() ? '' : `<div class="bhv4-empty">НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО</div>`;
+    // Повідомлення завжди виводиться під заголовком у bus-list, не тут
+    el.innerHTML = '';
     return;
   }
 
@@ -596,7 +596,8 @@ function renderRouteList() {
       el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
     } else {
       const noMoreMsg = isViewingToday()
-        ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>` : '';
+        ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`
+        : `<div class="bhv4-empty">НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО</div>`;
       el.innerHTML = titleHtml0 + noMoreMsg;
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {

@@ -2129,7 +2129,7 @@ ${post.text}
       return;
     const routes = findActiveRoutes();
     if (!routes.length) {
-      el.innerHTML = isViewingToday() ? "" : `<div class="bhv4-empty">\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E</div>`;
+      el.innerHTML = "";
       return;
     }
     if (smartRowIndex >= routes.length)
@@ -2268,7 +2268,7 @@ ${post.text}
         const msg = `\u041D\u0430 ${isViewingToday() ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : dd0.fetchedAt || "\u0446\u0435\u0439 \u0434\u0435\u043D\u044C"} \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
         el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
       } else {
-        const noMoreMsg = isViewingToday() ? `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>` : "";
+        const noMoreMsg = isViewingToday() ? `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>` : `<div class="bhv4-empty">\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E</div>`;
         el.innerHTML = titleHtml0 + noMoreMsg;
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
