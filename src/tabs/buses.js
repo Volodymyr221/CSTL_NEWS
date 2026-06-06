@@ -37,6 +37,13 @@ function getDayData() {
 
 function isViewingToday() { return busDay === getTodayISO(); }
 
+function formatBusDayTitle() {
+  const [year, month, day] = busDay.split('-').map(Number);
+  const months = ['СІЧНЯ','ЛЮТОГО','БЕРЕЗНЯ','КВІТНЯ','ТРАВНЯ','ЧЕРВНЯ',
+                  'ЛИПНЯ','СЕРПНЯ','ВЕРЕСНЯ','ЖОВТНЯ','ЛИСТОПАДА','ГРУДНЯ'];
+  return `НА ${day} ${months[month - 1]} ${year}`;
+}
+
 // Для hero-картки: для не-сьогоднішніх днів скидаємо state→'waiting',
 // progress→0, minsToDeparture/minsToArrival→null (немає відліку).
 function getTimingsForDisplay(route) {
@@ -705,7 +712,7 @@ function renderRouteList() {
   const updatedStr2 = dd.fetchedTime
     ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
     : 'Дані оновлюються...';
-  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
+  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', e => {

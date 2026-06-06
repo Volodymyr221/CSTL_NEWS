@@ -1801,6 +1801,24 @@ ${post.text}
   function isViewingToday() {
     return busDay === getTodayISO();
   }
+  function formatBusDayTitle() {
+    const [year, month, day] = busDay.split("-").map(Number);
+    const months = [
+      "\u0421\u0406\u0427\u041D\u042F",
+      "\u041B\u042E\u0422\u041E\u0413\u041E",
+      "\u0411\u0415\u0420\u0415\u0417\u041D\u042F",
+      "\u041A\u0412\u0406\u0422\u041D\u042F",
+      "\u0422\u0420\u0410\u0412\u041D\u042F",
+      "\u0427\u0415\u0420\u0412\u041D\u042F",
+      "\u041B\u0418\u041F\u041D\u042F",
+      "\u0421\u0415\u0420\u041F\u041D\u042F",
+      "\u0412\u0415\u0420\u0415\u0421\u041D\u042F",
+      "\u0416\u041E\u0412\u0422\u041D\u042F",
+      "\u041B\u0418\u0421\u0422\u041E\u041F\u0410\u0414\u0410",
+      "\u0413\u0420\u0423\u0414\u041D\u042F"
+    ];
+    return `\u041D\u0410 ${day} ${months[month - 1]} ${year}`;
+  }
   function getTimingsForDisplay(route) {
     if (isViewingToday())
       return getRouteTimings(route);
@@ -2343,7 +2361,7 @@ ${post.text}
       updRow.innerHTML = escapeHtml(busData.source);
     const dd = getDayData();
     const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
-    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
+    el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
