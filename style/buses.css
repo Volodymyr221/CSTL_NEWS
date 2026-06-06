@@ -88,9 +88,11 @@
 .bus-week-day--today .bus-week-day-num {
   color: var(--red);
 }
-/* Обраний день — насиченіший відтінок фону сторінки */
+/* Обраний день — м'який відтінок фону, краї плавно розмиваються */
 .bus-week-day--active {
-  background: #C9CDD8;
+  background: #D8DBE4;
+  border-radius: 12px;
+  box-shadow: 0 0 10px 6px rgba(216, 219, 228, 0.85);
 }
 /* Минулі дні — приглушені */
 .bus-week-day--past .bus-week-day-name,
