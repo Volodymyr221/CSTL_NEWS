@@ -46,7 +46,7 @@ jobs:
             head -80 data/vopas-fetched.json
             echo ""
             echo "=== Кількість рейсів ==="
-            python3 -c "import json; d=json.load(open('data/vopas-fetched.json')); print(f'routes: {len(d[\"routes\"])}'); print(f'errors: {len(d[\"errors\"])}')"
+            python3 -c "import json; d=json.load(open('data/vopas-fetched.json')); print(f'routes: {len(d.get(\"routes\",[]))}'); print(f'errors: {len(d.get(\"errors\",[])) }')"
           fi
 
       - name: Commit if changed
