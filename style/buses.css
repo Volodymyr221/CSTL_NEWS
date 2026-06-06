@@ -48,7 +48,7 @@
 
 /* Smart-рядок наступного рейсу */
 .bus-smart-row {
-  padding: 16px 14px 14px;
+  padding: 16px 14px 8px;
 }
 
 /* Заголовок над розкладом */
