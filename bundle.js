@@ -2205,6 +2205,10 @@ ${post.text}
         el.innerHTML = `<div class="empty-state">${msg}</div>`;
       } else {
         el.innerHTML = "";
+        const updRow2 = document.getElementById("buses-updated-row");
+        if (updRow2 && busData) {
+          updRow2.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData.verifiedTime || "")} | ${escapeHtml(busData.verifiedAt || "")}</span>`;
+        }
       }
       return;
     }
@@ -2288,6 +2292,9 @@ ${post.text}
         \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
       </button>`;
     }
+    const updRow = document.getElementById("buses-updated-row");
+    if (updRow && busData)
+      updRow.innerHTML = escapeHtml(busData.source);
     el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(busData?.verifiedTime || "")} | ${escapeHtml(busData?.verifiedAt || "")}</span></div>` + cards + toggleHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2395,7 +2402,7 @@ ${post.text}
     <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
-    <div class="buses-updated">${escapeHtml(busData.source)}</div>
+    <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
     renderSearchPanel();
     renderSmartRow();

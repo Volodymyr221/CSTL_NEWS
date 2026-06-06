@@ -533,7 +533,12 @@ function renderRouteList() {
       const msg = `На сьогодні рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
       el.innerHTML = `<div class="empty-state">${msg}</div>`;
     } else {
-      el.innerHTML = ''; // hero вже показує "СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО"
+      el.innerHTML = '';
+      // "Оновлено" — під рядком джерела VOPAS (коли маршрутів 0)
+      const updRow = document.getElementById('buses-updated-row');
+      if (updRow && busData) {
+        updRow.innerHTML = `${escapeHtml(busData.source)}<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData.verifiedTime || '')} | ${escapeHtml(busData.verifiedAt || '')}</span>`;
+      }
     }
     return;
   }
@@ -641,6 +646,8 @@ function renderRouteList() {
       </button>`;
   }
 
+  const updRow = document.getElementById('buses-updated-row');
+  if (updRow && busData) updRow.innerHTML = escapeHtml(busData.source);
   el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData?.verifiedTime || '')} | ${escapeHtml(busData?.verifiedAt || '')}</span></div>` + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
@@ -763,7 +770,7 @@ export async function initBuses() {
     <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
-    <div class="buses-updated">${escapeHtml(busData.source)}</div>
+    <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
 
   renderSearchPanel();
