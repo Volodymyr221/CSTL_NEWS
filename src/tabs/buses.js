@@ -188,9 +188,8 @@ function findActiveRoutes() {
 function getAllStops() {
   if (!busData) return [];
   const seen = new Set();
-  // Збираємо зупинки з усіх днів тижня для автодоповнення
-  const allDays = busData.days ? Object.values(busData.days) : [{ routes: busData.routes || [] }];
-  allDays.forEach(d => (d.routes || []).forEach(r => r.stops.forEach(s => seen.add(s.name))));
+  // Тільки зупинки обраного дня — пошук завжди в рамках поточної дати
+  (getDayData().routes || []).forEach(r => r.stops.forEach(s => seen.add(s.name)));
   return [...seen].sort((a, b) => a.localeCompare(b, 'uk'));
 }
 

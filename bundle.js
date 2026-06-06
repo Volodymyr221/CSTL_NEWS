@@ -1951,8 +1951,7 @@ ${post.text}
     if (!busData)
       return [];
     const seen = /* @__PURE__ */ new Set();
-    const allDays = busData.days ? Object.values(busData.days) : [{ routes: busData.routes || [] }];
-    allDays.forEach((d) => (d.routes || []).forEach((r) => r.stops.forEach((s) => seen.add(s.name))));
+    (getDayData().routes || []).forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
     return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
   }
   function openDropdown(field) {
