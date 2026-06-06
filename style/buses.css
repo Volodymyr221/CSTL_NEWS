@@ -608,13 +608,6 @@
   padding-top: 78px;
 }
 
-/* Widget + title — в потоці сторінки, прилипають під search при скролі */
-#bus-sticky-zone {
-  position: sticky;
-  top: 0;
-  z-index: 89;
-  background: #ECEEF2;
-}
 
 /* Рядок з двома полями і кнопкою swap */
 .bs-search-row {
