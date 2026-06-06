@@ -2228,6 +2228,7 @@ ${post.text}
         </div>`;
       }).join("");
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
+      const transitBadge = route.transit ? `<span class="bs-status transit">\u0442\u0440\u0430\u043D\u0437\u0438\u0442</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
@@ -2237,7 +2238,7 @@ ${post.text}
             <span class="bs-arr">\u2192\u202F${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}</div>
+            <div class="bus-card-route">${escapeHtml(route.name)}${statusBadge}${transitBadge}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>
