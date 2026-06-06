@@ -45,9 +45,7 @@ function formatBusDayTitle() {
 }
 
 function buildListTitleHtml(updatedStr) {
-  const isFuture = busDay > getTodayISO();
-  const dateClass = 'bus-list-date-sub' + (isFuture ? ' bus-list-date-sub--future' : '');
-  return `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="${dateClass}">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
+  return `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
 }
 
 // Для hero-картки: для не-сьогоднішніх днів скидаємо state→'waiting',
