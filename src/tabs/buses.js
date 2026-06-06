@@ -369,24 +369,14 @@ export function buildHeroCard(route, timings, index, total) {
     </div>`;
 }
 
-let _paddingObserver = null;
-
 function updateFixedPadding() {
-  const zone = document.getElementById('bus-fixed-zone');
-  const page = document.getElementById('page-buses');
-  if (!zone || !page) return;
-
-  const apply = () => {
-    const h = zone.getBoundingClientRect().height;
-    if (h > 0) page.style.paddingTop = h + 'px';
-  };
-
-  // ResizeObserver — спрацює щойно зона стає видимою або змінює розмір
-  if (!_paddingObserver) {
-    _paddingObserver = new ResizeObserver(apply);
-    _paddingObserver.observe(zone);
-  }
-  apply();
+  requestAnimationFrame(() => {
+    const zone = document.getElementById('bus-fixed-zone');
+    const page = document.getElementById('page-buses');
+    if (zone && page) {
+      page.style.paddingTop = zone.getBoundingClientRect().height + 'px';
+    }
+  });
 }
 
 function renderSmartRow() {
