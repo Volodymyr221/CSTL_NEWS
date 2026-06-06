@@ -415,16 +415,11 @@ def dedupe(routes: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def get_query_date() -> tuple[str, str]:
     """Повертає (query_date, label) для запиту до VOPAS.
-    Місцеві рейси їздять тільки по буднях (пн–пт).
-    Якщо сьогодні субота або неділя — беремо наступний понеділок,
-    щоб показати актуальний розклад майбутнього тижня."""
-    today = datetime.date.today()
-    weekday = today.weekday()  # 0=пн … 4=пт, 5=сб, 6=нд
-    if weekday >= 5:
-        days_ahead = 7 - weekday  # до понеділка: сб+2, нд+1
-        next_monday = today + datetime.timedelta(days=days_ahead)
-        return next_monday.strftime("%d.%m.%Y"), f"наступний пн {next_monday.strftime('%d.%m')}"
-    return today.strftime("%d.%m.%Y"), "сьогодні"
+    Завжди запитуємо ЗАВТРА — бо VOPAS приховує рейси що вже відправились.
+    Якщо запитувати сьогодні після обіду — більшість рейсів вже пройшло і VOPAS
+    повертає 0. Завтра — завжди повний незафільтрований розклад."""
+    tomorrow = datetime.date.today() + datetime.timedelta(days=1)
+    return tomorrow.strftime("%d.%m.%Y"), f"завтра {tomorrow.strftime('%d.%m')}"
 
 
 def main() -> int:
