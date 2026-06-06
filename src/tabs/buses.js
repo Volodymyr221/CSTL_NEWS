@@ -44,6 +44,12 @@ function formatBusDayTitle() {
   return `НА ${day} ${months[month - 1]} ${year}`;
 }
 
+function buildListTitleHtml(updatedStr) {
+  const isFuture = busDay > getTodayISO();
+  const dateClass = 'bus-list-date-sub' + (isFuture ? ' bus-list-date-sub--future' : '');
+  return `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="${dateClass}">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
+}
+
 // Для hero-картки: для не-сьогоднішніх днів скидаємо state→'waiting',
 // progress→0, minsToDeparture/minsToArrival→null (немає відліку).
 function getTimingsForDisplay(route) {
@@ -584,7 +590,7 @@ function renderRouteList() {
     const updStr0 = dd0.fetchedTime
       ? `Оновлено: ${escapeHtml(dd0.fetchedTime)} | ${escapeHtml(dd0.fetchedAt)}`
       : 'Дані оновлюються...';
-    const titleHtml0 = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updStr0}</span></div>`;
+    const titleHtml0 = buildListTitleHtml(updStr0);
     const hasFilter = fromStop || toStop;
     if (hasFilter) {
       const msg = `На ${isViewingToday() ? 'сьогодні' : dd0.fetchedAt || 'цей день'} рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
@@ -711,7 +717,7 @@ function renderRouteList() {
   const updatedStr2 = dd.fetchedTime
     ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
     : 'Дані оновлюються...';
-  el.innerHTML = `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
+  el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', e => {

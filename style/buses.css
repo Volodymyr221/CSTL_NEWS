@@ -131,6 +131,7 @@
   color: var(--ink-soft);
   margin-top: 3px;
 }
+.bus-list-date-sub--future { color: var(--ink); }
 .bus-list-updated-sub {
   display: block;
   font-size: 10px;
