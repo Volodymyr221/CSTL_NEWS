@@ -1902,8 +1902,8 @@ ${post.text}
   function findActiveRoutes() {
     const all = getFilteredRoutes();
     if (!isViewingToday()) {
-      const active = all.filter((r) => r.status !== "cancelled");
-      return active.length ? active : all.length ? [all[0]] : [];
+      const first = all.find((r) => r.status !== "cancelled") || all[0] || null;
+      return first ? [first] : [];
     }
     const result = all.filter((r) => {
       if (r.status === "cancelled")
