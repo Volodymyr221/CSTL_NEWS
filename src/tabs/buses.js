@@ -765,7 +765,7 @@ function renderRouteList() {
 // ── Week strip (тижнева смужка — 2 сторінки по 7 днів зі свайпом) ──────
 function getWeekDays(page = 0) {
   const now   = new Date();
-  const dow   = now.getDay() === 0 ? 6 : now.getDay() - 1; // Пн=0…Нд=6
+  const dow   = now.getDay() === 0 ? 6 : now.getDay() - 1;
   const mon   = new Date(now);
   mon.setDate(now.getDate() - dow + page * 7);
   mon.setHours(0, 0, 0, 0);
@@ -781,34 +781,40 @@ function renderWeekStrip() {
   if (!el) return;
 
   const todayISO = getTodayISO();
-  const days     = getWeekDays(weekPage);
   const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
-  let html = '<div class="bus-week-days">';
-  days.forEach((d, i) => {
-    const iso     = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
-    const dateNum = String(d.getDate()).padStart(2, '0');
-    const isPast   = iso < todayISO;
-    const isTodayD = iso === todayISO;
-    const isActive = iso === busDay;
-    html += `<button class="bus-week-day${isTodayD ? ' bus-week-day--today' : ''}${isActive ? ' bus-week-day--active' : ''}${isPast ? ' bus-week-day--past' : ''}" data-iso="${iso}">
-      <span class="bus-week-day-name">${dayNames[i]}</span>
-      <span class="bus-week-day-num">${dateNum}</span>
-    </button>`;
-  });
-  html += '</div>';
+  function pageHtml(page) {
+    return '<div class="bus-week-days">' +
+      getWeekDays(page).map((d, i) => {
+        const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        const num = String(d.getDate()).padStart(2, '0');
+        return `<button class="bus-week-day${iso === todayISO ? ' bus-week-day--today' : ''}${iso === busDay ? ' bus-week-day--active' : ''}${iso < todayISO ? ' bus-week-day--past' : ''}" data-iso="${iso}">
+          <span class="bus-week-day-name">${dayNames[i]}</span>
+          <span class="bus-week-day-num">${num}</span>
+        </button>`;
+      }).join('') +
+    '</div>';
+  }
 
-  // Крапки-сторінки (2 тижні)
-  html += `<div class="bus-week-pages">
-    <span class="bus-week-page-dot${weekPage === 0 ? ' active' : ''}" data-page="0"></span>
-    <span class="bus-week-page-dot${weekPage === 1 ? ' active' : ''}" data-page="1"></span>
-  </div>`;
+  el.innerHTML = `
+    <div class="bus-week-track">
+      ${pageHtml(0)}
+      ${pageHtml(1)}
+    </div>
+    <div class="bus-week-pages">
+      <span class="bus-week-page-dot${weekPage === 0 ? ' active' : ''}" data-page="0"></span>
+      <span class="bus-week-page-dot${weekPage === 1 ? ' active' : ''}" data-page="1"></span>
+    </div>`;
 
-  el.innerHTML = html;
+  const track = el.querySelector('.bus-week-track');
+
+  // Позиціонуємо без анімації — одразу в поточну сторінку
+  track.style.transform = `translateX(-${weekPage * 50}%)`;
 
   // Тап по дню
   el.querySelectorAll('.bus-week-day').forEach(btn => {
     btn.addEventListener('click', () => {
+      if (track.dataset.swiped === '1') return; // тап після свайпу ігноруємо
       busDay = btn.dataset.iso;
       showAll = false;
       smartRowIndex = 0;
@@ -823,20 +829,47 @@ function renderWeekStrip() {
   el.querySelectorAll('.bus-week-page-dot').forEach(dot => {
     dot.addEventListener('click', () => {
       weekPage = parseInt(dot.dataset.page, 10);
-      renderWeekStrip();
+      track.style.transition = 'transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+      track.style.transform   = `translateX(-${weekPage * 50}%)`;
+      el.querySelectorAll('.bus-week-page-dot').forEach(d =>
+        d.classList.toggle('active', parseInt(d.dataset.page) === weekPage)
+      );
     });
   });
 
-  // Свайп по смужці
-  let tx = 0;
-  el.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
-  el.addEventListener('touchend', e => {
-    const dx = e.changedTouches[0].clientX - tx;
-    if (Math.abs(dx) < 40) return;
-    const newPage = dx < 0 ? 1 : 0;
-    if (newPage === weekPage) return;
-    weekPage = newPage;
-    renderWeekStrip();
+  // Свайп — трек рухається за пальцем у реальному часі
+  let startX = 0;
+  track.addEventListener('touchstart', e => {
+    startX = e.touches[0].clientX;
+    track.dataset.swiped = '0';
+    track.style.transition = 'none';
+  }, { passive: true });
+
+  track.addEventListener('touchmove', e => {
+    const dx = e.touches[0].clientX - startX;
+    // Обмежуємо drag: не можна тягти ліво на 1-й сторінці і вправо на 2-й
+    const clamped = weekPage === 0 ? Math.min(dx, 0) : Math.max(dx, 0);
+    track.style.transform = `translateX(calc(-${weekPage * 50}% + ${clamped}px))`;
+  }, { passive: true });
+
+  track.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - startX;
+    const newPage = dx < -40 && weekPage === 0 ? 1
+                  : dx >  40 && weekPage === 1 ? 0
+                  : weekPage;
+
+    track.style.transition = 'transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)';
+    track.style.transform   = `translateX(-${newPage * 50}%)`;
+
+    if (newPage !== weekPage) {
+      track.dataset.swiped = '1';
+      weekPage = newPage;
+      el.querySelectorAll('.bus-week-page-dot').forEach(d =>
+        d.classList.toggle('active', parseInt(d.dataset.page) === weekPage)
+      );
+    }
+    // Знімаємо прапор після анімації щоб наступний тап на день проходив
+    setTimeout(() => { if (track.isConnected) track.dataset.swiped = '0'; }, 350);
   }, { passive: true });
 }
 
