@@ -1782,6 +1782,7 @@ ${post.text}
   var expandedIds = /* @__PURE__ */ new Set();
   var activeField = null;
   var smartRowIndex = 0;
+  var selectedRouteId = null;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1902,6 +1903,11 @@ ${post.text}
   function findActiveRoutes() {
     const all = getFilteredRoutes();
     if (!isViewingToday()) {
+      if (selectedRouteId) {
+        const sel = all.find((r) => r.id === selectedRouteId && r.status !== "cancelled");
+        if (sel)
+          return [sel];
+      }
       const first = all.find((r) => r.status !== "cancelled") || all[0] || null;
       return first ? [first] : [];
     }
@@ -2266,6 +2272,7 @@ ${post.text}
     const cards = toRender.map((route) => {
       const isPast = isPastRoute(route);
       const isNext = highlighted && route.id === highlighted.id;
+      const isSelectable = !isViewingToday();
       const effFrom = getEffectiveFrom(route);
       const effTo = getEffectiveTo(route);
       const fromTime = getStopHHMM(route, effFrom);
@@ -2293,7 +2300,7 @@ ${post.text}
       const [ep1, ep2] = parseRouteEndpoints(route.name);
       const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       return `
-      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}">
+      <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
@@ -2338,7 +2345,8 @@ ${post.text}
     const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
     el.innerHTML = `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-updated-sub">${updatedStr2}</span></div>` + cards + toggleHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
         const id = btn.dataset.id;
         if (expandedIds.has(id))
           expandedIds.delete(id);
@@ -2347,6 +2355,19 @@ ${post.text}
         renderRouteList();
       });
     });
+    if (!isViewingToday()) {
+      el.querySelectorAll(".bus-card.selectable").forEach((card) => {
+        card.addEventListener("click", () => {
+          const rid = card.dataset.routeId;
+          if (!rid)
+            return;
+          selectedRouteId = rid;
+          renderSmartRow();
+          renderRouteList();
+          document.getElementById("bus-smart-row")?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+      });
+    }
     const showAllBtn = document.getElementById("bus-show-all-btn");
     if (showAllBtn) {
       showAllBtn.addEventListener("click", () => {
@@ -2387,6 +2408,7 @@ ${post.text}
         busDay = btn.dataset.iso;
         showAll = false;
         smartRowIndex = 0;
+        selectedRouteId = null;
         renderWeekStrip();
         renderSmartRow();
         renderRouteList();
