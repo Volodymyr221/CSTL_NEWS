@@ -48,12 +48,12 @@
 
 /* Smart-рядок наступного рейсу */
 .bus-smart-row {
-  padding: 16px 14px 4px;
+  padding: 16px 14px 14px;
 }
 
 /* Заголовок над розкладом */
 .bus-list-title {
-  font-size: 18px;
+  font-size: 16.5px;
   font-weight: 700;
   letter-spacing: 1px;
   color: #1C1C1E;
