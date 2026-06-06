@@ -369,16 +369,6 @@ export function buildHeroCard(route, timings, index, total) {
     </div>`;
 }
 
-function updateFixedPadding() {
-  requestAnimationFrame(() => {
-    const zone = document.getElementById('bus-fixed-zone');
-    const page = document.getElementById('page-buses');
-    if (zone && page) {
-      page.style.paddingTop = zone.getBoundingClientRect().height + 'px';
-    }
-  });
-}
-
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
@@ -631,10 +621,7 @@ function renderRouteList() {
       </button>`;
   }
 
-  const titleBar = document.getElementById('bus-title-bar');
-  if (titleBar) titleBar.textContent = 'РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ';
-
-  el.innerHTML = toggleHtml + cards;
+  el.innerHTML = toggleHtml + `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ</div>` + cards;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -753,11 +740,8 @@ export async function initBuses() {
   }
 
   el.innerHTML = `
-    <div id="bus-fixed-zone">
-      <div id="bus-search-panel" class="bus-search"></div>
-      <div id="bus-smart-row" class="bus-smart-row"></div>
-      <div id="bus-title-bar" class="bus-list-title"></div>
-    </div>
+    <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
     <div class="buses-updated">
       ${escapeHtml(busData.source)}<br>
@@ -768,12 +752,10 @@ export async function initBuses() {
   renderSearchPanel();
   renderSmartRow();
   renderRouteList();
-  updateFixedPadding();
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     renderSmartRow();
     renderRouteList();
-    updateFixedPadding();
   }, 60_000);
 }
