@@ -2091,13 +2091,6 @@ ${post.text}
         switchHeroCard();
       });
     });
-    requestAnimationFrame(() => {
-      const page = document.getElementById("page-buses");
-      if (page) {
-        const h = el.getBoundingClientRect().height;
-        page.style.paddingTop = 78 + h + "px";
-      }
-    });
   }
   function switchHeroCard() {
     const el = document.getElementById("bus-smart-row");
