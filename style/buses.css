@@ -705,7 +705,7 @@
 .bs-arr {
   font-size: 20px;
   font-weight: 600;
-  color: var(--ink-mute);
+  color: var(--ink-soft);
   margin-top: 0;
   letter-spacing: -0.5px;
   font-variant-numeric: tabular-nums;
