@@ -621,7 +621,7 @@ function renderRouteList() {
       </button>`;
   }
 
-  el.innerHTML = toggleHtml + `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ</div>` + cards;
+  el.innerHTML = toggleHtml + `<div class="bus-list-title">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ<span class="bus-list-updated-sub">Оновлено: ${escapeHtml(busData?.verifiedTime || '')} | ${escapeHtml(busData?.verifiedAt || '')}</span></div>` + cards;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -743,10 +743,7 @@ export async function initBuses() {
     <div id="bus-search-panel" class="bus-search"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
     <div id="bus-list" class="bus-list"></div>
-    <div class="buses-updated">
-      ${escapeHtml(busData.source)}<br>
-      Оновлено: ${escapeHtml(busData.verifiedTime)} | ${escapeHtml(busData.verifiedAt)}
-    </div>
+    <div class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
 
   renderSearchPanel();
