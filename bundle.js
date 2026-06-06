@@ -2059,14 +2059,22 @@ ${post.text}
       </div>
     </div>`;
   }
+  var _paddingObserver = null;
   function updateFixedPadding() {
-    requestAnimationFrame(() => {
-      const zone = document.getElementById("bus-fixed-zone");
-      const page = document.getElementById("page-buses");
-      if (zone && page) {
-        page.style.paddingTop = zone.getBoundingClientRect().height + "px";
-      }
-    });
+    const zone = document.getElementById("bus-fixed-zone");
+    const page = document.getElementById("page-buses");
+    if (!zone || !page)
+      return;
+    const apply = () => {
+      const h = zone.getBoundingClientRect().height;
+      if (h > 0)
+        page.style.paddingTop = h + "px";
+    };
+    if (!_paddingObserver) {
+      _paddingObserver = new ResizeObserver(apply);
+      _paddingObserver.observe(zone);
+    }
+    apply();
   }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
