@@ -9,6 +9,7 @@ const PREFS_KEY = 'bus_prefs_v2';
 
 let busData       = null;
 let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
+let weekPage        = 0;             // 0 = поточний тиждень, 1 = наступний тиждень
 let fromStop        = '';
 let toStop          = '';
 let showAll         = false;
@@ -761,26 +762,31 @@ function renderRouteList() {
   }
 }
 
-// ── Week strip (тижнева смужка Пн–Нд) ───────────────────────────────────
+// ── Week strip (тижнева смужка — 2 сторінки по 7 днів зі свайпом) ──────
+function getWeekDays(page = 0) {
+  const now   = new Date();
+  const dow   = now.getDay() === 0 ? 6 : now.getDay() - 1; // Пн=0…Нд=6
+  const mon   = new Date(now);
+  mon.setDate(now.getDate() - dow + page * 7);
+  mon.setHours(0, 0, 0, 0);
+  return Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(mon);
+    d.setDate(mon.getDate() + i);
+    return d;
+  });
+}
+
 function renderWeekStrip() {
   const el = document.getElementById('bus-week-strip');
   if (!el) return;
 
   const todayISO = getTodayISO();
-  const now      = new Date();
-  // Понеділок поточного тижня
-  const monday   = new Date(now);
-  const dow      = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Пн … 6=Нд
-  monday.setDate(now.getDate() - dow);
-  monday.setHours(0, 0, 0, 0);
-
+  const days     = getWeekDays(weekPage);
   const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Нд'];
 
   let html = '<div class="bus-week-days">';
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday);
-    d.setDate(monday.getDate() + i);
-    const iso = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  days.forEach((d, i) => {
+    const iso     = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
     const dateNum = String(d.getDate()).padStart(2, '0');
     const isPast   = iso < todayISO;
     const isTodayD = iso === todayISO;
@@ -789,10 +795,18 @@ function renderWeekStrip() {
       <span class="bus-week-day-name">${dayNames[i]}</span>
       <span class="bus-week-day-num">${dateNum}</span>
     </button>`;
-  }
+  });
   html += '</div>';
+
+  // Крапки-сторінки (2 тижні)
+  html += `<div class="bus-week-pages">
+    <span class="bus-week-page-dot${weekPage === 0 ? ' active' : ''}" data-page="0"></span>
+    <span class="bus-week-page-dot${weekPage === 1 ? ' active' : ''}" data-page="1"></span>
+  </div>`;
+
   el.innerHTML = html;
 
+  // Тап по дню
   el.querySelectorAll('.bus-week-day').forEach(btn => {
     btn.addEventListener('click', () => {
       busDay = btn.dataset.iso;
@@ -804,6 +818,26 @@ function renderWeekStrip() {
       renderRouteList();
     });
   });
+
+  // Тап по крапці сторінки
+  el.querySelectorAll('.bus-week-page-dot').forEach(dot => {
+    dot.addEventListener('click', () => {
+      weekPage = parseInt(dot.dataset.page, 10);
+      renderWeekStrip();
+    });
+  });
+
+  // Свайп по смужці
+  let tx = 0;
+  el.addEventListener('touchstart', e => { tx = e.touches[0].clientX; }, { passive: true });
+  el.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - tx;
+    if (Math.abs(dx) < 40) return;
+    const newPage = dx < 0 ? 1 : 0;
+    if (newPage === weekPage) return;
+    weekPage = newPage;
+    renderWeekStrip();
+  }, { passive: true });
 }
 
 // ── Search panel (панель пошуку "Звідки → Куди") ──────────────────────

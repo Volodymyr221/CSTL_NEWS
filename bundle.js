@@ -1775,6 +1775,7 @@ ${post.text}
   var PREFS_KEY = "bus_prefs_v2";
   var busData = null;
   var busDay = getTodayISO();
+  var weekPage = 0;
   var fromStop = "";
   var toStop = "";
   var showAll = false;
@@ -2402,21 +2403,27 @@ ${post.text}
       });
     }
   }
+  function getWeekDays(page = 0) {
+    const now = /* @__PURE__ */ new Date();
+    const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
+    const mon = new Date(now);
+    mon.setDate(now.getDate() - dow + page * 7);
+    mon.setHours(0, 0, 0, 0);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(mon);
+      d.setDate(mon.getDate() + i);
+      return d;
+    });
+  }
   function renderWeekStrip() {
     const el = document.getElementById("bus-week-strip");
     if (!el)
       return;
     const todayISO = getTodayISO();
-    const now = /* @__PURE__ */ new Date();
-    const monday = new Date(now);
-    const dow = now.getDay() === 0 ? 6 : now.getDay() - 1;
-    monday.setDate(now.getDate() - dow);
-    monday.setHours(0, 0, 0, 0);
+    const days = getWeekDays(weekPage);
     const dayNames = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
     let html = '<div class="bus-week-days">';
-    for (let i = 0; i < 7; i++) {
-      const d = new Date(monday);
-      d.setDate(monday.getDate() + i);
+    days.forEach((d, i) => {
       const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
       const dateNum = String(d.getDate()).padStart(2, "0");
       const isPast = iso < todayISO;
@@ -2426,8 +2433,12 @@ ${post.text}
       <span class="bus-week-day-name">${dayNames[i]}</span>
       <span class="bus-week-day-num">${dateNum}</span>
     </button>`;
-    }
+    });
     html += "</div>";
+    html += `<div class="bus-week-pages">
+    <span class="bus-week-page-dot${weekPage === 0 ? " active" : ""}" data-page="0"></span>
+    <span class="bus-week-page-dot${weekPage === 1 ? " active" : ""}" data-page="1"></span>
+  </div>`;
     el.innerHTML = html;
     el.querySelectorAll(".bus-week-day").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -2440,6 +2451,26 @@ ${post.text}
         renderRouteList();
       });
     });
+    el.querySelectorAll(".bus-week-page-dot").forEach((dot) => {
+      dot.addEventListener("click", () => {
+        weekPage = parseInt(dot.dataset.page, 10);
+        renderWeekStrip();
+      });
+    });
+    let tx = 0;
+    el.addEventListener("touchstart", (e) => {
+      tx = e.touches[0].clientX;
+    }, { passive: true });
+    el.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - tx;
+      if (Math.abs(dx) < 40)
+        return;
+      const newPage = dx < 0 ? 1 : 0;
+      if (newPage === weekPage)
+        return;
+      weekPage = newPage;
+      renderWeekStrip();
+    }, { passive: true });
   }
   function renderSearchPanel() {
     const el = document.getElementById("bus-search-panel");
