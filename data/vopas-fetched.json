@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-06T12:52:19.333833+00:00",
+  "fetched_at": "2026-06-06T14:45:16.853478+00:00",
   "date": "06.06.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -193,8 +193,8 @@
       "carrier": "Чуй В.А. м.Рівне",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -208,9 +208,9 @@
       "carrier": "Дяков Г.Г.-",
       "bus": "МЕРСЕДЕС-БЕНЦ  711",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -223,8 +223,8 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
