@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-06T11:06:52.524235+00:00",
+  "fetched_at": "2026-06-06T12:52:19.333833+00:00",
   "date": "06.06.2026",
   "source": "vopas.com.ua",
   "errors": [],
@@ -148,8 +148,8 @@
       "carrier": "Кирилюк С.Л.",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -163,8 +163,8 @@
       "carrier": "Кирилюк С.Л.",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -178,8 +178,8 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -208,9 +208,9 @@
       "carrier": "Дяков Г.Г.-",
       "bus": "МЕРСЕДЕС-БЕНЦ  711",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
       "from": "Личани",
       "to": "Луцьк"
     },
