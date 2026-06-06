@@ -88,10 +88,10 @@
 .bus-week-day--today .bus-week-day-num {
   color: var(--red);
 }
-/* Обраний день — насиченіший фон, краї плавно розмиваються */
+/* Обраний день — та сама форма що й ободок today, краї розмиті */
 .bus-week-day--active {
   background: #CDD1DC;
-  border-radius: 12px;
+  border-radius: 8px;
   box-shadow: 0 0 10px 6px rgba(205, 209, 220, 0.9);
 }
 /* Минулі дні — приглушені */
