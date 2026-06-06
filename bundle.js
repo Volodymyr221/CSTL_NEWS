@@ -2420,28 +2420,32 @@ ${post.text}
     if (!el)
       return;
     const todayISO = getTodayISO();
-    const days = getWeekDays(weekPage);
     const dayNames = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
-    let html = '<div class="bus-week-days">';
-    days.forEach((d, i) => {
-      const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      const dateNum = String(d.getDate()).padStart(2, "0");
-      const isPast = iso < todayISO;
-      const isTodayD = iso === todayISO;
-      const isActive = iso === busDay;
-      html += `<button class="bus-week-day${isTodayD ? " bus-week-day--today" : ""}${isActive ? " bus-week-day--active" : ""}${isPast ? " bus-week-day--past" : ""}" data-iso="${iso}">
-      <span class="bus-week-day-name">${dayNames[i]}</span>
-      <span class="bus-week-day-num">${dateNum}</span>
-    </button>`;
-    });
-    html += "</div>";
-    html += `<div class="bus-week-pages">
-    <span class="bus-week-page-dot${weekPage === 0 ? " active" : ""}" data-page="0"></span>
-    <span class="bus-week-page-dot${weekPage === 1 ? " active" : ""}" data-page="1"></span>
-  </div>`;
-    el.innerHTML = html;
+    function pageHtml(page) {
+      return '<div class="bus-week-days">' + getWeekDays(page).map((d, i) => {
+        const iso = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+        const num = String(d.getDate()).padStart(2, "0");
+        return `<button class="bus-week-day${iso === todayISO ? " bus-week-day--today" : ""}${iso === busDay ? " bus-week-day--active" : ""}${iso < todayISO ? " bus-week-day--past" : ""}" data-iso="${iso}">
+          <span class="bus-week-day-name">${dayNames[i]}</span>
+          <span class="bus-week-day-num">${num}</span>
+        </button>`;
+      }).join("") + "</div>";
+    }
+    el.innerHTML = `
+    <div class="bus-week-track">
+      ${pageHtml(0)}
+      ${pageHtml(1)}
+    </div>
+    <div class="bus-week-pages">
+      <span class="bus-week-page-dot${weekPage === 0 ? " active" : ""}" data-page="0"></span>
+      <span class="bus-week-page-dot${weekPage === 1 ? " active" : ""}" data-page="1"></span>
+    </div>`;
+    const track = el.querySelector(".bus-week-track");
+    track.style.transform = `translateX(-${weekPage * 50}%)`;
     el.querySelectorAll(".bus-week-day").forEach((btn) => {
       btn.addEventListener("click", () => {
+        if (track.dataset.swiped === "1")
+          return;
         busDay = btn.dataset.iso;
         showAll = false;
         smartRowIndex = 0;
@@ -2454,22 +2458,40 @@ ${post.text}
     el.querySelectorAll(".bus-week-page-dot").forEach((dot) => {
       dot.addEventListener("click", () => {
         weekPage = parseInt(dot.dataset.page, 10);
-        renderWeekStrip();
+        track.style.transition = "transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+        track.style.transform = `translateX(-${weekPage * 50}%)`;
+        el.querySelectorAll(".bus-week-page-dot").forEach(
+          (d) => d.classList.toggle("active", parseInt(d.dataset.page) === weekPage)
+        );
       });
     });
-    let tx = 0;
-    el.addEventListener("touchstart", (e) => {
-      tx = e.touches[0].clientX;
+    let startX = 0;
+    track.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+      track.dataset.swiped = "0";
+      track.style.transition = "none";
     }, { passive: true });
-    el.addEventListener("touchend", (e) => {
-      const dx = e.changedTouches[0].clientX - tx;
-      if (Math.abs(dx) < 40)
-        return;
-      const newPage = dx < 0 ? 1 : 0;
-      if (newPage === weekPage)
-        return;
-      weekPage = newPage;
-      renderWeekStrip();
+    track.addEventListener("touchmove", (e) => {
+      const dx = e.touches[0].clientX - startX;
+      const clamped = weekPage === 0 ? Math.min(dx, 0) : Math.max(dx, 0);
+      track.style.transform = `translateX(calc(-${weekPage * 50}% + ${clamped}px))`;
+    }, { passive: true });
+    track.addEventListener("touchend", (e) => {
+      const dx = e.changedTouches[0].clientX - startX;
+      const newPage = dx < -40 && weekPage === 0 ? 1 : dx > 40 && weekPage === 1 ? 0 : weekPage;
+      track.style.transition = "transform 0.28s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+      track.style.transform = `translateX(-${newPage * 50}%)`;
+      if (newPage !== weekPage) {
+        track.dataset.swiped = "1";
+        weekPage = newPage;
+        el.querySelectorAll(".bus-week-page-dot").forEach(
+          (d) => d.classList.toggle("active", parseInt(d.dataset.page) === weekPage)
+        );
+      }
+      setTimeout(() => {
+        if (track.isConnected)
+          track.dataset.swiped = "0";
+      }, 350);
     }, { passive: true });
   }
   function renderSearchPanel() {

@@ -33,9 +33,21 @@
   right: 0;
   z-index: 92;
   background: #ECEEF2;
-  padding: 6px 12px 4px;
+  padding: 6px 0 4px;
+  overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
+}
+/* Трек що містить обидва тижні поруч — рухається translateX при свайпі */
+.bus-week-track {
+  display: flex;
+  width: 200%;
+  will-change: transform;
+}
+.bus-week-track > .bus-week-days {
+  flex: 0 0 50%;
+  min-width: 0;
+  padding: 0 12px;
 }
 .bus-week-days {
   display: flex;
