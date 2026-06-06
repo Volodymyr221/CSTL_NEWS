@@ -653,6 +653,17 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+/* Повна назва маршруту (показується коли фільтр показує сегмент) */
+.bs-route-full {
+  display: block;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--ink-mute);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 .bus-card-meta {
   display: flex;
   align-items: center;
