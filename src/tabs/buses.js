@@ -429,7 +429,8 @@ function renderSmartRow() {
 
   const routes = findActiveRoutes();
   if (!routes.length) {
-    el.innerHTML = `<div class="bhv4-empty">${isViewingToday() ? 'СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО' : 'НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО'}</div>`;
+    // Для сьогодні: повідомлення виводиться внизу списку, не тут
+    el.innerHTML = isViewingToday() ? '' : `<div class="bhv4-empty">НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО</div>`;
     return;
   }
 
@@ -604,10 +605,12 @@ function renderRouteList() {
   }
 
   if (!toRender.length) {
+    const noMoreMsg = isViewingToday()
+      ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>` : '';
     el.innerHTML = `
       <button class="bus-show-all" id="bus-show-all-btn">
         Показати всі ${all.length} рейси ↓
-      </button>`;
+      </button>${noMoreMsg}`;
     document.getElementById('bus-show-all-btn').addEventListener('click', () => {
       showAll = true;
       renderRouteList();
@@ -706,6 +709,10 @@ function renderRouteList() {
         <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
           Сховати минулі ↑
         </button>`;
+    }
+    // Якщо всі рейси сьогодні завершились — повідомлення внизу списку
+    if (future.length === 0 && all.length > 0) {
+      toggleHtml += `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
     }
   }
 
@@ -897,8 +904,8 @@ export async function initBuses() {
   el.innerHTML = `
     <div id="bus-week-strip" class="bus-week-strip"></div>
     <div id="bus-search-panel" class="bus-search"></div>
-    <div id="bus-list" class="bus-list"></div>
     <div id="bus-smart-row" class="bus-smart-row"></div>
+    <div id="bus-list" class="bus-list"></div>
     <div id="buses-updated-row" class="buses-updated">${escapeHtml(busData.source)}</div>
   `;
 
