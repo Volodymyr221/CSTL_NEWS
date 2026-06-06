@@ -369,25 +369,6 @@ export function buildHeroCard(route, timings, index, total) {
     </div>`;
 }
 
-let _paddingObserver = null;
-
-function updateFixedPadding() {
-  const zone = document.getElementById('bus-fixed-zone');
-  const page = document.getElementById('page-buses');
-  if (!zone || !page) return;
-
-  const apply = () => {
-    const h = zone.getBoundingClientRect().height;
-    if (h > 0) page.style.paddingTop = h + 'px';
-  };
-
-  // ResizeObserver — спрацює щойно зона стає видимою або змінює розмір
-  if (!_paddingObserver) {
-    _paddingObserver = new ResizeObserver(apply);
-    _paddingObserver.observe(zone);
-  }
-  apply();
-}
 
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
@@ -763,8 +744,8 @@ export async function initBuses() {
   }
 
   el.innerHTML = `
-    <div id="bus-fixed-zone">
-      <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-search-panel" class="bus-search"></div>
+    <div id="bus-sticky-zone">
       <div id="bus-smart-row" class="bus-smart-row"></div>
       <div id="bus-title-bar" class="bus-list-title"></div>
     </div>
@@ -778,12 +759,10 @@ export async function initBuses() {
   renderSearchPanel();
   renderSmartRow();
   renderRouteList();
-  updateFixedPadding();
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     renderSmartRow();
     renderRouteList();
-    updateFixedPadding();
-  }, 60_000);
+    }, 60_000);
 }
