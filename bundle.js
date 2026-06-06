@@ -1820,9 +1820,7 @@ ${post.text}
     return `\u041D\u0410 ${day} ${months[month - 1]} ${year}`;
   }
   function buildListTitleHtml(updatedStr) {
-    const isFuture = busDay > getTodayISO();
-    const dateClass = "bus-list-date-sub" + (isFuture ? " bus-list-date-sub--future" : "");
-    return `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="${dateClass}">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
+    return `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
   }
   function getTimingsForDisplay(route) {
     if (isViewingToday())
