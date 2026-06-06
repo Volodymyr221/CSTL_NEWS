@@ -343,21 +343,20 @@ def query_day(date_str: str) -> tuple[list[dict], list[str]]:
 
 # ── Main ──────────────────────────────────────────────────────────────────
 
-def get_week_days() -> list[datetime.date]:
-    """Повертає 7 днів поточного тижня: Пн (0) → Нд (6)."""
+def get_14_days() -> list[datetime.date]:
+    """Повертає 14 днів: поточний тиждень (Пн–Нд) + наступний тиждень (Пн–Нд)."""
     today = datetime.date.today()
-    # weekday(): Пн=0 … Нд=6
     monday = today - datetime.timedelta(days=today.weekday())
-    return [monday + datetime.timedelta(days=i) for i in range(7)]
+    return [monday + datetime.timedelta(days=i) for i in range(14)]
 
 
 def main() -> int:
     now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
     today = datetime.date.today()
-    week_days = get_week_days()
+    week_days = get_14_days()
 
     print(f"=== VOPAS parser {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ ===")
-    print(f"Тиждень: {week_days[0]} — {week_days[-1]}\n")
+    print(f"Діапазон: {week_days[0]} — {week_days[-1]} (14 днів)\n")
 
     # Завантажуємо поточний schedule.json щоб зберегти кешовані минулі дні
     existing: dict[str, Any] = {}
