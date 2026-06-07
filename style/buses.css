@@ -283,7 +283,11 @@
   vertical-align: middle;
 }
 .bhv4-state-dot--waiting { background: #BEC4D2; }
-.bhv4-state-dot--urgent  { background: #E05252; }
+.bhv4-state-dot--urgent  {
+  background: #722F37;
+  box-shadow: 0 0 0 3px rgba(114,47,55,0.35);
+  animation: bs-soon-pulse 1.4s ease-in-out infinite;
+}
 .bhv4-state-dot--enroute { background: #7DDA58; }
 .bhv4-dots-nav {
   position: absolute;
@@ -965,7 +969,7 @@
   right: 16px;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 8px;
 }
 .bs-live-label {
   font-size: 10px;
