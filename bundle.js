@@ -2336,8 +2336,7 @@ ${post.text}
       const filterActive = fromStop && toStop && route.stops.some((s) => s.name === fromStop) && route.stops.some((s) => s.name === toStop);
       const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fromStopTime = filterActive ? getStopHHMM(route, fromStop) : null;
-      const fromTimeStr = fromStopTime ? ` / ${fromStopTime}` : "";
-      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${escapeHtml(fromTimeStr)}</span>` : "";
+      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${fromStopTime ? `<br>/ \u041E\u0420\u0406\u0404\u041D\u0422\u041E\u0412\u041D\u0415 \u0412\u0406\u0414\u041F\u0420\u0410\u0412\u041B\u0415\u041D\u041D\u042F \u0417 ${escapeHtml(fromStop.toUpperCase())} ${escapeHtml(fromStopTime)}` : ""}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {

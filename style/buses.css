@@ -674,9 +674,7 @@
   font-weight: 500;
   color: var(--black);
   margin-top: 1px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.5;
 }
 .bus-card-meta {
   display: flex;

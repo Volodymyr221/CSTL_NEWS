@@ -719,9 +719,8 @@ function renderRouteList() {
       route.stops.some(s => s.name === toStop);
     const routeLabel = `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
     const fromStopTime = filterActive ? getStopHHMM(route, fromStop) : null;
-    const fromTimeStr = fromStopTime ? ` / ${fromStopTime}` : '';
     const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase())
-      ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${escapeHtml(fromTimeStr)}</span>`
+      ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${fromStopTime ? `<br>/ ОРІЄНТОВНЕ ВІДПРАВЛЕННЯ З ${escapeHtml(fromStop.toUpperCase())} ${escapeHtml(fromStopTime)}` : ''}</span>`
       : '';
 
     return `
