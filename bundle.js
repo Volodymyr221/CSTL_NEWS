@@ -2338,7 +2338,7 @@ ${post.text}
       const routeEndTime = getStopHHMM(route, route.stops[route.stops.length - 1].name);
       const routeTimeStr = routeStartTime && routeEndTime ? ` | ${routeStartTime} \u2192 ${routeEndTime}` : "";
       const routeLabel = segActive ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
-      const fullLabel = segActive ? `<span class="bs-route-full">\u0420\u0415\u0419\u0421: ${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
+      const fullLabel = segActive ? `<span class="bs-route-full">\u041C\u0410\u0420\u0428\u0420\u0423\u0422: ${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
