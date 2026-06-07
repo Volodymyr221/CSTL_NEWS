@@ -680,7 +680,7 @@
 }
 .bus-card-meta {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 4px;
   font-size: 12px;
   color: var(--gray);
