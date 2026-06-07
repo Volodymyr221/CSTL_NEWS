@@ -298,6 +298,7 @@ function selectStop(stop, field) {
   closeDropdown();
   showAll = false;
   savePrefs();
+  renderSearchPanel();
   renderSmartRow();
   renderRouteList();
 }
