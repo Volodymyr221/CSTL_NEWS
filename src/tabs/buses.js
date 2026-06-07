@@ -715,13 +715,10 @@ function renderRouteList() {
     const filterActive = fromStop && toStop &&
       route.stops.some(s => s.name === fromStop) &&
       route.stops.some(s => s.name === toStop);
-    const segLabel  = filterActive
-      ? `${fromStop.toUpperCase()} → ${toStop.toUpperCase()}`
-      : `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
+    const routeLabel = `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
     const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase())
-      ? `<span class="bs-route-full">${escapeHtml(ep1)} → ${escapeHtml(ep2)}</span>`
+      ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} → ${escapeHtml(toStop.toUpperCase())}</span>`
       : '';
-    const routeLabel = segLabel;
 
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
