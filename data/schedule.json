@@ -1,8 +1,8 @@
 {
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "updatedAt": "07.06.2026",
-  "updatedTime": "22:55",
+  "updatedAt": "08.06.2026",
+  "updatedTime": "00:19",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -1889,8 +1889,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=07.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-08": {
       "routes": [
@@ -3729,8 +3729,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=08.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-09": {
       "routes": [
@@ -5569,8 +5569,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=09.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-10": {
       "routes": [
@@ -7409,8 +7409,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=10.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-11": {
       "routes": [
@@ -9249,8 +9249,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=11.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-12": {
       "routes": [
@@ -11089,13 +11089,13 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=12.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-13": {
       "routes": [],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     },
     "2026-06-14": {
       "routes": [
@@ -12934,8 +12934,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=14.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "07.06.2026",
-      "fetchedTime": "22:55"
+      "fetchedAt": "08.06.2026",
+      "fetchedTime": "00:19"
     }
   }
 }
