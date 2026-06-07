@@ -56,6 +56,15 @@ BROWSER_UA = (
 VOPAS_BASE = "https://vopas.com.ua/search/"
 OUTPUT_PATH = Path(__file__).parent.parent / "data" / "vopas-fetched.json"
 SCHEDULE_PATH = Path(__file__).parent.parent / "data" / "schedule.json"
+ROUTE_STOPS_PATH = Path(__file__).parent.parent / "data" / "route-stops.json"
+
+# Завантажуємо ручні зупинки — словник {назва_маршруту: [stop, ...]}
+_route_stops_map: dict[str, list] = {}
+try:
+    _rs = json.loads(ROUTE_STOPS_PATH.read_text(encoding="utf-8"))
+    _route_stops_map = _rs.get("_by_vopas_name", {})
+except Exception:
+    pass
 
 
 # ── HTTP fetch з SSL fallback ─────────────────────────────────────────────
@@ -281,7 +290,8 @@ def build_day_routes(
         frm = r.get("from") or (r.get("route_name") or "").split()[0]
         to = r.get("to") or (r.get("route_name") or "—")
         status = "cancelled" if r.get("cancelled") else "scheduled"
-        stops = [{"name": frm, "km": 0}, {"name": to, "km": 100}]
+        route_name_key = r.get("route_name") or ""
+        stops = _route_stops_map.get(route_name_key) or [{"name": frm, "km": 0}, {"name": to, "km": 100}]
         vopas_url = build_url(frm, to, query_date)
 
         routes.append({
