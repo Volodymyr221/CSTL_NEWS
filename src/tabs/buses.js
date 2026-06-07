@@ -1020,15 +1020,9 @@ function renderSearchPanel() {
     renderRouteList();
   });
 
-  // Підстроюємо padding-top сторінки під реальну висоту фіксованої панелі
-  requestAnimationFrame(() => {
-    const busSearch = document.querySelector('.bus-search');
-    const page = document.getElementById('page-buses');
-    if (busSearch && page) {
-      const h = busSearch.getBoundingClientRect().height;
-      page.style.paddingTop = (h + 64 + 8) + 'px';
-    }
-  });
+  // Додаємо/прибираємо клас filter-active — CSS зробить правильний padding-top
+  const page = document.getElementById('page-buses');
+  if (page) page.classList.toggle('filter-active', !!(fromStop || toStop));
 }
 
 function buildSourceHtml() {

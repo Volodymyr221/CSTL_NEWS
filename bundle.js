@@ -2591,14 +2591,9 @@ ${post.text}
       renderSmartRow();
       renderRouteList();
     });
-    requestAnimationFrame(() => {
-      const busSearch = document.querySelector(".bus-search");
-      const page = document.getElementById("page-buses");
-      if (busSearch && page) {
-        const h = busSearch.getBoundingClientRect().height;
-        page.style.paddingTop = h + 64 + 8 + "px";
-      }
-    });
+    const page = document.getElementById("page-buses");
+    if (page)
+      page.classList.toggle("filter-active", !!(fromStop || toStop));
   }
   function buildSourceHtml() {
     if (!busData?.source)
