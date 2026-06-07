@@ -95,6 +95,12 @@
   border-color: #9AA3B5;
   box-shadow: 0 0 10px 6px rgba(190, 196, 210, 0.9);
 }
+/* Коли сьогодні = активний день — бордовий стиль перемагає синьо-сірий */
+.bus-week-day--today.bus-week-day--active {
+  background: none;
+  border-color: var(--red);
+  box-shadow: none;
+}
 /* Минулі дні — приглушені */
 .bus-week-day--past .bus-week-day-name,
 .bus-week-day--past .bus-week-day-num {
