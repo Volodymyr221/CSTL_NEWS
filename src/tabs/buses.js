@@ -687,7 +687,7 @@ function renderRouteList() {
 
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
-        ${isEnroute ? '<span class="bs-live-dot"></span>' : ''}
+        ${isEnroute ? '<span class="bs-live-corner"><span class="bs-live-label">В ДОРОЗІ</span><span class="bs-live-dot"></span></span>' : ''}
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>

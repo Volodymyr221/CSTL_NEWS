@@ -925,12 +925,24 @@
 .bs-status.cancelled { background: #fee2e2; color: var(--red); }
 .bs-status.delayed   { background: #fef3c7; color: #92400e; }
 
-/* Варіант Г — мигаючий кружечок у правому куті картки */
+/* Варіант Г — «В ДОРОЗІ» + мигаючий кружечок у правому куті картки */
 .bus-card { position: relative; }
-.bs-live-dot {
+.bs-live-corner {
   position: absolute;
   top: 14px;
   right: 16px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.bs-live-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #3a9e1a;
+  animation: bs-live-pulse 1.4s ease-in-out infinite;
+}
+.bs-live-dot {
   width: 10px;
   height: 10px;
   border-radius: 50%;
@@ -939,8 +951,8 @@
   animation: bs-live-pulse 1.4s ease-in-out infinite;
 }
 @keyframes bs-live-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(125,218,88,0.35); }
-  50%       { box-shadow: 0 0 0 7px rgba(125,218,88,0.12); }
+  0%, 100% { box-shadow: 0 0 0 3px rgba(125,218,88,0.35); opacity: 1; }
+  50%       { box-shadow: 0 0 0 7px rgba(125,218,88,0.12); opacity: 0.6; }
 }
 
 /* Підказка "розрахований зворотний рейс" */
