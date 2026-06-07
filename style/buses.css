@@ -915,6 +915,16 @@
   font-weight: 700;
   color: var(--black);
 }
+.bs-stop-row.bs-stop--current {
+  background: #f0fcea;
+  color: #2a7a0e;
+  font-weight: 700;
+  border-radius: 6px;
+}
+.bs-stop-row.bs-stop--next {
+  color: #1a6bb5;
+  font-weight: 600;
+}
 
 .bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
 .bs-stop-name  { flex: 1; }

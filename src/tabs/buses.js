@@ -655,21 +655,33 @@ function renderRouteList() {
     const c        = carrierInfo(route.carrier);
     const expanded = expandedIds.has(route.id);
 
+    const isEnroute = isViewingToday() && getRouteState(route) === 'enroute' && route.status !== 'cancelled';
+    // Для рейсу "в дорозі" — визначаємо поточну і наступну зупинку
+    const liveTimings     = isEnroute ? getRouteTimings(route) : null;
+    const liveCurrentStop = liveTimings?.currentStop || null;
+    const liveNextStop    = liveTimings?.nextStop    || null;
+
     const stopsHtml = route.stops.map(s => {
-      const isFrom = s.name === effFrom;
-      const isTo   = s.name === effTo;
-      const hl     = isFrom || isTo;
-      const t      = getStopHHMM(route, s.name);
+      const isFrom    = s.name === effFrom;
+      const isTo      = s.name === effTo;
+      const hl        = isFrom || isTo;
+      const isCurrent = isEnroute && s.name === liveCurrentStop;
+      const isNextS   = isEnroute && s.name === liveNextStop;
+      const t         = getStopHHMM(route, s.name);
+      let cls = 'bs-stop-row';
+      if (hl)        cls += ' hl';
+      if (isCurrent) cls += ' bs-stop--current';
+      if (isNextS)   cls += ' bs-stop--next';
+      const prefix = isCurrent ? '◉ ' : isNextS ? '▷ ' : isFrom ? '▶ ' : isTo ? '◄ ' : '';
       // Час прибуття на зупинку (з км + час відправлення). Ціну прибрано —
       // квиткова застаріває, час корисніший для пасажира.
       return `
-        <div class="bs-stop-row${hl ? ' hl' : ''}">
+        <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
-          <span class="bs-stop-name">${isFrom ? '▶\u202f' : isTo ? '◀\u202f' : ''}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${prefix}${escapeHtml(s.name)}</span>
         </div>`;
     }).join('');
 
-    const isEnroute = isViewingToday() && getRouteState(route) === 'enroute' && route.status !== 'cancelled';
     const liveDot = isEnroute ? `<span class="bs-live-dot"></span>` : '';
 
     const statusBadge = route.status === 'cancelled'
