@@ -126,9 +126,13 @@ function matchesSearch(route) {
 }
 
 // «Past» = рейс завершився (прибув на кінцеву). Рейс у дорозі тепер НЕ past.
+// Виняток: скасований рейс переходить у «минулі» з моменту часу відправлення.
 function isPastRoute(route) {
   if (!isViewingToday()) return false;
-  return getRouteState(route) === 'past';
+  const state = getRouteState(route);
+  if (state === 'past') return true;
+  if (route.status === 'cancelled' && state !== 'waiting') return true;
+  return false;
 }
 
 function getFilteredRoutes() {
