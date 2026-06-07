@@ -928,7 +928,7 @@
 
 .bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
 .bs-stop-name  { flex: 1; }
-.bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; }
+.bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; font-size: 11px; color: var(--gray); }
 
 /* Бейджики статусу (status badge — cancelled, delayed) */
 .bs-status {

@@ -673,12 +673,13 @@ function renderRouteList() {
       if (isCurrent) cls += ' bs-stop--current';
       if (isNextS)   cls += ' bs-stop--next';
       const prefix = isCurrent ? '◉ ' : isNextS ? '▷ ' : isFrom ? '▶ ' : isTo ? '◄ ' : '';
-      // Час прибуття на зупинку (з км + час відправлення). Ціну прибрано —
-      // квиткова застаріває, час корисніший для пасажира.
+      const segPrice = isFrom ? null : getSegmentPrice(route, effFrom, s.name);
+      const priceHtml = segPrice ? `<span class="bs-stop-price">${segPrice} грн</span>` : '';
       return `
         <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
           <span class="bs-stop-name">${prefix}${escapeHtml(s.name)}</span>
+          ${priceHtml}
         </div>`;
     }).join('');
 

@@ -2313,10 +2313,13 @@ ${post.text}
         if (isNextS)
           cls += " bs-stop--next";
         const prefix = isCurrent ? "\u25C9 " : isNextS ? "\u25B7 " : isFrom ? "\u25B6\u202F" : isTo ? "\u25C4\u202F" : "";
+        const segPrice = isFrom ? null : getSegmentPrice(route, effFrom, s.name);
+        const priceHtml = segPrice ? `<span class="bs-stop-price">${segPrice} \u0433\u0440\u043D</span>` : "";
         return `
         <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
           <span class="bs-stop-name">${prefix}${escapeHtml(s.name)}</span>
+          ${priceHtml}
         </div>`;
       }).join("");
       const liveDot = isEnroute ? `<span class="bs-live-dot"></span>` : "";
