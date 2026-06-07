@@ -899,11 +899,13 @@
 .bs-stops-body {
   background: var(--gray-light);
   border-top: 1px solid var(--border);
-  padding: 4px 0 6px;
+  padding: 0;
   border-radius: 0 0 12px 12px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.07);
 }
+.bs-stop-row:first-child { padding-top: 9px; }
+.bs-stop-row:last-child  { padding-bottom: 11px; }
 .bs-stops-body[hidden] { display: none; }
 
 /* Рядок однієї зупинки */
