@@ -2309,14 +2309,14 @@ ${post.text}
       const routeLabel = segLabel;
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
-        ${isEnroute ? '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>' : ""}
+        ${isEnroute ? '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>' : route.status === "cancelled" ? '<span class="bs-live-corner"><span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span></span>' : ""}
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>
