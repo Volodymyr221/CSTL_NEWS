@@ -897,6 +897,7 @@
   padding: 4px 0 6px;
   border-radius: 0 0 12px 12px;
   overflow: hidden;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.07);
 }
 .bs-stops-body[hidden] { display: none; }
 
