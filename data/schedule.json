@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "07.06.2026",
-  "updatedTime": "01:37",
+  "updatedTime": "03:08",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -731,7 +731,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-08": {
       "routes": [
@@ -1412,7 +1412,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-09": {
       "routes": [
@@ -2093,7 +2093,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-10": {
       "routes": [
@@ -2774,7 +2774,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-11": {
       "routes": [
@@ -3455,7 +3455,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-12": {
       "routes": [
@@ -4136,12 +4136,12 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-13": {
       "routes": [],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     },
     "2026-06-14": {
       "routes": [
@@ -4822,7 +4822,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "01:37"
+      "fetchedTime": "03:08"
     }
   }
 }
