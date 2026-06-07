@@ -363,7 +363,8 @@ export function buildHeroCard(route, timings, index, total) {
         : `${durMins} хв`)
     : '';
 
-  const statusDot  = isEnroute ? '🟢' : isUrgent ? '🔴' : '🔵';
+  const statusDotClass = isEnroute ? 'enroute' : isUrgent ? 'urgent' : 'waiting';
+  const statusDot  = `<span class="bhv4-state-dot bhv4-state-dot--${statusDotClass}"></span>`;
   const statusText = isEnroute ? 'в дорозі' : isUrgent ? 'відправляється' : 'очікується';
 
   const [, labelB] = parseRouteEndpoints(route.name || '');
@@ -505,7 +506,8 @@ function switchHeroCard() {
     const statusWrap = card.querySelector('.bhv4-status .bhv4-dyn');
     if (statusWrap) {
       const txt = isEnroute ? 'в дорозі' : isUrgent ? 'відправляється' : 'очікується';
-      const dot = isEnroute ? '🟢' : isUrgent ? '🔴' : '🔵';
+      const dotCls = isEnroute ? 'enroute' : isUrgent ? 'urgent' : 'waiting';
+      const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
       statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
     }
 
