@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "07.06.2026",
-  "updatedTime": "03:08",
+  "updatedTime": "08:08",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -62,7 +62,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -87,7 +87,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:05",
           "arrival_time": "08:30",
           "duration_min": 85,
@@ -112,7 +112,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:50",
           "arrival_time": "09:00",
           "duration_min": 70,
@@ -411,8 +411,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:10",
           "arrival_time": "15:45",
           "duration_min": 95,
@@ -436,8 +436,8 @@
           "carrier": "санрайз_л_т_д",
           "bus": "",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -686,8 +686,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "19:00",
           "arrival_time": "20:20",
           "duration_min": 80,
@@ -731,7 +731,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-08": {
       "routes": [
@@ -1412,7 +1412,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-09": {
       "routes": [
@@ -2093,7 +2093,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-10": {
       "routes": [
@@ -2774,7 +2774,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-11": {
       "routes": [
@@ -3455,7 +3455,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-12": {
       "routes": [
@@ -4136,12 +4136,12 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-13": {
       "routes": [],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     },
     "2026-06-14": {
       "routes": [
@@ -4822,7 +4822,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "03:08"
+      "fetchedTime": "08:08"
     }
   }
 }
