@@ -674,7 +674,7 @@ function renderRouteList() {
       if (isNextS)   cls += ' bs-stop--next';
       const prefixHtml = isCurrent
         ? '<span class="bs-stop-icon bs-stop-icon--current"></span>'
-        : isNextS
+        : isNextS && !isTo
         ? '<span class="bs-stop-icon bs-stop-icon--next">▷</span>'
         : isFrom
         ? '<span class="bs-stop-icon bs-stop-icon--from">●</span>'
