@@ -1062,6 +1062,13 @@ export async function initBuses() {
     const res = await fetch(`./data/schedule.json?v=${Math.floor(Date.now() / 60000)}`); // cache-bust кожну хвилину
     if (!res.ok) throw new Error(res.status);
     busData = await res.json();
+    // Нормалізація застарілих назв зупинок (для старого кешу на пристроях)
+    const STOP_ALIASES = { 'Гараджа': 'Гаразджа' };
+    const normalizeStop = name => STOP_ALIASES[name] || name;
+    const allDays = busData?.days ? Object.values(busData.days) : (busData ? [busData] : []);
+    allDays.forEach(day => (day.routes || []).forEach(r =>
+      (r.stops || []).forEach(s => { s.name = normalizeStop(s.name); })
+    ));
   } catch {
     busData = null;
   }

@@ -2627,6 +2627,14 @@ ${post.text}
       if (!res.ok)
         throw new Error(res.status);
       busData = await res.json();
+      const STOP_ALIASES = { "\u0413\u0430\u0440\u0430\u0434\u0436\u0430": "\u0413\u0430\u0440\u0430\u0437\u0434\u0436\u0430" };
+      const normalizeStop = (name) => STOP_ALIASES[name] || name;
+      const allDays = busData?.days ? Object.values(busData.days) : busData ? [busData] : [];
+      allDays.forEach((day) => (day.routes || []).forEach(
+        (r) => (r.stops || []).forEach((s) => {
+          s.name = normalizeStop(s.name);
+        })
+      ));
     } catch {
       busData = null;
     }
