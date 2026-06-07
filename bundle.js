@@ -2769,7 +2769,7 @@ ${post.text}
           cmBusRoutes = [next];
       }
       if (!cmBusRoutes.length) {
-        el.innerHTML = `<div class="cm-block-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
+        el.innerHTML = `<div class="cm-block-empty">\u041D\u0410 \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415\u041C\u0410\u0404</div>`;
         return;
       }
       if (cmBusIndex >= cmBusRoutes.length)
