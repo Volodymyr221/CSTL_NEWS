@@ -1025,23 +1025,24 @@
 .bs-search-input--tap:focus { outline: none; }
 
 /* Маленька кнопка ✕ в рядку пошуку (з'являється коли є активний фільтр) */
-.bs-clear-btn {
-  flex-shrink: 0;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(114,47,55,0.10);
-  color: rgba(114,47,55,0.85);
-  font-size: 14px;
-  line-height: 1;
-  cursor: pointer;
+.bs-filter-clear-row {
   display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background 0.15s;
+  justify-content: flex-end;
+  margin-top: 6px;
 }
-.bs-clear-btn:active { background: rgba(114,47,55,0.22); }
+.bs-filter-clear-btn {
+  border: none;
+  background: none;
+  color: var(--red);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  padding: 4px 2px;
+  opacity: 0.85;
+  transition: opacity 0.15s;
+}
+.bs-filter-clear-btn:active { opacity: 0.5; }
 
 /* ===== DROPDOWN — кастомний список вибору зупинки ===== */
 /* position:fixed — прив'язаний до екрана, не залежить від скролу */

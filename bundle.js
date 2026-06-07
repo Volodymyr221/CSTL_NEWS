@@ -2566,8 +2566,8 @@ ${post.text}
                type="text" placeholder="\u041A\u0443\u0434\u0438"
                value="${escapeHtml(toStop)}" readonly>
       </div>
-      ${hasFilter ? `<button class="bs-clear-btn" id="bs-reset-btn" title="\u0421\u043A\u0438\u043D\u0443\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442">\u2715</button>` : ""}
     </div>
+    ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">\u2715 \u0421\u041A\u0418\u041D\u0423\u0422\u0418 \u0424\u0406\u041B\u042C\u0422\u0420</button></div>` : ""}
   `;
     document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
     document.getElementById("bs-to-input").addEventListener("click", () => openDropdown("to"));
