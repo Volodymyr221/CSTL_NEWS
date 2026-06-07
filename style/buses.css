@@ -982,9 +982,6 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  border: 1.5px solid #722F37;
-  border-radius: 20px;
-  padding: 2px 8px 2px 8px;
 }
 .bs-soon-label {
   font-size: 12px;
