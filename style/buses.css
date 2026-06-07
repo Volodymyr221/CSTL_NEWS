@@ -895,6 +895,8 @@
   background: var(--gray-light);
   border-top: 1px solid var(--border);
   padding: 4px 0 6px;
+  border-radius: 0 0 12px 12px;
+  overflow: hidden;
 }
 .bs-stops-body[hidden] { display: none; }
 
