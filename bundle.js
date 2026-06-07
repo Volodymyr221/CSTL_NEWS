@@ -2337,7 +2337,19 @@ ${post.text}
       const routeLabel = segLabel;
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
-        ${isEnroute ? '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>' : route.status === "cancelled" ? '<span class="bs-live-corner"><span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span></span>' : ""}
+        ${(() => {
+        if (isEnroute)
+          return '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>';
+        if (route.status === "cancelled")
+          return '<span class="bs-live-corner"><span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span></span>';
+        if (isViewingToday() && !isPast && route.status !== "cancelled") {
+          const minsLeft = getRouteTimings(route).minsToDeparture;
+          if (minsLeft !== null && minsLeft <= 15 && minsLeft > 0) {
+            return `<span class="bs-live-corner"><span class="bs-soon-label">\u0427\u0415\u0420\u0415\u0417 ${minsLeft} \u0425\u0412</span></span>`;
+          }
+        }
+        return "";
+      })()}
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
