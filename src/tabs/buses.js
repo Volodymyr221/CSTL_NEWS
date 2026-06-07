@@ -751,7 +751,7 @@ function renderRouteList() {
             <div class="bus-card-meta">
               <span>Орієнтовно: ${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>
-              <span>${escapeHtml(c.name)}</span>
+              <span>${c.name.split('\n').map(escapeHtml).join('<br>')}</span>
             </div>
             ${autoNote}
           </div>
