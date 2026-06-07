@@ -91,9 +91,7 @@
 /* Обраний день — та сама форма що й ободок today, краї розмиті */
 .bus-week-day--active {
   background: #BEC4D2;
-  border-radius: 8px;
   border-color: #9AA3B5;
-  box-shadow: 0 0 10px 6px rgba(190, 196, 210, 0.9);
 }
 /* Коли сьогодні = активний день — лише ободок залишається бордовим */
 .bus-week-day--today.bus-week-day--active {
