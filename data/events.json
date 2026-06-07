@@ -40,16 +40,16 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 119,
-    "title": "На форум у Петербурзі за участю Путіна вперше за кілька років приїде представник США – росЗМІ",
-    "description": "Офіційний представник США вперше за кілька років приїде на Міжнародний економічним форум у російському Петербурзі.",
-    "date": "2026-06-06",
+    "id": 198,
+    "title": "ЗМІ: Зеленський 7 червня зустрінеться з Макроном, Стармером та Мерцом",
+    "description": "7 червня Зеленський проведе переговори з Макроном, Мерцом і Стармером щодо припинення війни.",
+    "date": "2026-06-07",
     "time": null,
     "location": null,
     "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/5/833545/556cc134918112ddc5ade92596357f4e.jpeg",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/2/843737/62aee98622b730ab4bff621fa30f033a.jpeg",
     "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/22/8035882/",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/07/8038098/",
     "auto": true
   },
   {
