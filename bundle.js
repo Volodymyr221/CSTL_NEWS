@@ -2298,6 +2298,8 @@ ${post.text}
           <span class="bs-stop-name">${isFrom ? "\u25B6\u202F" : isTo ? "\u25C0\u202F" : ""}${escapeHtml(s.name)}</span>
         </div>`;
       }).join("");
+      const isEnroute = isViewingToday() && getRouteState(route) === "enroute";
+      const liveDot = isEnroute ? `<span class="bs-live-dot"></span>` : "";
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       const [ep1, ep2] = parseRouteEndpoints(route.name);
@@ -2313,7 +2315,7 @@ ${post.text}
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${liveDot}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>
