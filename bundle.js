@@ -2310,7 +2310,8 @@ ${post.text}
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
-          <div class="bs-time-block">
+          <div class="bs-time-block${isEnroute ? " bs-time-block--live" : ""}">
+            ${isEnroute ? '<span class="bs-live-dot"></span>' : ""}
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
