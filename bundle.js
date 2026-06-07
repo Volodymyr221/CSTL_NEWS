@@ -2362,7 +2362,7 @@ ${post.text}
           <div class="bus-card-info">
             <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
-              <span>${escapeHtml(durStr)}</span>
+              <span>\u041E\u0440\u0456\u0454\u043D\u0442\u043E\u0432\u043D\u043E: ${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>
               <span>${escapeHtml(c.name)}</span>
             </div>
