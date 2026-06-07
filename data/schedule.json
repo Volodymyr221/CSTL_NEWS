@@ -2,14 +2,14 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "08.06.2026",
-  "updatedTime": "00:19",
+  "updatedTime": "01:38",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
       "phone": "0332 224 500"
     },
     "черняк_п_к_43018_волинська_об": {
-      "name": "Черняк П.К.-43018\nВолинська обл.",
+      "name": "Черняк П.К.-43018 Волинська об",
       "phone": "0332 224 500"
     },
     "санрайз_л_т_д": {
@@ -1890,7 +1890,7 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-08": {
       "routes": [
@@ -3730,7 +3730,7 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-09": {
       "routes": [
@@ -5570,7 +5570,7 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-10": {
       "routes": [
@@ -7410,7 +7410,7 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-11": {
       "routes": [
@@ -9250,7 +9250,7 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-12": {
       "routes": [
@@ -11090,12 +11090,12 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-13": {
       "routes": [],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     },
     "2026-06-14": {
       "routes": [
@@ -12935,7 +12935,7 @@
         }
       ],
       "fetchedAt": "08.06.2026",
-      "fetchedTime": "00:19"
+      "fetchedTime": "01:38"
     }
   }
 }
