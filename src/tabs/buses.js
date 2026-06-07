@@ -658,6 +658,9 @@ function renderRouteList() {
         </div>`;
     }).join('');
 
+    const isEnroute = isViewingToday() && getRouteState(route) === 'enroute';
+    const liveDot = isEnroute ? `<span class="bs-live-dot"></span>` : '';
+
     const statusBadge = route.status === 'cancelled'
       ? `<span class="bs-status cancelled">Скасовано</span>`
       : route.status === 'delayed'
@@ -690,7 +693,7 @@ function renderRouteList() {
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${liveDot}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>

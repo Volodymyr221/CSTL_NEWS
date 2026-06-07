@@ -925,6 +925,23 @@
 .bs-status.cancelled { background: #fee2e2; color: var(--red); }
 .bs-status.delayed   { background: #fef3c7; color: #92400e; }
 
+/* Мигаючий зелений індикатор — рейс зараз в дорозі */
+.bs-live-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #7DDA58;
+  box-shadow: 0 0 0 3px rgba(125,218,88,0.4);
+  margin-left: 7px;
+  vertical-align: middle;
+  animation: bs-live-pulse 1.4s ease-in-out infinite;
+}
+@keyframes bs-live-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(125,218,88,0.4); }
+  50%       { box-shadow: 0 0 0 6px rgba(125,218,88,0.15); }
+}
+
 /* Підказка "розрахований зворотний рейс" */
 .bs-autogen {
   font-size: 10px;
