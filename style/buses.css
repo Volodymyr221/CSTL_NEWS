@@ -919,7 +919,7 @@
   color: var(--black);
 }
 .bs-stop-row.hl {
-  background: var(--white);
+  background: #dce6f0;
   font-weight: 700;
 }
 .bs-stop-row.bs-stop--current {
