@@ -573,6 +573,7 @@
   text-align: center;
   cursor: pointer;
   font-weight: 600;
+  text-transform: uppercase;
   transition: background 0.15s;
 }
 
