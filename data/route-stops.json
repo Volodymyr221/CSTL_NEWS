@@ -5,7 +5,7 @@
       {"name": "Ківерці",      "km": 0,  "price_from_start": null},
       {"name": "Піддубці",     "km": 20, "price_from_start": 132.0},
       {"name": "Струмівка",    "km": 20, "price_from_start": 132.0},
-      {"name": "Гараджа",      "km": 20, "price_from_start": 132.0},
+      {"name": "Гаразджа",      "km": 20, "price_from_start": 132.0},
       {"name": "Звірів",       "km": 21, "price_from_start": 132.0},
       {"name": "Арматнів",     "km": 23, "price_from_start": 132.0},
       {"name": "Пальче",       "km": 24, "price_from_start": 132.0},
@@ -125,7 +125,7 @@
           "price_from_start": 132.0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 20,
           "price_from_start": 132.0
         },
@@ -201,7 +201,7 @@
           "price_from_start": 110.0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 11,
           "price_from_start": 110.0
         },
@@ -327,7 +327,7 @@
           "price_from_start": 56.1
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 31,
           "price_from_start": 56.1
         },
@@ -413,7 +413,7 @@
           "price_from_start": 56.1
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 40,
           "price_from_start": 78.1
         },
@@ -444,7 +444,7 @@
           "price_from_start": 33.0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 12,
           "price_from_start": 44.0
         },
@@ -555,7 +555,7 @@
           "price_from_start": 77.0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 32,
           "price_from_start": 88.0
         },
@@ -586,7 +586,7 @@
           "price_from_start": 33.0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 12,
           "price_from_start": 44.0
         },
@@ -727,7 +727,7 @@
           "price_from_start": 110.0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 42,
           "price_from_start": 121.0
         },
@@ -753,7 +753,7 @@
           "price_from_start": 0
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 20,
           "price_from_start": 132.0
         },
@@ -874,7 +874,7 @@
           "price_from_start": 56.1
         },
         {
-          "name": "Гараджа",
+          "name": "Гаразджа",
           "km": 31,
           "price_from_start": 56.1
         },
