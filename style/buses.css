@@ -925,21 +925,14 @@
 .bs-status.cancelled { background: #fee2e2; color: var(--red); }
 .bs-status.delayed   { background: #fef3c7; color: #92400e; }
 
-/* Мигаючий зелений індикатор — рейс зараз в дорозі */
-.bs-live-dot {
-  display: inline-block;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #7DDA58;
-  box-shadow: 0 0 0 3px rgba(125,218,88,0.4);
-  margin-left: 7px;
-  vertical-align: middle;
-  animation: bs-live-pulse 1.4s ease-in-out infinite;
+/* Варіант А — зелена смужка зліва від картки рейсу що зараз їде */
+.bus-card.enroute {
+  border-left: 3px solid #7DDA58;
+  animation: bs-bar-pulse 1.4s ease-in-out infinite;
 }
-@keyframes bs-live-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(125,218,88,0.4); }
-  50%       { box-shadow: 0 0 0 6px rgba(125,218,88,0.15); }
+@keyframes bs-bar-pulse {
+  0%, 100% { border-left-color: #7DDA58; box-shadow: -3px 0 8px rgba(125,218,88,0.5); }
+  50%       { border-left-color: #5ec93d; box-shadow: -3px 0 14px rgba(125,218,88,0.2); }
 }
 
 /* Підказка "розрахований зворотний рейс" */
