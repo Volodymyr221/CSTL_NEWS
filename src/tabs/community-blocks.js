@@ -267,7 +267,7 @@ export async function renderBusBlock() {
     }
 
     if (!cmBusRoutes.length) {
-      el.innerHTML = `<div class="cm-block-empty">Рейсів сьогодні більше немає</div>`;
+      el.innerHTML = `<div class="cm-block-empty">НА СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕМАЄ</div>`;
       return;
     }
 
