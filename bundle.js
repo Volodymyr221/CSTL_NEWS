@@ -2309,7 +2309,7 @@ ${post.text}
       const routeLabel = segLabel;
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
-        ${isEnroute ? '<span class="bs-live-dot"></span>' : ""}
+        ${isEnroute ? '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>' : ""}
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
