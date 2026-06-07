@@ -2054,7 +2054,8 @@ ${post.text}
     const toMin = timings.toMin;
     const durMins = fromMin !== null && toMin !== null ? toMin - fromMin : null;
     const durStr = durMins !== null ? durMins >= 60 ? `${Math.floor(durMins / 60)} \u0433\u043E\u0434${durMins % 60 ? " " + durMins % 60 + " \u0445\u0432" : ""}` : `${durMins} \u0445\u0432` : "";
-    const statusDot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
+    const statusDotClass = isEnroute ? "enroute" : isUrgent ? "urgent" : "waiting";
+    const statusDot = `<span class="bhv4-state-dot bhv4-state-dot--${statusDotClass}"></span>`;
     const statusText = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
     const [, labelB] = parseRouteEndpoints(route.name || "");
     const lastKnownStop = route.stops[route.stops.length - 1].name;
@@ -2181,7 +2182,8 @@ ${post.text}
       const statusWrap = card.querySelector(".bhv4-status .bhv4-dyn");
       if (statusWrap) {
         const txt = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
-        const dot = isEnroute ? "\u{1F7E2}" : isUrgent ? "\u{1F534}" : "\u{1F535}";
+        const dotCls = isEnroute ? "enroute" : isUrgent ? "urgent" : "waiting";
+        const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
         statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
       }
       const nameEl = card.querySelector(".bhv4-route-name");
