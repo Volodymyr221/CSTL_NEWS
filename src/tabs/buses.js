@@ -751,6 +751,8 @@ function renderRouteList() {
             <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
+              <span class="bus-meta-sep">·</span>
+              <span>${escapeHtml(c.name)}</span>
             </div>
             ${autoNote}
           </div>
