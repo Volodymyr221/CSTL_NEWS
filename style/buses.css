@@ -576,15 +576,7 @@
   transition: background 0.15s;
 }
 
-/* "Сховати минулі" — тепер знизу списку */
-.bus-show-all--less {
-  background: #ECEEF2;
-  border-top: 1px solid var(--border);
-  color: var(--gray);
-  font-weight: 400;
-}
 .bus-show-all:active { background: var(--gray-light); }
-.bus-show-all--less { color: var(--gray); font-weight: 400; }
 
 /* ===== BUSES v2 — Smart-Focus + картки рейсів ===== */
 
