@@ -748,7 +748,7 @@ function renderRouteList() {
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
+            <div class="bus-card-route">${segActive ? `<span class="bs-seg-label">${escapeHtml(routeLabel)}</span>` : escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>
