@@ -2016,6 +2016,7 @@ ${post.text}
     closeDropdown();
     showAll = false;
     savePrefs();
+    renderSearchPanel();
     renderSmartRow();
     renderRouteList();
   }
