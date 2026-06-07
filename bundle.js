@@ -2334,11 +2334,12 @@ ${post.text}
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       const [ep1, ep2] = parseRouteEndpoints(route.name);
       const filterActive = fromStop && toStop && route.stops.some((s) => s.name === fromStop) && route.stops.some((s) => s.name === toStop);
-      const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fromStopTime = filterActive ? getStopHHMM(route, fromStop) : null;
       const toStopTime = filterActive ? getStopHHMM(route, toStop) : null;
       const timeSuffix = fromStopTime && toStopTime ? ` / ${fromStopTime} \u2192 ${toStopTime}` : fromStopTime ? ` / ${fromStopTime}` : "";
-      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${escapeHtml(timeSuffix)}</span>` : "";
+      const segActive = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase());
+      const routeLabel = segActive ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}${timeSuffix}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
+      const fullLabel = segActive ? `<span class="bs-route-full">${escapeHtml(ep1)} \u2192 ${escapeHtml(ep2)}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
