@@ -688,8 +688,12 @@ function renderRouteList() {
         : '';
       const segPrice = isFrom ? null : getSegmentPrice(route, effFrom, s.name);
       const priceHtml = segPrice ? `<span class="bs-stop-price">${segPrice} грн</span>` : '';
+      // Над поточною зупинкою — маленький рядок з назвою наступної
+      const nextAboveHtml = isCurrent && liveNextStop
+        ? `<div class="bs-next-above">▷ ${escapeHtml(liveNextStop.toUpperCase())} ${escapeHtml(getStopHHMM(route, liveNextStop) || '')}</div>`
+        : '';
       return `
-        <div class="${cls}">
+        ${nextAboveHtml}<div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
           <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name)}</span>
           ${priceHtml}
