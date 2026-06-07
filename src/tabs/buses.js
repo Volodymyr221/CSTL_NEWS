@@ -673,7 +673,7 @@ function renderRouteList() {
       if (isCurrent) cls += ' bs-stop--current';
       if (isNextS)   cls += ' bs-stop--next';
       const prefixHtml = isCurrent
-        ? '<span class="bs-stop-icon bs-stop-icon--current">◉</span>'
+        ? '<span class="bs-stop-icon bs-stop-icon--current"></span>'
         : isNextS
         ? '<span class="bs-stop-icon bs-stop-icon--next">▷</span>'
         : isFrom
