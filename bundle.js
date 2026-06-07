@@ -1877,7 +1877,12 @@ ${post.text}
   function isPastRoute(route) {
     if (!isViewingToday())
       return false;
-    return getRouteState(route) === "past";
+    const state = getRouteState(route);
+    if (state === "past")
+      return true;
+    if (route.status === "cancelled" && state !== "waiting")
+      return true;
+    return false;
   }
   function getFilteredRoutes() {
     if (!busData)
