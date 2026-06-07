@@ -2336,7 +2336,7 @@ ${post.text}
       const filterActive = fromStop && toStop && route.stops.some((s) => s.name === fromStop) && route.stops.some((s) => s.name === toStop);
       const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fromStopTime = filterActive ? getStopHHMM(route, fromStop) : null;
-      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${fromStopTime ? `<br>/ \u041E\u0420\u0406\u0404\u041D\u0422\u041E\u0412\u041D\u0415 \u0412\u0406\u0414\u041F\u0420\u0410\u0412\u041B\u0415\u041D\u041D\u042F \u0417 ${escapeHtml(fromStop.toUpperCase())} ${escapeHtml(fromStopTime)}` : ""}</span>` : "";
+      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${fromStopTime ? ` / \u0412\u0406\u0414 ${escapeHtml(fromStop.toUpperCase())} ${escapeHtml(fromStopTime)}` : ""}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
@@ -2769,7 +2769,7 @@ ${post.text}
           cmBusRoutes = [next];
       }
       if (!cmBusRoutes.length) {
-        el.innerHTML = `<div class="cm-block-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454<button class="cm-block-cta" data-switch-tab="buses">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u2192</button></div>`;
+        el.innerHTML = `<div class="cm-block-empty">\u0420\u0435\u0439\u0441\u0456\u0432 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u043C\u0430\u0454</div>`;
         return;
       }
       if (cmBusIndex >= cmBusRoutes.length)
