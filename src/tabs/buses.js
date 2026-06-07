@@ -758,7 +758,7 @@ function renderRouteList() {
         </div>
         ${route.stops && route.stops.length > 2
           ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
-               ${expanded ? 'СХОВАТИ ЗУПИНКИ ▴' : 'ВСІ ЗУПИНКИ ▾'}
+               ${expanded ? 'СХОВАТИ ЗУПИНКИ' : 'ВСІ ЗУПИНКИ'} <span class="bs-toggle-arr">${expanded ? '▴' : '▾'}</span>
              </button>
              <div class="bs-stops-body"${expanded ? '' : ' hidden'}>${stopsHtml}</div>`
           : route.vopas_url
