@@ -548,6 +548,15 @@ function switchHeroCard() {
           : '';
     }
 
+    // Мітки А і Б на прогрес-шкалі (оновлюємо при зміні маршруту)
+    const labelsEl = card.querySelector('.bhv4-labels');
+    if (labelsEl) {
+      const [lA, lB] = parseRouteEndpoints(route.name || '');
+      labelsEl.innerHTML =
+        `<span class="bhv4-label bhv4-label--a">${escapeHtml(lA.toUpperCase())}</span>` +
+        `<span class="bhv4-label bhv4-label--b">${escapeHtml(lB.toUpperCase())}</span>`;
+    }
+
     // Шкала прогресу — трек (сіра лінія) статичний, міняємо тільки fill і крапки
     const mapOuter = card.querySelector('.bhv4-map-outer');
     if (mapOuter) {

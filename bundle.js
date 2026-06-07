@@ -2209,6 +2209,11 @@ ${post.text}
         const dispNext = timings.nextStop === lastStop ? labelB : timings.nextStop || labelB;
         nextEl.textContent = isEnroute ? `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${dispNext.toUpperCase()}` : isUrgent || timings.state === "waiting" && timings.minsToDeparture !== null ? formatCountdownUpper(timings.minsToDeparture) : "";
       }
+      const labelsEl = card.querySelector(".bhv4-labels");
+      if (labelsEl) {
+        const [lA, lB] = parseRouteEndpoints(route.name || "");
+        labelsEl.innerHTML = `<span class="bhv4-label bhv4-label--a">${escapeHtml(lA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(lB.toUpperCase())}</span>`;
+      }
       const mapOuter = card.querySelector(".bhv4-map-outer");
       if (mapOuter) {
         const pct = (timings.progress * 100).toFixed(1);
