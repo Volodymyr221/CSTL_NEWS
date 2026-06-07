@@ -983,9 +983,13 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #BEC4D2;
-  box-shadow: 0 0 0 3px rgba(190,196,210,0.4);
-  animation: bs-live-pulse 1.4s ease-in-out infinite;
+  background: #722F37;
+  box-shadow: 0 0 0 3px rgba(114,47,55,0.35);
+  animation: bs-soon-pulse 1.4s ease-in-out infinite;
+}
+@keyframes bs-soon-pulse {
+  0%, 100% { box-shadow: 0 0 0 3px rgba(114,47,55,0.35); opacity: 1; }
+  50%       { box-shadow: 0 0 0 7px rgba(114,47,55,0.12); opacity: 0.6; }
 }
 .bs-live-dot {
   width: 10px;
