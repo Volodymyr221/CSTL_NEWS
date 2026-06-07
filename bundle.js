@@ -2310,13 +2310,12 @@ ${post.text}
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
-          <div class="bs-time-block${isEnroute ? " bs-time-block--live" : ""}">
-            ${isEnroute ? '<span class="bs-live-dot"></span>' : ""}
+          <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || "\u2014")}</span>
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${isEnroute ? '<span class="bs-live-badge">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span>' : ""}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">\xB7</span>
