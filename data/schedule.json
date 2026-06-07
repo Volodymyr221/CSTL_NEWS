@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "07.06.2026",
-  "updatedTime": "18:11",
+  "updatedTime": "19:53",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -1620,7 +1620,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "18:30",
           "arrival_time": "19:42",
           "duration_min": 72,
@@ -1706,7 +1706,7 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "cancelled",
+          "status": "scheduled",
           "sale_active": false,
           "departure_time": "19:00",
           "arrival_time": "20:20",
@@ -1890,7 +1890,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-08": {
       "routes": [
@@ -3730,7 +3730,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-09": {
       "routes": [
@@ -5570,7 +5570,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-10": {
       "routes": [
@@ -7410,7 +7410,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-11": {
       "routes": [
@@ -9250,7 +9250,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-12": {
       "routes": [
@@ -11090,12 +11090,12 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-13": {
       "routes": [],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     },
     "2026-06-14": {
       "routes": [
@@ -12935,7 +12935,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "18:11"
+      "fetchedTime": "19:53"
     }
   }
 }
