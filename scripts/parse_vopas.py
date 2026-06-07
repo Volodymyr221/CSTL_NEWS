@@ -261,11 +261,15 @@ def build_day_routes(
     unique: list[dict[str, Any]],
     query_date: str,
     prev_routes: list[dict[str, Any]] | None = None,
+    now_min: int | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Конвертує сирі рейси VOPAS у формат schedule.json для одного дня.
     prev_routes — попередні дані для збереження статусу 'cancelled' (sticky).
+    now_min — поточний час у хвилинах від 00:00 (для sticky-перевірки).
+    Sticky правило: скасування зберігається тільки якщо ми вже ПІСЛЯ часу відправлення.
+    До відправлення — якщо VOPAS зняв скасування, довіряємо (рейс поновлений).
     Повертає (routes_list, carriers_dict)."""
-    # Індекс попередніх маршрутів за (назва, час відправлення) для sticky-cancelled
+    # Індекс попередніх скасованих рейсів за (назва, час відправлення)
     prev_cancelled: set[tuple[str, str]] = set()
     for pr in (prev_routes or []):
         if pr.get("status") == "cancelled":
@@ -299,7 +303,11 @@ def build_day_routes(
         route_name_for_key = r.get("route_name") or ""
         dep_for_key = r.get("departure_time") or ""
         was_cancelled = (route_name_for_key, dep_for_key) in prev_cancelled
-        status = "cancelled" if (r.get("cancelled") or was_cancelled) else "scheduled"
+        # Sticky: зберігаємо cancelled тільки якщо вже минув час відправлення.
+        # До відправлення — якщо VOPAS зняв мітку, рейс поновлений, довіряємо.
+        dep_min_val = hhmm_to_min(dep_for_key)
+        past_dep = now_min is not None and dep_min_val is not None and now_min >= dep_min_val
+        status = "cancelled" if (r.get("cancelled") or (was_cancelled and past_dep)) else "scheduled"
         stops = _route_stops_map.get(route_name_for_key) or [{"name": frm, "km": 0}, {"name": to, "km": 100}]
         vopas_url = build_url(frm, to, query_date)
 
@@ -417,7 +425,9 @@ def main() -> int:
             continue
 
         prev_routes = existing_days.get(iso, {}).get("routes") or []
-        routes, day_carriers = build_day_routes(unique, date_str, prev_routes)
+        # now_min передаємо тільки для сьогоднішнього дня (sticky актуальний лише сьогодні)
+        cur_now_min = (now_kyiv.hour * 60 + now_kyiv.minute) if day == today else None
+        routes, day_carriers = build_day_routes(unique, date_str, prev_routes, cur_now_min)
         all_carriers.update(day_carriers)
 
         days_result[iso] = {
