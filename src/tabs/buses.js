@@ -726,7 +726,7 @@ function renderRouteList() {
       ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}`
       : `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
     const fullLabel = segActive
-      ? `<span class="bs-route-full">МАРШРУТ: ${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
+      ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
       : '';
 
     return `
