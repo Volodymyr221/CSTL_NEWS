@@ -2250,7 +2250,7 @@ ${post.text}
     const all = getFilteredRoutes();
     const future = all.filter((r) => !isPastRoute(r));
     const past = all.filter((r) => isPastRoute(r));
-    const toRender = isViewingToday() ? showAll ? all : future : all;
+    const toRender = isViewingToday() ? showAll ? [...future, ...past] : future : all;
     if (!all.length) {
       const dd0 = getDayData();
       const updStr0 = dd0.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd0.fetchedTime)} | ${escapeHtml(dd0.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";

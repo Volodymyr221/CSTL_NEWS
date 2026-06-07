@@ -597,8 +597,9 @@ function renderRouteList() {
   const future   = all.filter(r => !isPastRoute(r));
   const past     = all.filter(r => isPastRoute(r));
   // Для сьогодні: за замовчуванням тільки майбутні (можна розгорнути).
+  // При showAll: актуальні зверху, минулі знизу (не перемішані за часом).
   // Для інших днів: завжди всі — немає сенсу ховати "минулі" вчорашнього дня.
-  const toRender = isViewingToday() ? (showAll ? all : future) : all;
+  const toRender = isViewingToday() ? (showAll ? [...future, ...past] : future) : all;
 
   if (!all.length) {
     const dd0 = getDayData();
