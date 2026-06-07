@@ -730,7 +730,7 @@ function renderRouteList() {
           if (isViewingToday() && !isPast && route.status !== 'cancelled') {
             const minsLeft = getRouteTimings(route).minsToDeparture;
             if (minsLeft !== null && minsLeft <= 15 && minsLeft > 0) {
-              return `<span class="bs-live-corner"><span class="bs-soon-label">ЧЕРЕЗ ${minsLeft} ХВ</span><span class="bs-soon-dot"></span></span>`;
+              return `<span class="bs-live-corner bs-live-corner--soon"><span class="bs-soon-badge"><span class="bs-soon-label">ЧЕРЕЗ ${minsLeft} ХВ</span><span class="bs-soon-dot"></span></span></span>`;
             }
           }
           return '';

@@ -977,6 +977,15 @@
   letter-spacing: 0.4px;
   color: #3a9e1a;
 }
+.bs-live-corner--soon { top: 10px; }
+.bs-soon-badge {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1.5px solid #722F37;
+  border-radius: 20px;
+  padding: 2px 8px 2px 8px;
+}
 .bs-soon-label {
   font-size: 12px;
   font-weight: 700;
