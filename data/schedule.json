@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "07.06.2026",
-  "updatedTime": "21:07",
+  "updatedTime": "22:55",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -84,7 +84,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -1374,7 +1374,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -1890,7 +1890,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-08": {
       "routes": [
@@ -1924,7 +1924,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -3214,7 +3214,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -3730,7 +3730,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-09": {
       "routes": [
@@ -3764,7 +3764,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -5054,7 +5054,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -5570,7 +5570,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-10": {
       "routes": [
@@ -5604,7 +5604,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -6894,7 +6894,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -7410,7 +7410,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-11": {
       "routes": [
@@ -7444,7 +7444,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -8734,7 +8734,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -9250,7 +9250,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-12": {
       "routes": [
@@ -9284,7 +9284,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -10574,7 +10574,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -11090,12 +11090,12 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-13": {
       "routes": [],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     },
     "2026-06-14": {
       "routes": [
@@ -11129,7 +11129,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -12419,7 +12419,7 @@
               "price_from_start": 132.0
             },
             {
-              "name": "Гаразджа",
+              "name": "Гараджа",
               "km": 20,
               "price_from_start": 132.0
             },
@@ -12935,7 +12935,7 @@
         }
       ],
       "fetchedAt": "07.06.2026",
-      "fetchedTime": "21:07"
+      "fetchedTime": "22:55"
     }
   }
 }
