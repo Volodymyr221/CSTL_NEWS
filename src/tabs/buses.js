@@ -658,7 +658,7 @@ function renderRouteList() {
         </div>`;
     }).join('');
 
-    const isEnroute = isViewingToday() && getRouteState(route) === 'enroute';
+    const isEnroute = isViewingToday() && getRouteState(route) === 'enroute' && route.status !== 'cancelled';
     const liveDot = isEnroute ? `<span class="bs-live-dot"></span>` : '';
 
     const statusBadge = route.status === 'cancelled'
@@ -686,14 +686,14 @@ function renderRouteList() {
     const routeLabel = segLabel;
 
     return `
-      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}" data-route-id="${escapeHtml(route.id)}">
+      <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${liveDot}${statusBadge}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>
