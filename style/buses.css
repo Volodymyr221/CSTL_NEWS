@@ -942,15 +942,6 @@
   box-shadow: 0 0 0 3px rgba(125,218,88,0.35);
   animation: bs-live-pulse 1.4s ease-in-out infinite;
   font-size: 0;
-  flex-shrink: 0;
-  margin-right: 6px;
-}
-.bs-next-above {
-  font-size: 10px;
-  font-weight: 600;
-  color: var(--gray);
-  padding: 4px 0 1px 46px;
-  letter-spacing: 0.3px;
 }
 .bs-stop-icon--next    { color: var(--black); font-size: 14px; font-weight: 900; }
 .bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; font-size: 11px; color: var(--gray); }
