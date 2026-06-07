@@ -754,9 +754,13 @@
   pointer-events: none;
 }
 
-/* Компенсація висоти: fixed week-strip (~64px) + fixed bus-search (~56px) */
+/* Компенсація висоти: fixed week-strip (~64px) + fixed bus-search (~60px) */
 #page-buses {
   padding-top: 124px;
+}
+/* +30px = margin-top 6px + висота рядка «СКИНУТИ ФІЛЬТР» ~24px */
+#page-buses.filter-active {
+  padding-top: 154px;
 }
 
 /* Рядок з двома полями і кнопкою swap */
