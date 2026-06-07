@@ -913,12 +913,11 @@
   gap: 8px;
   padding: 5px 16px;
   font-size: 12px;
-  color: var(--gray);
+  color: var(--black);
 }
 .bs-stop-row.hl {
   background: var(--white);
   font-weight: 700;
-  color: var(--black);
 }
 .bs-stop-row.bs-stop--current {
   color: var(--black);
