@@ -260,9 +260,16 @@ def make_carrier_id(name: str) -> str:
 def build_day_routes(
     unique: list[dict[str, Any]],
     query_date: str,
+    prev_routes: list[dict[str, Any]] | None = None,
 ) -> tuple[list[dict[str, Any]], dict[str, Any]]:
     """Конвертує сирі рейси VOPAS у формат schedule.json для одного дня.
+    prev_routes — попередні дані для збереження статусу 'cancelled' (sticky).
     Повертає (routes_list, carriers_dict)."""
+    # Індекс попередніх маршрутів за (назва, час відправлення) для sticky-cancelled
+    prev_cancelled: set[tuple[str, str]] = set()
+    for pr in (prev_routes or []):
+        if pr.get("status") == "cancelled":
+            prev_cancelled.add((pr.get("name", ""), pr.get("departure_time", "")))
     routes: list[dict] = []
     carriers: dict[str, dict] = {}
     skipped = 0
@@ -289,9 +296,11 @@ def build_day_routes(
 
         frm = r.get("from") or (r.get("route_name") or "").split()[0]
         to = r.get("to") or (r.get("route_name") or "—")
-        status = "cancelled" if r.get("cancelled") else "scheduled"
-        route_name_key = r.get("route_name") or ""
-        stops = _route_stops_map.get(route_name_key) or [{"name": frm, "km": 0}, {"name": to, "km": 100}]
+        route_name_for_key = r.get("route_name") or ""
+        dep_for_key = r.get("departure_time") or ""
+        was_cancelled = (route_name_for_key, dep_for_key) in prev_cancelled
+        status = "cancelled" if (r.get("cancelled") or was_cancelled) else "scheduled"
+        stops = _route_stops_map.get(route_name_for_key) or [{"name": frm, "km": 0}, {"name": to, "km": 100}]
         vopas_url = build_url(frm, to, query_date)
 
         routes.append({
@@ -407,7 +416,8 @@ def main() -> int:
             print(f"  ⚠ VOPAS не відповів — зберігаємо попередні дані")
             continue
 
-        routes, day_carriers = build_day_routes(unique, date_str)
+        prev_routes = existing_days.get(iso, {}).get("routes") or []
+        routes, day_carriers = build_day_routes(unique, date_str, prev_routes)
         all_carriers.update(day_carriers)
 
         days_result[iso] = {
