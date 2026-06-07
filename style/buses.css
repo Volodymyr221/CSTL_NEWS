@@ -912,8 +912,8 @@
   align-items: baseline;
   gap: 8px;
   padding: 5px 16px;
-  font-size: 14px;
-  font-weight: 400;
+  font-size: 13px;
+  font-weight: 500;
   color: var(--black);
 }
 .bs-stop-row.hl {
