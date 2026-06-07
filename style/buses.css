@@ -973,6 +973,12 @@
   letter-spacing: 0.4px;
   color: #3a9e1a;
 }
+.bs-soon-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #b85c00;
+}
 .bs-live-dot {
   width: 10px;
   height: 10px;

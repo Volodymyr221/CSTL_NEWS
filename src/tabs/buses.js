@@ -724,11 +724,17 @@ function renderRouteList() {
 
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
-        ${isEnroute
-          ? '<span class="bs-live-corner"><span class="bs-live-label">В ДОРОЗІ</span><span class="bs-live-dot"></span></span>'
-          : route.status === 'cancelled'
-          ? '<span class="bs-live-corner"><span class="bs-status cancelled">Скасовано</span></span>'
-          : ''}
+        ${(() => {
+          if (isEnroute) return '<span class="bs-live-corner"><span class="bs-live-label">В ДОРОЗІ</span><span class="bs-live-dot"></span></span>';
+          if (route.status === 'cancelled') return '<span class="bs-live-corner"><span class="bs-status cancelled">Скасовано</span></span>';
+          if (isViewingToday() && !isPast && route.status !== 'cancelled') {
+            const minsLeft = getRouteTimings(route).minsToDeparture;
+            if (minsLeft !== null && minsLeft <= 15 && minsLeft > 0) {
+              return `<span class="bs-live-corner"><span class="bs-soon-label">ЧЕРЕЗ ${minsLeft} ХВ</span></span>`;
+            }
+          }
+          return '';
+        })()}
         <div class="bus-card-main">
           <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
