@@ -2320,8 +2320,7 @@ ${post.text}
         if (isNextS)
           cls += " bs-stop--next";
         const prefixHtml = isCurrent ? '<span class="bs-stop-icon bs-stop-icon--current"></span>' : isNextS && !isTo ? '<span class="bs-stop-icon bs-stop-icon--next">\u25B7</span>' : isFrom ? '<span class="bs-stop-icon bs-stop-icon--from">\u25CF</span>' : isTo ? '<span class="bs-stop-icon bs-stop-icon--to"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg></span>' : "";
-        const segPrice = isFrom || idx < fromIdx ? null : getSegmentPrice(route, effFrom, s.name);
-        const priceHtml = segPrice ? `<span class="bs-stop-price">${segPrice} \u0433\u0440\u043D</span>` : "";
+        const priceHtml = "";
         return `
         <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
@@ -2364,8 +2363,6 @@ ${post.text}
             <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
-              <span class="bus-meta-sep">\xB7</span>
-              <span>${escapeHtml(price || "\u2014")} \u0433\u0440\u043D</span>
               <span class="bus-meta-sep">\xB7</span>
               <span>${escapeHtml(c.name)}</span>
             </div>
