@@ -942,6 +942,8 @@
   box-shadow: 0 0 0 3px rgba(125,218,88,0.35);
   animation: bs-live-pulse 1.4s ease-in-out infinite;
   font-size: 0;
+  flex-shrink: 0;
+  margin-right: 6px;
 }
 .bs-stop-icon--next    { color: var(--black); font-size: 14px; font-weight: 900; }
 .bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; font-size: 11px; color: var(--gray); }
