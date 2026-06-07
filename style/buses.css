@@ -876,7 +876,7 @@
   transition: background 0.12s;
 }
 .bs-toggle:active { background: var(--gray-light); }
-.bs-toggle-arr { font-size: 20px; line-height: 1; vertical-align: middle; }
+.bs-toggle-arr { font-size: 20px; line-height: 1; vertical-align: middle; position: relative; top: -3px; }
 
 /* Посилання на повні зупинки рейсу на vopas.com.ua (коли точних зупинок
    у нас немає — endpoint VOPAS обфускований). Веде на офіційний розклад. */
