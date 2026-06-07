@@ -2705,16 +2705,6 @@ ${post.text}
       el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
   }
-  function busIsDayActive(days) {
-    const d = (/* @__PURE__ */ new Date()).getDay();
-    if (days === "\u0449\u043E\u0434\u043D\u044F")
-      return true;
-    if (days === "\u043F\u043D-\u0441\u0431")
-      return d >= 1 && d <= 6;
-    if (days === "\u043F\u043D-\u043F\u0442")
-      return d >= 1 && d <= 5;
-    return true;
-  }
   async function renderBusBlock() {
     const el = document.getElementById("cm-bus-content");
     if (!el)
@@ -2722,9 +2712,9 @@ ${post.text}
     try {
       const res = await fetch("./data/schedule.json");
       const data = await res.json();
-      cmBusRoutes = data.routes.filter((r) => {
-        if (!busIsDayActive(r.days))
-          return false;
+      const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+      const allRoutes = data.days?.[todayISO]?.routes || data.routes || [];
+      cmBusRoutes = allRoutes.filter((r) => {
         if (r.status === "cancelled")
           return false;
         const state = getRouteState(r);
@@ -2741,7 +2731,7 @@ ${post.text}
         return aM - bM;
       });
       if (!cmBusRoutes.length) {
-        const next = data.routes.filter((r) => busIsDayActive(r.days) && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
+        const next = allRoutes.filter((r) => r.status !== "cancelled" && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
         if (next)
           cmBusRoutes = [next];
       }

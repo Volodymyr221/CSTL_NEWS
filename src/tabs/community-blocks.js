@@ -236,10 +236,13 @@ export async function renderBusBlock() {
     const res  = await fetch('./data/schedule.json');
     const data = await res.json();
 
+    // Нова структура: data.days["2026-06-07"].routes
+    const todayISO = new Date().toISOString().slice(0, 10);
+    const allRoutes = (data.days?.[todayISO]?.routes) || data.routes || [];
+
     // Актуальні рейси: enroute + waiting в межах 90 хв, сортування за відправленням
-    cmBusRoutes = data.routes
+    cmBusRoutes = allRoutes
       .filter(r => {
-        if (!busIsDayActive(r.days)) return false;
         if (r.status === 'cancelled') return false;
         const state = getRouteState(r);
         if (state === 'enroute') return true;
@@ -257,8 +260,8 @@ export async function renderBusBlock() {
 
     if (!cmBusRoutes.length) {
       // Показуємо наступний рейс якщо активних нема
-      const next = data.routes
-        .filter(r => busIsDayActive(r.days) && getRouteState(r) === 'waiting')
+      const next = allRoutes
+        .filter(r => r.status !== 'cancelled' && getRouteState(r) === 'waiting')
         .sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
       if (next) cmBusRoutes = [next];
     }
