@@ -2284,7 +2284,7 @@ ${post.text}
     const activeRoutes = findActiveRoutes();
     const highlighted = activeRoutes[smartRowIndex] || findNextRoute();
     const carrierInfo = (id) => busData.carriers?.[id] || { name: id, phone: "0332 224 500" };
-    const cards = toRender.map((route) => {
+    const buildCard = (route) => {
       const isPast = isPastRoute(route);
       const isNext = highlighted && route.id === highlighted.id;
       const isSelectable = !isViewingToday();
@@ -2372,8 +2372,9 @@ ${post.text}
              </button>
              <div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>` : route.vopas_url ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">\u0423\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u0440\u0435\u0439\u0441\u0443 \u043D\u0430 VOPAS \u2192</a>` : ""}
       </div>`;
-    }).join("");
+    };
     let toggleHtml = "";
+    let noMoreHtml = "";
     if (isViewingToday()) {
       if (!showAll && past.length > 0) {
         toggleHtml = `
@@ -2387,15 +2388,25 @@ ${post.text}
         </button>`;
       }
       if (future.length === 0 && all.length > 0) {
-        toggleHtml += `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>`;
+        noMoreHtml = `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>`;
       }
+    }
+    let cards;
+    if (isViewingToday() && showAll && past.length > 0) {
+      const futureCards = future.map(buildCard).join("");
+      const pastCards = past.map(buildCard).join("");
+      cards = futureCards + toggleHtml + pastCards + noMoreHtml;
+      toggleHtml = "";
+      noMoreHtml = "";
+    } else {
+      cards = toRender.map(buildCard).join("");
     }
     const updRow = document.getElementById("buses-updated-row");
     if (updRow && busData)
       updRow.innerHTML = buildSourceHtml();
     const dd = getDayData();
     const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
-    el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml;
+    el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml + noMoreHtml;
     el.querySelectorAll(".bs-toggle").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
