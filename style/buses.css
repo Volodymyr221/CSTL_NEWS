@@ -1048,15 +1048,16 @@
 /* position:fixed — прив'язаний до екрана, не залежить від скролу */
 .bs-dropdown {
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 10px;
+  right: 10px;
   z-index: 500;
   background: var(--white);
   max-height: 56vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 6px 28px rgba(0,0,0,0.18);
-  border-bottom: 2px solid var(--border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.20), 0 2px 8px rgba(0,0,0,0.10);
+  border-radius: 0 0 18px 18px;
+  overflow: hidden;
 }
 .bs-dropdown[hidden] { display: none; }
 
