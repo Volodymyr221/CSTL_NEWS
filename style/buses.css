@@ -979,6 +979,14 @@
   letter-spacing: 0.4px;
   color: #b85c00;
 }
+.bs-soon-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #BEC4D2;
+  box-shadow: 0 0 0 3px rgba(190,196,210,0.4);
+  animation: bs-live-pulse 1.4s ease-in-out infinite;
+}
 .bs-live-dot {
   width: 10px;
   height: 10px;
