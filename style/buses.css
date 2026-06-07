@@ -925,28 +925,24 @@
 .bs-status.cancelled { background: #fee2e2; color: var(--red); }
 .bs-status.delayed   { background: #fef3c7; color: #92400e; }
 
-/* Варіант Б — мигаючий кружечок зліва від часу відправлення */
-.bs-time-block--live {
-  flex-direction: row;
-  align-items: center;
-  gap: 6px;
-  flex-wrap: wrap;
+/* Варіант В — бейдж «В ДОРОЗІ» поряд з назвою маршруту */
+.bs-live-badge {
+  display: inline-block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  color: #3a9e1a;
+  background: rgba(125,218,88,0.15);
+  border: 1px solid rgba(125,218,88,0.5);
+  border-radius: 4px;
+  padding: 1px 6px;
+  margin-left: 6px;
+  vertical-align: middle;
+  animation: bs-badge-pulse 1.4s ease-in-out infinite;
 }
-.bs-time-block--live .bus-card-time { order: 2; }
-.bs-time-block--live .bs-arr        { order: 3; width: 100%; padding-left: 20px; }
-.bs-live-dot {
-  order: 1;
-  flex-shrink: 0;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: #7DDA58;
-  box-shadow: 0 0 0 3px rgba(125,218,88,0.35);
-  animation: bs-live-pulse 1.4s ease-in-out infinite;
-}
-@keyframes bs-live-pulse {
-  0%, 100% { box-shadow: 0 0 0 3px rgba(125,218,88,0.35); }
-  50%       { box-shadow: 0 0 0 6px rgba(125,218,88,0.12); }
+@keyframes bs-badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.5; }
 }
 
 /* Підказка "розрахований зворотний рейс" */

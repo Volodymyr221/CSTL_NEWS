@@ -688,13 +688,12 @@ function renderRouteList() {
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
         <div class="bus-card-main">
-          <div class="bs-time-block${isEnroute ? ' bs-time-block--live' : ''}">
-            ${isEnroute ? '<span class="bs-live-dot"></span>' : ''}
+          <div class="bs-time-block">
             <span class="bus-card-time">${escapeHtml(fromTime || '—')}</span>
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${statusBadge}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${isEnroute ? '<span class="bs-live-badge">В ДОРОЗІ</span>' : ''}${statusBadge}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>${escapeHtml(durStr)}</span>
               <span class="bus-meta-sep">·</span>
