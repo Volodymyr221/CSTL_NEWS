@@ -717,16 +717,17 @@ function renderRouteList() {
     const filterActive = fromStop && toStop &&
       route.stops.some(s => s.name === fromStop) &&
       route.stops.some(s => s.name === toStop);
-    const fromStopTime = filterActive ? getStopHHMM(route, fromStop) : null;
-    const toStopTime   = filterActive ? getStopHHMM(route, toStop)   : null;
-    const timeSuffix   = (fromStopTime && toStopTime) ? ` / ${fromStopTime} → ${toStopTime}` : (fromStopTime ? ` / ${fromStopTime}` : '');
     const segActive = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase());
-    // При активному фільтрі: заголовок = сегмент + час, підзаголовок = повний маршрут
+    // Час першої і останньої зупинки маршруту (не сегменту)
+    const routeStartTime = getStopHHMM(route, route.stops[0].name);
+    const routeEndTime   = getStopHHMM(route, route.stops[route.stops.length - 1].name);
+    const routeTimeStr   = (routeStartTime && routeEndTime) ? ` | ${routeStartTime} → ${routeEndTime}` : '';
+    // Заголовок = сегмент (без часу), підзаголовок = повний маршрут великими + час маршруту
     const routeLabel = segActive
-      ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}${timeSuffix}`
+      ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}`
       : `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
     const fullLabel = segActive
-      ? `<span class="bs-route-full">${escapeHtml(ep1)} → ${escapeHtml(ep2)}</span>`
+      ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
       : '';
 
     return `
