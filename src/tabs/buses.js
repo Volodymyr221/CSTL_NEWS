@@ -691,7 +691,7 @@ function renderRouteList() {
       return `
         <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || '—')}</span>
-          <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name.toUpperCase())}</span>
           ${priceHtml}
         </div>`;
     }).join('');

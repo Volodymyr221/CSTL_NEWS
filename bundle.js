@@ -2323,7 +2323,7 @@ ${post.text}
         return `
         <div class="${cls}">
           <span class="bs-stop-time">${escapeHtml(t || "\u2014")}</span>
-          <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name)}</span>
+          <span class="bs-stop-name">${prefixHtml}${escapeHtml(s.name.toUpperCase())}</span>
           ${priceHtml}
         </div>`;
       }).join("");
