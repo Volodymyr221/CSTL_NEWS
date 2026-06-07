@@ -927,7 +927,13 @@
 }
 
 .bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
-.bs-stop-name  { flex: 1; }
+.bs-stop-name  { flex: 1; display: flex; align-items: center; gap: 5px; }
+
+.bs-stop-icon { display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.bs-stop-icon--from { color: #722F37; font-size: 10px; }
+.bs-stop-icon--to svg { width: 13px; height: 13px; color: #722F37; }
+.bs-stop-icon--current { color: #2a7a0e; font-size: 11px; }
+.bs-stop-icon--next    { color: #1a6bb5; font-size: 11px; }
 .bs-stop-price { flex-shrink: 0; text-align: right; min-width: 60px; font-size: 11px; color: var(--gray); }
 
 /* Бейджики статусу (status badge — cancelled, delayed) */
