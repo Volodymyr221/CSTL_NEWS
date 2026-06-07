@@ -919,6 +919,8 @@
 .bs-stop-row.hl {
   background: #E1E4EC;
   font-weight: 700;
+  border-top: 1px solid #C4C9D6;
+  border-bottom: 1px solid #C4C9D6;
 }
 .bs-stop-row.bs-stop--current {
   color: var(--black);
