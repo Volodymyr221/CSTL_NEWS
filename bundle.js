@@ -2336,7 +2336,9 @@ ${post.text}
       const filterActive = fromStop && toStop && route.stops.some((s) => s.name === fromStop) && route.stops.some((s) => s.name === toStop);
       const routeLabel = `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fromStopTime = filterActive ? getStopHHMM(route, fromStop) : null;
-      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${fromStopTime ? ` / \u0412\u0406\u0414 ${escapeHtml(fromStop.toUpperCase())} ${escapeHtml(fromStopTime)}` : ""}</span>` : "";
+      const toStopTime = filterActive ? getStopHHMM(route, toStop) : null;
+      const timeSuffix = fromStopTime && toStopTime ? ` / ${fromStopTime} \u2192 ${toStopTime}` : fromStopTime ? ` / ${fromStopTime}` : "";
+      const fullLabel = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase()) ? `<span class="bs-route-full">${escapeHtml(fromStop.toUpperCase())} - ${escapeHtml(toStop.toUpperCase())}${escapeHtml(timeSuffix)}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
