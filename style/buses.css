@@ -940,7 +940,6 @@
   font-weight: 700;
   letter-spacing: 0.4px;
   color: #3a9e1a;
-  animation: bs-live-pulse 1.4s ease-in-out infinite;
 }
 .bs-live-dot {
   width: 10px;
