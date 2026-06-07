@@ -2332,13 +2332,14 @@ ${post.text}
       const statusBadge = route.status === "cancelled" ? `<span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span>` : route.status === "delayed" ? `<span class="bs-status delayed">\u0417\u0430\u0442\u0440\u0438\u043C\u043A\u0430</span>` : "";
       const autoNote = route.auto_generated ? `<div class="bs-autogen">\u0440\u043E\u0437\u0440\u0430\u0445\u043E\u0432\u0430\u043D\u0438\u0439 \u0437\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0439 \u0440\u0435\u0439\u0441</div>` : "";
       const [ep1, ep2] = parseRouteEndpoints(route.name);
-      const filterActive = fromStop && toStop && route.stops.some((s) => s.name === fromStop) && route.stops.some((s) => s.name === toStop);
-      const segActive = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase());
+      const fromDiffers = fromStop && route.stops.some((s) => s.name === fromStop) && ep1.toUpperCase() !== fromStop.toUpperCase();
+      const toDiffers = toStop && route.stops.some((s) => s.name === toStop) && ep2.toUpperCase() !== toStop.toUpperCase();
+      const anySegment = fromDiffers || toDiffers;
       const routeStartTime = getStopHHMM(route, route.stops[0].name);
       const routeEndTime = getStopHHMM(route, route.stops[route.stops.length - 1].name);
       const routeTimeStr = routeStartTime && routeEndTime ? ` | ${routeStartTime} \u2192 ${routeEndTime}` : "";
-      const routeLabel = segActive ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
-      const fullLabel = segActive ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
+      const routeLabel = anySegment ? `${effFrom.toUpperCase()} - ${effTo.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
+      const fullLabel = anySegment ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {

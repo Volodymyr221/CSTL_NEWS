@@ -711,21 +711,20 @@ function renderRouteList() {
       : '';
 
     const [ep1, ep2] = parseRouteEndpoints(route.name);
-    // Коли фільтр "звідки→куди" активний і зупинки знайдено в маршруті —
-    // показуємо сегмент фільтру, а не повну назву (щоб не плутати пасажира)
-    const filterActive = fromStop && toStop &&
-      route.stops.some(s => s.name === fromStop) &&
-      route.stops.some(s => s.name === toStop);
-    const segActive = filterActive && (ep1.toUpperCase() !== fromStop.toUpperCase() || ep2.toUpperCase() !== toStop.toUpperCase());
+    // anySegment=true коли хоча б одна вибрана зупинка відрізняється від крайньої точки маршруту.
+    // Охоплює всі типи пошуку: тільки "звідки", тільки "куди", або обидва.
+    const fromDiffers = fromStop && route.stops.some(s => s.name === fromStop) && ep1.toUpperCase() !== fromStop.toUpperCase();
+    const toDiffers   = toStop   && route.stops.some(s => s.name === toStop)   && ep2.toUpperCase() !== toStop.toUpperCase();
+    const anySegment  = fromDiffers || toDiffers;
     // Час першої і останньої зупинки маршруту (не сегменту)
     const routeStartTime = getStopHHMM(route, route.stops[0].name);
     const routeEndTime   = getStopHHMM(route, route.stops[route.stops.length - 1].name);
     const routeTimeStr   = (routeStartTime && routeEndTime) ? ` | ${routeStartTime} → ${routeEndTime}` : '';
     // Заголовок = сегмент (без часу), підзаголовок = повний маршрут великими + час маршруту
-    const routeLabel = segActive
-      ? `${fromStop.toUpperCase()} - ${toStop.toUpperCase()}`
+    const routeLabel = anySegment
+      ? `${effFrom.toUpperCase()} - ${effTo.toUpperCase()}`
       : `${ep1.toUpperCase()} → ${ep2.toUpperCase()}`;
-    const fullLabel = segActive
+    const fullLabel = anySegment
       ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
       : '';
 
