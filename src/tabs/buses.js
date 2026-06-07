@@ -642,7 +642,7 @@ function renderRouteList() {
   const highlighted   = activeRoutes[smartRowIndex] || findNextRoute();
   const carrierInfo = id => busData.carriers?.[id] || { name: id, phone: '0332 224 500' };
 
-  const cards = toRender.map(route => {
+  const buildCard = route => {
     const isPast     = isPastRoute(route);
     const isNext     = highlighted && route.id === highlighted.id;
     const isSelectable = !isViewingToday();
@@ -761,9 +761,10 @@ function renderRouteList() {
           ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">Усі зупинки рейсу на VOPAS →</a>`
           : ''}
       </div>`;
-  }).join('');
+  };
 
   let toggleHtml = '';
+  let noMoreHtml = '';
   if (isViewingToday()) {
     if (!showAll && past.length > 0) {
       toggleHtml = `
@@ -778,8 +779,21 @@ function renderRouteList() {
     }
     // Якщо всі рейси сьогодні завершились — повідомлення внизу списку
     if (future.length === 0 && all.length > 0) {
-      toggleHtml += `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
+      noMoreHtml = `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
     }
+  }
+
+  // Коли showAll: рендеримо майбутні → кнопка "Сховати минулі" → минулі
+  // Коли !showAll: рендеримо тільки майбутні → кнопка "Показати всі"
+  let cards;
+  if (isViewingToday() && showAll && past.length > 0) {
+    const futureCards = future.map(buildCard).join('');
+    const pastCards   = past.map(buildCard).join('');
+    cards = futureCards + toggleHtml + pastCards + noMoreHtml;
+    toggleHtml = '';
+    noMoreHtml = '';
+  } else {
+    cards = toRender.map(buildCard).join('');
   }
 
   const updRow = document.getElementById('buses-updated-row');
@@ -788,7 +802,7 @@ function renderRouteList() {
   const updatedStr2 = dd.fetchedTime
     ? `Оновлено: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}`
     : 'Дані оновлюються...';
-  el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml;
+  el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml + noMoreHtml;
 
   el.querySelectorAll('.bs-toggle').forEach(btn => {
     btn.addEventListener('click', e => {
