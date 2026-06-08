@@ -634,7 +634,7 @@
 
 /* Картка рейсу — Apple-мінімал */
 .bus-card {
-  padding: 14px 16px;
+  padding: 14px 16px 8px;
   border-bottom: 1px solid var(--hairline);
   background: #ECEEF2;
 }
