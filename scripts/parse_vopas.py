@@ -5,10 +5,14 @@
 (.github/workflows/vopas-parser.yml).
 
 Що робить:
-  1. Запитує VOPAS для кожного дня поточного тижня (Пн–Нд)
-  2. Кешує минулі дні — не перезапитує якщо вже є дані
+  1. Запитує VOPAS для 21 дня (3 тижні): Пн поточного → Нд через 2 тижні
+  2. Кешує минулі дні та "далекі" майбутні (>7 днів) — не перезапитує
   3. Конвертує у формат data/schedule.json (структура з days{})
   4. Оновлює data/vopas-fetched.json (діагностичний дамп)
+
+Чому 21 день: UI показує 2 тижні (поточний + наступний). Щоб у неділю
+парсер вже мав дані наступного тижня до того як настане понеділок і
+календар зсунеться вперед.
 
 Архітектура:
   - urllib + browser User-Agent
@@ -370,22 +374,24 @@ def query_day(date_str: str) -> tuple[list[dict], list[str]]:
 
 # ── Main ──────────────────────────────────────────────────────────────────
 
-def get_14_days() -> list[datetime.date]:
-    """Повертає рівно 14 днів календаря: Пн поточного тижня → Нд наступного тижня.
-    ПРАВИЛО: кожне число що є у calendar-смужці у застосунку ПОВИННО бути у цьому списку.
-    Якщо кількість днів у смужці зміниться — змінити range() тут відповідно."""
+def get_21_days() -> list[datetime.date]:
+    """Повертає 21 день: Пн поточного тижня → Нд через 2 тижні.
+    21 = 14 (видимі в UI) + 7 (буфер наступного тижня).
+    Буфер гарантує: у неділю парсер вже зберіг наступний тиждень,
+    щоб коли настає понеділок і UI зсовується вперед — дані вже є."""
     today = datetime.date.today()
     monday = today - datetime.timedelta(days=today.weekday())
-    return [monday + datetime.timedelta(days=i) for i in range(14)]
+    return [monday + datetime.timedelta(days=i) for i in range(21)]
 
 
 def main() -> int:
     now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
     today = datetime.date.today()
-    week_days = get_14_days()
+    week_days = get_21_days()
+    far_future_threshold = today + datetime.timedelta(days=7)
 
     print(f"=== VOPAS parser {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ ===")
-    print(f"Діапазон: {week_days[0]} — {week_days[-1]} (14 днів)\n")
+    print(f"Діапазон: {week_days[0]} — {week_days[-1]} (21 день)\n")
 
     # Завантажуємо поточний schedule.json щоб зберегти кешовані минулі дні
     existing: dict[str, Any] = {}
@@ -407,7 +413,14 @@ def main() -> int:
         # Минулі дні — кешуємо, не перезапитуємо
         if day < today and iso in existing_days:
             days_result[iso] = existing_days[iso]
-            print(f"  ↻ {iso}: кешовано ({len(existing_days[iso].get('routes', []))} рейсів)")
+            print(f"  ↻ {iso}: кешовано минуле ({len(existing_days[iso].get('routes', []))} рейсів)")
+            continue
+
+        # "Далекі" майбутні (>7 днів) — кешуємо якщо вже є, не запитуємо кожні 30 хв.
+        # Свіжий запит отримають коли увійдуть у вікно 7 днів.
+        if day > far_future_threshold and iso in existing_days:
+            days_result[iso] = existing_days[iso]
+            print(f"  ↻ {iso}: кешовано майбутнє ({len(existing_days[iso].get('routes', []))} рейсів)")
             continue
 
         print(f"\n=== {iso} ({date_str}) — {len(MARSHRUTI)} пар ===")
