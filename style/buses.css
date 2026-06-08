@@ -1483,10 +1483,10 @@
   padding: 0 16px 0 14px;
   border-radius: 22px;
   background: radial-gradient(ellipse at center,
-    rgba(90, 0, 25, 0.94) 0%,
-    rgba(90, 0, 25, 0.78) 40%,
-    rgba(90, 0, 25, 0.44) 72%,
-    rgba(90, 0, 25, 0.08) 100%);
+    rgba(240, 242, 245, 0.94) 0%,
+    rgba(240, 242, 245, 0.78) 40%,
+    rgba(240, 242, 245, 0.44) 72%,
+    rgba(240, 242, 245, 0.08) 100%);
   backdrop-filter: blur(24px) saturate(180%);
   -webkit-backdrop-filter: blur(24px) saturate(180%);
   border: 1px solid rgba(255,255,255,0.14);
@@ -1526,7 +1526,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1.5px solid rgba(90,0,25,0.4);
+  border: 1.5px solid rgba(240,242,245,0.4);
 }
 .btb-content {
   flex: 1;
