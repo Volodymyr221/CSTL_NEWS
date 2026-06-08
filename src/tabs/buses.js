@@ -1239,7 +1239,7 @@ export async function initBuses() {
     banner.className = 'bus-track-banner';
     banner.innerHTML = `
       <div class="btb-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(114,47,55,0.85)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span class="btb-check">✓</span>
       </div>
       <div class="btb-content">
