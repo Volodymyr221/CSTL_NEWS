@@ -1261,7 +1261,6 @@ export async function initBuses() {
         <span class="btb-check">✓</span>
       </div>
       <div class="btb-content">
-        <div class="btb-header">ВІДСЛІДКОВУЄТЬСЯ РЕЙС</div>
         <div class="btb-route"></div>
         <div class="btb-label"></div>
       </div>
