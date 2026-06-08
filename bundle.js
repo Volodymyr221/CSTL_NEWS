@@ -1786,8 +1786,11 @@ ${post.text}
   var smartRowIndex = 0;
   var selectedRouteId = null;
   var trackedRouteId = null;
+  var _trackDate = null;
+  var _trackedStop = null;
   var _notifiedDep = false;
   var _notifiedCanc = false;
+  var _notifiedBoard = false;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1849,28 +1852,36 @@ ${post.text}
   function loadTrackedRoute() {
     try {
       const d = JSON.parse(localStorage.getItem(TRACK_KEY));
-      if (d?.date === getTodayISO()) {
-        trackedRouteId = d.routeId;
-        _notifiedDep = d.notifiedDep || false;
-        _notifiedCanc = d.notifiedCanc || false;
-      } else {
+      if (!d?.trackDate || d.trackDate < getTodayISO()) {
         localStorage.removeItem(TRACK_KEY);
+        return;
       }
+      trackedRouteId = d.routeId;
+      _trackDate = d.trackDate;
+      _trackedStop = d.boardingStop || null;
+      _notifiedDep = d.notifiedDep || false;
+      _notifiedCanc = d.notifiedCanc || false;
+      _notifiedBoard = d.notifiedBoard || false;
     } catch {
     }
   }
   function saveTrackedRoute() {
     localStorage.setItem(TRACK_KEY, JSON.stringify({
-      date: getTodayISO(),
+      trackDate: _trackDate || getTodayISO(),
       routeId: trackedRouteId,
+      boardingStop: _trackedStop,
       notifiedDep: _notifiedDep,
-      notifiedCanc: _notifiedCanc
+      notifiedCanc: _notifiedCanc,
+      notifiedBoard: _notifiedBoard
     }));
   }
   function clearTrackedRoute() {
     trackedRouteId = null;
+    _trackDate = null;
+    _trackedStop = null;
     _notifiedDep = false;
     _notifiedCanc = false;
+    _notifiedBoard = false;
     localStorage.removeItem(TRACK_KEY);
   }
   function showBanner(text) {
@@ -1888,11 +1899,12 @@ ${post.text}
       banner.classList.remove("visible");
   }
   function checkTrackNotifications() {
-    if (!trackedRouteId || !isViewingToday()) {
+    if (!trackedRouteId || _trackDate !== getTodayISO()) {
       hideBanner();
       return;
     }
-    const route = (getDayData().routes || []).find((r) => r.id === trackedRouteId);
+    const dayRoutes = (busData?.days ? busData.days[_trackDate] || {} : busData || {}).routes || [];
+    const route = dayRoutes.find((r) => r.id === trackedRouteId);
     if (!route) {
       hideBanner();
       return;
@@ -1909,17 +1921,31 @@ ${post.text}
     }
     const state = getRouteState(route);
     const timings = getRouteTimings(route);
+    if (state === "past") {
+      hideBanner();
+      clearTrackedRoute();
+      return;
+    }
     if (state === "enroute") {
       if (!_notifiedDep) {
         _notifiedDep = true;
         saveTrackedRoute();
       }
+      if (_trackedStop) {
+        const boardMins = getStopMins(route, _trackedStop);
+        if (boardMins !== null) {
+          const minsToBoard = boardMins - nowMinutes();
+          if (minsToBoard > 0) {
+            if (!_notifiedBoard && minsToBoard <= 15) {
+              _notifiedBoard = true;
+              saveTrackedRoute();
+            }
+            showBanner(minsToBoard <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u0438\u0431\u0443\u0432\u0430\u0454 \u0434\u043E ${_trackedStop.toUpperCase()} \u0447\u0435\u0440\u0435\u0437 ${minsToBoard} \u0445\u0432` : `\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+            return;
+          }
+        }
+      }
       showBanner(`\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
-      return;
-    }
-    if (state === "past") {
-      hideBanner();
-      clearTrackedRoute();
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
@@ -2463,7 +2489,7 @@ ${post.text}
             ${autoNote}
           </div>
         </div>
-        ${isViewingToday() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
+        ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id && _trackDate === busDay ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id && _trackDate === busDay ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
         ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
              </button>
@@ -2519,12 +2545,15 @@ ${post.text}
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const rid = btn.dataset.trackId;
-        if (trackedRouteId === rid) {
+        if (trackedRouteId === rid && _trackDate === busDay) {
           clearTrackedRoute();
         } else {
           trackedRouteId = rid;
+          _trackDate = busDay;
+          _trackedStop = fromStop || null;
           _notifiedDep = false;
           _notifiedCanc = false;
+          _notifiedBoard = false;
           saveTrackedRoute();
         }
         checkTrackNotifications();

@@ -19,9 +19,12 @@ let expandedIds     = new Set();
 let activeField     = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
 let smartRowIndex   = 0;    // поточна картка у каруселі hero
 let selectedRouteId = null; // для майбутніх днів: яку картку показує hero
-let trackedRouteId  = null; // id рейсу який юзер відстежує сьогодні
+let trackedRouteId  = null; // id рейсу який юзер відстежує
+let _trackDate      = null; // дата рейсу що відстежується (може бути завтра)
+let _trackedStop    = null; // зупинка посадки (fromStop під час натискання)
 let _notifiedDep    = false;
 let _notifiedCanc   = false;
+let _notifiedBoard  = false; // сповіщено про прибуття до зупинки посадки
 
 function getTodayISO() {
   const d = new Date();
@@ -78,29 +81,36 @@ function loadPrefs() {
 function loadTrackedRoute() {
   try {
     const d = JSON.parse(localStorage.getItem(TRACK_KEY));
-    if (d?.date === getTodayISO()) {
-      trackedRouteId = d.routeId;
-      _notifiedDep   = d.notifiedDep   || false;
-      _notifiedCanc  = d.notifiedCanc  || false;
-    } else {
-      localStorage.removeItem(TRACK_KEY);
+    if (!d?.trackDate || d.trackDate < getTodayISO()) {
+      localStorage.removeItem(TRACK_KEY); return;
     }
+    trackedRouteId = d.routeId;
+    _trackDate     = d.trackDate;
+    _trackedStop   = d.boardingStop || null;
+    _notifiedDep   = d.notifiedDep   || false;
+    _notifiedCanc  = d.notifiedCanc  || false;
+    _notifiedBoard = d.notifiedBoard || false;
   } catch {}
 }
 
 function saveTrackedRoute() {
   localStorage.setItem(TRACK_KEY, JSON.stringify({
-    date: getTodayISO(),
-    routeId: trackedRouteId,
-    notifiedDep: _notifiedDep,
+    trackDate:    _trackDate || getTodayISO(),
+    routeId:      trackedRouteId,
+    boardingStop: _trackedStop,
+    notifiedDep:  _notifiedDep,
     notifiedCanc: _notifiedCanc,
+    notifiedBoard: _notifiedBoard,
   }));
 }
 
 function clearTrackedRoute() {
   trackedRouteId = null;
+  _trackDate     = null;
+  _trackedStop   = null;
   _notifiedDep   = false;
   _notifiedCanc  = false;
+  _notifiedBoard = false;
   localStorage.removeItem(TRACK_KEY);
 }
 
@@ -118,8 +128,11 @@ function hideBanner() {
 }
 
 function checkTrackNotifications() {
-  if (!trackedRouteId || !isViewingToday()) { hideBanner(); return; }
-  const route = (getDayData().routes || []).find(r => r.id === trackedRouteId);
+  // Банер активується тільки коли дата відстеженого рейсу = сьогодні
+  if (!trackedRouteId || _trackDate !== getTodayISO()) { hideBanner(); return; }
+  // Шукаємо маршрут у даних того дня (незалежно від busDay у UI)
+  const dayRoutes = (busData?.days ? (busData.days[_trackDate] || {}) : busData || {}).routes || [];
+  const route = dayRoutes.find(r => r.id === trackedRouteId);
   if (!route) { hideBanner(); return; }
 
   const [a, b] = parseRouteEndpoints(route.name);
@@ -134,13 +147,27 @@ function checkTrackNotifications() {
   const state   = getRouteState(route);
   const timings = getRouteTimings(route);
 
+  if (state === 'past') { hideBanner(); clearTrackedRoute(); return; }
+
   if (state === 'enroute') {
     if (!_notifiedDep) { _notifiedDep = true; saveTrackedRoute(); }
+    // Є зупинка посадки — показуємо час до неї
+    if (_trackedStop) {
+      const boardMins = getStopMins(route, _trackedStop);
+      if (boardMins !== null) {
+        const minsToBoard = boardMins - nowMinutes();
+        if (minsToBoard > 0) {
+          if (!_notifiedBoard && minsToBoard <= 15) { _notifiedBoard = true; saveTrackedRoute(); }
+          showBanner(minsToBoard <= 15
+            ? `Автобус прибуває до ${_trackedStop.toUpperCase()} через ${minsToBoard} хв`
+            : `Ваш автобус ${label} в дорозі`);
+          return;
+        }
+      }
+    }
     showBanner(`Ваш автобус ${label} вже в дорозі`);
     return;
   }
-
-  if (state === 'past') { hideBanner(); clearTrackedRoute(); return; }
 
   if (state === 'waiting' && timings.minsToDeparture !== null) {
     const m = timings.minsToDeparture;
@@ -844,8 +871,8 @@ function renderRouteList() {
             ${autoNote}
           </div>
         </div>
-        ${isViewingToday() && !isPast && route.status !== 'cancelled'
-          ? `<button class="bs-track-btn${trackedRouteId === route.id ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+        ${busDay >= getTodayISO() && !isPast && route.status !== 'cancelled'
+          ? `<button class="bs-track-btn${trackedRouteId === route.id && _trackDate === busDay ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id && _trackDate === busDay ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
           : ''}
         ${route.stops && route.stops.length > 2
           ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
@@ -913,12 +940,15 @@ function renderRouteList() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const rid = btn.dataset.trackId;
-      if (trackedRouteId === rid) {
+      if (trackedRouteId === rid && _trackDate === busDay) {
         clearTrackedRoute();
       } else {
         trackedRouteId = rid;
+        _trackDate     = busDay;
+        _trackedStop   = fromStop || null;
         _notifiedDep   = false;
         _notifiedCanc  = false;
+        _notifiedBoard = false;
         saveTrackedRoute();
       }
       checkTrackNotifications();
