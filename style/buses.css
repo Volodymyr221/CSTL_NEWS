@@ -869,7 +869,7 @@
 .bs-toggle {
   display: block;
   width: 100%;
-  padding: 8px 16px;
+  padding: 8px 16px 4px;
   margin-top: 6px;
   background: none;
   border: none;
