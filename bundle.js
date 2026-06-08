@@ -2512,8 +2512,8 @@ ${post.text}
             </div>
             ${autoNote}
           </div>
+          ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id && _trackDate === busDay ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id && _trackDate === busDay ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
         </div>
-        ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id && _trackDate === busDay ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id && _trackDate === busDay ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
         ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
              </button>
