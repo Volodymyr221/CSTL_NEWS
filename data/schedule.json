@@ -1,8 +1,8 @@
 {
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "updatedAt": "08.06.2026",
-  "updatedTime": "23:28",
+  "updatedAt": "09.06.2026",
+  "updatedTime": "00:13",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -968,7 +968,7 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "cancelled",
+          "status": "scheduled",
           "sale_active": false,
           "departure_time": "14:10",
           "arrival_time": "15:45",
@@ -1680,7 +1680,7 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "cancelled",
+          "status": "scheduled",
           "sale_active": false,
           "departure_time": "19:00",
           "arrival_time": "20:20",
@@ -1863,8 +1863,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=08.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "08.06.2026",
-      "fetchedTime": "23:28"
+      "fetchedAt": "09.06.2026",
+      "fetchedTime": "00:13"
     },
     "2026-06-09": {
       "routes": [
@@ -3703,8 +3703,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=09.06.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "08.06.2026",
-      "fetchedTime": "23:28"
+      "fetchedAt": "09.06.2026",
+      "fetchedTime": "00:13"
     },
     "2026-06-10": {
       "routes": [
