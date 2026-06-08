@@ -1438,3 +1438,66 @@
   font-size: 14px;
 }
 
+/* ===== TRACK ROUTE — Відстеження маршруту ===== */
+
+/* Кнопка "Відстежити маршрут" у картці рейсу */
+.bs-track-btn {
+  display: block;
+  margin: 6px 12px 10px;
+  padding: 7px 12px;
+  width: calc(100% - 24px);
+  background: none;
+  border: 1.5px solid rgba(114,47,55,0.3);
+  border-radius: 8px;
+  color: #722F37;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  cursor: pointer;
+  text-align: center;
+  font-family: inherit;
+  transition: background 0.15s, border-color 0.15s;
+}
+.bs-track-btn:active { background: rgba(114,47,55,0.06); }
+.bs-track-btn.tracked {
+  background: rgba(114,47,55,0.08);
+  border-color: #722F37;
+}
+
+/* Банер відстеження — фіксований над таб-баром */
+.bus-track-banner {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  z-index: 890;
+  background: #722F37;
+  color: #fff;
+  padding: 10px 14px 10px 16px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.3;
+}
+.bus-track-banner.visible {
+  display: flex;
+}
+.bus-track-banner-text {
+  flex: 1;
+  min-width: 0;
+}
+.bus-track-banner-close {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.7);
+  font-size: 16px;
+  cursor: pointer;
+  padding: 4px 6px;
+  line-height: 1;
+  font-family: inherit;
+}
+
