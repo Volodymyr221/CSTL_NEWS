@@ -772,9 +772,13 @@ function renderRouteList() {
   }
 
   if (!toRender.length) {
+    const dd1 = getDayData();
+    const updStr1 = dd1.fetchedTime
+      ? `Оновлено: ${escapeHtml(dd1.fetchedTime)} | ${escapeHtml(dd1.fetchedAt)}`
+      : 'Дані оновлюються...';
     const noMoreMsg = isViewingToday()
       ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>` : '';
-    el.innerHTML = `
+    el.innerHTML = buildListTitleHtml(updStr1) + `
       <button class="bus-show-all" id="bus-show-all-btn">
         Показати всі ${all.length} рейси ↓
       </button>${noMoreMsg}`;
