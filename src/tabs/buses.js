@@ -845,7 +845,7 @@ function renderRouteList() {
           </div>
         </div>
         ${isViewingToday() && !isPast && route.status !== 'cancelled'
-          ? `<button class="bs-track-btn${trackedRouteId === route.id ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? '✓ Відстежується' : '+ Відстежити'}</button>`
+          ? `<button class="bs-track-btn${trackedRouteId === route.id ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
           : ''}
         ${route.stops && route.stops.length > 2
           ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
