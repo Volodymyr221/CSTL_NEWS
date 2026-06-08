@@ -5,23 +5,19 @@ import {
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
 
-const PREFS_KEY  = 'bus_prefs_v2';
-const TRACK_KEY  = 'bus_track_v1';
+const PREFS_KEY = 'bus_prefs_v2';
 
 let busData       = null;
-let busDay          = getTodayISO();
-let weekPage        = 0;
+let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
+let weekPage        = 0;             // 0 = поточний тиждень, 1 = наступний тиждень
 let fromStop        = '';
 let toStop          = '';
 let showAll         = false;
 let timerInterval   = null;
 let expandedIds     = new Set();
-let activeField     = null;
-let smartRowIndex   = 0;
-let selectedRouteId = null;
-let trackedRouteId  = null; // id рейсу який юзер відстежує сьогодні
-let _notifiedDep    = false; // флаг: вже показали банер «15 хв» для цього рейсу
-let _notifiedCanc   = false; // флаг: вже показали банер «скасовано» для цього рейсу
+let activeField     = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
+let smartRowIndex   = 0;    // поточна картка у каруселі hero
+let selectedRouteId = null; // для майбутніх днів: яку картку показує hero
 
 function getTodayISO() {
   const d = new Date();
@@ -72,70 +68,6 @@ function loadPrefs() {
     if (p?.from) fromStop = p.from;
     if (p?.to)   toStop   = p.to;
   } catch {}
-}
-
-// ── Tracking (відстеження рейсу) ──────────────────────────────────────
-function loadTrackedRoute() {
-  try {
-    const t = JSON.parse(localStorage.getItem(TRACK_KEY));
-    trackedRouteId = (t?.date === getTodayISO() && t?.routeId) ? t.routeId : null;
-    if (!trackedRouteId) localStorage.removeItem(TRACK_KEY);
-  } catch { trackedRouteId = null; }
-}
-
-function saveTrackedRoute(routeId) {
-  trackedRouteId = routeId;
-  _notifiedDep  = false;
-  _notifiedCanc = false;
-  localStorage.setItem(TRACK_KEY, JSON.stringify({ routeId, date: getTodayISO() }));
-}
-
-function clearTrackedRoute() {
-  trackedRouteId = null;
-  _notifiedDep   = false;
-  _notifiedCanc  = false;
-  localStorage.removeItem(TRACK_KEY);
-  hideBanner();
-}
-
-function showBanner(text, type) {
-  const banner = document.getElementById('bus-track-banner');
-  if (!banner) return;
-  banner.className = `bus-track-banner bus-track-banner--${type}`;
-  banner.querySelector('.btb-text').textContent = text;
-  banner.hidden = false;
-}
-
-function hideBanner() {
-  const b = document.getElementById('bus-track-banner');
-  if (b) b.hidden = true;
-}
-
-function checkTrackNotifications() {
-  if (!trackedRouteId || !isViewingToday()) return;
-  const route = (getDayData().routes || []).find(r => r.id === trackedRouteId);
-  if (!route) return;
-
-  // Рейс відправився — знімаємо відстеження автоматично
-  if (getRouteState(route) === 'past') { clearTrackedRoute(); return; }
-
-  // Скасовано
-  if (route.status === 'cancelled' && !_notifiedCanc) {
-    _notifiedCanc = true;
-    const [a, b] = parseRouteEndpoints(route.name || '');
-    showBanner(`⚠️ РЕЙС ${a.toUpperCase()} → ${b.toUpperCase()} СКАСОВАНО`, 'cancelled');
-    return;
-  }
-
-  // За 15 хв до відправлення
-  if (route.status !== 'cancelled' && !_notifiedDep) {
-    const t = getRouteTimings(route);
-    if (t.minsToDeparture !== null && t.minsToDeparture <= 15 && t.minsToDeparture > 0) {
-      _notifiedDep = true;
-      const [a, b] = parseRouteEndpoints(route.name || '');
-      showBanner(`🔔 ${a.toUpperCase()} → ${b.toUpperCase()} ЧЕРЕЗ ${t.minsToDeparture} ХВ (${route.departure_time || ''})`, 'soon');
-    }
-  }
 }
 
 function isDayActive(days) {
@@ -255,17 +187,6 @@ function findActiveRoutes() {
     }
     return false;
   });
-
-  // Відстежуваний рейс — завжди першим у hero, навіть якщо далі 90 хв
-  if (trackedRouteId) {
-    const tracked = all.find(r => r.id === trackedRouteId
-      && r.status !== 'cancelled' && getRouteState(r) !== 'past');
-    if (tracked) {
-      const others = result.filter(r => r.id !== trackedRouteId);
-      return [tracked, ...others];
-    }
-  }
-
   return result.length ? result : (findNextRoute() ? [findNextRoute()] : []);
 }
 
@@ -807,13 +728,6 @@ function renderRouteList() {
       ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
       : '';
 
-    const isTracked  = isViewingToday() && !isPast && route.id === trackedRouteId;
-    const canTrack   = isViewingToday() && !isPast && route.status !== 'cancelled';
-    const trackBell  = `<svg width="13" height="13" viewBox="0 0 24 24" fill="${isTracked ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
-    const trackBtn   = canTrack
-      ? `<button class="bs-track-btn${isTracked ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}">${trackBell}${isTracked ? 'Відстежується' : 'Відстежити'}</button>`
-      : '';
-
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
@@ -842,7 +756,6 @@ function renderRouteList() {
             ${autoNote}
           </div>
         </div>
-        ${trackBtn}
         ${route.stops && route.stops.length > 2
           ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? 'СХОВАТИ ЗУПИНКИ' : 'ВСІ ЗУПИНКИ'} <span class="bs-toggle-arr">${expanded ? '▴' : '▾'}</span>
@@ -902,20 +815,6 @@ function renderRouteList() {
       if (expandedIds.has(id)) expandedIds.delete(id);
       else expandedIds.add(id);
       renderRouteList();
-    });
-  });
-
-  el.querySelectorAll('.bs-track-btn').forEach(btn => {
-    btn.addEventListener('click', e => {
-      e.stopPropagation();
-      const rid = btn.dataset.trackId;
-      if (!rid) return;
-      if (trackedRouteId === rid) clearTrackedRoute();
-      else saveTrackedRoute(rid);
-      smartRowIndex = 0;
-      renderSmartRow();
-      renderRouteList();
-      checkTrackNotifications();
     });
   });
 
@@ -1138,19 +1037,6 @@ export async function initBuses() {
   if (!el) return;
 
   loadPrefs();
-  loadTrackedRoute();
-
-  // Банер відстеження — фіксований елемент над таб-баром
-  if (!document.getElementById('bus-track-banner')) {
-    const banner = document.createElement('div');
-    banner.id        = 'bus-track-banner';
-    banner.className = 'bus-track-banner';
-    banner.hidden    = true;
-    banner.innerHTML = `<span class="btb-text"></span>
-      <button class="btb-x" id="btb-x-btn">✕</button>`;
-    document.body.appendChild(banner);
-    document.getElementById('btb-x-btn').addEventListener('click', hideBanner);
-  }
 
   // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)
   if (!document.getElementById('bs-dropdown')) {
@@ -1205,12 +1091,10 @@ export async function initBuses() {
   renderWeekStrip();
   renderSmartRow();
   renderRouteList();
-  checkTrackNotifications();
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     renderSmartRow();
     renderRouteList();
-    checkTrackNotifications();
   }, 60_000);
 }
