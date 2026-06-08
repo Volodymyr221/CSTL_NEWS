@@ -299,6 +299,7 @@ def build_day_routes(
             continue
 
         carrier_name = r.get("carrier") or "Перевізник"
+        carrier_name = re.sub(r'\bВолинська об\b\.?', 'Волинська обл.', carrier_name)
         cid = make_carrier_id(carrier_name)
         carriers[cid] = {"name": carrier_name, "phone": CARRIER_PHONE}
 
