@@ -1773,6 +1773,7 @@ ${post.text}
 
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
+  var TRACK_KEY = "bus_track_v1";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;
@@ -1784,6 +1785,9 @@ ${post.text}
   var activeField = null;
   var smartRowIndex = 0;
   var selectedRouteId = null;
+  var trackedRouteId = null;
+  var _notifiedDep = false;
+  var _notifiedCanc = false;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1840,6 +1844,67 @@ ${post.text}
       if (p?.to)
         toStop = p.to;
     } catch {
+    }
+  }
+  function loadTrackedRoute() {
+    try {
+      const t = JSON.parse(localStorage.getItem(TRACK_KEY));
+      trackedRouteId = t?.date === getTodayISO() && t?.routeId ? t.routeId : null;
+      if (!trackedRouteId)
+        localStorage.removeItem(TRACK_KEY);
+    } catch {
+      trackedRouteId = null;
+    }
+  }
+  function saveTrackedRoute(routeId) {
+    trackedRouteId = routeId;
+    _notifiedDep = false;
+    _notifiedCanc = false;
+    localStorage.setItem(TRACK_KEY, JSON.stringify({ routeId, date: getTodayISO() }));
+  }
+  function clearTrackedRoute() {
+    trackedRouteId = null;
+    _notifiedDep = false;
+    _notifiedCanc = false;
+    localStorage.removeItem(TRACK_KEY);
+    hideBanner();
+  }
+  function showBanner(text, type) {
+    const banner = document.getElementById("bus-track-banner");
+    if (!banner)
+      return;
+    banner.className = `bus-track-banner bus-track-banner--${type}`;
+    banner.querySelector(".btb-text").textContent = text;
+    banner.hidden = false;
+  }
+  function hideBanner() {
+    const b = document.getElementById("bus-track-banner");
+    if (b)
+      b.hidden = true;
+  }
+  function checkTrackNotifications() {
+    if (!trackedRouteId || !isViewingToday())
+      return;
+    const route = (getDayData().routes || []).find((r) => r.id === trackedRouteId);
+    if (!route)
+      return;
+    if (getRouteState(route) === "past") {
+      clearTrackedRoute();
+      return;
+    }
+    if (route.status === "cancelled" && !_notifiedCanc) {
+      _notifiedCanc = true;
+      const [a, b] = parseRouteEndpoints(route.name || "");
+      showBanner(`\u26A0\uFE0F \u0420\u0415\u0419\u0421 ${a.toUpperCase()} \u2192 ${b.toUpperCase()} \u0421\u041A\u0410\u0421\u041E\u0412\u0410\u041D\u041E`, "cancelled");
+      return;
+    }
+    if (route.status !== "cancelled" && !_notifiedDep) {
+      const t = getRouteTimings(route);
+      if (t.minsToDeparture !== null && t.minsToDeparture <= 15 && t.minsToDeparture > 0) {
+        _notifiedDep = true;
+        const [a, b] = parseRouteEndpoints(route.name || "");
+        showBanner(`\u{1F514} ${a.toUpperCase()} \u2192 ${b.toUpperCase()} \u0427\u0415\u0420\u0415\u0417 ${t.minsToDeparture} \u0425\u0412 (${route.departure_time || ""})`, "soon");
+      }
     }
   }
   function getSegmentPrice(route, fromName, toName) {
@@ -1930,6 +1995,13 @@ ${post.text}
       }
       return false;
     });
+    if (trackedRouteId) {
+      const tracked = all.find((r) => r.id === trackedRouteId && r.status !== "cancelled" && getRouteState(r) !== "past");
+      if (tracked) {
+        const others = result.filter((r) => r.id !== trackedRouteId);
+        return [tracked, ...others];
+      }
+    }
     return result.length ? result : findNextRoute() ? [findNextRoute()] : [];
   }
   function getAllStops() {
@@ -2340,6 +2412,10 @@ ${post.text}
       const routeTimeStr = routeStartTime && routeEndTime ? ` | ${routeStartTime} \u2192 ${routeEndTime}` : "";
       const routeLabel = anySegment ? `${effFrom.toUpperCase()} - ${effTo.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fullLabel = anySegment ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
+      const isTracked = isViewingToday() && !isPast && route.id === trackedRouteId;
+      const canTrack = isViewingToday() && !isPast && route.status !== "cancelled";
+      const trackBell = `<svg width="13" height="13" viewBox="0 0 24 24" fill="${isTracked ? "currentColor" : "none"}" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>`;
+      const trackBtn = canTrack ? `<button class="bs-track-btn${isTracked ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}">${trackBell}${isTracked ? "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438"}</button>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
@@ -2370,6 +2446,7 @@ ${post.text}
             ${autoNote}
           </div>
         </div>
+        ${trackBtn}
         ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
              </button>
@@ -2419,6 +2496,22 @@ ${post.text}
         else
           expandedIds.add(id);
         renderRouteList();
+      });
+    });
+    el.querySelectorAll(".bs-track-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const rid = btn.dataset.trackId;
+        if (!rid)
+          return;
+        if (trackedRouteId === rid)
+          clearTrackedRoute();
+        else
+          saveTrackedRoute(rid);
+        smartRowIndex = 0;
+        renderSmartRow();
+        renderRouteList();
+        checkTrackNotifications();
       });
     });
     if (!isViewingToday()) {
@@ -2607,6 +2700,17 @@ ${post.text}
     if (!el)
       return;
     loadPrefs();
+    loadTrackedRoute();
+    if (!document.getElementById("bus-track-banner")) {
+      const banner = document.createElement("div");
+      banner.id = "bus-track-banner";
+      banner.className = "bus-track-banner";
+      banner.hidden = true;
+      banner.innerHTML = `<span class="btb-text"></span>
+      <button class="btb-x" id="btb-x-btn">\u2715</button>`;
+      document.body.appendChild(banner);
+      document.getElementById("btb-x-btn").addEventListener("click", hideBanner);
+    }
     if (!document.getElementById("bs-dropdown")) {
       const dd = document.createElement("div");
       dd.id = "bs-dropdown";
@@ -2654,11 +2758,13 @@ ${post.text}
     renderWeekStrip();
     renderSmartRow();
     renderRouteList();
+    checkTrackNotifications();
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       renderSmartRow();
       renderRouteList();
+      checkTrackNotifications();
     }, 6e4);
   }
 
