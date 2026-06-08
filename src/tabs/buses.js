@@ -321,6 +321,10 @@ function findActiveRoutes() {
   const all = getFilteredRoutes(); // вже відсортовані за часом відправлення
   // Для майбутніх/минулих днів — вибраний рейс (selectedRouteId) або перший
   if (!isViewingToday()) {
+    if (trackedRouteId && _trackDate === busDay) {
+      const tracked = all.find(r => r.id === trackedRouteId && r.status !== 'cancelled');
+      if (tracked) return [tracked];
+    }
     if (selectedRouteId) {
       const sel = all.find(r => r.id === selectedRouteId && r.status !== 'cancelled');
       if (sel) return [sel];
