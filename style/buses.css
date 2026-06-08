@@ -1449,7 +1449,7 @@
   padding: 4px;
   background: none;
   border: none;
-  color: #722F37;
+  color: #1C1C1E;
   cursor: pointer;
   transition: color 0.15s;
 }
@@ -1461,7 +1461,7 @@
   transition: fill 0.15s;
 }
 .bs-track-btn.tracked svg {
-  fill: #722F37;
+  fill: #1C1C1E;
 }
 
 /* Банер відстеження — фіксований над таб-баром */
