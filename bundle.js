@@ -1890,13 +1890,16 @@ ${post.text}
     _bannerSnoozedUntil = 0;
     localStorage.removeItem(TRACK_KEY);
   }
-  function showBanner(text) {
+  function showBanner(label, route) {
     const banner = document.getElementById("bus-track-banner");
     if (!banner)
       return;
-    const textEl = banner.querySelector(".bus-track-banner-text");
-    if (textEl)
-      textEl.textContent = text;
+    const lEl = banner.querySelector(".btb-label");
+    const rEl = banner.querySelector(".btb-route");
+    if (lEl)
+      lEl.textContent = label;
+    if (rEl)
+      rEl.textContent = route;
     banner.classList.add("visible");
   }
   function hideBanner() {
@@ -1904,8 +1907,33 @@ ${post.text}
     if (banner)
       banner.classList.remove("visible");
   }
+  function fmtMins(m) {
+    if (m < 60)
+      return `${m} \u0445\u0432`;
+    const h = Math.floor(m / 60), min = m % 60;
+    return min ? `${h} \u0433\u043E\u0434 ${min} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
+  }
   function checkTrackNotifications() {
-    if (!trackedRouteId || _trackDate !== getTodayISO()) {
+    if (!trackedRouteId) {
+      hideBanner();
+      return;
+    }
+    if (_trackDate > getTodayISO()) {
+      if (Date.now() < _bannerSnoozedUntil) {
+        hideBanner();
+        return;
+      }
+      const dayRoutes2 = (busData?.days?.[_trackDate] || {}).routes || [];
+      const route2 = dayRoutes2.find((r) => r.id === trackedRouteId);
+      if (!route2) {
+        hideBanner();
+        return;
+      }
+      const [a2, b2] = parseRouteEndpoints(route2.name);
+      showBanner("\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", `${a2.toUpperCase()} \u2192 ${b2.toUpperCase()}`);
+      return;
+    }
+    if (_trackDate !== getTodayISO()) {
       hideBanner();
       return;
     }
@@ -1923,7 +1951,7 @@ ${post.text}
         _bannerSnoozedUntil = 0;
         saveTrackedRoute();
       }
-      showBanner(`\u0420\u0435\u0439\u0441 ${label} \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E`);
+      showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", label);
       return;
     }
     const state = getRouteState(route);
@@ -1953,14 +1981,17 @@ ${post.text}
               saveTrackedRoute();
             }
             if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-              showBanner(minsToBoard <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u0438\u0431\u0443\u0432\u0430\u0454 \u0434\u043E ${_trackedStop.toUpperCase()} \u0447\u0435\u0440\u0435\u0437 ${minsToBoard} \u0445\u0432` : `\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+              showBanner(
+                minsToBoard <= 15 ? `\u0414\u043E ${_trackedStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
+                label
+              );
             }
             return;
           }
         }
       }
       if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-        showBanner(`\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", label);
       }
       return;
     }
@@ -1973,7 +2004,10 @@ ${post.text}
         saveTrackedRoute();
       }
       if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-        showBanner(m <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432` : `\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F: ${label} \xB7 \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432`);
+        showBanner(
+          m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
+          label
+        );
       }
       return;
     }
@@ -2012,6 +2046,8 @@ ${post.text}
     return true;
   }
   function isPastRoute(route) {
+    if (busDay < getTodayISO())
+      return true;
     if (!isViewingToday())
       return false;
     const state = getRouteState(route);
@@ -2047,6 +2083,11 @@ ${post.text}
   function findActiveRoutes() {
     const all = getFilteredRoutes();
     if (!isViewingToday()) {
+      if (trackedRouteId && _trackDate === busDay) {
+        const tracked = all.find((r) => r.id === trackedRouteId && r.status !== "cancelled");
+        if (tracked)
+          return [tracked];
+      }
       if (selectedRouteId) {
         const sel = all.find((r) => r.id === selectedRouteId && r.status !== "cancelled");
         if (sel)
@@ -2068,10 +2109,15 @@ ${post.text}
       return false;
     });
     const activeList = result.length ? result : findNextRoute() ? [findNextRoute()] : [];
-    if (trackedRouteId) {
+    if (trackedRouteId && _trackDate === getTodayISO()) {
       const ti = activeList.findIndex((r) => r.id === trackedRouteId);
-      if (ti > 0)
+      if (ti > 0) {
         activeList.unshift(activeList.splice(ti, 1)[0]);
+      } else if (ti === -1) {
+        const tracked = all.find((r) => r.id === trackedRouteId && r.status !== "cancelled");
+        if (tracked)
+          activeList.unshift(tracked);
+      }
     }
     return activeList;
   }
@@ -2580,6 +2626,7 @@ ${post.text}
           _notifiedDep = false;
           _notifiedCanc = false;
           _notifiedBoard = false;
+          _bannerSnoozedUntil = 0;
           saveTrackedRoute();
         }
         checkTrackNotifications();
@@ -2785,7 +2832,16 @@ ${post.text}
       const banner = document.createElement("div");
       banner.id = "bus-track-banner";
       banner.className = "bus-track-banner";
-      banner.innerHTML = '<span class="bus-track-banner-text"></span><button class="bus-track-banner-close" id="bus-track-banner-close">\u2715</button>';
+      banner.innerHTML = `
+      <div class="btb-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.75)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span class="btb-check">\u2713</span>
+      </div>
+      <div class="btb-content">
+        <div class="btb-route"></div>
+        <div class="btb-label"></div>
+      </div>
+      <button class="btb-close" id="bus-track-banner-close">\u2715</button>`;
       document.body.appendChild(banner);
       document.getElementById("bus-track-banner-close").addEventListener("click", () => {
         _bannerSnoozedUntil = Date.now() + 5 * 60 * 1e3;
