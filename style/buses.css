@@ -1449,7 +1449,7 @@
   padding: 4px;
   background: none;
   border: none;
-  color: rgba(114,47,55,0.35);
+  color: #722F37;
   cursor: pointer;
   transition: color 0.15s;
 }
@@ -1457,15 +1457,11 @@
   width: 22px;
   height: 22px;
   stroke-width: 1.8;
-  transition: fill 0.15s, color 0.15s, stroke-width 0.1s;
-}
-.bs-track-btn:active { color: #722F37; }
-.bs-track-btn.tracked {
-  color: #722F37;
+  fill: none;
+  transition: fill 0.15s;
 }
 .bs-track-btn.tracked svg {
-  fill: rgba(114,47,55,0.18);
-  stroke-width: 2.2;
+  fill: #722F37;
 }
 
 /* Банер відстеження — фіксований над таб-баром */
