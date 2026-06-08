@@ -870,6 +870,7 @@
   display: block;
   width: 100%;
   padding: 8px 16px;
+  margin-top: 6px;
   background: none;
   border: none;
   border-top: 1px solid var(--border);
