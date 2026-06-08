@@ -142,8 +142,21 @@ function fmtMins(m) {
 }
 
 function checkTrackNotifications() {
-  // Банер активується тільки коли дата відстеженого рейсу = сьогодні
-  if (!trackedRouteId || _trackDate !== getTodayISO()) { hideBanner(); return; }
+  if (!trackedRouteId) { hideBanner(); return; }
+
+  // Майбутній день — просте підтвердження "Відстежується" (без таймера)
+  if (_trackDate > getTodayISO()) {
+    if (Date.now() < _bannerSnoozedUntil) { hideBanner(); return; }
+    const dayRoutes = (busData?.days?.[_trackDate] || {}).routes || [];
+    const route = dayRoutes.find(r => r.id === trackedRouteId);
+    if (!route) { hideBanner(); return; }
+    const [a, b] = parseRouteEndpoints(route.name);
+    showBanner('Відстежується', `${a.toUpperCase()} → ${b.toUpperCase()}`);
+    return;
+  }
+
+  // Сьогодні: повна логіка сповіщень
+  if (_trackDate !== getTodayISO()) { hideBanner(); return; }
   // Шукаємо маршрут у даних того дня (незалежно від busDay у UI)
   const dayRoutes = (busData?.days ? (busData.days[_trackDate] || {}) : busData || {}).routes || [];
   const route = dayRoutes.find(r => r.id === trackedRouteId);
