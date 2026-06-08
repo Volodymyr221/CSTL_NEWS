@@ -1540,6 +1540,7 @@
   text-transform: uppercase;
   line-height: 1.2;
   margin-bottom: 1px;
+  text-align: center;
 }
 .btb-label {
   font-size: 13px;
