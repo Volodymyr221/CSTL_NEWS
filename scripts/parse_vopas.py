@@ -424,6 +424,16 @@ def main() -> int:
             print(f"  ↻ {iso}: буфер, кешовано ({len(existing_days[iso].get('routes', []))} рейсів)")
             continue
 
+        # Майбутні видимі дні (завтра … visible_end) — кешуємо якщо вже запитали сьогодні.
+        # Розклад майбутніх днів змінюється рідко; скасування — тільки сьогодні.
+        # Сьогоднішній день (day == today) цей блок не зачіпає → завжди свіжий.
+        if day > today and iso in existing_days:
+            today_str = today.strftime("%d.%m.%Y")
+            if existing_days[iso].get("fetchedAt") == today_str:
+                days_result[iso] = existing_days[iso]
+                print(f"  ↻ {iso}: майбутній, кешовано сьогодні ({len(existing_days[iso].get('routes', []))} рейсів)")
+                continue
+
         print(f"\n=== {iso} ({date_str}) — {len(MARSHRUTI)} пар ===")
         unique, errors = query_day(date_str)
         print(f"  Усього: {len(unique)} унікальних рейсів від VOPAS")
