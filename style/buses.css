@@ -1532,6 +1532,15 @@
   flex: 1;
   min-width: 0;
 }
+.btb-header {
+  font-size: 10px;
+  font-weight: 700;
+  color: #722F37;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  line-height: 1.2;
+  margin-bottom: 1px;
+}
 .btb-label {
   font-size: 13px;
   font-weight: 500;
