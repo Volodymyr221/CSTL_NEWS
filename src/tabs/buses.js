@@ -133,6 +133,12 @@ function hideBanner() {
   if (banner) banner.classList.remove('visible');
 }
 
+function fmtMins(m) {
+  if (m < 60) return `${m} хв`;
+  const h = Math.floor(m / 60), min = m % 60;
+  return min ? `${h} год ${min} хв` : `${h} год`;
+}
+
 function checkTrackNotifications() {
   // Банер активується тільки коли дата відстеженого рейсу = сьогодні
   if (!trackedRouteId || _trackDate !== getTodayISO()) { hideBanner(); return; }
@@ -179,7 +185,7 @@ function checkTrackNotifications() {
           }
           if (forceShow || Date.now() >= _bannerSnoozedUntil) {
             showBanner(minsToBoard <= 15
-              ? `Автобус прибуває до ${_trackedStop.toUpperCase()} через ${minsToBoard} хв`
+              ? `Автобус прибуває до ${_trackedStop.toUpperCase()} через ${fmtMins(minsToBoard)}`
               : `Ваш автобус ${label} в дорозі`);
           }
           return;
@@ -202,8 +208,8 @@ function checkTrackNotifications() {
     }
     if (forceShow || Date.now() >= _bannerSnoozedUntil) {
       showBanner(m <= 15
-        ? `Автобус ${label} відправляється через ${m} хв`
-        : `Відстежується: ${label} · через ${m} хв`);
+        ? `Автобус ${label} відправляється через ${fmtMins(m)}`
+        : `Відстежується: ${label} · через ${fmtMins(m)}`);
     }
     return;
   }
