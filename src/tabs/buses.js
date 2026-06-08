@@ -269,6 +269,7 @@ function matchesSearch(route) {
 // «Past» = рейс завершився (прибув на кінцеву). Рейс у дорозі тепер НЕ past.
 // Виняток: скасований рейс переходить у «минулі» з моменту часу відправлення.
 function isPastRoute(route) {
+  if (busDay < getTodayISO()) return true;
   if (!isViewingToday()) return false;
   const state = getRouteState(route);
   if (state === 'past') return true;

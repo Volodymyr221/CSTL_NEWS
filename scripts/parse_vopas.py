@@ -387,7 +387,7 @@ def get_21_days() -> list[datetime.date]:
 
 def main() -> int:
     now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
-    today = datetime.date.today()
+    today = now_kyiv.date()  # Київ час, бо fetchedAt теж Київ
     week_days = get_21_days()
     monday = today - datetime.timedelta(days=today.weekday())
     visible_end = monday + datetime.timedelta(days=13)  # останній день видимого тижня 1 (Нд)
