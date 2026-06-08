@@ -1006,12 +1006,13 @@ function renderRouteList() {
       if (trackedRouteId === rid && _trackDate === busDay) {
         clearTrackedRoute();
       } else {
-        trackedRouteId = rid;
-        _trackDate     = busDay;
-        _trackedStop   = fromStop || null;
-        _notifiedDep   = false;
-        _notifiedCanc  = false;
-        _notifiedBoard = false;
+        trackedRouteId      = rid;
+        _trackDate          = busDay;
+        _trackedStop        = fromStop || null;
+        _notifiedDep        = false;
+        _notifiedCanc       = false;
+        _notifiedBoard      = false;
+        _bannerSnoozedUntil = 0;
         saveTrackedRoute();
       }
       checkTrackNotifications();
