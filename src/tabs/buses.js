@@ -357,9 +357,14 @@ function findActiveRoutes() {
     return false;
   });
   const activeList = result.length ? result : (findNextRoute() ? [findNextRoute()] : []);
-  if (trackedRouteId) {
+  if (trackedRouteId && _trackDate === getTodayISO()) {
     const ti = activeList.findIndex(r => r.id === trackedRouteId);
-    if (ti > 0) activeList.unshift(activeList.splice(ti, 1)[0]);
+    if (ti > 0) {
+      activeList.unshift(activeList.splice(ti, 1)[0]);
+    } else if (ti === -1) {
+      const tracked = all.find(r => r.id === trackedRouteId && r.status !== 'cancelled');
+      if (tracked) activeList.unshift(tracked);
+    }
   }
   return activeList;
 }
