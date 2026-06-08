@@ -898,7 +898,7 @@
   background: var(--gray-light);
   border-top: 1px solid var(--border);
   padding: 0;
-  border-radius: 0 0 12px 12px;
+  border-radius: 8px 8px 12px 12px;
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.07);
 }
