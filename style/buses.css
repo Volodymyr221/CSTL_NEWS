@@ -1473,7 +1473,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: calc(var(--tabbar-h) + 88px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   z-index: 890;
   background: #722F37;
   color: #fff;
