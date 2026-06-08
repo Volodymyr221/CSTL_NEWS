@@ -1445,8 +1445,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  margin: 2px 12px 8px auto;
-  padding: 4px;
+  flex-shrink: 0;
+  margin-left: auto;
+  padding: 6px 12px 6px 8px;
   background: none;
   border: none;
   color: #1C1C1E;
