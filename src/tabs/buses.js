@@ -1260,8 +1260,8 @@ export async function initBuses() {
         <span class="btb-check">✓</span>
       </div>
       <div class="btb-content">
-        <div class="btb-label"></div>
         <div class="btb-route"></div>
+        <div class="btb-label"></div>
       </div>
       <button class="btb-close" id="bus-track-banner-close">✕</button>`;
     document.body.appendChild(banner);
