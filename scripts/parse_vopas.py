@@ -388,7 +388,8 @@ def main() -> int:
     now_kyiv = datetime.datetime.now(datetime.timezone(datetime.timedelta(hours=3)))
     today = datetime.date.today()
     week_days = get_21_days()
-    far_future_threshold = today + datetime.timedelta(days=7)
+    monday = today - datetime.timedelta(days=today.weekday())
+    visible_end = monday + datetime.timedelta(days=13)  # останній день видимого тижня 1 (Нд)
 
     print(f"=== VOPAS parser {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ ===")
     print(f"Діапазон: {week_days[0]} — {week_days[-1]} (21 день)\n")
@@ -416,11 +417,11 @@ def main() -> int:
             print(f"  ↻ {iso}: кешовано минуле ({len(existing_days[iso].get('routes', []))} рейсів)")
             continue
 
-        # "Далекі" майбутні (>7 днів) — кешуємо якщо вже є, не запитуємо кожні 30 хв.
-        # Свіжий запит отримають коли увійдуть у вікно 7 днів.
-        if day > far_future_threshold and iso in existing_days:
+        # Тиждень 3 (буфер, не видимий в UI) — кешуємо якщо вже є.
+        # Свіжий запит отримає коли стане частиною видимого вікна (тиждень 0/1).
+        if day > visible_end and iso in existing_days:
             days_result[iso] = existing_days[iso]
-            print(f"  ↻ {iso}: кешовано майбутнє ({len(existing_days[iso].get('routes', []))} рейсів)")
+            print(f"  ↻ {iso}: буфер, кешовано ({len(existing_days[iso].get('routes', []))} рейсів)")
             continue
 
         print(f"\n=== {iso} ({date_str}) — {len(MARSHRUTI)} пар ===")
