@@ -391,6 +391,7 @@ def main() -> int:
     week_days = get_21_days()
     monday = today - datetime.timedelta(days=today.weekday())
     visible_end = monday + datetime.timedelta(days=13)  # останній день видимого тижня 1 (Нд)
+    tomorrow = today + datetime.timedelta(days=1)
 
     print(f"=== VOPAS parser {now_kyiv.strftime('%d.%m.%Y %H:%M')} Київ ===")
     print(f"Діапазон: {week_days[0]} — {week_days[-1]} (21 день)\n")
@@ -425,10 +426,9 @@ def main() -> int:
             print(f"  ↻ {iso}: буфер, кешовано ({len(existing_days[iso].get('routes', []))} рейсів)")
             continue
 
-        # Майбутні видимі дні (завтра … visible_end) — кешуємо якщо вже запитали сьогодні.
-        # Розклад майбутніх днів змінюється рідко; скасування — тільки сьогодні.
-        # Сьогоднішній день (day == today) цей блок не зачіпає → завжди свіжий.
-        if day > today and iso in existing_days:
+        # Майбутні видимі дні (після завтра … visible_end) — кешуємо якщо вже запитали сьогодні.
+        # Сьогодні і завтра — завжди свіжі: скасування можуть з'явитись для обох днів.
+        if day > tomorrow and iso in existing_days:
             today_str = today.strftime("%d.%m.%Y")
             if existing_days[iso].get("fetchedAt") == today_str:
                 days_result[iso] = existing_days[iso]
@@ -443,8 +443,8 @@ def main() -> int:
             for e in errors:
                 print(f"  ✗ {e}")
 
-        # ЗАХИСТ: якщо VOPAS взагалі не відповів для сьогодні — зберігаємо старе
-        if not unique and day == today and iso in existing_days:
+        # ЗАХИСТ: якщо VOPAS взагалі не відповів для сьогодні/завтра — зберігаємо старе
+        if not unique and day in (today, tomorrow) and iso in existing_days:
             days_result[iso] = existing_days[iso]
             print(f"  ⚠ VOPAS не відповів — зберігаємо попередні дані")
             continue
