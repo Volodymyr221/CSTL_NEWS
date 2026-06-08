@@ -1791,6 +1791,8 @@ ${post.text}
   var _notifiedDep = false;
   var _notifiedCanc = false;
   var _notifiedBoard = false;
+  var _notifiedWarning = false;
+  var _bannerSnoozedUntil = 0;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1862,6 +1864,7 @@ ${post.text}
       _notifiedDep = d.notifiedDep || false;
       _notifiedCanc = d.notifiedCanc || false;
       _notifiedBoard = d.notifiedBoard || false;
+      _notifiedWarning = d.notifiedWarning || false;
     } catch {
     }
   }
@@ -1872,7 +1875,8 @@ ${post.text}
       boardingStop: _trackedStop,
       notifiedDep: _notifiedDep,
       notifiedCanc: _notifiedCanc,
-      notifiedBoard: _notifiedBoard
+      notifiedBoard: _notifiedBoard,
+      notifiedWarning: _notifiedWarning
     }));
   }
   function clearTrackedRoute() {
@@ -1882,6 +1886,8 @@ ${post.text}
     _notifiedDep = false;
     _notifiedCanc = false;
     _notifiedBoard = false;
+    _notifiedWarning = false;
+    _bannerSnoozedUntil = 0;
     localStorage.removeItem(TRACK_KEY);
   }
   function showBanner(text) {
@@ -1914,6 +1920,7 @@ ${post.text}
     if (route.status === "cancelled") {
       if (!_notifiedCanc) {
         _notifiedCanc = true;
+        _bannerSnoozedUntil = 0;
         saveTrackedRoute();
       }
       showBanner(`\u0420\u0435\u0439\u0441 ${label} \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E`);
@@ -1926,9 +1933,12 @@ ${post.text}
       clearTrackedRoute();
       return;
     }
+    let forceShow = false;
     if (state === "enroute") {
       if (!_notifiedDep) {
         _notifiedDep = true;
+        _bannerSnoozedUntil = 0;
+        forceShow = true;
         saveTrackedRoute();
       }
       if (_trackedStop) {
@@ -1938,19 +1948,33 @@ ${post.text}
           if (minsToBoard > 0) {
             if (!_notifiedBoard && minsToBoard <= 15) {
               _notifiedBoard = true;
+              _bannerSnoozedUntil = 0;
+              forceShow = true;
               saveTrackedRoute();
             }
-            showBanner(minsToBoard <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u0438\u0431\u0443\u0432\u0430\u0454 \u0434\u043E ${_trackedStop.toUpperCase()} \u0447\u0435\u0440\u0435\u0437 ${minsToBoard} \u0445\u0432` : `\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+            if (forceShow || Date.now() >= _bannerSnoozedUntil) {
+              showBanner(minsToBoard <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 \u043F\u0440\u0438\u0431\u0443\u0432\u0430\u0454 \u0434\u043E ${_trackedStop.toUpperCase()} \u0447\u0435\u0440\u0435\u0437 ${minsToBoard} \u0445\u0432` : `\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+            }
             return;
           }
         }
       }
-      showBanner(`\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+      if (forceShow || Date.now() >= _bannerSnoozedUntil) {
+        showBanner(`\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+      }
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
       const m = timings.minsToDeparture;
-      showBanner(m <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432` : `\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F: ${label} \xB7 \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432`);
+      if (!_notifiedWarning && m <= 15) {
+        _notifiedWarning = true;
+        _bannerSnoozedUntil = 0;
+        forceShow = true;
+        saveTrackedRoute();
+      }
+      if (forceShow || Date.now() >= _bannerSnoozedUntil) {
+        showBanner(m <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432` : `\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F: ${label} \xB7 \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432`);
+      }
       return;
     }
     hideBanner();
@@ -2762,9 +2786,8 @@ ${post.text}
       banner.innerHTML = '<span class="bus-track-banner-text"></span><button class="bus-track-banner-close" id="bus-track-banner-close">\u2715</button>';
       document.body.appendChild(banner);
       document.getElementById("bus-track-banner-close").addEventListener("click", () => {
-        clearTrackedRoute();
+        _bannerSnoozedUntil = Date.now() + 5 * 60 * 1e3;
         hideBanner();
-        renderRouteList();
       });
     }
     document.addEventListener("click", (e) => {
