@@ -1445,31 +1445,27 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
   margin: 2px 12px 8px auto;
-  padding: 8px;
+  padding: 4px;
   background: none;
-  border: 1.5px solid rgba(114,47,55,0.3);
-  border-radius: 9px;
-  color: #722F37;
+  border: none;
+  color: rgba(114,47,55,0.35);
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s, border-width 0.1s;
+  transition: color 0.15s;
 }
 .bs-track-btn svg {
-  width: 16px;
-  height: 16px;
-  stroke-width: 2;
-  transition: fill 0.15s, stroke-width 0.1s;
+  width: 22px;
+  height: 22px;
+  stroke-width: 1.8;
+  transition: fill 0.15s, color 0.15s, stroke-width 0.1s;
 }
-.bs-track-btn:active { background: rgba(114,47,55,0.06); }
+.bs-track-btn:active { color: #722F37; }
 .bs-track-btn.tracked {
-  background: rgba(114,47,55,0.1);
-  border: 2.5px solid #722F37;
+  color: #722F37;
 }
 .bs-track-btn.tracked svg {
-  fill: rgba(114,47,55,0.2);
-  stroke-width: 2.5;
+  fill: rgba(114,47,55,0.18);
+  stroke-width: 2.2;
 }
 
 /* Банер відстеження — фіксований над таб-баром */
