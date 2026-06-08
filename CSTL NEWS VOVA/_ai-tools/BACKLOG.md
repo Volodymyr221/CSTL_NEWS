@@ -112,9 +112,34 @@ spільним станом для всіх юзерів.
 | ☐ | Рекламний формат у стрічці |
 | ☐ | Інтеграція з Smoke_Castle і Kino_Castle |
 
-### Фаза 6 — Firebase
-| ☐ | Firebase Auth + FCM push-сповіщення |
-| ☐ | Cloud Functions для scheduled задач |
+### Фаза 6 — Push-сповіщення (FCM (Firebase Cloud Messaging — безкоштовний сервіс сповіщень) + Supabase)
+
+**Архітектура (план):**
+```
+Юзер тапає «Відстежити» на рейсі
+    ↓
+Браузер запитує дозвіл на сповіщення
+    ↓
+FCM видає токен (унікальний ID пристрою) → зберігається у Supabase таблиця `push_subscriptions`
+    ↓
+Supabase pg_cron (планувальник задач) кожні 5 хв перевіряє рейси
+    ↓
+За 10 хв до відправлення → Supabase Edge Function → FCM API → телефон
+```
+
+**Що потрібно зробити:**
+| ☐ | Зареєструвати Firebase проект, отримати FCM Server Key (безкоштовно) |
+| ☐ | Таблиця `push_subscriptions` у Supabase: `user_uuid`, `fcm_token`, `route_id`, `departure_time`, `date` |
+| ☐ | Кнопка «🔔 Відстежити» на картці рейсу → запит дозволу → збереження токена |
+| ☐ | Supabase Edge Function `send-bus-push` — формує і відправляє FCM повідомлення |
+| ☐ | Supabase pg_cron — запускає Edge Function кожні 5 хв |
+| ☐ | Текст сповіщення: «🚌 ЛУЦЬК → ЛИЧАНИ відправляється через 10 хв (11:30)» |
+
+**Примітки:**
+- FCM безкоштовний, ліміту немає
+- Supabase Free tier: 500K Edge Function (серверних функцій) викликів/міс — вистачить
+- iOS підтримує push у PWA (Progressive Web App — веб-додаток) тільки з iOS 16.4+
+- Сповіщення виглядають як системні (стиль iOS/Android), не як дизайн додатку — іконка CSTL LIFE + текст
 
 ### Фаза 7 — Зрілість
 | ☐ | Власний домен `olyka.news` або `cstl.news` |
