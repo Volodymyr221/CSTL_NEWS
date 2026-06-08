@@ -1532,27 +1532,6 @@
   flex: 1;
   min-width: 0;
 }
-.btb-header {
-  font-size: 10px;
-  font-weight: 700;
-  color: #722F37;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  line-height: 1.2;
-  margin-bottom: 4px;
-  text-align: center;
-  position: relative;
-  padding-bottom: 5px;
-}
-.btb-header::after {
-  content: '';
-  position: absolute;
-  bottom: 0;
-  left: 10%;
-  width: 80%;
-  height: 1px;
-  background: linear-gradient(to right, transparent, #722F37 40%, #722F37 60%, transparent);
-}
 .btb-label {
   font-size: 13px;
   font-weight: 500;
