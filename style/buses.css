@@ -1469,37 +1469,88 @@
 
 /* Банер відстеження — фіксований над таб-баром */
 .bus-track-banner {
-  display: none;
   position: fixed;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px) scale(0.96);
   bottom: calc(88px + env(safe-area-inset-bottom, 0px));
   z-index: 890;
-  background: #722F37;
-  color: #fff;
-  padding: 10px 14px 10px 16px;
+  display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  line-height: 1.3;
+  gap: 12px;
+  min-width: 280px;
+  max-width: 320px;
+  height: 68px;
+  padding: 0 16px 0 14px;
+  border-radius: 22px;
+  background: rgba(90, 0, 25, 0.55);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 250ms cubic-bezier(0.22,1,0.36,1),
+              transform 250ms cubic-bezier(0.22,1,0.36,1);
 }
 .bus-track-banner.visible {
-  display: flex;
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(-50%) translateY(0) scale(1);
 }
-.bus-track-banner-text {
+.btb-icon {
+  position: relative;
+  flex-shrink: 0;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.18);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.btb-check {
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #5aad5a;
+  color: #fff;
+  font-size: 9px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px solid rgba(90,0,25,0.4);
+}
+.btb-content {
   flex: 1;
   min-width: 0;
 }
-.bus-track-banner-close {
+.btb-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255,255,255,0.8);
+  line-height: 1.2;
+}
+.btb-route {
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.3;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.btb-close {
   flex-shrink: 0;
   background: none;
   border: none;
-  color: rgba(255,255,255,0.7);
-  font-size: 16px;
+  color: rgba(255,255,255,0.6);
+  font-size: 18px;
   cursor: pointer;
-  padding: 4px 6px;
+  padding: 4px 2px 4px 6px;
   line-height: 1;
   font-family: inherit;
 }

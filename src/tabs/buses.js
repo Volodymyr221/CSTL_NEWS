@@ -120,11 +120,13 @@ function clearTrackedRoute() {
   localStorage.removeItem(TRACK_KEY);
 }
 
-function showBanner(text) {
+function showBanner(label, route) {
   const banner = document.getElementById('bus-track-banner');
   if (!banner) return;
-  const textEl = banner.querySelector('.bus-track-banner-text');
-  if (textEl) textEl.textContent = text;
+  const lEl = banner.querySelector('.btb-label');
+  const rEl = banner.querySelector('.btb-route');
+  if (lEl) lEl.textContent = label;
+  if (rEl) rEl.textContent = route;
   banner.classList.add('visible');
 }
 
@@ -153,7 +155,7 @@ function checkTrackNotifications() {
   // Скасований рейс — показуємо завжди, ігноруємо снуз
   if (route.status === 'cancelled') {
     if (!_notifiedCanc) { _notifiedCanc = true; _bannerSnoozedUntil = 0; saveTrackedRoute(); }
-    showBanner(`Рейс ${label} скасовано`);
+    showBanner('Рейс скасовано', label);
     return;
   }
 
@@ -184,16 +186,18 @@ function checkTrackNotifications() {
             saveTrackedRoute();
           }
           if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-            showBanner(minsToBoard <= 15
-              ? `Автобус прибуває до ${_trackedStop.toUpperCase()} через ${fmtMins(minsToBoard)}`
-              : `Ваш автобус ${label} в дорозі`);
+            showBanner(
+              minsToBoard <= 15
+                ? `До ${_trackedStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
+                : 'В дорозі',
+              label);
           }
           return;
         }
       }
     }
     if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-      showBanner(`Ваш автобус ${label} вже в дорозі`);
+      showBanner('Вже в дорозі', label);
     }
     return;
   }
@@ -207,9 +211,9 @@ function checkTrackNotifications() {
       saveTrackedRoute();
     }
     if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-      showBanner(m <= 15
-        ? `Автобус ${label} відправляється через ${fmtMins(m)}`
-        : `Відстежується: ${label} · через ${fmtMins(m)}`);
+      showBanner(
+        m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
+        label);
     }
     return;
   }
@@ -1233,7 +1237,16 @@ export async function initBuses() {
     const banner = document.createElement('div');
     banner.id        = 'bus-track-banner';
     banner.className = 'bus-track-banner';
-    banner.innerHTML = '<span class="bus-track-banner-text"></span><button class="bus-track-banner-close" id="bus-track-banner-close">✕</button>';
+    banner.innerHTML = `
+      <div class="btb-icon">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.9)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+        <span class="btb-check">✓</span>
+      </div>
+      <div class="btb-content">
+        <div class="btb-label"></div>
+        <div class="btb-route"></div>
+      </div>
+      <button class="btb-close" id="bus-track-banner-close">✕</button>`;
     document.body.appendChild(banner);
     document.getElementById('bus-track-banner-close').addEventListener('click', () => {
       _bannerSnoozedUntil = Date.now() + 5 * 60 * 1000; // снуз 5 хв
