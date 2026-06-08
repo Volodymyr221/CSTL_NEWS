@@ -6,6 +6,7 @@ import {
 } from '../core/bus-schedule.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
+const TRACK_KEY = 'bus_track_v1';
 
 let busData       = null;
 let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
@@ -18,6 +19,9 @@ let expandedIds     = new Set();
 let activeField     = null; // 'from' | 'to' — яке поле зараз відкрите в дропдауні
 let smartRowIndex   = 0;    // поточна картка у каруселі hero
 let selectedRouteId = null; // для майбутніх днів: яку картку показує hero
+let trackedRouteId  = null; // id рейсу який юзер відстежує сьогодні
+let _notifiedDep    = false;
+let _notifiedCanc   = false;
 
 function getTodayISO() {
   const d = new Date();
@@ -68,6 +72,85 @@ function loadPrefs() {
     if (p?.from) fromStop = p.from;
     if (p?.to)   toStop   = p.to;
   } catch {}
+}
+
+// ── Track route (відстеження рейсу) ──────────────────────────────────
+function loadTrackedRoute() {
+  try {
+    const d = JSON.parse(localStorage.getItem(TRACK_KEY));
+    if (d?.date === getTodayISO()) {
+      trackedRouteId = d.routeId;
+      _notifiedDep   = d.notifiedDep   || false;
+      _notifiedCanc  = d.notifiedCanc  || false;
+    } else {
+      localStorage.removeItem(TRACK_KEY);
+    }
+  } catch {}
+}
+
+function saveTrackedRoute() {
+  localStorage.setItem(TRACK_KEY, JSON.stringify({
+    date: getTodayISO(),
+    routeId: trackedRouteId,
+    notifiedDep: _notifiedDep,
+    notifiedCanc: _notifiedCanc,
+  }));
+}
+
+function clearTrackedRoute() {
+  trackedRouteId = null;
+  _notifiedDep   = false;
+  _notifiedCanc  = false;
+  localStorage.removeItem(TRACK_KEY);
+}
+
+function showBanner(text) {
+  const banner = document.getElementById('bus-track-banner');
+  if (!banner) return;
+  const textEl = banner.querySelector('.bus-track-banner-text');
+  if (textEl) textEl.textContent = text;
+  banner.classList.add('visible');
+}
+
+function hideBanner() {
+  const banner = document.getElementById('bus-track-banner');
+  if (banner) banner.classList.remove('visible');
+}
+
+function checkTrackNotifications() {
+  if (!trackedRouteId || !isViewingToday()) { hideBanner(); return; }
+  const route = (getDayData().routes || []).find(r => r.id === trackedRouteId);
+  if (!route) { hideBanner(); return; }
+
+  const [a, b] = parseRouteEndpoints(route.name);
+  const label  = `${a.toUpperCase()} → ${b.toUpperCase()}`;
+
+  if (route.status === 'cancelled') {
+    if (!_notifiedCanc) { _notifiedCanc = true; saveTrackedRoute(); }
+    showBanner(`Рейс ${label} скасовано`);
+    return;
+  }
+
+  const state   = getRouteState(route);
+  const timings = getRouteTimings(route);
+
+  if (state === 'enroute') {
+    if (!_notifiedDep) { _notifiedDep = true; saveTrackedRoute(); }
+    showBanner(`Ваш автобус ${label} вже в дорозі`);
+    return;
+  }
+
+  if (state === 'past') { hideBanner(); clearTrackedRoute(); return; }
+
+  if (state === 'waiting' && timings.minsToDeparture !== null) {
+    const m = timings.minsToDeparture;
+    showBanner(m <= 15
+      ? `Автобус ${label} відправляється через ${m} хв`
+      : `Відстежується: ${label} · через ${m} хв`);
+    return;
+  }
+
+  hideBanner();
 }
 
 function isDayActive(days) {
@@ -187,7 +270,12 @@ function findActiveRoutes() {
     }
     return false;
   });
-  return result.length ? result : (findNextRoute() ? [findNextRoute()] : []);
+  const activeList = result.length ? result : (findNextRoute() ? [findNextRoute()] : []);
+  if (trackedRouteId) {
+    const ti = activeList.findIndex(r => r.id === trackedRouteId);
+    if (ti > 0) activeList.unshift(activeList.splice(ti, 1)[0]);
+  }
+  return activeList;
 }
 
 function getAllStops() {
@@ -764,6 +852,9 @@ function renderRouteList() {
           : route.vopas_url
           ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">Усі зупинки рейсу на VOPAS →</a>`
           : ''}
+        ${isViewingToday() && !isPast && route.status !== 'cancelled'
+          ? `<button class="bs-track-btn${trackedRouteId === route.id ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? 'Відстежується ✓' : 'Відстежити маршрут'}</button>`
+          : ''}
       </div>`;
   };
 
@@ -814,6 +905,24 @@ function renderRouteList() {
       const id = btn.dataset.id;
       if (expandedIds.has(id)) expandedIds.delete(id);
       else expandedIds.add(id);
+      renderRouteList();
+    });
+  });
+
+  el.querySelectorAll('.bs-track-btn').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const rid = btn.dataset.trackId;
+      if (trackedRouteId === rid) {
+        clearTrackedRoute();
+      } else {
+        trackedRouteId = rid;
+        _notifiedDep   = false;
+        _notifiedCanc  = false;
+        saveTrackedRoute();
+      }
+      checkTrackNotifications();
+      renderSmartRow();
       renderRouteList();
     });
   });
@@ -1037,6 +1146,7 @@ export async function initBuses() {
   if (!el) return;
 
   loadPrefs();
+  loadTrackedRoute();
 
   // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)
   if (!document.getElementById('bs-dropdown')) {
@@ -1045,6 +1155,19 @@ export async function initBuses() {
     dd.className = 'bs-dropdown';
     dd.hidden    = true;
     document.body.appendChild(dd);
+  }
+
+  if (!document.getElementById('bus-track-banner')) {
+    const banner = document.createElement('div');
+    banner.id        = 'bus-track-banner';
+    banner.className = 'bus-track-banner';
+    banner.innerHTML = '<span class="bus-track-banner-text"></span><button class="bus-track-banner-close" id="bus-track-banner-close">✕</button>';
+    document.body.appendChild(banner);
+    document.getElementById('bus-track-banner-close').addEventListener('click', () => {
+      clearTrackedRoute();
+      hideBanner();
+      renderRouteList();
+    });
   }
 
   // Закривати дропдаун при кліку поза ним
@@ -1091,10 +1214,12 @@ export async function initBuses() {
   renderWeekStrip();
   renderSmartRow();
   renderRouteList();
+  checkTrackNotifications();
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {
     renderSmartRow();
     renderRouteList();
+    checkTrackNotifications();
   }, 60_000);
 }

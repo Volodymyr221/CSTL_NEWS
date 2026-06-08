@@ -1773,6 +1773,7 @@ ${post.text}
 
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
+  var TRACK_KEY = "bus_track_v1";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;
@@ -1784,6 +1785,9 @@ ${post.text}
   var activeField = null;
   var smartRowIndex = 0;
   var selectedRouteId = null;
+  var trackedRouteId = null;
+  var _notifiedDep = false;
+  var _notifiedCanc = false;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1841,6 +1845,89 @@ ${post.text}
         toStop = p.to;
     } catch {
     }
+  }
+  function loadTrackedRoute() {
+    try {
+      const d = JSON.parse(localStorage.getItem(TRACK_KEY));
+      if (d?.date === getTodayISO()) {
+        trackedRouteId = d.routeId;
+        _notifiedDep = d.notifiedDep || false;
+        _notifiedCanc = d.notifiedCanc || false;
+      } else {
+        localStorage.removeItem(TRACK_KEY);
+      }
+    } catch {
+    }
+  }
+  function saveTrackedRoute() {
+    localStorage.setItem(TRACK_KEY, JSON.stringify({
+      date: getTodayISO(),
+      routeId: trackedRouteId,
+      notifiedDep: _notifiedDep,
+      notifiedCanc: _notifiedCanc
+    }));
+  }
+  function clearTrackedRoute() {
+    trackedRouteId = null;
+    _notifiedDep = false;
+    _notifiedCanc = false;
+    localStorage.removeItem(TRACK_KEY);
+  }
+  function showBanner(text) {
+    const banner = document.getElementById("bus-track-banner");
+    if (!banner)
+      return;
+    const textEl = banner.querySelector(".bus-track-banner-text");
+    if (textEl)
+      textEl.textContent = text;
+    banner.classList.add("visible");
+  }
+  function hideBanner() {
+    const banner = document.getElementById("bus-track-banner");
+    if (banner)
+      banner.classList.remove("visible");
+  }
+  function checkTrackNotifications() {
+    if (!trackedRouteId || !isViewingToday()) {
+      hideBanner();
+      return;
+    }
+    const route = (getDayData().routes || []).find((r) => r.id === trackedRouteId);
+    if (!route) {
+      hideBanner();
+      return;
+    }
+    const [a, b] = parseRouteEndpoints(route.name);
+    const label = `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
+    if (route.status === "cancelled") {
+      if (!_notifiedCanc) {
+        _notifiedCanc = true;
+        saveTrackedRoute();
+      }
+      showBanner(`\u0420\u0435\u0439\u0441 ${label} \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E`);
+      return;
+    }
+    const state = getRouteState(route);
+    const timings = getRouteTimings(route);
+    if (state === "enroute") {
+      if (!_notifiedDep) {
+        _notifiedDep = true;
+        saveTrackedRoute();
+      }
+      showBanner(`\u0412\u0430\u0448 \u0430\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456`);
+      return;
+    }
+    if (state === "past") {
+      hideBanner();
+      clearTrackedRoute();
+      return;
+    }
+    if (state === "waiting" && timings.minsToDeparture !== null) {
+      const m = timings.minsToDeparture;
+      showBanner(m <= 15 ? `\u0410\u0432\u0442\u043E\u0431\u0443\u0441 ${label} \u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432` : `\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F: ${label} \xB7 \u0447\u0435\u0440\u0435\u0437 ${m} \u0445\u0432`);
+      return;
+    }
+    hideBanner();
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
@@ -1930,7 +2017,13 @@ ${post.text}
       }
       return false;
     });
-    return result.length ? result : findNextRoute() ? [findNextRoute()] : [];
+    const activeList = result.length ? result : findNextRoute() ? [findNextRoute()] : [];
+    if (trackedRouteId) {
+      const ti = activeList.findIndex((r) => r.id === trackedRouteId);
+      if (ti > 0)
+        activeList.unshift(activeList.splice(ti, 1)[0]);
+    }
+    return activeList;
   }
   function getAllStops() {
     if (!busData)
@@ -2374,6 +2467,7 @@ ${post.text}
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
              </button>
              <div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>` : route.vopas_url ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">\u0423\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u0440\u0435\u0439\u0441\u0443 \u043D\u0430 VOPAS \u2192</a>` : ""}
+        ${isViewingToday() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F \u2713" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}</button>` : ""}
       </div>`;
     };
     let toggleHtml = "";
@@ -2418,6 +2512,23 @@ ${post.text}
           expandedIds.delete(id);
         else
           expandedIds.add(id);
+        renderRouteList();
+      });
+    });
+    el.querySelectorAll(".bs-track-btn").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const rid = btn.dataset.trackId;
+        if (trackedRouteId === rid) {
+          clearTrackedRoute();
+        } else {
+          trackedRouteId = rid;
+          _notifiedDep = false;
+          _notifiedCanc = false;
+          saveTrackedRoute();
+        }
+        checkTrackNotifications();
+        renderSmartRow();
         renderRouteList();
       });
     });
@@ -2607,12 +2718,25 @@ ${post.text}
     if (!el)
       return;
     loadPrefs();
+    loadTrackedRoute();
     if (!document.getElementById("bs-dropdown")) {
       const dd = document.createElement("div");
       dd.id = "bs-dropdown";
       dd.className = "bs-dropdown";
       dd.hidden = true;
       document.body.appendChild(dd);
+    }
+    if (!document.getElementById("bus-track-banner")) {
+      const banner = document.createElement("div");
+      banner.id = "bus-track-banner";
+      banner.className = "bus-track-banner";
+      banner.innerHTML = '<span class="bus-track-banner-text"></span><button class="bus-track-banner-close" id="bus-track-banner-close">\u2715</button>';
+      document.body.appendChild(banner);
+      document.getElementById("bus-track-banner-close").addEventListener("click", () => {
+        clearTrackedRoute();
+        hideBanner();
+        renderRouteList();
+      });
     }
     document.addEventListener("click", (e) => {
       const dd = document.getElementById("bs-dropdown");
@@ -2654,11 +2778,13 @@ ${post.text}
     renderWeekStrip();
     renderSmartRow();
     renderRouteList();
+    checkTrackNotifications();
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       renderSmartRow();
       renderRouteList();
+      checkTrackNotifications();
     }, 6e4);
   }
 
