@@ -1442,19 +1442,18 @@
 
 /* Кнопка "Відстежити маршрут" у картці рейсу */
 .bs-track-btn {
-  display: block;
-  margin: 6px 12px 10px;
-  padding: 7px 12px;
-  width: calc(100% - 24px);
+  display: inline-flex;
+  align-items: center;
+  margin: 2px 12px 8px;
+  padding: 4px 10px;
   background: none;
   border: 1.5px solid rgba(114,47,55,0.3);
-  border-radius: 8px;
+  border-radius: 20px;
   color: #722F37;
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.03em;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  text-align: center;
   font-family: inherit;
   transition: background 0.15s, border-color 0.15s;
 }
