@@ -844,6 +844,9 @@ function renderRouteList() {
             ${autoNote}
           </div>
         </div>
+        ${isViewingToday() && !isPast && route.status !== 'cancelled'
+          ? `<button class="bs-track-btn${trackedRouteId === route.id ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? '✓ Відстежується' : '+ Відстежити'}</button>`
+          : ''}
         ${route.stops && route.stops.length > 2
           ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? 'СХОВАТИ ЗУПИНКИ' : 'ВСІ ЗУПИНКИ'} <span class="bs-toggle-arr">${expanded ? '▴' : '▾'}</span>
@@ -851,9 +854,6 @@ function renderRouteList() {
              <div class="bs-stops-body"${expanded ? '' : ' hidden'}>${stopsHtml}</div>`
           : route.vopas_url
           ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">Усі зупинки рейсу на VOPAS →</a>`
-          : ''}
-        ${isViewingToday() && !isPast && route.status !== 'cancelled'
-          ? `<button class="bs-track-btn${trackedRouteId === route.id ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? 'Відстежується ✓' : 'Відстежити маршрут'}</button>`
           : ''}
       </div>`;
   };

@@ -2463,11 +2463,11 @@ ${post.text}
             ${autoNote}
           </div>
         </div>
+        ${isViewingToday() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? "\u2713 \u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F" : "+ \u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438"}</button>` : ""}
         ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
              </button>
              <div class="bs-stops-body"${expanded ? "" : " hidden"}>${stopsHtml}</div>` : route.vopas_url ? `<a class="bs-vopas-link" href="${escapeHtml(route.vopas_url)}" target="_blank" rel="noopener">\u0423\u0441\u0456 \u0437\u0443\u043F\u0438\u043D\u043A\u0438 \u0440\u0435\u0439\u0441\u0443 \u043D\u0430 VOPAS \u2192</a>` : ""}
-        ${isViewingToday() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackedRouteId === route.id ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}">${trackedRouteId === route.id ? "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F \u2713" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}</button>` : ""}
       </div>`;
     };
     let toggleHtml = "";
