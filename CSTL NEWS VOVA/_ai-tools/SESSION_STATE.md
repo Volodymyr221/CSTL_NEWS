@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-09 02:30
+**Оновлено:** 2026-06-08 (синхронізація гілки)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -11,7 +11,7 @@
 |--|--|
 | **URL сайту** | https://volodymyr221.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
-| **Робоча гілка (поточна сесія)** | `claude/startup-uem-BJGcK` |
+| **Робоча гілка (поточна сесія)** | `claude/startup-uem-uc4gmp` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
 | **CACHE_NAME у `sw.js`** | `cstl-20260608-2315` |
