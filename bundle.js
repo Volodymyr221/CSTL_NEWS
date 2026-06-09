@@ -1916,7 +1916,7 @@ ${post.text}
     _bannerHideTimer = setTimeout(() => {
       hideBanner();
       _bannerHideTimer = null;
-    }, 5e3);
+    }, 4e3);
   }
   function hideBanner() {
     const banner = document.getElementById("bus-track-banner");
