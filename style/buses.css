@@ -1544,6 +1544,9 @@
   font-weight: 500;
   color: rgba(0,0,0,0.6);
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 .btb-label.btb-label--subroute {
   color: var(--red);
