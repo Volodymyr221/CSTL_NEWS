@@ -1472,7 +1472,7 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%) translateY(20px) scale(0.96);
-  bottom: calc(98px + env(safe-area-inset-bottom, 0px));
+  bottom: calc(95px + env(safe-area-inset-bottom, 0px));
   z-index: 890;
   display: flex;
   align-items: center;
