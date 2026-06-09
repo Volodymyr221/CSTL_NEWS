@@ -14,7 +14,7 @@
 | **Робоча гілка (поточна сесія)** | `claude/startup-uem-uc4gmp` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260609-1504` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260609-1508` |
 
 ## ✅ Зроблено у поточній сесії (09.06.2026, банер відстеження — нова логіка)
 
