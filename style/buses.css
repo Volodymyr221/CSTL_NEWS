@@ -1471,7 +1471,7 @@
 .bus-track-banner {
   position: fixed;
   left: 50%;
-  transform-origin: center bottom;
+  transform-origin: center top;
   transform: translateX(-50%) scale(0.14, 0.77);
   bottom: calc(95px + env(safe-area-inset-bottom, 0px));
   z-index: 890;
