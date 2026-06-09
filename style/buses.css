@@ -1494,16 +1494,16 @@
   opacity: 0;
   pointer-events: none;
   /* ховання — плавне ease-in */
-  transition: opacity 380ms cubic-bezier(0.4,0,1,1),
-              transform 380ms cubic-bezier(0.4,0,1,1);
+  transition: opacity 300ms cubic-bezier(0.4,0,1,1),
+              transform 300ms cubic-bezier(0.4,0,1,1);
 }
 .bus-track-banner.visible {
   opacity: 1;
   pointer-events: auto;
   transform: translateX(-50%) translateY(0) scale(1);
-  /* поява — довший spring */
-  transition: opacity 650ms cubic-bezier(0.22,1,0.36,1),
-              transform 650ms cubic-bezier(0.22,1,0.36,1);
+  /* поява — spring */
+  transition: opacity 520ms cubic-bezier(0.22,1,0.36,1),
+              transform 520ms cubic-bezier(0.22,1,0.36,1);
 }
 .btb-icon {
   position: relative;
