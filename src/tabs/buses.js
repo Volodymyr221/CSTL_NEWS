@@ -1278,6 +1278,7 @@ export async function initBuses() {
       <div class="btb-content">
         <div class="btb-route"></div>
         <div class="btb-label"></div>
+        <div class="btb-hint">ВАМ БУДУТЬ НАДХОДИТИ СПОВІЩЕННЯ ПРО ОНОВЛЕНУ ІНФОРМАЦІЮ РЕЙСУ</div>
       </div>`;
     document.body.appendChild(banner);
     // Свайп вниз — закрити банер раніше
