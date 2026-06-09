@@ -1477,10 +1477,11 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  min-width: 320px;
-  max-width: 380px;
+  justify-content: center;
+  min-width: 300px;
+  max-width: 360px;
   height: 68px;
-  padding: 0 16px 0 14px;
+  padding: 0 20px;
   border-radius: 22px;
   background: radial-gradient(ellipse at center,
     rgba(250, 251, 253, 0.94) 0%,
@@ -1529,8 +1530,8 @@
   border: 1.5px solid rgba(240,242,245,0.4);
 }
 .btb-content {
-  flex: 1;
   min-width: 0;
+  text-align: center;
 }
 .btb-label {
   font-size: 13px;
@@ -1546,16 +1547,5 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-}
-.btb-close {
-  flex-shrink: 0;
-  background: none;
-  border: none;
-  color: rgba(0,0,0,0.4);
-  font-size: 18px;
-  cursor: pointer;
-  padding: 4px 2px 4px 6px;
-  line-height: 1;
-  font-family: inherit;
 }
 
