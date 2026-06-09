@@ -1271,15 +1271,17 @@ export async function initBuses() {
     banner.id        = 'bus-track-banner';
     banner.className = 'bus-track-banner';
     banner.innerHTML = `
-      <div class="btb-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.75)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        <span class="btb-check">✓</span>
+      <div class="btb-main">
+        <div class="btb-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.75)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <span class="btb-check">✓</span>
+        </div>
+        <div class="btb-content">
+          <div class="btb-route"></div>
+          <div class="btb-label"></div>
+        </div>
       </div>
-      <div class="btb-content">
-        <div class="btb-route"></div>
-        <div class="btb-label"></div>
-        <div class="btb-hint">ВАМ БУДУТЬ НАДХОДИТИ СПОВІЩЕННЯ ПРО ОНОВЛЕНУ ІНФОРМАЦІЮ РЕЙСУ</div>
-      </div>`;
+      <div class="btb-hint">ВАМ БУДУТЬ НАДХОДИТИ СПОВІЩЕННЯ ПРО ОНОВЛЕНУ ІНФОРМАЦІЮ РЕЙСУ</div>`;
     document.body.appendChild(banner);
     // Свайп вниз — закрити банер раніше
     let _swipeStartY = 0;

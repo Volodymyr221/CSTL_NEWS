@@ -2858,15 +2858,17 @@ ${post.text}
       banner.id = "bus-track-banner";
       banner.className = "bus-track-banner";
       banner.innerHTML = `
-      <div class="btb-icon">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.75)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        <span class="btb-check">\u2713</span>
+      <div class="btb-main">
+        <div class="btb-icon">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="rgba(0,0,0,0.75)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+          <span class="btb-check">\u2713</span>
+        </div>
+        <div class="btb-content">
+          <div class="btb-route"></div>
+          <div class="btb-label"></div>
+        </div>
       </div>
-      <div class="btb-content">
-        <div class="btb-route"></div>
-        <div class="btb-label"></div>
-        <div class="btb-hint">\u0412\u0410\u041C \u0411\u0423\u0414\u0423\u0422\u042C \u041D\u0410\u0414\u0425\u041E\u0414\u0418\u0422\u0418 \u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u041E\u041D\u041E\u0412\u041B\u0415\u041D\u0423 \u0406\u041D\u0424\u041E\u0420\u041C\u0410\u0426\u0406\u042E \u0420\u0415\u0419\u0421\u0423</div>
-      </div>`;
+      <div class="btb-hint">\u0412\u0410\u041C \u0411\u0423\u0414\u0423\u0422\u042C \u041D\u0410\u0414\u0425\u041E\u0414\u0418\u0422\u0418 \u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u041E\u041D\u041E\u0412\u041B\u0415\u041D\u0423 \u0406\u041D\u0424\u041E\u0420\u041C\u0410\u0426\u0406\u042E \u0420\u0415\u0419\u0421\u0423</div>`;
       document.body.appendChild(banner);
       let _swipeStartY = 0;
       banner.addEventListener("touchstart", (e) => {
