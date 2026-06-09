@@ -1935,6 +1935,18 @@ ${post.text}
     const h = Math.floor(m / 60), min = m % 60;
     return min ? `${h} \u0433\u043E\u0434 ${min} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
   }
+  function buildBannerTexts(route) {
+    const [a, b] = parseRouteEndpoints(route.name);
+    const segFrom = _trackedStop || a;
+    const segTo = _trackedToStop || b;
+    const hasSeg = segFrom.toUpperCase() !== a.toUpperCase() || segTo.toUpperCase() !== b.toUpperCase();
+    const startTime = getStopHHMM(route, route.stops[0].name);
+    const endTime = getStopHHMM(route, route.stops[route.stops.length - 1].name);
+    const timeStr = startTime && endTime ? `${startTime} \u2192 ${endTime}` : "";
+    const heading = hasSeg ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}` : `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
+    const subDefault = hasSeg ? `${a.toUpperCase()} \u2192 ${b.toUpperCase()}${timeStr ? " | " + timeStr : ""}` : timeStr;
+    return { heading, subDefault };
+  }
   function checkTrackNotifications(forceInitial = false) {
     if (!trackedRouteId) {
       hideBanner();
@@ -1947,13 +1959,8 @@ ${post.text}
         const route2 = dayRoutes2.find((r) => r.id === trackedRouteId);
         if (!route2)
           return;
-        const [a2, b2] = parseRouteEndpoints(route2.name);
-        const segFrom2 = _trackedStop || a2;
-        const segTo2 = _trackedToStop || b2;
-        const heading2 = `${segFrom2.toUpperCase()} \u2192 ${segTo2.toUpperCase()}`;
-        const fullRoute2 = `${a2.toUpperCase()} \u2192 ${b2.toUpperCase()}`;
-        const hasSeg2 = heading2 !== fullRoute2;
-        showBanner(hasSeg2 ? fullRoute2 : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", heading2, hasSeg2);
+        const { heading: heading2, subDefault: subDefault2 } = buildBannerTexts(route2);
+        showBanner(subDefault2, heading2, true);
       }
       return;
     }
@@ -1967,12 +1974,7 @@ ${post.text}
       hideBanner();
       return;
     }
-    const [a, b] = parseRouteEndpoints(route.name);
-    const segFrom = _trackedStop || a;
-    const segTo = _trackedToStop || b;
-    const heading = `${segFrom.toUpperCase()} \u2192 ${segTo.toUpperCase()}`;
-    const fullRoute = `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
-    const hasSeg = heading !== fullRoute;
+    const { heading, subDefault } = buildBannerTexts(route);
     if (route.status === "cancelled") {
       if (!_notifiedCanc) {
         _notifiedCanc = true;
@@ -2033,7 +2035,7 @@ ${post.text}
       return;
     }
     if (forceShow)
-      showBanner(hasSeg ? fullRoute : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", heading, hasSeg);
+      showBanner(subDefault, heading, true);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
