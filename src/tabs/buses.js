@@ -150,6 +150,26 @@ function fmtMins(m) {
   return min ? `${h} год ${min} хв` : `${h} год`;
 }
 
+function buildBannerTexts(route) {
+  const [a, b] = parseRouteEndpoints(route.name);
+  const segFrom = _trackedStop   || a;
+  const segTo   = _trackedToStop || b;
+  const hasSeg  = segFrom.toUpperCase() !== a.toUpperCase() || segTo.toUpperCase() !== b.toUpperCase();
+
+  const startTime = getStopHHMM(route, route.stops[0].name);
+  const endTime   = getStopHHMM(route, route.stops[route.stops.length - 1].name);
+  const timeStr   = (startTime && endTime) ? `${startTime} → ${endTime}` : '';
+
+  const heading    = hasSeg
+    ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}`
+    : `${a.toUpperCase()} → ${b.toUpperCase()}`;
+  const subDefault = hasSeg
+    ? `${a.toUpperCase()} → ${b.toUpperCase()}${timeStr ? ' | ' + timeStr : ''}`
+    : timeStr;
+
+  return { heading, subDefault };
+}
+
 function checkTrackNotifications(forceInitial = false) {
   if (!trackedRouteId) { hideBanner(); return; }
 
@@ -160,13 +180,8 @@ function checkTrackNotifications(forceInitial = false) {
       const dayRoutes = (busData?.days?.[_trackDate] || {}).routes || [];
       const route = dayRoutes.find(r => r.id === trackedRouteId);
       if (!route) return;
-      const [a, b] = parseRouteEndpoints(route.name);
-      const segFrom = _trackedStop   || a;
-      const segTo   = _trackedToStop || b;
-      const heading   = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
-      const fullRoute = `${a.toUpperCase()} → ${b.toUpperCase()}`;
-      const hasSeg    = heading !== fullRoute;
-      showBanner(hasSeg ? fullRoute : 'Відстежується', heading, hasSeg);
+      const { heading, subDefault } = buildBannerTexts(route);
+      showBanner(subDefault, heading, true);
     }
     return;
   }
@@ -177,12 +192,7 @@ function checkTrackNotifications(forceInitial = false) {
   const route = dayRoutes.find(r => r.id === trackedRouteId);
   if (!route) { hideBanner(); return; }
 
-  const [a, b] = parseRouteEndpoints(route.name);
-  const segFrom   = _trackedStop   || a;
-  const segTo     = _trackedToStop || b;
-  const heading   = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
-  const fullRoute = `${a.toUpperCase()} → ${b.toUpperCase()}`;
-  const hasSeg    = heading !== fullRoute;
+  const { heading, subDefault } = buildBannerTexts(route);
 
   // Скасований рейс — показуємо при кожному новому виклику (важлива подія)
   if (route.status === 'cancelled') {
@@ -230,7 +240,7 @@ function checkTrackNotifications(forceInitial = false) {
   }
 
   // Стан очікування без таймеру / початковий — показуємо підзаголовок з маршрутом
-  if (forceShow) showBanner(hasSeg ? fullRoute : 'Відстежується', heading, hasSeg);
+  if (forceShow) showBanner(subDefault, heading, true);
 }
 
 function isDayActive(days) {
