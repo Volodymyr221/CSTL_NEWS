@@ -2868,7 +2868,7 @@ ${post.text}
           <div class="btb-label"></div>
         </div>
       </div>
-      <div class="btb-hint">\u0412\u0418 \u041E\u0422\u0420\u0418\u041C\u0423\u0412\u0410\u0422\u0418\u041C\u0415\u0422\u0415 \u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u0417\u041C\u0406\u041D\u0418 \u0420\u0415\u0419\u0421\u0423</div>`;
+      <div class="btb-hint">\u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u0420\u0415\u0419\u0421 \u0410\u041A\u0422\u0418\u0412\u041E\u0412\u0410\u041D\u041E</div>`;
       document.body.appendChild(banner);
       let _swipeStartY = 0;
       banner.addEventListener("touchstart", (e) => {

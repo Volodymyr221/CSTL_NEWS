@@ -1281,7 +1281,7 @@ export async function initBuses() {
           <div class="btb-label"></div>
         </div>
       </div>
-      <div class="btb-hint">ВИ ОТРИМУВАТИМЕТЕ СПОВІЩЕННЯ ПРО ЗМІНИ РЕЙСУ</div>`;
+      <div class="btb-hint">СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО</div>`;
     document.body.appendChild(banner);
     // Свайп вниз — закрити банер раніше
     let _swipeStartY = 0;
