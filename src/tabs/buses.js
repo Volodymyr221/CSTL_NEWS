@@ -26,7 +26,8 @@ let _notifiedDep    = false;
 let _notifiedCanc   = false;
 let _notifiedBoard  = false; // сповіщено про прибуття до зупинки посадки
 let _notifiedWarning = false; // сповіщено "≤15 хв до відправлення"
-let _bannerSnoozedUntil = 0; // ms-timestamp до якого банер схований (не зберігається)
+let _notifiedFuture  = false; // сповіщено при відстеженні майбутнього дня
+let _bannerHideTimer = null;  // таймер автозакриття банеру (5с)
 
 function getTodayISO() {
   const d = new Date();
@@ -116,7 +117,7 @@ function clearTrackedRoute() {
   _notifiedCanc       = false;
   _notifiedBoard      = false;
   _notifiedWarning    = false;
-  _bannerSnoozedUntil = 0;
+  _notifiedFuture     = false;
   localStorage.removeItem(TRACK_KEY);
 }
 
@@ -127,12 +128,16 @@ function showBanner(label, route) {
   const rEl = banner.querySelector('.btb-route');
   if (lEl) lEl.textContent = label;
   if (rEl) rEl.textContent = route;
+  if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
+  banner.style.transform = '';
   banner.classList.add('visible');
+  _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 5000);
 }
 
 function hideBanner() {
   const banner = document.getElementById('bus-track-banner');
-  if (banner) banner.classList.remove('visible');
+  if (banner) { banner.style.transform = ''; banner.classList.remove('visible'); }
+  if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
 }
 
 function fmtMins(m) {
@@ -141,23 +146,24 @@ function fmtMins(m) {
   return min ? `${h} год ${min} хв` : `${h} год`;
 }
 
-function checkTrackNotifications() {
+function checkTrackNotifications(forceInitial = false) {
   if (!trackedRouteId) { hideBanner(); return; }
 
-  // Майбутній день — просте підтвердження "Відстежується" (без таймера)
+  // Майбутній день — показуємо один раз при першому відстеженні
   if (_trackDate > getTodayISO()) {
-    if (Date.now() < _bannerSnoozedUntil) { hideBanner(); return; }
-    const dayRoutes = (busData?.days?.[_trackDate] || {}).routes || [];
-    const route = dayRoutes.find(r => r.id === trackedRouteId);
-    if (!route) { hideBanner(); return; }
-    const [a, b] = parseRouteEndpoints(route.name);
-    showBanner('Відстежується', `${a.toUpperCase()} → ${b.toUpperCase()}`);
+    if (!_notifiedFuture) {
+      _notifiedFuture = true;
+      const dayRoutes = (busData?.days?.[_trackDate] || {}).routes || [];
+      const route = dayRoutes.find(r => r.id === trackedRouteId);
+      if (!route) return;
+      const [a, b] = parseRouteEndpoints(route.name);
+      showBanner('Відстежується', `${a.toUpperCase()} → ${b.toUpperCase()}`);
+    }
     return;
   }
 
   // Сьогодні: повна логіка сповіщень
   if (_trackDate !== getTodayISO()) { hideBanner(); return; }
-  // Шукаємо маршрут у даних того дня (незалежно від busDay у UI)
   const dayRoutes = (busData?.days ? (busData.days[_trackDate] || {}) : busData || {}).routes || [];
   const route = dayRoutes.find(r => r.id === trackedRouteId);
   if (!route) { hideBanner(); return; }
@@ -165,9 +171,9 @@ function checkTrackNotifications() {
   const [a, b] = parseRouteEndpoints(route.name);
   const label  = `${a.toUpperCase()} → ${b.toUpperCase()}`;
 
-  // Скасований рейс — показуємо завжди, ігноруємо снуз
+  // Скасований рейс — показуємо при кожному новому виклику (важлива подія)
   if (route.status === 'cancelled') {
-    if (!_notifiedCanc) { _notifiedCanc = true; _bannerSnoozedUntil = 0; saveTrackedRoute(); }
+    if (!_notifiedCanc) { _notifiedCanc = true; saveTrackedRoute(); }
     showBanner('Рейс скасовано', label);
     return;
   }
@@ -177,61 +183,38 @@ function checkTrackNotifications() {
 
   if (state === 'past') { hideBanner(); clearTrackedRoute(); return; }
 
-  // forceShow = true коли виникла нова подія → скидаємо снуз і показуємо банер
-  let forceShow = false;
+  // forceShow = true при новій події або початковому відстеженні
+  let forceShow = forceInitial;
 
   if (state === 'enroute') {
-    if (!_notifiedDep) {
-      _notifiedDep = true;
-      _bannerSnoozedUntil = 0;
-      forceShow = true;
-      saveTrackedRoute();
-    }
+    if (!_notifiedDep) { _notifiedDep = true; forceShow = true; saveTrackedRoute(); }
     if (_trackedStop) {
       const boardMins = getStopMins(route, _trackedStop);
       if (boardMins !== null) {
         const minsToBoard = boardMins - nowMinutes();
         if (minsToBoard > 0) {
-          if (!_notifiedBoard && minsToBoard <= 15) {
-            _notifiedBoard = true;
-            _bannerSnoozedUntil = 0;
-            forceShow = true;
-            saveTrackedRoute();
-          }
-          if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-            showBanner(
-              minsToBoard <= 15
-                ? `До ${_trackedStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
-                : 'В дорозі',
-              label);
-          }
+          if (!_notifiedBoard && minsToBoard <= 15) { _notifiedBoard = true; forceShow = true; saveTrackedRoute(); }
+          if (forceShow) showBanner(
+            minsToBoard <= 15
+              ? `До ${_trackedStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
+              : 'В дорозі',
+            label);
           return;
         }
       }
     }
-    if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-      showBanner('Вже в дорозі', label);
-    }
+    if (forceShow) showBanner('Вже в дорозі', label);
     return;
   }
 
   if (state === 'waiting' && timings.minsToDeparture !== null) {
     const m = timings.minsToDeparture;
-    if (!_notifiedWarning && m <= 15) {
-      _notifiedWarning = true;
-      _bannerSnoozedUntil = 0;
-      forceShow = true;
-      saveTrackedRoute();
-    }
-    if (forceShow || Date.now() >= _bannerSnoozedUntil) {
-      showBanner(
-        m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
-        label);
-    }
+    if (!_notifiedWarning && m <= 15) { _notifiedWarning = true; forceShow = true; saveTrackedRoute(); }
+    if (forceShow) showBanner(
+      m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
+      label);
     return;
   }
-
-  hideBanner();
 }
 
 function isDayActive(days) {
@@ -1017,10 +1000,10 @@ function renderRouteList() {
         _notifiedDep        = false;
         _notifiedCanc       = false;
         _notifiedBoard      = false;
-        _bannerSnoozedUntil = 0;
+        _notifiedFuture     = false;
         saveTrackedRoute();
       }
-      checkTrackNotifications();
+      checkTrackNotifications(true);
       renderSmartRow();
       renderRouteList();
     });
@@ -1268,13 +1251,19 @@ export async function initBuses() {
       <div class="btb-content">
         <div class="btb-route"></div>
         <div class="btb-label"></div>
-      </div>
-      <button class="btb-close" id="bus-track-banner-close">✕</button>`;
+      </div>`;
     document.body.appendChild(banner);
-    document.getElementById('bus-track-banner-close').addEventListener('click', () => {
-      _bannerSnoozedUntil = Date.now() + 5 * 60 * 1000; // снуз 5 хв
-      hideBanner();
-      // відстеження залишається активним — іконка закладки залишається заповненою
+    // Свайп вниз — закрити банер раніше
+    let _swipeStartY = 0;
+    banner.addEventListener('touchstart', e => { _swipeStartY = e.touches[0].clientY; }, { passive: true });
+    banner.addEventListener('touchmove', e => {
+      const dy = e.touches[0].clientY - _swipeStartY;
+      if (dy > 0) banner.style.transform = `translateX(-50%) translateY(${dy}px) scale(1)`;
+    }, { passive: true });
+    banner.addEventListener('touchend', e => {
+      const dy = e.changedTouches[0].clientY - _swipeStartY;
+      banner.style.transform = '';
+      if (dy > 40) hideBanner();
     });
   }
 

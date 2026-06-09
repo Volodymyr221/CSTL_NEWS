@@ -1792,7 +1792,8 @@ ${post.text}
   var _notifiedCanc = false;
   var _notifiedBoard = false;
   var _notifiedWarning = false;
-  var _bannerSnoozedUntil = 0;
+  var _notifiedFuture = false;
+  var _bannerHideTimer = null;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -1887,7 +1888,7 @@ ${post.text}
     _notifiedCanc = false;
     _notifiedBoard = false;
     _notifiedWarning = false;
-    _bannerSnoozedUntil = 0;
+    _notifiedFuture = false;
     localStorage.removeItem(TRACK_KEY);
   }
   function showBanner(label, route) {
@@ -1900,12 +1901,27 @@ ${post.text}
       lEl.textContent = label;
     if (rEl)
       rEl.textContent = route;
+    if (_bannerHideTimer) {
+      clearTimeout(_bannerHideTimer);
+      _bannerHideTimer = null;
+    }
+    banner.style.transform = "";
     banner.classList.add("visible");
+    _bannerHideTimer = setTimeout(() => {
+      hideBanner();
+      _bannerHideTimer = null;
+    }, 5e3);
   }
   function hideBanner() {
     const banner = document.getElementById("bus-track-banner");
-    if (banner)
+    if (banner) {
+      banner.style.transform = "";
       banner.classList.remove("visible");
+    }
+    if (_bannerHideTimer) {
+      clearTimeout(_bannerHideTimer);
+      _bannerHideTimer = null;
+    }
   }
   function fmtMins(m) {
     if (m < 60)
@@ -1913,24 +1929,21 @@ ${post.text}
     const h = Math.floor(m / 60), min = m % 60;
     return min ? `${h} \u0433\u043E\u0434 ${min} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
   }
-  function checkTrackNotifications() {
+  function checkTrackNotifications(forceInitial = false) {
     if (!trackedRouteId) {
       hideBanner();
       return;
     }
     if (_trackDate > getTodayISO()) {
-      if (Date.now() < _bannerSnoozedUntil) {
-        hideBanner();
-        return;
+      if (!_notifiedFuture) {
+        _notifiedFuture = true;
+        const dayRoutes2 = (busData?.days?.[_trackDate] || {}).routes || [];
+        const route2 = dayRoutes2.find((r) => r.id === trackedRouteId);
+        if (!route2)
+          return;
+        const [a2, b2] = parseRouteEndpoints(route2.name);
+        showBanner("\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", `${a2.toUpperCase()} \u2192 ${b2.toUpperCase()}`);
       }
-      const dayRoutes2 = (busData?.days?.[_trackDate] || {}).routes || [];
-      const route2 = dayRoutes2.find((r) => r.id === trackedRouteId);
-      if (!route2) {
-        hideBanner();
-        return;
-      }
-      const [a2, b2] = parseRouteEndpoints(route2.name);
-      showBanner("\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", `${a2.toUpperCase()} \u2192 ${b2.toUpperCase()}`);
       return;
     }
     if (_trackDate !== getTodayISO()) {
@@ -1948,7 +1961,6 @@ ${post.text}
     if (route.status === "cancelled") {
       if (!_notifiedCanc) {
         _notifiedCanc = true;
-        _bannerSnoozedUntil = 0;
         saveTrackedRoute();
       }
       showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", label);
@@ -1961,11 +1973,10 @@ ${post.text}
       clearTrackedRoute();
       return;
     }
-    let forceShow = false;
+    let forceShow = forceInitial;
     if (state === "enroute") {
       if (!_notifiedDep) {
         _notifiedDep = true;
-        _bannerSnoozedUntil = 0;
         forceShow = true;
         saveTrackedRoute();
       }
@@ -1976,42 +1987,36 @@ ${post.text}
           if (minsToBoard > 0) {
             if (!_notifiedBoard && minsToBoard <= 15) {
               _notifiedBoard = true;
-              _bannerSnoozedUntil = 0;
               forceShow = true;
               saveTrackedRoute();
             }
-            if (forceShow || Date.now() >= _bannerSnoozedUntil) {
+            if (forceShow)
               showBanner(
                 minsToBoard <= 15 ? `\u0414\u043E ${_trackedStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
                 label
               );
-            }
             return;
           }
         }
       }
-      if (forceShow || Date.now() >= _bannerSnoozedUntil) {
+      if (forceShow)
         showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", label);
-      }
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
       const m = timings.minsToDeparture;
       if (!_notifiedWarning && m <= 15) {
         _notifiedWarning = true;
-        _bannerSnoozedUntil = 0;
         forceShow = true;
         saveTrackedRoute();
       }
-      if (forceShow || Date.now() >= _bannerSnoozedUntil) {
+      if (forceShow)
         showBanner(
           m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
           label
         );
-      }
       return;
     }
-    hideBanner();
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
@@ -2626,10 +2631,10 @@ ${post.text}
           _notifiedDep = false;
           _notifiedCanc = false;
           _notifiedBoard = false;
-          _bannerSnoozedUntil = 0;
+          _notifiedFuture = false;
           saveTrackedRoute();
         }
-        checkTrackNotifications();
+        checkTrackNotifications(true);
         renderSmartRow();
         renderRouteList();
       });
@@ -2840,12 +2845,22 @@ ${post.text}
       <div class="btb-content">
         <div class="btb-route"></div>
         <div class="btb-label"></div>
-      </div>
-      <button class="btb-close" id="bus-track-banner-close">\u2715</button>`;
+      </div>`;
       document.body.appendChild(banner);
-      document.getElementById("bus-track-banner-close").addEventListener("click", () => {
-        _bannerSnoozedUntil = Date.now() + 5 * 60 * 1e3;
-        hideBanner();
+      let _swipeStartY = 0;
+      banner.addEventListener("touchstart", (e) => {
+        _swipeStartY = e.touches[0].clientY;
+      }, { passive: true });
+      banner.addEventListener("touchmove", (e) => {
+        const dy = e.touches[0].clientY - _swipeStartY;
+        if (dy > 0)
+          banner.style.transform = `translateX(-50%) translateY(${dy}px) scale(1)`;
+      }, { passive: true });
+      banner.addEventListener("touchend", (e) => {
+        const dy = e.changedTouches[0].clientY - _swipeStartY;
+        banner.style.transform = "";
+        if (dy > 40)
+          hideBanner();
       });
     }
     document.addEventListener("click", (e) => {
