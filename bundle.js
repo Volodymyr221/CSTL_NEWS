@@ -1905,8 +1905,15 @@ ${post.text}
       lEl.textContent = label;
       lEl.classList.toggle("btb-label--subroute", isSubroute);
     }
-    if (rEl)
+    if (rEl) {
       rEl.textContent = route;
+      rEl.style.fontSize = "14px";
+      let fs = 14;
+      while (rEl.scrollWidth > rEl.clientWidth && fs > 9.5) {
+        fs -= 0.25;
+        rEl.style.fontSize = fs + "px";
+      }
+    }
     if (_bannerHideTimer) {
       clearTimeout(_bannerHideTimer);
       _bannerHideTimer = null;

@@ -131,7 +131,15 @@ function showBanner(label, route, isSubroute = false) {
   const lEl = banner.querySelector('.btb-label');
   const rEl = banner.querySelector('.btb-route');
   if (lEl) { lEl.textContent = label; lEl.classList.toggle('btb-label--subroute', isSubroute); }
-  if (rEl) rEl.textContent = route;
+  if (rEl) {
+    rEl.textContent = route;
+    rEl.style.fontSize = '14px';
+    let fs = 14;
+    while (rEl.scrollWidth > rEl.clientWidth && fs > 9.5) {
+      fs -= 0.25;
+      rEl.style.fontSize = fs + 'px';
+    }
+  }
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
   banner.classList.add('visible');
