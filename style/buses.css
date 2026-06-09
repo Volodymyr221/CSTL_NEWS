@@ -1478,8 +1478,8 @@
   display: flex;
   flex-direction: column;
   justify-content: center;
-  min-width: 320px;
-  max-width: 390px;
+  min-width: 355px;
+  max-width: 420px;
   padding: 12px 20px 24px;
   border-radius: 22px;
   background: radial-gradient(ellipse at center,
@@ -1573,10 +1573,10 @@
   bottom: 7px;
   left: 0;
   right: 0;
-  font-size: 9.5px;
+  font-size: 8.5px;
   font-weight: 500;
   color: rgba(0,0,0,0.38);
-  letter-spacing: 0.25px;
+  letter-spacing: 0.1px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
