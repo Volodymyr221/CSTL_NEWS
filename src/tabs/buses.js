@@ -160,12 +160,16 @@ function buildBannerTexts(route) {
   const endTime   = getStopHHMM(route, route.stops[route.stops.length - 1].name);
   const timeStr   = (startTime && endTime) ? `${startTime} → ${endTime}` : '';
 
+  const segFromTime = getStopHHMM(route, segFrom);
+  const segToTime   = getStopHHMM(route, segTo);
+  const segTimeStr  = (segFromTime && segToTime) ? `${segFromTime} → ${segToTime}` : timeStr;
+
   const heading    = hasSeg
-    ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}`
-    : `${a.toUpperCase()} → ${b.toUpperCase()}`;
+    ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}${segTimeStr ? ' | ' + segTimeStr : ''}`
+    : `${a.toUpperCase()} → ${b.toUpperCase()}${timeStr ? ' | ' + timeStr : ''}`;
   const subDefault = hasSeg
     ? `${a.toUpperCase()} → ${b.toUpperCase()}${timeStr ? ' | ' + timeStr : ''}`
-    : timeStr;
+    : '';
 
   return { heading, subDefault };
 }
