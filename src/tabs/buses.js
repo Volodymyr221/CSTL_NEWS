@@ -22,6 +22,7 @@ let selectedRouteId = null; // для майбутніх днів: яку кар
 let trackedRouteId  = null; // id рейсу який юзер відстежує
 let _trackDate      = null; // дата рейсу що відстежується (може бути завтра)
 let _trackedStop    = null; // зупинка посадки (fromStop під час натискання)
+let _trackedToStop  = null; // зупинка висадки (toStop під час натискання)
 let _notifiedDep    = false;
 let _notifiedCanc   = false;
 let _notifiedBoard  = false; // сповіщено про прибуття до зупинки посадки
@@ -87,9 +88,10 @@ function loadTrackedRoute() {
     if (!d?.trackDate || d.trackDate < getTodayISO()) {
       localStorage.removeItem(TRACK_KEY); return;
     }
-    trackedRouteId = d.routeId;
-    _trackDate     = d.trackDate;
-    _trackedStop   = d.boardingStop || null;
+    trackedRouteId  = d.routeId;
+    _trackDate      = d.trackDate;
+    _trackedStop    = d.boardingStop || null;
+    _trackedToStop  = d.alightingStop || null;
     _notifiedDep     = d.notifiedDep     || false;
     _notifiedCanc    = d.notifiedCanc    || false;
     _notifiedBoard   = d.notifiedBoard   || false;
@@ -101,7 +103,8 @@ function saveTrackedRoute() {
   localStorage.setItem(TRACK_KEY, JSON.stringify({
     trackDate:    _trackDate || getTodayISO(),
     routeId:      trackedRouteId,
-    boardingStop: _trackedStop,
+    boardingStop:  _trackedStop,
+    alightingStop: _trackedToStop,
     notifiedDep:     _notifiedDep,
     notifiedCanc:    _notifiedCanc,
     notifiedBoard:   _notifiedBoard,
@@ -113,6 +116,7 @@ function clearTrackedRoute() {
   trackedRouteId      = null;
   _trackDate          = null;
   _trackedStop        = null;
+  _trackedToStop      = null;
   _notifiedDep        = false;
   _notifiedCanc       = false;
   _notifiedBoard      = false;
@@ -157,7 +161,9 @@ function checkTrackNotifications(forceInitial = false) {
       const route = dayRoutes.find(r => r.id === trackedRouteId);
       if (!route) return;
       const [a, b] = parseRouteEndpoints(route.name);
-      showBanner('Відстежується', `${a.toUpperCase()} → ${b.toUpperCase()}`);
+      const segFrom = _trackedStop   || a;
+      const segTo   = _trackedToStop || b;
+      showBanner('Відстежується', `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`);
     }
     return;
   }
@@ -169,7 +175,9 @@ function checkTrackNotifications(forceInitial = false) {
   if (!route) { hideBanner(); return; }
 
   const [a, b] = parseRouteEndpoints(route.name);
-  const label  = `${a.toUpperCase()} → ${b.toUpperCase()}`;
+  const segFrom = _trackedStop   || a;
+  const segTo   = _trackedToStop || b;
+  const label   = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
 
   // Скасований рейс — показуємо при кожному новому виклику (важлива подія)
   if (route.status === 'cancelled') {
@@ -997,6 +1005,7 @@ function renderRouteList() {
         trackedRouteId      = rid;
         _trackDate          = busDay;
         _trackedStop        = fromStop || null;
+        _trackedToStop      = toStop   || null;
         _notifiedDep        = false;
         _notifiedCanc       = false;
         _notifiedBoard      = false;

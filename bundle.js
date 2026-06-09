@@ -1788,6 +1788,7 @@ ${post.text}
   var trackedRouteId = null;
   var _trackDate = null;
   var _trackedStop = null;
+  var _trackedToStop = null;
   var _notifiedDep = false;
   var _notifiedCanc = false;
   var _notifiedBoard = false;
@@ -1862,6 +1863,7 @@ ${post.text}
       trackedRouteId = d.routeId;
       _trackDate = d.trackDate;
       _trackedStop = d.boardingStop || null;
+      _trackedToStop = d.alightingStop || null;
       _notifiedDep = d.notifiedDep || false;
       _notifiedCanc = d.notifiedCanc || false;
       _notifiedBoard = d.notifiedBoard || false;
@@ -1874,6 +1876,7 @@ ${post.text}
       trackDate: _trackDate || getTodayISO(),
       routeId: trackedRouteId,
       boardingStop: _trackedStop,
+      alightingStop: _trackedToStop,
       notifiedDep: _notifiedDep,
       notifiedCanc: _notifiedCanc,
       notifiedBoard: _notifiedBoard,
@@ -1884,6 +1887,7 @@ ${post.text}
     trackedRouteId = null;
     _trackDate = null;
     _trackedStop = null;
+    _trackedToStop = null;
     _notifiedDep = false;
     _notifiedCanc = false;
     _notifiedBoard = false;
@@ -1942,7 +1946,9 @@ ${post.text}
         if (!route2)
           return;
         const [a2, b2] = parseRouteEndpoints(route2.name);
-        showBanner("\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", `${a2.toUpperCase()} \u2192 ${b2.toUpperCase()}`);
+        const segFrom2 = _trackedStop || a2;
+        const segTo2 = _trackedToStop || b2;
+        showBanner("\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", `${segFrom2.toUpperCase()} \u2192 ${segTo2.toUpperCase()}`);
       }
       return;
     }
@@ -1957,7 +1963,9 @@ ${post.text}
       return;
     }
     const [a, b] = parseRouteEndpoints(route.name);
-    const label = `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
+    const segFrom = _trackedStop || a;
+    const segTo = _trackedToStop || b;
+    const label = `${segFrom.toUpperCase()} \u2192 ${segTo.toUpperCase()}`;
     if (route.status === "cancelled") {
       if (!_notifiedCanc) {
         _notifiedCanc = true;
@@ -2628,6 +2636,7 @@ ${post.text}
           trackedRouteId = rid;
           _trackDate = busDay;
           _trackedStop = fromStop || null;
+          _trackedToStop = toStop || null;
           _notifiedDep = false;
           _notifiedCanc = false;
           _notifiedBoard = false;
