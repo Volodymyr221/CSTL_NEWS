@@ -1536,7 +1536,7 @@
 .btb-content {
   flex: 1;
   min-width: 0;
-  text-align: center;
+  text-align: left;
 }
 .btb-label {
   font-size: 13px;
