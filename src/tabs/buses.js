@@ -135,7 +135,7 @@ function showBanner(label, route, isSubroute = false) {
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
   banner.classList.add('visible');
-  _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 5000);
+  _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 4000);
 }
 
 function hideBanner() {
