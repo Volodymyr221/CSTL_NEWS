@@ -125,12 +125,12 @@ function clearTrackedRoute() {
   localStorage.removeItem(TRACK_KEY);
 }
 
-function showBanner(label, route) {
+function showBanner(label, route, isSubroute = false) {
   const banner = document.getElementById('bus-track-banner');
   if (!banner) return;
   const lEl = banner.querySelector('.btb-label');
   const rEl = banner.querySelector('.btb-route');
-  if (lEl) lEl.textContent = label;
+  if (lEl) { lEl.textContent = label; lEl.classList.toggle('btb-label--subroute', isSubroute); }
   if (rEl) rEl.textContent = route;
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
@@ -163,7 +163,10 @@ function checkTrackNotifications(forceInitial = false) {
       const [a, b] = parseRouteEndpoints(route.name);
       const segFrom = _trackedStop   || a;
       const segTo   = _trackedToStop || b;
-      showBanner('Відстежується', `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`);
+      const heading   = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
+      const fullRoute = `${a.toUpperCase()} → ${b.toUpperCase()}`;
+      const hasSeg    = heading !== fullRoute;
+      showBanner(hasSeg ? fullRoute : 'Відстежується', heading, hasSeg);
     }
     return;
   }
@@ -175,14 +178,16 @@ function checkTrackNotifications(forceInitial = false) {
   if (!route) { hideBanner(); return; }
 
   const [a, b] = parseRouteEndpoints(route.name);
-  const segFrom = _trackedStop   || a;
-  const segTo   = _trackedToStop || b;
-  const label   = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
+  const segFrom   = _trackedStop   || a;
+  const segTo     = _trackedToStop || b;
+  const heading   = `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}`;
+  const fullRoute = `${a.toUpperCase()} → ${b.toUpperCase()}`;
+  const hasSeg    = heading !== fullRoute;
 
   // Скасований рейс — показуємо при кожному новому виклику (важлива подія)
   if (route.status === 'cancelled') {
     if (!_notifiedCanc) { _notifiedCanc = true; saveTrackedRoute(); }
-    showBanner('Рейс скасовано', label);
+    showBanner('Рейс скасовано', heading);
     return;
   }
 
@@ -206,12 +211,12 @@ function checkTrackNotifications(forceInitial = false) {
             minsToBoard <= 15
               ? `До ${_trackedStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
               : 'В дорозі',
-            label);
+            heading);
           return;
         }
       }
     }
-    if (forceShow) showBanner('Вже в дорозі', label);
+    if (forceShow) showBanner('Вже в дорозі', heading);
     return;
   }
 
@@ -220,9 +225,12 @@ function checkTrackNotifications(forceInitial = false) {
     if (!_notifiedWarning && m <= 15) { _notifiedWarning = true; forceShow = true; saveTrackedRoute(); }
     if (forceShow) showBanner(
       m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
-      label);
+      heading);
     return;
   }
+
+  // Стан очікування без таймеру / початковий — показуємо підзаголовок з маршрутом
+  if (forceShow) showBanner(hasSeg ? fullRoute : 'Відстежується', heading, hasSeg);
 }
 
 function isDayActive(days) {

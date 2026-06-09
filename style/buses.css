@@ -1545,6 +1545,11 @@
   color: rgba(0,0,0,0.6);
   line-height: 1.2;
 }
+.btb-label.btb-label--subroute {
+  color: #722F37;
+  font-size: 12px;
+  font-weight: 600;
+}
 .btb-route {
   font-size: 16px;
   font-weight: 700;

@@ -1895,14 +1895,16 @@ ${post.text}
     _notifiedFuture = false;
     localStorage.removeItem(TRACK_KEY);
   }
-  function showBanner(label, route) {
+  function showBanner(label, route, isSubroute = false) {
     const banner = document.getElementById("bus-track-banner");
     if (!banner)
       return;
     const lEl = banner.querySelector(".btb-label");
     const rEl = banner.querySelector(".btb-route");
-    if (lEl)
+    if (lEl) {
       lEl.textContent = label;
+      lEl.classList.toggle("btb-label--subroute", isSubroute);
+    }
     if (rEl)
       rEl.textContent = route;
     if (_bannerHideTimer) {
@@ -1948,7 +1950,10 @@ ${post.text}
         const [a2, b2] = parseRouteEndpoints(route2.name);
         const segFrom2 = _trackedStop || a2;
         const segTo2 = _trackedToStop || b2;
-        showBanner("\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", `${segFrom2.toUpperCase()} \u2192 ${segTo2.toUpperCase()}`);
+        const heading2 = `${segFrom2.toUpperCase()} \u2192 ${segTo2.toUpperCase()}`;
+        const fullRoute2 = `${a2.toUpperCase()} \u2192 ${b2.toUpperCase()}`;
+        const hasSeg2 = heading2 !== fullRoute2;
+        showBanner(hasSeg2 ? fullRoute2 : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", heading2, hasSeg2);
       }
       return;
     }
@@ -1965,13 +1970,15 @@ ${post.text}
     const [a, b] = parseRouteEndpoints(route.name);
     const segFrom = _trackedStop || a;
     const segTo = _trackedToStop || b;
-    const label = `${segFrom.toUpperCase()} \u2192 ${segTo.toUpperCase()}`;
+    const heading = `${segFrom.toUpperCase()} \u2192 ${segTo.toUpperCase()}`;
+    const fullRoute = `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
+    const hasSeg = heading !== fullRoute;
     if (route.status === "cancelled") {
       if (!_notifiedCanc) {
         _notifiedCanc = true;
         saveTrackedRoute();
       }
-      showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", label);
+      showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading);
       return;
     }
     const state = getRouteState(route);
@@ -2001,14 +2008,14 @@ ${post.text}
             if (forceShow)
               showBanner(
                 minsToBoard <= 15 ? `\u0414\u043E ${_trackedStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
-                label
+                heading
               );
             return;
           }
         }
       }
       if (forceShow)
-        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", label);
+        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
@@ -2021,10 +2028,12 @@ ${post.text}
       if (forceShow)
         showBanner(
           m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
-          label
+          heading
         );
       return;
     }
+    if (forceShow)
+      showBanner(hasSeg ? fullRoute : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0454\u0442\u044C\u0441\u044F", heading, hasSeg);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
