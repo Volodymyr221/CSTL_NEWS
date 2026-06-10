@@ -966,12 +966,14 @@
   background: #E1E4EC;
   font-weight: 700;
 }
-.bs-stop-row.hl:first-child {
+.bs-stop-row.hl:first-child,
+.bs-stop-row.hl--from {
   background: linear-gradient(to bottom, #E1E4EC 45%, #f5f5f5 100%);
   border-top: 1.5px solid #C4C9D6;
   border-radius: 8px 8px 0 0;
 }
-.bs-stop-row.hl:last-child {
+.bs-stop-row.hl:last-child,
+.bs-stop-row.hl--to {
   background: linear-gradient(to top, #E1E4EC 45%, #f5f5f5 100%);
   border-bottom: 1.5px solid #C4C9D6;
   border-radius: 0 0 8px 8px;

@@ -1030,7 +1030,8 @@ function renderRouteList() {
       const isNextS   = isEnroute && s.name === liveNextStop;
       const t         = getStopHHMM(route, s.name);
       let cls = 'bs-stop-row';
-      if (hl)        cls += ' hl';
+      if (isFrom)    cls += ' hl hl--from';
+      else if (isTo) cls += ' hl hl--to';
       if (isCurrent) cls += ' bs-stop--current';
       if (isNextS)   cls += ' bs-stop--next';
       const prefixHtml = isCurrent
