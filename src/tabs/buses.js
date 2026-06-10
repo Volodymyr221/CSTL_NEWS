@@ -968,6 +968,18 @@ function renderRouteList() {
     const c        = carrierInfo(route.carrier);
     const expanded = expandedIds.has(route.id);
 
+    // Маркери ● і 📍 у списку зупинок: якщо немає активного фільтру але є
+    // відстежуваний сегмент — показуємо маркери для зупинок сегменту
+    const trackedSeg     = getTrackedSegmentForHero(route.id);
+    const [rA, rB]       = parseRouteEndpoints(route.name || '');
+    const hasTrackedSeg  = !!(
+      trackedSeg?.boardingStop && trackedSeg?.alightingStop &&
+      (trackedSeg.boardingStop.toUpperCase()  !== rA.toUpperCase() ||
+       trackedSeg.alightingStop.toUpperCase() !== rB.toUpperCase())
+    );
+    const hlFrom = (!fromStop && !toStop && hasTrackedSeg) ? trackedSeg.boardingStop  : effFrom;
+    const hlTo   = (!fromStop && !toStop && hasTrackedSeg) ? trackedSeg.alightingStop : effTo;
+
     const isEnroute = isViewingToday() && getRouteState(route) === 'enroute' && route.status !== 'cancelled';
     // Для рейсу "в дорозі" — визначаємо поточну і наступну зупинку
     const liveTimings     = isEnroute ? getRouteTimings(route) : null;
@@ -976,8 +988,8 @@ function renderRouteList() {
 
     const fromIdx   = route.stops.findIndex(s => s.name === effFrom);
     const stopsHtml = route.stops.map((s, idx) => {
-      const isFrom    = s.name === effFrom;
-      const isTo      = s.name === effTo;
+      const isFrom    = s.name === hlFrom;
+      const isTo      = s.name === hlTo;
       const hl        = isFrom || isTo;
       const isCurrent = isEnroute && s.name === liveCurrentStop;
       const isNextS   = isEnroute && s.name === liveNextStop;

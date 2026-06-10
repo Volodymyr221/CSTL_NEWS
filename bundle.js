@@ -2600,14 +2600,19 @@ ${post.text}
       const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
       const c = carrierInfo(route.carrier);
       const expanded = expandedIds.has(route.id);
+      const trackedSeg = getTrackedSegmentForHero(route.id);
+      const [rA, rB] = parseRouteEndpoints(route.name || "");
+      const hasTrackedSeg = !!(trackedSeg?.boardingStop && trackedSeg?.alightingStop && (trackedSeg.boardingStop.toUpperCase() !== rA.toUpperCase() || trackedSeg.alightingStop.toUpperCase() !== rB.toUpperCase()));
+      const hlFrom = !fromStop && !toStop && hasTrackedSeg ? trackedSeg.boardingStop : effFrom;
+      const hlTo = !fromStop && !toStop && hasTrackedSeg ? trackedSeg.alightingStop : effTo;
       const isEnroute = isViewingToday() && getRouteState(route) === "enroute" && route.status !== "cancelled";
       const liveTimings = isEnroute ? getRouteTimings(route) : null;
       const liveCurrentStop = liveTimings?.currentStop || null;
       const liveNextStop = liveTimings?.nextStop || null;
       const fromIdx = route.stops.findIndex((s) => s.name === effFrom);
       const stopsHtml = route.stops.map((s, idx) => {
-        const isFrom = s.name === effFrom;
-        const isTo = s.name === effTo;
+        const isFrom = s.name === hlFrom;
+        const isTo = s.name === hlTo;
         const hl = isFrom || isTo;
         const isCurrent = isEnroute && s.name === liveCurrentStop;
         const isNextS = isEnroute && s.name === liveNextStop;
