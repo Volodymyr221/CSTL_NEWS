@@ -2706,7 +2706,7 @@ ${post.text}
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}${trackedSegSubtitle}</div>
+            <div class="bus-card-route">${trackedSegSubtitle}${escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>\u041E\u0440\u0456\u0454\u043D\u0442\u043E\u0432\u043D\u043E: <span style="white-space:nowrap">${escapeHtml(durStr)}</span></span>
               <span class="bus-meta-sep">\xB7</span>

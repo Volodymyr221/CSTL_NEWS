@@ -1109,7 +1109,7 @@ function renderRouteList() {
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}${trackedSegSubtitle}</div>
+            <div class="bus-card-route">${trackedSegSubtitle}${escapeHtml(routeLabel)}${fullLabel}</div>
             <div class="bus-card-meta">
               <span>Орієнтовно: <span style="white-space:nowrap">${escapeHtml(durStr)}</span></span>
               <span class="bus-meta-sep">·</span>
