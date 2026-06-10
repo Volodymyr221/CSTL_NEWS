@@ -1942,6 +1942,11 @@ ${post.text}
     const h = Math.floor(m / 60), min = m % 60;
     return min ? `${h} \u0433\u043E\u0434 ${min} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
   }
+  function fmtBannerDate(iso) {
+    const months = ["\u0421\u0406\u0427", "\u041B\u042E\u0422", "\u0411\u0415\u0420", "\u041A\u0412\u0406", "\u0422\u0420\u0410", "\u0427\u0415\u0420", "\u041B\u0418\u041F", "\u0421\u0415\u0420", "\u0412\u0415\u0420", "\u0416\u041E\u0412", "\u041B\u0418\u0421", "\u0413\u0420\u0423"];
+    const [, m, d] = iso.split("-");
+    return `${+d} ${months[+m - 1]}`;
+  }
   function buildBannerTexts(route) {
     const [a, b] = parseRouteEndpoints(route.name);
     const segFrom = _trackedStop || a;
@@ -1954,7 +1959,9 @@ ${post.text}
     const segToTime = getStopHHMM(route, segTo);
     const segTimeStr = segFromTime && segToTime ? `${segFromTime} \u2192 ${segToTime}` : timeStr;
     const heading = hasSeg ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}` : `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
-    const subDefault = hasSeg ? segTimeStr : timeStr;
+    const dateStr = _trackDate ? fmtBannerDate(_trackDate) : "";
+    const timeLabel = hasSeg ? segTimeStr : timeStr;
+    const subDefault = dateStr && timeLabel ? `${dateStr} | ${timeLabel}` : timeLabel || dateStr;
     return { heading, subDefault };
   }
   function checkTrackNotifications(forceInitial = false) {

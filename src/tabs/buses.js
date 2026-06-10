@@ -158,6 +158,12 @@ function fmtMins(m) {
   return min ? `${h} год ${min} хв` : `${h} год`;
 }
 
+function fmtBannerDate(iso) {
+  const months = ['СІЧ','ЛЮТ','БЕР','КВІ','ТРА','ЧЕР','ЛИП','СЕР','ВЕР','ЖОВ','ЛИС','ГРУ'];
+  const [, m, d] = iso.split('-');
+  return `${+d} ${months[+m - 1]}`;
+}
+
 function buildBannerTexts(route) {
   const [a, b] = parseRouteEndpoints(route.name);
   const segFrom = _trackedStop   || a;
@@ -175,7 +181,10 @@ function buildBannerTexts(route) {
   const heading    = hasSeg
     ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}`
     : `${a.toUpperCase()} → ${b.toUpperCase()}`;
-  const subDefault = hasSeg ? segTimeStr : timeStr;
+
+  const dateStr    = _trackDate ? fmtBannerDate(_trackDate) : '';
+  const timeLabel  = hasSeg ? segTimeStr : timeStr;
+  const subDefault = dateStr && timeLabel ? `${dateStr} | ${timeLabel}` : (timeLabel || dateStr);
 
   return { heading, subDefault };
 }
