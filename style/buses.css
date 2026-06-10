@@ -978,6 +978,18 @@
   border-bottom: 1.5px solid #C4C9D6;
   border-radius: 0 0 8px 8px;
 }
+/* Проміжна А (не перша): затухає і зверху, і знизу */
+.bs-stop-row.hl--from:not(:first-child) {
+  background: linear-gradient(to bottom, #f5f5f5 0%, #E1E4EC 30%, #E1E4EC 70%, #f5f5f5 100%);
+  border-bottom: 1.5px solid #C4C9D6;
+  border-radius: 0;
+}
+/* Проміжна Б (не остання): затухає і зверху, і знизу */
+.bs-stop-row.hl--to:not(:last-child) {
+  background: linear-gradient(to bottom, #f5f5f5 0%, #E1E4EC 30%, #E1E4EC 70%, #f5f5f5 100%);
+  border-top: 1.5px solid #C4C9D6;
+  border-radius: 0;
+}
 .bs-stop-row.bs-stop--current {
   color: var(--black);
   font-weight: 700;
