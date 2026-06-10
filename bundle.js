@@ -1904,6 +1904,17 @@ ${post.text}
     if (lEl) {
       lEl.textContent = label;
       lEl.classList.toggle("btb-label--subroute", isSubroute);
+      lEl.style.letterSpacing = "";
+      if (isSubroute && label) {
+        lEl.style.letterSpacing = "0px";
+        void lEl.offsetWidth;
+        const avail = lEl.clientWidth;
+        const textW = lEl.scrollWidth;
+        const chars = label.length - 1;
+        if (chars > 0 && avail > textW) {
+          lEl.style.letterSpacing = ((avail - textW) / chars).toFixed(2) + "px";
+        }
+      }
     }
     if (rEl) {
       rEl.textContent = route;
