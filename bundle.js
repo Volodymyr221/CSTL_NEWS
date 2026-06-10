@@ -351,6 +351,23 @@
     const { data } = supa.storage.from("community-photos").getPublicUrl(path);
     return { url: data?.publicUrl || null, error: null };
   }
+  async function savePushSubscription(payload) {
+    if (!supa)
+      return { ok: false };
+    const { error } = await supa.from("push_subscriptions").upsert(payload, { onConflict: "endpoint,route_id,track_date" });
+    if (error) {
+      console.warn("[supabase] savePushSubscription:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
+  }
+  async function deletePushSubscription(endpoint, routeId, trackDate) {
+    if (!supa)
+      return;
+    const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
+    if (error)
+      console.warn("[supabase] deletePushSubscription:", error.message);
+  }
   function subscribeReactions(onChange) {
     if (!supa)
       return () => {
@@ -1774,6 +1791,7 @@ ${post.text}
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
   var TRACK_KEY = "bus_track_v2";
+  var VAPID_PUBLIC_KEY = "BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;
@@ -1843,6 +1861,60 @@ ${post.text}
       if (p?.to)
         toStop = p.to;
     } catch {
+    }
+  }
+  function urlBase64ToUint8Array(b64) {
+    const pad2 = "=".repeat((4 - b64.length % 4) % 4);
+    const base = (b64 + pad2).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base);
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+  async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+    if (trackDate !== getTodayISO())
+      return;
+    if (!("Notification" in window) || !("serviceWorker" in navigator))
+      return;
+    try {
+      let perm = Notification.permission;
+      if (perm === "denied")
+        return;
+      if (perm === "default")
+        perm = await Notification.requestPermission();
+      if (perm !== "granted")
+        return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+      });
+      const subJson = sub.toJSON();
+      await savePushSubscription({
+        user_uuid: getAnonId(),
+        endpoint: subJson.endpoint,
+        p256dh: subJson.keys.p256dh,
+        auth_key: subJson.keys.auth,
+        route_id: routeId,
+        route_name: routeName || "",
+        boarding_stop: boardingStop || null,
+        alighting_stop: alightingStop || null,
+        track_date: trackDate,
+        dep_time: depTime || null
+      });
+    } catch (err) {
+      console.warn("[push] subscribe error:", err);
+    }
+  }
+  async function unsubscribeFromPush(routeId, trackDate) {
+    if (trackDate !== getTodayISO())
+      return;
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub)
+        return;
+      await deletePushSubscription(sub.endpoint, routeId, trackDate);
+    } catch (err) {
+      console.warn("[push] unsubscribe error:", err);
     }
   }
   function loadTrackedRoute() {
@@ -2490,6 +2562,7 @@ ${post.text}
           heroBtn.addEventListener("click", () => {
             const entry = getTrackedSegmentForHero(route.id, route);
             if (entry) {
+              unsubscribeFromPush(entry.routeId, entry.trackDate);
               removeTrackedEntry(entry);
               checkTrackNotifications(false);
               renderSmartRow();
@@ -2783,8 +2856,10 @@ ${post.text}
         const rid = btn.dataset.trackId;
         if (isRouteSegmentTracked(rid)) {
           const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
-          if (entry)
+          if (entry) {
             removeTrackedEntry(entry);
+            unsubscribeFromPush(rid, busDay);
+          }
         } else {
           const existing = trackedRoutes.find((t) => t.routeId === rid && t.trackDate === busDay);
           trackedRoutes.push({
@@ -2799,6 +2874,9 @@ ${post.text}
             notifiedFuture: false
           });
           saveTrackedRoute();
+          const route = (getDayData().routes || []).find((r) => r.id === rid);
+          const depTime = route ? getStopHHMM(route, fromStop || route.stops[0].name) : null;
+          subscribeToPush(rid, route?.name || "", fromStop || null, toStop || null, busDay, depTime);
         }
         checkTrackNotifications(true);
         renderSmartRow();

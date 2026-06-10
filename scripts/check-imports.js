@@ -45,7 +45,7 @@ const WHITELIST = new Set([
   'File', 'FileReader', 'Image', 'HTMLElement', 'Element', 'Node',
   'NodeList', 'Event', 'CustomEvent', 'KeyboardEvent', 'TouchEvent',
   'MouseEvent', 'PointerEvent', 'PopStateEvent', 'crypto', 'navigator',
-  'location', 'history', 'alert', 'confirm', 'prompt', 'screen',
+  'location', 'history', 'alert', 'confirm', 'prompt', 'screen', 'atob', 'btoa',
   'performance', 'caches', 'self', 'addEventListener', 'removeEventListener',
   'matchMedia', 'getComputedStyle', 'AbortController', 'AbortSignal',
   'Notification', 'Worker', 'ServiceWorker', 'BroadcastChannel',

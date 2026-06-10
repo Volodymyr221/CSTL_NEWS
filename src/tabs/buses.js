@@ -4,9 +4,14 @@ import {
   getStopMins, getStopHHMM, getRouteState, getRouteTimings,
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
+import { getAnonId, savePushSubscription, deletePushSubscription } from '../core/supabase.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
+
+// VAPID public key (публічний ключ — безпечно зберігати у коді).
+// Private key — тільки у Supabase Edge Function Secrets (VAPID_PRIVATE_KEY).
+const VAPID_PUBLIC_KEY = 'BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo';
 
 let busData       = null;
 let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
@@ -73,6 +78,65 @@ function loadPrefs() {
     if (p?.from) fromStop = p.from;
     if (p?.to)   toStop   = p.to;
   } catch {}
+}
+
+// ── Push-сповіщення Level B ───────────────────────────────────────────────────
+
+// Перетворює VAPID public key з Base64url у Uint8Array для pushManager.subscribe()
+function urlBase64ToUint8Array(b64) {
+  const pad  = '='.repeat((4 - b64.length % 4) % 4);
+  const base = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
+  const raw  = atob(base);
+  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
+}
+
+// Підписує браузер на Web Push і зберігає у Supabase.
+// Запитує дозвіл на сповіщення якщо ще не надано.
+// Тихо виходить якщо: заборонено, немає SW, не сьогодні.
+async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
+  if (trackDate !== getTodayISO()) return; // push тільки для сьогоднішніх рейсів
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  try {
+    let perm = Notification.permission;
+    if (perm === 'denied') return;
+    if (perm === 'default') perm = await Notification.requestPermission();
+    if (perm !== 'granted') return;
+
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.subscribe({
+      userVisibleOnly:      true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+    });
+    const subJson = sub.toJSON();
+    await savePushSubscription({
+      user_uuid:     getAnonId(),
+      endpoint:      subJson.endpoint,
+      p256dh:        subJson.keys.p256dh,
+      auth_key:      subJson.keys.auth,
+      route_id:      routeId,
+      route_name:    routeName || '',
+      boarding_stop:  boardingStop  || null,
+      alighting_stop: alightingStop || null,
+      track_date:    trackDate,
+      dep_time:      depTime || null,
+    });
+  } catch (err) {
+    console.warn('[push] subscribe error:', err);
+  }
+}
+
+// Видаляє підписку для конкретного маршруту з Supabase.
+// НЕ скасовує браузерну підписку — інші маршрути продовжують працювати.
+async function unsubscribeFromPush(routeId, trackDate) {
+  if (trackDate !== getTodayISO()) return;
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) return;
+    await deletePushSubscription(sub.endpoint, routeId, trackDate);
+  } catch (err) {
+    console.warn('[push] unsubscribe error:', err);
+  }
 }
 
 // ── Track route (відстеження рейсу) ──────────────────────────────────
@@ -825,7 +889,13 @@ function switchHeroCard() {
       if (heroBtn) {
         heroBtn.addEventListener('click', () => {
           const entry = getTrackedSegmentForHero(route.id, route);
-          if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
+          if (entry) {
+            unsubscribeFromPush(entry.routeId, entry.trackDate);
+            removeTrackedEntry(entry);
+            checkTrackNotifications(false);
+            renderSmartRow();
+            renderRouteList();
+          }
         });
       }
     }
@@ -1200,7 +1270,10 @@ function renderRouteList() {
       const rid = btn.dataset.trackId;
       if (isRouteSegmentTracked(rid)) {
         const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
-        if (entry) removeTrackedEntry(entry);
+        if (entry) {
+          removeTrackedEntry(entry);
+          unsubscribeFromPush(rid, busDay);
+        }
       } else {
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);
@@ -1216,6 +1289,10 @@ function renderRouteList() {
           notifiedFuture:  false,
         });
         saveTrackedRoute();
+        // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
+        const route   = (getDayData().routes || []).find(r => r.id === rid);
+        const depTime = route ? getStopHHMM(route, fromStop || route.stops[0].name) : null;
+        subscribeToPush(rid, route?.name || '', fromStop || null, toStop || null, busDay, depTime);
       }
       checkTrackNotifications(true);
       renderSmartRow();

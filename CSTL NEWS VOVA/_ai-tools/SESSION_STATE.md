@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-11 00:15
+**Оновлено:** 2026-06-10 21:25
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,7 +14,7 @@
 | **Робоча гілка (поточна сесія)** | `claude/startup-uem-cugk5q` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260611-0007` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260610-2119` |
 | **Статус вкладки «Автобуси»** | 🟢 РОБОЧИЙ ВАРІАНТ — зафіксовано Вовою 11.06.2026 |
 
 ---
@@ -319,6 +319,39 @@ if (trackedRouteId && _trackDate === getTodayISO()) {
 - `style/buses.css`: `margin-left: 5px` на `.bhv4-status-dot` — тінь пульсу більше не налазить на текст.
 - Всі 3 стани тепер пульсують: `waiting` (сірий), `urgent` (бордо, було), `enroute` (зелений).
 - `sw.js`: CACHE_NAME → `cstl-20260608-0828`.
+
+---
+
+## ✅ Зроблено у поточній сесії (10.06.2026, Level B push-сповіщення)
+
+**feat(buses)** — Web Push Level B: справжні push-сповіщення навіть при закритому додатку:
+
+- `sw.js`: `push` event listener → `showNotification()` + `notificationclick` → відкриває вкладку Автобуси
+- `src/core/supabase.js`: `savePushSubscription()` + `deletePushSubscription()` — зберігає підписки у Supabase
+- `src/tabs/buses.js`:
+  - `VAPID_PUBLIC_KEY` константа (публічний ключ — safe у коді)
+  - `urlBase64ToUint8Array()` — конвертація ключа для pushManager
+  - `subscribeToPush()` — запитує дозвіл → підписує браузер → зберігає у Supabase
+  - `unsubscribeFromPush()` — видаляє рядок з Supabase (браузерну підписку не скасовує)
+  - Hook у track-кнопку картки рейсу: підписка при відстеженні
+  - Hook у hero-картку: відписка при знятті через bookmark-іконку
+- `scripts/supabase_push_schema.sql` — SQL для таблиці `push_subscriptions` (Вова запускає у Supabase)
+- `supabase/functions/send-bus-push/index.ts` — Edge Function (Deno): кожні 5 хв перевіряє рейси, надсилає push за 8-16 хв до відправлення
+- `scripts/check-imports.js`: додано `atob`, `btoa` до whitelist глобалів
+- `sw.js`: CACHE_NAME → `cstl-20260610-2119`
+
+### 🔑 ВАЖЛИВО — VAPID ключі
+
+```
+Public Key (у коді): BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo
+Private Key (ТІЛЬКИ у Supabase Secret — НІКОЛИ не у коді): o03idVnwjS-ziu1uU8IXwprjxoCk0TzSd2JhvSOfL_k
+```
+
+### ⚡ Що Вова має зробити щоб Push запрацював (3 кроки)
+
+1. **Supabase SQL** — зайти у `uabyfecseqnemvcqhdem.supabase.co` → SQL Editor → вставити і запустити `scripts/supabase_push_schema.sql`
+2. **Edge Function** — Supabase Dashboard → Edge Functions → New Function → назва `send-bus-push` → вставити код з `supabase/functions/send-bus-push/index.ts` → Deploy
+3. **Secret + Cron** — у тій самій Edge Function → Secrets → додати `VAPID_PRIVATE_KEY = o03idVnwjS-ziu1uU8IXwprjxoCk0TzSd2JhvSOfL_k` → Schedule → `*/5 * * * *`
 
 ---
 

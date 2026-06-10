@@ -219,6 +219,32 @@ export async function uploadPhotoToStorage(blob) {
 // Викликає callback при INSERT/UPDATE/DELETE у відповідній таблиці.
 // Повертає функцію-unsubscribe.
 
+// ── PUSH-ПІДПИСКИ (Level B — Web Push для Автобусів) ─────────────────────────
+
+// Зберігає push-підписку у Supabase. При повторному виклику — upsert оновлює.
+// payload: { user_uuid, endpoint, p256dh, auth_key, route_id, route_name,
+//            boarding_stop, alighting_stop, track_date, dep_time }
+export async function savePushSubscription(payload) {
+  if (!supa) return { ok: false };
+  const { error } = await supa.from('push_subscriptions')
+    .upsert(payload, { onConflict: 'endpoint,route_id,track_date' });
+  if (error) { console.warn('[supabase] savePushSubscription:', error.message); return { ok: false }; }
+  return { ok: true };
+}
+
+// Видаляє конкретний рядок підписки (при знятті відстеження рейсу).
+export async function deletePushSubscription(endpoint, routeId, trackDate) {
+  if (!supa) return;
+  const { error } = await supa.from('push_subscriptions')
+    .delete()
+    .eq('endpoint', endpoint)
+    .eq('route_id', routeId)
+    .eq('track_date', trackDate);
+  if (error) console.warn('[supabase] deletePushSubscription:', error.message);
+}
+
+// ── REALTIME ─────────────────────────────────────────────────────────────────
+
 export function subscribeReactions(onChange) {
   if (!supa) return () => {};
   const ch = supa.channel('reactions-watch')
