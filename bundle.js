@@ -1773,7 +1773,7 @@ ${post.text}
 
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
-  var TRACK_KEY = "bus_track_v1";
+  var TRACK_KEY = "bus_track_v2";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;
@@ -1785,15 +1785,7 @@ ${post.text}
   var activeField = null;
   var smartRowIndex = 0;
   var selectedRouteId = null;
-  var trackedRouteId = null;
-  var _trackDate = null;
-  var _trackedStop = null;
-  var _trackedToStop = null;
-  var _notifiedDep = false;
-  var _notifiedCanc = false;
-  var _notifiedBoard = false;
-  var _notifiedWarning = false;
-  var _notifiedFuture = false;
+  var trackedRoutes = [];
   var _bannerHideTimer = null;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
@@ -1855,50 +1847,40 @@ ${post.text}
   }
   function loadTrackedRoute() {
     try {
+      const today = getTodayISO();
       const d = JSON.parse(localStorage.getItem(TRACK_KEY));
-      if (!d?.trackDate || d.trackDate < getTodayISO()) {
-        localStorage.removeItem(TRACK_KEY);
-        return;
+      if (Array.isArray(d?.routes)) {
+        trackedRoutes = d.routes.filter((t) => t.trackDate >= today);
+      } else {
+        trackedRoutes = [];
       }
-      trackedRouteId = d.routeId;
-      _trackDate = d.trackDate;
-      _trackedStop = d.boardingStop || null;
-      _trackedToStop = d.alightingStop || null;
-      _notifiedDep = d.notifiedDep || false;
-      _notifiedCanc = d.notifiedCanc || false;
-      _notifiedBoard = d.notifiedBoard || false;
-      _notifiedWarning = d.notifiedWarning || false;
+      if (!trackedRoutes.length)
+        localStorage.removeItem(TRACK_KEY);
     } catch {
+      trackedRoutes = [];
     }
   }
   function saveTrackedRoute() {
-    localStorage.setItem(TRACK_KEY, JSON.stringify({
-      trackDate: _trackDate || getTodayISO(),
-      routeId: trackedRouteId,
-      boardingStop: _trackedStop,
-      alightingStop: _trackedToStop,
-      notifiedDep: _notifiedDep,
-      notifiedCanc: _notifiedCanc,
-      notifiedBoard: _notifiedBoard,
-      notifiedWarning: _notifiedWarning
-    }));
+    if (!trackedRoutes.length) {
+      localStorage.removeItem(TRACK_KEY);
+    } else {
+      localStorage.setItem(TRACK_KEY, JSON.stringify({ routes: trackedRoutes }));
+    }
   }
-  function clearTrackedRoute() {
-    trackedRouteId = null;
-    _trackDate = null;
-    _trackedStop = null;
-    _trackedToStop = null;
-    _notifiedDep = false;
-    _notifiedCanc = false;
-    _notifiedBoard = false;
-    _notifiedWarning = false;
-    _notifiedFuture = false;
-    localStorage.removeItem(TRACK_KEY);
+  function removeTrackedEntry(entry) {
+    const idx = trackedRoutes.indexOf(entry);
+    if (idx !== -1)
+      trackedRoutes.splice(idx, 1);
+    saveTrackedRoute();
+  }
+  function findTrackedEntry(routeId, boardingStop, alightingStop, date) {
+    const day = date || busDay;
+    return trackedRoutes.find(
+      (t) => t.routeId === routeId && t.trackDate === day && (t.boardingStop || null) === (boardingStop || null) && (t.alightingStop || null) === (alightingStop || null)
+    );
   }
   function isRouteSegmentTracked(routeId) {
-    if (trackedRouteId !== routeId || _trackDate !== busDay)
-      return false;
-    return _trackedStop === (fromStop || null) && _trackedToStop === (toStop || null);
+    return !!findTrackedEntry(routeId, fromStop || null, toStop || null);
   }
   function showBanner(label, route, isSubroute = false) {
     const banner = document.getElementById("bus-track-banner");
@@ -1936,16 +1918,14 @@ ${post.text}
     }
     banner.style.transform = "";
     banner.classList.add("visible");
-    _bannerHideTimer = setTimeout(() => {
-      hideBanner();
-      _bannerHideTimer = null;
-    }, 4e3);
   }
   function hideBanner() {
-    const banner = document.getElementById("bus-track-banner");
-    if (banner) {
-      banner.style.transform = "";
-      banner.classList.remove("visible");
+    if (!trackedRoutes.length) {
+      const banner = document.getElementById("bus-track-banner");
+      if (banner) {
+        banner.style.transform = "";
+        banner.classList.remove("visible");
+      }
     }
     if (_bannerHideTimer) {
       clearTimeout(_bannerHideTimer);
@@ -1963,10 +1943,10 @@ ${post.text}
     const [, m, d] = iso.split("-");
     return `${+d} ${months[+m - 1]}`;
   }
-  function buildBannerTexts(route) {
+  function buildBannerTexts(route, tracked) {
     const [a, b] = parseRouteEndpoints(route.name);
-    const segFrom = _trackedStop || a;
-    const segTo = _trackedToStop || b;
+    const segFrom = tracked.boardingStop || a;
+    const segTo = tracked.alightingStop || b;
     const hasSeg = segFrom.toUpperCase() !== a.toUpperCase() || segTo.toUpperCase() !== b.toUpperCase();
     const startTime = getStopHHMM(route, route.stops[0].name);
     const endTime = getStopHHMM(route, route.stops[route.stops.length - 1].name);
@@ -1975,42 +1955,53 @@ ${post.text}
     const segToTime = getStopHHMM(route, segTo);
     const segTimeStr = segFromTime && segToTime ? `${segFromTime} \u2192 ${segToTime}` : timeStr;
     const heading = hasSeg ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}` : `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
-    const dateStr = _trackDate ? fmtBannerDate(_trackDate) : "";
+    const dateStr = tracked.trackDate ? fmtBannerDate(tracked.trackDate) : "";
     const timeLabel = hasSeg ? segTimeStr : timeStr;
     const subDefault = dateStr && timeLabel ? `${dateStr} | ${timeLabel}` : timeLabel || dateStr;
     return { heading, subDefault };
   }
   function checkTrackNotifications(forceInitial = false) {
-    if (!trackedRouteId) {
+    const today = getTodayISO();
+    const before = trackedRoutes.length;
+    trackedRoutes = trackedRoutes.filter((t) => t.trackDate >= today);
+    if (before !== trackedRoutes.length)
+      saveTrackedRoute();
+    if (!trackedRoutes.length) {
       hideBanner();
       return;
     }
-    if (_trackDate > getTodayISO()) {
-      if (!_notifiedFuture) {
-        _notifiedFuture = true;
-        const dayRoutes2 = (busData?.days?.[_trackDate] || {}).routes || [];
-        const route2 = dayRoutes2.find((r) => r.id === trackedRouteId);
+    const forceEntry = forceInitial ? trackedRoutes[trackedRoutes.length - 1] : null;
+    for (const tracked of [...trackedRoutes]) {
+      checkSingleTracked(tracked, tracked === forceEntry);
+    }
+  }
+  function checkSingleTracked(tracked, forceInitial) {
+    const today = getTodayISO();
+    if (tracked.trackDate > today) {
+      if (!tracked.notifiedFuture) {
+        tracked.notifiedFuture = true;
+        saveTrackedRoute();
+        const dayRoutes2 = (busData?.days?.[tracked.trackDate] || {}).routes || [];
+        const route2 = dayRoutes2.find((r) => r.id === tracked.routeId);
         if (!route2)
           return;
-        const { heading: heading2, subDefault: subDefault2 } = buildBannerTexts(route2);
+        const { heading: heading2, subDefault: subDefault2 } = buildBannerTexts(route2, tracked);
         showBanner(subDefault2, heading2, true);
       }
       return;
     }
-    if (_trackDate !== getTodayISO()) {
-      hideBanner();
+    if (tracked.trackDate !== today) {
+      removeTrackedEntry(tracked);
       return;
     }
-    const dayRoutes = (busData?.days ? busData.days[_trackDate] || {} : busData || {}).routes || [];
-    const route = dayRoutes.find((r) => r.id === trackedRouteId);
-    if (!route) {
-      hideBanner();
+    const dayRoutes = (busData?.days ? busData.days[tracked.trackDate] || {} : busData || {}).routes || [];
+    const route = dayRoutes.find((r) => r.id === tracked.routeId);
+    if (!route)
       return;
-    }
-    const { heading, subDefault } = buildBannerTexts(route);
+    const { heading, subDefault } = buildBannerTexts(route, tracked);
     if (route.status === "cancelled") {
-      if (!_notifiedCanc) {
-        _notifiedCanc = true;
+      if (!tracked.notifiedCanc) {
+        tracked.notifiedCanc = true;
         saveTrackedRoute();
       }
       showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading);
@@ -2019,56 +2010,51 @@ ${post.text}
     const state = getRouteState(route);
     const timings = getRouteTimings(route);
     if (state === "past") {
-      hideBanner();
-      clearTrackedRoute();
+      removeTrackedEntry(tracked);
       return;
     }
     let forceShow = forceInitial;
     if (state === "enroute") {
-      if (!_notifiedDep) {
-        _notifiedDep = true;
+      if (!tracked.notifiedDep) {
+        tracked.notifiedDep = true;
         forceShow = true;
         saveTrackedRoute();
       }
-      if (_trackedStop) {
-        const boardMins = getStopMins(route, _trackedStop);
+      if (tracked.boardingStop) {
+        const boardMins = getStopMins(route, tracked.boardingStop);
         if (boardMins !== null) {
           const minsToBoard = boardMins - nowMinutes();
           if (minsToBoard > 0) {
-            if (!_notifiedBoard && minsToBoard <= 15) {
-              _notifiedBoard = true;
+            if (!tracked.notifiedBoard && minsToBoard <= 15) {
+              tracked.notifiedBoard = true;
               forceShow = true;
               saveTrackedRoute();
             }
-            if (forceShow)
-              showBanner(
-                minsToBoard <= 15 ? `\u0414\u043E ${_trackedStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
-                heading
-              );
+            showBanner(
+              minsToBoard <= 15 ? `\u0414\u043E ${tracked.boardingStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
+              heading
+            );
             return;
           }
         }
       }
-      if (forceShow)
-        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
+      showBanner(tracked.notifiedDep && !forceShow ? "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456" : "\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
       const m = timings.minsToDeparture;
-      if (!_notifiedWarning && m <= 15) {
-        _notifiedWarning = true;
+      if (!tracked.notifiedWarning && m <= 15) {
+        tracked.notifiedWarning = true;
         forceShow = true;
         saveTrackedRoute();
       }
-      if (forceShow)
-        showBanner(
-          m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
-          heading
-        );
+      showBanner(
+        m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
+        heading
+      );
       return;
     }
-    if (forceShow)
-      showBanner(subDefault, heading, true);
+    showBanner(subDefault, heading, true);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
@@ -2140,8 +2126,9 @@ ${post.text}
   function findActiveRoutes() {
     const all = getFilteredRoutes();
     if (!isViewingToday()) {
-      if (trackedRouteId && _trackDate === busDay) {
-        const tracked = all.find((r) => r.id === trackedRouteId && r.status !== "cancelled");
+      const trackedForDay = trackedRoutes.filter((t) => t.trackDate === busDay);
+      if (trackedForDay.length) {
+        const tracked = all.find((r) => trackedForDay.some((t) => t.routeId === r.id) && r.status !== "cancelled");
         if (tracked)
           return [tracked];
       }
@@ -2166,16 +2153,19 @@ ${post.text}
       return false;
     });
     const activeList = result.length ? result : findNextRoute() ? [findNextRoute()] : [];
-    if (trackedRouteId && _trackDate === getTodayISO()) {
-      const ti = activeList.findIndex((r) => r.id === trackedRouteId);
+    const trackedTodayIds = [...new Set(
+      trackedRoutes.filter((t) => t.trackDate === getTodayISO()).map((t) => t.routeId)
+    )];
+    [...trackedTodayIds].reverse().forEach((rid) => {
+      const ti = activeList.findIndex((r) => r.id === rid);
       if (ti > 0) {
         activeList.unshift(activeList.splice(ti, 1)[0]);
       } else if (ti === -1) {
-        const tracked = all.find((r) => r.id === trackedRouteId && r.status !== "cancelled");
-        if (tracked)
-          activeList.unshift(tracked);
+        const tr = all.find((r) => r.id === rid && r.status !== "cancelled");
+        if (tr)
+          activeList.unshift(tr);
       }
-    }
+    });
     return activeList;
   }
   function getAllStops() {
@@ -2675,18 +2665,22 @@ ${post.text}
         e.stopPropagation();
         const rid = btn.dataset.trackId;
         if (isRouteSegmentTracked(rid)) {
-          clearTrackedRoute();
+          const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
+          if (entry)
+            removeTrackedEntry(entry);
         } else {
-          const sameRoute = trackedRouteId === rid;
-          trackedRouteId = rid;
-          _trackDate = busDay;
-          _trackedStop = fromStop || null;
-          _trackedToStop = toStop || null;
-          _notifiedDep = sameRoute ? _notifiedDep : false;
-          _notifiedWarning = sameRoute ? _notifiedWarning : false;
-          _notifiedCanc = false;
-          _notifiedBoard = false;
-          _notifiedFuture = false;
+          const existing = trackedRoutes.find((t) => t.routeId === rid && t.trackDate === busDay);
+          trackedRoutes.push({
+            routeId: rid,
+            trackDate: busDay,
+            boardingStop: fromStop || null,
+            alightingStop: toStop || null,
+            notifiedDep: existing ? existing.notifiedDep : false,
+            notifiedWarning: existing ? existing.notifiedWarning : false,
+            notifiedCanc: false,
+            notifiedBoard: false,
+            notifiedFuture: false
+          });
           saveTrackedRoute();
         }
         checkTrackNotifications(true);
