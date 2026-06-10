@@ -333,7 +333,7 @@ function matchesSearch(route) {
   if (fromStop && !fStop) return false;
   if (toStop   && !tStop) return false;
   // Напрямок: fromStop повинен бути географічно ДО toStop (за км)
-  if (fromStop && toStop && fStop.km >= tStop.km) return false;
+  if (fromStop && toStop && fStop.km > tStop.km) return false;
   return true;
 }
 

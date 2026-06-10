@@ -2098,7 +2098,7 @@ ${post.text}
       return false;
     if (toStop && !tStop)
       return false;
-    if (fromStop && toStop && fStop.km >= tStop.km)
+    if (fromStop && toStop && fStop.km > tStop.km)
       return false;
     return true;
   }
