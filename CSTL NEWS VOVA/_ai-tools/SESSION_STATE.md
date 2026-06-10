@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-09 16:35
+**Оновлено:** 2026-06-10 13:53
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -11,10 +11,21 @@
 |--|--|
 | **URL сайту** | https://volodymyr221.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
-| **Робоча гілка (поточна сесія)** | `claude/startup-uem-uc4gmp` |
+| **Робоча гілка (поточна сесія)** | `claude/startup-uem-cugk5q` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260609-1635` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260610-1353` |
+
+## ✅ Зроблено у поточній сесії (10.06.2026, фікс банеру відстеження)
+
+**fix(buses)** — банер: чистий заголовок + час у підзаголовку:
+- `buildBannerTexts()`: прибрано `| HH:MM → HH:MM` з `heading` (заголовку)
+- `subDefault` тепер = тільки час сегменту (`segTimeStr`) або повного маршруту (`timeStr`)
+- `.btb-label--subroute` CSS: колір темний замість бордо, `12px / font-weight:600 / letter-spacing:3.5px`
+
+`sw.js`: CACHE_NAME → `cstl-20260610-1353`
+
+---
 
 ## ✅ Зроблено у поточній сесії (09.06.2026, Dynamic Island анімація банеру — ФІНАЛ)
 
