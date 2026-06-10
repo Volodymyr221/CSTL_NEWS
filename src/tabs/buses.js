@@ -1100,10 +1100,7 @@ function renderRouteList() {
             ${autoNote}
           </div>
           ${busDay >= getTodayISO() && !isPast && route.status !== 'cancelled'
-            ? (() => {
-                const tracked = isRouteSegmentTracked(route.id) || (!fromStop && !toStop && !!getTrackedSegmentForHero(route.id));
-                return `<button class="bs-track-btn${tracked ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${tracked ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`;
-              })()
+            ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${isRouteSegmentTracked(route.id) ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
             : ''}
         </div>
         ${route.stops && route.stops.length > 2
@@ -1172,10 +1169,9 @@ function renderRouteList() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const rid = btn.dataset.trackId;
-      const exactEntry = findTrackedEntry(rid, fromStop || null, toStop || null);
-      const anyEntry   = !fromStop && !toStop ? getTrackedSegmentForHero(rid) : null;
-      if (exactEntry || anyEntry) {
-        removeTrackedEntry(exactEntry || anyEntry);
+      if (isRouteSegmentTracked(rid)) {
+        const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
+        if (entry) removeTrackedEntry(entry);
       } else {
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);
