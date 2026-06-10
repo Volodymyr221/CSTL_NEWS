@@ -1081,8 +1081,9 @@ function renderRouteList() {
       ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
       : '';
     // Підзаголовок відстежуваного сегменту: коли немає активного фільтру але є відстежуваний сегмент
+    const trackedSegArrival = hasTrackedSeg ? getStopHHMM(route, trackedSeg.alightingStop) : null;
     const trackedSegSubtitle = (!anySegment && hasTrackedSeg)
-      ? `<span class="bs-route-full">${escapeHtml(trackedSeg.boardingStop.toUpperCase())} → ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}</span>`
+      ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop.toUpperCase())} → ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}${trackedSegArrival ? ` · ${escapeHtml(trackedSegArrival)}` : ''}</span>`
       : '';
 
     return `

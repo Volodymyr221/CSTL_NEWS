@@ -714,6 +714,13 @@
   overflow: hidden;
   text-overflow: ellipsis;
 }
+.bs-route-full svg {
+  width: 9px;
+  height: 9px;
+  fill: currentColor;
+  vertical-align: -1px;
+  margin-right: 3px;
+}
 .bus-card-meta {
   display: flex;
   align-items: flex-start;
