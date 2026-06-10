@@ -1569,7 +1569,7 @@
 }
 .btb-hint {
   position: absolute;
-  bottom: 7px;
+  top: 7px;
   left: 0;
   right: 0;
   font-size: 8.5px;
