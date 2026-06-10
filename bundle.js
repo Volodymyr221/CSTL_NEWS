@@ -1882,6 +1882,10 @@ ${post.text}
   function isRouteSegmentTracked(routeId) {
     return !!findTrackedEntry(routeId, fromStop || null, toStop || null);
   }
+  function getTrackedSegmentForHero(routeId) {
+    const day = isViewingToday() ? getTodayISO() : busDay;
+    return trackedRoutes.find((t) => t.routeId === routeId && t.trackDate === day) || null;
+  }
   function showBanner(label, route, isSubroute = false) {
     const banner = document.getElementById("bus-track-banner");
     if (!banner)
@@ -2291,28 +2295,47 @@ ${post.text}
       </div>
     </div>`;
   }
-  function buildHeroCard(route, timings, index, total) {
-    const effFrom = getEffectiveFrom(route);
-    const effTo = getEffectiveTo(route);
+  function buildHeroCard(route, timings, index, total, seg = null) {
+    const [routeA, routeB] = parseRouteEndpoints(route.name || "");
+    const segFrom = seg?.boardingStop || null;
+    const segTo = seg?.alightingStop || null;
+    const hasSeg = !!(segFrom && segTo && (segFrom.toUpperCase() !== routeA.toUpperCase() || segTo.toUpperCase() !== routeB.toUpperCase()));
+    const effFrom = hasSeg ? segFrom : getEffectiveFrom(route);
+    const effTo = hasSeg ? segTo : getEffectiveTo(route);
     const fromTime = getStopHHMM(route, effFrom);
     const toTime = getStopHHMM(route, effTo);
     const isEnroute = timings.state === "enroute";
     const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
-    const fromMin = timings.fromMin;
-    const toMin = timings.toMin;
+    const fromMin = hasSeg ? getStopMins(route, segFrom) : timings.fromMin;
+    const toMin = hasSeg ? getStopMins(route, segTo) : timings.toMin;
     const durMins = fromMin !== null && toMin !== null ? toMin - fromMin : null;
     const durStr = durMins !== null ? durMins >= 60 ? `${Math.floor(durMins / 60)} \u0433\u043E\u0434${durMins % 60 ? " " + durMins % 60 + " \u0445\u0432" : ""}` : `${durMins} \u0445\u0432` : "";
     const statusDotClass = isEnroute ? "enroute" : isUrgent ? "urgent" : "waiting";
     const statusDot = `<span class="bhv4-state-dot bhv4-state-dot--${statusDotClass}"></span>`;
     const statusText = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
-    const [, labelB] = parseRouteEndpoints(route.name || "");
     const lastKnownStop = route.stops[route.stops.length - 1].name;
-    const displayNext = timings.nextStop === lastKnownStop ? labelB : timings.nextStop || labelB;
-    const nextStopLine = isEnroute ? `<div class="bhv4-next-stop">\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(displayNext.toUpperCase())}</div>` : timings.state === "waiting" && timings.minsToDeparture !== null ? `<div class="bhv4-next-stop">${escapeHtml(formatCountdownUpper(timings.minsToDeparture))}</div>` : "";
+    const displayNext = timings.nextStop === lastKnownStop ? routeB : timings.nextStop || routeB;
+    let nextStopContent = "";
+    if (isEnroute) {
+      if (hasSeg) {
+        const boardMins = getStopMins(route, segFrom);
+        if (boardMins !== null && boardMins - nowMinutes() > 0) {
+          nextStopContent = `\u0414\u041E ${segFrom.toUpperCase()} \u0417\u0410 ${fmtMins(boardMins - nowMinutes()).toUpperCase()}`;
+        } else {
+          nextStopContent = `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${displayNext.toUpperCase()}`;
+        }
+      } else {
+        nextStopContent = `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${displayNext.toUpperCase()}`;
+      }
+    } else if (timings.state === "waiting" && timings.minsToDeparture !== null) {
+      nextStopContent = formatCountdownUpper(timings.minsToDeparture);
+    }
     const dotsHtml = total > 1 ? Array.from(
       { length: total },
       (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
     ).join("") : "";
+    const routeTitle = hasSeg ? `${escapeHtml(segFrom.toUpperCase())} \u2192 ${escapeHtml(segTo.toUpperCase())}` : `${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}`;
+    const routeFullHtml = hasSeg ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}</div>` : "";
     return `
     <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}">
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
@@ -2336,15 +2359,13 @@ ${post.text}
 
         <div class="bhv4-body">
           <div class="bhv4-left">
-            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((() => {
-      const [a, b] = parseRouteEndpoints(route.name || `${effFrom} \u2013 ${effTo}`);
-      return `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
-    })())}</div>
+            <div class="bhv4-route-name bhv4-dyn">${routeTitle}</div>
+            ${routeFullHtml}
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span></span>
               <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
             </div>
-            <div class="bhv4-next-stop bhv4-dyn">${isEnroute ? `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${escapeHtml(displayNext.toUpperCase())}` : timings.state === "waiting" && timings.minsToDeparture !== null ? escapeHtml(formatCountdownUpper(timings.minsToDeparture)) : ""}</div>
+            <div class="bhv4-next-stop bhv4-dyn">${escapeHtml(nextStopContent)}</div>
           </div>
         </div>
 
@@ -2365,7 +2386,8 @@ ${post.text}
       smartRowIndex = 0;
     const route = routes[smartRowIndex];
     const timings = getTimingsForDisplay(route);
-    el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length);
+    const seg = getTrackedSegmentForHero(route.id);
+    el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length, seg);
     let touchStartX = 0;
     const card = el.firstElementChild;
     card.addEventListener("touchstart", (e) => {
@@ -2411,6 +2433,11 @@ ${post.text}
         smartRowIndex = 0;
       const route = routes[smartRowIndex];
       const timings = getTimingsForDisplay(route);
+      const seg = getTrackedSegmentForHero(route.id);
+      const [routeA, routeB] = parseRouteEndpoints(route.name || "");
+      const segFrom = seg?.boardingStop || null;
+      const segTo = seg?.alightingStop || null;
+      const hasSeg = !!(segFrom && segTo && (segFrom.toUpperCase() !== routeA.toUpperCase() || segTo.toUpperCase() !== routeB.toUpperCase()));
       const isEnroute = timings.state === "enroute";
       const isUrgent = timings.state === "waiting" && timings.minsToDeparture !== null && timings.minsToDeparture <= 10;
       card.className = `bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}`;
@@ -2435,32 +2462,61 @@ ${post.text}
         statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
       }
       const nameEl = card.querySelector(".bhv4-route-name");
+      const existingFull = card.querySelector(".bhv4-route-full");
       if (nameEl) {
-        const [n1, n2] = parseRouteEndpoints(route.name || "");
-        nameEl.textContent = `${n1.toUpperCase()} \u2192 ${n2.toUpperCase()}`;
+        if (hasSeg) {
+          nameEl.textContent = `${segFrom.toUpperCase()} \u2192 ${segTo.toUpperCase()}`;
+          if (existingFull) {
+            existingFull.textContent = `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`;
+          } else {
+            const fullEl = document.createElement("div");
+            fullEl.className = "bhv4-route-full bhv4-dyn";
+            fullEl.textContent = `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`;
+            nameEl.insertAdjacentElement("afterend", fullEl);
+          }
+        } else {
+          nameEl.textContent = `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`;
+          if (existingFull)
+            existingFull.remove();
+        }
       }
       const capsuleEl = card.querySelector(".bhv4-capsule-inner");
       if (capsuleEl) {
-        const effFrom = getEffectiveFrom(route);
-        const effTo = getEffectiveTo(route);
-        capsuleEl.textContent = `${getStopHHMM(route, effFrom) || "\u2014"} \u2192 ${getStopHHMM(route, effTo) || "\u2014"}`;
+        const dispFrom = hasSeg ? segFrom : getEffectiveFrom(route);
+        const dispTo = hasSeg ? segTo : getEffectiveTo(route);
+        capsuleEl.textContent = `${getStopHHMM(route, dispFrom) || "\u2014"} \u2192 ${getStopHHMM(route, dispTo) || "\u2014"}`;
       }
       const durEl = card.querySelector(".bhv4-duration");
       if (durEl) {
-        const d = timings.toMin !== null && timings.fromMin !== null ? timings.toMin - timings.fromMin : null;
+        const dFrom = hasSeg ? getStopMins(route, segFrom) : timings.fromMin;
+        const dTo = hasSeg ? getStopMins(route, segTo) : timings.toMin;
+        const d = dFrom !== null && dTo !== null ? dTo - dFrom : null;
         durEl.textContent = d !== null ? d >= 60 ? `${Math.floor(d / 60)} \u0433\u043E\u0434${d % 60 ? " " + d % 60 + " \u0445\u0432" : ""}` : `${d} \u0445\u0432` : "";
       }
       const nextEl = card.querySelector(".bhv4-next-stop");
       if (nextEl) {
-        const [, labelB] = parseRouteEndpoints(route.name || "");
         const lastStop = route.stops[route.stops.length - 1].name;
-        const dispNext = timings.nextStop === lastStop ? labelB : timings.nextStop || labelB;
-        nextEl.textContent = isEnroute ? `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${dispNext.toUpperCase()}` : isUrgent || timings.state === "waiting" && timings.minsToDeparture !== null ? formatCountdownUpper(timings.minsToDeparture) : "";
+        const dispNext = timings.nextStop === lastStop ? routeB : timings.nextStop || routeB;
+        let nextContent = "";
+        if (isEnroute) {
+          if (hasSeg) {
+            const boardMins = getStopMins(route, segFrom);
+            if (boardMins !== null && boardMins - nowMinutes() > 0) {
+              nextContent = `\u0414\u041E ${segFrom.toUpperCase()} \u0417\u0410 ${fmtMins(boardMins - nowMinutes()).toUpperCase()}`;
+            } else {
+              nextContent = `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${dispNext.toUpperCase()}`;
+            }
+          } else {
+            nextContent = `\u041D\u0410\u0421\u0422\u0423\u041F\u041D\u0410 \u0417\u0423\u041F\u0418\u041D\u041A\u0410 \u2014 ${dispNext.toUpperCase()}`;
+          }
+        } else if (isUrgent || timings.state === "waiting" && timings.minsToDeparture !== null) {
+          nextContent = formatCountdownUpper(timings.minsToDeparture);
+        }
+        nextEl.textContent = nextContent;
       }
       const labelsEl = card.querySelector(".bhv4-labels");
       if (labelsEl) {
-        const [lA, lB] = parseRouteEndpoints(route.name || "");
-        labelsEl.innerHTML = `<span class="bhv4-label bhv4-label--a">${escapeHtml(lA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(lB.toUpperCase())}</span>`;
+        labelsEl.innerHTML = `<span class="bhv4-label bhv4-label--a">${escapeHtml(routeA.toUpperCase())}</span><span class="bhv4-label bhv4-label--b">${escapeHtml(routeB.toUpperCase())}</span>`;
       }
       const mapOuter = card.querySelector(".bhv4-map-outer");
       if (mapOuter) {
