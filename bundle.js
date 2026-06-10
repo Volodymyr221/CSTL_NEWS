@@ -1918,14 +1918,16 @@ ${post.text}
     }
     banner.style.transform = "";
     banner.classList.add("visible");
+    _bannerHideTimer = setTimeout(() => {
+      hideBanner();
+      _bannerHideTimer = null;
+    }, 4e3);
   }
   function hideBanner() {
-    if (!trackedRoutes.length) {
-      const banner = document.getElementById("bus-track-banner");
-      if (banner) {
-        banner.style.transform = "";
-        banner.classList.remove("visible");
-      }
+    const banner = document.getElementById("bus-track-banner");
+    if (banner) {
+      banner.style.transform = "";
+      banner.classList.remove("visible");
     }
     if (_bannerHideTimer) {
       clearTimeout(_bannerHideTimer);
@@ -2030,15 +2032,17 @@ ${post.text}
               forceShow = true;
               saveTrackedRoute();
             }
-            showBanner(
-              minsToBoard <= 15 ? `\u0414\u043E ${tracked.boardingStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
-              heading
-            );
+            if (forceShow)
+              showBanner(
+                minsToBoard <= 15 ? `\u0414\u043E ${tracked.boardingStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
+                heading
+              );
             return;
           }
         }
       }
-      showBanner(tracked.notifiedDep && !forceShow ? "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456" : "\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
+      if (forceShow)
+        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
@@ -2048,13 +2052,15 @@ ${post.text}
         forceShow = true;
         saveTrackedRoute();
       }
-      showBanner(
-        m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
-        heading
-      );
+      if (forceShow)
+        showBanner(
+          m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
+          heading
+        );
       return;
     }
-    showBanner(subDefault, heading, true);
+    if (forceShow)
+      showBanner(subDefault, heading, true);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
