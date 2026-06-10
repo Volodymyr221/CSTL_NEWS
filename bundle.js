@@ -1895,22 +1895,23 @@ ${post.text}
     _notifiedFuture = false;
     localStorage.removeItem(TRACK_KEY);
   }
-  function showBanner(label, route, isSubroute = false) {
+  function showBanner(status, route, sub = "") {
     const banner = document.getElementById("bus-track-banner");
     if (!banner)
       return;
     const lEl = banner.querySelector(".btb-label");
     const rEl = banner.querySelector(".btb-route");
+    const hEl = banner.querySelector(".btb-hint");
     if (lEl) {
-      lEl.textContent = label;
-      lEl.classList.toggle("btb-label--subroute", isSubroute);
+      lEl.textContent = sub;
+      lEl.classList.toggle("btb-label--subroute", !!sub);
       lEl.style.letterSpacing = "";
-      if (isSubroute && label) {
+      if (sub) {
         lEl.style.letterSpacing = "0px";
         void lEl.offsetWidth;
         const avail = lEl.clientWidth;
         const textW = lEl.scrollWidth;
-        const chars = label.length - 1;
+        const chars = sub.length - 1;
         if (chars > 0 && avail > textW) {
           lEl.style.letterSpacing = ((avail - textW) / chars).toFixed(2) + "px";
         }
@@ -1925,6 +1926,8 @@ ${post.text}
         rEl.style.fontSize = fs + "px";
       }
     }
+    if (hEl)
+      hEl.textContent = status || "\u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u0420\u0415\u0419\u0421 \u0410\u041A\u0422\u0418\u0412\u041E\u0412\u0410\u041D\u041E";
     if (_bannerHideTimer) {
       clearTimeout(_bannerHideTimer);
       _bannerHideTimer = null;
@@ -1972,7 +1975,7 @@ ${post.text}
     const heading = hasSeg ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}` : `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
     const dateStr = _trackDate ? fmtBannerDate(_trackDate) : "";
     const timeLabel = hasSeg ? segTimeStr : timeStr;
-    const subDefault = dateStr && timeLabel ? `${dateStr} | ${timeLabel}` : timeLabel || dateStr;
+    const subDefault = dateStr && timeLabel ? `${timeLabel} | ${dateStr}` : timeLabel || dateStr;
     return { heading, subDefault };
   }
   function checkTrackNotifications(forceInitial = false) {
@@ -1988,7 +1991,7 @@ ${post.text}
         if (!route2)
           return;
         const { heading: heading2, subDefault: subDefault2 } = buildBannerTexts(route2);
-        showBanner(subDefault2, heading2, true);
+        showBanner("", heading2, subDefault2);
       }
       return;
     }
@@ -2008,7 +2011,7 @@ ${post.text}
         _notifiedCanc = true;
         saveTrackedRoute();
       }
-      showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading);
+      showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading, subDefault);
       return;
     }
     const state = getRouteState(route);
@@ -2038,14 +2041,15 @@ ${post.text}
             if (forceShow)
               showBanner(
                 minsToBoard <= 15 ? `\u0414\u043E ${_trackedStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
-                heading
+                heading,
+                subDefault
               );
             return;
           }
         }
       }
       if (forceShow)
-        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
+        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading, subDefault);
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
@@ -2058,12 +2062,13 @@ ${post.text}
       if (forceShow)
         showBanner(
           m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
-          heading
+          heading,
+          subDefault
         );
       return;
     }
     if (forceShow)
-      showBanner(subDefault, heading, true);
+      showBanner("", heading, subDefault);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
