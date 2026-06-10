@@ -125,26 +125,31 @@ function clearTrackedRoute() {
   localStorage.removeItem(TRACK_KEY);
 }
 
-function showBanner(label, route, isSubroute = false) {
+function showBanner(status, route, sub = '') {
   const banner = document.getElementById('bus-track-banner');
   if (!banner) return;
   const lEl = banner.querySelector('.btb-label');
   const rEl = banner.querySelector('.btb-route');
+  const hEl = banner.querySelector('.btb-hint');
+
+  // Підзаголовок — завжди дата+час, авто letter-spacing до ширини заголовку
   if (lEl) {
-    lEl.textContent = label;
-    lEl.classList.toggle('btb-label--subroute', isSubroute);
+    lEl.textContent = sub;
+    lEl.classList.toggle('btb-label--subroute', !!sub);
     lEl.style.letterSpacing = '';
-    if (isSubroute && label) {
+    if (sub) {
       lEl.style.letterSpacing = '0px';
-      void lEl.offsetWidth; // примусовий перерахунок CSS перед вимірюванням
+      void lEl.offsetWidth;
       const avail = lEl.clientWidth;
       const textW = lEl.scrollWidth;
-      const chars = label.length - 1;
+      const chars = sub.length - 1;
       if (chars > 0 && avail > textW) {
         lEl.style.letterSpacing = ((avail - textW) / chars).toFixed(2) + 'px';
       }
     }
   }
+
+  // Заголовок
   if (rEl) {
     rEl.textContent = route;
     rEl.style.fontSize = '14px';
@@ -154,6 +159,10 @@ function showBanner(label, route, isSubroute = false) {
       rEl.style.fontSize = fs + 'px';
     }
   }
+
+  // Статус у підказці знизу
+  if (hEl) hEl.textContent = status || 'СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО';
+
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
   banner.classList.add('visible');
@@ -198,7 +207,7 @@ function buildBannerTexts(route) {
 
   const dateStr    = _trackDate ? fmtBannerDate(_trackDate) : '';
   const timeLabel  = hasSeg ? segTimeStr : timeStr;
-  const subDefault = dateStr && timeLabel ? `${dateStr} | ${timeLabel}` : (timeLabel || dateStr);
+  const subDefault = dateStr && timeLabel ? `${timeLabel} | ${dateStr}` : (timeLabel || dateStr);
 
   return { heading, subDefault };
 }
@@ -214,7 +223,7 @@ function checkTrackNotifications(forceInitial = false) {
       const route = dayRoutes.find(r => r.id === trackedRouteId);
       if (!route) return;
       const { heading, subDefault } = buildBannerTexts(route);
-      showBanner(subDefault, heading, true);
+      showBanner('', heading, subDefault);
     }
     return;
   }
@@ -230,7 +239,7 @@ function checkTrackNotifications(forceInitial = false) {
   // Скасований рейс — показуємо при кожному новому виклику (важлива подія)
   if (route.status === 'cancelled') {
     if (!_notifiedCanc) { _notifiedCanc = true; saveTrackedRoute(); }
-    showBanner('Рейс скасовано', heading);
+    showBanner('Рейс скасовано', heading, subDefault);
     return;
   }
 
@@ -254,12 +263,12 @@ function checkTrackNotifications(forceInitial = false) {
             minsToBoard <= 15
               ? `До ${_trackedStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
               : 'В дорозі',
-            heading);
+            heading, subDefault);
           return;
         }
       }
     }
-    if (forceShow) showBanner('Вже в дорозі', heading);
+    if (forceShow) showBanner('Вже в дорозі', heading, subDefault);
     return;
   }
 
@@ -268,12 +277,12 @@ function checkTrackNotifications(forceInitial = false) {
     if (!_notifiedWarning && m <= 15) { _notifiedWarning = true; forceShow = true; saveTrackedRoute(); }
     if (forceShow) showBanner(
       m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
-      heading);
+      heading, subDefault);
     return;
   }
 
-  // Стан очікування без таймеру / початковий — показуємо підзаголовок з маршрутом
-  if (forceShow) showBanner(subDefault, heading, true);
+  // Стан очікування без таймеру / початковий
+  if (forceShow) showBanner('', heading, subDefault);
 }
 
 function isDayActive(days) {
