@@ -1481,7 +1481,7 @@
   width: max-content;
   min-width: 240px;
   max-width: calc(100vw - 32px);
-  padding: 26px 28px 14px;
+  padding: 26px 20px 10px;
   border-radius: 22px;
   background: radial-gradient(ellipse at center,
     rgba(250, 251, 253, 0.94) 0%,
