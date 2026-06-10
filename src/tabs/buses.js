@@ -125,6 +125,12 @@ function clearTrackedRoute() {
   localStorage.removeItem(TRACK_KEY);
 }
 
+// Повертає true тільки якщо відстежується САМЕ цей маршрут + САМЕ ці зупинки сегменту
+function isRouteSegmentTracked(routeId) {
+  if (trackedRouteId !== routeId || _trackDate !== busDay) return false;
+  return _trackedStop === (fromStop || null) && _trackedToStop === (toStop || null);
+}
+
 function showBanner(label, route, isSubroute = false) {
   const banner = document.getElementById('bus-track-banner');
   if (!banner) return;
@@ -981,7 +987,7 @@ function renderRouteList() {
             ${autoNote}
           </div>
           ${busDay >= getTodayISO() && !isPast && route.status !== 'cancelled'
-            ? `<button class="bs-track-btn${trackedRouteId === route.id && _trackDate === busDay ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${trackedRouteId === route.id && _trackDate === busDay ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+            ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${isRouteSegmentTracked(route.id) ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
             : ''}
         </div>
         ${route.stops && route.stops.length > 2
@@ -1050,14 +1056,16 @@ function renderRouteList() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const rid = btn.dataset.trackId;
-      if (trackedRouteId === rid && _trackDate === busDay) {
+      if (isRouteSegmentTracked(rid)) {
         clearTrackedRoute();
       } else {
+        const sameRoute     = trackedRouteId === rid;
         trackedRouteId      = rid;
         _trackDate          = busDay;
         _trackedStop        = fromStop || null;
         _trackedToStop      = toStop   || null;
-        _notifiedDep        = false;
+        _notifiedDep        = sameRoute ? _notifiedDep     : false;
+        _notifiedWarning    = sameRoute ? _notifiedWarning : false;
         _notifiedCanc       = false;
         _notifiedBoard      = false;
         _notifiedFuture     = false;
