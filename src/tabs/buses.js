@@ -682,6 +682,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
             </svg>
             <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
+          ${seg ? `<button class="bhv4-untrack-btn bhv4-dyn" data-untrack-id="${escapeHtml(route.id)}">✕ Скинути</button>` : ''}
         </div>
 
         <div class="bhv4-body">
@@ -740,6 +741,16 @@ function renderSmartRow() {
       switchHeroCard();
     });
   });
+
+  // Кнопка «✕ Скинути» відстеження у hero
+  const untrackBtn = el.querySelector('.bhv4-untrack-btn');
+  if (untrackBtn) {
+    untrackBtn.addEventListener('click', () => {
+      const rid   = untrackBtn.dataset.untrackId;
+      const entry = getTrackedSegmentForHero(rid);
+      if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
+    });
+  }
 }
 
 /// Свайп: фейдяться тільки .bhv4-dyn елементи (назва, час, стоп, шкала).
@@ -793,6 +804,27 @@ function switchHeroCard() {
       const dotCls = isEnroute ? 'enroute' : isUrgent ? 'urgent' : 'waiting';
       const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
       statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
+    }
+
+    // Кнопка «✕ Скинути» відстеження: додати якщо є сегмент, прибрати якщо немає
+    const topbar        = card.querySelector('.bhv4-topbar');
+    const existingUntrack = card.querySelector('.bhv4-untrack-btn');
+    if (hasSeg) {
+      if (!existingUntrack && topbar) {
+        const ubtn = document.createElement('button');
+        ubtn.className = 'bhv4-untrack-btn bhv4-dyn';
+        ubtn.dataset.untrackId = route.id;
+        ubtn.textContent = '✕ Скинути';
+        ubtn.addEventListener('click', () => {
+          const entry = getTrackedSegmentForHero(route.id);
+          if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
+        });
+        topbar.appendChild(ubtn);
+      } else if (existingUntrack) {
+        existingUntrack.dataset.untrackId = route.id;
+      }
+    } else if (existingUntrack) {
+      existingUntrack.remove();
     }
 
     // Назва маршруту (сегмент або повна) + підзаголовок
@@ -1075,7 +1107,10 @@ function renderRouteList() {
             ${autoNote}
           </div>
           ${busDay >= getTodayISO() && !isPast && route.status !== 'cancelled'
-            ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${isRouteSegmentTracked(route.id) ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+            ? (() => {
+                const tracked = isRouteSegmentTracked(route.id) || (!fromStop && !toStop && !!getTrackedSegmentForHero(route.id));
+                return `<button class="bs-track-btn${tracked ? ' tracked' : ''}" data-track-id="${escapeHtml(route.id)}" aria-label="${tracked ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`;
+              })()
             : ''}
         </div>
         ${route.stops && route.stops.length > 2
@@ -1144,9 +1179,10 @@ function renderRouteList() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const rid = btn.dataset.trackId;
-      if (isRouteSegmentTracked(rid)) {
-        const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
-        if (entry) removeTrackedEntry(entry);
+      const exactEntry = findTrackedEntry(rid, fromStop || null, toStop || null);
+      const anyEntry   = !fromStop && !toStop ? getTrackedSegmentForHero(rid) : null;
+      if (exactEntry || anyEntry) {
+        removeTrackedEntry(exactEntry || anyEntry);
       } else {
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);

@@ -2355,6 +2355,7 @@ ${post.text}
             </svg>
             <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
+          ${seg ? `<button class="bhv4-untrack-btn bhv4-dyn" data-untrack-id="${escapeHtml(route.id)}">\u2715 \u0421\u043A\u0438\u043D\u0443\u0442\u0438</button>` : ""}
         </div>
 
         <div class="bhv4-body">
@@ -2406,6 +2407,19 @@ ${post.text}
         switchHeroCard();
       });
     });
+    const untrackBtn = el.querySelector(".bhv4-untrack-btn");
+    if (untrackBtn) {
+      untrackBtn.addEventListener("click", () => {
+        const rid = untrackBtn.dataset.untrackId;
+        const entry = getTrackedSegmentForHero(rid);
+        if (entry) {
+          removeTrackedEntry(entry);
+          checkTrackNotifications(false);
+          renderSmartRow();
+          renderRouteList();
+        }
+      });
+    }
   }
   function switchHeroCard() {
     const el = document.getElementById("bus-smart-row");
@@ -2460,6 +2474,30 @@ ${post.text}
         const dotCls = isEnroute ? "enroute" : isUrgent ? "urgent" : "waiting";
         const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
         statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
+      }
+      const topbar = card.querySelector(".bhv4-topbar");
+      const existingUntrack = card.querySelector(".bhv4-untrack-btn");
+      if (hasSeg) {
+        if (!existingUntrack && topbar) {
+          const ubtn = document.createElement("button");
+          ubtn.className = "bhv4-untrack-btn bhv4-dyn";
+          ubtn.dataset.untrackId = route.id;
+          ubtn.textContent = "\u2715 \u0421\u043A\u0438\u043D\u0443\u0442\u0438";
+          ubtn.addEventListener("click", () => {
+            const entry = getTrackedSegmentForHero(route.id);
+            if (entry) {
+              removeTrackedEntry(entry);
+              checkTrackNotifications(false);
+              renderSmartRow();
+              renderRouteList();
+            }
+          });
+          topbar.appendChild(ubtn);
+        } else if (existingUntrack) {
+          existingUntrack.dataset.untrackId = route.id;
+        }
+      } else if (existingUntrack) {
+        existingUntrack.remove();
       }
       const nameEl = card.querySelector(".bhv4-route-name");
       const existingFull = card.querySelector(".bhv4-route-full");
@@ -2674,7 +2712,10 @@ ${post.text}
             </div>
             ${autoNote}
           </div>
-          ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${isRouteSegmentTracked(route.id) ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
+          ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? (() => {
+        const tracked = isRouteSegmentTracked(route.id) || !fromStop && !toStop && !!getTrackedSegmentForHero(route.id);
+        return `<button class="bs-track-btn${tracked ? " tracked" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${tracked ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`;
+      })() : ""}
         </div>
         ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
@@ -2731,10 +2772,10 @@ ${post.text}
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const rid = btn.dataset.trackId;
-        if (isRouteSegmentTracked(rid)) {
-          const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
-          if (entry)
-            removeTrackedEntry(entry);
+        const exactEntry = findTrackedEntry(rid, fromStop || null, toStop || null);
+        const anyEntry = !fromStop && !toStop ? getTrackedSegmentForHero(rid) : null;
+        if (exactEntry || anyEntry) {
+          removeTrackedEntry(exactEntry || anyEntry);
         } else {
           const existing = trackedRoutes.find((t) => t.routeId === rid && t.trackDate === busDay);
           trackedRoutes.push({
