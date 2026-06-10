@@ -682,7 +682,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
-      <span class="bhv4-dots-nav">${heroTrackBtnHtml}${dotsHtml}</span>
+      <span class="bhv4-dots-nav">${dotsHtml}${heroTrackBtnHtml}</span>
 
       <div class="bhv4-content">
         <div class="bhv4-topbar">
@@ -808,7 +808,7 @@ function switchHeroCard() {
             `<span class="bhv4-dot-nav${i === smartRowIndex ? ' bhv4-dot-nav--active' : ''}" data-idx="${i}"></span>`
           ).join('')
         : '';
-      dotsNav.innerHTML = trackBtnHtml + newDotsHtml;
+      dotsNav.innerHTML = newDotsHtml + trackBtnHtml;
       dotsNav.querySelectorAll('.bhv4-dot-nav').forEach(dot =>
         dot.addEventListener('click', e => { smartRowIndex = +e.target.dataset.idx; switchHeroCard(); })
       );
