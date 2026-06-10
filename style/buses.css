@@ -995,10 +995,12 @@
 .bs-stop-row.bs-stop--current {
   color: var(--black);
   font-weight: 700;
+  background: linear-gradient(to bottom, #f5f5f5 0%, #E1E4EC 30%, #E1E4EC 70%, #f5f5f5 100%);
 }
 .bs-stop-row.bs-stop--next {
   color: var(--black);
   font-weight: 700;
+  background: linear-gradient(to bottom, #f5f5f5 0%, #E1E4EC 30%, #E1E4EC 70%, #f5f5f5 100%);
 }
 
 .bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
