@@ -1360,9 +1360,11 @@ export async function initBuses() {
         banner.style.transform = `translateX(-50%) translateY(${dy + 80}px) scale(0.85)`;
         setTimeout(() => { banner.style.transition = ''; hideBanner(); }, 260);
       } else {
-        // Плавно повертаємо на місце і запускаємо таймер 3.5 с
+        // Плавно повертаємо на місце
         banner.style.transition = 'transform 0.3s cubic-bezier(0.22,1,0.36,1)';
         banner.style.transform = '';
+        // Після snap-back скидаємо inline-transition щоб стандартна CSS-анімація зникнення не ламалась
+        setTimeout(() => { banner.style.transition = ''; }, 320);
         _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 3500);
       }
     };
