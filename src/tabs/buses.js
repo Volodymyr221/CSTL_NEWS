@@ -148,17 +148,15 @@ function showBanner(label, route, isSubroute = false) {
       rEl.style.fontSize = fs + 'px';
     }
   }
-  // Скасовуємо будь-який попередній таймер (банер більше не зникає сам по собі)
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
   banner.classList.add('visible');
+  _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 4000);
 }
 
 function hideBanner() {
-  if (!trackedRoutes.length) {
-    const banner = document.getElementById('bus-track-banner');
-    if (banner) { banner.style.transform = ''; banner.classList.remove('visible'); }
-  }
+  const banner = document.getElementById('bus-track-banner');
+  if (banner) { banner.style.transform = ''; banner.classList.remove('visible'); }
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
 }
 
@@ -264,7 +262,7 @@ function checkSingleTracked(tracked, forceInitial) {
           if (!tracked.notifiedBoard && minsToBoard <= 15) {
             tracked.notifiedBoard = true; forceShow = true; saveTrackedRoute();
           }
-          showBanner(
+          if (forceShow) showBanner(
             minsToBoard <= 15
               ? `До ${tracked.boardingStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
               : 'В дорозі',
@@ -273,7 +271,7 @@ function checkSingleTracked(tracked, forceInitial) {
         }
       }
     }
-    showBanner(tracked.notifiedDep && !forceShow ? 'В дорозі' : 'Вже в дорозі', heading);
+    if (forceShow) showBanner('Вже в дорозі', heading);
     return;
   }
 
@@ -282,14 +280,14 @@ function checkSingleTracked(tracked, forceInitial) {
     if (!tracked.notifiedWarning && m <= 15) {
       tracked.notifiedWarning = true; forceShow = true; saveTrackedRoute();
     }
-    showBanner(
+    if (forceShow) showBanner(
       m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
       heading);
     return;
   }
 
-  // Стан очікування без таймеру — показуємо підзаголовок
-  showBanner(subDefault, heading, true);
+  // Стан очікування без таймеру — показуємо підзаголовок (тільки при першому відстеженні)
+  if (forceShow) showBanner(subDefault, heading, true);
 }
 
 function isDayActive(days) {
