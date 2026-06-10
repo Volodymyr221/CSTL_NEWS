@@ -2027,6 +2027,13 @@ ${post.text}
       removeTrackedEntry(tracked);
       return;
     }
+    if (tracked.alightingStop) {
+      const alightMins = getStopMins(route, tracked.alightingStop);
+      if (alightMins !== null && nowMinutes() >= alightMins) {
+        removeTrackedEntry(tracked);
+        return;
+      }
+    }
     let forceShow = forceInitial;
     if (state === "enroute") {
       if (!tracked.notifiedDep) {

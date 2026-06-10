@@ -265,6 +265,15 @@ function checkSingleTracked(tracked, forceInitial) {
 
   if (state === 'past') { removeTrackedEntry(tracked); return; }
 
+  // Авто-скидання: якщо час висадки з пункту Б вже минув — сегмент завершено
+  if (tracked.alightingStop) {
+    const alightMins = getStopMins(route, tracked.alightingStop);
+    if (alightMins !== null && nowMinutes() >= alightMins) {
+      removeTrackedEntry(tracked);
+      return;
+    }
+  }
+
   let forceShow = forceInitial;
 
   if (state === 'enroute') {
