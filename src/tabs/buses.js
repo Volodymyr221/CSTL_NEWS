@@ -119,10 +119,19 @@ function isRouteSegmentTracked(routeId) {
   return !!findTrackedEntry(routeId, fromStop || null, toStop || null);
 }
 
-// Знаходить відстежуваний сегмент для hero-картки (перший запис для цього рейсу сьогодні)
-function getTrackedSegmentForHero(routeId) {
+// Знаходить відстежуваний сегмент для hero-картки (перший запис для цього рейсу сьогодні).
+// Якщо route переданий і час висадки вже минув — авто-знімає відстеження.
+function getTrackedSegmentForHero(routeId, route = null) {
   const day = isViewingToday() ? getTodayISO() : busDay;
-  return trackedRoutes.find(t => t.routeId === routeId && t.trackDate === day) || null;
+  const entry = trackedRoutes.find(t => t.routeId === routeId && t.trackDate === day) || null;
+  if (entry && route && isViewingToday() && entry.alightingStop) {
+    const alightMins = getStopMins(route, entry.alightingStop);
+    if (alightMins !== null && nowMinutes() >= alightMins) {
+      removeTrackedEntry(entry);
+      return null;
+    }
+  }
+  return entry;
 }
 
 function showBanner(label, route, isSubroute = false) {
@@ -721,7 +730,7 @@ function renderSmartRow() {
 
   const route   = routes[smartRowIndex];
   const timings = getTimingsForDisplay(route);
-  const seg     = getTrackedSegmentForHero(route.id);
+  const seg     = getTrackedSegmentForHero(route.id, route);
   el.innerHTML  = buildHeroCard(route, timings, smartRowIndex, routes.length, seg);
 
   // Свайп (touch — дотик)
@@ -750,7 +759,7 @@ function renderSmartRow() {
   if (heroTrackBtn) {
     heroTrackBtn.addEventListener('click', () => {
       const rid   = heroTrackBtn.dataset.untrackId;
-      const entry = getTrackedSegmentForHero(rid);
+      const entry = getTrackedSegmentForHero(rid, route);
       if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
     });
   }
@@ -774,7 +783,7 @@ function switchHeroCard() {
 
     const route   = routes[smartRowIndex];
     const timings = getTimingsForDisplay(route);
-    const seg     = getTrackedSegmentForHero(route.id);
+    const seg     = getTrackedSegmentForHero(route.id, route);
     const [routeA, routeB] = parseRouteEndpoints(route.name || '');
     const segFrom = seg?.boardingStop || null;
     const segTo   = seg?.alightingStop || null;
@@ -805,7 +814,7 @@ function switchHeroCard() {
       const heroBtn = dotsNav.querySelector('.bhv4-hero-track-btn');
       if (heroBtn) {
         heroBtn.addEventListener('click', () => {
-          const entry = getTrackedSegmentForHero(route.id);
+          const entry = getTrackedSegmentForHero(route.id, route);
           if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
         });
       }
@@ -995,7 +1004,7 @@ function renderRouteList() {
 
     // Маркери ● і 📍 у списку зупинок: якщо немає активного фільтру але є
     // відстежуваний сегмент — показуємо маркери для зупинок сегменту
-    const trackedSeg     = getTrackedSegmentForHero(route.id);
+    const trackedSeg     = getTrackedSegmentForHero(route.id, route);
     const [rA, rB]       = parseRouteEndpoints(route.name || '');
     const hasTrackedSeg  = !!(
       trackedSeg?.boardingStop && trackedSeg?.alightingStop &&
@@ -1071,6 +1080,10 @@ function renderRouteList() {
     const fullLabel = anySegment
       ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} → ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>`
       : '';
+    // Підзаголовок відстежуваного сегменту: коли немає активного фільтру але є відстежуваний сегмент
+    const trackedSegSubtitle = (!anySegment && hasTrackedSeg)
+      ? `<span class="bs-route-full">${escapeHtml(trackedSeg.boardingStop.toUpperCase())} → ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}</span>`
+      : '';
 
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
@@ -1091,7 +1104,7 @@ function renderRouteList() {
             <span class="bs-arr">${escapeHtml(toTime || '—')}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}${trackedSegSubtitle}</div>
             <div class="bus-card-meta">
               <span>Орієнтовно: <span style="white-space:nowrap">${escapeHtml(durStr)}</span></span>
               <span class="bus-meta-sep">·</span>

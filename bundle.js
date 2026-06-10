@@ -1882,9 +1882,17 @@ ${post.text}
   function isRouteSegmentTracked(routeId) {
     return !!findTrackedEntry(routeId, fromStop || null, toStop || null);
   }
-  function getTrackedSegmentForHero(routeId) {
+  function getTrackedSegmentForHero(routeId, route = null) {
     const day = isViewingToday() ? getTodayISO() : busDay;
-    return trackedRoutes.find((t) => t.routeId === routeId && t.trackDate === day) || null;
+    const entry = trackedRoutes.find((t) => t.routeId === routeId && t.trackDate === day) || null;
+    if (entry && route && isViewingToday() && entry.alightingStop) {
+      const alightMins = getStopMins(route, entry.alightingStop);
+      if (alightMins !== null && nowMinutes() >= alightMins) {
+        removeTrackedEntry(entry);
+        return null;
+      }
+    }
+    return entry;
   }
   function showBanner(label, route, isSubroute = false) {
     const banner = document.getElementById("bus-track-banner");
@@ -2387,7 +2395,7 @@ ${post.text}
       smartRowIndex = 0;
     const route = routes[smartRowIndex];
     const timings = getTimingsForDisplay(route);
-    const seg = getTrackedSegmentForHero(route.id);
+    const seg = getTrackedSegmentForHero(route.id, route);
     el.innerHTML = buildHeroCard(route, timings, smartRowIndex, routes.length, seg);
     let touchStartX = 0;
     const card = el.firstElementChild;
@@ -2411,7 +2419,7 @@ ${post.text}
     if (heroTrackBtn) {
       heroTrackBtn.addEventListener("click", () => {
         const rid = heroTrackBtn.dataset.untrackId;
-        const entry = getTrackedSegmentForHero(rid);
+        const entry = getTrackedSegmentForHero(rid, route);
         if (entry) {
           removeTrackedEntry(entry);
           checkTrackNotifications(false);
@@ -2447,7 +2455,7 @@ ${post.text}
         smartRowIndex = 0;
       const route = routes[smartRowIndex];
       const timings = getTimingsForDisplay(route);
-      const seg = getTrackedSegmentForHero(route.id);
+      const seg = getTrackedSegmentForHero(route.id, route);
       const [routeA, routeB] = parseRouteEndpoints(route.name || "");
       const segFrom = seg?.boardingStop || null;
       const segTo = seg?.alightingStop || null;
@@ -2472,7 +2480,7 @@ ${post.text}
         const heroBtn = dotsNav.querySelector(".bhv4-hero-track-btn");
         if (heroBtn) {
           heroBtn.addEventListener("click", () => {
-            const entry = getTrackedSegmentForHero(route.id);
+            const entry = getTrackedSegmentForHero(route.id, route);
             if (entry) {
               removeTrackedEntry(entry);
               checkTrackNotifications(false);
@@ -2628,7 +2636,7 @@ ${post.text}
       const durStr = segDur >= 60 ? `${Math.floor(segDur / 60)} \u0433\u043E\u0434${segDur % 60 ? " " + segDur % 60 + " \u0445\u0432" : ""}` : `${segDur} \u0445\u0432`;
       const c = carrierInfo(route.carrier);
       const expanded = expandedIds.has(route.id);
-      const trackedSeg = getTrackedSegmentForHero(route.id);
+      const trackedSeg = getTrackedSegmentForHero(route.id, route);
       const [rA, rB] = parseRouteEndpoints(route.name || "");
       const hasTrackedSeg = !!(trackedSeg?.boardingStop && trackedSeg?.alightingStop && (trackedSeg.boardingStop.toUpperCase() !== rA.toUpperCase() || trackedSeg.alightingStop.toUpperCase() !== rB.toUpperCase()));
       const hlFrom = !fromStop && !toStop && hasTrackedSeg ? trackedSeg.boardingStop : effFrom;
@@ -2673,6 +2681,7 @@ ${post.text}
       const routeTimeStr = routeStartTime && routeEndTime ? ` | ${routeStartTime} \u2192 ${routeEndTime}` : "";
       const routeLabel = anySegment ? `${effFrom.toUpperCase()} - ${effTo.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fullLabel = anySegment ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
+      const trackedSegSubtitle = !anySegment && hasTrackedSeg ? `<span class="bs-route-full">${escapeHtml(trackedSeg.boardingStop.toUpperCase())} \u2192 ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
@@ -2694,7 +2703,7 @@ ${post.text}
             <span class="bs-arr">${escapeHtml(toTime || "\u2014")}</span>
           </div>
           <div class="bus-card-info">
-            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}</div>
+            <div class="bus-card-route">${escapeHtml(routeLabel)}${fullLabel}${trackedSegSubtitle}</div>
             <div class="bus-card-meta">
               <span>\u041E\u0440\u0456\u0454\u043D\u0442\u043E\u0432\u043D\u043E: <span style="white-space:nowrap">${escapeHtml(durStr)}</span></span>
               <span class="bus-meta-sep">\xB7</span>
