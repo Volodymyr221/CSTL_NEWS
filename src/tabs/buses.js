@@ -1341,18 +1341,35 @@ export async function initBuses() {
       </div>
       <div class="btb-hint">СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО</div>`;
     document.body.appendChild(banner);
-    // Свайп вниз — закрити банер раніше
+    // Свайп вниз — закрити банер
     let _swipeStartY = 0;
-    banner.addEventListener('touchstart', e => { _swipeStartY = e.touches[0].clientY; }, { passive: true });
+    banner.addEventListener('touchstart', e => {
+      _swipeStartY = e.touches[0].clientY;
+      // Зупиняємо авто-таймер поки тримають банер
+      if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
+      banner.style.transition = 'none'; // точне слідування за пальцем без затримки
+    }, { passive: true });
     banner.addEventListener('touchmove', e => {
       const dy = e.touches[0].clientY - _swipeStartY;
       if (dy > 0) banner.style.transform = `translateX(-50%) translateY(${dy}px) scale(1)`;
     }, { passive: true });
+    const _onBannerRelease = (dy) => {
+      if (dy > 40) {
+        // Плавно ховаємо вниз
+        banner.style.transition = 'transform 0.25s cubic-bezier(0.4,0,1,1)';
+        banner.style.transform = `translateX(-50%) translateY(${dy + 80}px) scale(0.85)`;
+        setTimeout(() => { banner.style.transition = ''; hideBanner(); }, 260);
+      } else {
+        // Плавно повертаємо на місце і запускаємо таймер 3.5 с
+        banner.style.transition = 'transform 0.3s cubic-bezier(0.22,1,0.36,1)';
+        banner.style.transform = '';
+        _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 3500);
+      }
+    };
     banner.addEventListener('touchend', e => {
-      const dy = e.changedTouches[0].clientY - _swipeStartY;
-      banner.style.transform = '';
-      if (dy > 40) hideBanner();
+      _onBannerRelease(e.changedTouches[0].clientY - _swipeStartY);
     });
+    banner.addEventListener('touchcancel', () => { _onBannerRelease(0); });
   }
 
   // Закривати дропдаун при кліку поза ним
