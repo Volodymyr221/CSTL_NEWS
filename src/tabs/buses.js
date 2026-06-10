@@ -653,6 +653,10 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
       ).join('')
     : '';
 
+  const heroTrackBtnHtml = hasSeg
+    ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="Скасувати відстеження"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+    : '';
+
   const routeTitle    = hasSeg
     ? `${escapeHtml(segFrom.toUpperCase())} → ${escapeHtml(segTo.toUpperCase())}`
     : `${escapeHtml(routeA.toUpperCase())} → ${escapeHtml(routeB.toUpperCase())}`;
@@ -668,7 +672,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
-      <span class="bhv4-dots-nav">${dotsHtml}</span>
+      <span class="bhv4-dots-nav">${heroTrackBtnHtml}${dotsHtml}</span>
 
       <div class="bhv4-content">
         <div class="bhv4-topbar">
@@ -682,7 +686,6 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
             </svg>
             <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
-          ${seg ? `<button class="bhv4-untrack-btn bhv4-dyn" data-untrack-id="${escapeHtml(route.id)}">✕ Скинути</button>` : ''}
         </div>
 
         <div class="bhv4-body">
@@ -742,11 +745,11 @@ function renderSmartRow() {
     });
   });
 
-  // Кнопка «✕ Скинути» відстеження у hero
-  const untrackBtn = el.querySelector('.bhv4-untrack-btn');
-  if (untrackBtn) {
-    untrackBtn.addEventListener('click', () => {
-      const rid   = untrackBtn.dataset.untrackId;
+  // Іконка-закладка «скасувати відстеження» у hero (top-right)
+  const heroTrackBtn = el.querySelector('.bhv4-hero-track-btn');
+  if (heroTrackBtn) {
+    heroTrackBtn.addEventListener('click', () => {
+      const rid   = heroTrackBtn.dataset.untrackId;
       const entry = getTrackedSegmentForHero(rid);
       if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
     });
@@ -784,17 +787,28 @@ function switchHeroCard() {
     // Оновлюємо клас картки (urgent/enroute для кольору і анімації крапки)
     card.className = `bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}`;
 
-    // Крапки-індикатори — миттєво
+    // Крапки-навігатори + іконка закладки (коли є відстежуваний сегмент) — миттєво
     const dotsNav = card.querySelector('.bhv4-dots-nav');
     if (dotsNav) {
-      dotsNav.innerHTML = routes.length > 1
+      const trackBtnHtml = hasSeg
+        ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="Скасувати відстеження"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+        : '';
+      const newDotsHtml = routes.length > 1
         ? Array.from({ length: routes.length }, (_, i) =>
             `<span class="bhv4-dot-nav${i === smartRowIndex ? ' bhv4-dot-nav--active' : ''}" data-idx="${i}"></span>`
           ).join('')
         : '';
+      dotsNav.innerHTML = trackBtnHtml + newDotsHtml;
       dotsNav.querySelectorAll('.bhv4-dot-nav').forEach(dot =>
         dot.addEventListener('click', e => { smartRowIndex = +e.target.dataset.idx; switchHeroCard(); })
       );
+      const heroBtn = dotsNav.querySelector('.bhv4-hero-track-btn');
+      if (heroBtn) {
+        heroBtn.addEventListener('click', () => {
+          const entry = getTrackedSegmentForHero(route.id);
+          if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
+        });
+      }
     }
 
     // Статус (текст + крапка)
@@ -804,27 +818,6 @@ function switchHeroCard() {
       const dotCls = isEnroute ? 'enroute' : isUrgent ? 'urgent' : 'waiting';
       const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
       statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
-    }
-
-    // Кнопка «✕ Скинути» відстеження: додати якщо є сегмент, прибрати якщо немає
-    const topbar        = card.querySelector('.bhv4-topbar');
-    const existingUntrack = card.querySelector('.bhv4-untrack-btn');
-    if (hasSeg) {
-      if (!existingUntrack && topbar) {
-        const ubtn = document.createElement('button');
-        ubtn.className = 'bhv4-untrack-btn bhv4-dyn';
-        ubtn.dataset.untrackId = route.id;
-        ubtn.textContent = '✕ Скинути';
-        ubtn.addEventListener('click', () => {
-          const entry = getTrackedSegmentForHero(route.id);
-          if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
-        });
-        topbar.appendChild(ubtn);
-      } else if (existingUntrack) {
-        existingUntrack.dataset.untrackId = route.id;
-      }
-    } else if (existingUntrack) {
-      existingUntrack.remove();
     }
 
     // Назва маршруту (сегмент або повна) + підзаголовок

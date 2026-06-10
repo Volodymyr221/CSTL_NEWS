@@ -2334,6 +2334,7 @@ ${post.text}
       { length: total },
       (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
     ).join("") : "";
+    const heroTrackBtnHtml = hasSeg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
     const routeTitle = hasSeg ? `${escapeHtml(segFrom.toUpperCase())} \u2192 ${escapeHtml(segTo.toUpperCase())}` : `${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}`;
     const routeFullHtml = hasSeg ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}</div>` : "";
     return `
@@ -2341,7 +2342,7 @@ ${post.text}
       <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
       <div class="bhv4-overlay"></div>
 
-      <span class="bhv4-dots-nav">${dotsHtml}</span>
+      <span class="bhv4-dots-nav">${heroTrackBtnHtml}${dotsHtml}</span>
 
       <div class="bhv4-content">
         <div class="bhv4-topbar">
@@ -2355,7 +2356,6 @@ ${post.text}
             </svg>
             <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
-          ${seg ? `<button class="bhv4-untrack-btn bhv4-dyn" data-untrack-id="${escapeHtml(route.id)}">\u2715 \u0421\u043A\u0438\u043D\u0443\u0442\u0438</button>` : ""}
         </div>
 
         <div class="bhv4-body">
@@ -2407,10 +2407,10 @@ ${post.text}
         switchHeroCard();
       });
     });
-    const untrackBtn = el.querySelector(".bhv4-untrack-btn");
-    if (untrackBtn) {
-      untrackBtn.addEventListener("click", () => {
-        const rid = untrackBtn.dataset.untrackId;
+    const heroTrackBtn = el.querySelector(".bhv4-hero-track-btn");
+    if (heroTrackBtn) {
+      heroTrackBtn.addEventListener("click", () => {
+        const rid = heroTrackBtn.dataset.untrackId;
         const entry = getTrackedSegmentForHero(rid);
         if (entry) {
           removeTrackedEntry(entry);
@@ -2457,33 +2457,21 @@ ${post.text}
       card.className = `bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}`;
       const dotsNav = card.querySelector(".bhv4-dots-nav");
       if (dotsNav) {
-        dotsNav.innerHTML = routes.length > 1 ? Array.from(
+        const trackBtnHtml = hasSeg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
+        const newDotsHtml = routes.length > 1 ? Array.from(
           { length: routes.length },
           (_, i) => `<span class="bhv4-dot-nav${i === smartRowIndex ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
         ).join("") : "";
+        dotsNav.innerHTML = trackBtnHtml + newDotsHtml;
         dotsNav.querySelectorAll(".bhv4-dot-nav").forEach(
           (dot) => dot.addEventListener("click", (e) => {
             smartRowIndex = +e.target.dataset.idx;
             switchHeroCard();
           })
         );
-      }
-      const statusWrap = card.querySelector(".bhv4-status .bhv4-dyn");
-      if (statusWrap) {
-        const txt = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
-        const dotCls = isEnroute ? "enroute" : isUrgent ? "urgent" : "waiting";
-        const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
-        statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
-      }
-      const topbar = card.querySelector(".bhv4-topbar");
-      const existingUntrack = card.querySelector(".bhv4-untrack-btn");
-      if (hasSeg) {
-        if (!existingUntrack && topbar) {
-          const ubtn = document.createElement("button");
-          ubtn.className = "bhv4-untrack-btn bhv4-dyn";
-          ubtn.dataset.untrackId = route.id;
-          ubtn.textContent = "\u2715 \u0421\u043A\u0438\u043D\u0443\u0442\u0438";
-          ubtn.addEventListener("click", () => {
+        const heroBtn = dotsNav.querySelector(".bhv4-hero-track-btn");
+        if (heroBtn) {
+          heroBtn.addEventListener("click", () => {
             const entry = getTrackedSegmentForHero(route.id);
             if (entry) {
               removeTrackedEntry(entry);
@@ -2492,12 +2480,14 @@ ${post.text}
               renderRouteList();
             }
           });
-          topbar.appendChild(ubtn);
-        } else if (existingUntrack) {
-          existingUntrack.dataset.untrackId = route.id;
         }
-      } else if (existingUntrack) {
-        existingUntrack.remove();
+      }
+      const statusWrap = card.querySelector(".bhv4-status .bhv4-dyn");
+      if (statusWrap) {
+        const txt = isEnroute ? "\u0432 \u0434\u043E\u0440\u043E\u0437\u0456" : isUrgent ? "\u0432\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F" : "\u043E\u0447\u0456\u043A\u0443\u0454\u0442\u044C\u0441\u044F";
+        const dotCls = isEnroute ? "enroute" : isUrgent ? "urgent" : "waiting";
+        const dot = `<span class="bhv4-state-dot bhv4-state-dot--${dotCls}"></span>`;
+        statusWrap.innerHTML = `<span class="bhv4-status-text">${txt}</span> <span class="bhv4-status-dot">${dot}</span>`;
       }
       const nameEl = card.querySelector(".bhv4-route-name");
       const existingFull = card.querySelector(".bhv4-route-full");

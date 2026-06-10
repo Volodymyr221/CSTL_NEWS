@@ -338,23 +338,25 @@
   text-shadow: 0 1px 4px rgba(0,0,0,0.3);
 }
 
-/* Кнопка «✕ Скинути» відстеження у hero-картці */
-.bhv4-untrack-btn {
-  background: rgba(255,255,255,0.15);
-  border: 1px solid rgba(255,255,255,0.3);
-  border-radius: 10px;
-  color: rgba(255,255,255,0.85);
-  font-size: 11px;
-  font-weight: 700;
-  font-family: inherit;
-  padding: 3px 9px;
+/* Іконка закладки «відстежується» у hero-картці (top-right, поруч із крапками) */
+.bhv4-hero-track-btn {
+  background: none;
+  border: none;
+  padding: 2px;
   cursor: pointer;
-  letter-spacing: 0.3px;
-  white-space: nowrap;
+  display: flex;
+  align-items: center;
   flex-shrink: 0;
-  transition: background 0.15s;
+  opacity: 0.9;
 }
-.bhv4-untrack-btn:active { background: rgba(255,255,255,0.28); }
+.bhv4-hero-track-btn svg {
+  width: 18px;
+  height: 18px;
+  fill: white;
+  stroke: white;
+  stroke-width: 1.8;
+}
+.bhv4-hero-track-btn:active { opacity: 0.5; }
 
 /* Підзаголовок: повна назва маршруту під сегментом (наприклад ЛУЦЬК → ОЛИКА) */
 .bhv4-route-full {
