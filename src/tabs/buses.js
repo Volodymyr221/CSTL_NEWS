@@ -403,12 +403,13 @@ function findNextRoute() {
 // відсортовані за часом відправлення — той самий порядок що й список знизу.
 function findActiveRoutes() {
   const all = getFilteredRoutes(); // вже відсортовані за часом відправлення
-  // Для майбутніх/минулих днів — вибраний рейс (selectedRouteId) або перший
+  // Для майбутніх/минулих днів — відстежувані рейси або вибраний або перший
   if (!isViewingToday()) {
     const trackedForDay = trackedRoutes.filter(t => t.trackDate === busDay);
     if (trackedForDay.length) {
-      const tracked = all.find(r => trackedForDay.some(t => t.routeId === r.id) && r.status !== 'cancelled');
-      if (tracked) return [tracked];
+      const trackedIds = new Set(trackedForDay.map(t => t.routeId));
+      const tracked = all.filter(r => trackedIds.has(r.id) && r.status !== 'cancelled');
+      if (tracked.length) return tracked;
     }
     if (selectedRouteId) {
       const sel = all.find(r => r.id === selectedRouteId && r.status !== 'cancelled');
