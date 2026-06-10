@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-10 15:30
+**Оновлено:** 2026-06-10 15:41
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,7 +14,21 @@
 | **Робоча гілка (поточна сесія)** | `claude/startup-uem-cugk5q` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260610-1545` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260610-1615` |
+
+## ✅ Зроблено у поточній сесії (10.06.2026, мультитрекінг маршрутів)
+
+**feat(buses)** — можна відстежувати кілька маршрутів/сегментів одночасно:
+- `TRACK_KEY` → `bus_track_v2`, формат `{ routes: [...] }` замість одного об'єкту
+- `trackedRoutes[]` — масив відстежуваних рейсів замість одиночних змінних
+- Кожен запис: `{ routeId, trackDate, boardingStop, alightingStop, notifiedDep, notifiedCanc, notifiedBoard, notifiedWarning, notifiedFuture }`
+- `findTrackedEntry()` + `removeTrackedEntry()` — додавання/видалення конкретного запису
+- `checkSingleTracked(tracked, forceInitial)` — логіка сповіщень для одного рейсу
+- `findActiveRoutes()` — всі відстежувані рейси піднімаються на початок каруселі
+- Банер: 4 секунди auto-hide (повернено), `forceShow` логіка відновлена
+- Трекінг зберігається до завершення рейсу або ручного скасування
+- `notifiedDep` зберігається при переключенні сегменту того ж повного маршруту (без дублювання сповіщень)
+- `sw.js`: CACHE_NAME → `cstl-20260610-1615`
 
 ## ✅ Зроблено у поточній сесії (10.06.2026, фікси трекінгу сегментів)
 
