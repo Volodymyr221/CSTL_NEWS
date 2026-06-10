@@ -1953,8 +1953,8 @@ ${post.text}
     const segFromTime = getStopHHMM(route, segFrom);
     const segToTime = getStopHHMM(route, segTo);
     const segTimeStr = segFromTime && segToTime ? `${segFromTime} \u2192 ${segToTime}` : timeStr;
-    const heading = hasSeg ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}${segTimeStr ? " | " + segTimeStr : ""}` : `${a.toUpperCase()} \u2192 ${b.toUpperCase()}${timeStr ? " | " + timeStr : ""}`;
-    const subDefault = hasSeg ? `${a.toUpperCase()} \u2192 ${b.toUpperCase()}${timeStr ? " | " + timeStr : ""}` : "";
+    const heading = hasSeg ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}` : `${a.toUpperCase()} \u2192 ${b.toUpperCase()}`;
+    const subDefault = hasSeg ? segTimeStr : timeStr;
     return { heading, subDefault };
   }
   function checkTrackNotifications(forceInitial = false) {

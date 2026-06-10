@@ -173,11 +173,9 @@ function buildBannerTexts(route) {
   const segTimeStr  = (segFromTime && segToTime) ? `${segFromTime} → ${segToTime}` : timeStr;
 
   const heading    = hasSeg
-    ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}${segTimeStr ? ' | ' + segTimeStr : ''}`
-    : `${a.toUpperCase()} → ${b.toUpperCase()}${timeStr ? ' | ' + timeStr : ''}`;
-  const subDefault = hasSeg
-    ? `${a.toUpperCase()} → ${b.toUpperCase()}${timeStr ? ' | ' + timeStr : ''}`
-    : '';
+    ? `${segFrom.toUpperCase()} - ${segTo.toUpperCase()}`
+    : `${a.toUpperCase()} → ${b.toUpperCase()}`;
+  const subDefault = hasSeg ? segTimeStr : timeStr;
 
   return { heading, subDefault };
 }
