@@ -2681,8 +2681,10 @@ ${post.text}
       const routeTimeStr = routeStartTime && routeEndTime ? ` | ${routeStartTime} \u2192 ${routeEndTime}` : "";
       const routeLabel = anySegment ? `${effFrom.toUpperCase()} - ${effTo.toUpperCase()}` : `${ep1.toUpperCase()} \u2192 ${ep2.toUpperCase()}`;
       const fullLabel = anySegment ? `<span class="bs-route-full">${escapeHtml(ep1.toUpperCase())} \u2192 ${escapeHtml(ep2.toUpperCase())}${escapeHtml(routeTimeStr)}</span>` : "";
+      const trackedSegDepTime = hasTrackedSeg ? getStopHHMM(route, trackedSeg.boardingStop) : null;
       const trackedSegArrival = hasTrackedSeg ? getStopHHMM(route, trackedSeg.alightingStop) : null;
-      const trackedSegSubtitle = !anySegment && hasTrackedSeg ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop.toUpperCase())} \u2192 ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}${trackedSegArrival ? ` \xB7 ${escapeHtml(trackedSegArrival)}` : ""}</span>` : "";
+      const trackedSegTimeStr = trackedSegDepTime && trackedSegArrival ? ` | ${trackedSegDepTime} - ${trackedSegArrival}` : trackedSegDepTime ? ` | ${trackedSegDepTime}` : "";
+      const trackedSegSubtitle = !anySegment && hasTrackedSeg ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop.toUpperCase())} - ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}${escapeHtml(trackedSegTimeStr)}</span>` : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
