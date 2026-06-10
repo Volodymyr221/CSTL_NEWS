@@ -2342,7 +2342,7 @@ ${post.text}
       { length: total },
       (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
     ).join("") : "";
-    const heroTrackBtnHtml = hasSeg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
+    const heroTrackBtnHtml = seg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
     const routeTitle = hasSeg ? `${escapeHtml(segFrom.toUpperCase())} \u2192 ${escapeHtml(segTo.toUpperCase())}` : `${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}`;
     const routeFullHtml = hasSeg ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}</div>` : "";
     return `
@@ -2465,7 +2465,7 @@ ${post.text}
       card.className = `bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}`;
       const dotsNav = card.querySelector(".bhv4-dots-nav");
       if (dotsNav) {
-        const trackBtnHtml = hasSeg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
+        const trackBtnHtml = seg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
         const newDotsHtml = routes.length > 1 ? Array.from(
           { length: routes.length },
           (_, i) => `<span class="bhv4-dot-nav${i === smartRowIndex ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`

@@ -662,7 +662,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
       ).join('')
     : '';
 
-  const heroTrackBtnHtml = hasSeg
+  const heroTrackBtnHtml = seg
     ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="Скасувати відстеження"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
     : '';
 
@@ -796,10 +796,10 @@ function switchHeroCard() {
     // Оновлюємо клас картки (urgent/enroute для кольору і анімації крапки)
     card.className = `bhv4${isUrgent ? ' bhv4--urgent' : ''}${isEnroute ? ' bhv4--enroute' : ''}`;
 
-    // Крапки-навігатори + іконка закладки (коли є відстежуваний сегмент) — миттєво
+    // Крапки-навігатори + іконка закладки (коли є будь-яке відстеження) — миттєво
     const dotsNav = card.querySelector('.bhv4-dots-nav');
     if (dotsNav) {
-      const trackBtnHtml = hasSeg
+      const trackBtnHtml = seg
         ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="Скасувати відстеження"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
         : '';
       const newDotsHtml = routes.length > 1
