@@ -5,6 +5,23 @@
 
 ---
 
+## 🔴 ТЕРМІНОВО — ПОЧАТИ З ЦЬОГО В НОВІЙ СЕСІЇ
+
+> **Claude: прочитавши це, ОДРАЗУ скажи Вові цей план — не чекай питання.**
+
+**Контекст:** мережу середовища відкрито для Supabase (Custom + домени `*.supabase.com`/`*.supabase.co`), `.mcp.json` уже в `main`. Усе готове для підключення.
+
+1. **Підключити Supabase MCP (перше!):** запустити `mcp__supabase__authenticate` → дати Вові посилання → він логіниться → `mcp__supabase__complete_authentication` з callback-URL. Якщо знову «Host not in allowlist» — мережа не застосувалась, перевірити що сесія справді на новому середовищі.
+2. **Після входу — перевірити RLS-політики** всіх таблиць (`posts`, `announcements`, `reactions`, `comments`, `push_subscriptions`, `ads`, `ad_events`, `admins`) — останній відкладений пункт аудиту безпеки.
+
+**Нагадати Вові (його руки, поза кодом):**
+- 🔧 **Перезалити Cloudflare Worker** — фікс open-proxy у `cloudflare/worker.js` не діє, поки не задеплоїти на cloudflare.com.
+- 🔑 **Ротувати VAPID-ключ** — `npx web-push generate-vapid-keys` → новий приватний у Supabase Secret `VAPID_PRIVATE_KEY`, публічний у `src/tabs/buses.js`. Старий лишився в історії git.
+
+**Інші відкладені (не термінові):** прибрати debug-toast у `subscribeToPush()` (buses.js) · Фаза 3 «Світло» через Supabase · зворотні рейси «з боку Олики» (чекає список від Вови) · сторінка `/реклама`.
+
+---
+
 ## 🟢 Поточний стан
 
 | | |
