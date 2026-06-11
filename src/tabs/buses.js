@@ -552,8 +552,15 @@ export function renderRouteMapV4(route, timings) {
 }
 
 export function buildHeroCard(route, timings, index, total) {
-  const effFrom   = getEffectiveFrom(route);
-  const effTo     = getEffectiveTo(route);
+  const [routeA, routeB] = parseRouteEndpoints(route.name || '');
+  const isTracked = route.id === trackedRouteId;
+  const segFrom = (isTracked && _trackedStop)   || null;
+  const segTo   = (isTracked && _trackedToStop) || null;
+  const hasSeg  = !!(segFrom && segTo &&
+    (segFrom.toUpperCase() !== routeA.toUpperCase() || segTo.toUpperCase() !== routeB.toUpperCase()));
+
+  const effFrom   = hasSeg ? segFrom : getEffectiveFrom(route);
+  const effTo     = hasSeg ? segTo   : getEffectiveTo(route);
   const fromTime  = getStopHHMM(route, effFrom);
   const toTime    = getStopHHMM(route, effTo);
   const isEnroute = timings.state === 'enroute';
@@ -616,7 +623,7 @@ export function buildHeroCard(route, timings, index, total) {
 
         <div class="bhv4-body">
           <div class="bhv4-left">
-            <div class="bhv4-route-name bhv4-dyn">${escapeHtml((() => { const [a,b] = parseRouteEndpoints(route.name || `${effFrom} – ${effTo}`); return `${a.toUpperCase()} → ${b.toUpperCase()}`; })())}</div>
+            <div class="bhv4-route-name bhv4-dyn">${escapeHtml(hasSeg ? `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}` : `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`)}</div>
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span></span>
               <span class="bhv4-duration bhv4-dyn">${escapeHtml(durStr)}</span>
@@ -625,6 +632,7 @@ export function buildHeroCard(route, timings, index, total) {
           </div>
         </div>
 
+        ${hasSeg ? `<div class="bhv4-full-route bhv4-dyn">${escapeHtml(routeA.toUpperCase())} → ${escapeHtml(routeB.toUpperCase())}</div>` : ''}
         <div class="bhv4-map-outer">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
