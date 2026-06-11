@@ -82,7 +82,7 @@ serve(async () => {
       : routeLabel.toUpperCase();
 
     const payload = JSON.stringify({
-      title: `🚌 ${segLabel}`,
+      title: segLabel,
       body:  `Відправляється через ${minsLeft} хв (${sub.dep_time})`,
       tag:   `bus-${sub.route_id}`,
     });
