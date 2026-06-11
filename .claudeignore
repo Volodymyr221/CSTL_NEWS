@@ -1,0 +1,20 @@
+# Згенеровані / великі файли — не вантажити в контекст Claude
+bundle.js
+bundle.js.map
+node_modules/
+package-lock.json
+
+# Бінарні медіа
+photos/
+images/
+icons/
+logo.png
+*.png
+*.jpg
+*.jpeg
+*.webp
+
+# Бекапи і мініфіковані
+backup/
+*.min.js
+*.zip

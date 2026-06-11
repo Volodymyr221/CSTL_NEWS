@@ -18,13 +18,16 @@ export function postTime(p) {
   return p.ts || p.published_at || p.created_at || null;
 }
 
-// Захист від XSS (підставлення шкідливого HTML коду)
+// Захист від XSS (підставлення шкідливого HTML коду).
+// Екранує всі 5 небезпечних символів. Одинарна лапка ' → &#39; додана
+// як захист на майбутнє (defense-in-depth) для атрибутів у одинарних лапках.
 export function escapeHtml(s) {
   return String(s)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 // Форматування дати події: "12 квітня, субота"
