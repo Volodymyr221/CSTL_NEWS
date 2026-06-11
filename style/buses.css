@@ -415,6 +415,19 @@
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
 }
 
+/* Повний рейс над шкалою A/B — тільки при сегментному відстеженні */
+.bhv4-full-route {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.6px;
+  text-align: center;
+  margin-bottom: 3px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 /* ── Маршрутна шкала (v4) — в нормальному потоці після тексту ── */
 .bhv4-map {
   position: relative;
