@@ -94,23 +94,21 @@ function urlBase64ToUint8Array(b64) {
 // Запитує дозвіл на сповіщення якщо ще не надано.
 // Тихо виходить якщо: заборонено, немає SW, не сьогодні.
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
-  if (trackDate !== getTodayISO()) { showToast('Push: не сьогодні'); return; }
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) { showToast('Push: не підтримується браузером'); return; }
+  if (trackDate !== getTodayISO()) return;
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
   try {
     let perm = Notification.permission;
-    if (perm === 'denied') { showToast('Push: сповіщення заборонені'); return; }
+    if (perm === 'denied') return;
     if (perm === 'default') perm = await Notification.requestPermission();
-    if (perm !== 'granted') { showToast('Push: дозвіл не надано'); return; }
+    if (perm !== 'granted') return;
 
-    showToast('Push: підписка…');
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly:      true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     const subJson = sub.toJSON();
-    showToast('Push: зберігаємо у БД…');
-    const result = await savePushSubscription({
+    await savePushSubscription({
       user_uuid:      getAnonId(),
       endpoint:       subJson.endpoint,
       p256dh:         subJson.keys.p256dh,
@@ -122,10 +120,7 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
       track_date:     trackDate,
       dep_time:       depTime || null,
     });
-    showToast(result.ok ? '✅ Push підписка збережена' : ('❌ БД: ' + (result.error || '?')), 8000);
-  } catch (err) {
-    showToast('❌ Push помилка: ' + err.message);
-  }
+  } catch (_) {}
 }
 
 // Видаляє підписку для конкретного маршруту з Supabase.
