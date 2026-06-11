@@ -1643,7 +1643,8 @@ export async function initBuses() {
   renderWeekStrip();
   renderSmartRow();
   renderRouteList();
-  checkTrackNotifications();
+  // Затримка після сплеш-екрану (3500мс показ + 600мс fade + 100мс буфер)
+  setTimeout(() => checkTrackNotifications(), 4200);
 
   if (timerInterval) clearInterval(timerInterval);
   timerInterval = setInterval(() => {

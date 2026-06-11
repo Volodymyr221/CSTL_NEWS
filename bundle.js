@@ -3199,7 +3199,7 @@ ${post.text}
     renderWeekStrip();
     renderSmartRow();
     renderRouteList();
-    checkTrackNotifications();
+    setTimeout(() => checkTrackNotifications(), 4200);
     if (timerInterval)
       clearInterval(timerInterval);
     timerInterval = setInterval(() => {
