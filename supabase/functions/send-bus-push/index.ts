@@ -3,10 +3,11 @@
 //
 // Запускається кожну хвилину: cron * * * * *
 //
-// Три типи сповіщень:
-//   1. T-15 хв (notified_warning): "Відправляється через ~15 хв"
-//   2. T-0  хв (notified_dep):    "Автобус на зупинці" / "Автобус відправляється"
-//   3. Скасування (notified_canc): "Рейс скасовано" — перевіряє schedule.json
+// Чотири типи сповіщень:
+//   1. notified_start:   "Автобус вирушив · 07:15 (Ківерці)"     — тільки для проміжних зупинок
+//   2. notified_warning: "Відправляється через ~15 хв · 07:45"   — T-15 хв до зупинки посадки
+//   3. notified_dep:     "Автобус на зупинці · Олика"            — T-0 (автобус на зупинці)
+//   4. notified_canc:    "Рейс скасовано · 07:15"                — якщо рейс скасовано
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -59,7 +60,7 @@ serve(async () => {
     });
   }
 
-  // Завантажуємо schedule.json один раз для перевірки скасувань
+  // Завантажуємо schedule.json один раз
   let scheduleRoutes: any[] = [];
   try {
     const res = await fetch(`${SCHEDULE_URL}?v=${Date.now()}`);
@@ -93,17 +94,34 @@ serve(async () => {
       ? `${sub.boarding_stop.toUpperCase()} → ${sub.alighting_stop.toUpperCase()}`
       : routeLabel.toUpperCase();
 
-    // ── 1. Скасування рейсу ────────────────────────────────────────────────
-    if (!sub.notified_canc) {
-      const routeData = scheduleRoutes.find((r: any) => r.id === sub.route_id);
-      if (routeData?.status === 'cancelled') {
+    // Знаходимо дані маршруту з schedule.json
+    const routeData = scheduleRoutes.find((r: any) => r.id === sub.route_id);
+
+    // ── 1. Скасування рейсу (найвищий пріоритет) ──────────────────────────
+    if (!sub.notified_canc && routeData?.status === 'cancelled') {
+      const ok = await sendPush(sub, JSON.stringify({
+        title: segLabel,
+        body:  `Рейс скасовано · ${sub.dep_time}`,
+        tag:   `bus-canc-${sub.route_id}`,
+      }));
+      if (ok) await supa.from('push_subscriptions').update({ notified_canc: true }).eq('id', sub.id);
+      continue;
+    }
+
+    // ── 2. Автобус вирушив з початкової зупинки ───────────────────────────
+    // Тільки для проміжних зупинок (boarding_stop ≠ перша зупинка маршруту)
+    if (!sub.notified_start && sub.boarding_stop && routeData?.departure_time) {
+      const firstStopName = routeData.stops?.[0]?.name || '';
+      const isIntermediate = firstStopName.toLowerCase() !== sub.boarding_stop.toLowerCase();
+      const routeStartMins = timeToMins(routeData.departure_time);
+
+      if (isIntermediate && nowMins >= routeStartMins) {
         const ok = await sendPush(sub, JSON.stringify({
           title: segLabel,
-          body:  `Рейс скасовано · ${sub.dep_time}`,
-          tag:   `bus-canc-${sub.route_id}`,
+          body:  `Автобус вирушив · ${routeData.departure_time} (${firstStopName})`,
+          tag:   `bus-start-${sub.route_id}`,
         }));
-        if (ok) await supa.from('push_subscriptions').update({ notified_canc: true }).eq('id', sub.id);
-        continue; // Інші сповіщення для скасованого рейсу не потрібні
+        if (ok) await supa.from('push_subscriptions').update({ notified_start: true }).eq('id', sub.id);
       }
     }
 
@@ -111,7 +129,7 @@ serve(async () => {
     const depMins  = timeToMins(sub.dep_time);
     const minsLeft = depMins - nowMins;
 
-    // ── 2. Попередження: T-15 хв (вікно 13-17 хв) ─────────────────────────
+    // ── 3. Попередження: T-15 хв до зупинки посадки (вікно 13-17 хв) ──────
     if (!sub.notified_warning && minsLeft >= 13 && minsLeft <= 17) {
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
@@ -121,7 +139,7 @@ serve(async () => {
       if (ok) await supa.from('push_subscriptions').update({ notified_warning: true }).eq('id', sub.id);
     }
 
-    // ── 3. Автобус на зупинці: T-0 (вікно від -1 до +1 хв) ───────────────
+    // ── 4. Автобус на зупинці: T-0 (вікно від -1 до +1 хв) ───────────────
     if (!sub.notified_dep && minsLeft >= -1 && minsLeft <= 1) {
       const body = sub.boarding_stop
         ? `Автобус на зупинці · ${sub.boarding_stop}`
