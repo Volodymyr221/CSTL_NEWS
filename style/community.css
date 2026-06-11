@@ -595,8 +595,8 @@
   position: absolute;
   top: 4px;
   width: 32px;
-  height: 4px;
-  border-radius: 2px;
+  height: 3px;
+  border-radius: 1.5px;
   background: var(--red);
 }
 .tab-bar .tab-item { position: relative; }
