@@ -563,15 +563,12 @@ function openDropdown(field) {
 }
 
 // Промальовує вміст дропдауну (фільтрований список зупинок)
-function renderDropdownItems(query) {
-  const dd = document.getElementById('bs-dropdown');
-  if (!dd) return;
-
+// Будує HTML лише списку зупинок (без поля вводу і заголовку)
+function buildDropdownListHtml(query) {
   const all      = getAllStops();
   const q        = query.trim().toLowerCase();
   const filtered = q ? all.filter(s => s.toLowerCase().includes(q)) : all;
   const current  = activeField === 'from' ? fromStop : toStop;
-  const title    = activeField === 'from' ? 'Звідки їдете?' : 'Куди їдете?';
 
   const clearHtml = current
     ? `<button class="bs-dd-clear" id="bs-dd-clear">✕ Очистити вибір (${escapeHtml(current)})</button>`
@@ -585,6 +582,39 @@ function renderDropdownItems(query) {
       ).join('')
     : `<div class="bs-dd-empty">Зупинку не знайдено</div>`;
 
+  return clearHtml + itemsHtml;
+}
+
+// Навішує обробники на елементи списку (кнопки зупинок + "Очистити")
+function attachDropdownListListeners() {
+  const dd = document.getElementById('bs-dropdown');
+  if (!dd) return;
+
+  document.getElementById('bs-dd-clear')?.addEventListener('click', () => {
+    selectStop('', activeField);
+  });
+
+  dd.querySelectorAll('.bs-dd-item').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.preventDefault()); // не знімати фокус
+    btn.addEventListener('click', () => selectStop(btn.dataset.stop, activeField));
+  });
+}
+
+// Оновлює ТІЛЬКИ список при наборі — поле вводу лишається в DOM,
+// тому фокус і клавіатура (на iOS) не зникають.
+function updateDropdownList(query) {
+  const list = document.querySelector('#bs-dropdown .bs-dd-list');
+  if (!list) return;
+  list.innerHTML = buildDropdownListHtml(query);
+  attachDropdownListListeners();
+}
+
+function renderDropdownItems(query) {
+  const dd = document.getElementById('bs-dropdown');
+  if (!dd) return;
+
+  const title = activeField === 'from' ? 'Звідки їдете?' : 'Куди їдете?';
+
   dd.innerHTML = `
     <div class="bs-dd-head">
       <span class="bs-dd-title">${escapeHtml(title)}</span>
@@ -596,29 +626,20 @@ function renderDropdownItems(query) {
              autocomplete="off" autocorrect="off" spellcheck="false">
     </div>
     <div class="bs-dd-list">
-      ${clearHtml}
-      ${itemsHtml}
+      ${buildDropdownListHtml(query)}
     </div>
   `;
 
-  // Фільтр при наборі
+  // Фільтр при наборі — оновлюємо лише список, поле вводу не пересоздаємо
   document.getElementById('bs-dd-filter')?.addEventListener('input', e => {
-    renderDropdownItems(e.target.value);
+    updateDropdownList(e.target.value);
   });
 
   // Закрити ✕
   document.getElementById('bs-dd-x')?.addEventListener('click', closeDropdown);
 
-  // Очистити вибір
-  document.getElementById('bs-dd-clear')?.addEventListener('click', () => {
-    selectStop('', activeField);
-  });
-
-  // Вибір зупинки
-  dd.querySelectorAll('.bs-dd-item').forEach(btn => {
-    btn.addEventListener('mousedown', e => e.preventDefault()); // не знімати фокус
-    btn.addEventListener('click', () => selectStop(btn.dataset.stop, activeField));
-  });
+  // Обробники елементів списку
+  attachDropdownListListeners();
 }
 
 function closeDropdown() {

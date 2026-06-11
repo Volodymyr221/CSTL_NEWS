@@ -2297,21 +2297,43 @@ ${post.text}
     if (filterEl)
       setTimeout(() => filterEl.focus(), 80);
   }
-  function renderDropdownItems(query) {
-    const dd = document.getElementById("bs-dropdown");
-    if (!dd)
-      return;
+  function buildDropdownListHtml(query) {
     const all = getAllStops();
     const q = query.trim().toLowerCase();
     const filtered = q ? all.filter((s) => s.toLowerCase().includes(q)) : all;
     const current = activeField === "from" ? fromStop : toStop;
-    const title = activeField === "from" ? "\u0417\u0432\u0456\u0434\u043A\u0438 \u0457\u0434\u0435\u0442\u0435?" : "\u041A\u0443\u0434\u0438 \u0457\u0434\u0435\u0442\u0435?";
     const clearHtml = current ? `<button class="bs-dd-clear" id="bs-dd-clear">\u2715 \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0438\u0431\u0456\u0440 (${escapeHtml(current)})</button>` : "";
     const itemsHtml = filtered.length ? filtered.map(
       (s) => `<button class="bs-dd-item${s === current ? " sel" : ""}" data-stop="${escapeHtml(s)}">
            ${escapeHtml(s)}
          </button>`
     ).join("") : `<div class="bs-dd-empty">\u0417\u0443\u043F\u0438\u043D\u043A\u0443 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
+    return clearHtml + itemsHtml;
+  }
+  function attachDropdownListListeners() {
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd)
+      return;
+    document.getElementById("bs-dd-clear")?.addEventListener("click", () => {
+      selectStop("", activeField);
+    });
+    dd.querySelectorAll(".bs-dd-item").forEach((btn) => {
+      btn.addEventListener("mousedown", (e) => e.preventDefault());
+      btn.addEventListener("click", () => selectStop(btn.dataset.stop, activeField));
+    });
+  }
+  function updateDropdownList(query) {
+    const list = document.querySelector("#bs-dropdown .bs-dd-list");
+    if (!list)
+      return;
+    list.innerHTML = buildDropdownListHtml(query);
+    attachDropdownListListeners();
+  }
+  function renderDropdownItems(query) {
+    const dd = document.getElementById("bs-dropdown");
+    if (!dd)
+      return;
+    const title = activeField === "from" ? "\u0417\u0432\u0456\u0434\u043A\u0438 \u0457\u0434\u0435\u0442\u0435?" : "\u041A\u0443\u0434\u0438 \u0457\u0434\u0435\u0442\u0435?";
     dd.innerHTML = `
     <div class="bs-dd-head">
       <span class="bs-dd-title">${escapeHtml(title)}</span>
@@ -2323,21 +2345,14 @@ ${post.text}
              autocomplete="off" autocorrect="off" spellcheck="false">
     </div>
     <div class="bs-dd-list">
-      ${clearHtml}
-      ${itemsHtml}
+      ${buildDropdownListHtml(query)}
     </div>
   `;
     document.getElementById("bs-dd-filter")?.addEventListener("input", (e) => {
-      renderDropdownItems(e.target.value);
+      updateDropdownList(e.target.value);
     });
     document.getElementById("bs-dd-x")?.addEventListener("click", closeDropdown);
-    document.getElementById("bs-dd-clear")?.addEventListener("click", () => {
-      selectStop("", activeField);
-    });
-    dd.querySelectorAll(".bs-dd-item").forEach((btn) => {
-      btn.addEventListener("mousedown", (e) => e.preventDefault());
-      btn.addEventListener("click", () => selectStop(btn.dataset.stop, activeField));
-    });
+    attachDropdownListListeners();
   }
   function closeDropdown() {
     activeField = null;
