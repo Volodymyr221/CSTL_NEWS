@@ -1,8 +1,8 @@
 // supabase/functions/send-bus-push/index.ts
 // Edge Function: надсилає Web Push коли автобус відправляється через ~10 хв.
 //
-// Запускається за розкладом: кожні 5 хв через Supabase Dashboard → Edge Functions → Schedule.
-// Cron: */5 * * * *
+// Запускається за розкладом: кожну хвилину через Supabase Dashboard → Edge Functions → Schedule.
+// Cron: * * * * *
 //
 // Необхідні Secrets у Supabase Dashboard → Edge Functions → Secrets:
 //   VAPID_PRIVATE_KEY = o03idVnwjS-ziu1uU8IXwprjxoCk0TzSd2JhvSOfL_k
@@ -73,8 +73,8 @@ serve(async () => {
     const depMins  = timeToMins(sub.dep_time);
     const minsLeft = depMins - nowMins;
 
-    // Вікно відправки push: 8-16 хвилин до відправлення
-    if (minsLeft < 8 || minsLeft > 16) continue;
+    // Вікно відправки push: 9-11 хвилин до відправлення (точність ±1 хв при cron * * * * *)
+    if (minsLeft < 9 || minsLeft > 11) continue;
 
     const routeLabel = sub.route_name || sub.route_id;
     const segLabel   = sub.boarding_stop && sub.alighting_stop
