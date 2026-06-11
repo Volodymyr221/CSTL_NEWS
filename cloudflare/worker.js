@@ -7,17 +7,10 @@
  * Деплой: cloudflare.com → Workers & Pages → Create Worker → вставити цей код
  */
 
-// Дозволені шляхи (paths) — тільки потрібні розділи
-const ALLOWED_PATHS = [
-  '/',
-  '/novyny',
-  '/news',
-  '/ogoloshennia',
-  '/announcements',
-  '/gromadski-obhovorennia',
-];
-
+// Worker — проксі ВИКЛЮЧНО для одного сайту. Будь-який інший хост відкидається
+// (анти open-proxy: щоб чужі не ганяли через нього довільні сайти).
 const TARGET_BASE = 'https://olytska-gromada.gov.ua';
+const TARGET_ORIGIN = new URL(TARGET_BASE).origin;
 
 export default {
   async fetch(request) {
@@ -33,7 +26,25 @@ export default {
     // Отримуємо шлях з query-параметра: ?path=/novyny
     const path = url.searchParams.get('path') || '/';
 
-    const targetUrl = TARGET_BASE + path;
+    // Будуємо цільовий URL безпечно через new URL() (а не конкатенацією рядків).
+    // Анти open-proxy: path=@evil.com або //evil.com змінив би хост — після
+    // парсингу перевіряємо що origin лишився саме сайтом громади.
+    let target;
+    try {
+      target = new URL(path, TARGET_BASE);
+    } catch {
+      return new Response(JSON.stringify({ error: 'bad path' }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    if (target.origin !== TARGET_ORIGIN) {
+      return new Response(JSON.stringify({ error: 'forbidden host' }), {
+        status: 403,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+    const targetUrl = target.href;
 
     try {
       const response = await fetch(targetUrl, {
