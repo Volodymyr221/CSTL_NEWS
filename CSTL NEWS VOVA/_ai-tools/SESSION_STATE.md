@@ -1,24 +1,21 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-11 18:09
+**Оновлено:** 2026-06-11 (нова сесія, гілка `claude/wonderful-lamport-e5wq4z`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
 
-## 🔴 ТЕРМІНОВО — ПОЧАТИ З ЦЬОГО В НОВІЙ СЕСІЇ
+## ✅ ТЕРМІНОВИЙ ПЛАН — ВИКОНАНО (11.06.2026)
 
-> **Claude: прочитавши це, ОДРАЗУ скажи Вові цей план — не чекай питання.**
-
-**Контекст:** мережу середовища відкрито для Supabase (Custom + домени `*.supabase.com`/`*.supabase.co`), `.mcp.json` уже в `main`. Усе готове для підключення.
-
-1. **Підключити Supabase MCP (перше!):** запустити `mcp__supabase__authenticate` → дати Вові посилання → він логіниться → `mcp__supabase__complete_authentication` з callback-URL. Якщо знову «Host not in allowlist» — мережа не застосувалась, перевірити що сесія справді на новому середовищі.
-2. **Після входу — перевірити RLS-політики** всіх таблиць (`posts`, `announcements`, `reactions`, `comments`, `push_subscriptions`, `ads`, `ad_events`, `admins`) — останній відкладений пункт аудиту безпеки.
+1. ✅ **Supabase MCP підключено** — `Supabase` MCP-сервер працює без OAuth. Проект «Olyka Castle» (`uabyfecseqnemvcqhdem`, Frankfurt) ACTIVE_HEALTHY.
+2. ✅ **RLS-аудит завершено** — всі 8 таблиць перевірено. Критичних дір нема. Цінні дані (`posts`, `admins`, `announcements`, `ads`) захищені правильно. Слабкі місця (`reactions`, `push_subscriptions`, `comments`) — технічно невиправні без Google Auth. Google Auth записано як ключову задачу на майбутнє.
 
 **Нагадати Вові (його руки, поза кодом):**
 - 🔧 **Перезалити Cloudflare Worker** — фікс open-proxy у `cloudflare/worker.js` не діє, поки не задеплоїти на cloudflare.com.
 - 🔑 **Ротувати VAPID-ключ** — `npx web-push generate-vapid-keys` → новий приватний у Supabase Secret `VAPID_PRIVATE_KEY`, публічний у `src/tabs/buses.js`. Старий лишився в історії git.
+- 🔒 **Leaked Password Protection** — увімкнути у Supabase Dashboard → Authentication (захист паролів адмінів).
 
-**Інші відкладені (не термінові):** прибрати debug-toast у `subscribeToPush()` (buses.js) · Фаза 3 «Світло» через Supabase · зворотні рейси «з боку Олики» (чекає список від Вови) · сторінка `/реклама`.
+**Відкладені (не термінові):** прибрати debug-toast у `subscribeToPush()` (buses.js) · Фаза 3 «Світло» через Supabase · зворотні рейси «з боку Олики» (чекає список від Вови) · сторінка `/реклама`.
 
 ---
 
