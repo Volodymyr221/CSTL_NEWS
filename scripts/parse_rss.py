@@ -68,6 +68,45 @@ SOURCES = [
 GROMADA_PROXY = "https://cstl-proxy.volodymyrshevchuk19.workers.dev"
 GROMADA_BASE  = "https://olytska-gromada.gov.ua"
 
+# ── Анти-SSRF (Server-Side Request Forgery — підробка запиту з боку сервера) ──
+# fetch_full_article() ходить за посиланнями ЗІ СТРІЧКИ (RSS), а їх контролює
+# джерело. Зловмисне джерело могло б підсунути file:///etc/passwd або
+# http://169.254.169.254/ (метадані хмари) → парсер завантажив би це на runner.
+# Тому дозволяємо завантажувати повний текст ТІЛЬКИ з доменів відомих видань.
+ALLOWED_FETCH_DOMAINS = (
+    "volynpost.com",
+    "konkurent.ua",
+    "pravda.com.ua",
+    "rayon.in.ua",
+    "olytska-gromada.gov.ua",
+    "cstl-proxy.volodymyrshevchuk19.workers.dev",
+)
+
+
+def is_allowed_url(url: str) -> bool:
+    """True лише для http(s) на whitelist-домені і без приватних IP-літералів."""
+    import ipaddress
+    try:
+        p = urllib.parse.urlparse(url)
+    except Exception:
+        return False
+    if p.scheme not in ("http", "https"):
+        return False          # блокує file://, ftp://, gopher:// тощо
+    host = (p.hostname or "").lower()
+    if not host:
+        return False
+    # домен має збігатися або бути піддоменом дозволеного
+    if not any(host == d or host.endswith("." + d) for d in ALLOWED_FETCH_DOMAINS):
+        return False
+    # якщо host — це IP-літерал, відкидаємо приватні/локальні діапазони
+    try:
+        ip = ipaddress.ip_address(host)
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
+            return False
+    except ValueError:
+        pass  # не IP, а доменне імʼя — whitelist вище вже спрацював
+    return True
+
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
 MAX_ARTICLES     = 150
 MAX_PER_SOURCE   = 15   # не більше 15 статей з одного джерела за раз
@@ -416,6 +455,9 @@ def fetch_full_article(url: str) -> str | None:
     Викликається коли RSS дає лише анонс (<600 символів).
     Повертає текст або None якщо не вдалося.
     """
+    # Анти-SSRF: завантажуємо повний текст лише з доменів відомих видань.
+    if not is_allowed_url(url):
+        return None
     try:
         req = urllib.request.Request(url, headers={
             "User-Agent": BROWSER_UA,
