@@ -397,12 +397,18 @@ function getSegmentPrice(route, fromName, toName) {
 }
 
 function getEffectiveFrom(route) {
-  if (fromStop && route.stops.some(s => s.name === fromStop)) return fromStop;
+  if (fromStop) {
+    const match = route.stops.find(s => normalizeStopName(s.name) === normalizeStopName(fromStop));
+    if (match) return match.name; // повертаємо raw-назву з даних (може бути "Хорлупи пов.")
+  }
   return route.stops[0].name;
 }
 
 function getEffectiveTo(route) {
-  if (toStop && route.stops.some(s => s.name === toStop)) return toStop;
+  if (toStop) {
+    const match = route.stops.find(s => normalizeStopName(s.name) === normalizeStopName(toStop));
+    if (match) return match.name;
+  }
   return route.stops[route.stops.length - 1].name;
 }
 
@@ -424,8 +430,8 @@ function getOrderedStops(route) {
 function matchesSearch(route) {
   if (!fromStop && !toStop) return true;
   const stops = route.stops;
-  const fStop = fromStop ? stops.find(s => s.name === fromStop) : null;
-  const tStop = toStop   ? stops.find(s => s.name === toStop)   : null;
+  const fStop = fromStop ? stops.find(s => normalizeStopName(s.name) === normalizeStopName(fromStop)) : null;
+  const tStop = toStop   ? stops.find(s => normalizeStopName(s.name) === normalizeStopName(toStop))   : null;
   if (fromStop && !fStop) return false;
   if (toStop   && !tStop) return false;
   // Напрямок: fromStop повинен бути географічно ДО toStop (за км)
@@ -519,11 +525,18 @@ function findActiveRoutes() {
   return activeList;
 }
 
+// Прибирає суфікс " пов." (поворот — технічне позначення на квитках VOPAS).
+// "Хорлупи пов." і "Хорлупи" — одна фізична зупинка.
+function normalizeStopName(name) {
+  return name.replace(/\s+пов\.$/, '').trim();
+}
+
 function getAllStops() {
   if (!busData) return [];
   const seen = new Set();
-  // Тільки зупинки обраного дня — пошук завжди в рамках поточної дати
-  (getDayData().routes || []).forEach(r => r.stops.forEach(s => seen.add(s.name)));
+  // Тільки зупинки обраного дня — пошук завжди в рамках поточної дати.
+  // Нормалізуємо назви щоб "Хорлупи пов." і "Хорлупи" не дублювались у дропдауні.
+  (getDayData().routes || []).forEach(r => r.stops.forEach(s => seen.add(normalizeStopName(s.name))));
   return [...seen].sort((a, b) => a.localeCompare(b, 'uk'));
 }
 
