@@ -1284,7 +1284,9 @@ function renderRouteList() {
     btn.addEventListener('click', e => {
       e.stopPropagation();
       const rid = btn.dataset.trackId;
-      if (isRouteSegmentTracked(rid)) {
+      const tracked = isRouteSegmentTracked(rid);
+      showToast(tracked ? '🔕 знімаємо відстеження' : '🔔 додаємо відстеження');
+      if (tracked) {
         const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
         if (entry) {
           removeTrackedEntry(entry);
