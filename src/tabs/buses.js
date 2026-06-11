@@ -122,7 +122,7 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
       track_date:     trackDate,
       dep_time:       depTime || null,
     });
-    showToast(result.ok ? '✅ Push підписка збережена' : '❌ Push: помилка збереження у БД');
+    showToast(result.ok ? '✅ Push підписка збережена' : ('❌ БД: ' + (result.error || '?')), 8000);
   } catch (err) {
     showToast('❌ Push помилка: ' + err.message);
   }

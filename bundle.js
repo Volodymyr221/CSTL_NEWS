@@ -353,11 +353,11 @@
   }
   async function savePushSubscription(payload) {
     if (!supa)
-      return { ok: false };
+      return { ok: false, error: "no-supa" };
     const { error } = await supa.from("push_subscriptions").upsert(payload, { onConflict: "endpoint,route_id,track_date" });
     if (error) {
       console.warn("[supabase] savePushSubscription:", error.message);
-      return { ok: false };
+      return { ok: false, error: error.message };
     }
     return { ok: true };
   }
@@ -1910,7 +1910,7 @@ ${post.text}
         track_date: trackDate,
         dep_time: depTime || null
       });
-      showToast(result.ok ? "\u2705 Push \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430" : "\u274C Push: \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0443 \u0411\u0414");
+      showToast(result.ok ? "\u2705 Push \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430" : "\u274C \u0411\u0414: " + (result.error || "?"), 8e3);
     } catch (err) {
       showToast("\u274C Push \u043F\u043E\u043C\u0438\u043B\u043A\u0430: " + err.message);
     }
