@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-11 18:00
+**Оновлено:** 2026-06-11 18:09
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -11,12 +11,29 @@
 |--|--|
 | **URL сайту** | https://volodymyr221.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
-| **Робоча гілка (поточна сесія)** | `claude/startup-uem-csu670` |
+| **Робоча гілка (поточна сесія)** | `claude/peaceful-johnson-fwj3fn` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260611-1341` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260611-1459` |
 | **Статус вкладки «Автобуси»** | 🟢 РОБОЧИЙ ВАРІАНТ — зафіксовано Вовою 11.06.2026 |
 | **Push-сповіщення (Level B)** | 🟢 ПРАЦЮЄ — протестовано 11.06.2026 |
+
+---
+
+## 🛡️ СЕСІЯ БЕЗПЕКИ + Supabase MCP (11.06.2026, гілка peaceful-johnson)
+
+**Зроблено (аудит безпеки, усе в коді + перевірено build/тести):**
+- **B1 XSS:** `escapeHtml` тепер екранує і `'` (одинарну лапку). Аудит підтвердив — усі шляхи чужого контенту (RSS, пости Supabase, коментарі, фото) вже екранувались.
+- **B2 SSRF:** `parse_rss.fetch_full_article` ходив за будь-яким посиланням зі стрічки → додано `is_allowed_url()` (whitelist доменів, блок `file://`/приватних IP).
+- **B4 Cloudflare Worker:** виправлено open-proxy (`path=@evil.com` міняв хост) → `new URL()` + перевірка origin. ⚠️ **Worker треба вручну перезалити на Cloudflare.**
+- **B5 CI:** `auto-merge.yml` — `github.ref_name` винесено в env (захист від script injection).
+- **B6 секрети:** redact приватного VAPID-ключа з цього файлу + додано gitleaks-воркфлоу + `.gitleaks.toml`. ⚠️ **Вова має РОТУВАТИ VAPID-ключ** (він лишився в історії git).
+- **A1:** `.claudeignore`. **A4:** дедуплікація правил (START_HERE → HOT_RULES).
+
+**Supabase MCP:**
+- `.mcp.json` додано (read-only, project_ref=uabyfecseqnemvcqhdem, OAuth).
+- Network access середовища → Custom + домени `mcp.supabase.com`, `*.supabase.com`, `*.supabase.co`.
+- **Залишилось:** у НОВІЙ сесії на `main` пройти OAuth-вхід → тоді перевірити RLS-політики всіх таблиць (відкладений пункт безпеки).
 
 ---
 
