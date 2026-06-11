@@ -353,8 +353,14 @@ if (trackedRouteId && _trackDate === getTodayISO()) {
 
 ```
 Public Key (у коді): BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo
-Private Key (ТІЛЬКИ у Supabase Secret — НІКОЛИ не у коді): o03idVnwjS-ziu1uU8IXwprjxoCk0TzSd2JhvSOfL_k
+Private Key: [ВИДАЛЕНО З ДОКУМЕНТА — раніше був тут відкритим текстом]
 ```
+> ⚠️ **БЕЗПЕКА (11.06.2026):** приватний VAPID-ключ раніше зберігався тут
+> відкритим текстом і потрапив в історію git. Його прибрано з файлу, АЛЕ
+> редакція не чистить історію комітів. **Вова має РОТУВАТИ ключ:**
+> `npx web-push generate-vapid-keys` → новий приватний у Supabase Secret
+> `VAPID_PRIVATE_KEY`, новий публічний — у `VAPID_PUBLIC_KEY` (`src/tabs/buses.js`).
+> Після ротації старий ключ стає недійсним.
 
 ### 🟢 Push-сповіщення — ПОВНІСТЮ НАЛАШТОВАНО (11.06.2026)
 

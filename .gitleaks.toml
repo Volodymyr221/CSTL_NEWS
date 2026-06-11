@@ -1,0 +1,16 @@
+# Конфіг gitleaks — базові правила + allowlist відомих ПУБЛІЧНИХ значень.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Публічні за дизайном значення — не секрети"
+regexes = [
+  # Supabase publishable/anon key — призначений бути у клієнтському коді,
+  # захищений RLS-політиками на сервері. Не секрет.
+  '''sb_publishable_[A-Za-z0-9_]+''',
+  # VAPID PUBLIC key — публічний за дизайном (іде у браузер).
+  '''BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo''',
+]
+paths = [
+  '''bundle\.js''',  # згенерований — дублює вже перевірений src/
+]

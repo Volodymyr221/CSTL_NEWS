@@ -1,0 +1,21 @@
+name: Secret scan (gitleaks)
+
+# Сторож на майбутнє: ловить випадково закомічені секрети (приватні ключі,
+# токени, паролі) у нових пушах і pull request-ах. Сканує тільки нові коміти.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  gitleaks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Run gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
