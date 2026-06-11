@@ -696,11 +696,10 @@ export function renderRouteMapV4(route, timings) {
     </div>`;
 }
 
-export function buildHeroCard(route, timings, index, total) {
+export function buildHeroCard(route, timings, index, total, seg = null) {
   const [routeA, routeB] = parseRouteEndpoints(route.name || '');
-  const isTracked = route.id === trackedRouteId;
-  const segFrom = (isTracked && _trackedStop)   || null;
-  const segTo   = (isTracked && _trackedToStop) || null;
+  const segFrom = seg?.boardingStop  || null;
+  const segTo   = seg?.alightingStop || null;
   const hasSeg  = !!(segFrom && segTo &&
     (segFrom.toUpperCase() !== routeA.toUpperCase() || segTo.toUpperCase() !== routeB.toUpperCase()));
 

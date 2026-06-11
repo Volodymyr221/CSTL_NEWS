@@ -354,8 +354,10 @@
   async function savePushSubscription(payload) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { error } = await supa.from("push_subscriptions").upsert(payload, { onConflict: "endpoint,route_id,track_date" });
+    const { error } = await supa.from("push_subscriptions").insert(payload);
     if (error) {
+      if (error.code === "23505")
+        return { ok: true };
       console.warn("[supabase] savePushSubscription:", error.message);
       return { ok: false, error: error.message };
     }
@@ -2403,11 +2405,10 @@ ${post.text}
       </div>
     </div>`;
   }
-  function buildHeroCard(route, timings, index, total) {
+  function buildHeroCard(route, timings, index, total, seg = null) {
     const [routeA, routeB] = parseRouteEndpoints(route.name || "");
-    const isTracked = route.id === trackedRouteId;
-    const segFrom = isTracked && _trackedStop || null;
-    const segTo = isTracked && _trackedToStop || null;
+    const segFrom = seg?.boardingStop || null;
+    const segTo = seg?.alightingStop || null;
     const hasSeg = !!(segFrom && segTo && (segFrom.toUpperCase() !== routeA.toUpperCase() || segTo.toUpperCase() !== routeB.toUpperCase()));
     const effFrom = hasSeg ? segFrom : getEffectiveFrom(route);
     const effTo = hasSeg ? segTo : getEffectiveTo(route);
