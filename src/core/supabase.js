@@ -226,9 +226,13 @@ export async function uploadPhotoToStorage(blob) {
 //            boarding_stop, alighting_stop, track_date, dep_time }
 export async function savePushSubscription(payload) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { error } = await supa.from('push_subscriptions')
-    .upsert(payload, { onConflict: 'endpoint,route_id,track_date' });
-  if (error) { console.warn('[supabase] savePushSubscription:', error.message); return { ok: false, error: error.message }; }
+  const { error } = await supa.from('push_subscriptions').insert(payload);
+  if (error) {
+    // 23505 = unique_violation (порушення унікальності) — підписка вже є, це нормально
+    if (error.code === '23505') return { ok: true };
+    console.warn('[supabase] savePushSubscription:', error.message);
+    return { ok: false, error: error.message };
+  }
   return { ok: true };
 }
 
