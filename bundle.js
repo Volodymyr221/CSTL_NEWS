@@ -2162,21 +2162,27 @@ ${post.text}
     return diff > 0 ? diff.toFixed(2) : null;
   }
   function getEffectiveFrom(route) {
-    if (fromStop && route.stops.some((s) => s.name === fromStop))
-      return fromStop;
+    if (fromStop) {
+      const match = route.stops.find((s) => normalizeStopName(s.name) === normalizeStopName(fromStop));
+      if (match)
+        return match.name;
+    }
     return route.stops[0].name;
   }
   function getEffectiveTo(route) {
-    if (toStop && route.stops.some((s) => s.name === toStop))
-      return toStop;
+    if (toStop) {
+      const match = route.stops.find((s) => normalizeStopName(s.name) === normalizeStopName(toStop));
+      if (match)
+        return match.name;
+    }
     return route.stops[route.stops.length - 1].name;
   }
   function matchesSearch(route) {
     if (!fromStop && !toStop)
       return true;
     const stops = route.stops;
-    const fStop = fromStop ? stops.find((s) => s.name === fromStop) : null;
-    const tStop = toStop ? stops.find((s) => s.name === toStop) : null;
+    const fStop = fromStop ? stops.find((s) => normalizeStopName(s.name) === normalizeStopName(fromStop)) : null;
+    const tStop = toStop ? stops.find((s) => normalizeStopName(s.name) === normalizeStopName(toStop)) : null;
     if (fromStop && !fStop)
       return false;
     if (toStop && !tStop)
@@ -2266,11 +2272,14 @@ ${post.text}
     });
     return activeList;
   }
+  function normalizeStopName(name) {
+    return name.replace(/\s+пов\.$/, "").trim();
+  }
   function getAllStops() {
     if (!busData)
       return [];
     const seen = /* @__PURE__ */ new Set();
-    (getDayData().routes || []).forEach((r) => r.stops.forEach((s) => seen.add(s.name)));
+    (getDayData().routes || []).forEach((r) => r.stops.forEach((s) => seen.add(normalizeStopName(s.name))));
     return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
   }
   function openDropdown(field) {
