@@ -1,4 +1,4 @@
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, showToast } from '../core/utils.js';
 import {
   toMinutes, minsToHHMM, nowMinutes,
   getStopMins, getStopHHMM, getRouteState, getRouteTimings,
@@ -94,34 +94,37 @@ function urlBase64ToUint8Array(b64) {
 // Запитує дозвіл на сповіщення якщо ще не надано.
 // Тихо виходить якщо: заборонено, немає SW, не сьогодні.
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
-  if (trackDate !== getTodayISO()) return; // push тільки для сьогоднішніх рейсів
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
+  if (trackDate !== getTodayISO()) { showToast('Push: не сьогодні'); return; }
+  if (!('Notification' in window) || !('serviceWorker' in navigator)) { showToast('Push: не підтримується браузером'); return; }
   try {
     let perm = Notification.permission;
-    if (perm === 'denied') return;
+    if (perm === 'denied') { showToast('Push: сповіщення заборонені'); return; }
     if (perm === 'default') perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
+    if (perm !== 'granted') { showToast('Push: дозвіл не надано'); return; }
 
+    showToast('Push: підписка…');
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.subscribe({
       userVisibleOnly:      true,
       applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
     });
     const subJson = sub.toJSON();
-    await savePushSubscription({
-      user_uuid:     getAnonId(),
-      endpoint:      subJson.endpoint,
-      p256dh:        subJson.keys.p256dh,
-      auth_key:      subJson.keys.auth,
-      route_id:      routeId,
-      route_name:    routeName || '',
+    showToast('Push: зберігаємо у БД…');
+    const result = await savePushSubscription({
+      user_uuid:      getAnonId(),
+      endpoint:       subJson.endpoint,
+      p256dh:         subJson.keys.p256dh,
+      auth_key:       subJson.keys.auth,
+      route_id:       routeId,
+      route_name:     routeName || '',
       boarding_stop:  boardingStop  || null,
       alighting_stop: alightingStop || null,
-      track_date:    trackDate,
-      dep_time:      depTime || null,
+      track_date:     trackDate,
+      dep_time:       depTime || null,
     });
+    showToast(result.ok ? '✅ Push підписка збережена' : '❌ Push: помилка збереження у БД');
   } catch (err) {
-    console.warn('[push] subscribe error:', err);
+    showToast('❌ Push помилка: ' + err.message);
   }
 }
 

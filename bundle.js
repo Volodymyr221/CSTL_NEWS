@@ -1870,25 +1870,35 @@ ${post.text}
     return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
   }
   async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
-    if (trackDate !== getTodayISO())
+    if (trackDate !== getTodayISO()) {
+      showToast("Push: \u043D\u0435 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456");
       return;
-    if (!("Notification" in window) || !("serviceWorker" in navigator))
+    }
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      showToast("Push: \u043D\u0435 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u0443\u0454\u0442\u044C\u0441\u044F \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u043E\u043C");
       return;
+    }
     try {
       let perm = Notification.permission;
-      if (perm === "denied")
+      if (perm === "denied") {
+        showToast("Push: \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456");
         return;
+      }
       if (perm === "default")
         perm = await Notification.requestPermission();
-      if (perm !== "granted")
+      if (perm !== "granted") {
+        showToast("Push: \u0434\u043E\u0437\u0432\u0456\u043B \u043D\u0435 \u043D\u0430\u0434\u0430\u043D\u043E");
         return;
+      }
+      showToast("Push: \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0430\u2026");
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.subscribe({
         userVisibleOnly: true,
         applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
       });
       const subJson = sub.toJSON();
-      await savePushSubscription({
+      showToast("Push: \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u043C\u043E \u0443 \u0411\u0414\u2026");
+      const result = await savePushSubscription({
         user_uuid: getAnonId(),
         endpoint: subJson.endpoint,
         p256dh: subJson.keys.p256dh,
@@ -1900,8 +1910,9 @@ ${post.text}
         track_date: trackDate,
         dep_time: depTime || null
       });
+      showToast(result.ok ? "\u2705 Push \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0430" : "\u274C Push: \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F \u0443 \u0411\u0414");
     } catch (err) {
-      console.warn("[push] subscribe error:", err);
+      showToast("\u274C Push \u043F\u043E\u043C\u0438\u043B\u043A\u0430: " + err.message);
     }
   }
   async function unsubscribeFromPush(routeId, trackDate) {
