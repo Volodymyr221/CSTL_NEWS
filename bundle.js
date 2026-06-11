@@ -2102,8 +2102,8 @@ ${post.text}
       if (!tracked.notifiedCanc) {
         tracked.notifiedCanc = true;
         saveTrackedRoute();
+        showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading);
       }
-      showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading);
       return;
     }
     const state = getRouteState(route);

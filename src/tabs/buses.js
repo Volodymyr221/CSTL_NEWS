@@ -322,8 +322,11 @@ function checkSingleTracked(tracked, forceInitial) {
   const { heading, subDefault } = buildBannerTexts(route, tracked);
 
   if (route.status === 'cancelled') {
-    if (!tracked.notifiedCanc) { tracked.notifiedCanc = true; saveTrackedRoute(); }
-    showBanner('Рейс скасовано', heading);
+    if (!tracked.notifiedCanc) {
+      tracked.notifiedCanc = true;
+      saveTrackedRoute();
+      showBanner('Рейс скасовано', heading);
+    }
     return;
   }
 
