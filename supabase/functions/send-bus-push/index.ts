@@ -83,7 +83,7 @@ serve(async () => {
 
     const payload = JSON.stringify({
       title: segLabel,
-      body:  `Відправляється через ${minsLeft} хв (${sub.dep_time})`,
+      body:  `Відправляється через ${minsLeft} хв\n${sub.dep_time} · ${routeLabel}`,
       tag:   `bus-${sub.route_id}`,
     });
 
