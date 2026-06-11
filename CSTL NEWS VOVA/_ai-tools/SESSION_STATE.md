@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-11 13:38
+**Оновлено:** 2026-06-11 17:30
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -14,8 +14,9 @@
 | **Робоча гілка (поточна сесія)** | `claude/startup-uem-csu670` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260610-2119` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260611-1341` |
 | **Статус вкладки «Автобуси»** | 🟢 РОБОЧИЙ ВАРІАНТ — зафіксовано Вовою 11.06.2026 |
+| **Push-сповіщення (Level B)** | 🟢 ПРАЦЮЄ — протестовано 11.06.2026 |
 
 ---
 
@@ -343,10 +344,10 @@ if (trackedRouteId && _trackDate === getTodayISO()) {
   - `unsubscribeFromPush()` — видаляє рядок з Supabase (браузерну підписку не скасовує)
   - Hook у track-кнопку картки рейсу: підписка при відстеженні
   - Hook у hero-картку: відписка при знятті через bookmark-іконку
-- `scripts/supabase_push_schema.sql` — SQL для таблиці `push_subscriptions` (Вова запускає у Supabase)
-- `supabase/functions/send-bus-push/index.ts` — Edge Function (Deno): кожні 5 хв перевіряє рейси, надсилає push за 8-16 хв до відправлення
+- `scripts/supabase_push_schema.sql` — SQL для таблиці `push_subscriptions`
+- `scripts/supabase_push_fix_rls.sql` — фікс RLS-політик (INSERT/UPDATE/DELETE для anon)
+- `supabase/functions/send-bus-push/index.ts` — Edge Function (Deno)
 - `scripts/check-imports.js`: додано `atob`, `btoa` до whitelist глобалів
-- `sw.js`: CACHE_NAME → `cstl-20260610-2119`
 
 ### 🔑 ВАЖЛИВО — VAPID ключі
 
@@ -355,11 +356,28 @@ Public Key (у коді): BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTW
 Private Key (ТІЛЬКИ у Supabase Secret — НІКОЛИ не у коді): o03idVnwjS-ziu1uU8IXwprjxoCk0TzSd2JhvSOfL_k
 ```
 
-### ⚡ Що Вова має зробити щоб Push запрацював (3 кроки)
+### 🟢 Push-сповіщення — ПОВНІСТЮ НАЛАШТОВАНО (11.06.2026)
 
-1. **Supabase SQL** — зайти у `uabyfecseqnemvcqhdem.supabase.co` → SQL Editor → вставити і запустити `scripts/supabase_push_schema.sql`
-2. **Edge Function** — Supabase Dashboard → Edge Functions → New Function → назва `send-bus-push` → вставити код з `supabase/functions/send-bus-push/index.ts` → Deploy
-3. **Secret + Cron** — у тій самій Edge Function → Secrets → додати `VAPID_PRIVATE_KEY = o03idVnwjS-ziu1uU8IXwprjxoCk0TzSd2JhvSOfL_k` → Schedule → `*/5 * * * *`
+**Проблема яку вирішили:** `upsert` (INSERT ON CONFLICT DO UPDATE) в Supabase JS SDK вимагає SELECT-доступ для anon-ролі при перевірці UPDATE USING clause. Оскільки SELECT заборонений для anon — upsert падав з RLS-помилкою `42501`. Звичайний INSERT проходив без проблем.
+
+**Фікс у `src/core/supabase.js`:** замінено `.upsert()` на `.insert()`, дублікати (error code `23505`) обробляються як `ok: true`.
+
+**Edge Function `supabase/functions/send-bus-push/index.ts`:**
+- Cron: `* * * * *` — кожну хвилину (раніше `*/5 * * * *`)
+- Вікно відправки: 9-11 хв до відправлення з зупинки посадки (раніше 8-16 хв)
+- Точність: ±1 хв
+- Формат сповіщення:
+  - `title`: `ЗУПИНКА_А → ЗУПИНКА_Б` (сегмент або маршрут, без емодзі)
+  - `body`: `Відправляється через X хв\nHH:MM · Назва маршруту`
+  - `from CSTL LIFE` — iOS додає автоматично (не можна прибрати/змінити)
+- `dep_time` у БД = час прибуття автобуса на зупинку посадки користувача (не час відправлення з кінцевої)
+
+**Supabase налаштування (вже зроблено):**
+- Таблиця `push_subscriptions` ✅
+- RLS-політики (push_insert, push_update, push_delete, push_select) ✅ — `scripts/supabase_push_fix_rls.sql`
+- Edge Function `send-bus-push` задеплоєна ✅
+- VAPID_PRIVATE_KEY у Secrets ✅
+- pg_cron job (jobid: 4, schedule: `* * * * *`) ✅ — створено через SQL Editor
 
 ---
 
@@ -367,7 +385,9 @@ Private Key (ТІЛЬКИ у Supabase Secret — НІКОЛИ не у коді):
 
 **Зворотні рейси у вкладці Автобуси** — парсинг і відображення рейсів «з боку Олики» (Олика → Луцьк, Олика → Ківерці тощо). Вова має надати список конкретних рейсів які потрібно додати. До отримання списку від Вови — нічого не змінювати.
 
-**Банер відстеження** — зафіксований, є малі нюанси які Вова додасть в наступній сесії.
+**Push-сповіщення — можливі покращення (не термінові):**
+- Два окремих сповіщення: «Прибуде на зупинку за X хв» + «Відправився» — потребує додаткової логіки в Edge Function
+- Debug toast-повідомлення у `subscribeToPush()` — прибрати після підтвердження стабільності
 
 ### Видимі вкладки (порядок у tab-bar)
 **Автобуси** · **Дошка** · **ГРОМАДА** (центр, піднята кнопка) · **Події** · **Новини**
@@ -535,12 +555,11 @@ SVG пін (маркер місця) — такий самий як іконка
 - Level A ✅ + Dynamic Island анімація ✅ — зафіксовано Вовою 09.06.2026
 - Банер розширюється з іконки ГРОМАДА знизу вгору — `translateY(41px) scale(0.15,0.15)` → `scale(1)`
 
-**🟡 Рівень B «Відстежити маршрут» — push-сповіщення (код готовий, тест pending)**
-- Level B код задеплоєний у production (commit `561e4c5`, deploy #1486)
-- Supabase: таблиця `push_subscriptions` ✅, Edge Function `send-bus-push` ✅, pg_cron `*/5` ✅
-- **Тест не пройшов** — `push_subscriptions` порожня (перевірено SQL 11.06)
-- Причина: Вова тестував через старе PWA (кешовано), браузер показував v1536 = новий код
-- **Наступний крок (вдома з комп'ютера):** відкрити сайт у браузері, відстежити маршрут, перевірити що рядок з'явився у `push_subscriptions`, дочекатись push
+**🟢 Рівень B «Відстежити маршрут» — push-сповіщення ПРАЦЮЄ (11.06.2026)**
+- Підписка зберігається у `push_subscriptions` ✅
+- Cron `* * * * *` запущений ✅
+- Push-сповіщення надходить за 9-11 хв до відправлення ✅ — протестовано Вовою
+- Формат: `ЛУЦЬК → РІВНЕ` / `Відправляється через 9 хв\n17:15 · Луцьк Рівне`
 
 **🟢 Пізніше**
 - Кілька старих гілок `claude/*` на GitHub — прибрати через GitHub UI
