@@ -225,10 +225,10 @@ export async function uploadPhotoToStorage(blob) {
 // payload: { user_uuid, endpoint, p256dh, auth_key, route_id, route_name,
 //            boarding_stop, alighting_stop, track_date, dep_time }
 export async function savePushSubscription(payload) {
-  if (!supa) return { ok: false };
+  if (!supa) return { ok: false, error: 'no-supa' };
   const { error } = await supa.from('push_subscriptions')
     .upsert(payload, { onConflict: 'endpoint,route_id,track_date' });
-  if (error) { console.warn('[supabase] savePushSubscription:', error.message); return { ok: false }; }
+  if (error) { console.warn('[supabase] savePushSubscription:', error.message); return { ok: false, error: error.message }; }
   return { ok: true };
 }
 
