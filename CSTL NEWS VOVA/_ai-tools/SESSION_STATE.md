@@ -1,6 +1,6 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-10 21:25
+**Оновлено:** 2026-06-11 12:10
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
@@ -11,7 +11,7 @@
 |--|--|
 | **URL сайту** | https://volodymyr221.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
-| **Робоча гілка (поточна сесія)** | `claude/startup-uem-cugk5q` |
+| **Робоча гілка (поточна сесія)** | `claude/startup-uem-csu670` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
 | **CACHE_NAME у `sw.js`** | `cstl-20260610-2119` |
@@ -527,10 +527,12 @@ SVG пін (маркер місця) — такий самий як іконка
 - Level A ✅ + Dynamic Island анімація ✅ — зафіксовано Вовою 09.06.2026
 - Банер розширюється з іконки ГРОМАДА знизу вгору — `translateY(41px) scale(0.15,0.15)` → `scale(1)`
 
-**🟡 Рівень B «Відстежити маршрут» — push-сповіщення**
-- Level B: справжні push-сповіщення через Web Push API (VAPID) + Supabase Edge Function
-  - Потрібно: VAPID ключі, Edge Function `send-bus-push`, таблиця `push_subscriptions` у Supabase
-  - **Вова має зайти у Supabase Dashboard для налаштування**
+**🟡 Рівень B «Відстежити маршрут» — push-сповіщення (код готовий, тест pending)**
+- Level B код задеплоєний у production (commit `561e4c5`, deploy #1486)
+- Supabase: таблиця `push_subscriptions` ✅, Edge Function `send-bus-push` ✅, pg_cron `*/5` ✅
+- **Тест не пройшов** — `push_subscriptions` порожня (перевірено SQL 11.06)
+- Причина: Вова тестував через старе PWA (кешовано), браузер показував v1536 = новий код
+- **Наступний крок (вдома з комп'ютера):** відкрити сайт у браузері, відстежити маршрут, перевірити що рядок з'явився у `push_subscriptions`, дочекатись push
 
 **🟢 Пізніше**
 - Кілька старих гілок `claude/*` на GitHub — прибрати через GitHub UI
