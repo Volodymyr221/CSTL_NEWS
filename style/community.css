@@ -1663,6 +1663,7 @@
   border-radius: 14px;
   padding: 0 12px;
   height: 40px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
 }
 .bd-search-icon {
   font-size: 14px;
@@ -1712,7 +1713,7 @@
   border-radius: 14px;
   border: 1px solid var(--paper-deep);
   background: var(--card-cream);
-  color: var(--gray);
+  color: var(--black);
   font-size: 13px;
   font-weight: 500;
   font-family: inherit;
