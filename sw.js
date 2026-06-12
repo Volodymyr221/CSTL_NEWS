@@ -21,6 +21,7 @@ const STATIC_ASSETS = [
   './bundle.js',
   './logo.png',
   './manifest.json',
+  './images/cork.jpg',
 ];
 
 // Встановлення: кешуємо статичні файли
