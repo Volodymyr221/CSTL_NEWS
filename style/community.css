@@ -1649,10 +1649,10 @@
 .bd-controls::after {
   content: '';
   position: absolute;
-  bottom: -16px;
+  bottom: -10px;
   left: 0;
   right: 0;
-  height: 16px;
+  height: 10px;
   background: linear-gradient(to bottom, #F4F1E6, transparent);
   pointer-events: none;
 }
