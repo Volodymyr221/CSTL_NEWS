@@ -719,7 +719,7 @@
   min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 /* Рядок офіційних оголошень — повна ширина перед двоколонним блоком */
