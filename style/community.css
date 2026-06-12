@@ -2440,10 +2440,33 @@
 }
 .bd-greet-author { font-style: italic; }
 
-/* Корок на board не залазить на sticky пошук */
+/* Повна дошка: внутрішній скрол прибрано — скролиться сторінка, не контейнер.
+   max-height і overflow прибрані щоб не було видимого "рядка" знизу контейнера. */
 .cm-board-corkboard.board-corkboard--full {
   margin-top: 0;
   padding-top: 18px;
+  max-height: none;
+  overflow: visible;
+  box-shadow: none;
+}
+
+/* Фіксовані тіні зверху і знизу — поверх карточок (z:8), нижче контролів (z:90) */
+.board-vignette {
+  position: fixed;
+  left: 0;
+  right: 0;
+  pointer-events: none;
+  z-index: 8;
+}
+.board-vignette--top {
+  top: 0;
+  height: 100px;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.36) 0%, transparent 100%);
+}
+.board-vignette--bottom {
+  bottom: 0;
+  height: 100px;
+  background: linear-gradient(to top, rgba(0,0,0,0.30) 0%, transparent 100%);
 }
 
 /* ── Submit-форма: перемикач типу (3 таби) ─────────────────────────────── */
