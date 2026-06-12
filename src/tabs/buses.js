@@ -931,7 +931,13 @@ function renderSmartRow() {
     heroTrackBtn.addEventListener('click', () => {
       const rid   = heroTrackBtn.dataset.untrackId;
       const entry = getTrackedSegmentForHero(rid, route);
-      if (entry) { removeTrackedEntry(entry); checkTrackNotifications(false); renderSmartRow(); renderRouteList(); }
+      if (entry) {
+        unsubscribeFromPush(entry.routeId, entry.trackDate);
+        removeTrackedEntry(entry);
+        checkTrackNotifications(false);
+        renderSmartRow();
+        renderRouteList();
+      }
     });
   }
 }

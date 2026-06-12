@@ -5,9 +5,8 @@
 //
 // Типи сповіщень:
 //   А. Проміжна зупинка (boarding ≠ перша зупинка маршруту):
-//      1. notified_start:   "Автобус вирушив · 07:15 (Ківерці)"  — автобус виїхав з початкової
-//      2. notified_warning: "Відправляється через ~15 хв · 07:45" — T-15 до зупинки посадки
-//      3. notified_dep:     "Автобус на зупинці · Олика"          — T-0 (автобус на зупинці посадки)
+//      1. notified_warning: "Відправляється через ~15 хв · 07:45" — T-15 до зупинки посадки
+//      2. notified_dep:     "Автобус на зупинці · Олика"          — T-0 (автобус на зупинці посадки)
 //   Б. Звичайний рейс (boarding = початкова зупинка або без сегменту):
 //      1. notified_warning: "Автобус відправляється через ~15 хв · 07:15" — T-15
 //      2. notified_dep:     "Автобус вирушив · 07:15"            — T-0 (момент відправлення)
@@ -111,23 +110,6 @@ serve(async () => {
       }));
       if (ok) await supa.from('push_subscriptions').update({ notified_canc: true }).eq('id', sub.id);
       continue;
-    }
-
-    // ── 2. Автобус вирушив з початкової зупинки ───────────────────────────
-    // Тільки для проміжних зупинок (boarding_stop ≠ перша зупинка маршруту)
-    if (!sub.notified_start && sub.boarding_stop && routeData?.departure_time) {
-      const firstStopName = routeData.stops?.[0]?.name || '';
-      const isIntermediate = firstStopName.toLowerCase() !== sub.boarding_stop.toLowerCase();
-      const routeStartMins = timeToMins(routeData.departure_time);
-
-      if (isIntermediate && nowMins >= routeStartMins) {
-        const ok = await sendPush(sub, JSON.stringify({
-          title: segLabel,
-          body:  `Автобус вирушив · ${routeData.departure_time} (${firstStopName})`,
-          tag:   `bus-start-${sub.route_id}`,
-        }));
-        if (ok) await supa.from('push_subscriptions').update({ notified_start: true }).eq('id', sub.id);
-      }
     }
 
     if (!sub.dep_time) continue;
