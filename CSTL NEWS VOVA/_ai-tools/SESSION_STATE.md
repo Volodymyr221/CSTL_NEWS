@@ -157,7 +157,7 @@
 
 **Нагадати Вові (його руки, поза кодом):**
 - 🔧 **Перезалити Cloudflare Worker** — фікс open-proxy у `cloudflare/worker.js` не діє, поки не задеплоїти на cloudflare.com.
-- 🔑 **Ротувати VAPID-ключ** — `npx web-push generate-vapid-keys` → новий приватний у Supabase Secret `VAPID_PRIVATE_KEY`, публічний у `src/tabs/buses.js`. Старий лишився в історії git.
+- ~~🔑 **Ротувати VAPID-ключ**~~ — ✅ виконано 12.06. Новий ключ у buses.js + Edge Function. Старий лишився в git-історії (не критично — вже недійсний).
 - 🔒 **Leaked Password Protection** — увімкнути у Supabase Dashboard → Authentication (захист паролів адмінів).
 
 **Відкладені (не термінові):** ~~прибрати debug-toast у `subscribeToPush()`~~ (зроблено 12.06) · Фаза 3 «Світло» через Supabase · зворотні рейси «з боку Олики» (чекає список від Вови) · сторінка `/реклама`.
@@ -170,12 +170,12 @@
 |--|--|
 | **URL сайту** | https://volodymyr221.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
-| **Робоча гілка (поточна сесія)** | `claude/vibrant-gates-qgpfkc` (усе вже змерджено в `main`) |
+| **Робоча гілка (поточна сесія)** | `claude/startup-uem-qpkilt` (усе змерджено в `main` 12.06) |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260612-1150` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260612-1631` |
 | **Статус вкладки «Автобуси»** | 🟢 РОБОЧИЙ ВАРІАНТ — зафіксовано Вовою 11.06.2026 |
-| **Push-сповіщення (Level B)** | 🟢 ПРАЦЮЄ — протестовано 11.06.2026 |
+| **Push-сповіщення (Level B)** | 🟡 ВИПРАВЛЕНО 12.06 (VAPID ключ) — потребує перевірки |
 
 ---
 
