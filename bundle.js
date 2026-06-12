@@ -2881,7 +2881,6 @@ ${post.text}
         e.stopPropagation();
         const rid = btn.dataset.trackId;
         const tracked = isRouteSegmentTracked(rid);
-        showToast(tracked ? "\u{1F515} \u0437\u043D\u0456\u043C\u0430\u0454\u043C\u043E \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F" : "\u{1F514} \u0434\u043E\u0434\u0430\u0454\u043C\u043E \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F");
         if (tracked) {
           const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
           if (entry) {

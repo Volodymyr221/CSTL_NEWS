@@ -1,4 +1,4 @@
-import { escapeHtml, showToast } from '../core/utils.js';
+import { escapeHtml } from '../core/utils.js';
 import {
   toMinutes, minsToHHMM, nowMinutes,
   getStopMins, getStopHHMM, getRouteState, getRouteTimings,
@@ -1304,7 +1304,6 @@ function renderRouteList() {
       e.stopPropagation();
       const rid = btn.dataset.trackId;
       const tracked = isRouteSegmentTracked(rid);
-      showToast(tracked ? '🔕 знімаємо відстеження' : '🔔 додаємо відстеження');
       if (tracked) {
         const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
         if (entry) {
