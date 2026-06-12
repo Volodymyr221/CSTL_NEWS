@@ -1332,7 +1332,10 @@ ${post.text}
       <div class="board-bg" aria-hidden="true"></div>
       <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
       <div class="board-vignette board-vignette--bottom" aria-hidden="true"></div>
-    ` : ""}
+    ` : `
+      <div class="board-bg board-bg--plain" aria-hidden="true"></div>
+      <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
+    `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
     <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">

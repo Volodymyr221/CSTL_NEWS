@@ -1409,6 +1409,10 @@
   pointer-events: none;
   z-index: 0;
 }
+.board-bg--plain {
+  background: var(--paper);
+  box-shadow: none;
+}
 
 .board-content {
   position: relative;
