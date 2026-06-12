@@ -573,6 +573,19 @@
     "auto": true
   },
   {
+    "id": 225,
+    "title": "Путін підписав указ, який збільшує чисельність армії РФ",
+    "description": "Путін підписав указ: чисельність армії РФ зрісла до 1,51 млн військових. На війні проти України залучено понад 700 тис. осіб.",
+    "date": "2027-03-04",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/4/d/848593/4d261776d52b11712dca1a8c7f521955.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/13/8039095/",
+    "auto": true
+  },
+  {
     "id": 106,
     "title": "Чехія хоче посилити умови виплат для українських біженців",
     "description": "МВС Чехії пропонує змінити правила тимчасового захисту та гуманітарної допомоги для українських біженців: виплати хочуть прив'язати до роботи, реєстрації в центрі зайнятості або підприємницької діяльності.",
@@ -622,19 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/a/833379/eaac9c1a048afddc5993bd5a3ca35029.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/22/8035852/",
-    "auto": true
-  },
-  {
-    "id": 50,
-    "title": "МЗС Китаю повідомило дати візиту Трампа",
-    "description": "У Китаї повідомили про візит Трампа 13-15 березня.",
-    "date": "2027-03-15",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/c/826311/2c61f3bff06cf0594c61bc7246e96f0a.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/11/8034121/",
     "auto": true
   }
 ]
