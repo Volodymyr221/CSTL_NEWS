@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260612-1311';
+const CACHE_NAME = 'cstl-20260612-1621';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -122,14 +122,19 @@ self.addEventListener('fetch', e => {
 self.addEventListener('push', e => {
   const data = e.data?.json() ?? {};
   e.waitUntil(
-    self.registration.showNotification(data.title || 'CSTL LIFE', {
-      body:               data.body  || '',
-      icon:               './logo.png',
-      badge:              './logo.png',
-      tag:                data.tag   || 'bus-push',
-      data:               { url: './#buses' },
-      requireInteraction: false,
-    })
+    clients.matchAll({ type: 'window', includeUncontrolled: true })
+      .then(list => {
+        // App is in foreground — skip system notification, in-app banner handles it
+        if (list.some(c => c.visibilityState === 'visible')) return;
+        return self.registration.showNotification(data.title || 'CSTL LIFE', {
+          body:               data.body  || '',
+          icon:               './logo.png',
+          badge:              './logo.png',
+          tag:                data.tag   || 'bus-push',
+          data:               { url: './#buses' },
+          requireInteraction: false,
+        });
+      })
   );
 });
 

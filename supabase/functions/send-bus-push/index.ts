@@ -21,7 +21,7 @@ import webpush from 'https://esm.sh/web-push@3.6.7';
 const SUPABASE_URL             = Deno.env.get('SUPABASE_URL')!;
 const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
 const VAPID_PRIVATE_KEY         = Deno.env.get('VAPID_PRIVATE_KEY')!;
-const VAPID_PUBLIC_KEY          = 'BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo';
+const VAPID_PUBLIC_KEY          = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
 const VAPID_EMAIL               = 'mailto:illiabogdanets041@gmail.com';
 const SCHEDULE_URL              = 'https://volodymyr221.github.io/CSTL_NEWS/data/schedule.json';
 
