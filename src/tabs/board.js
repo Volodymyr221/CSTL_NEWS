@@ -1,13 +1,9 @@
 // src/tabs/board.js
 // Вкладка «Дошка громади 2.0» — 3 типи постів + пошук + фільтри + реакції + збережені.
-// Перебудовано 17.05.2026 під дизайн Дошки 2.0 з docs/COMMUNITY_BOARD_VISION.md.
 //
-// Тиипи постів:
-//   board    = оголошення (продам/куплю/...) — стікер на корку
-//   chat     = розмови — горизонтальна картка з аватаркою і хештегами
-//   greeting = вітання — святкова картка з emoji-обкладинкою
-//
-// Реакції і збережені поки у localStorage (без auth). У Фазі 9 Спринт 3 — у Supabase.
+// Типи постів:
+//   board = оголошення (продам/куплю/...) — стікер на корку
+//   chat  = обговорення — горизонтальна картка з аватаркою і хештегами
 
 import { escapeHtml, formatTime, sharePost, postTime } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
@@ -20,16 +16,18 @@ import {
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
-const TYPE_TABS = [
-  { id: 'all',      label: 'Актуальні',   emoji: '⚡' },
-  { id: 'board',    label: 'Дошка',       emoji: '🛒' },
-  { id: 'chat',     label: 'Розмови',     emoji: '💬' },
-  { id: 'greeting', label: 'Вітання',     emoji: '🎉' },
-  { id: 'saved',    label: 'Мої',         emoji: '💾' },
-];
+// SVG-іконки (оголошені до TYPE_TABS — збережені-таб використовує закладку)
+const PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
 
-// «Актуальні» = пости опубліковані за останні N днів (з усіх типів)
-const FRESH_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;   // 3 доби
+const TYPE_TABS = [
+  { id: 'board',   label: 'ДОШКА',        emoji: '🛒' },
+  { id: 'chat',    label: 'ОБГОВОРЕННЯ',   emoji: '💬' },
+  { id: 'saved',   label: 'ЗБЕРЕЖЕНІ',    emoji: BOOKMARK_OUTLINE_SVG },
+];
 
 const BOARD_CATEGORIES = [
   { id: 'all',         label: 'Всі',          emoji: '✦' },
@@ -47,24 +45,11 @@ const CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES.map(c => [c.id, c.emo
 
 const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
 
-// SVG слухавки (для кнопки виклика)
-const PHONE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
-
-// Іконка закладки (для «Зберегти у Мої»). Outline за замовчуванням, filled коли збережено.
-const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-
-// Іконка «Поділитись» — стандартний iOS-style (квадрат зі стрілкою вгору)
-const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
-
-// Іконка коментаря (мовний пузир)
-const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-
 // ── Стан (зберігається в межах сесії) ────────────────────────────────────────
 
 let allPosts       = [];   // [{id, type, ...}]
 let allAnnouncements = []; // офіційні з announcements
-let activeType     = 'all';
+let activeType     = 'board';
 let activeCategory = 'all';
 let searchQuery    = '';
 
@@ -204,10 +189,8 @@ function saveBtnHtml(post) {
 
 function shareBtnHtml(post) {
   const shareText = buildShareText(post);
-  const shareTitle = post.type === 'greeting'
-    ? `🎉 ${post.title || 'Вітання'} (CSTL LIFE)`
-    : post.type === 'chat'
-    ? 'Розмова з Дошки громади Олики'
+  const shareTitle = post.type === 'chat'
+    ? 'Обговорення з Дошки громади Олики'
     : 'Оголошення з Дошки громади Олики';
   return `<button class="bd-icon-btn bd-share-btn" type="button"
           data-share-board
@@ -226,17 +209,6 @@ function boardActionsHtml(post) {
         ${shareBtnHtml(post)}
       </div>
     </div>
-  `;
-}
-
-// GREETING: реакція + save + share + inline коментарі (як chat)
-function greetingActionsHtml(post) {
-  return `
-    <div class="bd-actions">
-      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
-      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
-    </div>
-    ${chatCommentsHtml(post)}
   `;
 }
 
@@ -335,9 +307,6 @@ function buildShareText(post) {
     const tags = (post.tags || []).join(' ');
     return `${post.text}${tags ? '\n\n' + tags : ''}\n— ${post.author || 'анонімно'}`;
   }
-  if (post.type === 'greeting') {
-    return `${post.cover_emoji || '🎉'} ${post.title ? 'Для ' + post.title + ':\n' : ''}${post.text}${post.author ? '\n— ' + post.author : ''}`;
-  }
   return post.text || '';
 }
 
@@ -412,34 +381,8 @@ function renderChatCard(p) {
   `;
 }
 
-// GREETING: святкова картка з кольоровою обкладинкою-emoji
-function renderGreetingCard(p) {
-  const grad = p.cover_gradient || 'linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)';
-  const emoji = p.cover_emoji || '🎉';
-  const titleLine = p.title
-    ? `<div class="bd-greet-to">Для ${escapeHtml(p.title)}</div>`
-    : '';
-  return `
-    <article class="bd-card bd-card--greeting" data-post-id="${p.id}">
-      <div class="bd-greet-cover" style="background:${escapeHtml(grad)}">
-        <span class="bd-greet-emoji">${emoji}</span>
-      </div>
-      <div class="bd-greet-body">
-        ${titleLine}
-        <p class="bd-greet-text">${escapeHtml(p.text)}</p>
-        <div class="bd-greet-footer">
-          <span class="bd-greet-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="bd-greet-time">${formatTime(postTime(p))}</span>
-        </div>
-      </div>
-      ${greetingActionsHtml(p)}
-    </article>
-  `;
-}
-
 function renderCard(post) {
-  if (post.type === 'chat')     return renderChatCard(post);
-  if (post.type === 'greeting') return renderGreetingCard(post);
+  if (post.type === 'chat') return renderChatCard(post);
   return renderBoardCard(post);
 }
 
@@ -448,17 +391,11 @@ function renderCard(post) {
 function getFilteredPosts() {
   const q = searchQuery.trim().toLowerCase();
   const savedIds = activeType === 'saved' ? getSavedIds() : null;
-  const freshCutoff = Date.now() - FRESH_WINDOW_MS;
 
   return allPosts.filter(p => {
     // Фільтр по типу
     if (activeType === 'saved') {
       if (!savedIds.has(p.id)) return false;
-    } else if (activeType === 'all') {
-      // «Актуальні» — пости за останні 3 доби (по published_at або ts)
-      const t = p.ts || (p.published_at && new Date(p.published_at).getTime())
-                     || (p.created_at && new Date(p.created_at).getTime()) || 0;
-      if (t < freshCutoff) return false;
     } else if (p.type !== activeType) {
       return false;
     }
@@ -478,15 +415,6 @@ function getFilteredPosts() {
   });
 }
 
-// Свіжі офіційні (для табу «Актуальні»)
-function getFreshAnnouncements() {
-  const cutoff = Date.now() - FRESH_WINDOW_MS;
-  return allAnnouncements.filter(a => {
-    const t = a.ts || (a.published_at && new Date(a.published_at).getTime())
-                   || (a.created_at && new Date(a.created_at).getTime()) || 0;
-    return t >= cutoff;
-  });
-}
 
 // ── Рендеринг панелі ─────────────────────────────────────────────────────────
 
@@ -526,30 +454,23 @@ function renderHeader() {
 
 function renderBody() {
   const filtered = getFilteredPosts();
-  // Для «Актуальні» офіційні теж фільтруємо за часом
-  const annsForView = activeType === 'all' ? getFreshAnnouncements() : allAnnouncements;
 
-  if (!filtered.length && !(activeType === 'all' && annsForView.length)) {
+  if (!filtered.length) {
     const msg = activeType === 'saved'
-      ? 'У «Моїх» поки нічого. Тапніть 🤍 на пості щоб зберегти.'
-      : activeType === 'all'
-      ? 'За останні 3 дні нічого нового. Заглядайте у Дошку / Розмови / Вітання.'
+      ? 'У «Збережених» поки нічого. Тапніть закладку на пості щоб зберегти.'
       : searchQuery
       ? `За запитом «${escapeHtml(searchQuery)}» нічого не знайдено`
       : 'У цій категорії поки порожньо';
     return `<div class="bd-empty">${msg}</div>`;
   }
 
-  // Сортування за часом — нові зверху
   const sorted = [...filtered].sort((a, b) => {
     const ta = a.ts || (a.published_at && new Date(a.published_at).getTime()) || 0;
     const tb = b.ts || (b.published_at && new Date(b.published_at).getTime()) || 0;
     return tb - ta;
   });
 
-  // Окремий лейаут для board (корок з нахилами) vs chat/greeting (стрічка)
   if (activeType === 'board') {
-    // BOARD-only — явно дві колонки: парні ліворуч, непарні праворуч
     const leftCards  = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
     const rightCards = sorted.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
     return `
@@ -561,26 +482,7 @@ function renderBody() {
     `;
   }
 
-  if (activeType === 'all') {
-    // Актуальні — офіційні на повну ширину зверху, потім board у двох колонках
-    const officialCards = annsForView.map(renderOfficialCard).join('');
-    const boardItems    = sorted.filter(p => p.type === 'board');
-    const boardLeft     = boardItems.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
-    const boardRight    = boardItems.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
-    const others        = sorted.filter(p => p.type !== 'board').map(renderCard).join('');
-    const hasCork       = officialCards || boardLeft || boardRight;
-    return `
-      <div class="board-backdrop" id="board-backdrop"></div>
-      ${hasCork ? `<div class="cm-board-corkboard board-corkboard--full">
-        ${officialCards ? `<div class="cm-board-official-row">${officialCards}</div>` : ''}
-        <div class="cm-board-col">${boardLeft}</div>
-        <div class="cm-board-col">${boardRight}</div>
-      </div>` : ''}
-      ${others ? `<div class="bd-stream">${others}</div>` : ''}
-    `;
-  }
-
-  // chat / greeting / saved — вертикальна стрічка карток
+  // chat / saved — вертикальна стрічка карток
   return `<div class="bd-stream">${sorted.map(renderCard).join('')}</div>`;
 }
 
@@ -629,7 +531,7 @@ export async function renderBoard() {
 
 // Перерендер тільки контейнера дошки (без перезавантаження даних)
 function renderAll(el) {
-  const hasCork = activeType === 'board' || activeType === 'all';
+  const hasCork = activeType === 'board';
   el.innerHTML = `
     ${hasCork ? `
       <div class="board-bg" aria-hidden="true"></div>
