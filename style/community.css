@@ -704,13 +704,10 @@
   padding: 18px 14px 22px;
   max-height: 460px;
   overflow-y: auto;
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px 8px;
-  justify-content: space-between;
-  /* align-items: flex-start — кожен стікер своєї природньої висоти, не тягнеться
-     щоб співпасти з сусідом-з-фото. На місці коротшого стікера лишається корок. */
-  align-items: flex-start;
+  /* column-count: 2 — газетний потік: картки заповнюють зверху вниз
+     без пустих місць (на відміну від flex-wrap де коротка картка лишала gap) */
+  column-count: 2;
+  column-gap: 8px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -718,7 +715,10 @@
 .cm-board-note {
   --tilt: 0deg;
   position: relative;
-  width: calc(50% - 4px);
+  width: 100%;
+  break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  margin-bottom: 14px;
   min-height: 100px;
   padding: 16px 14px 14px;
   background: #FFF59D;
@@ -1305,7 +1305,8 @@
   padding: 16px 14px 18px;
   border-top: 4px solid #7A5C30;
   border-bottom: 4px solid #7A5C30;
-  gap: 12px 10px;
+  column-count: 2;
+  column-gap: 8px;
   box-shadow: inset 0 3px 10px rgba(0,0,0,0.15), inset 0 -3px 10px rgba(0,0,0,0.10);
   background:
     radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.16) 100%),
@@ -1317,7 +1318,8 @@
 
 /* Міні-стікер — менші розміри + обрізаний текст */
 .cm-board-note.cm-board-mini {
-  width: calc(50% - 5px);
+  width: 100%;
+  margin-bottom: 10px;
   min-height: 92px;
   padding: 12px 10px 10px;
 }
