@@ -1659,7 +1659,7 @@
   display: flex;
   align-items: center;
   background: var(--card-cream);
-  border: 1px solid var(--paper-deep);
+  border: 1.5px solid rgba(0,0,0,0.22);
   border-radius: 14px;
   padding: 0 12px;
   height: 40px;
@@ -1711,7 +1711,7 @@
   gap: 5px;
   padding: 7px 12px;
   border-radius: 14px;
-  border: 1.5px solid rgba(0,0,0,0.22);
+  border: 1.5px solid #1C1C1E;
   background: var(--card-cream);
   color: var(--black);
   font-size: 13px;
