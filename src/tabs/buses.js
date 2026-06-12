@@ -1302,7 +1302,7 @@ function renderRouteList() {
             ${autoNote}
           </div>
           ${busDay >= getTodayISO() && !isPast && route.status !== 'cancelled'
-            ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? ' tracked' : (hasTrackedSeg && !anySegment ? ' tracked-seg' : '')}" data-track-id="${escapeHtml(route.id)}" aria-label="${(isRouteSegmentTracked(route.id) || (hasTrackedSeg && !anySegment)) ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+            ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? ' tracked' : (!!trackedSeg && !anySegment ? ' tracked-seg' : '')}" data-track-id="${escapeHtml(route.id)}" aria-label="${(isRouteSegmentTracked(route.id) || (!!trackedSeg && !anySegment)) ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
             : ''}
         </div>
         ${route.stops && route.stops.length > 2
@@ -1380,6 +1380,7 @@ function renderRouteList() {
           unsubscribeFromPush(entry.routeId, entry.trackDate);
           removeTrackedEntry(entry);
         }
+        checkTrackNotifications(false);
       } else {
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);
@@ -1399,8 +1400,8 @@ function renderRouteList() {
         const route   = (getDayData().routes || []).find(r => r.id === rid);
         const depTime = route ? getStopHHMM(route, fromStop || route.stops[0].name) : null;
         subscribeToPush(rid, route?.name || '', fromStop || null, toStop || null, busDay, depTime);
+        checkTrackNotifications(true);
       }
-      checkTrackNotifications(true);
       renderSmartRow();
       renderRouteList();
     });
