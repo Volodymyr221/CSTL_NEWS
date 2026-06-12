@@ -1017,6 +1017,22 @@
   /* верх суцільний — стикується з поточною, низ згасає в білий */
   background: linear-gradient(to bottom, #E1E4EC 0%, #E1E4EC 70%, #f5f5f5 100%);
 }
+/* Автобус на зупинці А (перша позиція у списку) — низ суцільний, верх без змін */
+.bs-stop-row.hl--from.bs-stop--current {
+  background: #E1E4EC;
+}
+/* Автобус на зупинці А (проміжна позиція) — верх затухає, низ суцільний */
+.bs-stop-row.hl--from:not(:first-child).bs-stop--current {
+  background: linear-gradient(to bottom, #f5f5f5 0%, #E1E4EC 30%, #E1E4EC 100%);
+}
+/* Автобус на зупинці Б (остання позиція у списку) — верх суцільний, низ без змін */
+.bs-stop-row.hl--to.bs-stop--current {
+  background: #E1E4EC;
+}
+/* Автобус на зупинці Б (проміжна позиція) — верх суцільний, низ затухає */
+.bs-stop-row.hl--to:not(:last-child).bs-stop--current {
+  background: linear-gradient(to bottom, #E1E4EC 0%, #E1E4EC 70%, #f5f5f5 100%);
+}
 
 .bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
 .bs-stop-name  { flex: 1; display: flex; align-items: center; gap: 5px; }
