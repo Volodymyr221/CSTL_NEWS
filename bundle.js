@@ -3214,7 +3214,17 @@ ${post.text}
 
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
-  var cmBusRoutes = [];
+  var cmBusEntries = [];
+  var CM_TRACK_KEY = "bus_track_v2";
+  function loadCmTracked(todayISO) {
+    try {
+      const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY));
+      if (d?.routes?.length)
+        return d.routes.filter((t) => t.trackDate >= todayISO);
+    } catch {
+    }
+    return [];
+  }
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
@@ -3305,8 +3315,29 @@ ${post.text}
       const res = await fetch("./data/schedule.json");
       const data = await res.json();
       const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-      const allRoutes = data.days?.[todayISO]?.routes || data.routes || [];
-      cmBusRoutes = allRoutes.filter((r) => {
+      const tomorrow = /* @__PURE__ */ new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+      const dayRoutes = (iso) => data.days?.[iso]?.routes || (iso === todayISO ? data.routes : null) || [];
+      const depMins = (r) => getStopMins(r, r.stops[0].name) || 0;
+      const entries = [];
+      const seen = /* @__PURE__ */ new Set();
+      const add = (route, dateISO) => {
+        const key = dateISO + "|" + route.id;
+        if (seen.has(key))
+          return;
+        seen.add(key);
+        entries.push({ route, dateISO });
+      };
+      for (const t of loadCmTracked(todayISO)) {
+        const r = dayRoutes(t.trackDate).find((x) => x.id === t.routeId && x.status !== "cancelled");
+        if (!r)
+          continue;
+        if (t.trackDate === todayISO && getRouteState(r) === "past")
+          continue;
+        add(r, t.trackDate);
+      }
+      dayRoutes(todayISO).filter((r) => {
         if (r.status === "cancelled")
           return false;
         const state = getRouteState(r);
@@ -3317,35 +3348,66 @@ ${post.text}
           return t.minsToDeparture !== null && t.minsToDeparture <= 90;
         }
         return false;
-      }).sort((a, b) => {
-        const aM = getStopMins(a, a.stops[0].name) || 0;
-        const bM = getStopMins(b, b.stops[0].name) || 0;
-        return aM - bM;
-      });
-      if (!cmBusRoutes.length) {
-        const next = allRoutes.filter((r) => r.status !== "cancelled" && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
+      }).sort((a, b) => depMins(a) - depMins(b)).forEach((r) => add(r, todayISO));
+      if (!entries.some((e) => e.dateISO === todayISO)) {
+        const next = dayRoutes(todayISO).filter((r) => r.status !== "cancelled" && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
         if (next)
-          cmBusRoutes = [next];
+          add(next, todayISO);
       }
-      if (!cmBusRoutes.length) {
-        el.innerHTML = `<div class="cm-block-empty">\u041D\u0410 \u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415\u041C\u0410\u0404</div>`;
+      if (!entries.length) {
+        const tom = dayRoutes(tomorrowISO).filter((r) => r.status !== "cancelled").sort((a, b) => depMins(a) - depMins(b))[0];
+        if (tom)
+          add(tom, tomorrowISO);
+      }
+      cmBusEntries = entries;
+      if (!cmBusEntries.length) {
+        el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
         return;
       }
-      if (cmBusIndex >= cmBusRoutes.length)
+      if (cmBusIndex >= cmBusEntries.length)
         cmBusIndex = 0;
       renderCmBusCard(el);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
     }
   }
+  var CM_MONTHS = [
+    "\u0441\u0456\u0447\u043D\u044F",
+    "\u043B\u044E\u0442\u043E\u0433\u043E",
+    "\u0431\u0435\u0440\u0435\u0437\u043D\u044F",
+    "\u043A\u0432\u0456\u0442\u043D\u044F",
+    "\u0442\u0440\u0430\u0432\u043D\u044F",
+    "\u0447\u0435\u0440\u0432\u043D\u044F",
+    "\u043B\u0438\u043F\u043D\u044F",
+    "\u0441\u0435\u0440\u043F\u043D\u044F",
+    "\u0432\u0435\u0440\u0435\u0441\u043D\u044F",
+    "\u0436\u043E\u0432\u0442\u043D\u044F",
+    "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430",
+    "\u0433\u0440\u0443\u0434\u043D\u044F"
+  ];
+  function cmDayLabel(dateISO, todayISO, tomorrowISO) {
+    if (dateISO === todayISO)
+      return "";
+    const [y, m, d] = dateISO.split("-").map(Number);
+    const prefix = dateISO === tomorrowISO ? "\u0417\u0430\u0432\u0442\u0440\u0430" : "";
+    const datePart = `${d} ${CM_MONTHS[m - 1]}`;
+    return prefix ? `${prefix} \xB7 ${datePart}` : datePart;
+  }
   function renderCmBusCard(el) {
-    if (!el || !cmBusRoutes.length)
+    if (!el || !cmBusEntries.length)
       return;
-    const route = cmBusRoutes[cmBusIndex];
-    const timings = getRouteTimings(route);
-    el.innerHTML = buildHeroCard(route, timings, cmBusIndex, cmBusRoutes.length);
+    const { route, dateISO } = cmBusEntries[cmBusIndex];
+    const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const tomorrow = /* @__PURE__ */ new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+    const base = getRouteTimings(route);
+    const timings = dateISO === todayISO ? base : { ...base, state: "waiting", progress: 0, minsToDeparture: null, minsToArrival: null };
+    const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
+    const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : "";
+    el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
     let touchStartX = 0;
-    const card = el.firstElementChild;
+    const card = el.querySelector(".bhv4") || el.lastElementChild;
     if (!card)
       return;
     card.addEventListener("touchstart", (e) => {
@@ -3355,7 +3417,7 @@ ${post.text}
       const dx = e.changedTouches[0].clientX - touchStartX;
       if (Math.abs(dx) < 40)
         return;
-      cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusRoutes.length : (cmBusIndex - 1 + cmBusRoutes.length) % cmBusRoutes.length;
+      cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusEntries.length : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
       switchCmBusCard(el);
     }, { passive: true });
     el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {

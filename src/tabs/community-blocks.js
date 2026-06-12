@@ -19,7 +19,17 @@ import {
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints } from './buses.js';
 
 let cmBusIndex = 0;
-let cmBusRoutes = [];
+let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
+
+const CM_TRACK_KEY = 'bus_track_v2';
+// Читає відстежувані рейси з localStorage (тільки сьогодні і майбутні)
+function loadCmTracked(todayISO) {
+  try {
+    const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY));
+    if (d?.routes?.length) return d.routes.filter(t => t.trackDate >= todayISO);
+  } catch { /* пусто */ }
+  return [];
+}
 
 // Типи у міні-блоці Дошки — свайп циклічно
 const BOARD_MINI_TYPES = [
@@ -238,10 +248,33 @@ export async function renderBusBlock() {
 
     // Нова структура: data.days["2026-06-07"].routes
     const todayISO = new Date().toISOString().slice(0, 10);
-    const allRoutes = (data.days?.[todayISO]?.routes) || data.routes || [];
+    const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+    const tomorrowISO = tomorrow.toISOString().slice(0, 10);
 
-    // Актуальні рейси: enroute + waiting в межах 90 хв, сортування за відправленням
-    cmBusRoutes = allRoutes
+    const dayRoutes = iso =>
+      (data.days?.[iso]?.routes) || (iso === todayISO ? data.routes : null) || [];
+    const depMins = r => scheduleGetStopMins(r, r.stops[0].name) || 0;
+
+    const entries = [];
+    const seen = new Set();
+    const add = (route, dateISO) => {
+      const key = dateISO + '|' + route.id;
+      if (seen.has(key)) return;
+      seen.add(key);
+      entries.push({ route, dateISO });
+    };
+
+    // 1) Відстежувані рейси (сьогодні + майбутні дні) — найвищий пріоритет.
+    //    Це дублює віджет відстеження з вкладки Автобуси у блок Громади.
+    for (const t of loadCmTracked(todayISO)) {
+      const r = dayRoutes(t.trackDate).find(x => x.id === t.routeId && x.status !== 'cancelled');
+      if (!r) continue;
+      if (t.trackDate === todayISO && getRouteState(r) === 'past') continue; // вже проїхав
+      add(r, t.trackDate);
+    }
+
+    // 2) Сьогоднішні активні: enroute + waiting у межах 90 хв
+    dayRoutes(todayISO)
       .filter(r => {
         if (r.status === 'cancelled') return false;
         const state = getRouteState(r);
@@ -252,49 +285,80 @@ export async function renderBusBlock() {
         }
         return false;
       })
-      .sort((a, b) => {
-        const aM = scheduleGetStopMins(a, a.stops[0].name) || 0;
-        const bM = scheduleGetStopMins(b, b.stops[0].name) || 0;
-        return aM - bM;
-      });
+      .sort((a, b) => depMins(a) - depMins(b))
+      .forEach(r => add(r, todayISO));
 
-    if (!cmBusRoutes.length) {
-      // Показуємо наступний рейс якщо активних нема
-      const next = allRoutes
+    // 3) Якщо для сьогодні нічого не зібрали — показуємо наступний сьогоднішній рейс
+    if (!entries.some(e => e.dateISO === todayISO)) {
+      const next = dayRoutes(todayISO)
         .filter(r => r.status !== 'cancelled' && getRouteState(r) === 'waiting')
         .sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
-      if (next) cmBusRoutes = [next];
+      if (next) add(next, todayISO);
     }
 
-    if (!cmBusRoutes.length) {
-      el.innerHTML = `<div class="cm-block-empty">НА СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕМАЄ</div>`;
+    // 4) Сьогоднішні рейси закінчились і нічого не відстежується —
+    //    одразу показуємо найближчий завтрашній рейс (замість «рейсів більше немає»)
+    if (!entries.length) {
+      const tom = dayRoutes(tomorrowISO)
+        .filter(r => r.status !== 'cancelled')
+        .sort((a, b) => depMins(a) - depMins(b))[0];
+      if (tom) add(tom, tomorrowISO);
+    }
+
+    cmBusEntries = entries;
+
+    if (!cmBusEntries.length) {
+      el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
       return;
     }
 
-    if (cmBusIndex >= cmBusRoutes.length) cmBusIndex = 0;
+    if (cmBusIndex >= cmBusEntries.length) cmBusIndex = 0;
     renderCmBusCard(el);
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Розклад тимчасово недоступний</div>';
   }
 }
 
+// Підпис над карткою для не-сьогоднішнього рейсу: «Завтра · 12 червня»
+const CM_MONTHS = ['січня','лютого','березня','квітня','травня','червня',
+                   'липня','серпня','вересня','жовтня','листопада','грудня'];
+function cmDayLabel(dateISO, todayISO, tomorrowISO) {
+  if (dateISO === todayISO) return '';
+  const [y, m, d] = dateISO.split('-').map(Number);
+  const prefix = dateISO === tomorrowISO ? 'Завтра' : '';
+  const datePart = `${d} ${CM_MONTHS[m - 1]}`;
+  return prefix ? `${prefix} · ${datePart}` : datePart;
+}
+
 function renderCmBusCard(el) {
-  if (!el || !cmBusRoutes.length) return;
-  const route   = cmBusRoutes[cmBusIndex];
-  const timings = getRouteTimings(route);
-  el.innerHTML  = buildHeroCard(route, timings, cmBusIndex, cmBusRoutes.length);
+  if (!el || !cmBusEntries.length) return;
+  const { route, dateISO } = cmBusEntries[cmBusIndex];
+
+  const todayISO = new Date().toISOString().slice(0, 10);
+  const tomorrow = new Date(); tomorrow.setDate(tomorrow.getDate() + 1);
+  const tomorrowISO = tomorrow.toISOString().slice(0, 10);
+
+  // Для не-сьогоднішніх днів: state→waiting, без відліку (як на вкладці Автобуси)
+  const base = getRouteTimings(route);
+  const timings = dateISO === todayISO
+    ? base
+    : { ...base, state: 'waiting', progress: 0, minsToDeparture: null, minsToArrival: null };
+
+  const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
+  const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : '';
+  el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
 
   // Свайп
   let touchStartX = 0;
-  const card = el.firstElementChild;
+  const card = el.querySelector('.bhv4') || el.lastElementChild;
   if (!card) return;
   card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
   card.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) < 40) return;
     cmBusIndex = dx < 0
-      ? (cmBusIndex + 1) % cmBusRoutes.length
-      : (cmBusIndex - 1 + cmBusRoutes.length) % cmBusRoutes.length;
+      ? (cmBusIndex + 1) % cmBusEntries.length
+      : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
     switchCmBusCard(el);
   }, { passive: true });
 
