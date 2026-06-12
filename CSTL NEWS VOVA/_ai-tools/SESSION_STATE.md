@@ -1,7 +1,25 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-12 (гілка `claude/startup-uem-hp5ldw`)
+**Оновлено:** 2026-06-12 (гілка `claude/startup-uem-pl7nch`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
+
+---
+
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-pl7nch`)
+
+**style(board): Premium skeuomorphic redesign — Дошка громади**
+- `.cm-board-note`: `border-radius 2px → 20px`, м'які ambient тіні, більший padding, колір `#2B2B2B`
+- Кольори карток: злегка приглушені (premium paper feel)
+- `.cm-board-photo-wrap`: закруглені верхні кути 20px + gradient overlay `::after` знизу фото
+- `.cm-board-pin`: 14px → 18px, реалістичний 3D-градієнт + layered тінь (highlight + shadow)
+- `.cm-board-cat`: badge-pill (бордово-рожевий фон, `border-radius: 99px`) замість plain text
+- Телефон: синій `#1565C0` → приглушений бордо `#8B3A4A`
+- `.cm-board-call`: 32→36px, premium тінь + glass inset highlight
+- Reaction chip: floating capsule з blur + тінню (Apple-стиль)
+- Cork backgrounds: тепліший gradient + виньєтка (radial shadow inset) на всіх варіантах дошки
+- CACHE_NAME: `cstl-20260612-1432`
+
+**В `main` ще НЕ мерджено — чекає перевірки Вови.**
 
 ---
 
