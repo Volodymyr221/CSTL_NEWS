@@ -1568,6 +1568,12 @@
 .bs-track-btn.tracked svg {
   fill: #1C1C1E;
 }
+.bs-track-btn.tracked-seg {
+  color: #722F37;
+}
+.bs-track-btn.tracked-seg svg {
+  fill: #722F37;
+}
 
 /* Банер відстеження — фіксований над таб-баром */
 .bus-track-banner {
