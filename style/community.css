@@ -523,10 +523,11 @@
    без кремових секцій (16.05.2026). Шапка і CTA — частина дошки. */
 .cm-block--board {
   background:
-    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.07) 1px, transparent 2px),
-    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    linear-gradient(135deg, #C9A678 0%, #A8845C 100%);
-  background-size: 12px 12px, 12px 12px, 100% 100%;
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.18) 100%),
+    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.07) 1px, transparent 2px),
+    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
+  background-size: 100% 100%, 12px 12px, 12px 12px, 100% 100%;
 }
 /* Шапка «Дошка громади» — темно-коричневий текст на корці */
 .cm-block--board .cm-block-title {
@@ -692,18 +693,20 @@
 .cm-board-corkboard {
   position: relative;
   background:
-    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.05) 1px, transparent 2px),
-    linear-gradient(135deg, #C9A678 0%, #B08A5C 100%);
-  background-size: 14px 14px, 14px 14px, 100% 100%;
-  border-top: 4px solid #8B6F47;
-  border-bottom: 4px solid #8B6F47;
+    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.18) 100%),
+    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.05) 1px, transparent 2px),
+    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
+  background-size: 100% 100%, 14px 14px, 14px 14px, 100% 100%;
+  border-top: 4px solid #7A5C30;
+  border-bottom: 4px solid #7A5C30;
+  box-shadow: inset 0 4px 16px rgba(0,0,0,0.18), inset 0 -4px 16px rgba(0,0,0,0.12);
   padding: 18px 14px 22px;
   max-height: 460px;
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 14px 8px;
+  gap: 16px 10px;
   justify-content: space-between;
   /* align-items: flex-start — кожен стікер своєї природньої висоти, не тягнеться
      щоб співпасти з сусідом-з-фото. На місці коротшого стікера лишається корок. */
@@ -717,12 +720,13 @@
   position: relative;
   width: calc(50% - 4px);
   min-height: 100px;
-  padding: 14px 12px 10px;
+  padding: 16px 14px 14px;
   background: #FFF59D;
-  border-radius: 2px;
+  border-radius: 20px;
   box-shadow:
-    0 2px 4px rgba(0,0,0,0.18),
-    0 6px 12px rgba(0,0,0,0.12);
+    0 1px 2px rgba(0,0,0,0.08),
+    0 4px 12px rgba(0,0,0,0.10),
+    0 10px 28px rgba(0,0,0,0.07);
   transform: rotate(var(--tilt)) translateZ(0);
   transition: transform 0.2s, opacity 0.18s ease;
   /* GPU promotion — запобігає «блиманню» сусідів коли модалка відкривається.
@@ -730,28 +734,29 @@
   -webkit-backface-visibility: hidden;
   backface-visibility: hidden;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #2c2c2c;
+  color: #2B2B2B;
   display: flex;
   flex-direction: column;
 }
 .cm-board-note:hover { transform: rotate(0deg) scale(1.02); z-index: 5; }
 
-/* Кольори папірців */
-.cm-board-note--yellow { background: #FFF59D; }
-.cm-board-note--blue   { background: #BBDEFB; }
-.cm-board-note--pink   { background: #F8BBD0; }
-.cm-board-note--white  { background: #FAFAFA; }
-.cm-board-note--green  { background: #C8E6C9; }
+/* Кольори папірців — дещо приглушені для преміальності */
+.cm-board-note--yellow { background: #FEFCE8; }
+.cm-board-note--blue   { background: #EFF6FF; }
+.cm-board-note--pink   { background: #FFF0F3; }
+.cm-board-note--white  { background: #FAFAF8; }
+.cm-board-note--green  { background: #F0FAF1; }
 
 /* Офіційний папірець (адміністрація) — на повну ширину, бронзова рамка */
 .cm-board-note--official {
   width: 100%;
   background: linear-gradient(135deg, #FFFDE7 0%, #FFF9C4 100%);
   border: 1.5px solid #B45309;
-  padding: 16px 14px 12px;
+  padding: 16px 14px 14px;
   box-shadow:
-    0 3px 6px rgba(0,0,0,0.22),
-    0 8px 16px rgba(0,0,0,0.15);
+    0 1px 2px rgba(0,0,0,0.08),
+    0 4px 14px rgba(0,0,0,0.12),
+    0 10px 28px rgba(0,0,0,0.08);
 }
 .cm-board-cat--official {
   color: #B45309;
@@ -767,39 +772,56 @@
 
 /* Золотиста шпилька для офіційних */
 .cm-board-pin--gold {
-  background: radial-gradient(circle at 35% 35%, #FFD54F 0%, #FFA000 60%, #B45309 100%);
+  background: radial-gradient(circle at 32% 28%, #FFE082 0%, #FFA000 50%, #B45309 100%);
+  box-shadow:
+    0 3px 7px rgba(0,0,0,0.40),
+    0 1px 2px rgba(0,0,0,0.20),
+    inset 2px 2px 2px rgba(255,255,255,0.45),
+    inset -1px -1px 2px rgba(0,0,0,0.15);
 }
 
-/* Червона шпилька зверху по центру */
+/* Червона шпилька зверху по центру — реалістична матова */
 .cm-board-pin {
   position: absolute;
-  top: -7px;
+  top: -10px;
   left: 50%;
   transform: translateX(-50%);
-  width: 14px;
-  height: 14px;
-  background: radial-gradient(circle at 35% 35%, #B8546A 0%, #722F37 60%, #4A1F26 100%);
+  width: 18px;
+  height: 18px;
+  background: radial-gradient(circle at 32% 28%, #C96070 0%, #8B2A3D 45%, #5A1A27 100%);
   border-radius: 50%;
-  box-shadow: 0 2px 3px rgba(0,0,0,0.4), inset 1px 1px 1px rgba(255,255,255,0.5);
+  box-shadow:
+    0 3px 7px rgba(0,0,0,0.45),
+    0 1px 2px rgba(0,0,0,0.25),
+    inset 2px 2px 2px rgba(255,255,255,0.40),
+    inset -1px -1px 2px rgba(0,0,0,0.20);
   z-index: 2;
 }
 
 .cm-board-cat {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(114, 47, 55, 0.09);
+  color: #7A3040;
+  font-size: 10.5px;
   font-weight: 700;
-  color: #555;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  margin-bottom: 4px;
+  padding: 3px 8px 3px 6px;
+  border-radius: 99px;
+  margin-bottom: 8px;
+  align-self: flex-start;
 }
 
 .cm-board-text {
   font-size: 13.5px;
   font-weight: 500;
-  line-height: 1.4;
-  margin-bottom: 6px;
+  line-height: 1.45;
+  margin-bottom: 10px;
   flex: 1;
   word-wrap: break-word;
+  color: #2B2B2B;
 }
 
 .cm-board-footer {
@@ -807,18 +829,18 @@
   justify-content: space-between;
   align-items: baseline;
   font-size: 11px;
-  color: #666;
-  border-top: 1px dashed rgba(0,0,0,0.15);
-  padding-top: 4px;
+  color: rgba(43, 43, 43, 0.50);
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  padding-top: 6px;
 }
 .cm-board-author { font-weight: 600; }
 .cm-board-time { font-size: 10px; }
 
 .cm-board-contact {
-  font-size: 12px;
-  font-weight: 600;
-  color: #1565C0;
-  margin-top: 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #8B3A4A;
+  margin-top: 6px;
   word-break: break-all;
 }
 
@@ -1084,12 +1106,13 @@
   margin: 18px -18px 14px;
   padding: 14px 18px 18px;
   background:
-    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.07) 1px, transparent 2px),
-    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    linear-gradient(135deg, #C9A678 0%, #A8845C 100%);
-  background-size: 12px 12px, 12px 12px, 100% 100%;
-  border-top: 3px solid #8B6F47;
-  border-bottom: 3px solid #8B6F47;
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.16) 100%),
+    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.07) 1px, transparent 2px),
+    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
+  background-size: 100% 100%, 12px 12px, 12px 12px, 100% 100%;
+  border-top: 3px solid #7A5C30;
+  border-bottom: 3px solid #7A5C30;
 }
 .bm-preview-label {
   font-size: 11px;
@@ -1276,21 +1299,20 @@
   text-align: center;
 }
 
-/* Міні-варіант коркової дошки — компактніша, без overflow scroll.
-   Більш контрастний фон і чіткі рамки щоб виглядало як справжня дошка. */
+/* Міні-варіант коркової дошки — компактніша, без overflow scroll. */
 .cm-board-corkboard--mini {
   max-height: none;
   padding: 16px 14px 18px;
-  border-top: 4px solid #8B6F47;
-  border-bottom: 4px solid #8B6F47;
-  gap: 10px 10px;
-  /* Деталізованіший фон з більш насиченим кольором — мабуть з градієнтом
-     і тонким нерівним «дерев'яним» обрамленням знизу */
+  border-top: 4px solid #7A5C30;
+  border-bottom: 4px solid #7A5C30;
+  gap: 12px 10px;
+  box-shadow: inset 0 3px 10px rgba(0,0,0,0.15), inset 0 -3px 10px rgba(0,0,0,0.10);
   background:
-    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.07) 1px, transparent 2px),
-    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    linear-gradient(135deg, #C9A678 0%, #A8845C 100%);
-  background-size: 12px 12px, 12px 12px, 100% 100%;
+    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.16) 100%),
+    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.07) 1px, transparent 2px),
+    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
+  background-size: 100% 100%, 12px 12px, 12px 12px, 100% 100%;
 }
 
 /* Міні-стікер — менші розміри + обрізаний текст */
@@ -1315,6 +1337,8 @@
 /* Стікер з фото на міні-дошці — фото менше, текст на 2 рядки */
 .cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-photo-wrap {
   margin: -12px -10px 8px;
+  border-top-left-radius: 18px;
+  border-top-right-radius: 18px;
 }
 .cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-photo {
   aspect-ratio: 4 / 3;
@@ -1368,10 +1392,11 @@
   left: 0;
   right: 0;
   background:
-    radial-gradient(circle at 25% 25%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    radial-gradient(circle at 75% 75%, rgba(0,0,0,0.05) 1px, transparent 2px),
-    linear-gradient(135deg, #C9A678 0%, #B08A5C 100%);
-  background-size: 14px 14px, 14px 14px, 100% 100%;
+    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.22) 100%),
+    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.06) 1px, transparent 2px),
+    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.05) 1px, transparent 2px),
+    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
+  background-size: 100% 100%, 14px 14px, 14px 14px, 100% 100%;
   pointer-events: none;
   z-index: 0;
 }
@@ -1447,15 +1472,27 @@
   transition: opacity 0.18s ease;
 }
 
-/* ── Фото на стікері (Polaroid-стиль) ── */
+/* ── Фото на стікері ── */
 .cm-board-photo-wrap {
   /* Виходимо за padding стікера щоб фото було від краю до краю */
-  margin: -14px -12px 10px;
+  margin: -16px -14px 12px;
   background: linear-gradient(135deg, #d8d8d8, #b8b8b8); /* плейсхолдер при завантаженні */
   overflow: hidden;
-  /* Спадковий border-radius для верху щоб співпадало зі стікером */
-  border-top-left-radius: 2px;
-  border-top-right-radius: 2px;
+  position: relative;
+  /* Закруглені верхні кути — збігаються з border-radius картки */
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+/* Темний gradient знизу фото — для читабельності тексту над зображенням */
+.cm-board-photo-wrap::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 42%;
+  background: linear-gradient(to bottom, transparent 0%, rgba(0,0,0,0.22) 100%);
+  pointer-events: none;
 }
 .cm-board-photo {
   display: block;
@@ -1473,8 +1510,8 @@
 /* У модалці фото природньо більше (бо модалка ширша) + більший margin */
 .cm-board-modal-note .cm-board-photo-wrap {
   margin: -22px -20px 14px;
-  border-top-left-radius: 4px;
-  border-top-right-radius: 4px;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
 }
 .cm-board-modal-note .cm-board-text {
   display: block;
@@ -1495,9 +1532,9 @@
   z-index: 220;
   margin: 0;
   padding: 22px 20px 18px;
-  border-radius: 4px;
+  border-radius: 20px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #2c2c2c;
+  color: #2B2B2B;
   box-shadow:
     0 16px 40px rgba(0,0,0,0.45),
     0 6px 16px rgba(0,0,0,0.25);
@@ -1562,19 +1599,23 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-  background: #A8334A; /* муніший за основний червоний — не б'є в очі */
+  background: var(--red);
   color: white;
   text-decoration: none;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.18), 0 1px 2px rgba(0,0,0,0.10);
-  transition: background 0.15s, transform 0.1s;
+  box-shadow:
+    0 3px 10px rgba(114, 47, 55, 0.40),
+    0 1px 3px rgba(0,0,0,0.15),
+    inset 0 1px 0 rgba(255,255,255,0.22);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
   -webkit-tap-highlight-color: transparent;
 }
 .cm-board-call:active {
-  background: #8B2A3D;
+  background: var(--red-dark);
   transform: scale(0.92);
+  box-shadow: 0 1px 4px rgba(114, 47, 55, 0.30);
 }
 
 /* ============================================================================
@@ -2158,14 +2199,19 @@
   display: block;
   margin-top: 6px;
   padding-top: 6px;
-  border-top: 1px dashed rgba(0,0,0,0.18);
+  border-top: 1px dashed rgba(0,0,0,0.12);
 }
 .bd-actions--board-compact .bd-react-trigger {
-  /* Зменшена версія в лівому нижньому куті */
-  min-width: 38px;
-  height: 26px;
-  padding: 0 8px;
-  border-radius: 13px;
+  /* Floating capsule — сучасний Apple-стиль */
+  min-width: 42px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  border: 1px solid rgba(0,0,0,0.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 1px 2px rgba(0,0,0,0.05);
 }
 .bd-actions--board-compact .bd-react-trigger-default { font-size: 13px; }
 .bd-actions--board-compact .bd-react-trigger-emoji   { font-size: 14px; }
