@@ -1675,7 +1675,7 @@ export async function initBuses() {
     if (!res.ok) throw new Error(res.status);
     busData = await res.json();
     // Нормалізація застарілих назв зупинок (для старого кешу на пристроях)
-    const STOP_ALIASES = { 'Гараджа': 'Гаразджа' };
+    const STOP_ALIASES = { 'Гараджа': 'Гаразджа', 'Хорлупи пов.': 'Хромяків' };
     const normalizeStop = name => STOP_ALIASES[name] || name;
     const allDays = busData?.days ? Object.values(busData.days) : (busData ? [busData] : []);
     allDays.forEach(day => (day.routes || []).forEach(r =>

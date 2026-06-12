@@ -3209,7 +3209,7 @@ ${post.text}
       if (!res.ok)
         throw new Error(res.status);
       busData = await res.json();
-      const STOP_ALIASES = { "\u0413\u0430\u0440\u0430\u0434\u0436\u0430": "\u0413\u0430\u0440\u0430\u0437\u0434\u0436\u0430" };
+      const STOP_ALIASES = { "\u0413\u0430\u0440\u0430\u0434\u0436\u0430": "\u0413\u0430\u0440\u0430\u0437\u0434\u0436\u0430", "\u0425\u043E\u0440\u043B\u0443\u043F\u0438 \u043F\u043E\u0432.": "\u0425\u0440\u043E\u043C\u044F\u043A\u0456\u0432" };
       const normalizeStop = (name) => STOP_ALIASES[name] || name;
       const allDays = busData?.days ? Object.values(busData.days) : busData ? [busData] : [];
       allDays.forEach((day) => (day.routes || []).forEach(
