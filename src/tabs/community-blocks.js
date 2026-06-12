@@ -551,7 +551,7 @@ function renderBoardMiniSlide(el) {
 
 // Рендер однієї карточки в міні-блоці. Стиль залежить від типу.
 function renderMiniCard(item, type) {
-  const tilt = ((item.id * 7) % 9) - 4;
+  const tilt = ((item.id * 7) % 5) - 2;
 
   if (type === 'official') {
     return `

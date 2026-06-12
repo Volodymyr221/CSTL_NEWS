@@ -1172,7 +1172,7 @@ ${post.text}
     return post.text || "";
   }
   function renderBoardCard(p) {
-    const tilt = p.id * 7 % 9 - 4;
+    const tilt = p.id * 7 % 5 - 2;
     const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
     const contactHtml = renderContact(p.contact);
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
@@ -3664,7 +3664,7 @@ ${post.text}
     }
   }
   function renderMiniCard(item, type) {
-    const tilt = item.id * 7 % 9 - 4;
+    const tilt = item.id * 7 % 5 - 2;
     if (type === "official") {
       return `
       <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">

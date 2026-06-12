@@ -345,7 +345,7 @@ function buildShareText(post) {
 
 // BOARD: стікер на корку (як було, з реакціями і ❤️-зберегти)
 function renderBoardCard(p) {
-  const tilt = ((p.id * 7) % 9) - 4;
+  const tilt = ((p.id * 7) % 5) - 2;
   const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const contactHtml = renderContact(p.contact);
   // posts.photos[] (масив у Supabase) АБО p.photo (старі демо-дані з community-board.json)
