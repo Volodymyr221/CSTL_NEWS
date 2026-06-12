@@ -2936,11 +2936,12 @@ ${post.text}
         e.stopPropagation();
         const rid = btn.dataset.trackId;
         const tracked = isRouteSegmentTracked(rid);
-        if (tracked) {
-          const entry = findTrackedEntry(rid, fromStop || null, toStop || null);
+        const trackedSeg = btn.classList.contains("tracked-seg");
+        if (tracked || trackedSeg) {
+          const entry = findTrackedEntry(rid, fromStop || null, toStop || null) || trackedRoutes.find((t) => t.routeId === rid && t.trackDate === busDay);
           if (entry) {
+            unsubscribeFromPush(entry.routeId, entry.trackDate);
             removeTrackedEntry(entry);
-            unsubscribeFromPush(rid, busDay);
           }
         } else {
           const existing = trackedRoutes.find((t) => t.routeId === rid && t.trackDate === busDay);
