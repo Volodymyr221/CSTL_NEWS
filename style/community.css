@@ -1724,9 +1724,9 @@
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .bd-tab--active {
-  background: var(--red);
+  background: rgba(100, 40, 40, 0.82);
   color: white;
-  border-color: var(--red);
+  border-color: rgba(100, 40, 40, 0.82);
   font-weight: 600;
 }
 .bd-tab-emoji { font-size: 14px; }
