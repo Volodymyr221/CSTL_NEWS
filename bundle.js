@@ -1793,7 +1793,7 @@ ${post.text}
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
   var TRACK_KEY = "bus_track_v2";
-  var VAPID_PUBLIC_KEY = "BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo";
+  var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;

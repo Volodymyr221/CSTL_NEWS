@@ -11,7 +11,7 @@ const TRACK_KEY = 'bus_track_v2';
 
 // VAPID public key (публічний ключ — безпечно зберігати у коді).
 // Private key — тільки у Supabase Edge Function Secrets (VAPID_PRIVATE_KEY).
-const VAPID_PUBLIC_KEY = 'BL6FKk0c_UoMo7TfJ17dlea2RCe2seP7amdebBb5SeomfXsH1k4UTWI10LPE9-ittx9Gzciudao7rMe9EciLeJo';
+const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
 
 let busData       = null;
 let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
