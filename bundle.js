@@ -1332,7 +1332,9 @@ ${post.text}
       <div class="board-bg" aria-hidden="true"></div>
       <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
       <div class="board-vignette board-vignette--bottom" aria-hidden="true"></div>
-    ` : ""}
+    ` : `
+      <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
+    `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
     <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
@@ -1340,9 +1342,9 @@ ${post.text}
       <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
     </button>
   `;
-    el.style.backgroundImage = hasCork ? "" : "url('./images/IMG_2321.png')";
-    el.style.backgroundSize = hasCork ? "" : "cover";
-    el.style.backgroundPosition = hasCork ? "" : "center";
+    el.style.backgroundImage = "";
+    el.style.backgroundSize = "";
+    el.style.backgroundPosition = "";
     const catsEl = el.querySelector(".bd-categories");
     if (catsEl)
       catsEl.scrollLeft = savedCatScroll;
