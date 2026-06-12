@@ -1642,10 +1642,19 @@
   z-index: 90;
   background: var(--paper);
   padding: 10px 14px 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.13);
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+.bd-controls::after {
+  content: '';
+  position: absolute;
+  bottom: -28px;
+  left: 0;
+  right: 0;
+  height: 28px;
+  background: linear-gradient(to bottom, #F4F1E6, transparent);
+  pointer-events: none;
 }
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
    Висота без категорій: tabs 38 + gap 8 + search 40 + padding 18 ≈ 110
