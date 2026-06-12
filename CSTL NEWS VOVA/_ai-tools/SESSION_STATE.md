@@ -5,6 +5,18 @@
 
 ---
 
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-pl7nch`) — ЗМЕРДЖЕНО В MAIN (фінал 21:54)
+
+**style(board): real cork background image + stronger vignettes**
+- Фоновий корок `.board-bg`: CSS-градієнт → `images/cork2.png` (реальне фото)
+- `images/cork2.png` додано в `STATIC_ASSETS` Service Worker для офлайн-кешування
+- Вінієтки (тіні зверху/знизу): opacity 0.36/0.30 → 0.58/0.52, висота 100→140px
+- `box-shadow` inset: 0.30/0.24 → 0.52/0.45, spread 56→80px
+- Тінь знизу `.bd-controls` (блок вкладок): `border-bottom` → `box-shadow: 0 4px 16px rgba(0,0,0,0.13)`
+- CACHE_NAME: `cstl-20260612-2154`
+
+---
+
 ## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-pl7nch`) — ЗМЕРДЖЕНО В MAIN
 
 **style(board): Premium skeuomorphic redesign — Дошка громади**
