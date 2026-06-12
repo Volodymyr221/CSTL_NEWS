@@ -49,7 +49,7 @@ const WHITELIST = new Set([
   'performance', 'caches', 'self', 'addEventListener', 'removeEventListener',
   'matchMedia', 'getComputedStyle', 'AbortController', 'AbortSignal',
   'Notification', 'Worker', 'ServiceWorker', 'BroadcastChannel',
-  'Response', 'Request', 'Headers',
+  'Response', 'Request', 'Headers', 'Uint8Array', 'Promise',
 
   // Module globals (CommonJS / Node)
   'require', 'module', 'exports', 'process', 'Buffer', '__dirname',

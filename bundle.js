@@ -1871,6 +1871,18 @@ ${post.text}
     const raw = atob(base);
     return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
   }
+  function pushKeysEqual(a, b) {
+    if (!a || !b)
+      return false;
+    const ua = new Uint8Array(a);
+    const ub = new Uint8Array(b);
+    if (ua.length !== ub.length)
+      return false;
+    for (let i = 0; i < ua.length; i++)
+      if (ua[i] !== ub[i])
+        return false;
+    return true;
+  }
   async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
     if (trackDate !== getTodayISO())
       return;
@@ -1885,12 +1897,23 @@ ${post.text}
       if (perm !== "granted")
         return;
       const reg = await navigator.serviceWorker.ready;
-      const sub = await reg.pushManager.subscribe({
-        userVisibleOnly: true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
-      });
+      const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const existingKey = sub.options && sub.options.applicationServerKey;
+        if (existingKey && !pushKeysEqual(existingKey, appKey)) {
+          await sub.unsubscribe();
+          sub = null;
+        }
+      }
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appKey
+        });
+      }
       const subJson = sub.toJSON();
-      await savePushSubscription({
+      const payload = {
         user_uuid: getAnonId(),
         endpoint: subJson.endpoint,
         p256dh: subJson.keys.p256dh,
@@ -1901,8 +1924,19 @@ ${post.text}
         alighting_stop: alightingStop || null,
         track_date: trackDate,
         dep_time: depTime || null
-      });
-    } catch (_) {
+      };
+      let res = await savePushSubscription(payload);
+      if (!res.ok) {
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await savePushSubscription(payload);
+      }
+      if (!res.ok) {
+        console.warn("[push] \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0443:", res.error);
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437");
+      }
+    } catch (err) {
+      console.warn("[push] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0438:", err);
+      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F");
     }
   }
   async function unsubscribeFromPush(routeId, trackDate) {

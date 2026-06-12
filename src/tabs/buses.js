@@ -1,4 +1,4 @@
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, showToast } from '../core/utils.js';
 import {
   toMinutes, minsToHHMM, nowMinutes,
   getStopMins, getStopHHMM, getRouteState, getRouteTimings,
@@ -93,6 +93,17 @@ function urlBase64ToUint8Array(b64) {
 // Підписує браузер на Web Push і зберігає у Supabase.
 // Запитує дозвіл на сповіщення якщо ще не надано.
 // Тихо виходить якщо: заборонено, немає SW, не сьогодні.
+// Порівнює два ключі застосунку (applicationServerKey) побайтно.
+// Потрібно щоб виявити стару підписку зі старим VAPID-ключем після ротації.
+function pushKeysEqual(a, b) {
+  if (!a || !b) return false;
+  const ua = new Uint8Array(a);
+  const ub = new Uint8Array(b);
+  if (ua.length !== ub.length) return false;
+  for (let i = 0; i < ua.length; i++) if (ua[i] !== ub[i]) return false;
+  return true;
+}
+
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
   if (trackDate !== getTodayISO()) return;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
@@ -102,13 +113,30 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
     if (perm === 'default') perm = await Notification.requestPermission();
     if (perm !== 'granted') return;
 
-    const reg = await navigator.serviceWorker.ready;
-    const sub = await reg.pushManager.subscribe({
-      userVisibleOnly:      true,
-      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
-    });
+    const reg    = await navigator.serviceWorker.ready;
+    const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+
+    // Якщо в браузері вже є підписка зі ЗМІНЕНИМ ключем (після ротації VAPID) —
+    // скасовуємо її, інакше pushManager.subscribe() кине InvalidStateError
+    // і рейс лишиться без сповіщень. Якщо ключ не читається — не чіпаємо
+    // (щоб не зламати робочу підписку на iOS, де options можуть бути приховані).
+    let sub = await reg.pushManager.getSubscription();
+    if (sub) {
+      const existingKey = sub.options && sub.options.applicationServerKey;
+      if (existingKey && !pushKeysEqual(existingKey, appKey)) {
+        await sub.unsubscribe();
+        sub = null;
+      }
+    }
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly:      true,
+        applicationServerKey: appKey,
+      });
+    }
+
     const subJson = sub.toJSON();
-    await savePushSubscription({
+    const payload = {
       user_uuid:      getAnonId(),
       endpoint:       subJson.endpoint,
       p256dh:         subJson.keys.p256dh,
@@ -119,8 +147,23 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
       alighting_stop: alightingStop || null,
       track_date:     trackDate,
       dep_time:       depTime || null,
-    });
-  } catch (_) {}
+    };
+
+    // Зберігаємо з одним повтором: якщо запит обірвався (напр. під час
+    // оновлення додатку) — пробуємо ще раз, а не лишаємо рейс без push мовчки.
+    let res = await savePushSubscription(payload);
+    if (!res.ok) {
+      await new Promise(r => setTimeout(r, 1500));
+      res = await savePushSubscription(payload);
+    }
+    if (!res.ok) {
+      console.warn('[push] не вдалося зберегти підписку:', res.error);
+      showToast('Не вдалося увімкнути сповіщення — спробуйте ще раз');
+    }
+  } catch (err) {
+    console.warn('[push] помилка підписки:', err);
+    showToast('Не вдалося увімкнути сповіщення');
+  }
 }
 
 // Видаляє підписку для конкретного маршруту з Supabase.
