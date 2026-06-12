@@ -533,6 +533,7 @@ export async function renderBoard() {
 
 // Перерендер тільки контейнера дошки (без перезавантаження даних)
 function renderAll(el) {
+  const savedCatScroll = el.querySelector('.bd-categories')?.scrollLeft ?? 0;
   const hasCork = activeType === 'board';
   el.innerHTML = `
     ${hasCork ? `
@@ -547,6 +548,9 @@ function renderAll(el) {
       <span class="cm-board-trigger-text">Подати оголошення</span>
     </button>
   `;
+
+  const catsEl = el.querySelector('.bd-categories');
+  if (catsEl) catsEl.scrollLeft = savedCatScroll;
 
   // Submit-форма
   document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
