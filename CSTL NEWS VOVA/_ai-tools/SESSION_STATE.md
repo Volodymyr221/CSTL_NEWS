@@ -5,21 +5,32 @@
 
 ---
 
-## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-pl7nch`)
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-pl7nch`) — ЗМЕРДЖЕНО В MAIN
 
 **style(board): Premium skeuomorphic redesign — Дошка громади**
 - `.cm-board-note`: `border-radius 2px → 20px`, м'які ambient тіні, більший padding, колір `#2B2B2B`
 - Кольори карток: злегка приглушені (premium paper feel)
-- `.cm-board-photo-wrap`: закруглені верхні кути 20px + gradient overlay `::after` знизу фото
-- `.cm-board-pin`: 14px → 18px, реалістичний 3D-градієнт + layered тінь (highlight + shadow)
-- `.cm-board-cat`: badge-pill (бордово-рожевий фон, `border-radius: 99px`) замість plain text
-- Телефон: синій `#1565C0` → приглушений бордо `#8B3A4A`
-- `.cm-board-call`: 32→36px, premium тінь + glass inset highlight
-- Reaction chip: floating capsule з blur + тінню (Apple-стиль)
 - Cork backgrounds: тепліший gradient + виньєтка (radial shadow inset) на всіх варіантах дошки
-- CACHE_NAME: `cstl-20260612-1432`
 
-**В `main` ще НЕ мерджено — чекає перевірки Вови.**
+**fix(board): JS two-column layout замість CSS column-count**
+- Причина: CSS `column-count: 2` з `max-height` + `overflow-y: auto` на iOS давав пусті місця
+- Фікс: JS розбиває картки на ліву/праву колонку по парності індексу (явні flex-divs)
+- Нахил карток ±4° → ±2°, gap між колонками 14px → 20px
+
+**fix(board): Cork background + fixed vignettes (тіні приклеплені до екрану)**
+- `.board-bg` елемент тепер реально додається в HTML (був тільки CSS без елемента)
+- `.board-vignette--top/bottom`: `position: fixed; z-index: 8` — не прокручуються зі стікерами
+
+**fix(buses): spurious banner при знятті відстеження**
+- `checkTrackNotifications()` тепер викликається тільки в потрібній гілці (true=tracking / false=untracking)
+
+**fix(buses): бордова закладка для проміжних сегментів**
+- `!!trackedSeg` замість `hasTrackedSeg` — коректно показує бордовий для проміжних зупинок
+
+**fix(buses): dep_time null → push notifications не надходили**
+- Причина: `getStopHHMM(route, fromStop)` — точне співпадіння, `fromStop` ≠ реальна назва зупинки
+- Фікс: `getStopHHMM(route, getEffectiveFrom(route))` — нормалізований пошук → правильний час → Edge Function не пропускає підписку
+- CACHE_NAME: `cstl-20260612-2124`
 
 ---
 
