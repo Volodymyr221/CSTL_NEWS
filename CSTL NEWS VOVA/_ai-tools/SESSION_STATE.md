@@ -1,7 +1,83 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-12 (гілка `claude/startup-uem-pl7nch`)
+**Оновлено:** 2026-06-13 (гілка `claude/startup-uem-pl7nch`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
+
+---
+
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (13.06.2026, гілка `claude/startup-uem-pl7nch`) — UI вкладки «Дошка»
+
+> CACHE_NAME: `cstl-20260612-2200`. Зміни на гілці, ще не змерджено в `main`.
+
+**style(board): повний UI-редизайн вкладки «Дошка» — tabs, chips, controls**
+
+### Таби (ДОШКА / ЗБЕРЕЖЕНІ / ОБГОВОРЕННЯ)
+
+- **Порядок табів змінено:** ЗБЕРЕЖЕНІ тепер у центрі між ДОШКА і ОБГОВОРЕННЯ
+  (`TYPE_TABS = [board, saved, chat]` у `src/tabs/board.js`)
+- **Активний таб** (`.bd-tab--active`):
+  - Фон: `var(--card-cream)` = `#FAF8EF` (кремовий)
+  - Ободок: `rgba(114, 47, 55, 0.80)` (бордовий, прозорість 0.80)
+  - Тінь: `inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10)` (ефект «натиснуто»)
+  - `font-weight: 700`
+- **Неактивний таб** (`.bd-tab`):
+  - Ободок: `1.5px solid rgba(0,0,0,0.28)` (світліший сірий)
+  - `font-weight: 700`
+  - Зовнішня тінь: `0 2px 8px rgba(0,0,0,0.12)`
+- **Іконка закладки ЗБЕРЕЖЕНІ** — зсунута вниз на 2px: `padding: 2px 0 0 0` на `.bd-tab--round`
+
+### Блок контролів (`.bd-controls`)
+
+- **Прибрано `box-shadow`** — замінено на плавний fade знизу
+- **`::after` fade:** `height: 6px`, `linear-gradient(to bottom, #F4F1E6, transparent)` — плавний перехід у дошку
+- **`padding-bottom: 6px`** на `.bd-tabs` — відступ між табами і пошуком
+- **Пошук (`.bd-search`)** — ободок: `1.5px solid rgba(0,0,0,0.22)`
+- **Плейсхолдер пошуку** — різний залежно від активної вкладки:
+  - ДОШКА → «Пошук по дошці...»
+  - ОБГОВОРЕННЯ → «Пошук в обговореннях...»
+  - ЗБЕРЕЖЕНІ → «Пошук у збережених...»
+
+### Кнопка дзвінка на картках (`.cm-board-call`)
+
+- Фон: прозорий
+- Ободок: `1px solid var(--red)` (бордовий)
+- Іконка: бордова (`color: var(--red)`)
+- SVG телефону: `width="15" height="15" stroke-width="2.1"`
+- Тінь: `inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10)`
+
+### Чіпи підкатегорій (`.bd-cat-chip`)
+
+- **Назви ВЕЛИКИМИ ЛІТЕРАМИ** (`text-transform: uppercase`)
+- Фон: `var(--card-cream)` (`#FAF8EF`)
+- Текст: `var(--black)`
+- Ободок: `1px solid var(--paper-deep)` (сірий)
+- Тінь: `0 2px 6px rgba(0,0,0,0.10)`
+- **Активний чіп** (`.bd-cat-chip--active`):
+  - Ободок: `rgba(0,0,0,0.30)` (чорнішій)
+  - `font-weight: 700`
+  - Тінь: `inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10)`
+- **«ВСІ» завжди жирний:** `.bd-cat-chip[data-bd-cat="all"] { font-weight: 700; }`
+- **«Подяки» ВИДАЛЕНО** з `BOARD_CATEGORIES` (залишилось 8 категорій)
+
+### Баги які виправили
+
+- **Скрол підкатегорій скакав на початок** при натисканні чіпу:
+  - Причина: `renderAll(el)` замінювала весь `innerHTML` → скидала `scrollLeft` на 0
+  - Фікс: `const savedCatScroll = el.querySelector('.bd-categories')?.scrollLeft ?? 0` перед рендером,
+    `if (catsEl) catsEl.scrollLeft = savedCatScroll` після
+
+- **Вкладки чат/збережені мали старий фото-фон** (залишок від попередньої сесії):
+  - Фікс: при `activeType !== 'board'` — НЕ додаємо `.board-bg` елемент (без фото),
+    додаємо тільки `.board-vignette--top` (верхня тінь)
+  - Не можна ставити `position: fixed; z-index: 0` елемент для фону — він перекриває `normal flow` картки
+
+### Що змінено у файлах
+
+| Файл | Що змінено |
+|------|-----------|
+| `src/tabs/board.js` | `TYPE_TABS` = [board, saved, chat], `BOARD_CATEGORIES` без Подяки, плейсхолдер per-tab, scroll preservation, hasCork логіка |
+| `style/community.css` | `.bd-tab`, `.bd-tab--active`, `.bd-tab--round`, `.bd-controls`, `.bd-controls::after`, `.bd-tabs`, `.bd-search`, `.cm-board-call`, `.bd-cat-chip`, `.bd-cat-chip--active`, `[data-bd-cat="all"]` |
+| `sw.js` | `CACHE_NAME: cstl-20260612-2200` |
 
 ---
 
@@ -268,13 +344,14 @@
 |--|--|
 | **URL сайту** | https://volodymyr221.github.io/CSTL_NEWS/ |
 | **Репозиторій** | https://github.com/Volodymyr221/CSTL_NEWS |
-| **Робоча гілка (поточна сесія)** | `claude/startup-uem-hp5ldw` (усе змерджено в `main` 12.06) |
+| **Робоча гілка (поточна сесія)** | `claude/startup-uem-pl7nch` |
 | **Production-гілка** | `main` — мердж тільки через `/finish` (PR → squash → auto-deploy) |
 | **Власник** | Вова Шевчук (GitHub: Volodymyr221) |
-| **CACHE_NAME у `sw.js`** | `cstl-20260612-1715` |
+| **CACHE_NAME у `sw.js`** | `cstl-20260612-2200` |
 | **Статус вкладки «Автобуси»** | 🟢 V1.0 ЗАФІКСОВАНО 12.06.2026 — тільки зворотні рейси відкладено |
 | **Push-сповіщення (Level B)** | 🟢 ПРАЦЮЄ 12.06 — зайве notified_start видалено, підписка виправлена |
-| **Наступна задача** | 🔴 Вкладка «Дошка» — аудит і виправлення |
+| **Статус вкладки «Дошка»** | 🟡 UI-редизайн виконано (13.06), ще не змерджено в `main` |
+| **Наступна задача** | Мержити дошку в main → обговорювати нові задачі з Вовою |
 
 ---
 
