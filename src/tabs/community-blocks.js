@@ -31,6 +31,10 @@ function loadCmTracked(todayISO) {
   return [];
 }
 
+// Вкладка Автобуси змінила відстеження → одразу перемальовуємо віджет Громади
+// (якщо вкладка Громада зараз не в DOM — renderBusBlock тихо вийде на null).
+window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
+
 // Типи у міні-блоці Дошки — свайп циклічно
 const BOARD_MINI_TYPES = [
   { id: 'official', label: 'Офіційні', emoji: '🏛️' },

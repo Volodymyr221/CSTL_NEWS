@@ -1939,6 +1939,7 @@ ${post.text}
     } else {
       localStorage.setItem(TRACK_KEY, JSON.stringify({ routes: trackedRoutes }));
     }
+    window.dispatchEvent(new CustomEvent("cstl-bus-track-changed"));
   }
   function removeTrackedEntry(entry) {
     const idx = trackedRoutes.indexOf(entry);
@@ -3225,6 +3226,9 @@ ${post.text}
     }
     return [];
   }
+  window.addEventListener("cstl-bus-track-changed", () => {
+    renderBusBlock();
+  });
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },

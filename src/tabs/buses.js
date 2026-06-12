@@ -158,6 +158,8 @@ function saveTrackedRoute() {
   } else {
     localStorage.setItem(TRACK_KEY, JSON.stringify({ routes: trackedRoutes }));
   }
+  // Сигнал для інших вкладок (Громада) — оновити їхній віджет автобуса в реальному часі
+  window.dispatchEvent(new CustomEvent('cstl-bus-track-changed'));
 }
 
 function removeTrackedEntry(entry) {
