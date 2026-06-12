@@ -706,9 +706,28 @@
   overflow-y: auto;
   /* column-count: 2 — газетний потік: картки заповнюють зверху вниз
      без пустих місць (на відміну від flex-wrap де коротка картка лишала gap) */
-  column-count: 2;
+  display: flex;
+  flex-wrap: wrap;
   column-gap: 8px;
+  align-items: flex-start;
   -webkit-overflow-scrolling: touch;
+}
+
+/* Явна колонка дошки — flex-дитина corkboard */
+.cm-board-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* Рядок офіційних оголошень — повна ширина перед двоколонним блоком */
+.cm-board-official-row {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
 }
 
 /* Папірець-оголошення */
@@ -716,9 +735,6 @@
   --tilt: 0deg;
   position: relative;
   width: 100%;
-  break-inside: avoid;
-  -webkit-column-break-inside: avoid;
-  margin-bottom: 14px;
   min-height: 100px;
   padding: 16px 14px 14px;
   background: #FFF59D;
@@ -1305,8 +1321,6 @@
   padding: 16px 14px 18px;
   border-top: 4px solid #7A5C30;
   border-bottom: 4px solid #7A5C30;
-  column-count: 2;
-  column-gap: 8px;
   box-shadow: inset 0 3px 10px rgba(0,0,0,0.15), inset 0 -3px 10px rgba(0,0,0,0.10);
   background:
     radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.16) 100%),
@@ -1319,7 +1333,6 @@
 /* Міні-стікер — менші розміри + обрізаний текст */
 .cm-board-note.cm-board-mini {
   width: 100%;
-  margin-bottom: 10px;
   min-height: 92px;
   padding: 12px 10px 10px;
 }

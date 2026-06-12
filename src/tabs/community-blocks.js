@@ -485,14 +485,24 @@ function renderBoardMiniSlide(el) {
 
   const emptyHtml = `<div class="cm-board-mini-empty">У «${escapeHtml(cfg.label)}» поки порожньо</div>`;
 
-  const cardsHtml = items.length ? items.map(item => renderMiniCard(item, cfg.id)).join('') : emptyHtml;
-
   // BOARD — корок зі стікерами (з нахилами і шпильками)
   // CHAT/GREETING/OFFICIAL — простіший лейаут без корки
   const isCorkType = cfg.id === 'board' || cfg.id === 'official';
-  const innerHtml = isCorkType
-    ? `<div class="cm-board-corkboard cm-board-corkboard--mini">${cardsHtml}</div>`
-    : `<div class="cm-board-mini-stream">${cardsHtml}</div>`;
+  let innerHtml;
+  if (isCorkType) {
+    if (items.length) {
+      const leftHtml  = items.filter((_, i) => i % 2 === 0).map(item => renderMiniCard(item, cfg.id)).join('');
+      const rightHtml = items.filter((_, i) => i % 2 === 1).map(item => renderMiniCard(item, cfg.id)).join('');
+      innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">
+        <div class="cm-board-col">${leftHtml}</div>
+        <div class="cm-board-col">${rightHtml}</div>
+      </div>`;
+    } else {
+      innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">${emptyHtml}</div>`;
+    }
+  } else {
+    innerHtml = `<div class="cm-board-mini-stream">${items.length ? items.map(item => renderMiniCard(item, cfg.id)).join('') : emptyHtml}</div>`;
+  }
 
   // Напрям анімації залежить від свайпу: вліво (наступний) = новий слайд
   // приходить справа, вправо (попередній) = слайд приходить зліва

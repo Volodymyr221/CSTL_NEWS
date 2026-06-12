@@ -1338,19 +1338,30 @@ ${post.text}
       return tb - ta;
     });
     if (activeType === "board") {
-      const cards = sorted.map(renderBoardCard).join("");
+      const leftCards = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join("");
+      const rightCards = sorted.filter((_, i) => i % 2 === 1).map(renderBoardCard).join("");
       return `
       <div class="board-backdrop" id="board-backdrop"></div>
-      <div class="cm-board-corkboard board-corkboard--full">${cards}</div>
+      <div class="cm-board-corkboard board-corkboard--full">
+        <div class="cm-board-col">${leftCards}</div>
+        <div class="cm-board-col">${rightCards}</div>
+      </div>
     `;
     }
     if (activeType === "all") {
       const officialCards = annsForView.map(renderOfficialCard).join("");
-      const boardOnly = sorted.filter((p) => p.type === "board").map(renderBoardCard).join("");
+      const boardItems = sorted.filter((p) => p.type === "board");
+      const boardLeft = boardItems.filter((_, i) => i % 2 === 0).map(renderBoardCard).join("");
+      const boardRight = boardItems.filter((_, i) => i % 2 === 1).map(renderBoardCard).join("");
       const others = sorted.filter((p) => p.type !== "board").map(renderCard).join("");
+      const hasCork = officialCards || boardLeft || boardRight;
       return `
       <div class="board-backdrop" id="board-backdrop"></div>
-      ${officialCards || boardOnly ? `<div class="cm-board-corkboard board-corkboard--full">${officialCards}${boardOnly}</div>` : ""}
+      ${hasCork ? `<div class="cm-board-corkboard board-corkboard--full">
+        ${officialCards ? `<div class="cm-board-official-row">${officialCards}</div>` : ""}
+        <div class="cm-board-col">${boardLeft}</div>
+        <div class="cm-board-col">${boardRight}</div>
+      </div>` : ""}
       ${others ? `<div class="bd-stream">${others}</div>` : ""}
     `;
     }
@@ -3590,9 +3601,22 @@ ${post.text}
     </div>
   `;
     const emptyHtml = `<div class="cm-board-mini-empty">\u0423 \xAB${escapeHtml(cfg.label)}\xBB \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>`;
-    const cardsHtml = items.length ? items.map((item) => renderMiniCard(item, cfg.id)).join("") : emptyHtml;
     const isCorkType = cfg.id === "board" || cfg.id === "official";
-    const innerHtml = isCorkType ? `<div class="cm-board-corkboard cm-board-corkboard--mini">${cardsHtml}</div>` : `<div class="cm-board-mini-stream">${cardsHtml}</div>`;
+    let innerHtml;
+    if (isCorkType) {
+      if (items.length) {
+        const leftHtml = items.filter((_, i) => i % 2 === 0).map((item) => renderMiniCard(item, cfg.id)).join("");
+        const rightHtml = items.filter((_, i) => i % 2 === 1).map((item) => renderMiniCard(item, cfg.id)).join("");
+        innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">
+        <div class="cm-board-col">${leftHtml}</div>
+        <div class="cm-board-col">${rightHtml}</div>
+      </div>`;
+      } else {
+        innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">${emptyHtml}</div>`;
+      }
+    } else {
+      innerHtml = `<div class="cm-board-mini-stream">${items.length ? items.map((item) => renderMiniCard(item, cfg.id)).join("") : emptyHtml}</div>`;
+    }
     const slideClass = _boardMiniDir < 0 ? " bd-mini-slide-back" : "";
     el.innerHTML = `
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
