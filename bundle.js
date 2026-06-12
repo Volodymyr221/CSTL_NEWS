@@ -1249,13 +1249,13 @@ ${post.text}
   ` : "";
     return `
     <div class="bd-controls">
+      <div class="bd-tabs">${tabs}</div>
       <div class="bd-search">
         <span class="bd-search-icon">\u{1F50D}</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
                placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..." value="${escapeHtml(searchQuery)}">
         ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
       </div>
-      <div class="bd-tabs">${tabs}</div>
       ${categoriesHtml}
     </div>
   `;

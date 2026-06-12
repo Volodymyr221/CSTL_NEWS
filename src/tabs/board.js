@@ -440,13 +440,13 @@ function renderHeader() {
 
   return `
     <div class="bd-controls">
+      <div class="bd-tabs">${tabs}</div>
       <div class="bd-search">
         <span class="bd-search-icon">🔍</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
                placeholder="Пошук по дошці..." value="${escapeHtml(searchQuery)}">
         ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
       </div>
-      <div class="bd-tabs">${tabs}</div>
       ${categoriesHtml}
     </div>
   `;
