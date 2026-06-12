@@ -1,14 +1,21 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-11 (нова сесія, гілка `claude/wonderful-lamport-e5wq4z`)
+**Оновлено:** 2026-06-12 (нова сесія, гілка `claude/startup-uem-ok51t5`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
 
-## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (11-12.06.2026, гілка `wonderful-lamport`)
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `startup-uem-ok51t5`)
 
 > Усе запушено в робочу гілку. У `main` ще НЕ мерджено — потрібен `/finish`.
-> Фінальний CACHE_NAME: `cstl-20260612-0631`.
+> Фінальний CACHE_NAME: `cstl-20260612-1100`.
+
+**Безпека:**
+1. **VAPID-ключ (ключ push-сповіщень) ротовано** — новий публічний ключ у `src/tabs/buses.js`, новий приватний — у Supabase Secrets (`VAPID_PRIVATE_KEY`). Старий ключ з git-історії недійсний.
+2. **Cloudflare Worker оновлено** — задеплоєно виправлений `cloudflare/worker.js` (закрито open-proxy дірку — тепер Worker ходить тільки на `olytska-gromada.gov.ua`).
+3. **Leaked Password Protection (Supabase)** — пропущено, доступно тільки на платному Pro плані.
+
+**🔴 ПЕРШЕ В НОВІЙ СЕСІЇ:** нічого критичного не відкрито.
 
 **Supabase MCP + безпека:**
 1. **Supabase MCP підключено** — сервер `Supabase` працює без OAuth. Проект «Olyka Castle» (`uabyfecseqnemvcqhdem`).
