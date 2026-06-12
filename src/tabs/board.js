@@ -549,6 +549,10 @@ function renderAll(el) {
     </button>
   `;
 
+  el.style.backgroundImage = hasCork ? '' : "url('./images/IMG_2321.png')";
+  el.style.backgroundSize  = hasCork ? '' : 'cover';
+  el.style.backgroundPosition = hasCork ? '' : 'center';
+
   const catsEl = el.querySelector('.bd-categories');
   if (catsEl) catsEl.scrollLeft = savedCatScroll;
 
