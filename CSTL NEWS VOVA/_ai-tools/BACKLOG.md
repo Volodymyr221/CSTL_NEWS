@@ -256,3 +256,8 @@ Supabase pg_cron кожні 5 хв перевіряє рейси
 | 2026-06-08 | **UI-полірування карток**: іконка закладки у `.bus-card-main` як 3-й flex-child (`align-self: flex-end`); `margin-top: 6px` на `.bs-toggle` + компенсація `padding-bottom` 14→8px на `.bus-card`; `white-space: nowrap` для значення тривалості маршруту | *(серія)* |
 | 2026-06-08 | **fix: carrier «Волинська об» → «Волинська обл.»** у `data/schedule.json` + `re.sub()` у `scripts/parse_vopas.py` | `149a185` |
 | 2026-06-08 | **fix: заголовок «РОЗКЛАД» у `renderRouteList()`** — додано `buildListTitleHtml()` у гілку `!toRender.length` (зникав коли всі рейси минулі але `showAll=false`) | `08ff498` |
+| 2026-06-12 | **fix(community): автобус-віджет Громади оновлюється в реальному часі** — `saveTrackedRoute()` кидає `CustomEvent('cstl-bus-track-changed')`, `community-blocks.js` слухає і перемальовує `renderBusBlock()` | `b930a50` |
+| 2026-06-12 | **fix(buses): прибрано debug-toast «додаємо/знімаємо відстеження»** (дублював банер) + прибрано непотрібний імпорт `showToast` | `b68d717` |
+| 2026-06-12 | **fix(buses): надійне збереження push-підписки** — прибрано німий `catch`, додано повтор + тост при провалі + перепідписку при зміні VAPID-ключа (`pushKeysEqual`). `Uint8Array`/`Promise` у whitelist check-imports | `59a900a` |
+| 2026-06-12 | **feat(push): звичайний (origin) рейс отримує «вирушив»** у момент відправлення (T-0) + «відправляється через 15 хв» (T-15). Edge Function `send-bus-push` → версія 8 | `2a0ad78` |
+| 2026-06-12 | **style(buses): поточна+наступна зупинки зливаються в один блок** — прибрано білу лінію між ними (внутрішні краї суцільні, згасання лише на зовнішніх) | `8ea7e74` |
