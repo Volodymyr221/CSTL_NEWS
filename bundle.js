@@ -1325,6 +1325,7 @@ ${post.text}
     renderAll(el);
   }
   function renderAll(el) {
+    const savedCatScroll = el.querySelector(".bd-categories")?.scrollLeft ?? 0;
     const hasCork = activeType === "board";
     el.innerHTML = `
     ${hasCork ? `
@@ -1339,6 +1340,9 @@ ${post.text}
       <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
     </button>
   `;
+    const catsEl = el.querySelector(".bd-categories");
+    if (catsEl)
+      catsEl.scrollLeft = savedCatScroll;
     document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
     const searchInput = document.getElementById("bd-search-input");
     if (searchInput) {
