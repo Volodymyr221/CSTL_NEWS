@@ -2237,6 +2237,11 @@ ${post.text}
       return true;
     if (route.status === "cancelled" && state !== "waiting")
       return true;
+    if (state === "enroute" && fromStop) {
+      const boardMins = getStopMins(route, getEffectiveFrom(route));
+      if (boardMins !== null && nowMinutes() > boardMins)
+        return true;
+    }
     return false;
   }
   function getFilteredRoutes() {
@@ -2252,7 +2257,16 @@ ${post.text}
     const all = getFilteredRoutes();
     if (!isViewingToday())
       return all.find((r) => r.status !== "cancelled") || null;
-    const enroute = all.filter((r) => getRouteState(r) === "enroute");
+    const enroute = all.filter((r) => {
+      if (getRouteState(r) !== "enroute")
+        return false;
+      if (fromStop) {
+        const boardMins = getStopMins(r, getEffectiveFrom(r));
+        if (boardMins !== null && nowMinutes() > boardMins)
+          return false;
+      }
+      return true;
+    });
     if (enroute.length) {
       return enroute.sort((a, b) => {
         const aT = getRouteTimings(a).minsToArrival ?? Infinity;
@@ -2284,8 +2298,14 @@ ${post.text}
       if (r.status === "cancelled")
         return false;
       const state = getRouteState(r);
-      if (state === "enroute")
+      if (state === "enroute") {
+        if (fromStop) {
+          const boardMins = getStopMins(r, getEffectiveFrom(r));
+          if (boardMins !== null && nowMinutes() > boardMins)
+            return false;
+        }
         return true;
+      }
       if (state === "waiting") {
         const t = getRouteTimings(r);
         return t.minsToDeparture !== null && t.minsToDeparture <= 90;
