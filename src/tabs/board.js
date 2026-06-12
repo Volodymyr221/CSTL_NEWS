@@ -37,7 +37,6 @@ const BOARD_CATEGORIES = [
   { id: 'послуга',     label: 'Послуги',      emoji: '🔧' },
   { id: 'знайдено',    label: 'Знайдено',     emoji: '🎁' },
   { id: 'загубилось',  label: 'Загубилось',   emoji: '😟' },
-  { id: 'подяка',      label: 'Подяки',       emoji: '❤️' },
   { id: 'оголошення',  label: 'Оголошення',   emoji: '📢' },
 ];
 
