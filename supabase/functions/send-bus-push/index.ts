@@ -3,11 +3,16 @@
 //
 // Запускається кожну хвилину: cron * * * * *
 //
-// Чотири типи сповіщень:
-//   1. notified_start:   "Автобус вирушив · 07:15 (Ківерці)"     — тільки для проміжних зупинок
-//   2. notified_warning: "Відправляється через ~15 хв · 07:45"   — T-15 хв до зупинки посадки
-//   3. notified_dep:     "Автобус на зупинці · Олика"            — T-0 (автобус на зупинці)
-//   4. notified_canc:    "Рейс скасовано · 07:15"                — якщо рейс скасовано
+// Типи сповіщень:
+//   А. Проміжна зупинка (boarding ≠ перша зупинка маршруту):
+//      1. notified_start:   "Автобус вирушив · 07:15 (Ківерці)"  — автобус виїхав з початкової
+//      2. notified_warning: "Відправляється через ~15 хв · 07:45" — T-15 до зупинки посадки
+//      3. notified_dep:     "Автобус на зупинці · Олика"          — T-0 (автобус на зупинці посадки)
+//   Б. Звичайний рейс (boarding = початкова зупинка або без сегменту):
+//      1. notified_warning: "Автобус відправляється через ~15 хв · 07:15" — T-15
+//      2. notified_dep:     "Автобус вирушив · 07:15"            — T-0 (момент відправлення)
+//   В обох випадках:
+//      notified_canc: "Рейс скасовано · 07:15" — якщо рейс скасовано
 
 import { serve } from 'https://deno.land/std@0.177.0/http/server.ts';
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -129,21 +134,29 @@ serve(async () => {
     const depMins  = timeToMins(sub.dep_time);
     const minsLeft = depMins - nowMins;
 
+    // Чи зупинка посадки — початкова зупинка маршруту (звичайний рейс).
+    // null boarding_stop (без сегменту) теж = початкова.
+    const firstStopName = routeData?.stops?.[0]?.name || '';
+    const isOriginBoarding = !sub.boarding_stop ||
+      (firstStopName && firstStopName.toLowerCase() === sub.boarding_stop.toLowerCase());
+
     // ── 3. Попередження: T-15 хв до зупинки посадки (вікно 13-17 хв) ──────
     if (!sub.notified_warning && minsLeft >= 13 && minsLeft <= 17) {
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
-        body:  `Відправляється через ${minsLeft} хв · ${sub.dep_time}`,
+        body:  `Автобус відправляється через ${minsLeft} хв · ${sub.dep_time}`,
         tag:   `bus-warn-${sub.route_id}`,
       }));
       if (ok) await supa.from('push_subscriptions').update({ notified_warning: true }).eq('id', sub.id);
     }
 
-    // ── 4. Автобус на зупинці: T-0 (вікно від -1 до +1 хв) ───────────────
+    // ── 4. T-0 (вікно від -1 до +1 хв) ───────────────────────────────────
+    //   звичайний рейс → "Автобус вирушив" (момент відправлення з його зупинки)
+    //   проміжна зупинка → "Автобус на зупинці · НАЗВА"
     if (!sub.notified_dep && minsLeft >= -1 && minsLeft <= 1) {
-      const body = sub.boarding_stop
-        ? `Автобус на зупинці · ${sub.boarding_stop}`
-        : `Автобус відправляється · ${sub.dep_time}`;
+      const body = isOriginBoarding
+        ? `Автобус вирушив · ${sub.dep_time}`
+        : `Автобус на зупинці · ${sub.boarding_stop}`;
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
         body,
