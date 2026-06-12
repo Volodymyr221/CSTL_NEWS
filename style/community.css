@@ -1730,6 +1730,14 @@
   font-weight: 600;
 }
 .bd-tab-emoji { font-size: 14px; }
+.bd-tab--round {
+  flex: none;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  padding: 0;
+  gap: 0;
+}
 
 /* Категорії-чіпи (другий ряд, тільки для табу board) */
 .bd-categories {
