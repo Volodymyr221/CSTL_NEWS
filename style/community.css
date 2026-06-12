@@ -1720,6 +1720,7 @@
   cursor: pointer;
   white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
   transition: background 0.12s, color 0.12s, border-color 0.12s;
 }
 .bd-tab--active {
