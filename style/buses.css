@@ -1033,6 +1033,14 @@
 .bs-stop-row.hl--to:not(:last-child).bs-stop--current {
   background: linear-gradient(to bottom, #E1E4EC 0%, #E1E4EC 70%, #f5f5f5 100%);
 }
+/* Наступна зупинка є зупинкою Б (остання у списку) — верх суцільний */
+.bs-stop-row.hl--to.bs-stop--next {
+  background: #E1E4EC;
+}
+/* Наступна зупинка є зупинкою Б (проміжна) — верх суцільний, низ затухає */
+.bs-stop-row.hl--to:not(:last-child).bs-stop--next {
+  background: linear-gradient(to bottom, #E1E4EC 0%, #E1E4EC 70%, #f5f5f5 100%);
+}
 
 .bs-stop-time  { flex-shrink: 0; min-width: 38px; font-variant-numeric: tabular-nums; }
 .bs-stop-name  { flex: 1; display: flex; align-items: center; gap: 5px; }
