@@ -1711,7 +1711,7 @@
   gap: 5px;
   padding: 7px 12px;
   border-radius: 14px;
-  border: 1px solid var(--paper-deep);
+  border: 1.5px solid rgba(0,0,0,0.22);
   background: var(--card-cream);
   color: var(--black);
   font-size: 13px;
