@@ -487,12 +487,18 @@ function matchesSearch(route) {
 
 // «Past» = рейс завершився (прибув на кінцеву). Рейс у дорозі тепер НЕ past.
 // Виняток: скасований рейс переходить у «минулі» з моменту часу відправлення.
+// Виняток 2: якщо є фільтр «Звідки» і автобус вже проїхав зупинку посадки —
+//   для цього користувача рейс є минулим (сісти вже неможливо).
 function isPastRoute(route) {
   if (busDay < getTodayISO()) return true;
   if (!isViewingToday()) return false;
   const state = getRouteState(route);
   if (state === 'past') return true;
   if (route.status === 'cancelled' && state !== 'waiting') return true;
+  if (state === 'enroute' && fromStop) {
+    const boardMins = getStopMins(route, getEffectiveFrom(route));
+    if (boardMins !== null && nowMinutes() > boardMins) return true;
+  }
   return false;
 }
 
@@ -513,7 +519,14 @@ function getFilteredRoutes() {
 function findNextRoute() {
   const all = getFilteredRoutes();
   if (!isViewingToday()) return all.find(r => r.status !== 'cancelled') || null;
-  const enroute = all.filter(r => getRouteState(r) === 'enroute');
+  const enroute = all.filter(r => {
+    if (getRouteState(r) !== 'enroute') return false;
+    if (fromStop) {
+      const boardMins = getStopMins(r, getEffectiveFrom(r));
+      if (boardMins !== null && nowMinutes() > boardMins) return false;
+    }
+    return true;
+  });
   if (enroute.length) {
     return enroute.sort((a, b) => {
       const aT = getRouteTimings(a).minsToArrival ?? Infinity;
@@ -547,7 +560,13 @@ function findActiveRoutes() {
   const result = all.filter(r => {
     if (r.status === 'cancelled') return false;
     const state = getRouteState(r);
-    if (state === 'enroute') return true;
+    if (state === 'enroute') {
+      if (fromStop) {
+        const boardMins = getStopMins(r, getEffectiveFrom(r));
+        if (boardMins !== null && nowMinutes() > boardMins) return false;
+      }
+      return true;
+    }
     if (state === 'waiting') {
       const t = getRouteTimings(r);
       return t.minsToDeparture !== null && t.minsToDeparture <= 90;
