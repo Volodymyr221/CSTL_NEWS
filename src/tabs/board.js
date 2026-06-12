@@ -549,22 +549,33 @@ function renderBody() {
 
   // Окремий лейаут для board (корок з нахилами) vs chat/greeting (стрічка)
   if (activeType === 'board') {
-    // BOARD-only — корок зі стікерами
-    const cards = sorted.map(renderBoardCard).join('');
+    // BOARD-only — явно дві колонки: парні ліворуч, непарні праворуч
+    const leftCards  = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
+    const rightCards = sorted.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
     return `
       <div class="board-backdrop" id="board-backdrop"></div>
-      <div class="cm-board-corkboard board-corkboard--full">${cards}</div>
+      <div class="cm-board-corkboard board-corkboard--full">
+        <div class="cm-board-col">${leftCards}</div>
+        <div class="cm-board-col">${rightCards}</div>
+      </div>
     `;
   }
 
   if (activeType === 'all') {
-    // Актуальні — змішане з офіційними зверху на корку + chat/greeting у стрічці
+    // Актуальні — офіційні на повну ширину зверху, потім board у двох колонках
     const officialCards = annsForView.map(renderOfficialCard).join('');
-    const boardOnly = sorted.filter(p => p.type === 'board').map(renderBoardCard).join('');
-    const others    = sorted.filter(p => p.type !== 'board').map(renderCard).join('');
+    const boardItems    = sorted.filter(p => p.type === 'board');
+    const boardLeft     = boardItems.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
+    const boardRight    = boardItems.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
+    const others        = sorted.filter(p => p.type !== 'board').map(renderCard).join('');
+    const hasCork       = officialCards || boardLeft || boardRight;
     return `
       <div class="board-backdrop" id="board-backdrop"></div>
-      ${(officialCards || boardOnly) ? `<div class="cm-board-corkboard board-corkboard--full">${officialCards}${boardOnly}</div>` : ''}
+      ${hasCork ? `<div class="cm-board-corkboard board-corkboard--full">
+        ${officialCards ? `<div class="cm-board-official-row">${officialCards}</div>` : ''}
+        <div class="cm-board-col">${boardLeft}</div>
+        <div class="cm-board-col">${boardRight}</div>
+      </div>` : ''}
       ${others ? `<div class="bd-stream">${others}</div>` : ''}
     `;
   }
