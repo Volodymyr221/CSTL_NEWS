@@ -1397,21 +1397,20 @@
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
 
-/* Фіксований корковий фон — займає область між шапкою і tab-bar,
-   не скролиться разом з папірцями (раніше cork був на самому corkboard div
-   і скролився разом з нотатками). */
+/* Фіксований корковий фон — повний екран, статичний (не скролиться з картками).
+   Тіні зверху і знизу — фіксовані, завжди на краях екрану. */
 .board-bg {
   position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  bottom: 0;
-  left: 0;
-  right: 0;
+  inset: 0;
   background:
     radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.22) 100%),
     radial-gradient(circle at 22% 22%, rgba(0,0,0,0.06) 1px, transparent 2px),
     radial-gradient(circle at 78% 78%, rgba(0,0,0,0.05) 1px, transparent 2px),
     linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
   background-size: 100% 100%, 14px 14px, 14px 14px, 100% 100%;
+  box-shadow:
+    inset 0 28px 56px rgba(0,0,0,0.30),
+    inset 0 -28px 56px rgba(0,0,0,0.24);
   pointer-events: none;
   z-index: 0;
 }

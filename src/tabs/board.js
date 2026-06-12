@@ -629,7 +629,9 @@ export async function renderBoard() {
 
 // Перерендер тільки контейнера дошки (без перезавантаження даних)
 function renderAll(el) {
+  const hasCork = activeType === 'board' || activeType === 'all';
   el.innerHTML = `
+    ${hasCork ? '<div class="board-bg" aria-hidden="true"></div>' : ''}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
     <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
