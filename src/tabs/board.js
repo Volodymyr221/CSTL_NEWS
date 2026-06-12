@@ -25,8 +25,8 @@ const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="
 
 const TYPE_TABS = [
   { id: 'board',   label: 'ДОШКА',        emoji: '🛒' },
-  { id: 'chat',    label: 'ОБГОВОРЕННЯ',   emoji: '💬' },
   { id: 'saved',   label: 'ЗБЕРЕЖЕНІ',    emoji: BOOKMARK_OUTLINE_SVG },
+  { id: 'chat',    label: 'ОБГОВОРЕННЯ',   emoji: '💬' },
 ];
 
 const BOARD_CATEGORIES = [

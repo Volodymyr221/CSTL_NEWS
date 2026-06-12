@@ -930,8 +930,8 @@
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var TYPE_TABS2 = [
     { id: "board", label: "\u0414\u041E\u0428\u041A\u0410", emoji: "\u{1F6D2}" },
-    { id: "chat", label: "\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", emoji: "\u{1F4AC}" },
-    { id: "saved", label: "\u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u0406", emoji: BOOKMARK_OUTLINE_SVG }
+    { id: "saved", label: "\u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u0406", emoji: BOOKMARK_OUTLINE_SVG },
+    { id: "chat", label: "\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", emoji: "\u{1F4AC}" }
   ];
   var BOARD_CATEGORIES2 = [
     { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726" },
