@@ -1,7 +1,22 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-12 (нова сесія, гілка `claude/vibrant-gates-qgpfkc`)
+**Оновлено:** 2026-06-12 (гілка `claude/startup-uem-qpkilt`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
+
+---
+
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-qpkilt`)
+
+**style(buses): фікс градієнту зупинок А/Б коли автобус на них**
+- Проблема: CSS-специфічність (specificity — вага правила) `hl--from:not(:first-child)` = (0,3,0) перебивала `bs-stop--current` = (0,2,0) → показувалося подвійне затухання замість суцільного низу.
+- Фікс: 4 нові правила з вагою (0,3,0)–(0,4,0):
+  - `hl--from.bs-stop--current` (перший рядок списку) → суцільний `#E1E4EC`
+  - `hl--from:not(:first-child).bs-stop--current` → верх затухає, низ суцільний
+  - `hl--to.bs-stop--current` (останній рядок) → суцільний `#E1E4EC`
+  - `hl--to:not(:last-child).bs-stop--current` → верх суцільний, низ затухає
+- Коли автобус проїхав зупинку А/Б — клас `bs-stop--current` зникає, зупинки повертаються до стандартного вигляду автоматично.
+- `style/buses.css`. CACHE_NAME → `cstl-20260612-1303`.
+- Запушено в `claude/startup-uem-qpkilt`. У `main` ще НЕ мерджено.
 
 ---
 
