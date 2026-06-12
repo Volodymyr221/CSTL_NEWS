@@ -1,9 +1,27 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-12 (гілка `claude/startup-uem-qpkilt`)
+**Оновлено:** 2026-06-12 (гілка `claude/startup-uem-hp5ldw`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
+
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-hp5ldw`)
+
+> Аудит вкладки «Автобуси» + два фікси push-сповіщень.
+> CACHE_NAME: `cstl-20260612-1356`.
+
+**fix(push): видалено `notified_start` — зайве сповіщення для проміжних маршрутів**
+- Симптом: при проміжному маршруті (Дідичі → Жорнище) приходило 2 push одночасно:
+  «Автобус на зупинці · Дідичі» (правильне) + «Автобус вирушив · 07:15 (Ківерці)» (зайве).
+- Фікс: видалено весь блок `notified_start` з Edge Function. Задеплоєно → версія 10, ACTIVE.
+
+**fix(buses): `unsubscribeFromPush` у hero track-button в `renderSmartRow`**
+- Симптом: зняття відстеження через закладку до першого свайпу не видаляло push-підписку з Supabase.
+- Фікс у `src/tabs/buses.js`: додано виклик `unsubscribeFromPush` перед `removeTrackedEntry`
+  у hero track-button handler в `renderSmartRow`.
+
+---
+
 
 ## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-qpkilt`)
 
