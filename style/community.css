@@ -706,7 +706,7 @@
   overflow-y: auto;
   display: flex;
   flex-wrap: wrap;
-  gap: 16px 10px;
+  gap: 14px 8px;
   justify-content: space-between;
   /* align-items: flex-start — кожен стікер своєї природньої висоти, не тягнеться
      щоб співпасти з сусідом-з-фото. На місці коротшого стікера лишається корок. */
