@@ -1398,7 +1398,7 @@ function renderRouteList() {
         saveTrackedRoute();
         // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
         const route   = (getDayData().routes || []).find(r => r.id === rid);
-        const depTime = route ? getStopHHMM(route, fromStop || route.stops[0].name) : null;
+        const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
         subscribeToPush(rid, route?.name || '', fromStop || null, toStop || null, busDay, depTime);
         checkTrackNotifications(true);
       }
