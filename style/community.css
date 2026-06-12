@@ -1781,6 +1781,7 @@
   box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
 }
 .bd-cat-emoji { font-size: 13px; }
+.bd-cat-chip[data-bd-cat="all"] { font-weight: 700; }
 
 /* Тіло — порожній стан і стрічка */
 .bd-body { min-height: 50vh; }
