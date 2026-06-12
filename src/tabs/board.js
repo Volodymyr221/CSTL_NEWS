@@ -419,12 +419,15 @@ function getFilteredPosts() {
 // ── Рендеринг панелі ─────────────────────────────────────────────────────────
 
 function renderHeader() {
-  const tabs = TYPE_TABS.map(t => `
-    <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}" type="button" data-bd-tab="${t.id}">
-      <span class="bd-tab-emoji">${t.emoji}</span>
-      <span class="bd-tab-label">${escapeHtml(t.label)}</span>
-    </button>
-  `).join('');
+  const tabs = TYPE_TABS.map(t => {
+    const isRound = t.id === 'saved';
+    return `
+      <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}${isRound ? ' bd-tab--round' : ''}" type="button" data-bd-tab="${t.id}">
+        <span class="bd-tab-emoji">${t.emoji}</span>
+        ${isRound ? '' : `<span class="bd-tab-label">${escapeHtml(t.label)}</span>`}
+      </button>
+    `;
+  }).join('');
 
   const showCategories = activeType === 'board';
   const categoriesHtml = showCategories ? `
