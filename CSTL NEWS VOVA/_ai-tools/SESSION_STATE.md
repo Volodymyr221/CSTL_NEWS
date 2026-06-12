@@ -7,19 +7,26 @@
 
 ## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (12.06.2026, гілка `claude/startup-uem-qpkilt`)
 
-> Змерджено в `main` через `/finish` → автодеплой.
-> CACHE_NAME: `cstl-20260612-1306`.
+> CACHE_NAME: `cstl-20260612-1621`.
+
+**fix(push): VAPID_PUBLIC_KEY у Edge Function — всі push-сповіщення були зламані**
+- Причина: у сесії `startup-uem-ok51t5` пара VAPID ключів ротована, але `index.ts` залишився з
+  OLD публічним ключем. Результат: 401 від Apple → `sent: 0` → всі підписки без сповіщень.
+- Фікс: `supabase/functions/send-bus-push/index.ts` рядок 24 → новий `VAPID_PUBLIC_KEY`.
+- Задеплоєно через Supabase MCP (версія 9, ACTIVE). Закомічено у git.
+
+**fix(sw): розгалуження in-app банер vs iOS системне сповіщення**
+- Раніше: push event у `sw.js` завжди показував системне сповіщення → дубляж при відкритому додатку.
+- Фікс: перед `showNotification()` перевіряємо `clients.matchAll()` — якщо є visible вікно,
+  повертаємо без сповіщення (in-app банер обробить). Якщо закрито/фон → системне.
+- Стосується всіх типів: origin, сегментні, скасування.
+- CACHE_NAME: `cstl-20260612-1621`.
 
 **style(buses): фікс градієнту зупинок А/Б — коли автобус на них або наступна є фінальною**
 - Проблема 1: `hl--from:not(:first-child)` (вага 0,3,0) перебивала `bs-stop--current` (0,2,0) → подвійне затухання замість суцільного краю.
 - Проблема 2: коли наступна зупинка є зупинкою Б (фінальною), верх Б затухав до білого замість з'єднання з поточною.
-- Фікс — 6 нових CSS-правил у `style/buses.css`:
-  - `hl--from.bs-stop--current` → суцільний `#E1E4EC`
-  - `hl--from:not(:first-child).bs-stop--current` → верх затухає, низ суцільний
-  - `hl--to.bs-stop--current` → суцільний `#E1E4EC`
-  - `hl--to:not(:last-child).bs-stop--current` → верх суцільний, низ затухає
-  - `hl--to.bs-stop--next` → суцільний `#E1E4EC`
-  - `hl--to:not(:last-child).bs-stop--next` → верх суцільний, низ затухає
+- Фікс — 8 нових CSS-правил у `style/buses.css` (включно з `hl--from.bs-stop--next`).
+- Ця частина змерджена в `main` через auto-merge раніше у сесії.
 
 ---
 
