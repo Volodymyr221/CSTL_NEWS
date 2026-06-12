@@ -477,6 +477,16 @@
 .cm-block--bus .bhv4 {
   border-radius: 0;
 }
+/* Підпис «Завтра · 12 червня» над карткою коли показуємо майбутній рейс */
+.cm-bus-daylabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--red);
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 10px 16px 8px;
+  background: var(--white);
+}
 /* bus-hero всередині блоку — без додаткових margin (вже у padding блоку) */
 .cm-block--bus .bus-hero {
   cursor: pointer;
