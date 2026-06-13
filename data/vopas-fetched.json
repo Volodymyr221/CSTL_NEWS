@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-13T21:17:26.837002+03:00",
+  "fetched_at": "2026-06-13T23:03:08.690429+03:00",
   "date": "13.06.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -627,8 +627,8 @@
       "carrier": "ТОВ \"САН САН БУС\"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
