@@ -998,23 +998,42 @@
   }
   function chatMessagesHtml(post) {
     const items = getComments(post.id);
+    if (!items.length) {
+      return `<div class="bd-chat-stream" data-comments-for="${post.id}">
+      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">\u{1F4AC}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>
+    </div>`;
+    }
     const myIds = getMyCommentIds();
-    const bubbles = items.length ? items.map((c) => {
+    const groups = [];
+    items.forEach((c) => {
       const mine = myIds.has(c.id);
       const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      const key = mine ? "__me" : author;
+      const last = groups[groups.length - 1];
+      if (last && last.key === key)
+        last.msgs.push(c);
+      else
+        groups.push({ key, mine, author, first: c, msgs: [c] });
+    });
+    const groupsHtml = groups.map((g) => {
+      const bubbles = g.msgs.map((c) => `
+      <div class="bd-msg-bubble">
+        <span class="bd-msg-text">${escapeHtml(c.text)}</span>
+        <span class="bd-msg-time">${formatTime(postTime(c))}</span>
+      </div>`).join("");
+      if (g.mine) {
+        return `<div class="bd-msg-group bd-msg-group--mine"><div class="bd-msg-col">${bubbles}</div></div>`;
+      }
       return `
-          <div class="bd-msg${mine ? " bd-msg--mine" : ""}">
-            ${mine ? "" : authorAvatar(c.author)}
-            <div class="bd-msg-bubble">
-              <div class="bd-msg-head">
-                <span class="bd-msg-author">${mine ? "\u0412\u0438" : escapeHtml(author)}</span>
-                <span class="bd-msg-time">${formatTime(postTime(c))}</span>
-              </div>
-              <div class="bd-msg-text">${escapeHtml(c.text)}</div>
-            </div>
-          </div>`;
-    }).join("") : '<div class="bd-chat-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E. \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>';
-    return `<div class="bd-chat-stream" data-comments-for="${post.id}">${bubbles}</div>`;
+      <div class="bd-msg-group bd-msg-group--other">
+        ${authorAvatar(g.first.author)}
+        <div class="bd-msg-col">
+          <span class="bd-msg-name">${escapeHtml(g.author)}</span>
+          ${bubbles}
+        </div>
+      </div>`;
+    }).join("");
+    return `<div class="bd-chat-stream" data-comments-for="${post.id}">${groupsHtml}</div>`;
   }
   function scrollChatToBottom() {
     const body = document.getElementById("bd-chat-modal-body");
@@ -1022,6 +1041,7 @@
       body.scrollTop = body.scrollHeight;
   }
   var _chatModalEl = null;
+  var _chatViewportHandler = null;
   function onChatEsc(e) {
     if (e.key === "Escape")
       closeChatModal();
@@ -1062,11 +1082,28 @@
       modal.classList.add("visible");
     });
     setTimeout(scrollChatToBottom, 80);
-    setTimeout(() => modal.querySelector(".bd-chat-modal-input")?.focus(), 280);
     backdrop.addEventListener("click", closeChatModal);
     modal.querySelector(".bd-chat-modal-back")?.addEventListener("click", closeChatModal);
     modal.querySelector(".bd-chat-modal-close")?.addEventListener("click", closeChatModal);
     document.addEventListener("keydown", onChatEsc);
+    const vv = window.visualViewport;
+    const input = modal.querySelector(".bd-chat-modal-input");
+    _chatViewportHandler = () => {
+      if (!vv)
+        return;
+      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      if (kb > 0) {
+        modal.classList.add("bd-chat-modal--kb");
+        modal.style.setProperty("--kb", kb + "px");
+      } else {
+        modal.classList.remove("bd-chat-modal--kb");
+      }
+      scrollChatToBottom();
+    };
+    vv?.addEventListener("resize", _chatViewportHandler);
+    vv?.addEventListener("scroll", _chatViewportHandler);
+    input?.addEventListener("focus", () => setTimeout(_chatViewportHandler, 120));
+    input?.addEventListener("blur", () => setTimeout(_chatViewportHandler, 120));
     let startY = 0, curY = 0, dragging = false;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
     dragZone.addEventListener("touchstart", (e) => {
@@ -1078,7 +1115,7 @@
         return;
       curY = e.touches[0].clientY - startY;
       if (curY > 0)
-        modal.style.transform = `translate(-50%, calc(-50% + ${curY}px)) scale(1)`;
+        modal.style.transform = `translateX(-50%) translateY(${curY}px)`;
     }, { passive: true });
     dragZone.addEventListener("touchend", () => {
       if (!dragging)
@@ -1102,6 +1139,11 @@
     backdrop?.classList.remove("visible");
     document.body.classList.remove("modal-open");
     document.removeEventListener("keydown", onChatEsc);
+    if (_chatViewportHandler && window.visualViewport) {
+      window.visualViewport.removeEventListener("resize", _chatViewportHandler);
+      window.visualViewport.removeEventListener("scroll", _chatViewportHandler);
+      _chatViewportHandler = null;
+    }
     setTimeout(() => {
       modal.remove();
       backdrop?.remove();

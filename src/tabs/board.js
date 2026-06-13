@@ -250,25 +250,41 @@ function boardActionsHtml(post) {
 // Поле вводу — окремо у модалці (поза стрічкою), тому переживає перемальовування.
 function chatMessagesHtml(post) {
   const items = getComments(post.id);
+  if (!items.length) {
+    return `<div class="bd-chat-stream" data-comments-for="${post.id}">
+      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">💬</span>Поки порожньо.<br>Напишіть перше повідомлення 👋</div>
+    </div>`;
+  }
   const myIds = getMyCommentIds();
-  const bubbles = items.length
-    ? items.map(c => {
-        const mine = myIds.has(c.id);
-        const author = c.author || 'Житель';
-        return `
-          <div class="bd-msg${mine ? ' bd-msg--mine' : ''}">
-            ${mine ? '' : authorAvatar(c.author)}
-            <div class="bd-msg-bubble">
-              <div class="bd-msg-head">
-                <span class="bd-msg-author">${mine ? 'Ви' : escapeHtml(author)}</span>
-                <span class="bd-msg-time">${formatTime(postTime(c))}</span>
-              </div>
-              <div class="bd-msg-text">${escapeHtml(c.text)}</div>
-            </div>
-          </div>`;
-      }).join('')
-    : '<div class="bd-chat-empty">Поки порожньо. Напишіть перше повідомлення 👋</div>';
-  return `<div class="bd-chat-stream" data-comments-for="${post.id}">${bubbles}</div>`;
+  // Групуємо підряд повідомлення від одного автора (месенджер-стиль)
+  const groups = [];
+  items.forEach(c => {
+    const mine = myIds.has(c.id);
+    const author = c.author || 'Житель';
+    const key = mine ? '__me' : author;
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.msgs.push(c);
+    else groups.push({ key, mine, author, first: c, msgs: [c] });
+  });
+  const groupsHtml = groups.map(g => {
+    const bubbles = g.msgs.map(c => `
+      <div class="bd-msg-bubble">
+        <span class="bd-msg-text">${escapeHtml(c.text)}</span>
+        <span class="bd-msg-time">${formatTime(postTime(c))}</span>
+      </div>`).join('');
+    if (g.mine) {
+      return `<div class="bd-msg-group bd-msg-group--mine"><div class="bd-msg-col">${bubbles}</div></div>`;
+    }
+    return `
+      <div class="bd-msg-group bd-msg-group--other">
+        ${authorAvatar(g.first.author)}
+        <div class="bd-msg-col">
+          <span class="bd-msg-name">${escapeHtml(g.author)}</span>
+          ${bubbles}
+        </div>
+      </div>`;
+  }).join('');
+  return `<div class="bd-chat-stream" data-comments-for="${post.id}">${groupsHtml}</div>`;
 }
 
 // Прокрутити стрічку модалки донизу (до найновіших)
@@ -281,6 +297,7 @@ function scrollChatToBottom() {
 // Розгортається з картки (scale-морф) поверх затемненого нерухомого фону.
 // Закриття: ← назад / ✕ / тап по фону / свайп вниз.
 let _chatModalEl = null;
+let _chatViewportHandler = null;
 function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
 function openChatModal(post) {
@@ -322,12 +339,31 @@ function openChatModal(post) {
     modal.classList.add('visible');
   });
   setTimeout(scrollChatToBottom, 80);
-  setTimeout(() => modal.querySelector('.bd-chat-modal-input')?.focus(), 280);
 
   backdrop.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-back')?.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
   document.addEventListener('keydown', onChatEsc);
+
+  // Клавіатура: тримаємо модалку над клавіатурою через visualViewport.
+  // Меню (таб-бар) не чіпаємо — рухається тільки модалка.
+  const vv = window.visualViewport;
+  const input = modal.querySelector('.bd-chat-modal-input');
+  _chatViewportHandler = () => {
+    if (!vv) return;
+    const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+    if (kb > 0) {
+      modal.classList.add('bd-chat-modal--kb');
+      modal.style.setProperty('--kb', kb + 'px');
+    } else {
+      modal.classList.remove('bd-chat-modal--kb');
+    }
+    scrollChatToBottom();
+  };
+  vv?.addEventListener('resize', _chatViewportHandler);
+  vv?.addEventListener('scroll', _chatViewportHandler);
+  input?.addEventListener('focus', () => setTimeout(_chatViewportHandler, 120));
+  input?.addEventListener('blur',  () => setTimeout(_chatViewportHandler, 120));
 
   // Свайп вниз по шапці/ручці → закрити
   let startY = 0, curY = 0, dragging = false;
@@ -336,7 +372,7 @@ function openChatModal(post) {
   dragZone.addEventListener('touchmove', e => {
     if (!dragging) return;
     curY = e.touches[0].clientY - startY;
-    if (curY > 0) modal.style.transform = `translate(-50%, calc(-50% + ${curY}px)) scale(1)`;
+    if (curY > 0) modal.style.transform = `translateX(-50%) translateY(${curY}px)`;
   }, { passive: true });
   dragZone.addEventListener('touchend', () => {
     if (!dragging) return;
@@ -357,6 +393,11 @@ function closeChatModal() {
   backdrop?.classList.remove('visible');
   document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onChatEsc);
+  if (_chatViewportHandler && window.visualViewport) {
+    window.visualViewport.removeEventListener('resize', _chatViewportHandler);
+    window.visualViewport.removeEventListener('scroll', _chatViewportHandler);
+    _chatViewportHandler = null;
+  }
   setTimeout(() => { modal.remove(); backdrop?.remove(); }, 240);
 }
 
