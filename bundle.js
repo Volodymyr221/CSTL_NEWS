@@ -515,6 +515,47 @@
         document.removeEventListener("keydown", onEsc);
       }
     });
+    const panel = wrap.querySelector(".cm-board-modal-panel");
+    const handle = wrap.querySelector(".cm-board-modal-handle");
+    let dragStartY = 0, dragging = false, dragDelta = 0;
+    panel.addEventListener("touchstart", (e) => {
+      const onHandle = handle && (e.target === handle || handle.contains(e.target));
+      dragging = onHandle || panel.scrollTop <= 2;
+      if (!dragging)
+        return;
+      dragStartY = e.touches[0].clientY;
+      dragDelta = 0;
+      panel.style.transition = "none";
+    }, { passive: true });
+    panel.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      dragDelta = e.touches[0].clientY - dragStartY;
+      if (dragDelta <= 0) {
+        panel.style.transform = "translateY(0)";
+        return;
+      }
+      e.preventDefault();
+      panel.style.transform = `translateY(${dragDelta}px)`;
+    }, { passive: false });
+    panel.addEventListener("touchend", () => {
+      if (!dragging)
+        return;
+      dragging = false;
+      if (dragDelta > 90) {
+        panel.style.transition = "transform 0.25s ease-in";
+        panel.style.transform = "translateY(100%)";
+        setTimeout(close, 240);
+      } else {
+        panel.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
+        panel.style.transform = "translateY(0)";
+        setTimeout(() => {
+          panel.style.transition = "";
+          panel.style.transform = "";
+        }, 300);
+      }
+      dragDelta = 0;
+    }, { passive: true });
     wrap.querySelectorAll(".bm-type-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (state.type === btn.dataset.type)
@@ -1475,6 +1516,38 @@ ${post.text}
           e.stopPropagation();
         }, { capture: true });
       });
+      let zStartY = 0, zDrag = false, zDelta = 0;
+      modal.addEventListener("touchstart", (e) => {
+        zDrag = modal.scrollTop <= 2;
+        if (!zDrag)
+          return;
+        zStartY = e.touches[0].clientY;
+        zDelta = 0;
+        modal.style.transition = "none";
+      }, { passive: true });
+      modal.addEventListener("touchmove", (e) => {
+        if (!zDrag)
+          return;
+        zDelta = e.touches[0].clientY - zStartY;
+        if (zDelta <= 0) {
+          modal.style.transform = "translate(-50%, -50%) scale(1)";
+          return;
+        }
+        e.preventDefault();
+        modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
+      }, { passive: false });
+      modal.addEventListener("touchend", () => {
+        if (!zDrag)
+          return;
+        zDrag = false;
+        modal.style.transition = "";
+        if (zDelta > 90) {
+          collapse();
+        } else {
+          modal.style.transform = "";
+        }
+        zDelta = 0;
+      }, { passive: true });
       activeNote = note;
       activeModal = modal;
       note.classList.add("cm-board-note--hidden");
