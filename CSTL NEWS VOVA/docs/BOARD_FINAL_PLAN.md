@@ -1,8 +1,14 @@
-# Дошка громади — фінальна узгоджена концепція + план (КРИТИЧНЕ ЗАВДАННЯ)
+# Дошка громади — фінальна узгоджена концепція + план
 
-> **Статус:** 🔴 РОБИТИ ЗАРАЗ. План затверджено Вовою 13.06.2026 (сказав «Роби»).
-> Реалізація ще НЕ почата — спочатку зберегли план у документацію (Вова переходить в інший чат).
-> Цей документ — **єдине джерело істини** по Дошці. Новий чат: читай його повністю перш ніж кодити.
+> **Статус (оновлено 13.06.2026 вечір):**
+> - **Фаза А ✅ ЗРОБЛЕНО** (чистка Вітань/Подяки + 6 чіпів + контакт). На проді.
+> - **Фаза А2 ✅ ЗРОБЛЕНО** (Обговорення → повноекранна чат-модалка). На проді.
+> - **Контакт спрощено:** Viber і Telegram прибрано (ненадійні на iOS) — лишився тільки 📞 Дзвінок
+>   (`tel:`). Замість месенджерів спонукаємо до **приватного чату в додатку** — це Фаза Б.
+> - **Фаза Б — лишилась** (Google-логін + приватний чат покупець↔автор + пуші). Будуємо на етапі
+>   **детальної розробки сторінки «Громада»** (рішення Вови). Уточнені рішення — нижче, секція «Фаза Б».
+>
+> Цей документ — **єдине джерело істини** по Дошці. Новий чат: читай його повністю.
 
 ---
 
@@ -88,7 +94,11 @@ pending → адмін → published (очікує → адмін перевір
 
 ---
 
-## Фаза А — Чистка і контакт (РОБИТИ ПЕРШОЮ, до логіну)
+## Фаза А ✅ ЗРОБЛЕНО — Чистка і контакт (до логіну)
+
+> ⚠️ Реалізовано з відхиленням від початкового плану: **Viber і Telegram прибрано** (обидва
+> ненадійні на iOS — `viber://`/`t.me` до незнайомого контакту дають збій). На картці лишився
+> **тільки 📞 Дзвінок** (`tel:`). Кнопка «Написати» (приватний чат) додасться у Фазі Б.
 
 Прибрати зайве (Вітання/Подяка) + згрупувати чіпи + додати кнопки контакту.
 Жодних нових залежностей.
@@ -138,7 +148,13 @@ const BOARD_CATEGORIES = [
 
 ---
 
-## Фаза А2 — Обговорення → повноекранна модалка-чат
+## Фаза А2 ✅ ЗРОБЛЕНО — Обговорення → повноекранна модалка-чат
+
+> Реалізовано: картка обговорення = прев'ю теми (останнє повідомлення + лічильник); тап → модалка-чат
+> з бульбашками (мої справа бордові, чужі зліва з аватаром), realtime через `comments`+`subscribeComments`.
+> Inline-коментарі прибрано. «Мої» повідомлення позначаються локально (`LS_MY_COMMENTS`) — до логіну.
+> Модалка коректно поводиться з клавіатурою на iOS PWA (visualViewport + window.resize, debounce, плавно).
+> Поки **анонімно** (гейтинг реєстрацією — у Фазі Б). Нижче — початковий план (для довідки).
 
 Переносимо inline-коментарі у повноекранний чат-тред на тему. Інфраструктура
 вже є: таблиця `comments`, `addComment()`, Realtime — усе у `src/core/supabase.js`
@@ -155,7 +171,86 @@ const BOARD_CATEGORIES = [
 
 ---
 
-## Фаза Б — Кабінет жителя (Google-логін) + внутрішній чат (фінал розробки)
+## Фаза Б — Кабінет жителя (Google-логін) + приватний чат (на етапі «Громада»)
+
+### 🔑 УЗГОДЖЕНІ РІШЕННЯ ВОВИ (13.06.2026) — основа для реалізації
+- **Спроектовано, код НЕ почато.** Будуємо коли робитимемо детально сторінку **«Громада»**.
+- **Логін лише для ДІЙ.** Перегляд усього + 📞 дзвінок за номером — вільні, без входу.
+- **Тільки Google (Gmail)** через Supabase Auth (`signInWithOAuth({provider:'google'})`).
+- **Реєстрація (критерії «пройти»):** Ім'я + Пошта (авто з Google) + **дата народження** (окремий крок).
+- **Флоу входу:** при відкритті — екран «Приєднайтесь до громади» → **[Увійти через Gmail]** або
+  **[Пропустити]**. «Пропустити» → режим перегляду (read-only), вибір памʼятаємо (localStorage),
+  не питаємо щоразу. Будь-яка дія в read-only → мʼяке контекстне «Щоб [дія], увійдіть» (не стіна).
+- **Сесія** тримається місяцями (`persistSession:true`).
+
+### Матриця доступу: 👀 гість (read-only) vs ✅ зареєстрований
+| Дія | Гість | Зареєстрований |
+|---|---|---|
+| Переглядати все (Громада/Новини/Події/Автобуси/Дошка), розклад, пошук | ✅ | ✅ |
+| 📞 Подзвонити за номером, Поділитися, Зберегти (localStorage) | ✅ | ✅ |
+| **Подати оголошення** | ❌ | ✅ |
+| **Реакції + коментарі** | ❌ | ✅ |
+| **Приватний чат з автором оголошення** | ❌ | ✅ |
+| **Відстежити автобус + пуш** | ❌ | ✅ |
+
+### Точки гейтингу в коді (єдина обгортка `requireAuth(action, fn)`)
+- `board.js` — тригер «Подати оголошення», `data-react-trigger`, форма коментаря, майбутня кнопка «Написати».
+- `community-modal.js` — submit оголошення (проставити `owner_uid` + ім'я з профілю).
+- `buses.js` — «Відстежити» (`subscribeToPush`).
+- «Зберегти» (`data-save-id`) — НЕ гейтимо (локальна закладка).
+
+### Технічна реалізація (SQL — через Supabase MCP `apply_migration`)
+```sql
+CREATE TABLE profiles (
+  uid UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  name TEXT NOT NULL, email TEXT, birth_date DATE, created_at TIMESTAMPTZ DEFAULT now());
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own profile read"   ON profiles FOR SELECT USING (uid = auth.uid());
+CREATE POLICY "own profile write"  ON profiles FOR INSERT WITH CHECK (uid = auth.uid());
+CREATE POLICY "own profile update" ON profiles FOR UPDATE USING (uid = auth.uid());
+
+ALTER TABLE posts ADD COLUMN owner_uid UUID REFERENCES auth.users(id);  -- хто подав (якщо залогінений)
+CREATE TABLE threads (
+  id BIGSERIAL PRIMARY KEY, post_id BIGINT REFERENCES posts(id) ON DELETE CASCADE,
+  author_uid UUID NOT NULL, buyer_uid UUID NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(), last_message_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (post_id, buyer_uid));
+CREATE TABLE messages (
+  id BIGSERIAL PRIMARY KEY, thread_id BIGINT REFERENCES threads(id) ON DELETE CASCADE,
+  sender_uid UUID NOT NULL, text TEXT NOT NULL CHECK (length(trim(text)) BETWEEN 1 AND 2000),
+  created_at TIMESTAMPTZ DEFAULT now(), read_at TIMESTAMPTZ);
+ALTER TABLE threads ENABLE ROW LEVEL SECURITY;  ALTER TABLE messages ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "thread participants read" ON threads FOR SELECT USING (auth.uid() IN (author_uid, buyer_uid));
+CREATE POLICY "buyer creates thread" ON threads FOR INSERT
+  WITH CHECK (buyer_uid = auth.uid() AND author_uid = (SELECT owner_uid FROM posts WHERE id = post_id));
+CREATE POLICY "msg participants read" ON messages FOR SELECT
+  USING (EXISTS (SELECT 1 FROM threads t WHERE t.id = thread_id AND auth.uid() IN (t.author_uid, t.buyer_uid)));
+CREATE POLICY "msg participants write" ON messages FOR INSERT
+  WITH CHECK (sender_uid = auth.uid()
+    AND EXISTS (SELECT 1 FROM threads t WHERE t.id = thread_id AND auth.uid() IN (t.author_uid, t.buyer_uid)));
+
+CREATE TABLE user_push_devices (
+  id BIGSERIAL PRIMARY KEY, uid UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  endpoint TEXT NOT NULL, p256dh TEXT NOT NULL, auth_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now(), UNIQUE (uid, endpoint));
+ALTER TABLE user_push_devices ENABLE ROW LEVEL SECURITY;
+CREATE POLICY "own device manage" ON user_push_devices FOR ALL USING (uid = auth.uid()) WITH CHECK (uid = auth.uid());
+CREATE POLICY "service reads devices" ON user_push_devices FOR SELECT USING (auth.role() = 'service_role');
+```
+**Пуші чату в обидва боки:** тригер `AFTER INSERT ON messages` → через `pg_net` викликає нову Edge
+Function `send-chat-push` (за зразком `supabase/functions/send-bus-push/index.ts`) → знаходить
+отримувача (учасник треда ≠ sender) → web-push на його `user_push_devices`
+`{type:'chat', thread_id, title:<ім'я>, body:<текст>}`. `sw.js` розгалужує по `data.type`, гасить
+системне коли вікно видиме (вже є). Клієнт реєструє пристрій логікою з `buses.js` (`subscribeToPush`,
+але привʼязка до `uid`, без маршруту).
+**Безпека:** анонімний `getAnonId()` непридатний (підробляється) → RLS лише на `auth.uid()`;
+тред/повідомлення читають **тільки 2 учасники**; email/телефон у чаті не показуємо (лише імʼя).
+**Конфіг (руки Вови):** Google Cloud Console → OAuth client (id+secret); Supabase Dashboard →
+Auth → Providers → Google + Redirect URL `https://volodymyr221.github.io/CSTL_NEWS/`.
+
+---
+
+### Початковий опис (для довідки)
 
 Логін — це **не просто гейт**, а **«Кабінет жителя громади»**: постійна
 ідентичність, яку додаток памʼятає. Фундамент під майбутні функції
