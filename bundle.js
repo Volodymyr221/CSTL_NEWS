@@ -862,6 +862,7 @@
   var reactionsByPost = /* @__PURE__ */ new Map();
   var commentsByPost = /* @__PURE__ */ new Map();
   var LS_SAVED = "cstl-saved-v1";
+  var LS_MY_COMMENTS = "cstl-my-comments-v1";
   function lsGet(key, fallback) {
     try {
       const v = localStorage.getItem(key);
@@ -890,6 +891,24 @@
   }
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
+  }
+  function getMyCommentIds() {
+    return new Set(lsGet(LS_MY_COMMENTS, []));
+  }
+  function addMyCommentId(id) {
+    const arr = lsGet(LS_MY_COMMENTS, []);
+    if (!arr.includes(id)) {
+      arr.push(id);
+      lsSet(LS_MY_COMMENTS, arr);
+    }
+  }
+  function msgWord(n) {
+    const mod10 = n % 10, mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11)
+      return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
+      return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
   function getSavedIds() {
     return new Set(lsGet(LS_SAVED, []));
@@ -977,35 +996,124 @@
     </div>
   `;
   }
-  function chatActionsHtml(post) {
-    return `
-    <div class="bd-actions">
-      <div class="bd-actions-left">${reactTriggerHtml(post)}</div>
-      <div class="bd-actions-right">${saveBtnHtml(post)}${shareBtnHtml(post)}</div>
-    </div>
-    ${chatCommentsHtml(post)}
-  `;
-  }
-  function chatCommentsHtml(post) {
+  function chatMessagesHtml(post) {
     const items = getComments(post.id);
-    const listHtml = items.length ? items.map((c) => `
-        <div class="bd-inline-comment">
-          <span class="bd-inline-comment-author">${escapeHtml(c.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-inline-comment-text">${escapeHtml(c.text)}</span>
-          <span class="bd-inline-comment-time">${formatTime(postTime(c))}</span>
-        </div>
-      `).join("") : "";
-    return `
-    <div class="bd-inline-comments" data-comments-for="${post.id}">
-      ${listHtml ? `<div class="bd-inline-comments-list">${listHtml}</div>` : ""}
-      <form class="bd-inline-comment-form" data-comment-form="${post.id}">
-        <input class="bd-inline-comment-input" type="text"
-               placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440..." aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440"
-               data-comment-input="${post.id}">
-        <button class="bd-inline-comment-submit" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
-      </form>
+    const myIds = getMyCommentIds();
+    const bubbles = items.length ? items.map((c) => {
+      const mine = myIds.has(c.id);
+      const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      return `
+          <div class="bd-msg${mine ? " bd-msg--mine" : ""}">
+            ${mine ? "" : authorAvatar(c.author)}
+            <div class="bd-msg-bubble">
+              <div class="bd-msg-head">
+                <span class="bd-msg-author">${mine ? "\u0412\u0438" : escapeHtml(author)}</span>
+                <span class="bd-msg-time">${formatTime(postTime(c))}</span>
+              </div>
+              <div class="bd-msg-text">${escapeHtml(c.text)}</div>
+            </div>
+          </div>`;
+    }).join("") : '<div class="bd-chat-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E. \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>';
+    return `<div class="bd-chat-stream" data-comments-for="${post.id}">${bubbles}</div>`;
+  }
+  function scrollChatToBottom() {
+    const body = document.getElementById("bd-chat-modal-body");
+    if (body)
+      body.scrollTop = body.scrollHeight;
+  }
+  var _chatModalEl = null;
+  function onChatEsc(e) {
+    if (e.key === "Escape")
+      closeChatModal();
+  }
+  function openChatModal(post) {
+    if (_chatModalEl)
+      return;
+    const tagsLine = (post.tags || []).join(" ");
+    const backdrop = document.createElement("div");
+    backdrop.className = "board-backdrop bd-chat-backdrop";
+    const modal = document.createElement("div");
+    modal.className = "bd-chat-modal";
+    modal.innerHTML = `
+    <div class="bd-chat-modal-handle"></div>
+    <header class="bd-chat-modal-head">
+      <button class="bd-chat-modal-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <div class="bd-chat-modal-titles">
+        <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
+        ${tagsLine ? `<div class="bd-chat-modal-sub">${escapeHtml(tagsLine)}</div>` : ""}
+      </div>
+      <button class="bd-chat-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+    </header>
+    <div class="bd-chat-modal-body" id="bd-chat-modal-body">
+      ${chatMessagesHtml(post)}
     </div>
+    <form class="bd-chat-modal-form" data-comment-form="${post.id}">
+      <input class="bd-chat-modal-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026"
+             aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" data-comment-input="${post.id}">
+      <button class="bd-chat-modal-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
+    </form>
   `;
+    document.body.appendChild(backdrop);
+    document.body.appendChild(modal);
+    document.body.classList.add("modal-open");
+    _chatModalEl = modal;
+    requestAnimationFrame(() => {
+      backdrop.classList.add("visible");
+      modal.classList.add("visible");
+    });
+    setTimeout(scrollChatToBottom, 80);
+    setTimeout(() => modal.querySelector(".bd-chat-modal-input")?.focus(), 280);
+    backdrop.addEventListener("click", closeChatModal);
+    modal.querySelector(".bd-chat-modal-back")?.addEventListener("click", closeChatModal);
+    modal.querySelector(".bd-chat-modal-close")?.addEventListener("click", closeChatModal);
+    document.addEventListener("keydown", onChatEsc);
+    let startY = 0, curY = 0, dragging = false;
+    const dragZone = modal.querySelector(".bd-chat-modal-head");
+    dragZone.addEventListener("touchstart", (e) => {
+      startY = e.touches[0].clientY;
+      dragging = true;
+    }, { passive: true });
+    dragZone.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      curY = e.touches[0].clientY - startY;
+      if (curY > 0)
+        modal.style.transform = `translate(-50%, calc(-50% + ${curY}px)) scale(1)`;
+    }, { passive: true });
+    dragZone.addEventListener("touchend", () => {
+      if (!dragging)
+        return;
+      dragging = false;
+      if (curY > 90)
+        closeChatModal();
+      else
+        modal.style.transform = "";
+      curY = 0;
+    });
+  }
+  function closeChatModal() {
+    if (!_chatModalEl)
+      return;
+    const modal = _chatModalEl;
+    const backdrop = document.querySelector(".bd-chat-backdrop");
+    _chatModalEl = null;
+    modal.classList.remove("visible");
+    modal.style.transform = "";
+    backdrop?.classList.remove("visible");
+    document.body.classList.remove("modal-open");
+    document.removeEventListener("keydown", onChatEsc);
+    setTimeout(() => {
+      modal.remove();
+      backdrop?.remove();
+    }, 240);
+  }
+  function refreshChatCardPreview(postId) {
+    const card = document.querySelector(`.bd-card--chat[data-chat-open="${postId}"]`);
+    if (!card)
+      return;
+    const post = allPosts.find((p) => p.id === postId);
+    if (post)
+      card.outerHTML = renderChatCard(post);
   }
   function openReactionPopup(triggerBtn, postId) {
     closeReactionPopup();
@@ -1085,21 +1193,23 @@ ${post.text}
   }
   function renderChatCard(p) {
     const tagsHtml = (p.tags || []).length ? `<div class="bd-chat-tags">${p.tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
-    const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
-    const photoHtml = photo ? `<img class="bd-chat-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.style.display='none'">` : "";
+    const comments = getComments(p.id);
+    const count = comments.length;
+    const last = count ? comments[count - 1] : null;
+    const lastHtml = last ? `<div class="bd-chat-last"><span class="bd-chat-last-author">${escapeHtml(last.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(last.text)}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
     return `
-    <article class="bd-card bd-card--chat" data-post-id="${p.id}">
-      <div class="bd-chat-head">
-        ${authorAvatar(p.author)}
-        <div class="bd-chat-meta">
-          <span class="bd-chat-author">${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="bd-chat-time">${formatTime(postTime(p))}</span>
-        </div>
+    <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
+      <div class="bd-chat-topic">
+        <span class="bd-chat-topic-icon">\u{1F4AC}</span>
+        <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <p class="bd-chat-text">${escapeHtml(p.text)}</p>
-      ${photoHtml}
       ${tagsHtml}
-      ${chatActionsHtml(p)}
+      ${lastHtml}
+      <div class="bd-chat-foot">
+        <span class="bd-chat-count">\u{1F465} ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-foot-time">${formatTime(postTime(last || p))}</span>
+        <span class="bd-chat-foot-arrow">\u2192</span>
+      </div>
     </article>
   `;
   }
@@ -1389,6 +1499,7 @@ ${post.text}
       const list = commentsByPost.get(postId) || [];
       list.push(tempComment);
       commentsByPost.set(postId, list);
+      addMyCommentId(tempComment.id);
       if (input)
         input.value = "";
       rerenderCommentsBlock(postId);
@@ -1404,6 +1515,7 @@ ${post.text}
             (c) => c.id === tempComment.id ? result.comment : c
           );
           commentsByPost.set(postId, updated);
+          addMyCommentId(result.comment.id);
           rerenderCommentsBlock(postId);
         }
       }
@@ -1415,12 +1527,19 @@ ${post.text}
       const post = allPosts.find((p) => p.id === postId);
       if (!post)
         return;
-      wrap.outerHTML = chatCommentsHtml(post);
-      setTimeout(() => {
-        document.querySelector(`[data-comment-input="${postId}"]`)?.focus();
-      }, 50);
+      wrap.outerHTML = chatMessagesHtml(post);
+      scrollChatToBottom();
+      refreshChatCardPreview(postId);
     }
     document.addEventListener("click", (e) => {
+      const chatCard = e.target.closest("[data-chat-open]");
+      if (chatCard && !e.target.closest(".bd-chat-modal")) {
+        const id = Number(chatCard.dataset.chatOpen);
+        const post = allPosts.find((p) => p.id === id);
+        if (post)
+          openChatModal(post);
+        return;
+      }
       const trigger = e.target.closest("[data-react-trigger]");
       if (trigger) {
         e.stopPropagation();
@@ -1520,9 +1639,12 @@ ${post.text}
       const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
       if (wrap) {
         const post = allPosts.find((p) => p.id === postId);
-        if (post)
-          wrap.outerHTML = chatCommentsHtml(post);
+        if (post) {
+          wrap.outerHTML = chatMessagesHtml(post);
+          scrollChatToBottom();
+        }
       }
+      refreshChatCardPreview(postId);
     });
   }
   var _realtimeAttached = false;
