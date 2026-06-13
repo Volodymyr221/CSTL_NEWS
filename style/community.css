@@ -1662,8 +1662,8 @@
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
    Висота без категорій: tabs 38 + gap 8 + search 40 + padding 18 ≈ 110
    Висота з категоріями (тип board): +8 gap +30 chip ≈ 148 */
-.bd-body { padding-top: 110px; }
-.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 148px; }
+.bd-body { padding-top: 124px; }
+.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 162px; }
 
 /* Пошук */
 .bd-search {
