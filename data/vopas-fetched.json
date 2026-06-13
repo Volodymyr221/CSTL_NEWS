@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-13T08:05:08.689618+03:00",
+  "fetched_at": "2026-06-13T11:37:45.931216+03:00",
   "date": "13.06.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -147,8 +147,8 @@
       "carrier": "Алексєєв І. Ю. 45500 смт.Локач",
       "bus": "БОГДАН А 09212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -162,8 +162,8 @@
       "carrier": "Приходько Н.В.",
       "bus": "БАЗ А 079.24",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -177,8 +177,8 @@
       "carrier": "Процик О.Є.-",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -192,9 +192,9 @@
       "carrier": "Подлевський Ю.І. 45400",
       "bus": "",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -207,8 +207,8 @@
       "carrier": "Чуй В.А. м.Рівне",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -222,8 +222,8 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -237,9 +237,9 @@
       "carrier": "Михалюк Ю.П.-",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -597,9 +597,9 @@
       "carrier": "під.Яцишин М.М.",
       "bus": "МЕРСЕДЕС-БЕНЦ",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
-      "cancelled": false,
+      "status": "Рейс зірваний",
+      "sale_active": false,
+      "cancelled": true,
       "from": "Личани",
       "to": "Луцьк"
     },
