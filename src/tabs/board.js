@@ -72,6 +72,7 @@ let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
 
 const LS_SAVED = 'cstl-saved-v1';   // [postId, postId, ...]
 const LS_MY_COMMENTS = 'cstl-my-comments-v1';  // id повідомлень які я написав (для right-вирівнювання)
+const LS_CHAT_SEEN = 'cstl-chat-seen-v1';  // { postId: timestamp останнього перегляду теми (ms) }
 
 function lsGet(key, fallback) {
   try {
@@ -112,6 +113,32 @@ function getMyCommentIds() {
 function addMyCommentId(id) {
   const arr = lsGet(LS_MY_COMMENTS, []);
   if (!arr.includes(id)) { arr.push(id); lsSet(LS_MY_COMMENTS, arr); }
+}
+
+// Час останнього перегляду теми (per-device) — для роздільника «Нові повідомлення».
+function getChatSeen(postId) {
+  const m = lsGet(LS_CHAT_SEEN, {});
+  return m[String(postId)] || 0;
+}
+function setChatSeen(postId, ts) {
+  const m = lsGet(LS_CHAT_SEEN, {});
+  m[String(postId)] = ts;
+  lsSet(LS_CHAT_SEEN, m);
+}
+
+// Відмінювання «відповідь» за числом (для підрядка хедера чату)
+function replyWord(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'відповідь';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'відповіді';
+  return 'відповідей';
+}
+// Повна підпис для пігулки «нові повідомлення» (середній рід)
+function newMsgLabel(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'нове повідомлення';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'нові повідомлення';
+  return 'нових повідомлень';
 }
 
 // Відмінювання слова «повідомлення» за числом (1 / 2-4 / 5+, з урахуванням 11-14)
@@ -256,26 +283,38 @@ function chatMessagesHtml(post) {
     </div>`;
   }
   const myIds = getMyCommentIds();
+  // Роздільник «Нові повідомлення» ставимо перед першим повідомленням, новішим за
+  // час останнього перегляду — але лише якщо до нього є хоч одне «старе» (щоб не
+  // ліпити роздільник на самому верху при першому вході).
+  const dividerTs = _chatDividerTs;
+  let hadOld = false, dividerPlaced = false;
   // Групуємо підряд повідомлення від одного автора (месенджер-стиль)
   const groups = [];
   items.forEach(c => {
+    const isNew = dividerTs > 0 && postTime(c) > dividerTs;
+    if (!isNew) hadOld = true;
+    const needDivider = isNew && hadOld && !dividerPlaced;
     const mine = myIds.has(c.id);
     const author = c.author || 'Житель';
     const key = mine ? '__me' : author;
     const last = groups[groups.length - 1];
-    if (last && last.key === key) last.msgs.push(c);
-    else groups.push({ key, mine, author, first: c, msgs: [c] });
+    if (last && last.key === key && !needDivider) last.msgs.push(c);
+    else groups.push({ key, mine, author, first: c, msgs: [c], dividerBefore: needDivider });
+    if (needDivider) dividerPlaced = true;
   });
   const groupsHtml = groups.map(g => {
+    const divider = g.dividerBefore
+      ? '<div class="bd-chat-divider" data-chat-divider><span>Нові повідомлення</span></div>'
+      : '';
     const bubbles = g.msgs.map(c => `
       <div class="bd-msg-bubble">
         <span class="bd-msg-text">${escapeHtml(c.text)}</span>
         <span class="bd-msg-time">${formatTime(postTime(c))}</span>
       </div>`).join('');
     if (g.mine) {
-      return `<div class="bd-msg-group bd-msg-group--mine"><div class="bd-msg-col">${bubbles}</div></div>`;
+      return divider + `<div class="bd-msg-group bd-msg-group--mine"><div class="bd-msg-col">${bubbles}</div></div>`;
     }
-    return `
+    return divider + `
       <div class="bd-msg-group bd-msg-group--other">
         ${authorAvatar(g.first.author)}
         <div class="bd-msg-col">
@@ -293,16 +332,66 @@ function scrollChatToBottom() {
   if (body) body.scrollTop = body.scrollHeight;
 }
 
+// Чи користувач зараз біля низу стрічки (для розумного автоскролу)
+function chatBodyNearBottom() {
+  const body = document.getElementById('bd-chat-modal-body');
+  if (!body) return true;
+  return (body.scrollHeight - body.scrollTop - body.clientHeight) < 80;
+}
+
+// При відкритті: якщо є роздільник нових — скролимо до нього, інакше донизу
+function scrollChatToNewOrBottom() {
+  const body = document.getElementById('bd-chat-modal-body');
+  if (!body) return;
+  const div = body.querySelector('[data-chat-divider]');
+  if (div) {
+    body.scrollTop += div.getBoundingClientRect().top - body.getBoundingClientRect().top - 60;
+  } else {
+    body.scrollTop = body.scrollHeight;
+  }
+}
+
+// Floating-пігулка «N нових повідомлень»
+function showChatPill(n) {
+  const pill = _chatModalEl?.querySelector('.bd-chat-newpill');
+  if (!pill) return;
+  pill.querySelector('.bd-chat-newpill-n').textContent = `${n} ${newMsgLabel(n)}`;
+  pill.hidden = false;
+}
+function hideChatPill() {
+  const pill = _chatModalEl?.querySelector('.bd-chat-newpill');
+  if (pill) pill.hidden = true;
+}
+
+// Оновити лічильник відповідей у шапці відкритої модалки
+function updateChatHeaderCount(postId) {
+  if (postId !== _chatOpenPostId) return;
+  const el = document.getElementById('bd-chat-reply-count');
+  if (el) {
+    const n = getComments(postId).length;
+    el.textContent = `💬 ${n} ${replyWord(n)}`;
+  }
+}
+
 // ── Повноекранна модалка-чат «Обговорення» ───────────────────────────────────
 // Розгортається з картки (scale-морф) поверх затемненого нерухомого фону.
 // Закриття: ← назад / ✕ / тап по фону / свайп вниз.
 let _chatModalEl = null;
 let _chatViewportHandler = null;
+let _chatScrollHandler = null;   // слухач скролу стрічки (ховає пігулку біля низу)
+let _chatOpenPostId = null;      // id теми відкритої модалки
+let _chatDividerTs = 0;          // час останнього перегляду (межа для роздільника «Нові»)
+let _chatUnseen = 0;             // лічильник нових поки користувач не біля низу
 function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
 function openChatModal(post) {
   if (_chatModalEl) return;
   const tagsLine = (post.tags || []).join(' ');
+  // Стан модалки — ВАЖЛИВО виставити до chatMessagesHtml (воно читає _chatDividerTs)
+  _chatOpenPostId = post.id;
+  _chatDividerTs = getChatSeen(post.id);
+  _chatUnseen = 0;
+  const replyCount = getComments(post.id).length;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'board-backdrop bd-chat-backdrop';
@@ -315,6 +404,7 @@ function openChatModal(post) {
       <button class="bd-chat-modal-back" type="button" aria-label="Назад">←</button>
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
+        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${replyWord(replyCount)}</div>
         ${tagsLine ? `<div class="bd-chat-modal-sub">${escapeHtml(tagsLine)}</div>` : ''}
       </div>
       <button class="bd-chat-modal-close" type="button" aria-label="Закрити">✕</button>
@@ -322,6 +412,7 @@ function openChatModal(post) {
     <div class="bd-chat-modal-body" id="bd-chat-modal-body">
       ${chatMessagesHtml(post)}
     </div>
+    <button class="bd-chat-newpill" type="button" hidden>↓ <span class="bd-chat-newpill-n"></span></button>
     <form class="bd-chat-modal-form" data-comment-form="${post.id}">
       <input class="bd-chat-modal-input" type="text" placeholder="Написати повідомлення…"
              aria-label="Повідомлення" data-comment-input="${post.id}">
@@ -338,12 +429,21 @@ function openChatModal(post) {
     backdrop.classList.add('visible');
     modal.classList.add('visible');
   });
-  setTimeout(scrollChatToBottom, 80);
+  setTimeout(scrollChatToNewOrBottom, 80);
 
   backdrop.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-back')?.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
   document.addEventListener('keydown', onChatEsc);
+
+  // Скрол стрічки → коли користувач сам долистав до низу, ховаємо пігулку «нові»
+  const bodyEl = modal.querySelector('#bd-chat-modal-body');
+  _chatScrollHandler = () => { if (chatBodyNearBottom()) { _chatUnseen = 0; hideChatPill(); } };
+  bodyEl?.addEventListener('scroll', _chatScrollHandler, { passive: true });
+  // Тап по пігулці → стрибок донизу
+  modal.querySelector('.bd-chat-newpill')?.addEventListener('click', () => {
+    scrollChatToBottom(); _chatUnseen = 0; hideChatPill();
+  });
 
   // Клавіатура на iOS PWA шле зливу подій під час анімації — щоб модалка НЕ
   // смикалась, збираємо їх через debounce (один виклик після паузи) → одна
@@ -399,6 +499,14 @@ function closeChatModal() {
   if (!_chatModalEl) return;
   const modal = _chatModalEl;
   const backdrop = document.querySelector('.bd-chat-backdrop');
+  // Запам'ятати час перегляду теми → наступного разу роздільник «Нові» стане на цій межі
+  if (_chatOpenPostId != null) setChatSeen(_chatOpenPostId, Date.now());
+  const bodyEl = modal.querySelector('#bd-chat-modal-body');
+  if (bodyEl && _chatScrollHandler) bodyEl.removeEventListener('scroll', _chatScrollHandler);
+  _chatScrollHandler = null;
+  _chatOpenPostId = null;
+  _chatDividerTs = 0;
+  _chatUnseen = 0;
   _chatModalEl = null;
   modal.classList.remove('visible');
   modal.style.transform = '';
@@ -952,7 +1060,10 @@ function attachBoardDelegation() {
     const post = allPosts.find(p => p.id === postId);
     if (!post) return;
     wrap.outerHTML = chatMessagesHtml(post);
+    // Власне повідомлення — користувач завжди має опинитись внизу
     scrollChatToBottom();
+    _chatUnseen = 0; hideChatPill();
+    updateChatHeaderCount(postId);
     // Оновити лічильник/прев'ю на картці у списку (якщо вона в DOM)
     refreshChatCardPreview(postId);
   }
@@ -1086,13 +1197,31 @@ function onReactionRealtimeEvent(payload) {
 function onCommentRealtimeEvent(payload) {
   const postId = (payload.new || payload.old || {}).post_id;
   if (!postId) return;
+  const prevCount = getComments(postId).length;
   // Просто refetch усіх коментарів і перерендеримо блок
   fetchAllComments().then(fresh => {
     commentsByPost = fresh;
     const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
     if (wrap) {
       const post = allPosts.find(p => p.id === postId);
-      if (post) { wrap.outerHTML = chatMessagesHtml(post); scrollChatToBottom(); }
+      if (post) {
+        // Розумний автоскрол: фіксуємо позицію ДО перемальовування
+        const body = document.getElementById('bd-chat-modal-body');
+        const near = chatBodyNearBottom();
+        const prevTop = body ? body.scrollTop : 0;
+        wrap.outerHTML = chatMessagesHtml(post);
+        if (near) {
+          scrollChatToBottom();   // користувач унизу — лишаємо його внизу
+        } else {
+          if (body) body.scrollTop = prevTop;   // читає старі — НЕ збиваємо позицію
+          const delta = Math.max(0, getComments(postId).length - prevCount);
+          if (delta > 0 && postId === _chatOpenPostId) {
+            _chatUnseen += delta;
+            showChatPill(_chatUnseen);
+          }
+        }
+        updateChatHeaderCount(postId);
+      }
     }
     refreshChatCardPreview(postId);
   });
