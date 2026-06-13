@@ -1129,22 +1129,26 @@
     document.addEventListener("keydown", onChatEsc);
     const vv = window.visualViewport;
     const input = modal.querySelector(".bd-chat-modal-input");
+    const fullH = window.innerHeight;
     _chatViewportHandler = () => {
       if (!vv)
         return;
-      const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-      if (kb > 0) {
+      const kb = fullH - vv.height - vv.offsetTop;
+      if (kb > 80) {
         modal.classList.add("bd-chat-modal--kb");
-        modal.style.setProperty("--kb", kb + "px");
+        modal.style.top = vv.offsetTop + 6 + "px";
+        modal.style.bottom = kb + 6 + "px";
       } else {
         modal.classList.remove("bd-chat-modal--kb");
+        modal.style.top = "";
+        modal.style.bottom = "";
       }
       scrollChatToBottom();
     };
     vv?.addEventListener("resize", _chatViewportHandler);
     vv?.addEventListener("scroll", _chatViewportHandler);
-    input?.addEventListener("focus", () => setTimeout(_chatViewportHandler, 120));
-    input?.addEventListener("blur", () => setTimeout(_chatViewportHandler, 120));
+    input?.addEventListener("focus", () => [60, 250, 450].forEach((t) => setTimeout(_chatViewportHandler, t)));
+    input?.addEventListener("blur", () => [60, 250].forEach((t) => setTimeout(_chatViewportHandler, t)));
     let startY = 0, curY = 0, dragging = false;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
     dragZone.addEventListener("touchstart", (e) => {

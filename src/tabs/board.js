@@ -345,25 +345,30 @@ function openChatModal(post) {
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
   document.addEventListener('keydown', onChatEsc);
 
-  // Клавіатура: тримаємо модалку над клавіатурою через visualViewport.
-  // Меню (таб-бар) не чіпаємо — рухається тільки модалка.
+  // Клавіатура: модалку прив'язуємо прямо до видимої області (visualViewport).
+  // Меню (таб-бар) не чіпаємо — рухається тільки модалка; поле вводу сідає над клавіатурою.
   const vv = window.visualViewport;
   const input = modal.querySelector('.bd-chat-modal-input');
+  const fullH = window.innerHeight;   // базова висота ДО клавіатури (стабільний орієнтир)
   _chatViewportHandler = () => {
     if (!vv) return;
-    const kb = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
-    if (kb > 0) {
+    const kb = fullH - vv.height - vv.offsetTop;   // висота клавіатури
+    if (kb > 80) {                                 // клавіатура відкрита
       modal.classList.add('bd-chat-modal--kb');
-      modal.style.setProperty('--kb', kb + 'px');
+      modal.style.top = (vv.offsetTop + 6) + 'px'; // верх у межах екрана
+      modal.style.bottom = (kb + 6) + 'px';        // низ впритул над клавіатурою
     } else {
       modal.classList.remove('bd-chat-modal--kb');
+      modal.style.top = '';
+      modal.style.bottom = '';
     }
     scrollChatToBottom();
   };
   vv?.addEventListener('resize', _chatViewportHandler);
   vv?.addEventListener('scroll', _chatViewportHandler);
-  input?.addEventListener('focus', () => setTimeout(_chatViewportHandler, 120));
-  input?.addEventListener('blur',  () => setTimeout(_chatViewportHandler, 120));
+  // Клавіатура анімується ~250-450мс — кілька викликів щоб зловити фінальну висоту
+  input?.addEventListener('focus', () => [60, 250, 450].forEach(t => setTimeout(_chatViewportHandler, t)));
+  input?.addEventListener('blur',  () => [60, 250].forEach(t => setTimeout(_chatViewportHandler, t)));
 
   // Свайп вниз по шапці/ручці → закрити
   let startY = 0, curY = 0, dragging = false;
