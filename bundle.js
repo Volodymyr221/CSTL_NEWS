@@ -831,6 +831,8 @@
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var VIBER_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.6 1.28 4.94 3.3 6.54v3.36c0 .42.48.66.82.4l2.55-1.96c1.04.28 2.16.46 3.33.46 5.52 0 10-3.94 10-8.8S17.52 2 12 2zM8.7 6.8c-.2-.16-.5-.13-.68.06l-.5.52c-.6.62-.62 1.55-.18 2.46.5 1.04 1.26 2.06 2.22 2.94.96.88 2.04 1.5 3.12 1.86.94.32 1.86.18 2.42-.46l.42-.48c.18-.2.16-.5-.04-.66l-1.5-1.2c-.2-.16-.48-.14-.66.04l-.46.48c-.56-.3-1.06-.68-1.5-1.1-.4-.44-.74-.92-1-1.46l.5-.5c.18-.18.2-.46.04-.66L8.7 6.8z"/></svg>';
+  var TELEGRAM_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>';
   var TYPE_TABS2 = [
     { id: "board", label: "\u0414\u041E\u0428\u041A\u0410", emoji: "\u{1F6D2}" },
     { id: "saved", label: "\u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u0406", emoji: BOOKMARK_OUTLINE_SVG },
@@ -914,23 +916,50 @@
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
   }
+  function toE164(raw) {
+    const d = String(raw).replace(/[^\d+]/g, "");
+    if (d.startsWith("+"))
+      return d;
+    if (d.startsWith("380"))
+      return "+" + d;
+    if (d.startsWith("0"))
+      return "+38" + d;
+    return "+" + d;
+  }
+  function parseTelegram(s) {
+    const m = String(s).match(/(?:t\.me\/|@)([A-Za-z0-9_]{3,})/i);
+    return m ? m[1] : null;
+  }
   function renderContact(contact) {
     if (!contact)
       return "";
     const trimmed = String(contact).trim();
     const isPhone2 = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
-    if (!isPhone2) {
-      return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
+    if (isPhone2) {
+      const tel = trimmed.replace(/[^\d+]/g, "");
+      const e164 = toE164(trimmed);
+      return `
+      <div class="cm-board-contact cm-board-contact--phone">
+        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
+        <div class="cm-board-contact-btns">
+          <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
+          <a class="cm-board-call cm-board-call--viber" href="viber://chat?number=${encodeURIComponent(e164)}" aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0443 Viber">${VIBER_ICON_SVG}</a>
+        </div>
+      </div>
+    `;
     }
-    const tel = trimmed.replace(/[^\d+]/g, "");
-    return `
-    <div class="cm-board-contact cm-board-contact--phone">
-      <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-      <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
-        ${PHONE_ICON_SVG}
-      </a>
-    </div>
-  `;
+    const tgUser = parseTelegram(trimmed);
+    if (tgUser) {
+      return `
+      <div class="cm-board-contact cm-board-contact--phone">
+        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
+        <div class="cm-board-contact-btns">
+          <a class="cm-board-call cm-board-call--tg" href="https://t.me/${escapeHtml(tgUser)}" target="_blank" rel="noopener" aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0443 Telegram">${TELEGRAM_ICON_SVG}</a>
+        </div>
+      </div>
+    `;
+    }
+    return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
   }
   function reactTriggerHtml(post) {
     const myReaction = getMyReaction(post.id);

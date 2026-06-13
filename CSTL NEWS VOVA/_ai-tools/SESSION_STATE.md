@@ -13,10 +13,23 @@
 - `data/community-board.json`: прибрано пост-подяку (id 4) + 4 greeting-пости (201-204). 17→12 постів. Оновлено `_meta`.
 - Supabase `posts`: 2 реальні greeting-пости (id 11, 15) сховано через `status='rejected'` (НЕ видалено — реальний контент мешканців, оборотно).
 - `node build.js` пройшов з кодом 0, `check-imports` чисто. `bundle.js` перезібрано.
-- ⚠️ Ще НЕ зроблено в Кроці 1: CACHE_NAME bump (буде у фінальному Кроці 6 перед /finish).
 - 🔵 Залишок (не блокер): `admin.html:676` має лейбл `🎉 вітання` + CHECK-constraint `type` досі дозволяє `greeting` — лишив, бо старі rejected-пости мають коректно показуватись в адмінці.
 
-**Далі по плану:** Крок 2 (згрупувати чіпи у 6) → Крок 3 (кнопки контакту Viber/Telegram).
+**Крок 2 — згруповано чіпи фільтра у 6 (`board.js`):**
+- `BOARD_CATEGORIES` → 6 чіпів з полем `match`: Всі · 🛒 Куплю/Продам · 🔍 Шукаю · 🔧 Послуги · 🎁 Знайдено/Загубилось · 📢 Оголошення.
+- `CATEGORY_EMOJI` → окрема явна мапа конкретна-категорія→emoji (бо у чіпах конкретних категорій більше нема).
+- `getFilteredPosts`: фільтр через `cat.match.includes(p.category)` — один чіп групує дві конкретні.
+
+**Крок 3 — кнопки контакту (тільки іконки, `board.js` + `community.css`):**
+- `renderContact()`: номер → 📞 Подзвонити (`tel:`) + 🟣 Viber (`viber://chat?number=+380…`); `@username`/`t.me` → ✈️ Telegram (`https://t.me/<user>`); інший текст → просто текст.
+- Хелпери `toE164()` (нормалізація номера) + `parseTelegram()` (regex username).
+- Нові SVG-іконки `VIBER_ICON_SVG` + `TELEGRAM_ICON_SVG`. Кнопки мають клас `.cm-board-call` → наявні `stopPropagation`-обробники їх уже покривають (нове wiring не треба).
+- CSS: `.cm-board-contact-btns` (ряд кнопок) + `.cm-board-call--viber` (фіолетовий) + `.cm-board-call--tg` (блакитний).
+
+**Крок 6 — фінал:** `CACHE_NAME` bump → `cstl-20260613-1123`. `node build.js` exit 0, `bundle.js` перезібрано.
+
+**Статус Фази А:** ✅ код готовий на гілці `claude/startup-uem-9tfuxg`. НЕ змерджено в `main` — чекає перевірки Вови → `/finish`.
+**Далі:** Фаза А2 (Обговорення → повноекранна модалка-чат, спершу ASCII-макет).
 
 ---
 

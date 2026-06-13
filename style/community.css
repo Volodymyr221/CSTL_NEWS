@@ -1629,6 +1629,26 @@
   box-shadow: inset 0 2px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.10);
 }
 
+/* Кілька кнопок контакту в ряд (Подзвонити + Viber / Telegram) */
+.cm-board-contact-btns {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+/* Viber — фірмовий фіолетовий */
+.cm-board-call--viber {
+  color: #7360F2;
+  border-color: #7360F2;
+}
+.cm-board-call--viber:active { background: rgba(115,96,242,0.12); }
+/* Telegram — фірмовий блакитний */
+.cm-board-call--tg {
+  color: #29A9EB;
+  border-color: #29A9EB;
+}
+.cm-board-call--tg:active { background: rgba(41,169,235,0.12); }
+
 /* ============================================================================
    ДОШКА ГРОМАДИ 2.0 — таби + пошук + 3 типи карток + реакції + збережені
    (17.05.2026, план з docs/COMMUNITY_BOARD_VISION.md)
