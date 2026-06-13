@@ -29,18 +29,29 @@ const TYPE_TABS = [
   { id: 'chat',    label: 'ОБГОВОРЕННЯ',   emoji: '💬' },
 ];
 
+// Фільтр-чіпи (6 шт): деякі групують ДВІ конкретні категорії через `match`.
+// Пост зберігає конкретну категорію (продам/куплю/...), а чіп групує.
 const BOARD_CATEGORIES = [
-  { id: 'all',         label: 'Всі',          emoji: '✦' },
-  { id: 'продам',      label: 'Продам',       emoji: '💰' },
-  { id: 'куплю',       label: 'Куплю',        emoji: '🛒' },
-  { id: 'шукаю',       label: 'Шукаю',        emoji: '🔍' },
-  { id: 'послуга',     label: 'Послуги',      emoji: '🔧' },
-  { id: 'знайдено',    label: 'Знайдено',     emoji: '🎁' },
-  { id: 'загубилось',  label: 'Загубилось',   emoji: '😟' },
-  { id: 'оголошення',  label: 'Оголошення',   emoji: '📢' },
+  { id: 'all',        label: 'Всі',                 emoji: '✦',  match: null },
+  { id: 'trade',      label: 'Куплю/Продам',        emoji: '🛒', match: ['продам', 'куплю'] },
+  { id: 'шукаю',      label: 'Шукаю',               emoji: '🔍', match: ['шукаю'] },
+  { id: 'послуга',    label: 'Послуги',             emoji: '🔧', match: ['послуга'] },
+  { id: 'lostfound',  label: 'Знайдено/Загубилось', emoji: '🎁', match: ['знайдено', 'загубилось'] },
+  { id: 'оголошення', label: 'Оголошення',          emoji: '📢', match: ['оголошення'] },
 ];
 
-const CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES.map(c => [c.id, c.emoji]));
+// Окрема явна мапа конкретна-категорія → emoji (для лейбла на стікері).
+// Раніше виводилась з BOARD_CATEGORIES, але після групування чіпів
+// конкретних категорій там більше нема.
+const CATEGORY_EMOJI = {
+  'продам':     '💰',
+  'куплю':      '🛒',
+  'шукаю':      '🔍',
+  'знайдено':   '🎁',
+  'загубилось': '😟',
+  'послуга':    '🔧',
+  'оголошення': '📢',
+};
 
 const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
 
@@ -398,9 +409,11 @@ function getFilteredPosts() {
     } else if (p.type !== activeType) {
       return false;
     }
-    // Фільтр по категорії — тільки для board
+    // Фільтр по категорії — тільки для board. Чіп може групувати кілька
+    // конкретних категорій (напр. «Куплю/Продам» → ['продам','куплю']).
     if (activeType === 'board' && activeCategory !== 'all') {
-      if (p.category !== activeCategory) return false;
+      const cat = BOARD_CATEGORIES.find(c => c.id === activeCategory);
+      if (!cat || !cat.match || !cat.match.includes(p.category)) return false;
     }
     // Пошук — text + tags + author + title
     if (q) {

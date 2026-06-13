@@ -837,16 +837,22 @@
     { id: "chat", label: "\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", emoji: "\u{1F4AC}" }
   ];
   var BOARD_CATEGORIES2 = [
-    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726" },
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}" },
-    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}" },
-    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}" },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}" }
+    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726", match: null },
+    { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
+    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", match: ["\u0448\u0443\u043A\u0430\u044E"] },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}", match: ["\u043F\u043E\u0441\u043B\u0443\u0433\u0430"] },
+    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] },
+    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", match: ["\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"] }
   ];
-  var CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES2.map((c) => [c.id, c.emoji]));
+  var CATEGORY_EMOJI = {
+    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
+    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
+    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
+    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
+    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
+    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
+    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
+  };
   var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
   var allPosts = [];
   var allAnnouncements = [];
@@ -1115,7 +1121,8 @@ ${post.text}
         return false;
       }
       if (activeType === "board" && activeCategory !== "all") {
-        if (p.category !== activeCategory)
+        const cat = BOARD_CATEGORIES2.find((c) => c.id === activeCategory);
+        if (!cat || !cat.match || !cat.match.includes(p.category))
           return false;
       }
       if (q) {
