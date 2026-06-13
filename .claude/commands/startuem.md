@@ -16,7 +16,7 @@
 2. **Підпиши коміти:** `git config user.name "<Рома/Вова>"` + `git config user.email "<пошта>"`.
 3. **Гілка під людину:** `roma/<тема>` або `vova/<тема>` (потік: іменована гілка → `/finish` → `main`). Авто-гілку `claude/startup-...` лишай до першого «Роби».
 4. **Перевір конфлікти:** `git fetch origin` + `git log --oneline --all -15` + кінець `SESSION_STATE.md`/`BACKLOG.md`. Якщо рішення іншої людини суперечать — скажи про це у першій відповіді.
-5. **ТІЛЬКИ якщо людина = Рома:** увімкни автостеження за активністю Вови через `/loop` (~10 хв) — деталі у `NEW_SESSION_PROMPT.md` Крок 0 п.5. Для сесій Вови — пропустити.
+5. **Взаємне автостеження (для ОБОХ власників):** запусти Monitor `SELF='<твій regex>' bash .claude/owner-watch.sh` (persistent) — повідомляє про активність ІНШОГО власника. SELF: Рома=`Рома|roma\.haranin\.ru1@gmail\.com`, Вова=`Вова|Vova|VShevchukkk|Volodymyr221`. Деталі — `NEW_SESSION_PROMPT.md` Крок 0 п.5.
 
 > ⚠️ **Знай про auto-merge:** пуш у будь-яку гілку `claude/**` автоматично мерджиться в `main` + деплой (`.github/workflows/auto-merge.yml`, `-X theirs`). Хочеш контрольований потік через `/finish` — працюй на `roma/...`/`vova/...` (вони НЕ автомерджаться).
 
