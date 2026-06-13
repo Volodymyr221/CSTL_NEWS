@@ -1130,7 +1130,7 @@
     const vv = window.visualViewport;
     const input = modal.querySelector(".bd-chat-modal-input");
     const fullH = window.innerHeight;
-    _chatViewportHandler = () => {
+    const applyKb = () => {
       const visH = vv ? vv.height : window.innerHeight;
       const open = visH < fullH - 80;
       if (open) {
@@ -1146,11 +1146,16 @@
       }
       scrollChatToBottom();
     };
+    let kbTimer = null;
+    _chatViewportHandler = () => {
+      clearTimeout(kbTimer);
+      kbTimer = setTimeout(applyKb, 80);
+    };
     window.addEventListener("resize", _chatViewportHandler);
     vv?.addEventListener("resize", _chatViewportHandler);
     vv?.addEventListener("scroll", _chatViewportHandler);
-    input?.addEventListener("focus", () => [60, 250, 450, 700].forEach((t) => setTimeout(_chatViewportHandler, t)));
-    input?.addEventListener("blur", () => [60, 250].forEach((t) => setTimeout(_chatViewportHandler, t)));
+    input?.addEventListener("focus", _chatViewportHandler);
+    input?.addEventListener("blur", _chatViewportHandler);
     let startY = 0, curY = 0, dragging = false;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
     dragZone.addEventListener("touchstart", (e) => {
