@@ -139,6 +139,44 @@ export function openBoardModal() {
     if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
   });
 
+  // ── Свайп вниз → закрити (з ручки або коли форма прокручена до верху) ──
+  const panel  = wrap.querySelector('.cm-board-modal-panel');
+  const handle = wrap.querySelector('.cm-board-modal-handle');
+  let dragStartY = 0, dragging = false, dragDelta = 0;
+
+  panel.addEventListener('touchstart', e => {
+    const onHandle = handle && (e.target === handle || handle.contains(e.target));
+    // тягнемо тільки з ручки або коли список прокручено до самого верху
+    dragging = onHandle || panel.scrollTop <= 2;
+    if (!dragging) return;
+    dragStartY = e.touches[0].clientY;
+    dragDelta = 0;
+    panel.style.transition = 'none';
+  }, { passive: true });
+
+  panel.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dragDelta = e.touches[0].clientY - dragStartY;
+    if (dragDelta <= 0) { panel.style.transform = 'translateY(0)'; return; } // вгору — це скрол
+    e.preventDefault();                                   // вниз — перехоплюємо як закриття
+    panel.style.transform = `translateY(${dragDelta}px)`;
+  }, { passive: false });
+
+  panel.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    if (dragDelta > 90) {                                 // достатньо протягнув — закрити
+      panel.style.transition = 'transform 0.25s ease-in';
+      panel.style.transform  = 'translateY(100%)';
+      setTimeout(close, 240);
+    } else {                                              // мало — плавно повернути
+      panel.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
+      panel.style.transform  = 'translateY(0)';
+      setTimeout(() => { panel.style.transition = ''; panel.style.transform = ''; }, 300);
+    }
+    dragDelta = 0;
+  }, { passive: true });
+
   // ── Перемикач типу ──
   wrap.querySelectorAll('.bm-type-tab').forEach(btn => {
     btn.addEventListener('click', () => {

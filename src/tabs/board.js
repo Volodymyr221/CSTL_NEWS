@@ -801,6 +801,34 @@ function initBoardNoteExpand(root) {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });
 
+    // Свайп вниз → згорнути (зберігаємо центрування translate(-50%,-50%))
+    let zStartY = 0, zDrag = false, zDelta = 0;
+    modal.addEventListener('touchstart', e => {
+      zDrag = modal.scrollTop <= 2;          // тягнемо лише коли прокручено до верху
+      if (!zDrag) return;
+      zStartY = e.touches[0].clientY;
+      zDelta = 0;
+      modal.style.transition = 'none';
+    }, { passive: true });
+    modal.addEventListener('touchmove', e => {
+      if (!zDrag) return;
+      zDelta = e.touches[0].clientY - zStartY;
+      if (zDelta <= 0) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; return; }
+      e.preventDefault();
+      modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
+    }, { passive: false });
+    modal.addEventListener('touchend', () => {
+      if (!zDrag) return;
+      zDrag = false;
+      modal.style.transition = '';           // повертаємо CSS-перехід
+      if (zDelta > 90) {
+        collapse();                          // згорнути (fade на місці пальця)
+      } else {
+        modal.style.transform = '';          // назад у центр через CSS .visible
+      }
+      zDelta = 0;
+    }, { passive: true });
+
     activeNote = note;
     activeModal = modal;
 

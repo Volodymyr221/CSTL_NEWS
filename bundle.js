@@ -515,6 +515,47 @@
         document.removeEventListener("keydown", onEsc);
       }
     });
+    const panel = wrap.querySelector(".cm-board-modal-panel");
+    const handle = wrap.querySelector(".cm-board-modal-handle");
+    let dragStartY = 0, dragging = false, dragDelta = 0;
+    panel.addEventListener("touchstart", (e) => {
+      const onHandle = handle && (e.target === handle || handle.contains(e.target));
+      dragging = onHandle || panel.scrollTop <= 2;
+      if (!dragging)
+        return;
+      dragStartY = e.touches[0].clientY;
+      dragDelta = 0;
+      panel.style.transition = "none";
+    }, { passive: true });
+    panel.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      dragDelta = e.touches[0].clientY - dragStartY;
+      if (dragDelta <= 0) {
+        panel.style.transform = "translateY(0)";
+        return;
+      }
+      e.preventDefault();
+      panel.style.transform = `translateY(${dragDelta}px)`;
+    }, { passive: false });
+    panel.addEventListener("touchend", () => {
+      if (!dragging)
+        return;
+      dragging = false;
+      if (dragDelta > 90) {
+        panel.style.transition = "transform 0.25s ease-in";
+        panel.style.transform = "translateY(100%)";
+        setTimeout(close, 240);
+      } else {
+        panel.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
+        panel.style.transform = "translateY(0)";
+        setTimeout(() => {
+          panel.style.transition = "";
+          panel.style.transform = "";
+        }, 300);
+      }
+      dragDelta = 0;
+    }, { passive: true });
     wrap.querySelectorAll(".bm-type-tab").forEach((btn) => {
       btn.addEventListener("click", () => {
         if (state.type === btn.dataset.type)
@@ -1475,6 +1516,38 @@ ${post.text}
           e.stopPropagation();
         }, { capture: true });
       });
+      let zStartY = 0, zDrag = false, zDelta = 0;
+      modal.addEventListener("touchstart", (e) => {
+        zDrag = modal.scrollTop <= 2;
+        if (!zDrag)
+          return;
+        zStartY = e.touches[0].clientY;
+        zDelta = 0;
+        modal.style.transition = "none";
+      }, { passive: true });
+      modal.addEventListener("touchmove", (e) => {
+        if (!zDrag)
+          return;
+        zDelta = e.touches[0].clientY - zStartY;
+        if (zDelta <= 0) {
+          modal.style.transform = "translate(-50%, -50%) scale(1)";
+          return;
+        }
+        e.preventDefault();
+        modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
+      }, { passive: false });
+      modal.addEventListener("touchend", () => {
+        if (!zDrag)
+          return;
+        zDrag = false;
+        modal.style.transition = "";
+        if (zDelta > 90) {
+          collapse();
+        } else {
+          modal.style.transform = "";
+        }
+        zDelta = 0;
+      }, { passive: true });
       activeNote = note;
       activeModal = modal;
       note.classList.add("cm-board-note--hidden");
@@ -2559,13 +2632,33 @@ ${post.text}
       </div>
     </div>`;
   }
+  function emptyHeroMessage() {
+    if (fromStop || toStop) {
+      const seg = `${fromStop ? "\u0417 " + fromStop.toUpperCase() : ""}${fromStop && toStop ? " \u0414\u041E " : ""}${toStop ? toStop.toUpperCase() : ""}`;
+      return `\u0420\u0415\u0419\u0421\u0406\u0412 ${seg} ${isViewingToday() ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406" : "\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C"} \u041D\u0415\u041C\u0410\u0404`;
+    }
+    return isViewingToday() ? "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E" : "\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E";
+  }
+  function buildEmptyHeroCard(msg) {
+    return `
+    <div class="bhv4 bhv4--empty">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <div class="bhv4-overlay"></div>
+      <div class="bhv4-content bhv4-empty-content">
+        <svg class="bhv4-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="13" rx="2"/><path d="M2 9h20"/><path d="M8 4v5M16 4v5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
+        </svg>
+        <div class="bhv4-empty-msg">${escapeHtml(msg)}</div>
+      </div>
+    </div>`;
+  }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
     if (!el)
       return;
     const routes = findActiveRoutes();
     if (!routes.length) {
-      el.innerHTML = "";
+      el.innerHTML = buildEmptyHeroCard(emptyHeroMessage());
       return;
     }
     if (smartRowIndex >= routes.length)
@@ -2771,11 +2864,9 @@ ${post.text}
       const titleHtml0 = buildListTitleHtml(updStr0);
       const hasFilter = fromStop || toStop;
       if (hasFilter) {
-        const msg = `\u041D\u0430 ${isViewingToday() ? "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : dd0.fetchedAt || "\u0446\u0435\u0439 \u0434\u0435\u043D\u044C"} \u0440\u0435\u0439\u0441\u0456\u0432 ${fromStop ? `\u0437 ${fromStop}` : ""}${fromStop && toStop ? " \u0434\u043E " : ""}${toStop || ""} \u043D\u0435 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u043E`;
-        el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
+        el.innerHTML = titleHtml0;
       } else {
-        const noMoreMsg = isViewingToday() ? `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>` : `<div class="bhv4-empty">\u041D\u0410 \u0426\u0415\u0419 \u0414\u0415\u041D\u042C \u0420\u0415\u0419\u0421\u0406\u0412 \u041D\u0415 \u0417\u041D\u0410\u0419\u0414\u0415\u041D\u041E</div>`;
-        el.innerHTML = titleHtml0 + noMoreMsg;
+        el.innerHTML = titleHtml0;
         const updRow2 = document.getElementById("buses-updated-row");
         if (updRow2 && busData) {
           updRow2.innerHTML = buildSourceHtml();
@@ -2786,11 +2877,10 @@ ${post.text}
     if (!toRender.length) {
       const dd1 = getDayData();
       const updStr1 = dd1.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd1.fetchedTime)} | ${escapeHtml(dd1.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
-      const noMoreMsg = isViewingToday() ? `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>` : "";
       el.innerHTML = buildListTitleHtml(updStr1) + `
       <button class="bus-show-all" id="bus-show-all-btn">
         \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0432\u0441\u0456 ${all.length} \u0440\u0435\u0439\u0441\u0438 \u2193
-      </button>${noMoreMsg}`;
+      </button>`;
       document.getElementById("bus-show-all-btn").addEventListener("click", () => {
         showAll = true;
         renderRouteList();
@@ -2916,9 +3006,6 @@ ${post.text}
         <button class="bus-show-all bus-show-all--less" id="bus-show-all-btn">
           \u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u043C\u0438\u043D\u0443\u043B\u0456 \u2191
         </button>`;
-      }
-      if (future.length === 0 && all.length > 0) {
-        noMoreHtml = `<div class="bhv4-empty">\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406 \u0420\u0415\u0419\u0421\u0406\u0412 \u0411\u0406\u041B\u042C\u0428\u0415 \u041D\u0415 \u0417\u0410\u041F\u041B\u0410\u041D\u041E\u0412\u0410\u041D\u041E</div>`;
       }
     }
     let cards;
