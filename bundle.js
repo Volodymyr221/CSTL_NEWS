@@ -1134,11 +1134,14 @@
       const visH = vv ? vv.height : window.innerHeight;
       const open = visH < fullH - 80;
       if (open) {
-        const offset = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) : 0;
         modal.classList.add("bd-chat-modal--kb");
-        modal.style.bottom = offset + 6 + "px";
+        modal.style.top = (vv ? vv.offsetTop : 0) + "px";
+        modal.style.height = (vv ? vv.height : window.innerHeight) - 4 + "px";
+        modal.style.bottom = "auto";
       } else {
         modal.classList.remove("bd-chat-modal--kb");
+        modal.style.top = "";
+        modal.style.height = "";
         modal.style.bottom = "";
       }
       scrollChatToBottom();
