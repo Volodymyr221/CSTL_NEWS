@@ -22,9 +22,8 @@ const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fi
 const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-// Viber: бульбашка з телефонною слухавкою всередині (вирізана через evenodd)
-const VIBER_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.6 1.28 4.94 3.3 6.54v3.36c0 .42.48.66.82.4l2.55-1.96c1.04.28 2.16.46 3.33.46 5.52 0 10-3.94 10-8.8S17.52 2 12 2zM8.7 6.8c-.2-.16-.5-.13-.68.06l-.5.52c-.6.62-.62 1.55-.18 2.46.5 1.04 1.26 2.06 2.22 2.94.96.88 2.04 1.5 3.12 1.86.94.32 1.86.18 2.42-.46l.42-.48c.18-.2.16-.5-.04-.66l-1.5-1.2c-.2-.16-.48-.14-.66.04l-.46.48c-.56-.3-1.06-.68-1.5-1.1-.4-.44-.74-.92-1-1.46l.5-.5c.18-.18.2-.46.04-.66L8.7 6.8z"/></svg>';
-// Telegram: паперовий літачок
+// Telegram: паперовий літачок (Viber прибрано — viber:// до незнайомого номера
+// ненадійно відкривається на iOS, дає «адреса недійсна»)
 const TELEGRAM_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>';
 
 const TYPE_TABS = [
@@ -132,43 +131,27 @@ function authorAvatar(author) {
   return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
 }
 
-// Нормалізує телефон у формат E.164 (+380XXXXXXXXX) для tel:/viber:
-//   0XXXXXXXXX  → +380XXXXXXXXX
-//   380XXXXXXXXX → +380XXXXXXXXX
-//   +...        → лишаємо як є
-function toE164(raw) {
-  const d = String(raw).replace(/[^\d+]/g, '');
-  if (d.startsWith('+'))   return d;
-  if (d.startsWith('380')) return '+' + d;
-  if (d.startsWith('0'))   return '+38' + d;
-  return '+' + d;
-}
-
 // Витягує Telegram-username з @maria / t.me/maria / https://t.me/maria
 function parseTelegram(s) {
   const m = String(s).match(/(?:t\.me\/|@)([A-Za-z0-9_]{3,})/i);
   return m ? m[1] : null;
 }
 
-// Контакт-картка з кнопками-іконками:
-//   номер телефону → 📞 Подзвонити + 🟣 Viber (обидва працюють за номером)
-//   @username / t.me → ✈️ Telegram
-//   інший текст → просто текст без кнопок
+// Контакт-картка з кнопкою-іконкою:
+//   номер телефону → 📞 Подзвонити (tel:)
+//   @username / t.me → ✈️ Telegram (https://t.me/<user>)
+//   інший текст → просто текст без кнопки
 function renderContact(contact) {
   if (!contact) return '';
   const trimmed = String(contact).trim();
   const isPhone = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
 
   if (isPhone) {
-    const tel  = trimmed.replace(/[^\d+]/g, '');
-    const e164 = toE164(trimmed);
+    const tel = trimmed.replace(/[^\d+]/g, '');
     return `
       <div class="cm-board-contact cm-board-contact--phone">
         <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-        <div class="cm-board-contact-btns">
-          <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
-          <a class="cm-board-call cm-board-call--viber" href="viber://chat?number=${encodeURIComponent(e164)}" aria-label="Написати у Viber">${VIBER_ICON_SVG}</a>
-        </div>
+        <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
       </div>
     `;
   }
@@ -178,9 +161,7 @@ function renderContact(contact) {
     return `
       <div class="cm-board-contact cm-board-contact--phone">
         <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-        <div class="cm-board-contact-btns">
-          <a class="cm-board-call cm-board-call--tg" href="https://t.me/${escapeHtml(tgUser)}" target="_blank" rel="noopener" aria-label="Написати у Telegram">${TELEGRAM_ICON_SVG}</a>
-        </div>
+        <a class="cm-board-call cm-board-call--tg" href="https://t.me/${escapeHtml(tgUser)}" target="_blank" rel="noopener" aria-label="Написати у Telegram">${TELEGRAM_ICON_SVG}</a>
       </div>
     `;
   }
