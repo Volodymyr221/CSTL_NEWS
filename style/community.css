@@ -2330,10 +2330,9 @@
   transform: translateX(-50%) scale(1);
   opacity: 1;
 }
-/* Клавіатура відкрита: модалка до самого верху + стоїть над клавіатурою */
+/* Клавіатура відкрита: верх піднімається до самого верху (низ — inline-стилем у JS) */
 .bd-chat-modal--kb {
   top: calc(env(safe-area-inset-top, 0px) + 6px);
-  bottom: calc(var(--kb, 0px) + 8px);
 }
 
 .bd-chat-modal-handle {

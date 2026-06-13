@@ -1131,23 +1131,22 @@
     const input = modal.querySelector(".bd-chat-modal-input");
     const fullH = window.innerHeight;
     _chatViewportHandler = () => {
-      if (!vv)
-        return;
-      const kb = fullH - vv.height - vv.offsetTop;
-      if (kb > 80) {
+      const visH = vv ? vv.height : window.innerHeight;
+      const open = visH < fullH - 80;
+      if (open) {
+        const offset = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) : 0;
         modal.classList.add("bd-chat-modal--kb");
-        modal.style.top = vv.offsetTop + 6 + "px";
-        modal.style.bottom = kb + 6 + "px";
+        modal.style.bottom = offset + 6 + "px";
       } else {
         modal.classList.remove("bd-chat-modal--kb");
-        modal.style.top = "";
         modal.style.bottom = "";
       }
       scrollChatToBottom();
     };
+    window.addEventListener("resize", _chatViewportHandler);
     vv?.addEventListener("resize", _chatViewportHandler);
     vv?.addEventListener("scroll", _chatViewportHandler);
-    input?.addEventListener("focus", () => [60, 250, 450].forEach((t) => setTimeout(_chatViewportHandler, t)));
+    input?.addEventListener("focus", () => [60, 250, 450, 700].forEach((t) => setTimeout(_chatViewportHandler, t)));
     input?.addEventListener("blur", () => [60, 250].forEach((t) => setTimeout(_chatViewportHandler, t)));
     let startY = 0, curY = 0, dragging = false;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
@@ -1184,9 +1183,12 @@
     backdrop?.classList.remove("visible");
     document.body.classList.remove("modal-open");
     document.removeEventListener("keydown", onChatEsc);
-    if (_chatViewportHandler && window.visualViewport) {
-      window.visualViewport.removeEventListener("resize", _chatViewportHandler);
-      window.visualViewport.removeEventListener("scroll", _chatViewportHandler);
+    if (_chatViewportHandler) {
+      window.removeEventListener("resize", _chatViewportHandler);
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener("resize", _chatViewportHandler);
+        window.visualViewport.removeEventListener("scroll", _chatViewportHandler);
+      }
       _chatViewportHandler = null;
     }
     setTimeout(() => {

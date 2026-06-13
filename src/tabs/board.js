@@ -345,29 +345,33 @@ function openChatModal(post) {
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
   document.addEventListener('keydown', onChatEsc);
 
-  // Клавіатура: модалку прив'язуємо прямо до видимої області (visualViewport).
-  // Меню (таб-бар) не чіпаємо — рухається тільки модалка; поле вводу сідає над клавіатурою.
+  // Клавіатура на iOS PWA: інколи resize-иться саме вікно (fires window.resize),
+  // інколи лише visualViewport (overlay). Слухаємо обидва. Мета — низ модалки
+  // (поле вводу) впритул над клавіатурою, без пустки. Меню можна накрити.
   const vv = window.visualViewport;
   const input = modal.querySelector('.bd-chat-modal-input');
-  const fullH = window.innerHeight;   // базова висота ДО клавіатури (стабільний орієнтир)
+  const fullH = window.innerHeight;   // повна висота ДО клавіатури
   _chatViewportHandler = () => {
-    if (!vv) return;
-    const kb = fullH - vv.height - vv.offsetTop;   // висота клавіатури
-    if (kb > 80) {                                 // клавіатура відкрита
+    const visH = vv ? vv.height : window.innerHeight;
+    const open = visH < fullH - 80;   // клавіатура відкрита (видима область помітно менша)
+    if (open) {
+      // нижній край видимої області відносно layout-viewport:
+      //  • вікно resize-нулось → window.innerHeight == visH, offset ≈ 0 (низ біля клавіатури)
+      //  • overlay → offset == висота клавіатури
+      const offset = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) : 0;
       modal.classList.add('bd-chat-modal--kb');
-      modal.style.top = (vv.offsetTop + 6) + 'px'; // верх у межах екрана
-      modal.style.bottom = (kb + 6) + 'px';        // низ впритул над клавіатурою
+      modal.style.bottom = (offset + 6) + 'px';
     } else {
       modal.classList.remove('bd-chat-modal--kb');
-      modal.style.top = '';
       modal.style.bottom = '';
     }
     scrollChatToBottom();
   };
+  window.addEventListener('resize', _chatViewportHandler);
   vv?.addEventListener('resize', _chatViewportHandler);
   vv?.addEventListener('scroll', _chatViewportHandler);
-  // Клавіатура анімується ~250-450мс — кілька викликів щоб зловити фінальну висоту
-  input?.addEventListener('focus', () => [60, 250, 450].forEach(t => setTimeout(_chatViewportHandler, t)));
+  // Клавіатура анімується ~250-450мс — кілька викликів щоб зловити фінальний стан
+  input?.addEventListener('focus', () => [60, 250, 450, 700].forEach(t => setTimeout(_chatViewportHandler, t)));
   input?.addEventListener('blur',  () => [60, 250].forEach(t => setTimeout(_chatViewportHandler, t)));
 
   // Свайп вниз по шапці/ручці → закрити
@@ -398,9 +402,12 @@ function closeChatModal() {
   backdrop?.classList.remove('visible');
   document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onChatEsc);
-  if (_chatViewportHandler && window.visualViewport) {
-    window.visualViewport.removeEventListener('resize', _chatViewportHandler);
-    window.visualViewport.removeEventListener('scroll', _chatViewportHandler);
+  if (_chatViewportHandler) {
+    window.removeEventListener('resize', _chatViewportHandler);
+    if (window.visualViewport) {
+      window.visualViewport.removeEventListener('resize', _chatViewportHandler);
+      window.visualViewport.removeEventListener('scroll', _chatViewportHandler);
+    }
     _chatViewportHandler = null;
   }
   setTimeout(() => { modal.remove(); backdrop?.remove(); }, 240);
