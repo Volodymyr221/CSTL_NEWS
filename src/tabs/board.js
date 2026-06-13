@@ -355,14 +355,17 @@ function openChatModal(post) {
     const visH = vv ? vv.height : window.innerHeight;
     const open = visH < fullH - 80;   // клавіатура відкрита (видима область помітно менша)
     if (open) {
-      // нижній край видимої області відносно layout-viewport:
-      //  • вікно resize-нулось → window.innerHeight == visH, offset ≈ 0 (низ біля клавіатури)
-      //  • overlay → offset == висота клавіатури
-      const offset = vv ? Math.max(0, window.innerHeight - (vv.offsetTop + vv.height)) : 0;
+      // Модалка займає РІВНО видиму область (visualViewport): верх притискається до
+      // верху екрана (під статус-баром) і фіксується, висота динамічно стискається,
+      // низ (поле вводу) — над клавіатурою. Нічого не вилазить за рамки.
       modal.classList.add('bd-chat-modal--kb');
-      modal.style.bottom = (offset + 6) + 'px';
+      modal.style.top = (vv ? vv.offsetTop : 0) + 'px';
+      modal.style.height = ((vv ? vv.height : window.innerHeight) - 4) + 'px';
+      modal.style.bottom = 'auto';
     } else {
       modal.classList.remove('bd-chat-modal--kb');
+      modal.style.top = '';
+      modal.style.height = '';
       modal.style.bottom = '';
     }
     scrollChatToBottom();
