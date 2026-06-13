@@ -885,14 +885,42 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
     </div>`;
 }
 
+// Повідомлення для порожнього табло (коли активних рейсів нема).
+// Враховує фільтр Звідки/Куди і чи дивимось сьогодні/інший день.
+function emptyHeroMessage() {
+  if (fromStop || toStop) {
+    const seg = `${fromStop ? 'З ' + fromStop.toUpperCase() : ''}${fromStop && toStop ? ' ДО ' : ''}${toStop ? toStop.toUpperCase() : ''}`;
+    return `РЕЙСІВ ${seg} ${isViewingToday() ? 'СЬОГОДНІ' : 'НА ЦЕЙ ДЕНЬ'} НЕМАЄ`;
+  }
+  return isViewingToday()
+    ? 'СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО'
+    : 'НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО';
+}
+
+// Порожнє табло — те саме бордове табло, але з повідомленням по центру.
+// Тримається на місці завжди, навіть коли рейсів нема (за бажанням Вови/Роми).
+function buildEmptyHeroCard(msg) {
+  return `
+    <div class="bhv4 bhv4--empty">
+      <img class="bhv4-bg-img" src="./images/bus-hero2.png" alt="" aria-hidden="true">
+      <div class="bhv4-overlay"></div>
+      <div class="bhv4-content bhv4-empty-content">
+        <svg class="bhv4-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="4" width="20" height="13" rx="2"/><path d="M2 9h20"/><path d="M8 4v5M16 4v5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
+        </svg>
+        <div class="bhv4-empty-msg">${escapeHtml(msg)}</div>
+      </div>
+    </div>`;
+}
+
 function renderSmartRow() {
   const el = document.getElementById('bus-smart-row');
   if (!el) return;
 
   const routes = findActiveRoutes();
   if (!routes.length) {
-    // Повідомлення завжди виводиться під заголовком у bus-list, не тут
-    el.innerHTML = '';
+    // Табло лишається на місці — повідомлення про відсутність рейсів усередині нього
+    el.innerHTML = buildEmptyHeroCard(emptyHeroMessage());
     return;
   }
 
@@ -1130,13 +1158,11 @@ function renderRouteList() {
     const titleHtml0 = buildListTitleHtml(updStr0);
     const hasFilter = fromStop || toStop;
     if (hasFilter) {
-      const msg = `На ${isViewingToday() ? 'сьогодні' : dd0.fetchedAt || 'цей день'} рейсів ${fromStop ? `з ${fromStop}` : ''}${fromStop && toStop ? ' до ' : ''}${toStop || ''} не заплановано`;
-      el.innerHTML = titleHtml0 + `<div class="empty-state">${msg}</div>`;
+      // Повідомлення про відсутність рейсів тепер у табло (renderSmartRow)
+      el.innerHTML = titleHtml0;
     } else {
-      const noMoreMsg = isViewingToday()
-        ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`
-        : `<div class="bhv4-empty">НА ЦЕЙ ДЕНЬ РЕЙСІВ НЕ ЗНАЙДЕНО</div>`;
-      el.innerHTML = titleHtml0 + noMoreMsg;
+      // Повідомлення про відсутність рейсів тепер у табло (renderSmartRow)
+      el.innerHTML = titleHtml0;
       const updRow = document.getElementById('buses-updated-row');
       if (updRow && busData) {
         updRow.innerHTML = buildSourceHtml();
@@ -1150,12 +1176,10 @@ function renderRouteList() {
     const updStr1 = dd1.fetchedTime
       ? `Оновлено: ${escapeHtml(dd1.fetchedTime)} | ${escapeHtml(dd1.fetchedAt)}`
       : 'Дані оновлюються...';
-    const noMoreMsg = isViewingToday()
-      ? `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>` : '';
     el.innerHTML = buildListTitleHtml(updStr1) + `
       <button class="bus-show-all" id="bus-show-all-btn">
         Показати всі ${all.length} рейси ↓
-      </button>${noMoreMsg}`;
+      </button>`;
     document.getElementById('bus-show-all-btn').addEventListener('click', () => {
       showAll = true;
       renderRouteList();
@@ -1330,10 +1354,7 @@ function renderRouteList() {
           Сховати минулі ↑
         </button>`;
     }
-    // Якщо всі рейси сьогодні завершились — повідомлення внизу списку
-    if (future.length === 0 && all.length > 0) {
-      noMoreHtml = `<div class="bhv4-empty">СЬОГОДНІ РЕЙСІВ БІЛЬШЕ НЕ ЗАПЛАНОВАНО</div>`;
-    }
+    // Повідомлення про завершення рейсів тепер у табло (renderSmartRow), не в списку
   }
 
   // Коли showAll: рендеримо майбутні → кнопка "Сховати минулі" → минулі
