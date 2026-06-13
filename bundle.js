@@ -396,8 +396,7 @@
   // src/tabs/community-modal.js
   var TYPE_TABS = [
     { id: "board", emoji: "\u{1F6D2}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" },
-    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" },
-    { id: "greeting", emoji: "\u{1F389}", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F" }
+    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" }
   ];
   var BOARD_CATEGORIES = [
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
@@ -405,19 +404,8 @@
     { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
-    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", emoji: "\u2764\uFE0F", color: "white" },
     { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
     { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
-  ];
-  var GREETING_PRESETS = [
-    { emoji: "\u{1F382}", gradient: "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)", label: "\u0414\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F" },
-    { emoji: "\u{1F476}", gradient: "linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)", label: "\u041D\u043E\u0432\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0438\u0439" },
-    { emoji: "\u{1F48D}", gradient: "linear-gradient(135deg, #FFF9E6 0%, #FFECB3 100%)", label: "\u0412\u0435\u0441\u0456\u043B\u043B\u044F" },
-    { emoji: "\u{1F393}", gradient: "linear-gradient(135deg, #E1BEE7 0%, #BA68C8 100%)", label: "\u0412\u0438\u043F\u0443\u0441\u043A" },
-    { emoji: "\u2764\uFE0F", gradient: "linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)", label: "\u041F\u043E\u0434\u044F\u043A\u0430" },
-    { emoji: "\u{1F333}", gradient: "linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)", label: "\u041F\u0440\u0438\u0440\u043E\u0434\u0430" },
-    { emoji: "\u{1F389}", gradient: "linear-gradient(135deg, #FFE0B2 0%, #FFB74D 100%)", label: "\u0421\u0432\u044F\u0442\u043E" },
-    { emoji: "\u{1F54A}\uFE0F", gradient: "linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)", label: "\u041F\u0430\u043C\u02BC\u044F\u0442\u044C" }
   ];
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
@@ -473,10 +461,7 @@
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
       // CHAT
-      tagsRaw: "",
-      // GREETING
-      title: "",
-      greetingIdx: 0
+      tagsRaw: ""
     };
     const wrap = document.createElement("div");
     wrap.id = "cm-board-modal";
@@ -547,8 +532,6 @@
         return renderBoardFields();
       if (state.type === "chat")
         return renderChatFields();
-      if (state.type === "greeting")
-        return renderGreetingFields();
     }
     function renderBoardFields() {
       dynamicEl.innerHTML = `
@@ -627,48 +610,6 @@
         renderPreview();
       });
       bindPhotoSlots();
-    }
-    function renderGreetingFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label">\u041E\u0431\u043A\u043B\u0430\u0434\u0438\u043D\u043A\u0430</label>
-        <div class="bm-greet-presets" id="bm-greet-presets">
-          ${GREETING_PRESETS.map((g, i) => `
-            <button type="button" class="bm-greet-preset${i === state.greetingIdx ? " active" : ""}" data-idx="${i}" style="background:${g.gradient}" aria-label="${escapeHtml(g.label)}">
-              <span class="bm-greet-preset-emoji">${g.emoji}</span>
-            </button>
-          `).join("")}
-        </div>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-title">\u041A\u043E\u043C\u0443 <span class="bm-label-hint">(\u0456\u043C\u02BC\u044F, \u0440\u043E\u0434\u0438\u043D\u0430, \u0443\u0441\u0456\u0439 \u0433\u0440\u043E\u043C\u0430\u0434\u0456...)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="\u0421\u0435\u0440\u0433\u0456\u044E / \u0443\u0441\u0456\u043C \u043C\u0430\u0442\u0435\u0440\u044F\u043C / \u0440\u043E\u0434\u0438\u043D\u0456 \u0406\u0432\u0430\u043D\u0447\u0443\u043A\u0456\u0432" value="${escapeHtml(state.title)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0417 \u0414\u043D\u0435\u043C \u041D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F! \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F, \u0449\u0430\u0441\u0442\u044F..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0412\u0456\u0434 \u043A\u043E\u0433\u043E <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0421\u0443\u0441\u0456\u0434\u0438 / \u041A\u043E\u043B\u0435\u043A\u0442\u0438\u0432 \u0448\u043A\u043E\u043B\u0438" value="${escapeHtml(state.author)}">
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
-        state.title = e.target.value;
-        renderPreview();
-      });
-      dynamicEl.querySelectorAll(".bm-greet-preset").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          dynamicEl.querySelectorAll(".bm-greet-preset").forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          state.greetingIdx = parseInt(btn.dataset.idx, 10) || 0;
-          renderPreview();
-        });
-      });
     }
     function bindCommonFields() {
       dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
@@ -774,11 +715,9 @@
         renderBoardPreview();
       else if (state.type === "chat")
         renderChatPreview();
-      else if (state.type === "greeting")
-        renderGreetingPreview();
     }
     function renderBoardPreview() {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
       const contactHtml = contactTrim ? `
@@ -822,26 +761,6 @@
       </article>
     `;
     }
-    function renderGreetingPreview() {
-      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-      const author = state.author.trim();
-      const title = state.title.trim();
-      previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--greeting">
-        <div class="bd-greet-cover" style="background:${preset.gradient}">
-          <span class="bd-greet-emoji">${preset.emoji}</span>
-        </div>
-        <div class="bd-greet-body">
-          ${title ? `<div class="bd-greet-to">\u0414\u043B\u044F ${escapeHtml(title)}</div>` : ""}
-          <p class="bd-greet-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
-          <div class="bd-greet-footer">
-            <span class="bd-greet-author">\u2014 ${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="bd-greet-time">\u0449\u043E\u0439\u043D\u043E</span>
-          </div>
-        </div>
-      </article>
-    `;
-    }
     renderDynamic();
     renderPreview();
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
@@ -850,11 +769,6 @@
       if (!state.text.trim()) {
         showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
         wrap.querySelector("#bm-text")?.focus();
-        return;
-      }
-      if (state.type === "greeting" && !state.title.trim()) {
-        showToast("\u0412\u043A\u0430\u0436\u0456\u0442\u044C \u043A\u043E\u043C\u0443 \u0432\u0456\u0442\u0430\u043D\u043D\u044F", 2500);
-        wrap.querySelector("#bm-title")?.focus();
         return;
       }
       if (state.uploadingCount > 0 || state.photos.some((p) => p && p.startsWith("blob:"))) {
@@ -893,7 +807,7 @@
       status: "pending"
     };
     if (state.type === "board") {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
       return {
         ...base,
         category: state.category,
@@ -907,17 +821,6 @@
         ...base,
         category: null,
         tags: parseTags(state.tagsRaw)
-      };
-    }
-    if (state.type === "greeting") {
-      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-      return {
-        ...base,
-        category: null,
-        title: state.title.trim(),
-        cover_emoji: preset.emoji,
-        cover_gradient: preset.gradient,
-        tags: []
       };
     }
     return base;
@@ -3233,8 +3136,7 @@ ${post.text}
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
-    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" },
-    { id: "greeting", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F", emoji: "\u{1F389}" }
+    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" }
   ];
   var _boardMiniTypeIdx = 0;
   var _boardMiniData = { userPosts: [], official: [] };
@@ -3458,7 +3360,6 @@ ${post.text}
     "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
     "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
     "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
-    "\u043F\u043E\u0434\u044F\u043A\u0430": "\u2764\uFE0F",
     "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
     "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
   };
@@ -3516,11 +3417,8 @@ ${post.text}
         ts: p.ts || p.created_at && new Date(p.created_at).getTime(),
         category: p.category,
         text: p.text,
-        title: p.title,
         color: p.color,
         photo: Array.isArray(p.photos) && p.photos[0] || p.photo,
-        cover_emoji: p.cover_emoji,
-        cover_gradient: p.cover_gradient,
         author: p.author
       }));
     }
@@ -3630,21 +3528,6 @@ ${post.text}
         <div class="cm-mini-chat-body">
           <div class="cm-mini-chat-author">${escapeHtml(item.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</div>
           <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
-        </div>
-      </article>
-    `;
-    }
-    if (type === "greeting") {
-      const grad = item.cover_gradient || "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)";
-      const emoji = item.cover_emoji || "\u{1F389}";
-      return `
-      <article class="cm-mini-greet">
-        <div class="cm-mini-greet-cover" style="background:${escapeHtml(grad)}">
-          <span class="cm-mini-greet-emoji">${emoji}</span>
-        </div>
-        <div class="cm-mini-greet-body">
-          ${item.title ? `<div class="cm-mini-greet-to">\u0414\u043B\u044F ${escapeHtml(item.title)}</div>` : ""}
-          <p class="cm-mini-greet-text">${escapeHtml(item.text)}</p>
         </div>
       </article>
     `;

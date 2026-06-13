@@ -1,12 +1,13 @@
 {
   "_meta": {
-    "description": "Дошка громади 2.0 — 3 типи постів (board/chat/greeting)",
+    "description": "Дошка громади 2.0 — 2 типи постів (board/chat)",
     "moderation": "DEMO-дані. Фаза 9 Спринт 1: переїдемо на Supabase + адмінку /admin",
     "supabase_target_table": "posts",
-    "supabase_target_fields": "id, type, category, text, title, author, contact, color, photo, tags, location, status, ts, published_at",
-    "types": "board = оголошення (продам/куплю/...); chat = розмови (плітки/питання, з хештегами); greeting = вітання (день народження/подяки/новонароджені)",
+    "supabase_target_fields": "id, type, category, text, author, contact, color, photo, tags, location, status, ts, published_at",
+    "types": "board = оголошення (продам/куплю/...); chat = розмови (плітки/питання, з хештегами)",
+    "note_greeting": "Тип greeting (вітання) і категорію подяка видалено 13.06.2026 — Фаза А Дошки.",
     "note_picsum": "Прибрано тестові https://picsum.photos URL 2026-05-17 (періодично 404-или). Фото додаються користувачами через submit-форму.",
-    "last_updated": "2026-05-17"
+    "last_updated": "2026-06-13"
   },
   "posts": [
     {
@@ -50,20 +51,6 @@
       "location": "Дерно",
       "status": "published",
       "published_at": "2026-05-11T05:06:40+03:00"
-    },
-    {
-      "id": 4,
-      "type": "board",
-      "category": "подяка",
-      "text": "Велике дякую сусідам зі Ставка які допомогли з дровами після буревію! Ви справжні люди ❤️",
-      "author": null,
-      "contact": null,
-      "ts": 1746850000000,
-      "color": "white",
-      "photo": null,
-      "location": "Ставок",
-      "status": "published",
-      "published_at": "2026-05-10T04:13:20+03:00"
     },
     {
       "id": 5,
@@ -181,59 +168,6 @@
       "status": "published",
       "ts": 1746860000000,
       "published_at": "2026-05-10T13:00:00+03:00"
-    },
-
-    {
-      "id": 201,
-      "type": "greeting",
-      "title": "Сергію",
-      "text": "Сергію, з днем народження! Здоров'я, мирного неба і весни у серці. Цілуємо!",
-      "author": "Сусіди по вулиці",
-      "cover_emoji": "🎂",
-      "cover_gradient": "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)",
-      "location": "Олика",
-      "status": "published",
-      "ts": 1747110000000,
-      "published_at": "2026-05-13T10:20:00+03:00"
-    },
-    {
-      "id": 202,
-      "type": "greeting",
-      "title": "Родині Шевчуків",
-      "text": "Вітаємо з народженням донечки! Хай росте здоровенькою. Щиро тішимось разом.",
-      "author": null,
-      "cover_emoji": "👶",
-      "cover_gradient": "linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)",
-      "location": "Дерно",
-      "status": "published",
-      "ts": 1747050000000,
-      "published_at": "2026-05-12T17:40:00+03:00"
-    },
-    {
-      "id": 203,
-      "type": "greeting",
-      "title": "усім мамам Олики",
-      "text": "З Днем Матері! Дякуємо за все що ви робите. Без вас нічого б не було.",
-      "author": "Олицька громада",
-      "cover_emoji": "❤️",
-      "cover_gradient": "linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)",
-      "location": null,
-      "status": "published",
-      "ts": 1746950000000,
-      "published_at": "2026-05-11T13:53:20+03:00"
-    },
-    {
-      "id": 204,
-      "type": "greeting",
-      "title": "Оксані Петрівні",
-      "text": "Дякуємо Оксані Петрівні за організацію толоки минулі вихідні! Прибрали парк за один день. Ви наш приклад.",
-      "author": "Активісти Олики",
-      "cover_emoji": "🌳",
-      "cover_gradient": "linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)",
-      "location": "Олика",
-      "status": "published",
-      "ts": 1746880000000,
-      "published_at": "2026-05-10T18:13:20+03:00"
     }
   ]
 }

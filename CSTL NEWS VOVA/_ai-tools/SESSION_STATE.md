@@ -1,7 +1,22 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-13 (гілка `claude/startup-uem-t6plka`)
+**Оновлено:** 2026-06-13 (гілка `claude/startup-uem-9tfuxg`)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
+
+---
+
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (13.06.2026, гілка `claude/startup-uem-9tfuxg`) — Фаза А Дошки
+
+**Крок 1 — видалено тип 🎉 Вітання (`greeting`) і категорію ❤️ Подяка ПОВНІСТЮ:**
+- `community-modal.js`: прибрано таб `greeting`, `GREETING_PRESETS`, `renderGreetingFields/Preview`, гілки greeting у `renderDynamic/renderPreview/buildPayload`, поля стану `title`+`greetingIdx`, перевірку greeting у submit. Прибрано `'подяка'` з `BOARD_CATEGORIES`. Fallback `BOARD_CATEGORIES[7]` → `.find(c => c.id === 'оголошення')` (2 місця).
+- `community-blocks.js`: прибрано `greeting` з `BOARD_MINI_TYPES`, гілку greeting у `renderMiniCard`, `'подяка'` з `CATEGORY_EMOJI`, мертві поля `title`/`cover_emoji`/`cover_gradient` з маппінгу міні-карток.
+- `data/community-board.json`: прибрано пост-подяку (id 4) + 4 greeting-пости (201-204). 17→12 постів. Оновлено `_meta`.
+- Supabase `posts`: 2 реальні greeting-пости (id 11, 15) сховано через `status='rejected'` (НЕ видалено — реальний контент мешканців, оборотно).
+- `node build.js` пройшов з кодом 0, `check-imports` чисто. `bundle.js` перезібрано.
+- ⚠️ Ще НЕ зроблено в Кроці 1: CACHE_NAME bump (буде у фінальному Кроці 6 перед /finish).
+- 🔵 Залишок (не блокер): `admin.html:676` має лейбл `🎉 вітання` + CHECK-constraint `type` досі дозволяє `greeting` — лишив, бо старі rejected-пости мають коректно показуватись в адмінці.
+
+**Далі по плану:** Крок 2 (згрупувати чіпи у 6) → Крок 3 (кнопки контакту Viber/Telegram).
 
 ---
 

@@ -40,7 +40,6 @@ const BOARD_MINI_TYPES = [
   { id: 'official', label: 'Офіційні', emoji: '🏛️' },
   { id: 'board',    label: 'Дошка',    emoji: '🛒' },
   { id: 'chat',     label: 'Розмови',  emoji: '💬' },
-  { id: 'greeting', label: 'Вітання',  emoji: '🎉' },
 ];
 let _boardMiniTypeIdx = 0;   // індекс активного типу
 let _boardMiniData    = { userPosts: [], official: [] };   // кеш даних щоб не запитувати при свайпі
@@ -399,12 +398,11 @@ const CATEGORY_EMOJI = {
   'шукаю':       '🔍',
   'знайдено':    '🎁',
   'загубилось':  '😟',
-  'подяка':      '❤️',
   'послуга':     '🔧',
   'оголошення':  '📢',
 };
 
-// Міні-блок Дошки — свайпом перемикається тип: Офіційні → Дошка → Розмови → Вітання.
+// Міні-блок Дошки — свайпом перемикається тип: Офіційні → Дошка → Розмови.
 // Повна Дошка відкривається тапом на CTA внизу.
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
@@ -465,9 +463,9 @@ function renderBoardMiniSlide(el) {
       .slice(0, 2)
       .map(p => ({
         kind: cfg.id, id: p.id, ts: p.ts || (p.created_at && new Date(p.created_at).getTime()),
-        category: p.category, text: p.text, title: p.title, color: p.color,
+        category: p.category, text: p.text, color: p.color,
         photo: (Array.isArray(p.photos) && p.photos[0]) || p.photo,
-        cover_emoji: p.cover_emoji, cover_gradient: p.cover_gradient, author: p.author,
+        author: p.author,
       }));
   }
 
@@ -486,7 +484,7 @@ function renderBoardMiniSlide(el) {
   const emptyHtml = `<div class="cm-board-mini-empty">У «${escapeHtml(cfg.label)}» поки порожньо</div>`;
 
   // BOARD — корок зі стікерами (з нахилами і шпильками)
-  // CHAT/GREETING/OFFICIAL — простіший лейаут без корки
+  // CHAT/OFFICIAL — простіший лейаут без корки
   const isCorkType = cfg.id === 'board' || cfg.id === 'official';
   let innerHtml;
   if (isCorkType) {
@@ -590,22 +588,6 @@ function renderMiniCard(item, type) {
         <div class="cm-mini-chat-body">
           <div class="cm-mini-chat-author">${escapeHtml(item.author || 'анонімно')}</div>
           <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
-        </div>
-      </article>
-    `;
-  }
-
-  if (type === 'greeting') {
-    const grad  = item.cover_gradient || 'linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)';
-    const emoji = item.cover_emoji || '🎉';
-    return `
-      <article class="cm-mini-greet">
-        <div class="cm-mini-greet-cover" style="background:${escapeHtml(grad)}">
-          <span class="cm-mini-greet-emoji">${emoji}</span>
-        </div>
-        <div class="cm-mini-greet-body">
-          ${item.title ? `<div class="cm-mini-greet-to">Для ${escapeHtml(item.title)}</div>` : ''}
-          <p class="cm-mini-greet-text">${escapeHtml(item.text)}</p>
         </div>
       </article>
     `;
