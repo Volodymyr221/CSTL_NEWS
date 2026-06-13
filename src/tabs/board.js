@@ -22,9 +22,6 @@ const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fi
 const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-// Telegram: паперовий літачок (Viber прибрано — viber:// до незнайомого номера
-// ненадійно відкривається на iOS, дає «адреса недійсна»)
-const TELEGRAM_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>';
 
 const TYPE_TABS = [
   { id: 'board',   label: 'ДОШКА',        emoji: '🛒' },
@@ -131,16 +128,11 @@ function authorAvatar(author) {
   return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
 }
 
-// Витягує Telegram-username з @maria / t.me/maria / https://t.me/maria
-function parseTelegram(s) {
-  const m = String(s).match(/(?:t\.me\/|@)([A-Za-z0-9_]{3,})/i);
-  return m ? m[1] : null;
-}
-
 // Контакт-картка з кнопкою-іконкою:
 //   номер телефону → 📞 Подзвонити (tel:)
-//   @username / t.me → ✈️ Telegram (https://t.me/<user>)
 //   інший текст → просто текст без кнопки
+// (Telegram-кнопку прибрано 13.06 — спонукаємо дзвонити або писати в чаті додатка;
+//  приватний чат у додатку — Фаза Б, BOARD_FINAL_PLAN.md)
 function renderContact(contact) {
   if (!contact) return '';
   const trimmed = String(contact).trim();
@@ -152,16 +144,6 @@ function renderContact(contact) {
       <div class="cm-board-contact cm-board-contact--phone">
         <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
         <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
-      </div>
-    `;
-  }
-
-  const tgUser = parseTelegram(trimmed);
-  if (tgUser) {
-    return `
-      <div class="cm-board-contact cm-board-contact--phone">
-        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-        <a class="cm-board-call cm-board-call--tg" href="https://t.me/${escapeHtml(tgUser)}" target="_blank" rel="noopener" aria-label="Написати у Telegram">${TELEGRAM_ICON_SVG}</a>
       </div>
     `;
   }
