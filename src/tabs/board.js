@@ -345,19 +345,18 @@ function openChatModal(post) {
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
   document.addEventListener('keydown', onChatEsc);
 
-  // Клавіатура на iOS PWA: інколи resize-иться саме вікно (fires window.resize),
-  // інколи лише visualViewport (overlay). Слухаємо обидва. Мета — низ модалки
-  // (поле вводу) впритул над клавіатурою, без пустки. Меню можна накрити.
+  // Клавіатура на iOS PWA шле зливу подій під час анімації — щоб модалка НЕ
+  // смикалась, збираємо їх через debounce (один виклик після паузи) → одна
+  // плавна анімація у фінальний стан. Слухаємо і window.resize, і visualViewport.
   const vv = window.visualViewport;
   const input = modal.querySelector('.bd-chat-modal-input');
   const fullH = window.innerHeight;   // повна висота ДО клавіатури
-  _chatViewportHandler = () => {
+  const applyKb = () => {
     const visH = vv ? vv.height : window.innerHeight;
     const open = visH < fullH - 80;   // клавіатура відкрита (видима область помітно менша)
     if (open) {
-      // Модалка займає РІВНО видиму область (visualViewport): верх притискається до
-      // верху екрана (під статус-баром) і фіксується, висота динамічно стискається,
-      // низ (поле вводу) — над клавіатурою. Нічого не вилазить за рамки.
+      // Модалка займає РІВНО видиму область: верх під статус-баром і фіксується,
+      // висота динамічно стискається, низ (поле вводу) — над клавіатурою.
       modal.classList.add('bd-chat-modal--kb');
       modal.style.top = (vv ? vv.offsetTop : 0) + 'px';
       modal.style.height = ((vv ? vv.height : window.innerHeight) - 4) + 'px';
@@ -370,12 +369,13 @@ function openChatModal(post) {
     }
     scrollChatToBottom();
   };
+  let kbTimer = null;
+  _chatViewportHandler = () => { clearTimeout(kbTimer); kbTimer = setTimeout(applyKb, 80); };
   window.addEventListener('resize', _chatViewportHandler);
   vv?.addEventListener('resize', _chatViewportHandler);
   vv?.addEventListener('scroll', _chatViewportHandler);
-  // Клавіатура анімується ~250-450мс — кілька викликів щоб зловити фінальний стан
-  input?.addEventListener('focus', () => [60, 250, 450, 700].forEach(t => setTimeout(_chatViewportHandler, t)));
-  input?.addEventListener('blur',  () => [60, 250].forEach(t => setTimeout(_chatViewportHandler, t)));
+  input?.addEventListener('focus', _chatViewportHandler);
+  input?.addEventListener('blur',  _chatViewportHandler);
 
   // Свайп вниз по шапці/ручці → закрити
   let startY = 0, curY = 0, dragging = false;
