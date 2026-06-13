@@ -40,45 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 222,
-    "title": "РФ обстріляла Суми з далекобійної артилерії: 8 влучань по місту, постраждали 6 людей",
-    "description": "Вранці 12 червня російські окупаційні війська обстріляли Суми з далекобійного артилерійського озброєння.",
-    "date": "2026-06-12",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/e/848196/ee5767241e0b2d88a7bb267d256a1349.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8039002/",
-    "auto": true
-  },
-  {
-    "id": 221,
-    "title": "ЗМІ: У Костянтинівку проникли більше сотні росіян, військові попереджають про загрози",
-    "description": "Щонайменше сотня росіян інфільтрувалася в Костянтинівку Донецької області, Сили оборони фіксують ворога у центрі міста.",
-    "date": "2026-06-12",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/4/f/847977/4f9575bdc74a515123384cef3628a902.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8038962/",
-    "auto": true
-  },
-  {
-    "id": 157,
-    "title": "Bloomberg: Мерц хоче зібрати лідерів Європи перед зустріччю з Трампом на саміті НАТО",
-    "description": "Канцлер Німеччини Фрідріх Мерц планує наприкінці червня провести зустріч із європейськими лідерами, щоб узгодити підхід до переговорів із президентом США Дональдом Трампом на липневому саміті НАТО.",
-    "date": "2026-06-12",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/a/840300/3a3cc2c7730aeb46eaadc83d384521c9.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/01/8037309/",
-    "auto": true
-  },
-  {
     "id": 14,
     "title": "Білий дім опублікував фото Трампа і Чарльза ІІІ з підписом \"Два королі\"",
     "description": "Офіційний акаунт Білого дому в мережі X опублікував фото зустрічі президента США Дональда Трампа і короля Британії Чарльза III, що відбулася у вівторок у Вашингтоні, підписавши його \"Два королі\".",
@@ -531,6 +492,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/a/836044/7a3b2d9486b7338838290679f347c4fc.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/articles/2026/05/26/8036384/",
+    "auto": true
+  },
+  {
+    "id": 226,
+    "title": "Росія могла допомогти Ірану відновити ракетний арсенал під час перемир’я зі США – ЗМІ",
+    "description": "Іран відновив ракетний арсенал російською зброєю за 8 тижнів перемир'я зі США, повідомляє Bloomberg з посиланням на західну розвідку.",
+    "date": "2027-02-28",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/0/848855/90eb33b8480738057e7b39b247ad8713.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/13/8039171/",
     "auto": true
   },
   {
