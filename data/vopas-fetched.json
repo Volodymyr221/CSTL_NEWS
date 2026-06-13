@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-13T11:37:45.931216+03:00",
+  "fetched_at": "2026-06-13T14:18:20.331644+03:00",
   "date": "13.06.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -252,8 +252,8 @@
       "carrier": "Веснянка В.М. 45605 с.Боратин",
       "bus": "ФОЛЬКСВАГЕН LT46",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -267,8 +267,8 @@
       "carrier": "НОВОВОЛИНСЬК АТП 10708",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -282,8 +282,8 @@
       "carrier": "Веснянка В.М. 45605 с.Боратин",
       "bus": "БОГДАН А0921",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -297,8 +297,8 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "ФОЛЬКСВАГЕН LT35",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -312,8 +312,8 @@
       "carrier": "Величко  М.П. 14",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
