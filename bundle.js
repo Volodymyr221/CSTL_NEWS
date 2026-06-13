@@ -396,8 +396,7 @@
   // src/tabs/community-modal.js
   var TYPE_TABS = [
     { id: "board", emoji: "\u{1F6D2}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" },
-    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" },
-    { id: "greeting", emoji: "\u{1F389}", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F" }
+    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" }
   ];
   var BOARD_CATEGORIES = [
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
@@ -405,19 +404,8 @@
     { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
-    { id: "\u043F\u043E\u0434\u044F\u043A\u0430", emoji: "\u2764\uFE0F", color: "white" },
     { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
     { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
-  ];
-  var GREETING_PRESETS = [
-    { emoji: "\u{1F382}", gradient: "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)", label: "\u0414\u0435\u043D\u044C \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F" },
-    { emoji: "\u{1F476}", gradient: "linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)", label: "\u041D\u043E\u0432\u043E\u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u0438\u0439" },
-    { emoji: "\u{1F48D}", gradient: "linear-gradient(135deg, #FFF9E6 0%, #FFECB3 100%)", label: "\u0412\u0435\u0441\u0456\u043B\u043B\u044F" },
-    { emoji: "\u{1F393}", gradient: "linear-gradient(135deg, #E1BEE7 0%, #BA68C8 100%)", label: "\u0412\u0438\u043F\u0443\u0441\u043A" },
-    { emoji: "\u2764\uFE0F", gradient: "linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)", label: "\u041F\u043E\u0434\u044F\u043A\u0430" },
-    { emoji: "\u{1F333}", gradient: "linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)", label: "\u041F\u0440\u0438\u0440\u043E\u0434\u0430" },
-    { emoji: "\u{1F389}", gradient: "linear-gradient(135deg, #FFE0B2 0%, #FFB74D 100%)", label: "\u0421\u0432\u044F\u0442\u043E" },
-    { emoji: "\u{1F54A}\uFE0F", gradient: "linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)", label: "\u041F\u0430\u043C\u02BC\u044F\u0442\u044C" }
   ];
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
@@ -473,10 +461,7 @@
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
       // CHAT
-      tagsRaw: "",
-      // GREETING
-      title: "",
-      greetingIdx: 0
+      tagsRaw: ""
     };
     const wrap = document.createElement("div");
     wrap.id = "cm-board-modal";
@@ -547,8 +532,6 @@
         return renderBoardFields();
       if (state.type === "chat")
         return renderChatFields();
-      if (state.type === "greeting")
-        return renderGreetingFields();
     }
     function renderBoardFields() {
       dynamicEl.innerHTML = `
@@ -627,48 +610,6 @@
         renderPreview();
       });
       bindPhotoSlots();
-    }
-    function renderGreetingFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label">\u041E\u0431\u043A\u043B\u0430\u0434\u0438\u043D\u043A\u0430</label>
-        <div class="bm-greet-presets" id="bm-greet-presets">
-          ${GREETING_PRESETS.map((g, i) => `
-            <button type="button" class="bm-greet-preset${i === state.greetingIdx ? " active" : ""}" data-idx="${i}" style="background:${g.gradient}" aria-label="${escapeHtml(g.label)}">
-              <span class="bm-greet-preset-emoji">${g.emoji}</span>
-            </button>
-          `).join("")}
-        </div>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-title">\u041A\u043E\u043C\u0443 <span class="bm-label-hint">(\u0456\u043C\u02BC\u044F, \u0440\u043E\u0434\u0438\u043D\u0430, \u0443\u0441\u0456\u0439 \u0433\u0440\u043E\u043C\u0430\u0434\u0456...)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="\u0421\u0435\u0440\u0433\u0456\u044E / \u0443\u0441\u0456\u043C \u043C\u0430\u0442\u0435\u0440\u044F\u043C / \u0440\u043E\u0434\u0438\u043D\u0456 \u0406\u0432\u0430\u043D\u0447\u0443\u043A\u0456\u0432" value="${escapeHtml(state.title)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0417 \u0414\u043D\u0435\u043C \u041D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F! \u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F, \u0449\u0430\u0441\u0442\u044F..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0412\u0456\u0434 \u043A\u043E\u0433\u043E <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0421\u0443\u0441\u0456\u0434\u0438 / \u041A\u043E\u043B\u0435\u043A\u0442\u0438\u0432 \u0448\u043A\u043E\u043B\u0438" value="${escapeHtml(state.author)}">
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
-        state.title = e.target.value;
-        renderPreview();
-      });
-      dynamicEl.querySelectorAll(".bm-greet-preset").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          dynamicEl.querySelectorAll(".bm-greet-preset").forEach((b) => b.classList.remove("active"));
-          btn.classList.add("active");
-          state.greetingIdx = parseInt(btn.dataset.idx, 10) || 0;
-          renderPreview();
-        });
-      });
     }
     function bindCommonFields() {
       dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
@@ -774,11 +715,9 @@
         renderBoardPreview();
       else if (state.type === "chat")
         renderChatPreview();
-      else if (state.type === "greeting")
-        renderGreetingPreview();
     }
     function renderBoardPreview() {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
       const contactHtml = contactTrim ? `
@@ -822,26 +761,6 @@
       </article>
     `;
     }
-    function renderGreetingPreview() {
-      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-      const author = state.author.trim();
-      const title = state.title.trim();
-      previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--greeting">
-        <div class="bd-greet-cover" style="background:${preset.gradient}">
-          <span class="bd-greet-emoji">${preset.emoji}</span>
-        </div>
-        <div class="bd-greet-body">
-          ${title ? `<div class="bd-greet-to">\u0414\u043B\u044F ${escapeHtml(title)}</div>` : ""}
-          <p class="bd-greet-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
-          <div class="bd-greet-footer">
-            <span class="bd-greet-author">\u2014 ${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="bd-greet-time">\u0449\u043E\u0439\u043D\u043E</span>
-          </div>
-        </div>
-      </article>
-    `;
-    }
     renderDynamic();
     renderPreview();
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
@@ -850,11 +769,6 @@
       if (!state.text.trim()) {
         showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
         wrap.querySelector("#bm-text")?.focus();
-        return;
-      }
-      if (state.type === "greeting" && !state.title.trim()) {
-        showToast("\u0412\u043A\u0430\u0436\u0456\u0442\u044C \u043A\u043E\u043C\u0443 \u0432\u0456\u0442\u0430\u043D\u043D\u044F", 2500);
-        wrap.querySelector("#bm-title")?.focus();
         return;
       }
       if (state.uploadingCount > 0 || state.photos.some((p) => p && p.startsWith("blob:"))) {
@@ -893,7 +807,7 @@
       status: "pending"
     };
     if (state.type === "board") {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[7];
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
       return {
         ...base,
         category: state.category,
@@ -909,17 +823,6 @@
         tags: parseTags(state.tagsRaw)
       };
     }
-    if (state.type === "greeting") {
-      const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-      return {
-        ...base,
-        category: null,
-        title: state.title.trim(),
-        cover_emoji: preset.emoji,
-        cover_gradient: preset.gradient,
-        tags: []
-      };
-    }
     return base;
   }
 
@@ -928,22 +831,30 @@
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var VIBER_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" fill-rule="evenodd" clip-rule="evenodd"><path d="M12 2C6.48 2 2 5.94 2 10.8c0 2.6 1.28 4.94 3.3 6.54v3.36c0 .42.48.66.82.4l2.55-1.96c1.04.28 2.16.46 3.33.46 5.52 0 10-3.94 10-8.8S17.52 2 12 2zM8.7 6.8c-.2-.16-.5-.13-.68.06l-.5.52c-.6.62-.62 1.55-.18 2.46.5 1.04 1.26 2.06 2.22 2.94.96.88 2.04 1.5 3.12 1.86.94.32 1.86.18 2.42-.46l.42-.48c.18-.2.16-.5-.04-.66l-1.5-1.2c-.2-.16-.48-.14-.66.04l-.46.48c-.56-.3-1.06-.68-1.5-1.1-.4-.44-.74-.92-1-1.46l.5-.5c.18-.18.2-.46.04-.66L8.7 6.8z"/></svg>';
+  var TELEGRAM_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor"><path d="M9.78 18.65l.28-4.23 7.68-6.92c.34-.31-.07-.46-.52-.19L7.74 13.3 3.64 12c-.88-.25-.89-.86.2-1.3l15.97-6.16c.73-.33 1.43.18 1.15 1.3l-2.72 12.81c-.19.91-.74 1.13-1.5.71L12.6 16.3l-1.99 1.93c-.23.23-.42.42-.83.42z"/></svg>';
   var TYPE_TABS2 = [
     { id: "board", label: "\u0414\u041E\u0428\u041A\u0410", emoji: "\u{1F6D2}" },
     { id: "saved", label: "\u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u0406", emoji: BOOKMARK_OUTLINE_SVG },
     { id: "chat", label: "\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", emoji: "\u{1F4AC}" }
   ];
   var BOARD_CATEGORIES2 = [
-    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726" },
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}" },
-    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}" },
-    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}" },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}" }
+    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726", match: null },
+    { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
+    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", match: ["\u0448\u0443\u043A\u0430\u044E"] },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}", match: ["\u043F\u043E\u0441\u043B\u0443\u0433\u0430"] },
+    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] },
+    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", match: ["\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"] }
   ];
-  var CATEGORY_EMOJI = Object.fromEntries(BOARD_CATEGORIES2.map((c) => [c.id, c.emoji]));
+  var CATEGORY_EMOJI = {
+    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
+    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
+    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
+    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
+    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
+    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
+    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
+  };
   var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
   var allPosts = [];
   var allAnnouncements = [];
@@ -1005,23 +916,50 @@
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
   }
+  function toE164(raw) {
+    const d = String(raw).replace(/[^\d+]/g, "");
+    if (d.startsWith("+"))
+      return d;
+    if (d.startsWith("380"))
+      return "+" + d;
+    if (d.startsWith("0"))
+      return "+38" + d;
+    return "+" + d;
+  }
+  function parseTelegram(s) {
+    const m = String(s).match(/(?:t\.me\/|@)([A-Za-z0-9_]{3,})/i);
+    return m ? m[1] : null;
+  }
   function renderContact(contact) {
     if (!contact)
       return "";
     const trimmed = String(contact).trim();
     const isPhone2 = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
-    if (!isPhone2) {
-      return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
+    if (isPhone2) {
+      const tel = trimmed.replace(/[^\d+]/g, "");
+      const e164 = toE164(trimmed);
+      return `
+      <div class="cm-board-contact cm-board-contact--phone">
+        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
+        <div class="cm-board-contact-btns">
+          <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
+          <a class="cm-board-call cm-board-call--viber" href="viber://chat?number=${encodeURIComponent(e164)}" aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0443 Viber">${VIBER_ICON_SVG}</a>
+        </div>
+      </div>
+    `;
     }
-    const tel = trimmed.replace(/[^\d+]/g, "");
-    return `
-    <div class="cm-board-contact cm-board-contact--phone">
-      <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-      <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0432\u0430\u0442\u0438 ${escapeHtml(trimmed)}">
-        ${PHONE_ICON_SVG}
-      </a>
-    </div>
-  `;
+    const tgUser = parseTelegram(trimmed);
+    if (tgUser) {
+      return `
+      <div class="cm-board-contact cm-board-contact--phone">
+        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
+        <div class="cm-board-contact-btns">
+          <a class="cm-board-call cm-board-call--tg" href="https://t.me/${escapeHtml(tgUser)}" target="_blank" rel="noopener" aria-label="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0443 Telegram">${TELEGRAM_ICON_SVG}</a>
+        </div>
+      </div>
+    `;
+    }
+    return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
   }
   function reactTriggerHtml(post) {
     const myReaction = getMyReaction(post.id);
@@ -1212,7 +1150,8 @@ ${post.text}
         return false;
       }
       if (activeType === "board" && activeCategory !== "all") {
-        if (p.category !== activeCategory)
+        const cat = BOARD_CATEGORIES2.find((c) => c.id === activeCategory);
+        if (!cat || !cat.match || !cat.match.includes(p.category))
           return false;
       }
       if (q) {
@@ -3233,8 +3172,7 @@ ${post.text}
   var BOARD_MINI_TYPES = [
     { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
-    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" },
-    { id: "greeting", label: "\u0412\u0456\u0442\u0430\u043D\u043D\u044F", emoji: "\u{1F389}" }
+    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" }
   ];
   var _boardMiniTypeIdx = 0;
   var _boardMiniData = { userPosts: [], official: [] };
@@ -3458,7 +3396,6 @@ ${post.text}
     "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
     "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
     "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
-    "\u043F\u043E\u0434\u044F\u043A\u0430": "\u2764\uFE0F",
     "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
     "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
   };
@@ -3516,11 +3453,8 @@ ${post.text}
         ts: p.ts || p.created_at && new Date(p.created_at).getTime(),
         category: p.category,
         text: p.text,
-        title: p.title,
         color: p.color,
         photo: Array.isArray(p.photos) && p.photos[0] || p.photo,
-        cover_emoji: p.cover_emoji,
-        cover_gradient: p.cover_gradient,
         author: p.author
       }));
     }
@@ -3630,21 +3564,6 @@ ${post.text}
         <div class="cm-mini-chat-body">
           <div class="cm-mini-chat-author">${escapeHtml(item.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</div>
           <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
-        </div>
-      </article>
-    `;
-    }
-    if (type === "greeting") {
-      const grad = item.cover_gradient || "linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)";
-      const emoji = item.cover_emoji || "\u{1F389}";
-      return `
-      <article class="cm-mini-greet">
-        <div class="cm-mini-greet-cover" style="background:${escapeHtml(grad)}">
-          <span class="cm-mini-greet-emoji">${emoji}</span>
-        </div>
-        <div class="cm-mini-greet-body">
-          ${item.title ? `<div class="cm-mini-greet-to">\u0414\u043B\u044F ${escapeHtml(item.title)}</div>` : ""}
-          <p class="cm-mini-greet-text">${escapeHtml(item.text)}</p>
         </div>
       </article>
     `;

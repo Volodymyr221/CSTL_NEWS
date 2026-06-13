@@ -1,11 +1,10 @@
 // src/tabs/community-modal.js
-// Bottom-sheet модалка «Додати на Дошку громади» — 3 типи постів (17.05.2026):
+// Bottom-sheet модалка «Додати на Дошку громади» — 2 типи постів:
 //
 //   🛒 Оголошення (board) — категорія + текст + фото + контакт + ім'я
 //   💬 Розмова (chat)     — текст + хештеги + фото + ім'я
-//   🎉 Вітання (greeting) — кому + текст + emoji-обкладинка + ім'я
 //
-// Submit-handler наразі заглушка (Фаза 9 Спринт 1 → Supabase POST у posts).
+// (Тип 🎉 Вітання і категорію ❤️ Подяка видалено 13.06.2026 — Фаза А Дошки.)
 
 import { showToast, escapeHtml } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
@@ -13,7 +12,6 @@ import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supab
 const TYPE_TABS = [
   { id: 'board',    emoji: '🛒', label: 'Оголошення' },
   { id: 'chat',     emoji: '💬', label: 'Розмова' },
-  { id: 'greeting', emoji: '🎉', label: 'Вітання' },
 ];
 
 const BOARD_CATEGORIES = [
@@ -22,20 +20,8 @@ const BOARD_CATEGORIES = [
   { id: 'шукаю',      emoji: '🔍', color: 'blue'   },
   { id: 'знайдено',   emoji: '🎁', color: 'yellow' },
   { id: 'загубилось', emoji: '😟', color: 'pink'   },
-  { id: 'подяка',     emoji: '❤️', color: 'white'  },
   { id: 'послуга',    emoji: '🔧', color: 'blue'   },
   { id: 'оголошення', emoji: '📢', color: 'pink'   },
-];
-
-const GREETING_PRESETS = [
-  { emoji: '🎂', gradient: 'linear-gradient(135deg, #FFD1DC 0%, #FFB6C1 100%)', label: 'День народження' },
-  { emoji: '👶', gradient: 'linear-gradient(135deg, #B5E2FA 0%, #87CEEB 100%)', label: 'Новонароджений' },
-  { emoji: '💍', gradient: 'linear-gradient(135deg, #FFF9E6 0%, #FFECB3 100%)', label: 'Весілля' },
-  { emoji: '🎓', gradient: 'linear-gradient(135deg, #E1BEE7 0%, #BA68C8 100%)', label: 'Випуск' },
-  { emoji: '❤️', gradient: 'linear-gradient(135deg, #FFB6C1 0%, #FF9494 100%)', label: 'Подяка' },
-  { emoji: '🌳', gradient: 'linear-gradient(135deg, #C5E1A5 0%, #8BC34A 100%)', label: 'Природа' },
-  { emoji: '🎉', gradient: 'linear-gradient(135deg, #FFE0B2 0%, #FFB74D 100%)', label: 'Свято' },
-  { emoji: '🕊️', gradient: 'linear-gradient(135deg, #E0E0E0 0%, #BDBDBD 100%)', label: 'Памʼять' },
 ];
 
 // Чи виглядає рядок як телефон
@@ -99,9 +85,6 @@ export function openBoardModal() {
     contact: '',
     // CHAT
     tagsRaw: '',
-    // GREETING
-    title: '',
-    greetingIdx: 0,
   };
 
   const wrap = document.createElement('div');
@@ -172,9 +155,8 @@ export function openBoardModal() {
   const dynamicEl = wrap.querySelector('#bm-dynamic');
 
   function renderDynamic() {
-    if (state.type === 'board')    return renderBoardFields();
-    if (state.type === 'chat')     return renderChatFields();
-    if (state.type === 'greeting') return renderGreetingFields();
+    if (state.type === 'board') return renderBoardFields();
+    if (state.type === 'chat')  return renderChatFields();
   }
 
   function renderBoardFields() {
@@ -258,51 +240,6 @@ export function openBoardModal() {
       renderPreview();
     });
     bindPhotoSlots();
-  }
-
-  function renderGreetingFields() {
-    dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label">Обкладинка</label>
-        <div class="bm-greet-presets" id="bm-greet-presets">
-          ${GREETING_PRESETS.map((g, i) => `
-            <button type="button" class="bm-greet-preset${i === state.greetingIdx ? ' active' : ''}" data-idx="${i}" style="background:${g.gradient}" aria-label="${escapeHtml(g.label)}">
-              <span class="bm-greet-preset-emoji">${g.emoji}</span>
-            </button>
-          `).join('')}
-        </div>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-title">Кому <span class="bm-label-hint">(імʼя, родина, усій громаді...)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="Сергію / усім матерям / родині Іванчуків" value="${escapeHtml(state.title)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">Текст вітання</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="З Днем Народження! Здоровʼя, щастя..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-author">Від кого <span class="bm-label-hint">(порожнє — анонімно)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="Сусіди / Колектив школи" value="${escapeHtml(state.author)}">
-      </div>
-    `;
-    bindCommonFields();
-    // Title
-    dynamicEl.querySelector('#bm-title')?.addEventListener('input', e => {
-      state.title = e.target.value;
-      renderPreview();
-    });
-    // Пресети обкладинки
-    dynamicEl.querySelectorAll('.bm-greet-preset').forEach(btn => {
-      btn.addEventListener('click', () => {
-        dynamicEl.querySelectorAll('.bm-greet-preset').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        state.greetingIdx = parseInt(btn.dataset.idx, 10) || 0;
-        renderPreview();
-      });
-    });
   }
 
   // Спільні поля: text + author
@@ -419,11 +356,11 @@ export function openBoardModal() {
   function renderPreview() {
     if (state.type === 'board') renderBoardPreview();
     else if (state.type === 'chat') renderChatPreview();
-    else if (state.type === 'greeting') renderGreetingPreview();
   }
 
   function renderBoardPreview() {
-    const cat = BOARD_CATEGORIES.find(c => c.id === state.category) || BOARD_CATEGORIES[7];
+    const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
+      || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
     const firstPhoto = state.photos.find(p => p);
     const contactTrim = state.contact.trim();
     const contactHtml = contactTrim ? `
@@ -469,27 +406,6 @@ export function openBoardModal() {
     `;
   }
 
-  function renderGreetingPreview() {
-    const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-    const author = state.author.trim();
-    const title = state.title.trim();
-    previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--greeting">
-        <div class="bd-greet-cover" style="background:${preset.gradient}">
-          <span class="bd-greet-emoji">${preset.emoji}</span>
-        </div>
-        <div class="bd-greet-body">
-          ${title ? `<div class="bd-greet-to">Для ${escapeHtml(title)}</div>` : ''}
-          <p class="bd-greet-text">${escapeHtml(state.text.trim() || 'Текст вітання зʼявиться тут…')}</p>
-          <div class="bd-greet-footer">
-            <span class="bd-greet-author">— ${escapeHtml(author || 'анонімно')}</span>
-            <span class="bd-greet-time">щойно</span>
-          </div>
-        </div>
-      </article>
-    `;
-  }
-
   // Початковий рендер
   renderDynamic();
   renderPreview();
@@ -501,11 +417,6 @@ export function openBoardModal() {
     if (!state.text.trim()) {
       showToast('Будь ласка, заповніть текст', 2500);
       wrap.querySelector('#bm-text')?.focus();
-      return;
-    }
-    if (state.type === 'greeting' && !state.title.trim()) {
-      showToast('Вкажіть кому вітання', 2500);
-      wrap.querySelector('#bm-title')?.focus();
       return;
     }
     // Захист: не пускаємо blob:URL у БД (фото ще не завантажилось у Storage).
@@ -554,7 +465,8 @@ function buildPayload(state) {
     status:   'pending',
   };
   if (state.type === 'board') {
-    const cat = BOARD_CATEGORIES.find(c => c.id === state.category) || BOARD_CATEGORIES[7];
+    const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
+      || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
     return {
       ...base,
       category: state.category,
@@ -568,17 +480,6 @@ function buildPayload(state) {
       ...base,
       category: null,
       tags:     parseTags(state.tagsRaw),
-    };
-  }
-  if (state.type === 'greeting') {
-    const preset = GREETING_PRESETS[state.greetingIdx] || GREETING_PRESETS[0];
-    return {
-      ...base,
-      category:       null,
-      title:          state.title.trim(),
-      cover_emoji:    preset.emoji,
-      cover_gradient: preset.gradient,
-      tags:           [],
     };
   }
   return base;
