@@ -1,11 +1,25 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-13 (гілка `claude/startup-uem-9tfuxg`)
+**Оновлено:** 2026-06-13 (гілка `claude/startup-uem-vf1bic`, сесія Роми)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
 
 ---
 
-## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (13.06.2026, гілка `claude/startup-uem-9tfuxg`) — Фаза А Дошки
+## ✅ ЗРОБЛЕНО У ЦІЙ СЕСІЇ (13.06.2026, гілка `claude/startup-uem-vf1bic`, Рома) — Робочий потік для ДВОХ власників
+
+> Контекст: над проектом працюють Вова **і Рома**, кожен зі свого Claude. Треба автоматично розрізняти хто на зв'язку, працювати на іменованій гілці, бачити в історії хто що робив, і попереджати про конфлікти рішень.
+
+- **Автовизначення людини** за поштою сесії (`userEmail`): `roma.haranin.ru1@gmail.com` → Рома; інша → Вова (метод виключення, без запитань).
+- **Підпис комітів:** `git config user.name/email` під людину на старті сесії → `git log` показує автора (раніше всі коміти були безликий `Claude <noreply@anthropic.com>`).
+- **Іменовані гілки:** `roma/<тема>` / `vova/<тема>` → `/finish` (PR → squash) → `main`.
+- **Перевірка конфліктів** на старті: `git fetch origin` + `git log --all` + кінець `SESSION_STATE`/`BACKLOG` → попередити якщо рішення власників суперечать.
+- **Куди вписано:** `NEW_SESSION_PROMPT.md` (Крок 0 + формат відповіді), `.claude/commands/startuem.md` (Крок 0), `CSTL NEWS VOVA/CLAUDE.md` (секція «Двоє власників»). Чисто документація (`.md`/`.claude`) → `CACHE_NAME` НЕ чіпали.
+- **Також:** оновлено таблицю «Поточний стан» (гілка `...vf1bic`, `CACHE_NAME` `cstl-20260613-1532`, статус Дошки).
+- 🔵 **Ця сесія** лишається на авто-гілці `claude/startup-uem-vf1bic` (вже стартувала). Іменовані `roma/`/`vova/` діятимуть з наступного `/startuem`.
+
+---
+
+## ✅ ЗРОБЛЕНО У ПОПЕРЕДНІЙ СЕСІЇ (13.06.2026, гілка `claude/startup-uem-9tfuxg`) — Фаза А Дошки
 
 **Крок 1 — видалено тип 🎉 Вітання (`greeting`) і категорію ❤️ Подяка ПОВНІСТЮ:**
 - `community-modal.js`: прибрано таб `greeting`, `GREETING_PRESETS`, `renderGreetingFields/Preview`, гілки greeting у `renderDynamic/renderPreview/buildPayload`, поля стану `title`+`greetingIdx`, перевірку greeting у submit. Прибрано `'подяка'` з `BOARD_CATEGORIES`. Fallback `BOARD_CATEGORIES[7]` → `.find(c => c.id === 'оголошення')` (2 місця).
