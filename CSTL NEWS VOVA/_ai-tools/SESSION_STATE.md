@@ -21,12 +21,11 @@
 - `getFilteredPosts`: фільтр через `cat.match.includes(p.category)` — один чіп групує дві конкретні.
 
 **Крок 3 — кнопки контакту (тільки іконки, `board.js` + `community.css`):**
-- `renderContact()`: номер → 📞 Подзвонити (`tel:`) + 🟣 Viber (`viber://chat?number=+380…`); `@username`/`t.me` → ✈️ Telegram (`https://t.me/<user>`); інший текст → просто текст.
-- Хелпери `toE164()` (нормалізація номера) + `parseTelegram()` (regex username).
-- Нові SVG-іконки `VIBER_ICON_SVG` + `TELEGRAM_ICON_SVG`. Кнопки мають клас `.cm-board-call` → наявні `stopPropagation`-обробники їх уже покривають (нове wiring не треба).
-- CSS: `.cm-board-contact-btns` (ряд кнопок) + `.cm-board-call--viber` (фіолетовий) + `.cm-board-call--tg` (блакитний).
+- `renderContact()`: номер → 📞 Подзвонити (`tel:`); `@username`/`t.me` → ✈️ Telegram (`https://t.me/<user>`); інший текст → просто текст.
+- Хелпер `parseTelegram()` (regex username). `TELEGRAM_ICON_SVG`. CSS `.cm-board-call--tg` (блакитний). Кнопки мають клас `.cm-board-call` → наявні `stopPropagation`-обробники їх покривають.
+- ⚠️ **Viber ПРИБРАНО (13.06, рішення Вови):** `viber://chat?number=…` до незнайомого номера ненадійно відкривається на iOS (Safari: «адреса недійсна») — обмеження схеми Viber, не баг коду. Лишили лише надійні Дзвінок + Telegram. Прибрано `VIBER_ICON_SVG`, `toE164()`, `.cm-board-call--viber`, `.cm-board-contact-btns`.
 
-**Крок 6 — фінал:** `CACHE_NAME` bump → `cstl-20260613-1123`. `node build.js` exit 0, `bundle.js` перезібрано.
+**Крок 6 — фінал:** `CACHE_NAME` bump → `cstl-20260613-1150`. `node build.js` exit 0, `bundle.js` перезібрано.
 
 **Статус Фази А:** ✅ код готовий на гілці `claude/startup-uem-9tfuxg`. НЕ змерджено в `main` — чекає перевірки Вови → `/finish`.
 **Далі:** Фаза А2 (Обговорення → повноекранна модалка-чат, спершу ASCII-макет).
