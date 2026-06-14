@@ -2306,7 +2306,7 @@
 .bd-chat-foot-arrow { font-size: 15px; color: var(--red); }
 /* Автор теми обговорення (хто створив) — великими буквами, чорний */
 .bd-chat-by { margin-top: 6px; font-size: 12px; color: #1C1C1E; text-transform: uppercase; }
-.bd-chat-by-label { font-weight: 700; color: #1C1C1E; }
+.bd-chat-by-label { font-weight: 700; color: var(--red); }
 /* Кнопка «зберегти» в підвалі картки — трохи компактніша */
 .bd-chat-foot .bd-bookmark { width: 30px; height: 30px; }
 
