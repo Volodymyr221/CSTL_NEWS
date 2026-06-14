@@ -1720,16 +1720,12 @@ function toggleRouteReminders(rid, date, from, to) {
   saveTrackedRoute();   // → подія → бейдж/модалка
 }
 
-// Бейдж-лічильник на іконці хедера (ховаємо коли нема збережених)
+// Іконка хедера: показуємо ЛИШЕ на вкладці Автобуси і коли є збережені рейси
 function updateSavedBadge() {
   const btn = document.getElementById('saved-routes-btn');
   if (!btn) return;
-  const n = getSavedCount();
-  // Іконка показується ЛИШЕ на вкладці Автобуси (і коли є збережені)
   const onBuses = document.querySelector('.app-main')?.dataset.tab === 'buses';
-  btn.hidden = n === 0 || !onBuses;
-  const cnt = document.getElementById('saved-routes-count');
-  if (cnt) cnt.textContent = n > 0 ? String(n) : '';
+  btn.hidden = getSavedCount() === 0 || !onBuses;
 }
 
 // ── Слайд-модалка «Збережені рейси» ──
