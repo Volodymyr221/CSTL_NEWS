@@ -6,7 +6,7 @@
 //
 // (Тип 🎉 Вітання і категорію ❤️ Подяка видалено 13.06.2026 — Фаза А Дошки.)
 
-import { showToast, escapeHtml } from '../core/utils.js';
+import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 
 const TYPE_TABS = [
@@ -454,6 +454,13 @@ export function openBoardModal() {
     e.preventDefault();
     if (!state.text.trim()) {
       showToast('Будь ласка, заповніть текст', 2500);
+      wrap.querySelector('#bm-text')?.focus();
+      return;
+    }
+    // Фільтр матюків/образ — у тексті, контакті, імені, тегах
+    if (containsProfanity(state.text) || containsProfanity(state.contact)
+        || containsProfanity(state.author) || containsProfanity(state.tagsRaw)) {
+      showToast('Будь ласка, приберіть образливі слова', 3000);
       wrap.querySelector('#bm-text')?.focus();
       return;
     }

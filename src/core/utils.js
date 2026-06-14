@@ -148,3 +148,57 @@ export function showToast(msg, duration = 3000) {
   toast.classList.add('visible');
   setTimeout(() => toast.classList.remove('visible'), duration);
 }
+
+// ── Фільтр матюків / образливих слів / спаму (клієнтський) ───────────────────
+// Бувабельний (до Фази Б — серверний тригер). Мета: відсікати очевидні образи
+// і флуд ще до публікації у чаті/постах. Списки легко доповнювати.
+
+// Мапа латинських гомогліфів → кирилиця (щоб «xyй» теж ловилось)
+const FILTER_HOMOGLYPHS = { a:'а', e:'е', o:'о', c:'с', x:'х', p:'р', y:'у', k:'к', i:'і', b:'б', m:'м', h:'н', t:'т' };
+
+// Нормалізація для перевірки: lowercase + гомогліфи + схлопування повторів літер
+function normalizeForFilter(text) {
+  return String(text || '')
+    .toLowerCase()
+    .replace(/[a-z]/g, ch => FILTER_HOMOGLYPHS[ch] || ch)
+    .replace(/(.)\1{2,}/g, '$1');   // «хуууй» → «хуй»
+}
+
+// Сильні стеми — блокуємо слово якщо воно ПОЧИНАЄТЬСЯ з них (безпечно для prefix-матчу)
+const PROFANITY_STEMS = [
+  'ху', 'пизд', 'пізд', 'бляд', 'блят', 'єбал', 'ебал', 'йоб', 'наєб', 'наеб',
+  'заєб', 'заеб', 'виєб', 'виеб', 'залуп', 'гандон', 'гондон', 'мудак',
+  'підар', 'пидор', 'педик', 'наху', 'похуй', 'дроч', 'манда', 'сцук', 'хуйл',
+];
+// Ризиковані короткі — лише ПОВНИМ словом (prefix дав би хибу: «сукня», «корабля»…)
+const PROFANITY_EXACT = new Set([
+  'бля', 'сука', 'суки', 'суку', 'сучка', 'хер', 'лох', 'дебіл', 'дебил', 'підор',
+]);
+// Ультра-безпечні стеми для «squashed» проходу (рознесене «х у й») — майже не трапляються всередині легальних слів
+const PROFANITY_SQUASH = ['хуй', 'хуйл', 'пизд', 'пізд', 'єбал', 'йоб'];
+
+// true якщо текст містить матюк/образу
+export function containsProfanity(text) {
+  const norm = normalizeForFilter(text);
+  // 1) по словах
+  const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
+  for (const w of words) {
+    if (PROFANITY_EXACT.has(w)) return true;
+    if (PROFANITY_STEMS.some(s => w.startsWith(s))) return true;
+  }
+  // 2) «squashed» — прибрати все крім літер, шукати ультра-безпечні стеми
+  const squashed = norm.replace(/[^а-яіїєґa-z]/g, '');
+  if (PROFANITY_SQUASH.some(s => squashed.includes(s))) return true;
+  return false;
+}
+
+// true якщо текст схожий на спам/беззмістовний набір (консервативно — щоб не блокувати «Ок»/«Так»)
+export function looksLikeSpam(text) {
+  const t = String(text || '').trim();
+  if (t.length === 1) return true;                       // одна літера
+  if (/(.)\1{5,}/.test(t)) return true;                  // символ повторено ≥6 разів
+  const letters = t.replace(/[^а-яіїєґa-zА-ЯІЇЄҐA-Z]/g, '');
+  if (letters.length >= 12 && !/[аеиіоуяюєїёauoiey]/i.test(letters)) return true; // довге без голосних = клавіатурний набір
+  return false;
+}
+

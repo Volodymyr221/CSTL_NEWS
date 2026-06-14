@@ -163,6 +163,77 @@
     toast.classList.add("visible");
     setTimeout(() => toast.classList.remove("visible"), duration);
   }
+  var FILTER_HOMOGLYPHS = { a: "\u0430", e: "\u0435", o: "\u043E", c: "\u0441", x: "\u0445", p: "\u0440", y: "\u0443", k: "\u043A", i: "\u0456", b: "\u0431", m: "\u043C", h: "\u043D", t: "\u0442" };
+  function normalizeForFilter(text) {
+    return String(text || "").toLowerCase().replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
+  }
+  var PROFANITY_STEMS = [
+    "\u0445\u0443",
+    "\u043F\u0438\u0437\u0434",
+    "\u043F\u0456\u0437\u0434",
+    "\u0431\u043B\u044F\u0434",
+    "\u0431\u043B\u044F\u0442",
+    "\u0454\u0431\u0430\u043B",
+    "\u0435\u0431\u0430\u043B",
+    "\u0439\u043E\u0431",
+    "\u043D\u0430\u0454\u0431",
+    "\u043D\u0430\u0435\u0431",
+    "\u0437\u0430\u0454\u0431",
+    "\u0437\u0430\u0435\u0431",
+    "\u0432\u0438\u0454\u0431",
+    "\u0432\u0438\u0435\u0431",
+    "\u0437\u0430\u043B\u0443\u043F",
+    "\u0433\u0430\u043D\u0434\u043E\u043D",
+    "\u0433\u043E\u043D\u0434\u043E\u043D",
+    "\u043C\u0443\u0434\u0430\u043A",
+    "\u043F\u0456\u0434\u0430\u0440",
+    "\u043F\u0438\u0434\u043E\u0440",
+    "\u043F\u0435\u0434\u0438\u043A",
+    "\u043D\u0430\u0445\u0443",
+    "\u043F\u043E\u0445\u0443\u0439",
+    "\u0434\u0440\u043E\u0447",
+    "\u043C\u0430\u043D\u0434\u0430",
+    "\u0441\u0446\u0443\u043A",
+    "\u0445\u0443\u0439\u043B"
+  ];
+  var PROFANITY_EXACT = /* @__PURE__ */ new Set([
+    "\u0431\u043B\u044F",
+    "\u0441\u0443\u043A\u0430",
+    "\u0441\u0443\u043A\u0438",
+    "\u0441\u0443\u043A\u0443",
+    "\u0441\u0443\u0447\u043A\u0430",
+    "\u0445\u0435\u0440",
+    "\u043B\u043E\u0445",
+    "\u0434\u0435\u0431\u0456\u043B",
+    "\u0434\u0435\u0431\u0438\u043B",
+    "\u043F\u0456\u0434\u043E\u0440"
+  ]);
+  var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0439\u043E\u0431"];
+  function containsProfanity(text) {
+    const norm = normalizeForFilter(text);
+    const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
+    for (const w of words) {
+      if (PROFANITY_EXACT.has(w))
+        return true;
+      if (PROFANITY_STEMS.some((s) => w.startsWith(s)))
+        return true;
+    }
+    const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
+    if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
+      return true;
+    return false;
+  }
+  function looksLikeSpam(text) {
+    const t = String(text || "").trim();
+    if (t.length === 1)
+      return true;
+    if (/(.)\1{5,}/.test(t))
+      return true;
+    const letters = t.replace(/[^а-яіїєґa-zА-ЯІЇЄҐA-Z]/g, "");
+    if (letters.length >= 12 && !/[аеиіоуяюєїёauoiey]/i.test(letters))
+      return true;
+    return false;
+  }
 
   // src/core/weather.js
   function codeToIcon(code) {
@@ -812,6 +883,11 @@
         wrap.querySelector("#bm-text")?.focus();
         return;
       }
+      if (containsProfanity(state.text) || containsProfanity(state.contact) || containsProfanity(state.author) || containsProfanity(state.tagsRaw)) {
+        showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u043F\u0440\u0438\u0431\u0435\u0440\u0456\u0442\u044C \u043E\u0431\u0440\u0430\u0437\u043B\u0438\u0432\u0456 \u0441\u043B\u043E\u0432\u0430", 3e3);
+        wrap.querySelector("#bm-text")?.focus();
+        return;
+      }
       if (state.uploadingCount > 0 || state.photos.some((p) => p && p.startsWith("blob:"))) {
         showToast("\u0417\u0430\u0447\u0435\u043A\u0430\u0439, \u0444\u043E\u0442\u043E \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u0454\u0442\u044C\u0441\u044F\u2026", 2500);
         return;
@@ -968,6 +1044,24 @@
     if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
       return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+  }
+  var LS_MSG_RATE = "cstl-msg-rate-v1";
+  var FLOOD_MAX = 5;
+  var FLOOD_WINDOW = 15e3;
+  function isDuplicateMsg(text) {
+    return lsGet(LS_MSG_RATE, {}).last === text;
+  }
+  function isFlooding() {
+    const now = Date.now();
+    const times = (lsGet(LS_MSG_RATE, {}).times || []).filter((t) => now - t < FLOOD_WINDOW);
+    return times.length >= FLOOD_MAX;
+  }
+  function recordSentMsg(text) {
+    const now = Date.now();
+    const st = lsGet(LS_MSG_RATE, {});
+    const times = (st.times || []).filter((t) => now - t < FLOOD_WINDOW);
+    times.push(now);
+    lsSet(LS_MSG_RATE, { last: text, times });
   }
   function msgWord(n) {
     const mod10 = n % 10, mod100 = n % 100;
@@ -1723,6 +1817,23 @@ ${post.text}
         input?.focus();
         return;
       }
+      if (containsProfanity(text)) {
+        showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0431\u0435\u0437 \u043E\u0431\u0440\u0430\u0437\u043B\u0438\u0432\u0438\u0445 \u0441\u043B\u0456\u0432");
+        return;
+      }
+      if (looksLikeSpam(text)) {
+        showToast("\u0426\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0441\u043F\u0430\u043C");
+        return;
+      }
+      if (isDuplicateMsg(text)) {
+        showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438");
+        return;
+      }
+      if (isFlooding()) {
+        showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434");
+        return;
+      }
+      recordSentMsg(text);
       const tempComment = {
         id: "temp-" + Date.now(),
         post_id: postId,
