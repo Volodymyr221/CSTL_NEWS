@@ -467,6 +467,8 @@ function openChatModal(post) {
   modal.querySelector('.bd-chat-newpill')?.addEventListener('click', () => {
     scrollChatToBottom(); _chatUnseen = 0; hideChatPill();
   });
+  // Кнопка надсилання не має забирати фокус з поля (інакше iOS ховає клавіатуру)
+  modal.querySelector('.bd-chat-modal-send')?.addEventListener('pointerdown', e => e.preventDefault());
 
   // Клавіатура на iOS PWA шле зливу подій під час анімації — щоб модалка НЕ
   // смикалась, збираємо їх через debounce (один виклик після паузи) → одна
@@ -1062,6 +1064,7 @@ function attachBoardDelegation() {
     addMyCommentId(tempComment.id);
     if (input) input.value = '';
     rerenderCommentsBlock(postId);
+    input?.focus();   // лишаємо фокус → клавіатура не ховається після надсилання
 
     // POST у Supabase
     if (isSupabaseReady()) {
