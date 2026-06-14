@@ -460,7 +460,7 @@ export function openBoardModal() {
     // Фільтр матюків/образ — у тексті, контакті, імені, тегах
     if (containsProfanity(state.text) || containsProfanity(state.contact)
         || containsProfanity(state.author) || containsProfanity(state.tagsRaw)) {
-      showToast('Будь ласка, приберіть образливі слова', 3000);
+      showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error');
       wrap.querySelector('#bm-text')?.focus();
       return;
     }

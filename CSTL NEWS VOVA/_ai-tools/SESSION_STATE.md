@@ -20,6 +20,10 @@
   У submit коментаря 4 перевірки з тостами ДО optimistic-додавання (`recordSentMsg` після проходження).
 - `src/tabs/community-modal.js` — `containsProfanity` на text/contact/author/tagsRaw у submit поста.
 - `CACHE_NAME` → `cstl-20260614-0738`. `node build.js` exit 0.
+- **Виразне сповіщення при блоці (гілка `vova/filter-notice`):** `showToast(msg, dur, 'error')` —
+  червоний тост (`.toast--error`, фон `var(--red)`, перенос рядків). **Гол. фікс:** тост мав
+  `z-index:999` < чат-модалки (1100) → був НЕВИДИМИЙ у чаті; підняв `.toast` до `z-index:2000`.
+  Текст блоку: «🚫 Повідомлення містить заборонені слова і не надіслане». `CACHE_NAME` → `cstl-20260614-0759`.
 - ⚠️ **Обмеження:** фільтр клієнтський (бувабельний). Справжній захист — серверний тригер на `comments`
   у Supabase, додамо разом з Фазою Б (логін). Наявні старі образи прибираються через `/admin.html`.
 

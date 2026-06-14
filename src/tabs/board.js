@@ -1042,10 +1042,10 @@ function attachBoardDelegation() {
     if (!text) { input?.focus(); return; }
 
     // Фільтр матюків / спаму / флуду — блокуємо ДО відправки
-    if (containsProfanity(text)) { showToast('Будь ласка, без образливих слів'); return; }
-    if (looksLikeSpam(text))     { showToast('Це повідомлення схоже на спам'); return; }
-    if (isDuplicateMsg(text))    { showToast('Ви щойно це написали'); return; }
-    if (isFlooding())            { showToast('Занадто швидко — зачекайте кілька секунд'); return; }
+    if (containsProfanity(text)) { showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error'); return; }
+    if (looksLikeSpam(text))     { showToast('🚫 Повідомлення схоже на спам і не надіслане', 4000, 'error'); return; }
+    if (isDuplicateMsg(text))    { showToast('Ви щойно це написали', 3000); return; }
+    if (isFlooding())            { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
     recordSentMsg(text);
 
     // Optimistic: миттєво у DOM
