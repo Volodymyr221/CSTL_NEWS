@@ -1723,19 +1723,24 @@
 
 /* ═══ ЗБЕРЕЖЕНІ РЕЙСИ: іконка хедера + слайд-модалка ═══════════════════════ */
 
-/* Іконка в хедері (біля погоди) */
+/* Іконка-кнопка в хедері (біля погоди) — червона кнопка, біла закладка + цифра */
 .saved-routes-btn {
-  position: relative;
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  background: none;
+  gap: 3px;
+  background: var(--red, #722F37);
   border: none;
-  padding: 4px;
-  margin-right: 4px;
-  color: var(--red, #722F37);
+  border-radius: 13px;
+  padding: 4px 8px 4px 6px;
+  color: #fff;
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+}
+.saved-routes-count {
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1;
 }
 /* Слайд-модалка зверху вниз */
 .sr-modal {
