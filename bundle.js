@@ -2543,6 +2543,8 @@ ${post.text}
   }
   function checkSingleTracked(tracked, forceInitial) {
     const today = getTodayISO();
+    if (tracked.notify === false)
+      return;
     if (tracked.trackDate > today) {
       if (!tracked.notifiedFuture) {
         tracked.notifiedFuture = true;
@@ -3403,12 +3405,25 @@ ${post.text}
           }
           checkTrackNotifications(false);
         } else {
+          const route = (getDayData().routes || []).find((r) => r.id === rid);
+          const segFrom = fromStop || null;
+          const segTo = toStop || null;
+          const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
+          const arrTime = route ? getStopHHMM(route, getEffectiveTo(route)) : null;
+          const [rA, rB] = parseRouteEndpoints(route?.name || "");
+          const title = segFrom && segTo ? `${segFrom} \u2192 ${segTo}` : `${rA} \u2192 ${rB}`;
           const existing = trackedRoutes.find((t) => t.routeId === rid && t.trackDate === busDay);
           trackedRoutes.push({
             routeId: rid,
             trackDate: busDay,
-            boardingStop: fromStop || null,
-            alightingStop: toStop || null,
+            boardingStop: segFrom,
+            alightingStop: segTo,
+            notify: true,
+            // нагадування авто-увімкнені при збереженні
+            title,
+            // денормалізовано для модалки «Збережені»
+            depTime: depTime || "",
+            arrTime: arrTime || "",
             notifiedDep: existing ? existing.notifiedDep : false,
             notifiedWarning: existing ? existing.notifiedWarning : false,
             notifiedCanc: false,
@@ -3416,9 +3431,7 @@ ${post.text}
             notifiedFuture: false
           });
           saveTrackedRoute();
-          const route = (getDayData().routes || []).find((r) => r.id === rid);
-          const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
-          subscribeToPush(rid, route?.name || "", fromStop || null, toStop || null, busDay, depTime);
+          subscribeToPush(rid, route?.name || "", segFrom, segTo, busDay, depTime);
           checkTrackNotifications(true);
         }
         renderSmartRow();
@@ -3605,6 +3618,177 @@ ${post.text}
     if (!busData?.source)
       return "";
     return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
+  }
+  var SR_BOOKMARK_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  var SR_BELL_ON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+  var SR_BELL_OFF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+  function savedRouteDayLabel(trackDate) {
+    const today = getTodayISO();
+    if (trackDate === today)
+      return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    const [y, m, d] = today.split("-").map(Number);
+    const tm = new Date(y, m - 1, d + 1);
+    const tomorrow = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, "0")}-${String(tm.getDate()).padStart(2, "0")}`;
+    if (trackDate === tomorrow)
+      return "\u0437\u0430\u0432\u0442\u0440\u0430";
+    const [, mm, dd] = trackDate.split("-");
+    return `${dd}.${mm}`;
+  }
+  function getSavedRoutesForUI() {
+    return [...trackedRoutes].sort((a, b) => (a.trackDate + (a.depTime || "")).localeCompare(b.trackDate + (b.depTime || ""))).map((t) => ({
+      routeId: t.routeId,
+      trackDate: t.trackDate,
+      from: t.boardingStop || null,
+      to: t.alightingStop || null,
+      title: t.title || `${t.boardingStop || "?"} \u2192 ${t.alightingStop || "?"}`,
+      timeStr: t.depTime && t.arrTime ? `${t.depTime} \u2192 ${t.arrTime}` : t.depTime || "",
+      dayLabel: savedRouteDayLabel(t.trackDate),
+      notify: t.notify !== false
+    }));
+  }
+  function getSavedCount() {
+    return trackedRoutes.length;
+  }
+  function unsaveRoute(rid, date, from, to) {
+    const entry = findTrackedEntry(rid, from || null, to || null, date);
+    if (!entry)
+      return;
+    unsubscribeFromPush(entry.routeId, entry.trackDate);
+    removeTrackedEntry(entry);
+    checkTrackNotifications(false);
+    renderSmartRow();
+  }
+  function toggleRouteReminders(rid, date, from, to) {
+    const entry = findTrackedEntry(rid, from || null, to || null, date);
+    if (!entry)
+      return;
+    entry.notify = entry.notify === false;
+    if (entry.notify) {
+      subscribeToPush(rid, entry.title || "", from || null, to || null, date, entry.depTime || null);
+    } else {
+      unsubscribeFromPush(rid, date);
+    }
+    saveTrackedRoute();
+  }
+  function updateSavedBadge() {
+    const btn = document.getElementById("saved-routes-btn");
+    if (!btn)
+      return;
+    const n = getSavedCount();
+    btn.hidden = n === 0;
+    const cnt = document.getElementById("saved-routes-count");
+    if (cnt)
+      cnt.textContent = n > 0 ? String(n) : "";
+  }
+  var _srModalEl = null;
+  function srRowHtml(r) {
+    const bellSvg = r.notify ? SR_BELL_ON_SVG : SR_BELL_OFF_SVG;
+    const bellCls = r.notify ? "sr-bell sr-bell--on" : "sr-bell sr-bell--off";
+    const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || "")}" data-to="${escapeHtml(r.to || "")}"`;
+    return `
+    <div class="sr-row">
+      <div class="sr-row-info">
+        <div class="sr-row-title">${escapeHtml(r.title)}</div>
+        <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? " \xB7 " + r.dayLabel : ""}</div>
+      </div>
+      <button class="${bellCls}" type="button" ${data} aria-label="\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F">${bellSvg}</button>
+      <button class="sr-unsave" type="button" ${data} aria-label="\u0417\u043D\u044F\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F">${SR_BOOKMARK_SVG}</button>
+    </div>`;
+  }
+  function renderSavedRows() {
+    const list = _srModalEl?.querySelector(".sr-list");
+    if (!list)
+      return;
+    const rows = getSavedRoutesForUI();
+    list.innerHTML = rows.length ? rows.map(srRowHtml).join("") : '<div class="sr-empty">\u041D\u0435\u043C\u0430\u0454 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0440\u0435\u0439\u0441\u0456\u0432</div>';
+  }
+  function closeSavedModal() {
+    if (!_srModalEl)
+      return;
+    const m = _srModalEl;
+    _srModalEl = null;
+    m.classList.remove("open");
+    document.body.classList.remove("modal-open");
+    setTimeout(() => m.remove(), 240);
+  }
+  function openSavedModal() {
+    if (_srModalEl)
+      return;
+    const wrap = document.createElement("div");
+    wrap.className = "sr-modal";
+    wrap.innerHTML = `
+    <div class="sr-backdrop"></div>
+    <div class="sr-panel" role="dialog" aria-modal="true">
+      <div class="sr-head">
+        <span class="sr-title">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0440\u0435\u0439\u0441\u0438</span>
+        <button class="sr-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      </div>
+      <div class="sr-list"></div>
+      <div class="sr-handle"></div>
+    </div>`;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    _srModalEl = wrap;
+    renderSavedRows();
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    wrap.querySelector(".sr-backdrop").addEventListener("click", closeSavedModal);
+    wrap.querySelector(".sr-close").addEventListener("click", closeSavedModal);
+    wrap.querySelector(".sr-list").addEventListener("click", (e) => {
+      const bell = e.target.closest(".sr-bell");
+      const uns = e.target.closest(".sr-unsave");
+      const t = bell || uns;
+      if (!t)
+        return;
+      const { rid, date, from, to } = t.dataset;
+      if (bell)
+        toggleRouteReminders(rid, date, from || null, to || null);
+      else
+        unsaveRoute(rid, date, from || null, to || null);
+      renderSavedRows();
+    });
+    const panel = wrap.querySelector(".sr-panel");
+    let sy = 0, drag = false, dd = 0;
+    panel.addEventListener("touchstart", (e) => {
+      sy = e.touches[0].clientY;
+      drag = true;
+      dd = 0;
+      panel.style.transition = "none";
+    }, { passive: true });
+    panel.addEventListener("touchmove", (e) => {
+      if (!drag)
+        return;
+      dd = e.touches[0].clientY - sy;
+      if (dd >= 0) {
+        panel.style.transform = "translateY(0)";
+        return;
+      }
+      panel.style.transform = `translateY(${dd}px)`;
+    }, { passive: true });
+    panel.addEventListener("touchend", () => {
+      if (!drag)
+        return;
+      drag = false;
+      panel.style.transition = "";
+      if (dd < -70)
+        closeSavedModal();
+      else
+        panel.style.transform = "";
+      dd = 0;
+    }, { passive: true });
+  }
+  function initSavedRoutesHeader() {
+    loadTrackedRoute();
+    const btn = document.getElementById("saved-routes-btn");
+    if (btn && !btn.dataset.wired) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", openSavedModal);
+    }
+    updateSavedBadge();
+    window.addEventListener("cstl-bus-track-changed", () => {
+      updateSavedBadge();
+      if (_srModalEl)
+        renderSavedRows();
+    });
   }
   async function initBuses() {
     const el = document.getElementById("buses-content");
@@ -5650,6 +5834,7 @@ END:VEVENT`
     initNews();
     initEvents();
     initBuses();
+    initSavedRoutesHeader();
     initPower();
     initBoard();
     initAdminShortcut();

@@ -339,6 +339,10 @@ function checkTrackNotifications(forceInitial = false) {
 function checkSingleTracked(tracked, forceInitial) {
   const today = getTodayISO();
 
+  // Нагадування вимкнені для цього рейсу (дзвіночок off) — жодних банерів/сповіщень,
+  // але рейс лишається збереженим і піднімається у hero.
+  if (tracked.notify === false) return;
+
   // Майбутній день — банер один раз при додаванні
   if (tracked.trackDate > today) {
     if (!tracked.notifiedFuture) {
@@ -1403,13 +1407,26 @@ function renderRouteList() {
         }
         checkTrackNotifications(false);
       } else {
+        // Дані рейсу денормалізуємо у запис → модалка «Збережені» малюється будь-де
+        // (на будь-якій вкладці), без доступу до даних розкладу.
+        const route   = (getDayData().routes || []).find(r => r.id === rid);
+        const segFrom = fromStop || null;
+        const segTo   = toStop   || null;
+        const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
+        const arrTime = route ? getStopHHMM(route, getEffectiveTo(route))   : null;
+        const [rA, rB] = parseRouteEndpoints(route?.name || '');
+        const title   = (segFrom && segTo) ? `${segFrom} → ${segTo}` : `${rA} → ${rB}`;
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);
         trackedRoutes.push({
           routeId:         rid,
           trackDate:       busDay,
-          boardingStop:    fromStop || null,
-          alightingStop:   toStop   || null,
+          boardingStop:    segFrom,
+          alightingStop:   segTo,
+          notify:          true,        // нагадування авто-увімкнені при збереженні
+          title,                        // денормалізовано для модалки «Збережені»
+          depTime:         depTime || '',
+          arrTime:         arrTime || '',
           notifiedDep:     existing ? existing.notifiedDep     : false,
           notifiedWarning: existing ? existing.notifiedWarning : false,
           notifiedCanc:    false,
@@ -1418,9 +1435,7 @@ function renderRouteList() {
         });
         saveTrackedRoute();
         // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
-        const route   = (getDayData().routes || []).find(r => r.id === rid);
-        const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
-        subscribeToPush(rid, route?.name || '', fromStop || null, toStop || null, busDay, depTime);
+        subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime);
         checkTrackNotifications(true);
       }
       renderSmartRow();
@@ -1642,6 +1657,184 @@ function buildSourceHtml() {
   if (!busData?.source) return '';
   return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
 }
+// ════════════════════════════════════════════════════════════════════════════
+// ЗБЕРЕЖЕНІ РЕЙСИ — глобальна іконка в хедері + слайд-модалка керування.
+// Збереження = відстеження (trackedRoutes). Дзвіночок (notify) роздільний:
+// можна лишити рейс збереженим, але вимкнути нагадування.
+// ════════════════════════════════════════════════════════════════════════════
+
+const SR_BOOKMARK_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+const SR_BELL_ON_SVG  = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
+const SR_BELL_OFF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
+
+// Підпис дня (сьогодні / завтра / DD.MM) — локальні компоненти, без зсуву UTC
+function savedRouteDayLabel(trackDate) {
+  const today = getTodayISO();
+  if (trackDate === today) return 'сьогодні';
+  const [y, m, d] = today.split('-').map(Number);
+  const tm = new Date(y, m - 1, d + 1);
+  const tomorrow = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, '0')}-${String(tm.getDate()).padStart(2, '0')}`;
+  if (trackDate === tomorrow) return 'завтра';
+  const [, mm, dd] = trackDate.split('-');
+  return `${dd}.${mm}`;
+}
+
+// Збережені рейси для UI (відсортовані за датою+часом)
+function getSavedRoutesForUI() {
+  return [...trackedRoutes]
+    .sort((a, b) => (a.trackDate + (a.depTime || '')).localeCompare(b.trackDate + (b.depTime || '')))
+    .map(t => ({
+      routeId:   t.routeId,
+      trackDate: t.trackDate,
+      from:      t.boardingStop  || null,
+      to:        t.alightingStop || null,
+      title:     t.title || `${t.boardingStop || '?'} → ${t.alightingStop || '?'}`,
+      timeStr:   (t.depTime && t.arrTime) ? `${t.depTime} → ${t.arrTime}` : (t.depTime || ''),
+      dayLabel:  savedRouteDayLabel(t.trackDate),
+      notify:    t.notify !== false,
+    }));
+}
+
+function getSavedCount() { return trackedRoutes.length; }
+
+// Зняти збереження рейсу (зникає зі списку, відстеження стоп)
+function unsaveRoute(rid, date, from, to) {
+  const entry = findTrackedEntry(rid, from || null, to || null, date);
+  if (!entry) return;
+  unsubscribeFromPush(entry.routeId, entry.trackDate);
+  removeTrackedEntry(entry);   // → saveTrackedRoute → подія → бейдж/модалка оновляться
+  checkTrackNotifications(false);
+  renderSmartRow();
+}
+
+// Перемкнути нагадування рейсу (дзвіночок). Рейс лишається збереженим.
+function toggleRouteReminders(rid, date, from, to) {
+  const entry = findTrackedEntry(rid, from || null, to || null, date);
+  if (!entry) return;
+  entry.notify = entry.notify === false;   // off→on / on→off
+  if (entry.notify) {
+    subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+  } else {
+    unsubscribeFromPush(rid, date);
+  }
+  saveTrackedRoute();   // → подія → бейдж/модалка
+}
+
+// Бейдж-лічильник на іконці хедера (ховаємо коли нема збережених)
+function updateSavedBadge() {
+  const btn = document.getElementById('saved-routes-btn');
+  if (!btn) return;
+  const n = getSavedCount();
+  btn.hidden = n === 0;
+  const cnt = document.getElementById('saved-routes-count');
+  if (cnt) cnt.textContent = n > 0 ? String(n) : '';
+}
+
+// ── Слайд-модалка «Збережені рейси» ──
+let _srModalEl = null;
+
+function srRowHtml(r) {
+  const bellSvg = r.notify ? SR_BELL_ON_SVG : SR_BELL_OFF_SVG;
+  const bellCls = r.notify ? 'sr-bell sr-bell--on' : 'sr-bell sr-bell--off';
+  const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || '')}" data-to="${escapeHtml(r.to || '')}"`;
+  return `
+    <div class="sr-row">
+      <div class="sr-row-info">
+        <div class="sr-row-title">${escapeHtml(r.title)}</div>
+        <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? ' · ' + r.dayLabel : ''}</div>
+      </div>
+      <button class="${bellCls}" type="button" ${data} aria-label="Нагадування">${bellSvg}</button>
+      <button class="sr-unsave" type="button" ${data} aria-label="Зняти збереження">${SR_BOOKMARK_SVG}</button>
+    </div>`;
+}
+
+function renderSavedRows() {
+  const list = _srModalEl?.querySelector('.sr-list');
+  if (!list) return;
+  const rows = getSavedRoutesForUI();
+  list.innerHTML = rows.length
+    ? rows.map(srRowHtml).join('')
+    : '<div class="sr-empty">Немає збережених рейсів</div>';
+}
+
+function closeSavedModal() {
+  if (!_srModalEl) return;
+  const m = _srModalEl;
+  _srModalEl = null;
+  m.classList.remove('open');
+  document.body.classList.remove('modal-open');
+  setTimeout(() => m.remove(), 240);
+}
+
+function openSavedModal() {
+  if (_srModalEl) return;
+  const wrap = document.createElement('div');
+  wrap.className = 'sr-modal';
+  wrap.innerHTML = `
+    <div class="sr-backdrop"></div>
+    <div class="sr-panel" role="dialog" aria-modal="true">
+      <div class="sr-head">
+        <span class="sr-title">Збережені рейси</span>
+        <button class="sr-close" type="button" aria-label="Закрити">✕</button>
+      </div>
+      <div class="sr-list"></div>
+      <div class="sr-handle"></div>
+    </div>`;
+  document.body.appendChild(wrap);
+  document.body.classList.add('modal-open');
+  _srModalEl = wrap;
+  renderSavedRows();
+  requestAnimationFrame(() => wrap.classList.add('open'));
+
+  wrap.querySelector('.sr-backdrop').addEventListener('click', closeSavedModal);
+  wrap.querySelector('.sr-close').addEventListener('click', closeSavedModal);
+
+  // Делегований клік: дзвіночок (нагадування) / закладка (зняти)
+  wrap.querySelector('.sr-list').addEventListener('click', e => {
+    const bell = e.target.closest('.sr-bell');
+    const uns  = e.target.closest('.sr-unsave');
+    const t = bell || uns;
+    if (!t) return;
+    const { rid, date, from, to } = t.dataset;
+    if (bell) toggleRouteReminders(rid, date, from || null, to || null);
+    else      unsaveRoute(rid, date, from || null, to || null);
+    renderSavedRows();   // бейдж оновиться через подію cstl-bus-track-changed
+  });
+
+  // Свайп вгору по панелі → закрити (модалка спускається зверху)
+  const panel = wrap.querySelector('.sr-panel');
+  let sy = 0, drag = false, dd = 0;
+  panel.addEventListener('touchstart', e => { sy = e.touches[0].clientY; drag = true; dd = 0; panel.style.transition = 'none'; }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (!drag) return;
+    dd = e.touches[0].clientY - sy;
+    if (dd >= 0) { panel.style.transform = 'translateY(0)'; return; }   // вниз — ігнор
+    panel.style.transform = `translateY(${dd}px)`;
+  }, { passive: true });
+  panel.addEventListener('touchend', () => {
+    if (!drag) return; drag = false;
+    panel.style.transition = '';
+    if (dd < -70) closeSavedModal();
+    else panel.style.transform = '';
+    dd = 0;
+  }, { passive: true });
+}
+
+// Ініціалізація глобальної іконки хедера (викликається з app.js при старті)
+export function initSavedRoutesHeader() {
+  loadTrackedRoute();
+  const btn = document.getElementById('saved-routes-btn');
+  if (btn && !btn.dataset.wired) {
+    btn.dataset.wired = '1';
+    btn.addEventListener('click', openSavedModal);
+  }
+  updateSavedBadge();
+  window.addEventListener('cstl-bus-track-changed', () => {
+    updateSavedBadge();
+    if (_srModalEl) renderSavedRows();
+  });
+}
+
 export async function initBuses() {
   const el = document.getElementById('buses-content');
   if (!el) return;

@@ -3,7 +3,7 @@ import { initWeather } from './core/weather.js';
 import { initCommunity } from './tabs/community.js';
 import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
-import { initBuses } from './tabs/buses.js';
+import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard } from './tabs/board.js';
 
@@ -167,6 +167,7 @@ function init() {
   initNews();
   initEvents();
   initBuses();
+  initSavedRoutesHeader();   // глобальна іконка «Збережені рейси» в хедері
   initPower();
   initBoard();
   initAdminShortcut();
