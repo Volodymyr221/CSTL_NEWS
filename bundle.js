@@ -3675,7 +3675,8 @@ ${post.text}
     if (!btn)
       return;
     const n = getSavedCount();
-    btn.hidden = n === 0;
+    const onBuses = document.querySelector(".app-main")?.dataset.tab === "buses";
+    btn.hidden = n === 0 || !onBuses;
     const cnt = document.getElementById("saved-routes-count");
     if (cnt)
       cnt.textContent = n > 0 ? String(n) : "";
@@ -3789,6 +3790,7 @@ ${post.text}
       if (_srModalEl)
         renderSavedRows();
     });
+    window.addEventListener("cstl-tab-changed", updateSavedBadge);
   }
   async function initBuses() {
     const el = document.getElementById("buses-content");
@@ -5714,6 +5716,7 @@ END:VEVENT`
     if (main)
       main.dataset.tab = tab;
     currentTab = tab;
+    window.dispatchEvent(new CustomEvent("cstl-tab-changed"));
   };
   window.closeArticleModal = function() {
     const modal = document.getElementById("article-modal");
@@ -5836,6 +5839,10 @@ END:VEVENT`
     initBuses();
     initSavedRoutesHeader();
     initPower();
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible")
+        window.switchTab("community");
+    });
     initBoard();
     initAdminShortcut();
     setTimeout(() => {

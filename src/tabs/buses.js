@@ -1725,7 +1725,9 @@ function updateSavedBadge() {
   const btn = document.getElementById('saved-routes-btn');
   if (!btn) return;
   const n = getSavedCount();
-  btn.hidden = n === 0;
+  // Іконка показується ЛИШЕ на вкладці Автобуси (і коли є збережені)
+  const onBuses = document.querySelector('.app-main')?.dataset.tab === 'buses';
+  btn.hidden = n === 0 || !onBuses;
   const cnt = document.getElementById('saved-routes-count');
   if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 }
@@ -1833,6 +1835,8 @@ export function initSavedRoutesHeader() {
     updateSavedBadge();
     if (_srModalEl) renderSavedRows();
   });
+  // Перемикання вкладок → показати/сховати іконку (вона лише на Автобусах)
+  window.addEventListener('cstl-tab-changed', updateSavedBadge);
 }
 
 export async function initBuses() {
