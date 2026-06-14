@@ -1723,24 +1723,31 @@
 
 /* ═══ ЗБЕРЕЖЕНІ РЕЙСИ: іконка хедера + слайд-модалка ═══════════════════════ */
 
-/* Іконка-кнопка в хедері (біля погоди) — червона кнопка, біла закладка + цифра */
+/* Кнопка = сама бордова закладка. Біла цифра кількості — ВСЕРЕДИНІ закладки. */
 .saved-routes-btn {
+  position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 3px;
-  background: var(--red, #722F37);
+  justify-content: center;
+  background: none;
   border: none;
-  border-radius: 13px;
-  padding: 4px 8px 4px 6px;
-  color: #fff;
+  padding: 2px;
+  color: var(--red, #722F37);   /* закладка бордова */
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
+/* ВАЖЛИВО: display вище перебиває атрибут [hidden] — повертаємо приховування */
+.saved-routes-btn[hidden] { display: none; }
 .saved-routes-count {
-  font-size: 12px;
+  position: absolute;
+  top: 42%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 10px;
   font-weight: 700;
-  color: #fff;
+  color: #fff;            /* біла цифра всередині закладки */
   line-height: 1;
+  pointer-events: none;
 }
 /* Слайд-модалка зверху вниз */
 .sr-modal {
