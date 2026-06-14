@@ -1602,11 +1602,13 @@ ${post.text}
         <span class="bd-chat-topic-icon">\u{1F4AC}</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
+      <div class="bd-chat-by"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
       ${tagsHtml}
       ${lastHtml}
       <div class="bd-chat-foot">
         <span class="bd-chat-count">\u{1F465} ${count} ${msgWord(count)}</span>
         <span class="bd-chat-foot-time">${formatTime(postTime(last || p))}</span>
+        ${saveBtnHtml(p)}
         <span class="bd-chat-foot-arrow">\u2192</span>
       </div>
     </article>
@@ -1985,7 +1987,7 @@ ${post.text}
     }
     document.addEventListener("click", (e) => {
       const chatCard = e.target.closest("[data-chat-open]");
-      if (chatCard && !e.target.closest(".bd-chat-modal")) {
+      if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]")) {
         const id = Number(chatCard.dataset.chatOpen);
         const post = allPosts.find((p) => p.id === id);
         if (post)

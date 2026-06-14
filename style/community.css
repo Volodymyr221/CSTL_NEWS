@@ -2304,6 +2304,11 @@
 .bd-chat-count { font-weight: 600; }
 .bd-chat-foot-time { margin-left: auto; }
 .bd-chat-foot-arrow { font-size: 15px; color: var(--red); }
+/* Автор теми обговорення (хто створив) */
+.bd-chat-by { margin-top: 6px; font-size: 12px; color: var(--gray); }
+.bd-chat-by-label { font-weight: 600; color: var(--red); }
+/* Кнопка «зберегти» в підвалі картки — трохи компактніша */
+.bd-chat-foot .bd-bookmark { width: 30px; height: 30px; }
 
 /* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
 .bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
