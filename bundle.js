@@ -3674,12 +3674,8 @@ ${post.text}
     const btn = document.getElementById("saved-routes-btn");
     if (!btn)
       return;
-    const n = getSavedCount();
     const onBuses = document.querySelector(".app-main")?.dataset.tab === "buses";
-    btn.hidden = n === 0 || !onBuses;
-    const cnt = document.getElementById("saved-routes-count");
-    if (cnt)
-      cnt.textContent = n > 0 ? String(n) : "";
+    btn.hidden = getSavedCount() === 0 || !onBuses;
   }
   var _srModalEl = null;
   function srRowHtml(r) {

@@ -1737,43 +1737,34 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.saved-routes-count {
-  position: absolute;
-  top: -2px;
-  right: -3px;
-  min-width: 15px;
-  height: 15px;
-  padding: 0 3px;
-  border-radius: 8px;
-  background: var(--red, #722F37);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 15px;
-  text-align: center;
-  box-sizing: border-box;
-}
-
 /* Слайд-модалка зверху вниз */
 .sr-modal {
   position: fixed;
   inset: 0;
-  z-index: 1200;
+  z-index: 99;                 /* нижче шапки (z-index 100) — шапка лишається зверху */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.24s ease;
 }
 .sr-modal.open { opacity: 1; pointer-events: auto; }
-.sr-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); }
+/* Затемнення лише ПІД шапкою — погода і CSTL LIFE залишаються видимі */
+.sr-backdrop {
+  position: absolute;
+  top: calc(var(--header-h, 56px) + env(safe-area-inset-top, 0px));
+  left: 0; right: 0; bottom: 0;
+  background: rgba(0,0,0,0.40);
+}
+/* Панель виїжджає З-ПІД шапки, біла, з тінню по контуру */
 .sr-panel {
   position: absolute;
-  top: 0; left: 0; right: 0;
-  max-height: 82vh;
+  top: calc(var(--header-h, 56px) + env(safe-area-inset-top, 0px));
+  left: 0; right: 0;
+  max-height: calc(86vh - var(--header-h, 56px));
   overflow-y: auto;
-  padding: calc(var(--header-h, 56px) + env(safe-area-inset-top, 0px) + 10px) 16px 8px;
-  background: var(--card-cream, #FAF8EF);
-  border-radius: 0 0 24px 24px;
-  box-shadow: 0 10px 36px rgba(0,0,0,0.32);
+  padding: 16px 16px 8px;
+  background: #fff;
+  border-radius: 0 0 22px 22px;
+  box-shadow: 0 16px 30px rgba(0,0,0,0.20), 0 0 0 1px rgba(0,0,0,0.05);
   transform: translateY(-100%);
   transition: transform 0.32s cubic-bezier(0.32, 0.72, 0, 1);
   -webkit-overflow-scrolling: touch;
@@ -1798,9 +1789,9 @@
   align-items: center;
   gap: 10px;
   padding: 12px 14px;
-  background: #fff;
+  background: #F4F5F7;
   border-radius: 14px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .sr-row-info { flex: 1; min-width: 0; }
 .sr-row-title {
