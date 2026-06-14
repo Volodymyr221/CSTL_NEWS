@@ -40,6 +40,32 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 232,
+    "title": "Трамп, окрім Зеленського, поговорив і з Путіним: нібито готовий вплинути на Київ",
+    "description": "Президент США Дональд Трамп у неділю провів телефонну розмову з правителем РФ Володимиром Путіним.",
+    "date": "2026-06-14",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/d/849337/cdb0fbe3bf65540c7286fa1e8c449838.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039265/",
+    "auto": true
+  },
+  {
+    "id": 233,
+    "title": "Зеленський побажав Трампу успіхів у завершенні війни в Україні й анонсував зустріч",
+    "description": "Зеленський і Трамп обговорили підтримку України та наступну розмову на G7 після телефонної бесіди 14 червня.",
+    "date": "2026-06-14",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/e/849325/9e2102ee6b1578764349f04d63389b54.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039264/",
+    "auto": true
+  },
+  {
     "id": 231,
     "title": "РФ запустила понад 3500 ударних дронів та КАБів за тиждень – Зеленський",
     "description": "Росія за 7 днів випустила по Україні 1920 дронів, 1790 авіабомб та 17 ракет — Зеленський.",
@@ -609,32 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/8/825873/28e0fc805e7ec188b165e2ffec90fed5.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/10/8034018/",
-    "auto": true
-  },
-  {
-    "id": 225,
-    "title": "Путін підписав указ, який збільшує чисельність армії РФ",
-    "description": "Путін підписав указ: чисельність армії РФ зрісла до 1,51 млн військових. На війні проти України залучено понад 700 тис. осіб.",
-    "date": "2027-03-04",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/4/d/848593/4d261776d52b11712dca1a8c7f521955.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/13/8039095/",
-    "auto": true
-  },
-  {
-    "id": 106,
-    "title": "Чехія хоче посилити умови виплат для українських біженців",
-    "description": "МВС Чехії пропонує змінити правила тимчасового захисту та гуманітарної допомоги для українських біженців: виплати хочуть прив'язати до роботи, реєстрації в центрі зайнятості або підприємницької діяльності.",
-    "date": "2027-03-04",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/5/831622/05ed0116c4a8fecb850b6f2401fa0c51.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/19/8035429/",
     "auto": true
   }
 ]
