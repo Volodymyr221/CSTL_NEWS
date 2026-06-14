@@ -50,6 +50,7 @@ window.switchTab = function(tab) {
   if (main) main.dataset.tab = tab;
 
   currentTab = tab;
+  window.dispatchEvent(new CustomEvent('cstl-tab-changed'));
 };
 
 // Закрити модальне вікно статті
@@ -167,8 +168,13 @@ function init() {
   initNews();
   initEvents();
   initBuses();
-  initSavedRoutesHeader();   // глобальна іконка «Збережені рейси» в хедері
+  initSavedRoutesHeader();   // іконка «Збережені рейси» в хедері (лише на Автобусах)
   initPower();
+
+  // При запуску / поверненні застосунку на передній план — завжди Громада
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') window.switchTab('community');
+  });
   initBoard();
   initAdminShortcut();
 
