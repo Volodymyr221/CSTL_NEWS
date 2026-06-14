@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 234,
+    "title": "Зеленський переказав слова Трампа про Крим: Якби було сильне лідерство, не було б війни",
+    "description": "Зеленський розповів про розмову з Трампом: якби у 2014 було сильне лідерство, війни в Україні не було б.",
+    "date": "2026-06-14",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/3/849362/1362868dee5504f857c91638f7774e9e.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039268/",
+    "auto": true
+  },
+  {
     "id": 232,
     "title": "Трамп, окрім Зеленського, поговорив і з Путіним: нібито готовий вплинути на Київ",
     "description": "Президент США Дональд Трамп у неділю провів телефонну розмову з правителем РФ Володимиром Путіним.",
@@ -622,19 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/1/831046/a162d20eabe28eed26b3d690f161ce44.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/19/8035307/",
-    "auto": true
-  },
-  {
-    "id": 45,
-    "title": "Ізраїль створив таємну військову базу в пустелі Іраку незадовго до ударів по Ірану – WSJ",
-    "description": "ЗМІ повідомили про таємну військову базу в пустелі Іраку, яку Ізраїль збудував перед ударами по Ірану.",
-    "date": "2027-02-28",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/8/825873/28e0fc805e7ec188b165e2ffec90fed5.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/10/8034018/",
     "auto": true
   }
 ]
