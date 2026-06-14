@@ -1,7 +1,27 @@
 # Стан сесії — CSTL LIFE
 
-**Оновлено:** 2026-06-14 (день, гілка `vova/chat-author-save`, сесія ВОВИ)
+**Оновлено:** 2026-06-14 (день, гілка `vova/auth-foundation`, сесія ВОВИ)
 **Архів попередніх сесій:** `_ai-tools/SESSION_ARCHIVE.md`
+
+---
+
+## 🔵 ФАЗА Б — РОЗПОЧАТО (14.06) — Авторизація + приватний чат. План: `docs/BOARD_FINAL_PLAN.md` + `/root/.claude/plans/...`
+
+> Рішення Вови: будуємо ВСЮ систему (приватний чат покупець↔автор) на фундаменті авторизації.
+> Підхід: «авторизація = фундамент», усе проти `currentUserId()` + `requireAuth()`. Стадіями.
+> **Гейтинг (уточнення Вови 14.06):** читати все (включно зі стрічкою чату «Обговорення») — вільно;
+> писати/реагувати/подавати/**зберігати**/чат — лише авторизований. «Зберегти» ТЕЖ гейтиться.
+
+**✅ Стадія 1 (фундамент, гілка `vova/auth-foundation`) — ЗРОБЛЕНО (код, без UI):**
+- `src/core/supabase.js`: клієнт тепер з `persistSession:true, autoRefreshToken:true, detectSessionInUrl:true`
+  (потрібно для Google-входу й підхоплення сесії після редіректу).
+- **Новий `src/core/auth.js`:** `initAuth/currentUser/currentUserId/isLoggedIn/onAuthChange/
+  signInWithGoogle/signOut/requireAuth(actionLabel,fn)/getProfile/saveProfile`. `requireAuth` для гостя
+  показує тост + кидає подію `cstl-need-login` (UI-шар підхопить пізніше).
+- `src/app.js`: `initAuth()` у `init()`. build exit 0, check-imports чисто. `CACHE_NAME` → `cstl-20260614-1507`.
+- ⏳ **Лишилось у Стадії 1:** міграція `profiles` (через Supabase MCP — потребує підтвердження Вови),
+  UI: екран «Приєднайтесь» + Кабінет + «Доповніть профіль», підключити `requireAuth` до дій. **Спершу — макет (узгодити).**
+- ⏳ **Стадія 0 (руки Вови):** Google Cloud OAuth client + Supabase Dashboard Google provider (інструкція надана).
 
 ---
 

@@ -1,4 +1,5 @@
 import { bootApp } from './core/boot.js';
+import { initAuth } from './core/auth.js';
 import { initWeather } from './core/weather.js';
 import { initCommunity } from './tabs/community.js';
 import { initNews } from './tabs/news.js';
@@ -161,6 +162,7 @@ function initAdminShortcut() {
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
+  initAuth();           // Фаза Б: відновити сесію Google-логіну (якщо є)
   initModalSwipe();
   initWeather();
   initCommunity();

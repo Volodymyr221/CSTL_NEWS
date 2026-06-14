@@ -47,6 +47,188 @@
     }
   }
 
+  // src/core/supabase.js
+  var SUPABASE_URL = "https://uabyfecseqnemvcqhdem.supabase.co";
+  var SUPABASE_ANON_KEY = "sb_publishable_sbV0XNktCiTK0iA4659P9g_Y3sT0mDv";
+  var supa = null;
+  if (typeof window !== "undefined" && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
+    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      // Фаза Б: вмикаємо збереження сесії для Google-логіну.
+      // persistSession — памʼятати вхід місяцями; autoRefreshToken — оновлювати токен;
+      // detectSessionInUrl — підхопити сесію після OAuth-редіректу назад на сайт.
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true }
+    });
+  }
+  function getSupabase() {
+    return supa;
+  }
+  function isSupabaseReady() {
+    return supa !== null;
+  }
+  async function fetchPublishedPosts() {
+    if (!supa)
+      return null;
+    const { data, error } = await supa.from("posts").select("*").eq("status", "published").order("published_at", { ascending: false, nullsLast: true }).limit(200);
+    if (error) {
+      console.warn("[supabase] fetchPublishedPosts error:", error.message);
+      return null;
+    }
+    return data;
+  }
+  async function submitPost(payload) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const row = { ...payload, status: "pending" };
+    const { error } = await supa.from("posts").insert(row);
+    if (error) {
+      console.warn("[supabase] submitPost error:", error);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  }
+  async function fetchPublishedAnnouncements() {
+    if (!supa)
+      return null;
+    const { data, error } = await supa.from("announcements").select("*").eq("status", "published").order("pinned", { ascending: false }).order("published_at", { ascending: false, nullsLast: true }).limit(50);
+    if (error) {
+      console.warn("[supabase] fetchPublishedAnnouncements error:", error.message);
+      return null;
+    }
+    return data;
+  }
+  var ANON_ID_KEY = "cstl-anon-id";
+  function getAnonId() {
+    try {
+      let id = localStorage.getItem(ANON_ID_KEY);
+      if (!id) {
+        id = crypto.randomUUID ? crypto.randomUUID() : "anon-" + Math.random().toString(36).slice(2) + "-" + Date.now();
+        localStorage.setItem(ANON_ID_KEY, id);
+      }
+      return id;
+    } catch {
+      return "anon-fallback";
+    }
+  }
+  async function fetchAllReactions(anonId) {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
+    if (error) {
+      console.warn("[supabase] fetchAllReactions error:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const r of data || []) {
+      if (!map.has(r.post_id))
+        map.set(r.post_id, { counts: {}, my: null });
+      const e = map.get(r.post_id);
+      e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
+      if (r.user_id === anonId)
+        e.my = r.emoji;
+    }
+    return map;
+  }
+  async function setReaction(postId, anonId, emoji) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (emoji == null) {
+      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", anonId);
+      if (error2)
+        return { ok: false, error: error2.message };
+      return { ok: true };
+    }
+    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: "post_id,user_id" });
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true };
+  }
+  async function fetchAllComments() {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at").order("created_at", { ascending: true });
+    if (error) {
+      console.warn("[supabase] fetchAllComments error:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const c of data || []) {
+      if (!map.has(c.post_id))
+        map.set(c.post_id, []);
+      map.get(c.post_id).push(c);
+    }
+    return map;
+  }
+  async function addComment(postId, author, text) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("comments").insert({ post_id: postId, author: author || null, text }).select().single();
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true, comment: data };
+  }
+  async function uploadPhotoToStorage(blob) {
+    if (!supa)
+      return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!blob)
+      return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
+    const ext = blob.type && blob.type.split("/")[1] || "jpg";
+    const rand = Math.random().toString(36).slice(2, 10);
+    const path = `${getAnonId()}/${Date.now()}-${rand}.${ext}`;
+    const { error: uploadError } = await supa.storage.from("community-photos").upload(path, blob, {
+      contentType: blob.type || "image/jpeg",
+      cacheControl: "31536000",
+      // 1 рік — фото незмінне
+      upsert: false
+    });
+    if (uploadError) {
+      console.warn("[supabase] uploadPhotoToStorage error:", uploadError.message);
+      return { url: null, error: uploadError.message };
+    }
+    const { data } = supa.storage.from("community-photos").getPublicUrl(path);
+    return { url: data?.publicUrl || null, error: null };
+  }
+  async function savePushSubscription(payload) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    const { error } = await supa.from("push_subscriptions").insert(payload);
+    if (error) {
+      if (error.code === "23505")
+        return { ok: true };
+      console.warn("[supabase] savePushSubscription:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
+  }
+  async function deletePushSubscription(endpoint, routeId, trackDate) {
+    if (!supa)
+      return;
+    const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
+    if (error)
+      console.warn("[supabase] deletePushSubscription:", error.message);
+  }
+  function subscribeReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
+  function subscribeComments(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("comments-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "comments" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
+
   // src/core/utils.js
   function formatTime(value) {
     if (!value)
@@ -337,6 +519,34 @@
     return false;
   }
 
+  // src/core/auth.js
+  var _user = null;
+  var _listeners = [];
+  function emitAuthChange() {
+    _listeners.forEach((cb) => {
+      try {
+        cb(_user);
+      } catch (_) {
+      }
+    });
+  }
+  async function initAuth() {
+    const supa2 = getSupabase();
+    if (!supa2)
+      return;
+    try {
+      const { data } = await supa2.auth.getSession();
+      _user = data && data.session ? data.session.user : null;
+      emitAuthChange();
+    } catch (e) {
+      console.warn("[auth] getSession:", e && e.message);
+    }
+    supa2.auth.onAuthStateChange((_event, session) => {
+      _user = session ? session.user : null;
+      emitAuthChange();
+    });
+  }
+
   // src/core/weather.js
   function codeToIcon(code) {
     if (code === 0)
@@ -387,183 +597,6 @@
       if (widget)
         widget.style.visibility = "hidden";
     }
-  }
-
-  // src/core/supabase.js
-  var SUPABASE_URL = "https://uabyfecseqnemvcqhdem.supabase.co";
-  var SUPABASE_ANON_KEY = "sb_publishable_sbV0XNktCiTK0iA4659P9g_Y3sT0mDv";
-  var supa = null;
-  if (typeof window !== "undefined" && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
-    supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false }
-      // на основному сайті auth не потрібна — тільки публічне читання + INSERT pending
-    });
-  }
-  function isSupabaseReady() {
-    return supa !== null;
-  }
-  async function fetchPublishedPosts() {
-    if (!supa)
-      return null;
-    const { data, error } = await supa.from("posts").select("*").eq("status", "published").order("published_at", { ascending: false, nullsLast: true }).limit(200);
-    if (error) {
-      console.warn("[supabase] fetchPublishedPosts error:", error.message);
-      return null;
-    }
-    return data;
-  }
-  async function submitPost(payload) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const row = { ...payload, status: "pending" };
-    const { error } = await supa.from("posts").insert(row);
-    if (error) {
-      console.warn("[supabase] submitPost error:", error);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
-  }
-  async function fetchPublishedAnnouncements() {
-    if (!supa)
-      return null;
-    const { data, error } = await supa.from("announcements").select("*").eq("status", "published").order("pinned", { ascending: false }).order("published_at", { ascending: false, nullsLast: true }).limit(50);
-    if (error) {
-      console.warn("[supabase] fetchPublishedAnnouncements error:", error.message);
-      return null;
-    }
-    return data;
-  }
-  var ANON_ID_KEY = "cstl-anon-id";
-  function getAnonId() {
-    try {
-      let id = localStorage.getItem(ANON_ID_KEY);
-      if (!id) {
-        id = crypto.randomUUID ? crypto.randomUUID() : "anon-" + Math.random().toString(36).slice(2) + "-" + Date.now();
-        localStorage.setItem(ANON_ID_KEY, id);
-      }
-      return id;
-    } catch {
-      return "anon-fallback";
-    }
-  }
-  async function fetchAllReactions(anonId) {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
-    if (error) {
-      console.warn("[supabase] fetchAllReactions error:", error.message);
-      return /* @__PURE__ */ new Map();
-    }
-    const map = /* @__PURE__ */ new Map();
-    for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { counts: {}, my: null });
-      const e = map.get(r.post_id);
-      e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
-      if (r.user_id === anonId)
-        e.my = r.emoji;
-    }
-    return map;
-  }
-  async function setReaction(postId, anonId, emoji) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    if (emoji == null) {
-      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", anonId);
-      if (error2)
-        return { ok: false, error: error2.message };
-      return { ok: true };
-    }
-    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: "post_id,user_id" });
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true };
-  }
-  async function fetchAllComments() {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at").order("created_at", { ascending: true });
-    if (error) {
-      console.warn("[supabase] fetchAllComments error:", error.message);
-      return /* @__PURE__ */ new Map();
-    }
-    const map = /* @__PURE__ */ new Map();
-    for (const c of data || []) {
-      if (!map.has(c.post_id))
-        map.set(c.post_id, []);
-      map.get(c.post_id).push(c);
-    }
-    return map;
-  }
-  async function addComment(postId, author, text) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("comments").insert({ post_id: postId, author: author || null, text }).select().single();
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  }
-  async function uploadPhotoToStorage(blob) {
-    if (!supa)
-      return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    if (!blob)
-      return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
-    const ext = blob.type && blob.type.split("/")[1] || "jpg";
-    const rand = Math.random().toString(36).slice(2, 10);
-    const path = `${getAnonId()}/${Date.now()}-${rand}.${ext}`;
-    const { error: uploadError } = await supa.storage.from("community-photos").upload(path, blob, {
-      contentType: blob.type || "image/jpeg",
-      cacheControl: "31536000",
-      // 1 рік — фото незмінне
-      upsert: false
-    });
-    if (uploadError) {
-      console.warn("[supabase] uploadPhotoToStorage error:", uploadError.message);
-      return { url: null, error: uploadError.message };
-    }
-    const { data } = supa.storage.from("community-photos").getPublicUrl(path);
-    return { url: data?.publicUrl || null, error: null };
-  }
-  async function savePushSubscription(payload) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
-    const { error } = await supa.from("push_subscriptions").insert(payload);
-    if (error) {
-      if (error.code === "23505")
-        return { ok: true };
-      console.warn("[supabase] savePushSubscription:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
-  }
-  async function deletePushSubscription(endpoint, routeId, trackDate) {
-    if (!supa)
-      return;
-    const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
-    if (error)
-      console.warn("[supabase] deletePushSubscription:", error.message);
-  }
-  function subscribeReactions(onChange) {
-    if (!supa)
-      return () => {
-      };
-    const ch = supa.channel("reactions-watch").on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "reactions" },
-      (payload) => onChange(payload)
-    ).subscribe();
-    return () => supa.removeChannel(ch);
-  }
-  function subscribeComments(onChange) {
-    if (!supa)
-      return () => {
-      };
-    const ch = supa.channel("comments-watch").on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "comments" },
-      (payload) => onChange(payload)
-    ).subscribe();
-    return () => supa.removeChannel(ch);
   }
 
   // src/tabs/community-modal.js
@@ -5644,6 +5677,7 @@ END:VEVENT`
   }
   function init() {
     bootApp();
+    initAuth();
     initModalSwipe();
     initWeather();
     initCommunity();

@@ -17,7 +17,10 @@ const SUPABASE_ANON_KEY = 'sb_publishable_sbV0XNktCiTK0iA4659P9g_Y3sT0mDv';
 let supa = null;
 if (typeof window !== 'undefined' && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
   supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-    auth: { persistSession: false }, // на основному сайті auth не потрібна — тільки публічне читання + INSERT pending
+    // Фаза Б: вмикаємо збереження сесії для Google-логіну.
+    // persistSession — памʼятати вхід місяцями; autoRefreshToken — оновлювати токен;
+    // detectSessionInUrl — підхопити сесію після OAuth-редіректу назад на сайт.
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true },
   });
 }
 
