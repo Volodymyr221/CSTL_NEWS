@@ -208,9 +208,18 @@ html, body {
   transition: opacity 0.2s, transform 0.2s;
   pointer-events: none;
   white-space: nowrap;
-  z-index: 999;
+  z-index: 2000;   /* вище чат-модалки (1100) — щоб сповіщення було видно поверх неї */
+  max-width: calc(100vw - 32px);
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
+/* Червоне сповіщення — заборонені слова / помилки. Дозволяємо перенос рядків. */
+.toast--error {
+  background: var(--red);
+  font-weight: 600;
+  white-space: normal;
+  text-align: center;
+  line-height: 1.35;
+}
 
 /* ===== EMPTY STATE ===== */
 .empty-state { text-align: center; padding: 48px 24px; color: var(--gray); font-size: 15px; }

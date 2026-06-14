@@ -137,7 +137,8 @@ export async function sharePost({ title, text, url }) {
 }
 
 // Показати toast-повідомлення (маленьке сповіщення знизу екрану)
-export function showToast(msg, duration = 3000) {
+// type: '' (звичайне) або 'error' (червоне — для заборон/помилок)
+export function showToast(msg, duration = 3000, type = '') {
   let toast = document.getElementById('cstl-toast');
   if (!toast) {
     toast = document.createElement('div');
@@ -145,8 +146,10 @@ export function showToast(msg, duration = 3000) {
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
+  toast.classList.toggle('toast--error', type === 'error');
   toast.classList.add('visible');
-  setTimeout(() => toast.classList.remove('visible'), duration);
+  clearTimeout(toast._hideTimer);
+  toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), duration);
 }
 
 // ── Фільтр матюків / образливих слів / спаму (клієнтський) ───────────────────
