@@ -5,7 +5,7 @@
 //   board = оголошення (продам/куплю/...) — стікер на корку
 //   chat  = обговорення — горизонтальна картка з аватаркою і хештегами
 
-import { escapeHtml, formatTime, sharePost, postTime } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
@@ -139,6 +139,29 @@ function newMsgLabel(n) {
   if (m10 === 1 && m100 !== 11) return 'нове повідомлення';
   if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'нові повідомлення';
   return 'нових повідомлень';
+}
+
+// ── Антиспам/антифлуд для коментарів чату (per-device) ──────────────────────
+const LS_MSG_RATE = 'cstl-msg-rate-v1';  // { last: 'текст', times: [ts, ts, ...] }
+const FLOOD_MAX = 5;       // максимум повідомлень
+const FLOOD_WINDOW = 15000; // за 15 секунд
+// Чи це дубль попереднього надісланого повідомлення
+function isDuplicateMsg(text) {
+  return lsGet(LS_MSG_RATE, {}).last === text;
+}
+// Чи користувач шле занадто швидко (флуд)
+function isFlooding() {
+  const now = Date.now();
+  const times = (lsGet(LS_MSG_RATE, {}).times || []).filter(t => now - t < FLOOD_WINDOW);
+  return times.length >= FLOOD_MAX;
+}
+// Зафіксувати що повідомлення надіслано (після проходження перевірок)
+function recordSentMsg(text) {
+  const now = Date.now();
+  const st = lsGet(LS_MSG_RATE, {});
+  const times = (st.times || []).filter(t => now - t < FLOOD_WINDOW);
+  times.push(now);
+  lsSet(LS_MSG_RATE, { last: text, times });
 }
 
 // Відмінювання слова «повідомлення» за числом (1 / 2-4 / 5+, з урахуванням 11-14)
@@ -1017,6 +1040,13 @@ function attachBoardDelegation() {
     const input  = form.querySelector('[data-comment-input]');
     const text   = (input?.value || '').trim();
     if (!text) { input?.focus(); return; }
+
+    // Фільтр матюків / спаму / флуду — блокуємо ДО відправки
+    if (containsProfanity(text)) { showToast('Будь ласка, без образливих слів'); return; }
+    if (looksLikeSpam(text))     { showToast('Це повідомлення схоже на спам'); return; }
+    if (isDuplicateMsg(text))    { showToast('Ви щойно це написали'); return; }
+    if (isFlooding())            { showToast('Занадто швидко — зачекайте кілька секунд'); return; }
+    recordSentMsg(text);
 
     // Optimistic: миттєво у DOM
     const tempComment = {
