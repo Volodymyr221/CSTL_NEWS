@@ -2346,7 +2346,7 @@
   padding: 4px 8px 10px;
   flex-shrink: 0;
   background: #F3EFE3;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);  /* мʼяка тінь замість жорсткої лінії */
+  box-shadow: 0 4px 12px rgba(0,0,0,0.12);  /* мʼяка тінь на чат (внутрішній край) */
   z-index: 1;
 }
 .bd-chat-modal-back,
@@ -2361,6 +2361,7 @@
 .bd-chat-modal-titles { flex: 1; min-width: 0; }
 .bd-chat-modal-title {
   font-size: 16px; font-weight: 700; color: var(--black);
+  text-transform: uppercase;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .bd-chat-modal-meta {
@@ -2445,7 +2446,7 @@
   display: flex; gap: 8px; align-items: center;
   padding: 10px 12px calc(env(safe-area-inset-bottom, 0px) + 10px);
   background: #F3EFE3;
-  box-shadow: 0 -2px 10px rgba(0,0,0,0.05);
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.12);  /* мʼяка тінь на чат (внутрішній край) */
   flex-shrink: 0;
 }
 .bd-chat-modal-input {
