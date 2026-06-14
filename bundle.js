@@ -1319,6 +1319,7 @@
       _chatUnseen = 0;
       hideChatPill();
     });
+    modal.querySelector(".bd-chat-modal-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
     const vv = window.visualViewport;
     const input = modal.querySelector(".bd-chat-modal-input");
     const fullH = window.innerHeight;
@@ -1850,6 +1851,7 @@ ${post.text}
       if (input)
         input.value = "";
       rerenderCommentsBlock(postId);
+      input?.focus();
       if (isSupabaseReady()) {
         const result = await addComment(postId, null, text);
         if (!result.ok) {
