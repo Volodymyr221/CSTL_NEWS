@@ -680,11 +680,13 @@ function renderChatCard(p) {
         <span class="bd-chat-topic-icon">💬</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
+      <div class="bd-chat-by"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
       ${tagsHtml}
       ${lastHtml}
       <div class="bd-chat-foot">
         <span class="bd-chat-count">👥 ${count} ${msgWord(count)}</span>
         <span class="bd-chat-foot-time">${formatTime(postTime(last || p))}</span>
+        ${saveBtnHtml(p)}
         <span class="bd-chat-foot-arrow">→</span>
       </div>
     </article>
@@ -1104,7 +1106,8 @@ function attachBoardDelegation() {
   document.addEventListener('click', e => {
     // Тап по картці обговорення → повноекранна модалка-чат
     const chatCard = e.target.closest('[data-chat-open]');
-    if (chatCard && !e.target.closest('.bd-chat-modal')) {
+    if (chatCard && !e.target.closest('.bd-chat-modal')
+        && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')) {
       const id = Number(chatCard.dataset.chatOpen);
       const post = allPosts.find(p => p.id === id);
       if (post) openChatModal(post);
