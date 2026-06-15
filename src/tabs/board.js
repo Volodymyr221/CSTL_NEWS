@@ -744,14 +744,20 @@ function renderHeader() {
   }).join('');
 
   const showCategories = activeType === 'board';
+  const chipHtml = c => `
+    <button class="bd-cat-chip${c.id === activeCategory ? ' bd-cat-chip--active' : ''}" type="button" data-bd-cat="${c.id}">
+      <span class="bd-cat-emoji">${c.emoji}</span>
+      ${escapeHtml(c.label)}
+    </button>`;
+  // «ВСІ» (перша категорія) — закріплена ЗА межами контейнера що скролиться, з відступом.
+  // Решта чіпів у .bd-categories — обрізаються його краєм (overflow), тож ховаються повністю.
   const categoriesHtml = showCategories ? `
-    <div class="bd-categories">
-      ${BOARD_CATEGORIES.map(c => `
-        <button class="bd-cat-chip${c.id === activeCategory ? ' bd-cat-chip--active' : ''}" type="button" data-bd-cat="${c.id}">
-          <span class="bd-cat-emoji">${c.emoji}</span>
-          ${escapeHtml(c.label)}
-        </button>
-      `).join('')}
+    <div class="bd-cat-wrap">
+      ${chipHtml(BOARD_CATEGORIES[0])}
+      <span class="bd-cat-divider" aria-hidden="true"></span>
+      <div class="bd-categories">
+        ${BOARD_CATEGORIES.slice(1).map(chipHtml).join('')}
+      </div>
     </div>
   ` : '';
 
