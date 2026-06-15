@@ -1658,14 +1658,17 @@ ${post.text}
     `;
     }).join("");
     const showCategories = activeType === "board";
+    const chipHtml = (c) => `
+    <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
+      <span class="bd-cat-emoji">${c.emoji}</span>
+      ${escapeHtml(c.label)}
+    </button>`;
     const categoriesHtml = showCategories ? `
-    <div class="bd-categories">
-      ${BOARD_CATEGORIES2.map((c) => `
-        <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
-          <span class="bd-cat-emoji">${c.emoji}</span>
-          ${escapeHtml(c.label)}
-        </button>
-      `).join("")}
+    <div class="bd-cat-wrap">
+      ${chipHtml(BOARD_CATEGORIES2[0])}
+      <div class="bd-categories">
+        ${BOARD_CATEGORIES2.slice(1).map(chipHtml).join("")}
+      </div>
     </div>
   ` : "";
     return `

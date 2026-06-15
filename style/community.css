@@ -1753,7 +1753,15 @@
 }
 
 /* Категорії-чіпи (другий ряд, тільки для табу board) */
+/* Ряд підкатегорій: «ВСІ» закріплена зліва + контейнер що скролиться окремо */
+.bd-cat-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
 .bd-categories {
+  flex: 1;
+  min-width: 0;
   display: flex;
   gap: 5px;
   overflow-x: auto;
@@ -1786,18 +1794,10 @@
   box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
 }
 .bd-cat-emoji { font-size: 13px; }
-/* «ВСІ» закріплена зліва — решта чіпів скролиться під нею (sticky + непрозорий фон + шар) */
-.bd-cat-chip[data-bd-cat="all"] {
+/* «ВСІ» закріплена (поза контейнером скролу) — не стискається */
+.bd-cat-wrap > .bd-cat-chip[data-bd-cat="all"] {
   font-weight: 700;
-  position: sticky;
-  left: 0;
-  z-index: 2;
   flex-shrink: 0;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.10), 6px 0 8px -4px rgba(0,0,0,0.18);
-}
-/* Закріплена «ВСІ» в активному стані — зберігаємо праву тінь-відсічку */
-.bd-cat-chip[data-bd-cat="all"].bd-cat-chip--active {
-  box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 6px 0 8px -4px rgba(0,0,0,0.18);
 }
 
 /* Тіло — порожній стан і стрічка */
