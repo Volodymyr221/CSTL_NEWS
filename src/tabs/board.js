@@ -692,8 +692,8 @@ function renderChatCard(p) {
         <span class="bd-chat-topic-icon">💭</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
       ${tagsHtml}
+      <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
         <span class="bd-chat-count">👥 ${participants} ${partWord(participants)}</span>

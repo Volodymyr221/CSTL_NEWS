@@ -1614,8 +1614,8 @@ ${post.text}
         <span class="bd-chat-topic-icon">\u{1F4AD}</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <div class="bd-chat-msgcount">\u{1F4AC} ${count} ${msgWord(count)}</div>
       ${tagsHtml}
+      <div class="bd-chat-msgcount">\u{1F4AC} ${count} ${msgWord(count)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
         <span class="bd-chat-count">\u{1F465} ${participants} ${partWord(participants)}</span>
