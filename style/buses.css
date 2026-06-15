@@ -1813,6 +1813,13 @@
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .sr-row-info { flex: 1; min-width: 0; }
+.sr-row-day {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  color: var(--ink-soft, #888);
+  margin-bottom: 3px;
+}
 .sr-row-title {
   font-size: 14px; font-weight: 700;
   color: var(--ink, #2B2B2B);

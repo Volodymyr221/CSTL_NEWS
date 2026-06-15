@@ -3358,6 +3358,8 @@ ${post.text}
       const trackedSegArrival = hasTrackedSeg ? getStopHHMM(route, trackedSeg.alightingStop) : null;
       const trackedSegTimeStr = trackedSegDepTime && trackedSegArrival ? ` | ${trackedSegDepTime} - ${trackedSegArrival}` : trackedSegDepTime ? ` | ${trackedSegDepTime}` : "";
       const trackedSegSubtitle = !anySegment && hasTrackedSeg ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop.toUpperCase())} - ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}${escapeHtml(trackedSegTimeStr)}</span>` : "";
+      const isTrackedNow = isRouteSegmentTracked(route.id) || !!trackedSeg && !anySegment;
+      const trackBtnCls = isTrackedNow ? hasTrackedSeg ? " tracked-seg" : " tracked" : "";
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
@@ -3387,7 +3389,7 @@ ${post.text}
             </div>
             ${autoNote}
           </div>
-          ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? " tracked" : !!trackedSeg && !anySegment ? " tracked-seg" : ""}" data-track-id="${escapeHtml(route.id)}" aria-label="${isRouteSegmentTracked(route.id) || !!trackedSeg && !anySegment ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
+          ${busDay >= getTodayISO() && !isPast && route.status !== "cancelled" ? `<button class="bs-track-btn${trackBtnCls}" data-track-id="${escapeHtml(route.id)}" aria-label="${isTrackedNow ? "\u041D\u0435 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438" : "\u0412\u0456\u0434\u0441\u0442\u0435\u0436\u0438\u0442\u0438 \u043C\u0430\u0440\u0448\u0440\u0443\u0442"}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : ""}
         </div>
         ${route.stops && route.stops.length > 2 ? `<button class="bs-toggle" data-id="${escapeHtml(route.id)}">
                ${expanded ? "\u0421\u0425\u041E\u0412\u0410\u0422\u0418 \u0417\u0423\u041F\u0418\u041D\u041A\u0418" : "\u0412\u0421\u0406 \u0417\u0423\u041F\u0418\u041D\u041A\u0418"} <span class="bs-toggle-arr">${expanded ? "\u25B4" : "\u25BE"}</span>
@@ -3791,14 +3793,15 @@ ${post.text}
       bellLabel = "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u0456";
     }
     const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || "")}" data-to="${escapeHtml(r.to || "")}"`;
-    const titleText = r.isSegment ? `${r.from} - ${r.to}` : r.title;
-    const fullLine = r.isSegment ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? " | " + escapeHtml(r.fullTimeStr) : ""}</div>` : "";
+    const dayTop = r.dayLabel ? `<div class="sr-row-day">${escapeHtml(r.dayLabel)}</div>` : "";
+    const titleText = r.isSegment ? `${r.from} - ${r.to}${r.timeStr ? " | " + r.timeStr : ""}` : r.title;
+    const belowLine = r.isSegment ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? " | " + escapeHtml(r.fullTimeStr) : ""}</div>` : r.timeStr ? `<div class="sr-row-sub">${escapeHtml(r.timeStr)}</div>` : "";
     return `
     <div class="sr-row">
       <div class="sr-row-info">
+        ${dayTop}
         <div class="sr-row-title">${escapeHtml(titleText)}</div>
-        ${fullLine}
-        <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? " \xB7 " + r.dayLabel : ""}</div>
+        ${belowLine}
       </div>
       <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
       <button class="sr-unsave" type="button" ${data} aria-label="\u0417\u043D\u044F\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F">${SR_BOOKMARK_SVG}</button>
