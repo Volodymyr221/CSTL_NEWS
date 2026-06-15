@@ -1354,6 +1354,11 @@ function renderRouteList() {
       ? `<span class="bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(trackedSeg.boardingStop.toUpperCase())} - ${escapeHtml(trackedSeg.alightingStop.toUpperCase())}${escapeHtml(trackedSegTimeStr)}</span>`
       : '';
 
+    // Закладка відстеження: проміжний (сегментний) рейс → завжди бордова (.tracked-seg),
+    // повний маршрут → чорна (.tracked). Бордова більше не залежить від активного фільтра.
+    const isTrackedNow = isRouteSegmentTracked(route.id) || (!!trackedSeg && !anySegment);
+    const trackBtnCls  = isTrackedNow ? (hasTrackedSeg ? ' tracked-seg' : ' tracked') : '';
+
     return `
       <div class="bus-card${isPast ? ' past' : ''}${isNext ? ' next' : ''}${isSelectable ? ' selectable' : ''}${isEnroute ? ' enroute' : ''}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
@@ -1382,7 +1387,7 @@ function renderRouteList() {
             ${autoNote}
           </div>
           ${busDay >= getTodayISO() && !isPast && route.status !== 'cancelled'
-            ? `<button class="bs-track-btn${isRouteSegmentTracked(route.id) ? ' tracked' : (!!trackedSeg && !anySegment ? ' tracked-seg' : '')}" data-track-id="${escapeHtml(route.id)}" aria-label="${(isRouteSegmentTracked(route.id) || (!!trackedSeg && !anySegment)) ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
+            ? `<button class="bs-track-btn${trackBtnCls}" data-track-id="${escapeHtml(route.id)}" aria-label="${isTrackedNow ? 'Не відстежувати' : 'Відстежити маршрут'}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
             : ''}
         </div>
         ${route.stops && route.stops.length > 2
@@ -1849,18 +1854,23 @@ function srRowHtml(r) {
     bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--on';  bellLabel = 'Нагадування увімкнені';
   }
   const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || '')}" data-to="${escapeHtml(r.to || '')}"`;
-  // Проміжний рейс: заголовок = сегмент ВІД - ДО (тире), + підрядок з повним
-  // маршрутом-батьком і 📍 — той самий патерн, що в картці «Розкладу» (.bs-route-full).
-  const titleText = r.isSegment ? `${r.from} - ${r.to}` : r.title;
-  const fullLine = r.isSegment
+  // «СЬОГОДНІ/ЗАВТРА/дата» — окремим рядком великими над назвою рейсу.
+  const dayTop = r.dayLabel ? `<div class="sr-row-day">${escapeHtml(r.dayLabel)}</div>` : '';
+  // Проміжний рейс: заголовок = сегмент ВІД - ДО + час сегмента ЗБОКУ; нижче — повний
+  // маршрут-батько з 📍 (той самий патерн, що в картці «Розкладу», .bs-route-full).
+  // Звичайний рейс: заголовок = назва, час окремим підрядком знизу (без змін).
+  const titleText = r.isSegment
+    ? `${r.from} - ${r.to}${r.timeStr ? ' | ' + r.timeStr : ''}`
+    : r.title;
+  const belowLine = r.isSegment
     ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? ' | ' + escapeHtml(r.fullTimeStr) : ''}</div>`
-    : '';
+    : (r.timeStr ? `<div class="sr-row-sub">${escapeHtml(r.timeStr)}</div>` : '');
   return `
     <div class="sr-row">
       <div class="sr-row-info">
+        ${dayTop}
         <div class="sr-row-title">${escapeHtml(titleText)}</div>
-        ${fullLine}
-        <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? ' · ' + r.dayLabel : ''}</div>
+        ${belowLine}
       </div>
       <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
       <button class="sr-unsave" type="button" ${data} aria-label="Зняти збереження">${SR_BOOKMARK_SVG}</button>
