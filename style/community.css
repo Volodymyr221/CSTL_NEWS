@@ -1753,11 +1753,21 @@
 }
 
 /* Категорії-чіпи (другий ряд, тільки для табу board) */
-/* Ряд підкатегорій: «ВСІ» закріплена зліва + контейнер що скролиться окремо */
+/* Ряд підкатегорій: «ВСІ» закріплена зліва + «|» роздільник + контейнер що скролиться */
 .bd-cat-wrap {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
+}
+.bd-cat-wrap > .bd-cat-chip[data-bd-cat="all"] { margin-right: 8px; }
+/* Вертикальна риска між «ВСІ» і контейнером; чіпи обрізаються лівим краєм контейнера праворуч від неї */
+.bd-cat-divider {
+  flex-shrink: 0;
+  width: 1px;
+  height: 20px;
+  margin-right: 8px;
+  background: rgba(0,0,0,0.18);
+  border-radius: 1px;
 }
 .bd-categories {
   flex: 1;

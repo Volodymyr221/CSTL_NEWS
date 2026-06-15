@@ -754,6 +754,7 @@ function renderHeader() {
   const categoriesHtml = showCategories ? `
     <div class="bd-cat-wrap">
       ${chipHtml(BOARD_CATEGORIES[0])}
+      <span class="bd-cat-divider" aria-hidden="true"></span>
       <div class="bd-categories">
         ${BOARD_CATEGORIES.slice(1).map(chipHtml).join('')}
       </div>
