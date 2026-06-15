@@ -1514,6 +1514,11 @@
   aspect-ratio: 4 / 3;
   object-fit: cover;
 }
+/* Стрічка «Збережені» — картки оголошень компактніші: нижче фото + менші відступи */
+.bd-stream .cm-board-note--has-photo .cm-board-photo { aspect-ratio: 16 / 10; }
+.bd-stream .cm-board-note { padding: 13px 13px 12px; }
+.bd-stream .cm-board-note--has-photo .cm-board-photo-wrap { margin: -13px -13px 10px; }
+.bd-stream .cm-board-text { font-size: 14px; }
 /* На стікері з фото меншу к-сть рядків тексту (місця менше) */
 .cm-board-note--has-photo .cm-board-text {
   display: -webkit-box;
