@@ -22,6 +22,16 @@ CREATE TABLE IF NOT EXISTS push_subscriptions (
   created_at     TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Прапорці «вже надіслано» по типах сповіщень (додані пізніше — синхронізація з живою БД).
+-- Edge Function send-bus-push оновлює їх, щоб не слати один тип двічі.
+ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS notified_start   BOOLEAN NOT NULL DEFAULT FALSE; -- T-0 «вирушив» (з початкової)
+ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS notified_warning BOOLEAN NOT NULL DEFAULT FALSE; -- T-15 попередження
+ALTER TABLE push_subscriptions ADD COLUMN IF NOT EXISTS notified_canc    BOOLEAN NOT NULL DEFAULT FALSE; -- рейс скасовано
+
+-- ⚠️ Майбутні дати ПІДТРИМУЮТЬСЯ сервером: send-bus-push видаляє лише track_date < today
+--    і відбирає track_date == today, тож рядок із завтрашньою датою вистрелить завтра.
+--    Клієнт має вставляти підписку одразу при збереженні (без guard на «лише сьогодні»).
+
 -- Унікальний ключ: один рядок на endpoint + маршрут + день
 -- При повторному відстеженні — upsert оновлює дані (dep_time, зупинки)
 CREATE UNIQUE INDEX IF NOT EXISTS push_subs_unique
