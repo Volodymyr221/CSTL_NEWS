@@ -157,6 +157,19 @@
     "auto": true
   },
   {
+    "id": 241,
+    "title": "Трамп підтвердив укладення мирної угоди з Іраном",
+    "description": "Президент США Дональд Трамп заявив, що мирна угода з Іраном уже погоджена, а її офіційне підписання заплановане на 19 червня.",
+    "date": "2026-06-19",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/0/850330/e0e88713d20be7f37ed43895b3e3986f.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039464/",
+    "auto": true
+  },
+  {
     "id": 239,
     "title": "США та Іран підпишуть угоду в червні у Швейцарії",
     "description": "Церемонія підписання мирної угоди між США та Іраном відбудеться 19 червня у швейцарському місті Женева.",
@@ -596,6 +609,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/9/834329/59f3dfe8e61e60f6c1d46786eaaf9793.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/23/8036036/",
+    "auto": true
+  },
+  {
+    "id": 240,
+    "title": "Портнов під час останнього візиту в Україну зустрічався з Міндічем — розслідування",
+    "description": "Ексзаступник голови адміністрації президента Віктора Януковича, юрист Андрій Портнов під час свого останнього візиту в Україну зустрічався з фігурнатом справи \"Мідас\" Тимуром Міндічем.",
+    "date": "2027-05-14",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/8/850335/c8d21be463899786a58ee575e3151f90.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039469/",
     "auto": true
   }
 ]
