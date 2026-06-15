@@ -92,14 +92,15 @@
 
 | ✓ | Крок |
 |---|------|
-| ☐ | **6.1.** Supabase MCP → прочитати `push_subscriptions`, `send-bus-push/index.ts`, `pg_cron` jobs. Записати сюди: чи вміє сервер майбутні дати. |
-| ☐ | **6.2.** Дослідити iOS-PWA web push (інет) + чи `web-push` підтримує відкладені дати на сервері. Записати висновки. |
-| ☐ | **6.3.** Рішення «майбутні дні»: послабити guard у `subscribeToPush`/`unsubscribeFromPush` АБО доробити серверну логіку. |
-| ☐ | **6.4.** Чесний стан дзвіночка (3 стани) у `buses.js` `getSavedRoutesForUI`/`srRowHtml` + перевірка `Notification.permission` і наявності підписки. CSS для стану ⚠️. |
-| ☐ | **6.5.** Тост-зворотний-зв'язок при збереженні якщо push недоступний. |
-| ☐ | **6.6.** Self-heal: при `initBuses`/resume звірити `notify=true` рейси з підписками, перепідписати втрачені. |
-| ☐ | **6.7.** Тест наживо на iPhone: збережений рейс на **завтра** реально присилає нагадування; дзвіночок ⚠️ коли немає дозволу. |
-| ☐ | **6.8.** Bump `CACHE_NAME`, `node build.js`, `/finish`. |
+| ✅ | **6.1.** Supabase MCP — DONE 15.06. Сервер **підтримує майбутні дати** (видаляє `track_date<today`, відбирає `==today` → майбутній рядок вистрелить у свій день). Жива `push_subscriptions` має всі прапорці (`notified_warning/canc/start`) → синкнуто `scripts/supabase_push_schema.sql`. ⚠️ **Знайдено cron-дубль:** `jobid 4` (щохвилини) + `jobid 1` (щоп'ять хв) обидва б'ють `send-bus-push` — лишити jobid 4, прибрати jobid 1 (окремо, з дозволу Вови). |
+| ☐ | **6.2.** iOS-PWA web push (інет) — не робив формально; рішення спиралось на код + поведінку сервера. Лишається як перевірка наживо (6.7). |
+| ✅ | **6.3.** «Майбутні дні» — DONE. Послаблено guard: `trackDate!==today` → `trackDate<today` у `subscribeToPush`/`unsubscribeFromPush`. |
+| ✅ | **6.4.** Чесний дзвіночок (3 стани) — DONE. `srRowHtml` через `pushBlockedMsg()`: 🔔 on / 🔕 off / ⚠️ warn. CSS `.sr-bell--warn`. Тап по ⚠️ → `requestPushForSavedRoute` (запит дозволу), не вимкнення. |
+| ✅ | **6.5.** Тост при збереженні якщо push недоступний — DONE. |
+| ✅ | **6.6.** Self-heal — DONE. `selfHealPushSubscriptions()` в `initBuses` (лише коли дозвіл уже надано). |
+| ☐ | **6.7.** Тест наживо на iPhone: рейс на **завтра** реально присилає нагадування; дзвіночок ⚠️ без дозволу. **Чекає на Вову.** |
+| ✅ | **6.8.** Bump `CACHE_NAME` (`cstl-20260615-0538`), `node build.js` exit 0, `/finish` 15.06. |
+| ✅ | **6.9 (нове 15.06).** 🔔 **Дзвіночок на банері відстеження** — toggle push прямо з банера (`showBanner(entry)` + `_bannerEntry` + `updateBannerBell()`), напис `АКТИВОВАНО↔ВИМКНЕНО`, рейс лишається відстежуваним. CSS `.btb-bell`. |
 
 ---
 
