@@ -2334,17 +2334,9 @@
 }
 .bd-chat-last-author { font-weight: 600; color: var(--red); }
 .bd-chat-last--empty { color: var(--gray); font-style: italic; }
-/* Кількість учасників — окремий рядок над останнім повідомленням */
-.bd-chat-participants {
-  margin-top: 8px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--gray);
-}
 .bd-chat-foot {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
   gap: 8px;
   margin-top: 10px;
   padding-top: 8px;
@@ -2352,6 +2344,7 @@
   font-size: 12px;
   color: var(--gray);
 }
+.bd-chat-count { font-weight: 600; margin-right: auto; }
 .bd-chat-foot-arrow { font-size: 15px; color: var(--red); }
 /* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
 .bd-chat-by {
