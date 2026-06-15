@@ -909,8 +909,14 @@ function renderAll(el) {
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {
     btn.addEventListener('click', () => {
-      activeCategory = btn.dataset.bdCat;
+      const cat = btn.dataset.bdCat;
+      activeCategory = cat;
       renderAll(el);
+      // При виборі «ВСІ» — плавно повернути стрічку підкатегорій на початок
+      // (renderAll відновив поточну позицію, звідси й стартує анімація скролу до 0).
+      if (cat === 'all') {
+        el.querySelector('.bd-categories')?.scrollTo({ left: 0, behavior: 'smooth' });
+      }
     });
   });
 

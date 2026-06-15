@@ -1794,8 +1794,12 @@ ${post.text}
     });
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
-        activeCategory = btn.dataset.bdCat;
+        const cat = btn.dataset.bdCat;
+        activeCategory = cat;
         renderAll(el);
+        if (cat === "all") {
+          el.querySelector(".bd-categories")?.scrollTo({ left: 0, behavior: "smooth" });
+        }
       });
     });
     el.querySelectorAll(".cm-board-call").forEach((btn) => {
