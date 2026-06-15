@@ -694,9 +694,9 @@ function renderChatCard(p) {
       </div>
       <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
       ${tagsHtml}
+      <div class="bd-chat-participants">👥 ${participants} ${partWord(participants)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">👥 ${participants} ${partWord(participants)}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
