@@ -105,7 +105,10 @@ function pushKeysEqual(a, b) {
 }
 
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
-  if (trackDate !== getTodayISO()) return;
+  // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
+  // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
+  // у свій день. Блокуємо тільки минуле (підписка на нього безсенсова).
+  if (trackDate < getTodayISO()) return;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
   try {
     let perm = Notification.permission;
@@ -169,7 +172,10 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
 // Видаляє підписку для конкретного маршруту з Supabase.
 // НЕ скасовує браузерну підписку — інші маршрути продовжують працювати.
 async function unsubscribeFromPush(routeId, trackDate) {
-  if (trackDate !== getTodayISO()) return;
+  // Симетрично до subscribeToPush: знімаємо підписку і для майбутніх днів,
+  // інакше серверний рядок завтрашнього рейсу лишиться «висіти». Минуле сервер
+  // прибирає сам (track_date<today), тож для нього нічого не робимо.
+  if (trackDate < getTodayISO()) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
@@ -377,12 +383,17 @@ function checkSingleTracked(tracked, forceInitial) {
   const state   = getRouteState(route);
   const timings = getRouteTimings(route);
 
-  if (state === 'past') { removeTrackedEntry(tracked); return; }
+  if (state === 'past') {
+    unsubscribeFromPush(tracked.routeId, tracked.trackDate);  // не лишати висячу серверну підписку
+    removeTrackedEntry(tracked);
+    return;
+  }
 
   // Авто-скидання: якщо час висадки з пункту Б вже минув — сегмент завершено
   if (tracked.alightingStop) {
     const alightMins = getStopMins(route, tracked.alightingStop);
     if (alightMins !== null && nowMinutes() >= alightMins) {
+      unsubscribeFromPush(tracked.routeId, tracked.trackDate);  // не лишати висячу серверну підписку
       removeTrackedEntry(tracked);
       return;
     }
@@ -1415,7 +1426,16 @@ function renderRouteList() {
         const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
         const arrTime = route ? getStopHHMM(route, getEffectiveTo(route))   : null;
         const [rA, rB] = parseRouteEndpoints(route?.name || '');
-        const title   = (segFrom && segTo) ? `${segFrom} → ${segTo}` : `${rA} → ${rB}`;
+        // Проміжний (сегментний) рейс: посадка/висадка відрізняються від кінців маршруту
+        const isSeg = !!(segFrom && segTo &&
+          (segFrom.toUpperCase() !== rA.toUpperCase() || segTo.toUpperCase() !== rB.toUpperCase()));
+        const title   = isSeg ? `${segFrom} → ${segTo}` : `${rA} → ${rB}`;
+        // Повний маршрут-батько + його час (для підзаголовка «це проміжний рейс»)
+        const fullTitle = `${rA} → ${rB}`;
+        const stops     = route?.stops || [];
+        const fullDep   = stops.length ? getStopHHMM(route, stops[0].name) : null;
+        const fullArr   = stops.length ? getStopHHMM(route, stops[stops.length - 1].name) : null;
+        const fullTimeStr = (fullDep && fullArr) ? `${fullDep} → ${fullArr}` : (fullDep || '');
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);
         trackedRoutes.push({
@@ -1425,6 +1445,9 @@ function renderRouteList() {
           alightingStop:   segTo,
           notify:          true,        // нагадування авто-увімкнені при збереженні
           title,                        // денормалізовано для модалки «Збережені»
+          isSeg,                        // проміжний рейс → показати повний маршрут окремо
+          fullTitle,                    // ВІД → ДО повного маршруту-батька
+          fullTimeStr,                  // час повного маршруту HH:MM → HH:MM
           depTime:         depTime || '',
           arrTime:         arrTime || '',
           notifiedDep:     existing ? existing.notifiedDep     : false,
@@ -1692,6 +1715,11 @@ function getSavedRoutesForUI() {
       timeStr:   (t.depTime && t.arrTime) ? `${t.depTime} → ${t.arrTime}` : (t.depTime || ''),
       dayLabel:  savedRouteDayLabel(t.trackDate),
       notify:    t.notify !== false,
+      // Проміжний рейс: показуємо тільки коли є денормалізований повний маршрут
+      // (старі записи без fullTitle малюються як звичайні — без падіння).
+      isSegment:   t.isSeg === true && !!t.fullTitle,
+      fullTitle:   t.fullTitle || '',
+      fullTimeStr: t.fullTimeStr || '',
     }));
 }
 
@@ -1739,10 +1767,17 @@ function srRowHtml(r) {
   const bellSvg = r.notify ? SR_BELL_ON_SVG : SR_BELL_OFF_SVG;
   const bellCls = r.notify ? 'sr-bell sr-bell--on' : 'sr-bell sr-bell--off';
   const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || '')}" data-to="${escapeHtml(r.to || '')}"`;
+  // Проміжний рейс: заголовок = сегмент ВІД - ДО (тире), + підрядок з повним
+  // маршрутом-батьком і 📍 — той самий патерн, що в картці «Розкладу» (.bs-route-full).
+  const titleText = r.isSegment ? `${r.from} - ${r.to}` : r.title;
+  const fullLine = r.isSegment
+    ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? ' | ' + escapeHtml(r.fullTimeStr) : ''}</div>`
+    : '';
   return `
     <div class="sr-row">
       <div class="sr-row-info">
-        <div class="sr-row-title">${escapeHtml(r.title)}</div>
+        <div class="sr-row-title">${escapeHtml(titleText)}</div>
+        ${fullLine}
         <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? ' · ' + r.dayLabel : ''}</div>
       </div>
       <button class="${bellCls}" type="button" ${data} aria-label="Нагадування">${bellSvg}</button>
