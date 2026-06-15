@@ -676,6 +676,10 @@
     document.body.classList.add("modal-open");
     requestAnimationFrame(() => wrap.classList.add("open"));
     function close() {
+      state.photos.forEach((p) => {
+        if (p && p.startsWith("blob:"))
+          URL.revokeObjectURL(p);
+      });
       wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
       setTimeout(() => wrap.remove(), 220);
@@ -1983,7 +1987,7 @@ ${post.text}
           const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
           commentsByPost.set(postId, filtered);
           rerenderCommentsBlock(postId);
-          alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440: " + result.error);
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 4e3, "error");
         } else if (result.comment) {
           const updated = (commentsByPost.get(postId) || []).map(
             (c) => c.id === tempComment.id ? result.comment : c
