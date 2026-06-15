@@ -672,7 +672,10 @@ function renderChatCard(p) {
   const count = comments.length;
   const last = count ? comments[count - 1] : null;
   const lastHtml = last
-    ? `<div class="bd-chat-last"><span class="bd-chat-last-author">${escapeHtml(last.author || 'Житель')}:</span> ${escapeHtml(last.text)}</div>`
+    ? `<div class="bd-chat-last">
+         <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(last.author || 'Житель')}:</span> ${escapeHtml(last.text)}</span>
+         <span class="bd-chat-last-time">${formatTime(postTime(last))}</span>
+       </div>`
     : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
@@ -680,12 +683,14 @@ function renderChatCard(p) {
         <span class="bd-chat-topic-icon">💬</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <div class="bd-chat-by"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
       ${tagsHtml}
       ${lastHtml}
       <div class="bd-chat-foot">
         <span class="bd-chat-count">👥 ${count} ${msgWord(count)}</span>
-        <span class="bd-chat-foot-time">${formatTime(postTime(last || p))}</span>
+        <div class="bd-chat-by">
+          <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
+          <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
+        </div>
         ${saveBtnHtml(p)}
         <span class="bd-chat-foot-arrow">→</span>
       </div>
