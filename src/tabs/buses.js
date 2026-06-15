@@ -104,6 +104,19 @@ function pushKeysEqual(a, b) {
   return true;
 }
 
+// Чи здатний цей пристрій/браузер взагалі показувати push (iOS-PWA, дозвіл тощо).
+function isPushCapable() {
+  return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+}
+
+// Якщо push недоступний — повертає текст пояснення, інакше null.
+// Використовується для чесного стану дзвіночка і тосту при збереженні.
+function pushBlockedMsg() {
+  if (!isPushCapable()) return 'Сповіщення недоступні на цьому пристрої';
+  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях — нагадування не приходитимуть';
+  return null;
+}
+
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
   // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
   // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
@@ -1459,6 +1472,9 @@ function renderRouteList() {
         saveTrackedRoute();
         // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
         subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime);
+        // §5.3 — чесний зворотний зв'язок: якщо push завідомо недоступний, кажемо одразу
+        const blocked = pushBlockedMsg();
+        if (blocked) showToast(`Збережено. ${blocked}`);
         checkTrackNotifications(true);
       }
       renderSmartRow();
@@ -1748,6 +1764,34 @@ function toggleRouteReminders(rid, date, from, to) {
   saveTrackedRoute();   // → подія → бейдж/модалка
 }
 
+// Тап по дзвіночку у стані ⚠️: пробуємо реально увімкнути сповіщення.
+// Якщо дозвіл відхилено/недоступно — чесно пояснюємо тостом, не вдаючи що ОК.
+async function requestPushForSavedRoute(rid, date, from, to) {
+  if (!isPushCapable()) { showToast('Сповіщення недоступні на цьому пристрої'); return; }
+  if (Notification.permission === 'denied') {
+    showToast('Сповіщення вимкнені в налаштуваннях телефону/браузера. Увімкніть їх, щоб отримувати нагадування.');
+    return;
+  }
+  const entry = findTrackedEntry(rid, from || null, to || null, date);
+  if (!entry) return;
+  // subscribeToPush сам запитає дозвіл (по жесту користувача) і збереже підписку.
+  await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+  renderSavedRows();   // оновити стан дзвіночка (⚠️ → 🔔 якщо дозвіл надано)
+}
+
+// Self-heal: при відкритті Автобусів звіряємо збережені рейси (notify=on, сьогодні+майбутні)
+// з реальною push-підпискою і тихо перепідписуємо втрачені. Лише коли дозвіл уже надано —
+// без жесту НЕ запитуємо (щоб не зловживати промптом). Upsert ідемпотентний.
+function selfHealPushSubscriptions() {
+  if (!isPushCapable() || Notification.permission !== 'granted') return;
+  const today = getTodayISO();
+  for (const t of trackedRoutes) {
+    if (t.notify !== false && t.trackDate >= today) {
+      subscribeToPush(t.routeId, t.title || '', t.boardingStop || null, t.alightingStop || null, t.trackDate, t.depTime || null);
+    }
+  }
+}
+
 // Іконка хедера: показуємо ЛИШЕ на вкладці Автобуси і коли є збережені рейси.
 // Цифра (кількість збережених) — біла, всередині червоної кнопки.
 function updateSavedBadge() {
@@ -1764,8 +1808,17 @@ function updateSavedBadge() {
 let _srModalEl = null;
 
 function srRowHtml(r) {
-  const bellSvg = r.notify ? SR_BELL_ON_SVG : SR_BELL_OFF_SVG;
-  const bellCls = r.notify ? 'sr-bell sr-bell--on' : 'sr-bell sr-bell--off';
+  // Чесний стан дзвіночка (3 стани): off (вимкнув користувач) / warn (notify=true,
+  // але push недоступний — немає дозволу/не iOS-PWA) / on (реально працює).
+  const pushBlocked = !!pushBlockedMsg();
+  let bellSvg, bellCls, bellLabel;
+  if (!r.notify) {
+    bellSvg = SR_BELL_OFF_SVG; bellCls = 'sr-bell sr-bell--off'; bellLabel = 'Нагадування вимкнені';
+  } else if (pushBlocked) {
+    bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--warn'; bellLabel = 'Сповіщення недоступні — натисніть щоб увімкнути';
+  } else {
+    bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--on';  bellLabel = 'Нагадування увімкнені';
+  }
   const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || '')}" data-to="${escapeHtml(r.to || '')}"`;
   // Проміжний рейс: заголовок = сегмент ВІД - ДО (тире), + підрядок з повним
   // маршрутом-батьком і 📍 — той самий патерн, що в картці «Розкладу» (.bs-route-full).
@@ -1780,7 +1833,7 @@ function srRowHtml(r) {
         ${fullLine}
         <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? ' · ' + r.dayLabel : ''}</div>
       </div>
-      <button class="${bellCls}" type="button" ${data} aria-label="Нагадування">${bellSvg}</button>
+      <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
       <button class="sr-unsave" type="button" ${data} aria-label="Зняти збереження">${SR_BOOKMARK_SVG}</button>
     </div>`;
 }
@@ -1833,8 +1886,14 @@ function openSavedModal() {
     const t = bell || uns;
     if (!t) return;
     const { rid, date, from, to } = t.dataset;
-    if (bell) toggleRouteReminders(rid, date, from || null, to || null);
-    else      unsaveRoute(rid, date, from || null, to || null);
+    if (bell) {
+      // Стан ⚠️ (notify=true, але push недоступний) → тап = спроба увімкнути
+      // (запит дозволу / пояснення), а не вимкнути нагадування.
+      if (bell.classList.contains('sr-bell--warn')) requestPushForSavedRoute(rid, date, from || null, to || null);
+      else toggleRouteReminders(rid, date, from || null, to || null);
+    } else {
+      unsaveRoute(rid, date, from || null, to || null);
+    }
     renderSavedRows();   // бейдж оновиться через подію cstl-bus-track-changed
   });
 
@@ -1880,6 +1939,7 @@ export async function initBuses() {
 
   loadPrefs();
   loadTrackedRoute();
+  selfHealPushSubscriptions();   // перепідписати втрачені push (тихо, лише якщо дозвіл є)
 
   // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)
   if (!document.getElementById('bs-dropdown')) {

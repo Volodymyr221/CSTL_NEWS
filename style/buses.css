@@ -1831,6 +1831,8 @@
 }
 .sr-bell--on  { color: var(--red, #722F37); border-color: rgba(114,47,55,0.40); }
 .sr-bell--off { color: rgba(0,0,0,0.30); }
+/* ⚠️ notify=on, але push недоступний (немає дозволу / не iOS-PWA) — бурштиновий */
+.sr-bell--warn { color: #C77800; border-color: rgba(199,120,0,0.45); background: #FFF8EE; }
 .sr-unsave    { color: var(--red, #722F37); }
 .sr-empty {
   text-align: center;
