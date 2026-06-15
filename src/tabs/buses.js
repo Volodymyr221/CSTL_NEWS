@@ -1777,6 +1777,7 @@ function unsaveRoute(rid, date, from, to) {
   removeTrackedEntry(entry);   // → saveTrackedRoute → подія → бейдж/модалка оновляться
   checkTrackNotifications(false);
   renderSmartRow();
+  renderRouteList();   // оновити закладку рейсу у списку розкладу
 }
 
 // Перемкнути нагадування рейсу (дзвіночок). Рейс лишається збереженим.
@@ -1956,6 +1957,7 @@ export function initSavedRoutesHeader() {
   window.addEventListener('cstl-bus-track-changed', () => {
     updateSavedBadge();
     if (_srModalEl) renderSavedRows();
+    updateBannerBell();   // банер ділить той самий запис — синхронізуємо дзвіночок/напис
   });
   // Перемикання вкладок → показати/сховати іконку (вона лише на Автобусах)
   window.addEventListener('cstl-tab-changed', updateSavedBadge);

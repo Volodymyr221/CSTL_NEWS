@@ -3723,6 +3723,7 @@ ${post.text}
     removeTrackedEntry(entry);
     checkTrackNotifications(false);
     renderSmartRow();
+    renderRouteList();
   }
   function toggleRouteReminders(rid, date, from, to) {
     const entry = findTrackedEntry(rid, from || null, to || null, date);
@@ -3900,6 +3901,7 @@ ${post.text}
       updateSavedBadge();
       if (_srModalEl)
         renderSavedRows();
+      updateBannerBell();
     });
     window.addEventListener("cstl-tab-changed", updateSavedBadge);
   }
