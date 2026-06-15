@@ -1683,6 +1683,13 @@
   text-align: left;
   padding-left: 14px;
 }
+/* Дзвіночок на банері — той самий вигляд що в «Збережених», трохи компактніший */
+.btb-bell {
+  width: 36px; height: 36px;
+  margin-right: 2px;
+  z-index: 1;
+}
+.btb-bell svg { width: 19px; height: 19px; }
 .btb-label {
   font-size: 13px;
   font-weight: 500;
@@ -1813,6 +1820,12 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .sr-row-sub { font-size: 12px; color: var(--ink-soft, #888); margin-top: 2px; }
+/* Підрядок повного маршруту для проміжного рейсу (перевикористовує .bs-route-full) */
+.sr-row-full {
+  margin: 2px 0 0;
+  text-transform: uppercase;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .sr-bell, .sr-unsave {
   flex-shrink: 0;
   width: 38px; height: 38px;
@@ -1825,6 +1838,8 @@
 }
 .sr-bell--on  { color: var(--red, #722F37); border-color: rgba(114,47,55,0.40); }
 .sr-bell--off { color: rgba(0,0,0,0.30); }
+/* ⚠️ notify=on, але push недоступний (немає дозволу / не iOS-PWA) — бурштиновий */
+.sr-bell--warn { color: #C77800; border-color: rgba(199,120,0,0.45); background: #FFF8EE; }
 .sr-unsave    { color: var(--red, #722F37); }
 .sr-empty {
   text-align: center;

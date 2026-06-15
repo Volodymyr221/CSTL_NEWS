@@ -28,6 +28,7 @@ let selectedRouteId = null; // для майбутніх днів: яку кар
 //   notifiedDep, notifiedCanc, notifiedBoard, notifiedWarning, notifiedFuture }]
 let trackedRoutes    = [];
 let _bannerHideTimer = null;  // таймер автозакриття банеру
+let _bannerEntry = null;      // запис трекінгу, який зараз показує банер (для дзвіночка)
 
 function getTodayISO() {
   const d = new Date();
@@ -104,8 +105,24 @@ function pushKeysEqual(a, b) {
   return true;
 }
 
+// Чи здатний цей пристрій/браузер взагалі показувати push (iOS-PWA, дозвіл тощо).
+function isPushCapable() {
+  return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+}
+
+// Якщо push недоступний — повертає текст пояснення, інакше null.
+// Використовується для чесного стану дзвіночка і тосту при збереженні.
+function pushBlockedMsg() {
+  if (!isPushCapable()) return 'Сповіщення недоступні на цьому пристрої';
+  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях — нагадування не приходитимуть';
+  return null;
+}
+
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
-  if (trackDate !== getTodayISO()) return;
+  // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
+  // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
+  // у свій день. Блокуємо тільки минуле (підписка на нього безсенсова).
+  if (trackDate < getTodayISO()) return;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
   try {
     let perm = Notification.permission;
@@ -169,7 +186,10 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
 // Видаляє підписку для конкретного маршруту з Supabase.
 // НЕ скасовує браузерну підписку — інші маршрути продовжують працювати.
 async function unsubscribeFromPush(routeId, trackDate) {
-  if (trackDate !== getTodayISO()) return;
+  // Симетрично до subscribeToPush: знімаємо підписку і для майбутніх днів,
+  // інакше серверний рядок завтрашнього рейсу лишиться «висіти». Минуле сервер
+  // прибирає сам (track_date<today), тож для нього нічого не робимо.
+  if (trackDate < getTodayISO()) return;
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
@@ -241,9 +261,10 @@ function getTrackedSegmentForHero(routeId, route = null) {
   return entry;
 }
 
-function showBanner(label, route, isSubroute = false) {
+function showBanner(label, route, isSubroute = false, entry = null) {
   const banner = document.getElementById('bus-track-banner');
   if (!banner) return;
+  _bannerEntry = entry;          // запис, яким керує дзвіночок на банері
   const lEl = banner.querySelector('.btb-label');
   const rEl = banner.querySelector('.btb-route');
   if (lEl) {
@@ -270,16 +291,42 @@ function showBanner(label, route, isSubroute = false) {
       rEl.style.fontSize = fs + 'px';
     }
   }
+  updateBannerBell();            // дзвіночок + верхній напис під стан notify
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
   banner.classList.add('visible');
   _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 4000);
 }
 
+// Малює дзвіночок банера + верхній напис відповідно до стану _bannerEntry.notify.
+// 3 стани як у «Збережених»: on (працює) / warn (notify=true, push недоступний) / off.
+function updateBannerBell() {
+  const banner = document.getElementById('bus-track-banner');
+  if (!banner) return;
+  const bell = banner.querySelector('.btb-bell');
+  const hint = banner.querySelector('.btb-hint');
+  if (!bell || !hint || !_bannerEntry) return;
+  const notify  = _bannerEntry.notify !== false;
+  const blocked = notify && !!pushBlockedMsg();
+  bell.classList.remove('sr-bell--on', 'sr-bell--off', 'sr-bell--warn');
+  if (!notify) {
+    bell.classList.add('sr-bell--off'); bell.innerHTML = SR_BELL_OFF_SVG;
+    bell.setAttribute('aria-label', 'Нагадування вимкнені — натисніть щоб увімкнути');
+  } else if (blocked) {
+    bell.classList.add('sr-bell--warn'); bell.innerHTML = SR_BELL_ON_SVG;
+    bell.setAttribute('aria-label', 'Сповіщення недоступні — натисніть');
+  } else {
+    bell.classList.add('sr-bell--on'); bell.innerHTML = SR_BELL_ON_SVG;
+    bell.setAttribute('aria-label', 'Нагадування увімкнені — натисніть щоб вимкнути');
+  }
+  hint.textContent = notify ? 'СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО' : 'СПОВІЩЕННЯ ПРО РЕЙС ВИМКНЕНО';
+}
+
 function hideBanner() {
   const banner = document.getElementById('bus-track-banner');
   if (banner) { banner.style.transform = ''; banner.classList.remove('visible'); }
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
+  _bannerEntry = null;
 }
 
 function fmtMins(m) {
@@ -352,7 +399,7 @@ function checkSingleTracked(tracked, forceInitial) {
       const route = dayRoutes.find(r => r.id === tracked.routeId);
       if (!route) return;
       const { heading, subDefault } = buildBannerTexts(route, tracked);
-      showBanner(subDefault, heading, true);
+      showBanner(subDefault, heading, true, tracked);
     }
     return;
   }
@@ -369,7 +416,7 @@ function checkSingleTracked(tracked, forceInitial) {
     if (!tracked.notifiedCanc) {
       tracked.notifiedCanc = true;
       saveTrackedRoute();
-      showBanner('Рейс скасовано', heading);
+      showBanner('Рейс скасовано', heading, false, tracked);
     }
     return;
   }
@@ -377,12 +424,17 @@ function checkSingleTracked(tracked, forceInitial) {
   const state   = getRouteState(route);
   const timings = getRouteTimings(route);
 
-  if (state === 'past') { removeTrackedEntry(tracked); return; }
+  if (state === 'past') {
+    unsubscribeFromPush(tracked.routeId, tracked.trackDate);  // не лишати висячу серверну підписку
+    removeTrackedEntry(tracked);
+    return;
+  }
 
   // Авто-скидання: якщо час висадки з пункту Б вже минув — сегмент завершено
   if (tracked.alightingStop) {
     const alightMins = getStopMins(route, tracked.alightingStop);
     if (alightMins !== null && nowMinutes() >= alightMins) {
+      unsubscribeFromPush(tracked.routeId, tracked.trackDate);  // не лишати висячу серверну підписку
       removeTrackedEntry(tracked);
       return;
     }
@@ -404,12 +456,12 @@ function checkSingleTracked(tracked, forceInitial) {
             minsToBoard <= 15
               ? `До ${tracked.boardingStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
               : 'В дорозі',
-            heading);
+            heading, false, tracked);
           return;
         }
       }
     }
-    if (forceShow) showBanner('Вже в дорозі', heading);
+    if (forceShow) showBanner('Вже в дорозі', heading, false, tracked);
     return;
   }
 
@@ -420,12 +472,12 @@ function checkSingleTracked(tracked, forceInitial) {
     }
     if (forceShow) showBanner(
       m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
-      heading);
+      heading, false, tracked);
     return;
   }
 
   // Стан очікування без таймеру — показуємо підзаголовок (тільки при першому відстеженні)
-  if (forceShow) showBanner(subDefault, heading, true);
+  if (forceShow) showBanner(subDefault, heading, true, tracked);
 }
 
 function isDayActive(days) {
@@ -1415,7 +1467,16 @@ function renderRouteList() {
         const depTime = route ? getStopHHMM(route, getEffectiveFrom(route)) : null;
         const arrTime = route ? getStopHHMM(route, getEffectiveTo(route))   : null;
         const [rA, rB] = parseRouteEndpoints(route?.name || '');
-        const title   = (segFrom && segTo) ? `${segFrom} → ${segTo}` : `${rA} → ${rB}`;
+        // Проміжний (сегментний) рейс: посадка/висадка відрізняються від кінців маршруту
+        const isSeg = !!(segFrom && segTo &&
+          (segFrom.toUpperCase() !== rA.toUpperCase() || segTo.toUpperCase() !== rB.toUpperCase()));
+        const title   = isSeg ? `${segFrom} → ${segTo}` : `${rA} → ${rB}`;
+        // Повний маршрут-батько + його час (для підзаголовка «це проміжний рейс»)
+        const fullTitle = `${rA} → ${rB}`;
+        const stops     = route?.stops || [];
+        const fullDep   = stops.length ? getStopHHMM(route, stops[0].name) : null;
+        const fullArr   = stops.length ? getStopHHMM(route, stops[stops.length - 1].name) : null;
+        const fullTimeStr = (fullDep && fullArr) ? `${fullDep} → ${fullArr}` : (fullDep || '');
         // Зберігаємо notifiedDep якщо той самий повний маршрут вже відстежується
         const existing = trackedRoutes.find(t => t.routeId === rid && t.trackDate === busDay);
         trackedRoutes.push({
@@ -1425,6 +1486,9 @@ function renderRouteList() {
           alightingStop:   segTo,
           notify:          true,        // нагадування авто-увімкнені при збереженні
           title,                        // денормалізовано для модалки «Збережені»
+          isSeg,                        // проміжний рейс → показати повний маршрут окремо
+          fullTitle,                    // ВІД → ДО повного маршруту-батька
+          fullTimeStr,                  // час повного маршруту HH:MM → HH:MM
           depTime:         depTime || '',
           arrTime:         arrTime || '',
           notifiedDep:     existing ? existing.notifiedDep     : false,
@@ -1436,6 +1500,9 @@ function renderRouteList() {
         saveTrackedRoute();
         // Level B: підписка на Web Push (запитає дозвіл якщо ще не надано)
         subscribeToPush(rid, route?.name || '', segFrom, segTo, busDay, depTime);
+        // §5.3 — чесний зворотний зв'язок: якщо push завідомо недоступний, кажемо одразу
+        const blocked = pushBlockedMsg();
+        if (blocked) showToast(`Збережено. ${blocked}`);
         checkTrackNotifications(true);
       }
       renderSmartRow();
@@ -1692,6 +1759,11 @@ function getSavedRoutesForUI() {
       timeStr:   (t.depTime && t.arrTime) ? `${t.depTime} → ${t.arrTime}` : (t.depTime || ''),
       dayLabel:  savedRouteDayLabel(t.trackDate),
       notify:    t.notify !== false,
+      // Проміжний рейс: показуємо тільки коли є денормалізований повний маршрут
+      // (старі записи без fullTitle малюються як звичайні — без падіння).
+      isSegment:   t.isSeg === true && !!t.fullTitle,
+      fullTitle:   t.fullTitle || '',
+      fullTimeStr: t.fullTimeStr || '',
     }));
 }
 
@@ -1720,6 +1792,34 @@ function toggleRouteReminders(rid, date, from, to) {
   saveTrackedRoute();   // → подія → бейдж/модалка
 }
 
+// Тап по дзвіночку у стані ⚠️: пробуємо реально увімкнути сповіщення.
+// Якщо дозвіл відхилено/недоступно — чесно пояснюємо тостом, не вдаючи що ОК.
+async function requestPushForSavedRoute(rid, date, from, to) {
+  if (!isPushCapable()) { showToast('Сповіщення недоступні на цьому пристрої'); return; }
+  if (Notification.permission === 'denied') {
+    showToast('Сповіщення вимкнені в налаштуваннях телефону/браузера. Увімкніть їх, щоб отримувати нагадування.');
+    return;
+  }
+  const entry = findTrackedEntry(rid, from || null, to || null, date);
+  if (!entry) return;
+  // subscribeToPush сам запитає дозвіл (по жесту користувача) і збереже підписку.
+  await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
+  renderSavedRows();   // оновити стан дзвіночка (⚠️ → 🔔 якщо дозвіл надано)
+}
+
+// Self-heal: при відкритті Автобусів звіряємо збережені рейси (notify=on, сьогодні+майбутні)
+// з реальною push-підпискою і тихо перепідписуємо втрачені. Лише коли дозвіл уже надано —
+// без жесту НЕ запитуємо (щоб не зловживати промптом). Upsert ідемпотентний.
+function selfHealPushSubscriptions() {
+  if (!isPushCapable() || Notification.permission !== 'granted') return;
+  const today = getTodayISO();
+  for (const t of trackedRoutes) {
+    if (t.notify !== false && t.trackDate >= today) {
+      subscribeToPush(t.routeId, t.title || '', t.boardingStop || null, t.alightingStop || null, t.trackDate, t.depTime || null);
+    }
+  }
+}
+
 // Іконка хедера: показуємо ЛИШЕ на вкладці Автобуси і коли є збережені рейси.
 // Цифра (кількість збережених) — біла, всередині червоної кнопки.
 function updateSavedBadge() {
@@ -1736,16 +1836,32 @@ function updateSavedBadge() {
 let _srModalEl = null;
 
 function srRowHtml(r) {
-  const bellSvg = r.notify ? SR_BELL_ON_SVG : SR_BELL_OFF_SVG;
-  const bellCls = r.notify ? 'sr-bell sr-bell--on' : 'sr-bell sr-bell--off';
+  // Чесний стан дзвіночка (3 стани): off (вимкнув користувач) / warn (notify=true,
+  // але push недоступний — немає дозволу/не iOS-PWA) / on (реально працює).
+  const pushBlocked = !!pushBlockedMsg();
+  let bellSvg, bellCls, bellLabel;
+  if (!r.notify) {
+    bellSvg = SR_BELL_OFF_SVG; bellCls = 'sr-bell sr-bell--off'; bellLabel = 'Нагадування вимкнені';
+  } else if (pushBlocked) {
+    bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--warn'; bellLabel = 'Сповіщення недоступні — натисніть щоб увімкнути';
+  } else {
+    bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--on';  bellLabel = 'Нагадування увімкнені';
+  }
   const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || '')}" data-to="${escapeHtml(r.to || '')}"`;
+  // Проміжний рейс: заголовок = сегмент ВІД - ДО (тире), + підрядок з повним
+  // маршрутом-батьком і 📍 — той самий патерн, що в картці «Розкладу» (.bs-route-full).
+  const titleText = r.isSegment ? `${r.from} - ${r.to}` : r.title;
+  const fullLine = r.isSegment
+    ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? ' | ' + escapeHtml(r.fullTimeStr) : ''}</div>`
+    : '';
   return `
     <div class="sr-row">
       <div class="sr-row-info">
-        <div class="sr-row-title">${escapeHtml(r.title)}</div>
+        <div class="sr-row-title">${escapeHtml(titleText)}</div>
+        ${fullLine}
         <div class="sr-row-sub">${escapeHtml(r.timeStr)}${r.dayLabel ? ' · ' + r.dayLabel : ''}</div>
       </div>
-      <button class="${bellCls}" type="button" ${data} aria-label="Нагадування">${bellSvg}</button>
+      <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
       <button class="sr-unsave" type="button" ${data} aria-label="Зняти збереження">${SR_BOOKMARK_SVG}</button>
     </div>`;
 }
@@ -1798,8 +1914,14 @@ function openSavedModal() {
     const t = bell || uns;
     if (!t) return;
     const { rid, date, from, to } = t.dataset;
-    if (bell) toggleRouteReminders(rid, date, from || null, to || null);
-    else      unsaveRoute(rid, date, from || null, to || null);
+    if (bell) {
+      // Стан ⚠️ (notify=true, але push недоступний) → тап = спроба увімкнути
+      // (запит дозволу / пояснення), а не вимкнути нагадування.
+      if (bell.classList.contains('sr-bell--warn')) requestPushForSavedRoute(rid, date, from || null, to || null);
+      else toggleRouteReminders(rid, date, from || null, to || null);
+    } else {
+      unsaveRoute(rid, date, from || null, to || null);
+    }
     renderSavedRows();   // бейдж оновиться через подію cstl-bus-track-changed
   });
 
@@ -1845,6 +1967,7 @@ export async function initBuses() {
 
   loadPrefs();
   loadTrackedRoute();
+  selfHealPushSubscriptions();   // перепідписати втрачені push (тихо, лише якщо дозвіл є)
 
   // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)
   if (!document.getElementById('bs-dropdown')) {
@@ -1869,6 +1992,7 @@ export async function initBuses() {
           <div class="btb-route"></div>
           <div class="btb-label"></div>
         </div>
+        <button class="btb-bell sr-bell sr-bell--on" type="button" aria-label="Нагадування">${SR_BELL_ON_SVG}</button>
       </div>
       <div class="btb-hint">СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО</div>`;
     document.body.appendChild(banner);
@@ -1903,6 +2027,24 @@ export async function initBuses() {
       _onBannerRelease(e.changedTouches[0].clientY - _swipeStartY);
     });
     banner.addEventListener('touchcancel', () => { _onBannerRelease(0); });
+    // Дзвіночок на банері: вмикає/вимикає push-нагадування для показаного рейсу.
+    // Рейс лишається відстежуваним (це лише сповіщення). Верхній напис і іконка
+    // оновлюються, банер тримаємо видимим щоб користувач побачив зміну.
+    const _btbBell = banner.querySelector('.btb-bell');
+    if (_btbBell) _btbBell.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!_bannerEntry) return;
+      const from = _bannerEntry.boardingStop || null;
+      const to   = _bannerEntry.alightingStop || null;
+      if (_btbBell.classList.contains('sr-bell--warn')) {
+        await requestPushForSavedRoute(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+      } else {
+        toggleRouteReminders(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+      }
+      updateBannerBell();
+      if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); }
+      _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 4000);
+    });
   }
 
   // Закривати дропдаун при кліку поза ним
