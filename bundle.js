@@ -1173,6 +1173,14 @@
       return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
+  function partWord(n) {
+    const m10 = n % 10, m100 = n % 100;
+    if (m10 === 1 && m100 !== 11)
+      return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A";
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
+      return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0438";
+    return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432";
+  }
   function getSavedIds() {
     return new Set(lsGet(LS_SAVED, []));
   }
@@ -1595,6 +1603,7 @@ ${post.text}
     const comments = getComments(p.id);
     const count = comments.length;
     const last = count ? comments[count - 1] : null;
+    const participants = new Set(comments.map((c) => c.author || "\u0416\u0438\u0442\u0435\u043B\u044C")).size;
     const lastHtml = last ? `<div class="bd-chat-last">
          <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(last.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(last.text)}</span>
          <span class="bd-chat-last-time">${formatTime(postTime(last))}</span>
@@ -1602,13 +1611,14 @@ ${post.text}
     return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
-        <span class="bd-chat-topic-icon">\u{1F4AC}</span>
+        <span class="bd-chat-topic-icon">\u{1F4AD}</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
+      <div class="bd-chat-msgcount">\u{1F4AC} ${count} ${msgWord(count)}</div>
       ${tagsHtml}
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">\u{1F465} ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-count">\u{1F465} ${participants} ${partWord(participants)}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>

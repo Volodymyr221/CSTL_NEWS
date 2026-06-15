@@ -171,6 +171,13 @@ function msgWord(n) {
   if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'повідомлення';
   return 'повідомлень';
 }
+// Відмінювання «учасник» для лічильника унікальних авторів у чаті
+function partWord(n) {
+  const m10 = n % 10, m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return 'учасник';
+  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'учасники';
+  return 'учасників';
+}
 
 function getSavedIds() {
   return new Set(lsGet(LS_SAVED, []));
@@ -671,6 +678,8 @@ function renderChatCard(p) {
   const comments = getComments(p.id);
   const count = comments.length;
   const last = count ? comments[count - 1] : null;
+  // Унікальні учасники чату — за іменами авторів повідомлень (анонімні «Житель» зіллються)
+  const participants = new Set(comments.map(c => c.author || 'Житель')).size;
   const lastHtml = last
     ? `<div class="bd-chat-last">
          <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(last.author || 'Житель')}:</span> ${escapeHtml(last.text)}</span>
@@ -680,13 +689,14 @@ function renderChatCard(p) {
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
-        <span class="bd-chat-topic-icon">💬</span>
+        <span class="bd-chat-topic-icon">💭</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
+      <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
       ${tagsHtml}
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">👥 ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-count">👥 ${participants} ${partWord(participants)}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
