@@ -129,6 +129,8 @@ export function openBoardModal() {
 
   // ── Close ──
   function close() {
+    // Звільняємо blob:-посилання незавантажених фото (щоб не лишати витік пам'яті)
+    state.photos.forEach(p => { if (p && p.startsWith('blob:')) URL.revokeObjectURL(p); });
     wrap.classList.remove('open');
     document.body.classList.remove('modal-open');
     setTimeout(() => wrap.remove(), 220);

@@ -1103,7 +1103,7 @@ function attachBoardDelegation() {
         const filtered = (commentsByPost.get(postId) || []).filter(c => c.id !== tempComment.id);
         commentsByPost.set(postId, filtered);
         rerenderCommentsBlock(postId);
-        alert('Не вдалося надіслати коментар: ' + result.error);
+        showToast('❌ Не вдалося надіслати повідомлення. Спробуйте ще раз.', 4000, 'error');
       } else if (result.comment) {
         // Заміняємо temp-коментар на справжній (з реальним id з БД)
         const updated = (commentsByPost.get(postId) || []).map(c =>
