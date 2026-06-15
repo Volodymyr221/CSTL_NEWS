@@ -40,6 +40,32 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 237,
+    "title": "Росіяни заявили, що на кіностудії Довженка збирали дрони, а по Лаврі вдарив Patriot",
+    "description": "В Міноборони РФ заявили, що по собору на території Києво-Печерської лаври завдала удару не російська армія, а ракета від системи ППО \"Patriot\".",
+    "date": "2026-06-15",
+    "time": null,
+    "location": null,
+    "category": "Культура",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/2/849825/52a7b33a5eade4e98285e44326440822.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039351/",
+    "auto": true
+  },
+  {
+    "id": 238,
+    "title": "Будівля Вищого антикорупційного суду зазнала пошкоджень від російської атаки",
+    "description": "Будівля Вищого антикорупційного суду на проспекті Берестейському у Києві зазнала ушкоджень внаслідок нічної масованої атаки РФ 15 червня.",
+    "date": "2026-06-15",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/c/849705/fc351ced59123d5a655d0f39e6fcd113.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039323/",
+    "auto": true
+  },
+  {
     "id": 229,
     "title": "Трамп і Макрон зустрінуться за вечерею після саміту G7 – ЗМІ",
     "description": "Дональд Трамп і Еммануель Макрон проведуть вечерю у Версалі після саміту G7 у Франції.",
@@ -128,6 +154,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/4/847770/a48d380ce4a57c688745a3a13d3a3836.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8038937/",
+    "auto": true
+  },
+  {
+    "id": 239,
+    "title": "США та Іран підпишуть угоду в червні у Швейцарії",
+    "description": "Церемонія підписання мирної угоди між США та Іраном відбудеться 19 червня у швейцарському місті Женева.",
+    "date": "2026-06-19",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/0/849798/202f0435ff74e9b5074c8c3895208215.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039339/",
     "auto": true
   },
   {
