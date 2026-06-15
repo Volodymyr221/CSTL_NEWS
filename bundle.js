@@ -2251,6 +2251,7 @@ ${post.text}
   var selectedRouteId = null;
   var trackedRoutes = [];
   var _bannerHideTimer = null;
+  var _bannerEntry = null;
   function getTodayISO() {
     const d = /* @__PURE__ */ new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -2456,10 +2457,11 @@ ${post.text}
     }
     return entry;
   }
-  function showBanner(label, route, isSubroute = false) {
+  function showBanner(label, route, isSubroute = false, entry = null) {
     const banner = document.getElementById("bus-track-banner");
     if (!banner)
       return;
+    _bannerEntry = entry;
     const lEl = banner.querySelector(".btb-label");
     const rEl = banner.querySelector(".btb-route");
     if (lEl) {
@@ -2486,6 +2488,7 @@ ${post.text}
         rEl.style.fontSize = fs + "px";
       }
     }
+    updateBannerBell();
     if (_bannerHideTimer) {
       clearTimeout(_bannerHideTimer);
       _bannerHideTimer = null;
@@ -2497,6 +2500,32 @@ ${post.text}
       _bannerHideTimer = null;
     }, 4e3);
   }
+  function updateBannerBell() {
+    const banner = document.getElementById("bus-track-banner");
+    if (!banner)
+      return;
+    const bell = banner.querySelector(".btb-bell");
+    const hint = banner.querySelector(".btb-hint");
+    if (!bell || !hint || !_bannerEntry)
+      return;
+    const notify = _bannerEntry.notify !== false;
+    const blocked = notify && !!pushBlockedMsg();
+    bell.classList.remove("sr-bell--on", "sr-bell--off", "sr-bell--warn");
+    if (!notify) {
+      bell.classList.add("sr-bell--off");
+      bell.innerHTML = SR_BELL_OFF_SVG;
+      bell.setAttribute("aria-label", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0449\u043E\u0431 \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438");
+    } else if (blocked) {
+      bell.classList.add("sr-bell--warn");
+      bell.innerHTML = SR_BELL_ON_SVG;
+      bell.setAttribute("aria-label", "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C");
+    } else {
+      bell.classList.add("sr-bell--on");
+      bell.innerHTML = SR_BELL_ON_SVG;
+      bell.setAttribute("aria-label", "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u0456 \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0449\u043E\u0431 \u0432\u0438\u043C\u043A\u043D\u0443\u0442\u0438");
+    }
+    hint.textContent = notify ? "\u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u0420\u0415\u0419\u0421 \u0410\u041A\u0422\u0418\u0412\u041E\u0412\u0410\u041D\u041E" : "\u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u0420\u0415\u0419\u0421 \u0412\u0418\u041C\u041A\u041D\u0415\u041D\u041E";
+  }
   function hideBanner() {
     const banner = document.getElementById("bus-track-banner");
     if (banner) {
@@ -2507,6 +2536,7 @@ ${post.text}
       clearTimeout(_bannerHideTimer);
       _bannerHideTimer = null;
     }
+    _bannerEntry = null;
   }
   function fmtMins(m) {
     if (m < 60)
@@ -2564,7 +2594,7 @@ ${post.text}
         if (!route2)
           return;
         const { heading: heading2, subDefault: subDefault2 } = buildBannerTexts(route2, tracked);
-        showBanner(subDefault2, heading2, true);
+        showBanner(subDefault2, heading2, true, tracked);
       }
       return;
     }
@@ -2581,7 +2611,7 @@ ${post.text}
       if (!tracked.notifiedCanc) {
         tracked.notifiedCanc = true;
         saveTrackedRoute();
-        showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading);
+        showBanner("\u0420\u0435\u0439\u0441 \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E", heading, false, tracked);
       }
       return;
     }
@@ -2620,14 +2650,16 @@ ${post.text}
             if (forceShow)
               showBanner(
                 minsToBoard <= 15 ? `\u0414\u043E ${tracked.boardingStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
-                heading
+                heading,
+                false,
+                tracked
               );
             return;
           }
         }
       }
       if (forceShow)
-        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading);
+        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading, false, tracked);
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
@@ -2640,12 +2672,14 @@ ${post.text}
       if (forceShow)
         showBanner(
           m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
-          heading
+          heading,
+          false,
+          tracked
         );
       return;
     }
     if (forceShow)
-      showBanner(subDefault, heading, true);
+      showBanner(subDefault, heading, true, tracked);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
@@ -3897,6 +3931,7 @@ ${post.text}
           <div class="btb-route"></div>
           <div class="btb-label"></div>
         </div>
+        <button class="btb-bell sr-bell sr-bell--on" type="button" aria-label="\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F">${SR_BELL_ON_SVG}</button>
       </div>
       <div class="btb-hint">\u0421\u041F\u041E\u0412\u0406\u0429\u0415\u041D\u041D\u042F \u041F\u0420\u041E \u0420\u0415\u0419\u0421 \u0410\u041A\u0422\u0418\u0412\u041E\u0412\u0410\u041D\u041E</div>`;
       document.body.appendChild(banner);
@@ -3940,6 +3975,28 @@ ${post.text}
       banner.addEventListener("touchcancel", () => {
         _onBannerRelease(0);
       });
+      const _btbBell = banner.querySelector(".btb-bell");
+      if (_btbBell)
+        _btbBell.addEventListener("click", async (e) => {
+          e.stopPropagation();
+          if (!_bannerEntry)
+            return;
+          const from = _bannerEntry.boardingStop || null;
+          const to = _bannerEntry.alightingStop || null;
+          if (_btbBell.classList.contains("sr-bell--warn")) {
+            await requestPushForSavedRoute(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+          } else {
+            toggleRouteReminders(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+          }
+          updateBannerBell();
+          if (_bannerHideTimer) {
+            clearTimeout(_bannerHideTimer);
+          }
+          _bannerHideTimer = setTimeout(() => {
+            hideBanner();
+            _bannerHideTimer = null;
+          }, 4e3);
+        });
     }
     document.addEventListener("click", (e) => {
       const dd = document.getElementById("bs-dropdown");

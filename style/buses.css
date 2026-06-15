@@ -1683,6 +1683,13 @@
   text-align: left;
   padding-left: 14px;
 }
+/* Дзвіночок на банері — той самий вигляд що в «Збережених», трохи компактніший */
+.btb-bell {
+  width: 36px; height: 36px;
+  margin-right: 2px;
+  z-index: 1;
+}
+.btb-bell svg { width: 19px; height: 19px; }
 .btb-label {
   font-size: 13px;
   font-weight: 500;

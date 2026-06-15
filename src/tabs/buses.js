@@ -28,6 +28,7 @@ let selectedRouteId = null; // для майбутніх днів: яку кар
 //   notifiedDep, notifiedCanc, notifiedBoard, notifiedWarning, notifiedFuture }]
 let trackedRoutes    = [];
 let _bannerHideTimer = null;  // таймер автозакриття банеру
+let _bannerEntry = null;      // запис трекінгу, який зараз показує банер (для дзвіночка)
 
 function getTodayISO() {
   const d = new Date();
@@ -260,9 +261,10 @@ function getTrackedSegmentForHero(routeId, route = null) {
   return entry;
 }
 
-function showBanner(label, route, isSubroute = false) {
+function showBanner(label, route, isSubroute = false, entry = null) {
   const banner = document.getElementById('bus-track-banner');
   if (!banner) return;
+  _bannerEntry = entry;          // запис, яким керує дзвіночок на банері
   const lEl = banner.querySelector('.btb-label');
   const rEl = banner.querySelector('.btb-route');
   if (lEl) {
@@ -289,16 +291,42 @@ function showBanner(label, route, isSubroute = false) {
       rEl.style.fontSize = fs + 'px';
     }
   }
+  updateBannerBell();            // дзвіночок + верхній напис під стан notify
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
   banner.style.transform = '';
   banner.classList.add('visible');
   _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 4000);
 }
 
+// Малює дзвіночок банера + верхній напис відповідно до стану _bannerEntry.notify.
+// 3 стани як у «Збережених»: on (працює) / warn (notify=true, push недоступний) / off.
+function updateBannerBell() {
+  const banner = document.getElementById('bus-track-banner');
+  if (!banner) return;
+  const bell = banner.querySelector('.btb-bell');
+  const hint = banner.querySelector('.btb-hint');
+  if (!bell || !hint || !_bannerEntry) return;
+  const notify  = _bannerEntry.notify !== false;
+  const blocked = notify && !!pushBlockedMsg();
+  bell.classList.remove('sr-bell--on', 'sr-bell--off', 'sr-bell--warn');
+  if (!notify) {
+    bell.classList.add('sr-bell--off'); bell.innerHTML = SR_BELL_OFF_SVG;
+    bell.setAttribute('aria-label', 'Нагадування вимкнені — натисніть щоб увімкнути');
+  } else if (blocked) {
+    bell.classList.add('sr-bell--warn'); bell.innerHTML = SR_BELL_ON_SVG;
+    bell.setAttribute('aria-label', 'Сповіщення недоступні — натисніть');
+  } else {
+    bell.classList.add('sr-bell--on'); bell.innerHTML = SR_BELL_ON_SVG;
+    bell.setAttribute('aria-label', 'Нагадування увімкнені — натисніть щоб вимкнути');
+  }
+  hint.textContent = notify ? 'СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО' : 'СПОВІЩЕННЯ ПРО РЕЙС ВИМКНЕНО';
+}
+
 function hideBanner() {
   const banner = document.getElementById('bus-track-banner');
   if (banner) { banner.style.transform = ''; banner.classList.remove('visible'); }
   if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); _bannerHideTimer = null; }
+  _bannerEntry = null;
 }
 
 function fmtMins(m) {
@@ -371,7 +399,7 @@ function checkSingleTracked(tracked, forceInitial) {
       const route = dayRoutes.find(r => r.id === tracked.routeId);
       if (!route) return;
       const { heading, subDefault } = buildBannerTexts(route, tracked);
-      showBanner(subDefault, heading, true);
+      showBanner(subDefault, heading, true, tracked);
     }
     return;
   }
@@ -388,7 +416,7 @@ function checkSingleTracked(tracked, forceInitial) {
     if (!tracked.notifiedCanc) {
       tracked.notifiedCanc = true;
       saveTrackedRoute();
-      showBanner('Рейс скасовано', heading);
+      showBanner('Рейс скасовано', heading, false, tracked);
     }
     return;
   }
@@ -428,12 +456,12 @@ function checkSingleTracked(tracked, forceInitial) {
             minsToBoard <= 15
               ? `До ${tracked.boardingStop.toUpperCase()} за ${fmtMins(minsToBoard)}`
               : 'В дорозі',
-            heading);
+            heading, false, tracked);
           return;
         }
       }
     }
-    if (forceShow) showBanner('Вже в дорозі', heading);
+    if (forceShow) showBanner('Вже в дорозі', heading, false, tracked);
     return;
   }
 
@@ -444,12 +472,12 @@ function checkSingleTracked(tracked, forceInitial) {
     }
     if (forceShow) showBanner(
       m <= 15 ? `Відправляється через ${fmtMins(m)}` : `Через ${fmtMins(m)}`,
-      heading);
+      heading, false, tracked);
     return;
   }
 
   // Стан очікування без таймеру — показуємо підзаголовок (тільки при першому відстеженні)
-  if (forceShow) showBanner(subDefault, heading, true);
+  if (forceShow) showBanner(subDefault, heading, true, tracked);
 }
 
 function isDayActive(days) {
@@ -1964,6 +1992,7 @@ export async function initBuses() {
           <div class="btb-route"></div>
           <div class="btb-label"></div>
         </div>
+        <button class="btb-bell sr-bell sr-bell--on" type="button" aria-label="Нагадування">${SR_BELL_ON_SVG}</button>
       </div>
       <div class="btb-hint">СПОВІЩЕННЯ ПРО РЕЙС АКТИВОВАНО</div>`;
     document.body.appendChild(banner);
@@ -1998,6 +2027,24 @@ export async function initBuses() {
       _onBannerRelease(e.changedTouches[0].clientY - _swipeStartY);
     });
     banner.addEventListener('touchcancel', () => { _onBannerRelease(0); });
+    // Дзвіночок на банері: вмикає/вимикає push-нагадування для показаного рейсу.
+    // Рейс лишається відстежуваним (це лише сповіщення). Верхній напис і іконка
+    // оновлюються, банер тримаємо видимим щоб користувач побачив зміну.
+    const _btbBell = banner.querySelector('.btb-bell');
+    if (_btbBell) _btbBell.addEventListener('click', async e => {
+      e.stopPropagation();
+      if (!_bannerEntry) return;
+      const from = _bannerEntry.boardingStop || null;
+      const to   = _bannerEntry.alightingStop || null;
+      if (_btbBell.classList.contains('sr-bell--warn')) {
+        await requestPushForSavedRoute(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+      } else {
+        toggleRouteReminders(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+      }
+      updateBannerBell();
+      if (_bannerHideTimer) { clearTimeout(_bannerHideTimer); }
+      _bannerHideTimer = setTimeout(() => { hideBanner(); _bannerHideTimer = null; }, 4000);
+    });
   }
 
   // Закривати дропдаун при кліку поза ним
