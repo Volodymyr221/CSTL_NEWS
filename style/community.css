@@ -1518,7 +1518,15 @@
 .bd-stream .cm-board-note--has-photo .cm-board-photo { aspect-ratio: 16 / 10; }
 .bd-stream .cm-board-note { padding: 13px 13px 12px; }
 .bd-stream .cm-board-note--has-photo .cm-board-photo-wrap { margin: -13px -13px 10px; }
-.bd-stream .cm-board-text { font-size: 14px; }
+.bd-stream .cm-board-text {
+  font-size: 14px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Картки-обговорення у стрічці «Збережені» — ті самі відступи, що й оголошення */
+.bd-stream .bd-card--chat { padding: 13px 13px 12px; }
 /* На стікері з фото меншу к-сть рядків тексту (місця менше) */
 .cm-board-note--has-photo .cm-board-text {
   display: -webkit-box;
@@ -2365,7 +2373,7 @@
 .bd-chat-by-label { font-weight: 700; color: var(--red); }
 .bd-chat-by-date { font-size: 10.5px; color: var(--gray); }
 /* Кнопка «зберегти» в підвалі картки — трохи компактніша */
-.bd-chat-foot .bd-bookmark { width: 30px; height: 30px; }
+.bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
 
 /* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
 .bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
