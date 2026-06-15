@@ -40,97 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 234,
-    "title": "Зеленський переказав слова Трампа про Крим: Якби було сильне лідерство, не було б війни",
-    "description": "Зеленський розповів про розмову з Трампом: якби у 2014 було сильне лідерство, війни в Україні не було б.",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/3/849362/1362868dee5504f857c91638f7774e9e.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039268/",
-    "auto": true
-  },
-  {
-    "id": 232,
-    "title": "Трамп, окрім Зеленського, поговорив і з Путіним: нібито готовий вплинути на Київ",
-    "description": "Президент США Дональд Трамп у неділю провів телефонну розмову з правителем РФ Володимиром Путіним.",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/d/849337/cdb0fbe3bf65540c7286fa1e8c449838.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039265/",
-    "auto": true
-  },
-  {
-    "id": 233,
-    "title": "Зеленський побажав Трампу успіхів у завершенні війни в Україні й анонсував зустріч",
-    "description": "Зеленський і Трамп обговорили підтримку України та наступну розмову на G7 після телефонної бесіди 14 червня.",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/e/849325/9e2102ee6b1578764349f04d63389b54.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039264/",
-    "auto": true
-  },
-  {
-    "id": 231,
-    "title": "РФ запустила понад 3500 ударних дронів та КАБів за тиждень – Зеленський",
-    "description": "Росія за 7 днів випустила по Україні 1920 дронів, 1790 авіабомб та 17 ракет — Зеленський.",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/2/849242/723183579aca06028748d26762619822.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039247/",
-    "auto": true
-  },
-  {
-    "id": 230,
-    "title": "Стармер показав, як британці захоплювали корабель \"тіньового флоту\" РФ",
-    "description": "Президент України Володимир Зеленський висловив вдячність Британії та її прем'єру Кіру Стармеру за першу операцію із захоплення російського танкера \"тіньового флоту\", відреагувавши на відео спецоперації.",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/6/849232/1642aa452249dfb6082a6f06c4dea17f.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039242/",
-    "auto": true
-  },
-  {
-    "id": 228,
-    "title": "Трамп: Угоду з Іраном планується підписати завтра, Ормузьку протоку відкриють",
-    "description": "Трамп заявив про підписання угоди з Іраном 14 червня та відкриття Ормузької протоки для судноплавства.",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/c/848951/8ce54cd26bfd00090d8addc67c1e87d5.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/13/8039190/",
-    "auto": true
-  },
-  {
-    "id": 14,
-    "title": "Білий дім опублікував фото Трампа і Чарльза ІІІ з підписом \"Два королі\"",
-    "description": "Офіційний акаунт Білого дому в мережі X опублікував фото зустрічі президента США Дональда Трампа і короля Британії Чарльза III, що відбулася у вівторок у Вашингтоні, підписавши його \"Два королі\".",
-    "date": "2026-06-14",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/4/818992/14d7bb0aa7820f6e40722787c775f9f1.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/04/29/8032272/",
-    "auto": true
-  },
-  {
     "id": 229,
     "title": "Трамп і Макрон зустрінуться за вечерею після саміту G7 – ЗМІ",
     "description": "Дональд Трамп і Еммануель Макрон проведуть вечерю у Версалі після саміту G7 у Франції.",
@@ -219,6 +128,32 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/4/847770/a48d380ce4a57c688745a3a13d3a3836.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8038937/",
+    "auto": true
+  },
+  {
+    "id": 236,
+    "title": "Трамп заявив про угоду з Іраном і анонсував відкриття Ормузької протоки",
+    "description": "Президент США Дональд Трамп заявив про укладення мирної угоди з Іраном та відкриття Ормузької протоки.",
+    "date": "2026-06-19",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/6/849524/f634a80d5afbeb71d92d68d253df856d.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039289/",
+    "auto": true
+  },
+  {
+    "id": 235,
+    "title": "Прем'єр Пакистану заявив про досягнення \"мирної угоди між США та Іраном\"",
+    "description": "Прем'єр-міністр Пакистану Шехбаз Шаріф заявив, що \"мирна угода між Сполученими Штатами Америки та Ісламською Республікою Іран досягнута\".",
+    "date": "2026-06-19",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/d/849523/fd3fb110d35588f044fce1158ed9ed35.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039288/",
     "auto": true
   },
   {
@@ -622,19 +557,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/9/834329/59f3dfe8e61e60f6c1d46786eaaf9793.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/23/8036036/",
-    "auto": true
-  },
-  {
-    "id": 102,
-    "title": "У мечеті в США підлітки вбили трьох людей і вчинили самогубство",
-    "description": "В Ісламському центрі міста Сан-Дієго (штат Каліфорнія) двоє озброєних підлітків убили трьох людей, після чого вчинили самогубство.",
-    "date": "2027-02-28",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/1/831046/a162d20eabe28eed26b3d690f161ce44.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/19/8035307/",
     "auto": true
   }
 ]
