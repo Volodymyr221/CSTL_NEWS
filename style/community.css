@@ -2300,6 +2300,13 @@
   align-items: flex-start;
 }
 .bd-chat-topic-icon { font-size: 16px; line-height: 1.5; flex-shrink: 0; }
+/* Лічильник повідомлень — окремий рядок під темою (де раніше був автор) */
+.bd-chat-msgcount {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+}
 .bd-chat-last {
   margin-top: 8px;
   display: flex;
