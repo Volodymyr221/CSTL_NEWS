@@ -1616,9 +1616,9 @@ ${post.text}
       </div>
       <div class="bd-chat-msgcount">\u{1F4AC} ${count} ${msgWord(count)}</div>
       ${tagsHtml}
+      <div class="bd-chat-participants">\u{1F465} ${participants} ${partWord(participants)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">\u{1F465} ${participants} ${partWord(participants)}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
