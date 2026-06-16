@@ -1621,7 +1621,7 @@ ${post.text}
     const photoHtml = photo ? `<div class="cm-board-modal-photo"><img src="${escapeHtml(photo)}" alt="" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
     ${photoHtml}
-    <div class="cm-board-modal-body">
+    <div class="cm-board-modal-content">
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1889,17 +1889,16 @@ ${post.text}
       const modal = document.createElement("article");
       modal.className = note.className + " cm-board-modal-note";
       const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
-      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-body">${note.innerHTML}</div>`;
+      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-content">${note.innerHTML}</div>`;
       document.body.appendChild(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
         }, { capture: true });
       });
-      const modalBody = modal.querySelector(".cm-board-modal-body");
       let zStartY = 0, zDrag = false, zDelta = 0;
       modal.addEventListener("touchstart", (e) => {
-        zDrag = !modalBody || modalBody.scrollTop <= 2;
+        zDrag = modal.scrollTop <= 2;
         if (!zDrag)
           return;
         zStartY = e.touches[0].clientY;

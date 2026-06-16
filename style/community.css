@@ -1553,8 +1553,8 @@
 
 /* ── Зум-модалка оголошення (будується з даних поста, renderAdModal) ──
    Висота ДИНАМІЧНА за вмістом; центрована у проміжку між шапкою і таб-баром.
-   max-height = розмір проміжку → довгий текст скролиться у .cm-board-modal-body,
-   короткий — модалка стискається під вміст. Фото flush зверху не обрізається. */
+   Увесь вміст (ФОТО + текст) — один скрол (overflow-y на самій модалці), тож фото
+   скролиться РАЗОМ з текстом, без різкого стику. Фото — повного розміру (без обрізки). */
 .cm-board-modal-note {
   position: fixed;
   left: 50%;
@@ -1562,9 +1562,9 @@
   top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)) / 2);
   width: min(92vw, 400px);
   max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;            /* обрізає під border-radius; скрол у body */
+  overflow-y: auto;            /* фото+текст скроляться разом */
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
   z-index: 220;
   margin: 0;
   padding: 0;
@@ -1582,22 +1582,15 @@
   transform: translate(-50%, -50%) scale(1);
   opacity: 1;
 }
-/* Фото — flush зверху, на всю ширину, з обмеженою висотою */
-.cm-board-modal-photo { flex-shrink: 0; width: 100%; }
+/* Фото — на всю ширину, ПОВНОГО розміру (природна висота, без обрізки) */
+.cm-board-modal-photo { width: 100%; }
 .cm-board-modal-photo img {
   display: block;
   width: 100%;
-  max-height: 40vh;
-  object-fit: cover;
+  height: auto;
 }
-/* Прокручуване тіло */
-.cm-board-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: 16px 20px 18px;
-}
+/* Текст і дії — з відступами (фото лишається від краю до краю) */
+.cm-board-modal-content { padding: 14px 20px 18px; }
 /* Шпилька зайва — модалка не на дошці */
 .cm-board-modal-note .cm-board-pin { display: none; }
 
