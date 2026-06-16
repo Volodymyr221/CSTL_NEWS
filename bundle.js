@@ -1758,7 +1758,9 @@ ${post.text}
       </div>
     `;
     }
-    return `<div class="bd-stream">${sorted.map(renderCard).join("")}</div>`;
+    return `
+    <div class="board-backdrop" id="board-backdrop"></div>
+    <div class="bd-stream">${sorted.map(renderCard).join("")}</div>`;
   }
   async function renderBoard() {
     const el = document.getElementById("board-content");
@@ -2111,6 +2113,7 @@ ${post.text}
         saveBtn.classList.toggle("bd-bookmark--active", nowSaved);
         saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
         if (activeType === "saved" && !nowSaved) {
+          document.querySelector("#board-backdrop.visible")?.click();
           const el = document.getElementById("board-content");
           if (el)
             renderBodyOnly(el);
