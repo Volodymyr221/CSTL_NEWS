@@ -83,6 +83,7 @@ export function openBoardModal() {
     // BOARD
     category: 'оголошення',
     contact: '',
+    title: '',
     // CHAT
     tagsRaw: '',
   };
@@ -214,6 +215,11 @@ export function openBoardModal() {
       </div>
 
       <div class="bm-section">
+        <label class="bm-label" for="bm-title">Заголовок <span class="bm-label-hint">(необов'язково)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="Напр. Продам мотоцикл" value="${escapeHtml(state.title)}">
+      </div>
+
+      <div class="bm-section">
         <label class="bm-label" for="bm-text">Опис</label>
         <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="Що хочете повідомити громаді?" required>${escapeHtml(state.text)}</textarea>
       </div>
@@ -242,6 +248,11 @@ export function openBoardModal() {
         state.category = btn.dataset.cat;
         renderPreview();
       });
+    });
+    // Заголовок
+    dynamicEl.querySelector('#bm-title')?.addEventListener('input', e => {
+      state.title = e.target.value;
+      renderPreview();
     });
     // Контакт
     dynamicEl.querySelector('#bm-contact')?.addEventListener('input', e => {
@@ -412,6 +423,7 @@ export function openBoardModal() {
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
+        ${state.title.trim() ? `<h3 class="cm-board-title">${escapeHtml(state.title.trim())}</h3>` : ''}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'анонімно')}</span>
@@ -519,6 +531,7 @@ function buildPayload(state) {
       category: state.category,
       color:    cat.color,
       contact:  state.contact.trim() || null,
+      title:    state.title.trim() || null,
       tags:     [],
     };
   }

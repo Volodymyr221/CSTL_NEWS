@@ -50,7 +50,7 @@ CREATE TABLE posts (
   -- Основний текст (обов'язковий для всіх типів)
   text          TEXT NOT NULL,
 
-  -- Для greeting: «Сергію» / «усім матерям». Для board/chat: null
+  -- Заголовок: для board — назва оголошення (опціонально); greeting — кому. chat: null
   title         TEXT,
 
   -- NULL = анонімно
