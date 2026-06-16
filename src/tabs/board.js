@@ -848,8 +848,12 @@ function renderBody() {
     `;
   }
 
-  // chat / saved — вертикальна стрічка карток
-  return `<div class="bd-stream">${sorted.map(renderCard).join('')}</div>`;
+  // chat / saved — вертикальна стрічка карток.
+  // #board-backdrop рендеримо і тут, щоб у «Збережених» працювала зум-модалка
+  // оголошення (initBoardNoteExpand виходить рано, якщо backdrop відсутній).
+  return `
+    <div class="board-backdrop" id="board-backdrop"></div>
+    <div class="bd-stream">${sorted.map(renderCard).join('')}</div>`;
 }
 
 export async function renderBoard() {
@@ -1246,8 +1250,10 @@ function attachBoardDelegation() {
       saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
       saveBtn.classList.toggle('bd-bookmark--active', nowSaved);
       saveBtn.setAttribute('aria-label', nowSaved ? 'Прибрати зі збережених' : 'Зберегти у Мої');
-      // Якщо у табі «Мої» прибираємо — перерендерити (картка зникає)
+      // Якщо у табі «Мої» прибираємо — закрити відкриту зум-модалку (клік по backdrop
+      // → collapse) і перерендерити стрічку (картка зникає)
       if (activeType === 'saved' && !nowSaved) {
+        document.querySelector('#board-backdrop.visible')?.click();
         const el = document.getElementById('board-content');
         if (el) renderBodyOnly(el);
       }
