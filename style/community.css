@@ -1542,45 +1542,58 @@
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
-/* У модалці фото природньо більше (бо модалка ширша) + більший margin */
-.cm-board-modal-note .cm-board-photo-wrap {
-  margin: -22px -20px 14px;
-  border-top-left-radius: 20px;
-  border-top-right-radius: 20px;
-}
+/* Повний текст у модалці (без клампу), чорний */
 .cm-board-modal-note .cm-board-text {
   display: block;
   -webkit-line-clamp: unset;
   overflow: visible;
+  color: #1C1C1E;
 }
 
-/* ── Модалка-копія стікера (16.05.2026, замінює FLIP-zoom підхід) ──
-   Окремий елемент по центру з більшим font-size — текст КРИШТАЛЕВО чіткий
-   (ніяких transform: scale, ніякої матричної інтерполяції) */
+/* ── Зум-модалка оголошення (будується з даних поста, renderAdModal) ──
+   Прибита top/bottom як чат-модалка (над таб-баром), скрол у .cm-board-modal-body.
+   Фото flush зверху (flex-child) → НЕ обрізається скролом навіть з довгим текстом. */
 .cm-board-modal-note {
   position: fixed;
-  top: 50%;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 6px);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
   left: 50%;
-  width: min(86vw, 380px);
-  max-height: 80vh;
-  overflow-y: auto;
+  width: min(92vw, 400px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* обрізає під border-radius; скрол у body */
   z-index: 220;
   margin: 0;
-  padding: 22px 20px 18px;
+  padding: 0;
   border-radius: 20px;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-  color: #2B2B2B;
+  color: #1C1C1E;
   box-shadow:
     0 16px 40px rgba(0,0,0,0.45),
     0 6px 16px rgba(0,0,0,0.25);
-  transform: translate(-50%, -50%) scale(0.88);
+  transform: translateX(-50%) scale(0.9);
   opacity: 0;
   transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
-  -webkit-overflow-scrolling: touch;
 }
 .cm-board-modal-note.visible {
-  transform: translate(-50%, -50%) scale(1);
+  transform: translateX(-50%) scale(1);
   opacity: 1;
+}
+/* Фото — flush зверху, на всю ширину, з обмеженою висотою */
+.cm-board-modal-photo { flex-shrink: 0; width: 100%; }
+.cm-board-modal-photo img {
+  display: block;
+  width: 100%;
+  max-height: 40vh;
+  object-fit: cover;
+}
+/* Прокручуване тіло */
+.cm-board-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px 20px 18px;
 }
 /* Шпилька зайва — модалка не на дошці */
 .cm-board-modal-note .cm-board-pin { display: none; }
