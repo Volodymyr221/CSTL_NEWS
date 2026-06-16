@@ -92,6 +92,19 @@
     "auto": true
   },
   {
+    "id": 252,
+    "title": "Зеленський: Думаю, у середу ще зустрінемось з Трампом окремо",
+    "description": "Володимир Зеленський анонсував ще одну зустріч із Дональдом Трампом на полях саміту G7 у Франції 17 червня.",
+    "date": "2026-06-17",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/5/851365/050bea55272154c8275be70056a6c19f.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039681/",
+    "auto": true
+  },
+  {
     "id": 189,
     "title": "Politico: Макрон шукає спосіб втримати Трампа на саміті G7",
     "description": "Politico пише, що президент Франції Емманюель Макрон шукає способи втримати президента США Дональда Трампа на саміті G7 та не допустити його дострокового від'їзду.",
@@ -128,6 +141,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/b/832001/7b46b88b10410bec1356d4a678d6561b.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/20/8035525/",
+    "auto": true
+  },
+  {
+    "id": 251,
+    "title": "Верховна Рада збереться у четвер, аби розблокувати законопроєкт про фінансування армії",
+    "description": "Верховна Рада збереться на засідання у четвер 18 червня, аби розблокувати законопроєкт про фінансування армії, який заблокувала фракція \"Європейська Солідарність\".",
+    "date": "2026-06-18",
+    "time": null,
+    "location": null,
+    "category": "Бізнес",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/2/851366/224cb22c01473e1a2bcc4ac1e5609750.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039682/",
     "auto": true
   },
   {
@@ -609,32 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/1/820898/e18db5a0fe9d254ecb35f33b7ff4246f.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/01/8032773/",
-    "auto": true
-  },
-  {
-    "id": 64,
-    "title": "CNN: Російське судно Ursa Major, що затунуло біля Іспанії, могло везти ядерні реактори для КНДР",
-    "description": "Російське вантажне судно \"Урса Майор\", яке затонуло в грудні 2024 року біля узбережжя Іспанії, ймовірно, перевозило два ядерні реактори для підводних човнів і, як вважають, прямувало до Північної Кореї.",
-    "date": "2027-02-23",
-    "time": "21:50",
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/0/827042/205f22d067468da37bf5a87d1ec44728.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/12/8034352/",
-    "auto": true
-  },
-  {
-    "id": 249,
-    "title": "Прем'єр Канади анонсував нові санкції проти Росії",
-    "description": "Прем'єр-міністр Канади Марк Карні анонсував нові санкції проти Росії, спрямовані проти російського \"тіньового флоту\", енергетичних доходів, оборонної промисловості та дезінформації.",
-    "date": "2027-02-24",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/d/851227/ad5fd0cf4267174a5bd75d24e03bb52d.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039645/",
     "auto": true
   }
 ]
