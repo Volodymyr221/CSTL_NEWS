@@ -757,11 +757,12 @@
 .cm-board-note:hover { transform: rotate(0deg) scale(1.02); z-index: 5; }
 
 /* Кольори папірців — дещо приглушені для преміальності */
-.cm-board-note--yellow { background: #FEFCE8; }
-.cm-board-note--blue   { background: #EFF6FF; }
-.cm-board-note--pink   { background: #FFF0F3; }
-.cm-board-note--white  { background: #FAFAF8; }
-.cm-board-note--green  { background: #F0FAF1; }
+/* Відтінки карток — приглушені (ледь помітний тон, не насичений) */
+.cm-board-note--yellow { background: #FDFCF5; }
+.cm-board-note--blue   { background: #F5F8FC; }
+.cm-board-note--pink   { background: #FBF5F6; }
+.cm-board-note--white  { background: #FBFBF9; }
+.cm-board-note--green  { background: #F5FAF6; }
 
 /* Офіційний папірець (адміністрація) — на повну ширину, бронзова рамка */
 .cm-board-note--official {
