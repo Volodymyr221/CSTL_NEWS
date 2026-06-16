@@ -667,7 +667,7 @@ function renderAdModal(p) {
     : '';
   return `
     ${photoHtml}
-    <div class="cm-board-modal-body">
+    <div class="cm-board-modal-content">
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1009,19 +1009,18 @@ function initBoardNoteExpand(root) {
     const post = allPosts.find(x => String(x.id) === note.dataset.postId);
     modal.innerHTML = post
       ? renderAdModal(post)
-      : `<div class="cm-board-modal-body">${note.innerHTML}</div>`;
+      : `<div class="cm-board-modal-content">${note.innerHTML}</div>`;
     document.body.appendChild(modal);
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });
 
-    // Свайп вниз → згорнути. Базова позиція тепер translateX(-50%) (модалка не
-    // центрована по Y, а прибита top/bottom як чат). Скрол — у .cm-board-modal-body.
-    const modalBody = modal.querySelector('.cm-board-modal-body');
+    // Свайп вниз → згорнути. Скрол тепер на самій модалці (фото+текст разом),
+    // тож тягнемо лише коли модалка прокручена до верху.
     let zStartY = 0, zDrag = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
-      zDrag = !modalBody || modalBody.scrollTop <= 2;  // тягнемо лише коли тіло вгорі
+      zDrag = modal.scrollTop <= 2;  // тягнемо лише коли вгорі
       if (!zDrag) return;
       zStartY = e.touches[0].clientY;
       zDelta = 0;
