@@ -1551,14 +1551,16 @@
 }
 
 /* ── Зум-модалка оголошення (будується з даних поста, renderAdModal) ──
-   Прибита top/bottom як чат-модалка (над таб-баром), скрол у .cm-board-modal-body.
-   Фото flush зверху (flex-child) → НЕ обрізається скролом навіть з довгим текстом. */
+   Висота ДИНАМІЧНА за вмістом; центрована у проміжку між шапкою і таб-баром.
+   max-height = розмір проміжку → довгий текст скролиться у .cm-board-modal-body,
+   короткий — модалка стискається під вміст. Фото flush зверху не обрізається. */
 .cm-board-modal-note {
   position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 6px);
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 10px);
   left: 50%;
+  /* центр проміжку між низом шапки і верхом таб-бару */
+  top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)) / 2);
   width: min(92vw, 400px);
+  max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 24px);
   display: flex;
   flex-direction: column;
   overflow: hidden;            /* обрізає під border-radius; скрол у body */
@@ -1571,12 +1573,12 @@
   box-shadow:
     0 16px 40px rgba(0,0,0,0.45),
     0 6px 16px rgba(0,0,0,0.25);
-  transform: translateX(-50%) scale(0.9);
+  transform: translate(-50%, -50%) scale(0.9);
   opacity: 0;
   transition: transform 0.24s cubic-bezier(0.22, 1, 0.36, 1), opacity 0.24s ease;
 }
 .cm-board-modal-note.visible {
-  transform: translateX(-50%) scale(1);
+  transform: translate(-50%, -50%) scale(1);
   opacity: 1;
 }
 /* Фото — flush зверху, на всю ширину, з обмеженою висотою */
