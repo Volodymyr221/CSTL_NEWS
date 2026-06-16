@@ -21,6 +21,15 @@
 
 ---
 
+## ✅ СЕСІЯ ВОВИ 16.06 (гілка `vova/ad-modal-photo-round`) — Модалка: фото cover + заокруглені нижні кути + тінь
+
+> CACHE_NAME → `cstl-20260616-1652`. Вова: повне фото «так собі» — повернути обрізане + заокруглити низ + тінь.
+> - `.cm-board-modal-photo img` назад на `max-height:40vh; object-fit:cover` (прибрано `height:auto`).
+> - `.cm-board-modal-photo`: `border-bottom-*-radius:16px` + `overflow:hidden` + тінь знизу `0 6px 14px`.
+> - Скрол-разом лишився. Файл: `style/community.css`.
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 16.06 (гілка `vova/ad-modal-scroll`) — Модалка: фото скролиться разом + повний розмір
 
 > CACHE_NAME → `cstl-20260616-1645`. Вова: різкий стик фото/тексту + фото треба повного розміру.
