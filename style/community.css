@@ -1582,12 +1582,22 @@
   transform: translate(-50%, -50%) scale(1);
   opacity: 1;
 }
-/* Фото — на всю ширину, ПОВНОГО розміру (природна висота, без обрізки) */
-.cm-board-modal-photo { width: 100%; }
+/* Фото — на всю ширину, обрізане (cover) з обмеженою висотою; нижні кути заокруглені
+   + легка тінь знизу, щоб відділити від тексту. Верхні кути дає радіус модалки. */
+.cm-board-modal-photo {
+  width: 100%;
+  border-bottom-left-radius: 16px;
+  border-bottom-right-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
+  position: relative;
+  z-index: 1;
+}
 .cm-board-modal-photo img {
   display: block;
   width: 100%;
-  height: auto;
+  max-height: 40vh;
+  object-fit: cover;
 }
 /* Текст і дії — з відступами (фото лишається від краю до краю) */
 .cm-board-modal-content { padding: 14px 20px 18px; }
