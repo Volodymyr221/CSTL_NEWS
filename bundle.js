@@ -1911,11 +1911,11 @@ ${post.text}
           return;
         zDelta = e.touches[0].clientY - zStartY;
         if (zDelta <= 0) {
-          modal.style.transform = "translateX(-50%) scale(1)";
+          modal.style.transform = "translate(-50%, -50%) scale(1)";
           return;
         }
         e.preventDefault();
-        modal.style.transform = `translate(-50%, ${zDelta}px) scale(1)`;
+        modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
       }, { passive: false });
       modal.addEventListener("touchend", () => {
         if (!zDrag)
