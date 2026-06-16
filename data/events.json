@@ -40,58 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 237,
-    "title": "Росіяни заявили, що на кіностудії Довженка збирали дрони, а по Лаврі вдарив Patriot",
-    "description": "В Міноборони РФ заявили, що по собору на території Києво-Печерської лаври завдала удару не російська армія, а ракета від системи ППО \"Patriot\".",
-    "date": "2026-06-15",
-    "time": null,
-    "location": null,
-    "category": "Культура",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/2/849825/52a7b33a5eade4e98285e44326440822.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039351/",
-    "auto": true
-  },
-  {
-    "id": 238,
-    "title": "Будівля Вищого антикорупційного суду зазнала пошкоджень від російської атаки",
-    "description": "Будівля Вищого антикорупційного суду на проспекті Берестейському у Києві зазнала ушкоджень внаслідок нічної масованої атаки РФ 15 червня.",
-    "date": "2026-06-15",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/c/849705/fc351ced59123d5a655d0f39e6fcd113.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/15/8039323/",
-    "auto": true
-  },
-  {
-    "id": 229,
-    "title": "Трамп і Макрон зустрінуться за вечерею після саміту G7 – ЗМІ",
-    "description": "Дональд Трамп і Еммануель Макрон проведуть вечерю у Версалі після саміту G7 у Франції.",
-    "date": "2026-06-15",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/2/849108/722d7b7bcdb18b9b019f9a9cafad5d88.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/14/8039202/",
-    "auto": true
-  },
-  {
-    "id": 223,
-    "title": "Глави МЗС країн ЄС у Люксембурзі обговорять новий пакет санкцій проти РФ",
-    "description": "У понеділок, 15 червня, під час засідання Ради ЄС у закордонних справах у Люксембурзі міністри закордонних справ держав Євросоюзу обговорять новий, 21-й пакет санкцій ЄС проти Росії.",
-    "date": "2026-06-15",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/1/4/848443/14bba32c4c1fff61b7859cf8b7577418.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8039052/",
-    "auto": true
-  },
-  {
     "id": 227,
     "title": "Трамп і Зеленський візьмуть участь у робочій зустрічі G7 у Франції – ЗМІ",
     "description": "Трамп і Зеленський візьмуть участь у робочій зустрічі на саміті G7 у Франції 16 червня. Офіційної двосторонньої зустрічі не заплановано.",
@@ -154,6 +102,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/4/847770/a48d380ce4a57c688745a3a13d3a3836.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8038937/",
+    "auto": true
+  },
+  {
+    "id": 243,
+    "title": "Нетаньягу: \"З угодою чи без неї, Іран не матиме ядерної зброї\"",
+    "description": "Нетаньягу в коментарі про угоду США та Ірану заявив, що захищатиме інтереси Ізріїлю.",
+    "date": "2026-06-19",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/c/850477/6cff77a045ce5a0934f3157a484106af.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039498/",
     "auto": true
   },
   {
