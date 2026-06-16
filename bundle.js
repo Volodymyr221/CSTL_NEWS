@@ -1617,10 +1617,15 @@ ${post.text}
   }
   function renderAdModal(p) {
     const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
-    const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
-    const photoHtml = photo ? `<div class="cm-board-modal-photo"><img src="${escapeHtml(photo)}" alt="" onerror="this.parentNode.style.display='none'"></div>` : "";
+    const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
+    const galleryHtml = photos.length ? `
+    <div class="cm-board-modal-gallery"${photos.length > 1 ? " data-multi" : ""}>
+      ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
+    </div>
+    ${photos.length > 1 ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
+  ` : "";
     return `
-    ${photoHtml}
+    ${galleryHtml}
     <div class="cm-board-modal-content">
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
@@ -1633,6 +1638,44 @@ ${post.text}
       ${boardActionsHtml(p)}
     </div>
   `;
+  }
+  function openPhotoLightbox(photos, startIdx) {
+    if (!photos || !photos.length)
+      return;
+    const wrap = document.createElement("div");
+    wrap.className = "cm-photo-lightbox";
+    wrap.innerHTML = `
+    <button class="cm-photo-lightbox-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+    <div class="cm-photo-lightbox-track">
+      ${photos.map((ph) => `<div class="cm-photo-lightbox-slide"><img src="${escapeHtml(ph)}" alt=""></div>`).join("")}
+    </div>
+    ${photos.length > 1 ? '<div class="cm-photo-lightbox-count"></div>' : ""}`;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    const track = wrap.querySelector(".cm-photo-lightbox-track");
+    const countEl = wrap.querySelector(".cm-photo-lightbox-count");
+    const updateCount = () => {
+      if (!countEl || !track.clientWidth)
+        return;
+      const i = Math.round(track.scrollLeft / track.clientWidth);
+      countEl.textContent = `${i + 1} / ${photos.length}`;
+    };
+    requestAnimationFrame(() => {
+      track.scrollLeft = (startIdx || 0) * track.clientWidth;
+      updateCount();
+      wrap.classList.add("open");
+    });
+    track.addEventListener("scroll", () => requestAnimationFrame(updateCount), { passive: true });
+    const close = () => {
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      setTimeout(() => wrap.remove(), 200);
+    };
+    wrap.querySelector(".cm-photo-lightbox-close").addEventListener("click", close);
+    wrap.addEventListener("click", (e) => {
+      if (e.target === wrap)
+        close();
+    });
   }
   function renderChatCard(p) {
     const tagsHtml = (p.tags || []).length ? `<div class="bd-chat-tags">${p.tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
@@ -1896,19 +1939,47 @@ ${post.text}
           e.stopPropagation();
         }, { capture: true });
       });
-      let zStartY = 0, zDrag = false, zDelta = 0;
+      const gallery = modal.querySelector(".cm-board-modal-gallery");
+      if (gallery) {
+        const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
+        gallery.querySelectorAll("img[data-photo-idx]").forEach((im) => {
+          im.addEventListener("click", (e) => {
+            e.stopPropagation();
+            openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0);
+          });
+        });
+        const dots = modal.querySelectorAll(".cm-board-modal-dot");
+        if (dots.length) {
+          gallery.addEventListener("scroll", () => {
+            const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
+            dots.forEach((d, di) => d.classList.toggle("active", di === i));
+          }, { passive: true });
+        }
+      }
+      let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
       modal.addEventListener("touchstart", (e) => {
         zDrag = modal.scrollTop <= 2;
+        zLocked = false;
         if (!zDrag)
           return;
         zStartY = e.touches[0].clientY;
+        zStartX = e.touches[0].clientX;
         zDelta = 0;
         modal.style.transition = "none";
       }, { passive: true });
       modal.addEventListener("touchmove", (e) => {
         if (!zDrag)
           return;
-        zDelta = e.touches[0].clientY - zStartY;
+        const dy = e.touches[0].clientY - zStartY;
+        const dx = e.touches[0].clientX - zStartX;
+        if (!zLocked && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
+          zLocked = true;
+          if (Math.abs(dx) > Math.abs(dy)) {
+            zDrag = false;
+            return;
+          }
+        }
+        zDelta = dy;
         if (zDelta <= 0) {
           modal.style.transform = "translate(-50%, -50%) scale(1)";
           return;
