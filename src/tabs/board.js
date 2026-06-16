@@ -654,6 +654,33 @@ function renderBoardCard(p) {
   `;
 }
 
+// BOARD: вміст зум-модалки оголошення — будується З ДАНИХ поста (не клон картки).
+// Фото flush зверху (без відʼємного margin → не обрізається скролом), нижче —
+// прокручуване тіло з категорією, заголовком, повним описом, контактом і діями.
+// Дії (реакції/зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
+// обробники працюють без змін.
+function renderAdModal(p) {
+  const emoji = CATEGORY_EMOJI[p.category] || '📌';
+  const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
+  const photoHtml = photo
+    ? `<div class="cm-board-modal-photo"><img src="${escapeHtml(photo)}" alt="" onerror="this.parentNode.style.display='none'"></div>`
+    : '';
+  return `
+    ${photoHtml}
+    <div class="cm-board-modal-body">
+      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+      </div>
+      ${renderContact(p.contact)}
+      ${boardActionsHtml(p)}
+    </div>
+  `;
+}
+
 // OFFICIAL: офіційне оголошення сільради (для табу «Усі»)
 function renderOfficialCard(a) {
   const tilt = ((a.id * 5) % 5) - 2;
@@ -972,17 +999,25 @@ function initBoardNoteExpand(root) {
 
     const modal = document.createElement('article');
     modal.className = note.className + ' cm-board-modal-note';
-    modal.innerHTML = note.innerHTML;
+    // Будуємо модалку З ДАНИХ поста (а не клон HTML картки) — фото flush зверху,
+    // повний текст, чорний колір, без обрізки фото скролом. Fallback на клон якщо
+    // пост раптом не знайдено (officials виключені, тож для оголошень не трапляється).
+    const post = allPosts.find(x => String(x.id) === note.dataset.postId);
+    modal.innerHTML = post
+      ? renderAdModal(post)
+      : `<div class="cm-board-modal-body">${note.innerHTML}</div>`;
     document.body.appendChild(modal);
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });
 
-    // Свайп вниз → згорнути (зберігаємо центрування translate(-50%,-50%))
+    // Свайп вниз → згорнути. Базова позиція тепер translateX(-50%) (модалка не
+    // центрована по Y, а прибита top/bottom як чат). Скрол — у .cm-board-modal-body.
+    const modalBody = modal.querySelector('.cm-board-modal-body');
     let zStartY = 0, zDrag = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
-      zDrag = modal.scrollTop <= 2;          // тягнемо лише коли прокручено до верху
+      zDrag = !modalBody || modalBody.scrollTop <= 2;  // тягнемо лише коли тіло вгорі
       if (!zDrag) return;
       zStartY = e.touches[0].clientY;
       zDelta = 0;
@@ -991,9 +1026,9 @@ function initBoardNoteExpand(root) {
     modal.addEventListener('touchmove', e => {
       if (!zDrag) return;
       zDelta = e.touches[0].clientY - zStartY;
-      if (zDelta <= 0) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; return; }
+      if (zDelta <= 0) { modal.style.transform = 'translateX(-50%) scale(1)'; return; }
       e.preventDefault();
-      modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
+      modal.style.transform = `translate(-50%, ${zDelta}px) scale(1)`;
     }, { passive: false });
     modal.addEventListener('touchend', () => {
       if (!zDrag) return;

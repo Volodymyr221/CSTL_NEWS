@@ -1615,6 +1615,25 @@ ${post.text}
     </article>
   `;
   }
+  function renderAdModal(p) {
+    const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
+    const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
+    const photoHtml = photo ? `<div class="cm-board-modal-photo"><img src="${escapeHtml(photo)}" alt="" onerror="this.parentNode.style.display='none'"></div>` : "";
+    return `
+    ${photoHtml}
+    <div class="cm-board-modal-body">
+      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
+      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+      </div>
+      ${renderContact(p.contact)}
+      ${boardActionsHtml(p)}
+    </div>
+  `;
+  }
   function renderChatCard(p) {
     const tagsHtml = (p.tags || []).length ? `<div class="bd-chat-tags">${p.tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
     const comments = getComments(p.id);
@@ -1867,16 +1886,18 @@ ${post.text}
       isAnimating = true;
       const modal = document.createElement("article");
       modal.className = note.className + " cm-board-modal-note";
-      modal.innerHTML = note.innerHTML;
+      const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
+      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-body">${note.innerHTML}</div>`;
       document.body.appendChild(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
         }, { capture: true });
       });
+      const modalBody = modal.querySelector(".cm-board-modal-body");
       let zStartY = 0, zDrag = false, zDelta = 0;
       modal.addEventListener("touchstart", (e) => {
-        zDrag = modal.scrollTop <= 2;
+        zDrag = !modalBody || modalBody.scrollTop <= 2;
         if (!zDrag)
           return;
         zStartY = e.touches[0].clientY;
@@ -1888,11 +1909,11 @@ ${post.text}
           return;
         zDelta = e.touches[0].clientY - zStartY;
         if (zDelta <= 0) {
-          modal.style.transform = "translate(-50%, -50%) scale(1)";
+          modal.style.transform = "translateX(-50%) scale(1)";
           return;
         }
         e.preventDefault();
-        modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
+        modal.style.transform = `translate(-50%, ${zDelta}px) scale(1)`;
       }, { passive: false });
       modal.addEventListener("touchend", () => {
         if (!zDrag)
