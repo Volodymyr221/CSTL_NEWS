@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 244,
+    "title": "Британія оголосить новий пакет санкцій проти Росії, які торкнуться танкерів з перевезення СПГ",
+    "description": "На саміті G7 Кір Стармер оголосить про нові аснкції Британії проти Росії.",
+    "date": "2026-06-16",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/a/850482/9a0c627e5e8eee13601b76ac2e83d02f.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039503/",
+    "auto": true
+  },
+  {
     "id": 227,
     "title": "Трамп і Зеленський візьмуть участь у робочій зустрічі G7 у Франції – ЗМІ",
     "description": "Трамп і Зеленський візьмуть участь у робочій зустрічі на саміті G7 у Франції 16 червня. Офіційної двосторонньої зустрічі не заплановано.",
@@ -102,6 +115,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/4/847770/a48d380ce4a57c688745a3a13d3a3836.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/12/8038937/",
+    "auto": true
+  },
+  {
+    "id": 245,
+    "title": "Угода між США та Іраном займає півтори сторінки і передбачає присутність МАГАТЕ в Ірані – Венс",
+    "description": "Венс розповів, що угода між США та Іраном займає всього півтори сторінки.",
+    "date": "2026-06-19",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/e/850480/8e3ce597b0516c92e6d3e262592d62a8.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039501/",
     "auto": true
   },
   {
