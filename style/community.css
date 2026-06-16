@@ -830,6 +830,14 @@
   align-self: flex-start;
 }
 
+.cm-board-title {
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.3;
+  margin: 0 0 4px;
+  color: #1C1C1E;
+  word-wrap: break-word;
+}
 .cm-board-text {
   font-size: 13.5px;
   font-weight: 500;

@@ -642,6 +642,7 @@ function renderBoardCard(p) {
       <span class="cm-board-pin"></span>
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       <div class="cm-board-footer">
         <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>

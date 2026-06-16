@@ -633,6 +633,7 @@
       // BOARD
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
+      title: "",
       // CHAT
       tagsRaw: ""
     };
@@ -766,6 +767,11 @@
       </div>
 
       <div class="bm-section">
+        <label class="bm-label" for="bm-title">\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="\u041D\u0430\u043F\u0440. \u041F\u0440\u043E\u0434\u0430\u043C \u043C\u043E\u0442\u043E\u0446\u0438\u043A\u043B" value="${escapeHtml(state.title)}">
+      </div>
+
+      <div class="bm-section">
         <label class="bm-label" for="bm-text">\u041E\u043F\u0438\u0441</label>
         <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456?" required>${escapeHtml(state.text)}</textarea>
       </div>
@@ -793,6 +799,10 @@
           state.category = btn.dataset.cat;
           renderPreview();
         });
+      });
+      dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
+        state.title = e.target.value;
+        renderPreview();
       });
       dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
         state.contact = e.target.value;
@@ -947,6 +957,7 @@
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
         <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
+        ${state.title.trim() ? `<h3 class="cm-board-title">${escapeHtml(state.title.trim())}</h3>` : ""}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
@@ -1036,6 +1047,7 @@
         category: state.category,
         color: cat.color,
         contact: state.contact.trim() || null,
+        title: state.title.trim() || null,
         tags: []
       };
     }
@@ -1592,6 +1604,7 @@ ${post.text}
       <span class="cm-board-pin"></span>
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       <div class="cm-board-footer">
         <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
