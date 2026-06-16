@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 253,
+    "title": "Трамп може піти на поступки щодо України в обмін на допомогу Європи в Ормузькій протоці – ЗМІ",
+    "description": "Президент США Дональд Трамп готовий підтримати Україну та посилити тиск на Росію в обмін на допомогу європейських союзників у розмінуванні Ормузької протоки.",
+    "date": "2026-06-16",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/5/851398/654fdb44c168a8f2bc37ed19529fd37f.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/17/8039694/",
+    "auto": true
+  },
+  {
     "id": 246,
     "title": "Зеленський, Трамп і Макрон зустрілися на полях саміту G7 – ЗМІ",
     "description": "Президенти України Володимир Зеленський, США Дональд Трамп та Франції Емманюель Макрон провели тристоронню зустріч у кулуарах саміту G7 у Франції 16 червня.",
@@ -622,19 +635,6 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/d/8/837418/d8b28602a4365e714f50eb02ead7aa45.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/27/8036678/",
-    "auto": true
-  },
-  {
-    "id": 20,
-    "title": "ЗМІ: Посланці Трампа не поспішають в Україну, бо не вірять у переговори. А Віткоффу складно їхати поїздом",
-    "description": "Посланці Трампа Віткофф і Кушнер відкладають візит до Києва: переговори з Україною, РФ та США у глухому куті.",
-    "date": "2027-02-16",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/1/820898/e18db5a0fe9d254ecb35f33b7ff4246f.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/01/8032773/",
     "auto": true
   }
 ]
