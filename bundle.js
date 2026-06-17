@@ -1631,17 +1631,23 @@ ${post.text}
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
     </div>
-    ${galleryHtml}
-    <div class="cm-board-modal-content">
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      <div class="cm-board-footer">
-        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+    <div class="cm-board-modal-head">
+      ${galleryHtml}
+      <div class="cm-board-modal-subhead">
+        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
-      ${renderContact(p.contact)}
-      ${boardActionsHtml(p)}
+    </div>
+    <div class="cm-board-modal-body">
+      <div class="cm-board-modal-content">
+        <p class="cm-board-text">${escapeHtml(p.text)}</p>
+        <div class="cm-board-footer">
+          <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-time">${formatTime(postTime(p))}</span>
+        </div>
+        ${renderContact(p.contact)}
+        ${boardActionsHtml(p)}
+      </div>
     </div>
   `;
   }
@@ -1938,7 +1944,7 @@ ${post.text}
       const modal = document.createElement("article");
       modal.className = note.className + " cm-board-modal-note";
       const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
-      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-content">${note.innerHTML}</div>`;
+      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
       document.body.appendChild(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
@@ -1962,9 +1968,25 @@ ${post.text}
           }, { passive: true });
         }
       }
+      const frame = modal.querySelector(".cm-board-modal-photoframe");
+      const body = modal.querySelector(".cm-board-modal-body");
+      if (frame && body) {
+        const MIN_H = 72;
+        let fullH = 0;
+        const measure = () => {
+          fullH = Math.round(frame.clientWidth * 3 / 4);
+        };
+        requestAnimationFrame(measure);
+        body.addEventListener("scroll", () => {
+          if (!fullH)
+            measure();
+          frame.style.height = Math.max(MIN_H, fullH - body.scrollTop) + "px";
+        }, { passive: true });
+      }
+      const scroller = body || modal;
       let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
       modal.addEventListener("touchstart", (e) => {
-        zDrag = modal.scrollTop <= 2;
+        zDrag = scroller.scrollTop <= 2;
         zLocked = false;
         if (!zDrag)
           return;
