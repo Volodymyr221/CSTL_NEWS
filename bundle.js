@@ -1982,7 +1982,8 @@ ${post.text}
         area.addEventListener("scroll", () => {
           if (!fullH)
             measure();
-          photo.style.height = Math.max(MIN_H, fullH - area.scrollTop) + "px";
+          const c = Math.min(fullH - MIN_H, area.scrollTop);
+          photo.style.clipPath = `inset(0 0 ${c}px 0)`;
         }, { passive: true });
       }
       const scroller = area || modal;

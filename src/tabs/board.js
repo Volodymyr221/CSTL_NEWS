@@ -1103,7 +1103,10 @@ function initBoardNoteExpand(root) {
       requestAnimationFrame(measure);
       area.addEventListener('scroll', () => {
         if (!fullH) measure();
-        photo.style.height = Math.max(MIN_H, fullH - area.scrollTop) + 'px';
+        // Обрізаємо фото знизу на C пікселів → видима висота = fullH-C (від MIN_H до fullH).
+        // clip-path (композит) замість height → без перерахунку layout → плавно.
+        const c = Math.min(fullH - MIN_H, area.scrollTop);
+        photo.style.clipPath = `inset(0 0 ${c}px 0)`;
       }, { passive: true });
     }
 
