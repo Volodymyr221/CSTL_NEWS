@@ -1625,6 +1625,10 @@ ${post.text}
     ${photos.length > 1 ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? " active" : ""}"></span>`).join("")}</div>` : ""}
   ` : "";
     return `
+    <div class="cm-board-modal-bar">
+      <span class="cm-board-modal-grip"></span>
+      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+    </div>
     ${galleryHtml}
     <div class="cm-board-modal-content">
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
@@ -1939,6 +1943,12 @@ ${post.text}
           e.stopPropagation();
         }, { capture: true });
       });
+      const adClose = modal.querySelector(".cm-board-modal-close");
+      if (adClose)
+        adClose.addEventListener("click", (e) => {
+          e.stopPropagation();
+          collapse();
+        });
       const gallery = modal.querySelector(".cm-board-modal-gallery");
       if (gallery) {
         const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);

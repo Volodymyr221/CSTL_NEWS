@@ -1558,10 +1558,11 @@
 .cm-board-modal-note {
   position: fixed;
   left: 50%;
-  /* центр проміжку між низом шапки і верхом таб-бару */
-  top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px)) / 2);
+  /* центр проміжку між низом шапки і верхом таб-бару.
+     -30px знизу резервуємо під виступ центральної кнопки-замка (стирчить ~27px над таб-баром) */
+  top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 30px) / 2);
   width: min(88vw, 360px);
-  max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 40px);
+  max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 70px);
   overflow-y: auto;            /* фото+текст скроляться разом */
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
@@ -1582,6 +1583,47 @@
   transform: translate(-50%, -50%) scale(1);
   opacity: 1;
 }
+/* Шапка модалки над фото: смужка-ручка для свайпу (по центру) + кнопка ✕ (справа).
+   Липка (sticky) — лишається зверху при скролі, тож ✕ завжди доступний.
+   Фон успадковує колір картки (background: inherit), радіус — під верхні кути модалки. */
+.cm-board-modal-bar {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  background: inherit;
+  border-top-left-radius: 20px;
+  border-top-right-radius: 20px;
+}
+.cm-board-modal-grip {
+  width: 40px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(0,0,0,0.18);
+}
+.cm-board-modal-close {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.06);
+  color: #1C1C1E;
+  font-size: 15px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.cm-board-modal-close:active { background: rgba(0,0,0,0.12); }
 /* Галерея фото — горизонтальний свайп (scroll-snap), нижні кути заокруглені + тінь знизу.
    Кожен слайд на всю ширину; обмеження висоти (вертикальні фото не перекривають опис). */
 .cm-board-modal-gallery {
