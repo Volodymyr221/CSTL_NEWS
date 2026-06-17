@@ -672,7 +672,6 @@ function renderAdModal(p) {
   return `
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
-      <button class="cm-board-modal-close" type="button" aria-label="Закрити">✕</button>
     </div>
     ${galleryHtml}
     <div class="cm-board-modal-content">
@@ -1060,10 +1059,6 @@ function initBoardNoteExpand(root) {
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
     });
-
-    // Кнопка ✕ у шапці модалки → закрити (collapse). stopPropagation, щоб не спливло у backdrop/картку.
-    const adClose = modal.querySelector('.cm-board-modal-close');
-    if (adClose) adClose.addEventListener('click', e => { e.stopPropagation(); collapse(); });
 
     // Галерея фото: тап по фото → повноекранний перегляд; крапки-індикатор оновлюються при свайпі
     const gallery = modal.querySelector('.cm-board-modal-gallery');

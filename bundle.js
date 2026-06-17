@@ -1627,7 +1627,6 @@ ${post.text}
     return `
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
-      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
     </div>
     ${galleryHtml}
     <div class="cm-board-modal-content">
@@ -1943,12 +1942,6 @@ ${post.text}
           e.stopPropagation();
         }, { capture: true });
       });
-      const adClose = modal.querySelector(".cm-board-modal-close");
-      if (adClose)
-        adClose.addEventListener("click", (e) => {
-          e.stopPropagation();
-          collapse();
-        });
       const gallery = modal.querySelector(".cm-board-modal-gallery");
       if (gallery) {
         const photoUrls = [...gallery.querySelectorAll("[data-photo-full]")].map((im) => im.dataset.photoFull);
