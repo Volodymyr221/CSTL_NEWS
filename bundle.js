@@ -1641,13 +1641,15 @@ ${post.text}
     <div class="cm-board-modal-body">
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
-        <div class="cm-board-footer">
-          <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="cm-board-time">${formatTime(postTime(p))}</span>
-        </div>
-        ${renderContact(p.contact)}
-        ${boardActionsHtml(p)}
       </div>
+    </div>
+    <div class="cm-board-modal-foot">
+      <div class="cm-board-footer">
+        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+      </div>
+      ${renderContact(p.contact)}
+      ${boardActionsHtml(p)}
     </div>
   `;
   }

@@ -686,13 +686,15 @@ function renderAdModal(p) {
     <div class="cm-board-modal-body">
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
-        <div class="cm-board-footer">
-          <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="cm-board-time">${formatTime(postTime(p))}</span>
-        </div>
-        ${renderContact(p.contact)}
-        ${boardActionsHtml(p)}
       </div>
+    </div>
+    <div class="cm-board-modal-foot">
+      <div class="cm-board-footer">
+        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+      </div>
+      ${renderContact(p.contact)}
+      ${boardActionsHtml(p)}
     </div>
   `;
 }
