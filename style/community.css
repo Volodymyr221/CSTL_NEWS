@@ -1563,9 +1563,8 @@
   top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 18px) / 2);
   width: min(88vw, 360px);
   max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 58px);
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;            /* скролиться тіло .cm-board-modal-body; фото — згортна шапка */
+  overflow-y: auto;            /* фото + текст — один скрол; фото їде вгору, не перекриває текст */
+  overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   z-index: 220;
   margin: 0;
@@ -1605,15 +1604,13 @@
   border-radius: 3px;
   background: rgba(0,0,0,0.18);
 }
-/* ── Фото: рамка фіксованої пропорції 4:3 (згортна шапка) ──
+/* ── Фото: рамка фіксованої пропорції 4:3 ──
    Будь-яке фото заповнює рамку (object-fit:cover, обрізка по центру) → однаковий розмір завжди.
-   При скролі тексту JS зменшує height рамки до маленького (акцент на описі). flex:0 0 auto —
-   не стискається потоком; height керується скриптом. */
+   Рамка скролиться РАЗОМ з текстом (їде вгору, не перекриває опис). */
 .cm-board-modal-photoframe {
   position: relative;
-  flex: 0 0 auto;
   width: 100%;
-  aspect-ratio: 4 / 3;         /* стартова висота; далі height задає JS при скролі */
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   border-bottom-left-radius: 16px;
   border-bottom-right-radius: 16px;
@@ -1638,18 +1635,6 @@
   object-fit: cover;
   cursor: pointer;
 }
-/* Лічильник «1/3» — у кутку поверх фото */
-.cm-board-modal-count {
-  position: absolute;
-  top: 8px; right: 10px;
-  background: rgba(0,0,0,0.55);
-  color: #fff;
-  font-size: 12px;
-  padding: 2px 8px;
-  border-radius: 10px;
-  z-index: 2;
-  pointer-events: none;
-}
 /* Крапки-індикатор — поверх фото знизу (білі, бо на зображенні) */
 .cm-board-modal-dots {
   position: absolute;
@@ -1667,13 +1652,6 @@
   transition: background 0.15s, transform 0.15s;
 }
 .cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
-/* Тіло — скролиться (текст + дії). min-height:0 щоб flex-скрол працював */
-.cm-board-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
 .cm-board-modal-content { padding: 14px 20px 18px; }
 
 /* ── Повноекранний перегляд фото (lightbox) — свайп між кадрами ── */
