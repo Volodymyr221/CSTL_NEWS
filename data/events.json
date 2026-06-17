@@ -40,71 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 253,
-    "title": "Трамп може піти на поступки щодо України в обмін на допомогу Європи в Ормузькій протоці – ЗМІ",
-    "description": "Президент США Дональд Трамп готовий підтримати Україну та посилити тиск на Росію в обмін на допомогу європейських союзників у розмінуванні Ормузької протоки.",
-    "date": "2026-06-16",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/5/851398/654fdb44c168a8f2bc37ed19529fd37f.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/17/8039694/",
-    "auto": true
-  },
-  {
-    "id": 246,
-    "title": "Зеленський, Трамп і Макрон зустрілися на полях саміту G7 – ЗМІ",
-    "description": "Президенти України Володимир Зеленський, США Дональд Трамп та Франції Емманюель Макрон провели тристоронню зустріч у кулуарах саміту G7 у Франції 16 червня.",
-    "date": "2026-06-16",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/e/850878/7e33d865e617b164e9d7108f18a99e53.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039571/",
-    "auto": true
-  },
-  {
-    "id": 247,
-    "title": "Макрон хоче організувати зустріч Зеленського і Трампа на полях саміту G7",
-    "description": "Президент Франції Еммануель Макрон провів коротку двосторонню зустріч зі своїм українським колегою Володимиром Зеленським перед головним засіданням саміту G7, яке відбудеться вранці 16 червня в Ев'ян-ле-Бен.",
-    "date": "2026-06-16",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/e/850770/eefc2bb43a5dd0d5a0d5066cf58722e3.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039552/",
-    "auto": true
-  },
-  {
-    "id": 244,
-    "title": "Британія оголосить новий пакет санкцій проти Росії, які торкнуться танкерів з перевезення СПГ",
-    "description": "На саміті G7 Кір Стармер оголосить про нові аснкції Британії проти Росії.",
-    "date": "2026-06-16",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/a/850482/9a0c627e5e8eee13601b76ac2e83d02f.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/16/8039503/",
-    "auto": true
-  },
-  {
-    "id": 227,
-    "title": "Трамп і Зеленський візьмуть участь у робочій зустрічі G7 у Франції – ЗМІ",
-    "description": "Трамп і Зеленський візьмуть участь у робочій зустрічі на саміті G7 у Франції 16 червня. Офіційної двосторонньої зустрічі не заплановано.",
-    "date": "2026-06-16",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/7/848876/c73f7ab985116b43e8d04d72b2e990a5.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/13/8039177/",
-    "auto": true
-  },
-  {
     "id": 252,
     "title": "Зеленський: Думаю, у середу ще зустрінемось з Трампом окремо",
     "description": "Володимир Зеленський анонсував ще одну зустріч із Дональдом Трампом на полях саміту G7 у Франції 17 червня.",
@@ -154,6 +89,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/b/832001/7b46b88b10410bec1356d4a678d6561b.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/20/8035525/",
+    "auto": true
+  },
+  {
+    "id": 254,
+    "title": "США виводять озброєння з Європи та закликають союзників покладатися на власну техніку",
+    "description": "Начальник штабу оборони Великої Британії Річард Найтон повідомив, що США виводять свої військові сили та засоби з Європи і вимагають від європейських союзників по НАТО терміново знайти власну зброю для закриття оборонних прогалин.",
+    "date": "2026-06-18",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/5/851429/6530ca33a4bd72c49f12cf275a0d18ba.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/17/8039702/",
     "auto": true
   },
   {
