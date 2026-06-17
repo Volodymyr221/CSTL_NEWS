@@ -669,7 +669,6 @@ function renderAdModal(p) {
       <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
       </div>
-      ${multi ? `<div class="cm-board-modal-count">1/${photos.length}</div>` : ''}
       ${multi ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>` : ''}
     </div>
   ` : '';
@@ -678,18 +677,16 @@ function renderAdModal(p) {
       <span class="cm-board-modal-grip"></span>
     </div>
     ${galleryHtml}
-    <div class="cm-board-modal-body">
-      <div class="cm-board-modal-content">
-        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-        <p class="cm-board-text">${escapeHtml(p.text)}</p>
-        <div class="cm-board-footer">
-          <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="cm-board-time">${formatTime(postTime(p))}</span>
-        </div>
-        ${renderContact(p.contact)}
-        ${boardActionsHtml(p)}
+    <div class="cm-board-modal-content">
+      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      <div class="cm-board-footer">
+        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+        <span class="cm-board-time">${formatTime(postTime(p))}</span>
       </div>
+      ${renderContact(p.contact)}
+      ${boardActionsHtml(p)}
     </div>
   `;
 }
@@ -1059,7 +1056,7 @@ function initBoardNoteExpand(root) {
     const post = allPosts.find(x => String(x.id) === note.dataset.postId);
     modal.innerHTML = post
       ? renderAdModal(post)
-      : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
+      : `<div class="cm-board-modal-content">${note.innerHTML}</div>`;
     document.body.appendChild(modal);
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
@@ -1077,37 +1074,19 @@ function initBoardNoteExpand(root) {
         });
       });
       const dots = modal.querySelectorAll('.cm-board-modal-dot');
-      const countEl = modal.querySelector('.cm-board-modal-count');
-      if (dots.length || countEl) {
+      if (dots.length) {
         gallery.addEventListener('scroll', () => {
           const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
           dots.forEach((d, di) => d.classList.toggle('active', di === i));
-          if (countEl) countEl.textContent = `${i + 1}/${photoUrls.length}`;
         }, { passive: true });
       }
     }
 
-    // Згортна шапка-фото: при скролі тіла фото плавно зменшується від рамки 4:3 до маленького
-    // (MIN_H) — акцент на тексті. Зменшення прив'язане до scrollTop тіла → рухається за пальцем.
-    const frame = modal.querySelector('.cm-board-modal-photoframe');
-    const body = modal.querySelector('.cm-board-modal-body');
-    if (frame && body) {
-      const MIN_H = 64;
-      let fullH = 0;
-      const measure = () => { fullH = Math.round(frame.clientWidth * 3 / 4); };
-      requestAnimationFrame(measure);
-      body.addEventListener('scroll', () => {
-        if (!fullH) measure();
-        frame.style.height = Math.max(MIN_H, fullH - body.scrollTop) + 'px';
-      }, { passive: true });
-    }
-
-    // Свайп вниз → згорнути. Скролер — тіло модалки (.cm-board-modal-body); тягнемо лише коли
-    // тіло прокручене до верху. Горизонтальний рух (свайп галереї) НЕ перехоплюємо.
-    const scroller = body || modal;
+    // Свайп вниз → згорнути. Скрол — на самій модалці (фото+текст разом); тягнемо лише коли
+    // модалка прокручена до верху. Горизонтальний рух (свайп галереї) НЕ перехоплюємо.
     let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
-      zDrag = scroller.scrollTop <= 2;  // тягнемо лише коли вгорі
+      zDrag = modal.scrollTop <= 2;  // тягнемо лише коли вгорі
       zLocked = false;
       if (!zDrag) return;
       zStartY = e.touches[0].clientY;
