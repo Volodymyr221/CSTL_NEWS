@@ -1672,7 +1672,15 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
 }
-.cm-board-modal-content { padding: 12px 20px 18px; }
+.cm-board-modal-content { padding: 12px 20px 14px; }
+/* Закріплений футер: автор/дата + контакт + реакції/збереження/шер — завжди внизу модалки.
+   flex:0 0 auto (не скролиться); фон картки (opaque) ховає текст що скролиться під нього. */
+.cm-board-modal-foot {
+  flex: 0 0 auto;
+  background: inherit;
+  padding: 0 20px 12px;
+  box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+}
 
 /* ── Повноекранний перегляд фото (lightbox) — свайп між кадрами ── */
 .cm-photo-lightbox {
