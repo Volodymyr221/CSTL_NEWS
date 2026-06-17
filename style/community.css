@@ -1605,49 +1605,32 @@
   border-radius: 3px;
   background: rgba(0,0,0,0.18);
 }
-/* ── Згортна шапка (collapsing) ──
-   Послідовність: спершу скрол ЗМЕНШУЄ фото (текст не ховається), і лише коли фото стиснулось
-   до MIN_H — заголовок фіксується, а текст починає ховатись під нього.
-   Як: .photo — абсолютний оверлей зверху (height задає JS = fullH→MIN_H, не входить у скрол-потік);
-   .spacer (4:3) у скролері резервує місце під ПОВНЕ фото; .subhead sticky top:MIN_H фіксується під
-   стиснутим фото. Поки фото велике — subhead їде разом з низом фото (текст видно); коли фото MIN —
-   subhead прилипає, текст ховається під нього. */
-.cm-board-modal-stage {
-  flex: 1 1 auto;
-  min-height: 0;
+/* ── Згортна шапка: head (фото + під-шапка) закріплена зверху, body скролиться ──
+   Фото в рамці 4:3 у head; при скролі body JS зменшує height рамки ШВИДКО (RATE) — щоб фото
+   майже повністю стиснулось перш ніж текст піде під заголовок. Категорія+заголовок (subhead)
+   у head — завжди закріплені під фото; текст body ховається під них. min-height:0 дозволяє стискатись. */
+.cm-board-modal-head {
+  flex: 0 0 auto;
   position: relative;
-  overflow: hidden;
-}
-.cm-board-modal-scroll {
-  position: absolute;
-  inset: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-}
-.cm-board-modal-spacer {
-  width: 100%;
-  aspect-ratio: 4 / 3;          /* = повна висота фото; резервує місце (фото — оверлей зверху) */
-}
-.cm-board-modal-photo {
-  position: absolute;
-  top: 0; left: 0; right: 0;
-  aspect-ratio: 4 / 3;          /* стартова висота; далі height задає JS при скролі */
-  overflow: hidden;
   z-index: 2;
+  background: inherit;
 }
-/* Під-шапка: категорія+заголовок. sticky top=MIN_H(72px) → фіксується під стиснутим фото.
-   z-index:1 щоб текст ховався ПІД неї. Фон картки (opaque). */
-.cm-board-modal-subhead {
-  position: sticky;
-  top: 72px;
+.cm-board-modal-photoframe {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 4 / 3;          /* стартова висота; далі height задає JS при скролі */
+  min-height: 0;                /* ВАЖЛИВО: дозволяє рамці стискатись */
+  overflow: hidden;
   z-index: 1;
+}
+.cm-board-modal-subhead {
   background: inherit;
   padding: 10px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 .cm-board-modal-subhead .cm-board-title { margin: 0; }
-/* Галерея — горизонтальний свайп (scroll-snap) на всю висоту фото-оверлея */
+/* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
   display: flex;
   height: 100%;
@@ -1682,6 +1665,13 @@
   transition: background 0.15s, transform 0.15s;
 }
 .cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
+/* Тіло — скролиться (лише текст опису) під закріпленою шапкою. min-height:0 для flex-скролу */
+.cm-board-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 .cm-board-modal-content { padding: 12px 20px 16px; }
 /* Закріплений футер: автор/дата + контакт + реакції/збереження/шер — завжди внизу модалки.
    flex:0 0 auto (не скролиться); фон картки (opaque) ховає текст що скролиться під нього. */

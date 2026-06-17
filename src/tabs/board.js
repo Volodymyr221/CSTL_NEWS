@@ -664,10 +664,10 @@ function renderAdModal(p) {
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
   const hasPhoto = photos.length > 0;
   const multi = photos.length > 1;
-  // Фото — абсолютний оверлей зверху сцени (.cm-board-modal-photo), height задає JS (стискання).
+  // Фото у рамці 4:3 (.cm-board-modal-photoframe) в закріпленій шапці; height стискає JS при скролі.
   // Для 2+ — горизонтальний свайп (scroll-snap) + крапки. Тап → повний екран.
   const photoHtml = hasPhoto ? `
-    <div class="cm-board-modal-photo">
+    <div class="cm-board-modal-photoframe">
       <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
       </div>
@@ -678,18 +678,17 @@ function renderAdModal(p) {
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
     </div>
-    <div class="cm-board-modal-stage">
-      <div class="cm-board-modal-scroll">
-        ${hasPhoto ? '<div class="cm-board-modal-spacer"></div>' : ''}
-        <div class="cm-board-modal-subhead"${hasPhoto ? '' : ' style="top:0"'}>
-          <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-          ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-        </div>
-        <div class="cm-board-modal-content">
-          <p class="cm-board-text">${escapeHtml(p.text)}</p>
-        </div>
-      </div>
+    <div class="cm-board-modal-head">
       ${photoHtml}
+      <div class="cm-board-modal-subhead">
+        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+      </div>
+    </div>
+    <div class="cm-board-modal-body">
+      <div class="cm-board-modal-content">
+        <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      </div>
     </div>
     <div class="cm-board-modal-foot">
       <div class="cm-board-footer">
@@ -1067,7 +1066,7 @@ function initBoardNoteExpand(root) {
     const post = allPosts.find(x => String(x.id) === note.dataset.postId);
     modal.innerHTML = post
       ? renderAdModal(post)
-      : `<div class="cm-board-modal-stage"><div class="cm-board-modal-scroll"><div class="cm-board-modal-content">${note.innerHTML}</div></div></div>`;
+      : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
     document.body.appendChild(modal);
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
@@ -1093,26 +1092,25 @@ function initBoardNoteExpand(root) {
       }
     }
 
-    // Згортна шапка: фото — абсолютний оверлей (.cm-board-modal-photo), його height = fullH-scrollTop
-    // (до MIN_H=72px). Спейсер у скролері резервує повну висоту, тож спершу скрол стискає фото
-    // (текст не ховається), а коли фото=MIN_H — заголовок (sticky top:72) прилипає і текст ховається під нього.
-    // MIN_H тут МУСИТЬ збігатися з top у .cm-board-modal-subhead.
-    const photo = modal.querySelector('.cm-board-modal-photo');
-    const scroll = modal.querySelector('.cm-board-modal-scroll');
-    if (photo && scroll) {
-      const MIN_H = 72;
+    // Згортна шапка: при скролі тіла JS зменшує height рамки фото. RATE=2 → фото стискається удвічі
+    // швидше за скрол, тож майже повністю зникає ПЕРШ ніж текст піде під закріплений заголовок.
+    // min-height:0 у CSS дозволяє рамці реально стискатись.
+    const frame = modal.querySelector('.cm-board-modal-photoframe');
+    const body = modal.querySelector('.cm-board-modal-body');
+    if (frame && body) {
+      const MIN_H = 72, RATE = 2;
       let fullH = 0;
-      const measure = () => { fullH = Math.round(photo.clientWidth * 3 / 4); };
+      const measure = () => { fullH = Math.round(frame.clientWidth * 3 / 4); };
       requestAnimationFrame(measure);
-      scroll.addEventListener('scroll', () => {
+      body.addEventListener('scroll', () => {
         if (!fullH) measure();
-        photo.style.height = Math.max(MIN_H, fullH - scroll.scrollTop) + 'px';
+        frame.style.height = Math.max(MIN_H, fullH - body.scrollTop * RATE) + 'px';
       }, { passive: true });
     }
 
-    // Свайп вниз → згорнути. Скролер — .cm-board-modal-scroll; тягнемо лише коли він угорі.
+    // Свайп вниз → згорнути. Скролер — тіло (.cm-board-modal-body); тягнемо лише коли воно вгорі.
     // Горизонтальний рух (свайп галереї) НЕ перехоплюємо.
-    const scroller = scroll || modal;
+    const scroller = body || modal;
     let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
       zDrag = scroller.scrollTop <= 2;  // тягнемо лише коли вгорі
