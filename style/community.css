@@ -1563,8 +1563,9 @@
   top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 18px) / 2);
   width: min(88vw, 360px);
   max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 58px);
-  overflow-y: auto;            /* фото + текст — один скрол; фото їде вгору, не перекриває текст */
-  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;            /* згортна шапка: скролиться тіло; фото+під-шапка закріплені зверху */
   -webkit-overflow-scrolling: touch;
   z-index: 220;
   margin: 0;
@@ -1604,19 +1605,31 @@
   border-radius: 3px;
   background: rgba(0,0,0,0.18);
 }
-/* ── Фото: рамка фіксованої пропорції 4:3 ──
-   Будь-яке фото заповнює рамку (object-fit:cover, обрізка по центру) → однаковий розмір завжди.
-   Рамка скролиться РАЗОМ з текстом (їде вгору, не перекриває опис). */
+/* ── Згортна шапка: фото (рамка 4:3) + під-шапка (категорія+заголовок) — закріплені зверху ──
+   При скролі тіла JS зменшує height рамки fullH→MIN_H (фото стискається). Категорія+заголовок
+   у .cm-board-modal-subhead лишаються під фото; текст тіла скролиться ПІД них. */
+.cm-board-modal-head {
+  flex: 0 0 auto;
+  position: relative;
+  z-index: 2;
+  background: inherit;          /* колір картки — щоб під-шапка перекривала текст під собою */
+}
 .cm-board-modal-photoframe {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
+  aspect-ratio: 4 / 3;          /* стартова висота; далі height задає JS при скролі */
+  min-height: 0;                /* ВАЖЛИВО: дозволяє рамці стискатись (інакше лишалась велика) */
   overflow: hidden;
-  border-bottom-left-radius: 16px;
-  border-bottom-right-radius: 16px;
-  box-shadow: 0 6px 14px rgba(0,0,0,0.18);
   z-index: 1;
 }
+/* Під-шапка: категорія + заголовок, закріплена під фото; хайрлайн відділяє від тексту */
+.cm-board-modal-subhead {
+  padding: 10px 20px 8px;
+  background: inherit;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
+.cm-board-modal-subhead .cm-board-title { margin: 0; }
 /* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
   display: flex;
@@ -1652,7 +1665,14 @@
   transition: background 0.15s, transform 0.15s;
 }
 .cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
-.cm-board-modal-content { padding: 14px 20px 18px; }
+/* Тіло — скролиться (текст+дії) під закріпленою шапкою. min-height:0 щоб flex-скрол працював */
+.cm-board-modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.cm-board-modal-content { padding: 12px 20px 18px; }
 
 /* ── Повноекранний перегляд фото (lightbox) — свайп між кадрами ── */
 .cm-photo-lightbox {

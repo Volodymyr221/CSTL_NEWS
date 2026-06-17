@@ -676,17 +676,23 @@ function renderAdModal(p) {
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
     </div>
-    ${galleryHtml}
-    <div class="cm-board-modal-content">
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-      <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      <div class="cm-board-footer">
-        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+    <div class="cm-board-modal-head">
+      ${galleryHtml}
+      <div class="cm-board-modal-subhead">
+        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       </div>
-      ${renderContact(p.contact)}
-      ${boardActionsHtml(p)}
+    </div>
+    <div class="cm-board-modal-body">
+      <div class="cm-board-modal-content">
+        <p class="cm-board-text">${escapeHtml(p.text)}</p>
+        <div class="cm-board-footer">
+          <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+          <span class="cm-board-time">${formatTime(postTime(p))}</span>
+        </div>
+        ${renderContact(p.contact)}
+        ${boardActionsHtml(p)}
+      </div>
     </div>
   `;
 }
@@ -1056,7 +1062,7 @@ function initBoardNoteExpand(root) {
     const post = allPosts.find(x => String(x.id) === note.dataset.postId);
     modal.innerHTML = post
       ? renderAdModal(post)
-      : `<div class="cm-board-modal-content">${note.innerHTML}</div>`;
+      : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
     document.body.appendChild(modal);
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
@@ -1082,11 +1088,28 @@ function initBoardNoteExpand(root) {
       }
     }
 
-    // Свайп вниз → згорнути. Скрол — на самій модалці (фото+текст разом); тягнемо лише коли
-    // модалка прокручена до верху. Горизонтальний рух (свайп галереї) НЕ перехоплюємо.
+    // Згортна шапка: при скролі тіла фото плавно зменшується (рамка 4:3 → MIN_H). Категорія+
+    // заголовок (.cm-board-modal-subhead) лишаються закріплені; текст тіла скролиться ПІД них.
+    // min-height:0 у CSS дозволяє рамці реально стискатись.
+    const frame = modal.querySelector('.cm-board-modal-photoframe');
+    const body = modal.querySelector('.cm-board-modal-body');
+    if (frame && body) {
+      const MIN_H = 72;
+      let fullH = 0;
+      const measure = () => { fullH = Math.round(frame.clientWidth * 3 / 4); };
+      requestAnimationFrame(measure);
+      body.addEventListener('scroll', () => {
+        if (!fullH) measure();
+        frame.style.height = Math.max(MIN_H, fullH - body.scrollTop) + 'px';
+      }, { passive: true });
+    }
+
+    // Свайп вниз → згорнути. Скролер — тіло (.cm-board-modal-body); тягнемо лише коли тіло
+    // прокручене до верху. Горизонтальний рух (свайп галереї) НЕ перехоплюємо.
+    const scroller = body || modal;
     let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
-      zDrag = modal.scrollTop <= 2;  // тягнемо лише коли вгорі
+      zDrag = scroller.scrollTop <= 2;  // тягнемо лише коли вгорі
       zLocked = false;
       if (!zDrag) return;
       zStartY = e.touches[0].clientY;
