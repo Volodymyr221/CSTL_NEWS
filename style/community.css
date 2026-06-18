@@ -1696,7 +1696,7 @@
   padding-top: 6px;
 }
 
-/* ── Новий мета-блок футера: автор навпроти тел + кнопки ── */
+/* ── Мета-блок футера модалки: «номер — ім'я» + кнопки ── */
 .cm-board-modal-foot {
   border-top: none;
   box-shadow: 0 -6px 16px rgba(0,0,0,0.08);
@@ -1708,26 +1708,15 @@
   justify-content: space-between;
   gap: 8px;
 }
-.cm-board-modal-meta-main > .cm-board-author {
-  font-size: 13px;
-  font-weight: 600;
-  color: rgba(43,43,43,0.6);
+.cm-board-contact-line {
+  font-size: 14px;
+  font-weight: 700;
+  color: #8B3A4A;
   flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-}
-.cm-board-modal-meta-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
-}
-.cm-board-modal-meta-right .cm-board-contact-num {
-  font-size: 15px;
-  font-weight: 700;
-  color: #8B3A4A;
 }
 .cm-board-modal-meta-btns {
   display: flex;
@@ -1858,6 +1847,11 @@
   align-items: center;
   gap: 8px;
   justify-content: space-between;
+}
+.cm-board-contact-btns {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
 }
 .cm-board-contact-num {
   flex: 1;

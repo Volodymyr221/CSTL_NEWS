@@ -220,7 +220,10 @@ function renderContact(contact) {
     return `
       <div class="cm-board-contact cm-board-contact--phone">
         <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-        <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
+        <div class="cm-board-contact-btns">
+          <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+          <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
+        </div>
       </div>
     `;
   }
@@ -696,13 +699,10 @@ function renderAdModal(p) {
         if (isPhone) return `
           <div class="cm-board-modal-meta">
             <div class="cm-board-modal-meta-main">
-              <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-              <div class="cm-board-modal-meta-right">
-                <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-                <div class="cm-board-modal-meta-btns">
-                  <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
-                  <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-                </div>
+              <span class="cm-board-contact-line">${escapeHtml(contact)} — ${escapeHtml(p.author || 'анонімно')}</span>
+              <div class="cm-board-modal-meta-btns">
+                <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+                <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
               </div>
             </div>
             <span class="cm-board-time">${formatTime(postTime(p))}</span>
