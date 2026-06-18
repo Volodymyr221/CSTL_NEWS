@@ -1627,6 +1627,9 @@
   background: inherit;
   padding: 10px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 .cm-board-modal-subhead .cm-board-title { margin: 0; }
