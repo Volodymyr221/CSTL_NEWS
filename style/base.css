@@ -200,7 +200,7 @@ body.cm-zoom-open .app-main { overflow: hidden; }
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 36px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--black);
