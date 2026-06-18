@@ -1221,25 +1221,6 @@
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
   }
-  function renderContact(contact) {
-    if (!contact)
-      return "";
-    const trimmed = String(contact).trim();
-    const isPhone2 = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
-    if (isPhone2) {
-      const tel = trimmed.replace(/[^\d+]/g, "");
-      return `
-      <div class="cm-board-contact cm-board-contact--phone">
-        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-        <div class="cm-board-contact-btns">
-          <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-          <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
-        </div>
-      </div>
-    `;
-    }
-    return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
-  }
   function reactTriggerHtml(post) {
     const myReaction = getMyReaction(post.id);
     const counts = getReactionCounts(post.id);
@@ -1600,7 +1581,9 @@ ${post.text}
   function renderBoardCard(p) {
     const tilt = p.id * 7 % 5 - 2;
     const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
-    const contactHtml = renderContact(p.contact);
+    const contact = p.contact ? String(p.contact).trim() : "";
+    const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+    const tel = isPhone2 ? contact.replace(/[^\d+]/g, "") : "";
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
@@ -1611,10 +1594,19 @@ ${post.text}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       <div class="cm-board-footer">
-        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+        ${isPhone2 ? "" : `<span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>`}
         <span class="cm-board-time">${formatTime(postTime(p))}</span>
       </div>
-      ${contactHtml}
+      ${isPhone2 ? `
+        <div class="cm-board-contact cm-board-contact--phone">
+          <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
+          <div class="cm-board-contact-btns">
+            <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
+          </div>
+        </div>
+        <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+      ` : contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -1654,7 +1646,7 @@ ${post.text}
         return `
           <div class="cm-board-modal-meta">
             <div class="cm-board-modal-meta-main">
-              <span class="cm-board-contact-line">${escapeHtml(contact)} \u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+              <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> \u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>
               <div class="cm-board-modal-meta-btns">
                 <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
                 <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>

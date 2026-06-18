@@ -635,8 +635,9 @@ function buildShareText(post) {
 function renderBoardCard(p) {
   const tilt = ((p.id * 7) % 5) - 2;
   const emoji = CATEGORY_EMOJI[p.category] || '📌';
-  const contactHtml = renderContact(p.contact);
-  // posts.photos[] (масив у Supabase) АБО p.photo (старі демо-дані з community-board.json)
+  const contact = p.contact ? String(p.contact).trim() : '';
+  const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+  const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   const photoHtml = photo
     ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
@@ -649,10 +650,19 @@ function renderBoardCard(p) {
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       <div class="cm-board-footer">
-        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+        ${isPhone ? '' : `<span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>`}
         <span class="cm-board-time">${formatTime(postTime(p))}</span>
       </div>
-      ${contactHtml}
+      ${isPhone ? `
+        <div class="cm-board-contact cm-board-contact--phone">
+          <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
+          <div class="cm-board-contact-btns">
+            <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
+          </div>
+        </div>
+        <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
+      ` : (contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : '')}
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -699,7 +709,7 @@ function renderAdModal(p) {
         if (isPhone) return `
           <div class="cm-board-modal-meta">
             <div class="cm-board-modal-meta-main">
-              <span class="cm-board-contact-line">${escapeHtml(contact)} — ${escapeHtml(p.author || 'анонімно')}</span>
+              <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> — ${escapeHtml(p.author || 'анонімно')}</span></span>
               <div class="cm-board-modal-meta-btns">
                 <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
                 <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
