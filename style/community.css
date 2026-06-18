@@ -1700,8 +1700,9 @@
 .cm-board-modal-foot {
   border-top: none;
   box-shadow: 0 -6px 16px rgba(0,0,0,0.08);
+  padding: 0 20px 6px;
 }
-.cm-board-modal-meta { padding-top: 10px; }
+.cm-board-modal-meta { padding-top: 6px; }
 .cm-board-modal-meta-main {
   display: flex;
   align-items: center;
@@ -1710,13 +1711,19 @@
 }
 .cm-board-contact-line {
   font-size: 14px;
-  font-weight: 700;
-  color: #8B3A4A;
   flex-shrink: 1;
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.cm-board-contact-line .cm-board-contact-phone {
+  font-weight: 700;
+  color: #8B3A4A;
+}
+.cm-board-contact-line .cm-board-contact-name {
+  font-weight: 600;
+  color: rgba(43,43,43,0.6);
 }
 .cm-board-modal-meta-btns {
   display: flex;
@@ -1852,6 +1859,25 @@
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+/* Менші кнопки на картці щоб номер завжди влазив */
+.cm-board-contact--phone .cm-board-msg-btn,
+.cm-board-contact--phone .cm-board-call {
+  width: 28px;
+  height: 28px;
+}
+.cm-board-contact--phone .cm-board-msg-btn svg,
+.cm-board-contact--phone .cm-board-call svg {
+  width: 13px;
+  height: 13px;
+}
+/* Ім'я під номером телефону на картці */
+.cm-board-author--card {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(43,43,43,0.5);
+  margin-top: 3px;
 }
 .cm-board-contact-num {
   flex: 1;
