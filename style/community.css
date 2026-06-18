@@ -1635,7 +1635,7 @@
   position: sticky;
   top: -1px;
   z-index: 2;
-  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 5px 7px -4px rgba(0,0,0,0.16);
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 .cm-board-modal-subhead .cm-board-title { margin: 0; }
@@ -1685,7 +1685,7 @@
   z-index: 3;
   background: inherit;
   padding: 0 20px 10px;
-  box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
+  box-shadow: 0 -5px 7px -4px rgba(0,0,0,0.16);
 }
 /* Компактний футер — менше місця (специфічність 0,3,0 щоб перекрити загальні .cm-board-modal-note правила) */
 .cm-board-modal-note .cm-board-modal-foot .cm-board-footer {
