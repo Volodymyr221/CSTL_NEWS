@@ -664,26 +664,30 @@ function renderAdModal(p) {
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
   const hasPhoto = photos.length > 0;
   const multi = photos.length > 1;
-  // Фото — АБСОЛЮТНИЙ оверлей (.cm-board-modal-photo), НЕ в потоці скролера → стискання його height
-  // НЕ змінює розмір скрол-блоку (тому скрол не клинить). Для 2+ — свайп-галерея + крапки. Тап → екран.
-  const photoHtml = hasPhoto ? `
-    <div class="cm-board-modal-photo">
-      <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
-        ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
+  // Категорія+заголовок — в ОДНОМУ шарі з фото (під фото), тож завжди приклеєні до низу фото і не ховаються під нього.
+  const subheadHtml = `
+    <div class="cm-board-modal-subhead">
+      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+    </div>`;
+  // Шапка-оверлей (.cm-board-modal-head, абсолютна, поза потоком скролера → стискання НЕ ресайзить
+  // скрол-блок): фото (.cm-board-modal-photo, height стискає JS) + під-шапка одразу під ним.
+  const headHtml = hasPhoto ? `
+    <div class="cm-board-modal-head">
+      <div class="cm-board-modal-photo">
+        <div class="cm-board-modal-gallery"${multi ? ' data-multi' : ''}>
+          ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join('')}
+        </div>
+        ${multi ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>` : ''}
       </div>
-      ${multi ? `<div class="cm-board-modal-dots">${photos.map((_, i) => `<span class="cm-board-modal-dot${i === 0 ? ' active' : ''}"></span>`).join('')}</div>` : ''}
-    </div>
-  ` : '';
+      ${subheadHtml}
+    </div>` : '';
   return `
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
     </div>
     <div class="cm-board-modal-scrollarea">
-      ${hasPhoto ? '<div class="cm-board-modal-spacer"></div>' : ''}
-      <div class="cm-board-modal-subhead"${hasPhoto ? '' : ' style="position:static"'}>
-        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
-        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-      </div>
+      ${hasPhoto ? '<div class="cm-board-modal-spacer"></div>' : subheadHtml}
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
       </div>
@@ -696,7 +700,7 @@ function renderAdModal(p) {
       ${renderContact(p.contact)}
       ${boardActionsHtml(p)}
     </div>
-    ${photoHtml}
+    ${headHtml}
   `;
 }
 
@@ -1094,22 +1098,23 @@ function initBoardNoteExpand(root) {
       }
     }
 
-    // Згортна шапка (як найперший раз): при скролі body JS зменшує height рамки фото; під-шапка
-    // Фото — АБСОЛЮТНИЙ оверлей (поза потоком скролера) → зміна його height НЕ ресайзить скрол-блок,
-    // тому нативний скрол НЕ клинить. Спейсер у скролері резервує висоту під повне фото (= fullH).
-    // height оновлюємо через rAF + skip-if-unchanged. subhead (sticky top:72) тримається під фото.
+    // Шапка-оверлей (фото + під-шапка) — поза потоком скролера → стискання НЕ ресайзить скрол-блок,
+    // нативний скрол НЕ клинить. Спейсер резервує висоту під УВЕСЬ оверлей (фото fullH + під-шапка),
+    // тож текст завжди починається рівно під оверлеєм, а під-шапка завжди приклеєна під фото.
     const photo = modal.querySelector('.cm-board-modal-photo');
     const area = modal.querySelector('.cm-board-modal-scrollarea');
     const spacer = modal.querySelector('.cm-board-modal-spacer');
+    const subhead = modal.querySelector('.cm-board-modal-head .cm-board-modal-subhead');
     if (photo && area) {
       const MIN_H = 72;
       let fullH = 0, lastH = -1, ticking = false;
       const measure = () => {
         fullH = Math.round(photo.clientWidth * 3 / 4);
-        if (spacer) spacer.style.height = fullH + 'px';
         // стартова висота фото (без aspect-ratio фото інакше має 0 висоти)
         const h0 = Math.max(MIN_H, fullH - area.scrollTop);
         lastH = h0; photo.style.height = h0 + 'px';
+        // спейсер = повне фото + під-шапка (резерв під увесь оверлей)
+        if (spacer) spacer.style.height = (fullH + (subhead ? subhead.offsetHeight : 0)) + 'px';
       };
       requestAnimationFrame(measure);
       const apply = () => {
