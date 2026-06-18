@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 264,
+    "title": "Прем’єр Болгарії наполягає, щоб з 21-го пакету санкцій проти РФ виключили Кирила і \"Лукойл\"",
+    "description": "Прем'єр Болгарії Радєв вимагає виключити патріарха Кирила з санкцій ЄС через загрози економіці країни.",
+    "date": "2026-06-18",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/0/852904/e068b515a9b9854225c1e578db00cabf.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/18/8040033/",
+    "auto": true
+  },
+  {
     "id": 261,
     "title": "Гегсет відзначив успіхи PURL і досягнення українців на фронті",
     "description": "Міністр оборони США Піт Гегсет заявив, що ініціатива PURL, завдяки якій європейські союзники закуповують зброю в США для України, демонструє прогрес і закладає підґрунтя для миру.",
@@ -596,6 +609,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/3/826309/8341a8b686c182af9cd6d4ec44e03abb.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/11/8034119/",
+    "auto": true
+  },
+  {
+    "id": 263,
+    "title": "Пісторіус анонсував поставку Україні ракет \"повітря-повітря\" із запасів Бундесверу",
+    "description": "Німеччина поставить Україні понад 100 ракет і разом з українською компанією вироблятиме роботизовані комплекси.",
+    "date": "2027-05-18",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/e/9/852927/e917119f517f9efc472fe01631a76d57.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/18/8040038/",
     "auto": true
   }
 ]
