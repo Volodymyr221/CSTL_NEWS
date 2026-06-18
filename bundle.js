@@ -1988,33 +1988,32 @@ ${post.text}
         }, { passive: true });
       }
       const scroller = body || modal;
-      let zStartY = 0, zStartX = 0, zDrag = false, zDecided = false, zDelta = 0;
+      let zStartY = 0, zStartX = 0, zDrag = false, zDelta = 0;
       modal.addEventListener("touchstart", (e) => {
         zStartY = e.touches[0].clientY;
         zStartX = e.touches[0].clientX;
         zDelta = 0;
         zDrag = false;
-        zDecided = false;
       }, { passive: true });
       modal.addEventListener("touchmove", (e) => {
-        const dy = e.touches[0].clientY - zStartY;
+        const y = e.touches[0].clientY;
+        const dy = y - zStartY;
         const dx = e.touches[0].clientX - zStartX;
-        if (!zDecided) {
-          if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
-            zDecided = true;
-            zDrag = false;
-            return;
-          }
-          if (Math.abs(dy) > 6 || Math.abs(dx) > 6) {
-            zDecided = true;
-            zDrag = dy > 0 && scroller.scrollTop <= 0;
-            if (zDrag)
-              modal.style.transition = "none";
-          }
+        if (!zDrag && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10)
+          return;
+        if (!zDrag && dy > 0 && scroller.scrollTop <= 0) {
+          zDrag = true;
+          zStartY = y;
+          modal.style.transition = "none";
         }
         if (!zDrag)
           return;
-        zDelta = Math.max(0, e.touches[0].clientY - zStartY);
+        zDelta = y - zStartY;
+        if (zDelta <= 0) {
+          zDrag = false;
+          modal.style.transform = "";
+          return;
+        }
         e.preventDefault();
         modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
       }, { passive: false });

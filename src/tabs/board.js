@@ -1108,29 +1108,35 @@ function initBoardNoteExpand(root) {
       }, { passive: true });
     }
 
-    // Свайп вниз → закрити. Напрям визначаємо на ходу (а не лише на старті): закриття вмикається
-    // ТІЛЬКИ якщо тягнемо ВНИЗ і тіло вже прокручене до самого верху (scrollTop<=0). Тож після
-    // читання достатньо догорнути вгору і одразу тягнути вниз — закриється. Горизонталь = свайп галереї.
+    // Свайп вниз → закрити. Перевіряємо НА КОЖЕН РУХ: щойно тягнемо ВНИЗ і тіло на самому верху
+    // (scrollTop<=0) — вмикаємо закриття (навіть посеред жесту: прокрутив униз → догорнув угору →
+    // тягнеш далі вниз і воно закривається, без відриву пальця). Горизонталь = свайп галереї.
     const scroller = body || modal;
-    let zStartY = 0, zStartX = 0, zDrag = false, zDecided = false, zDelta = 0;
+    let zStartY = 0, zStartX = 0, zDrag = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
       zStartY = e.touches[0].clientY;
       zStartX = e.touches[0].clientX;
-      zDelta = 0; zDrag = false; zDecided = false;
+      zDelta = 0; zDrag = false;
     }, { passive: true });
     modal.addEventListener('touchmove', e => {
-      const dy = e.touches[0].clientY - zStartY;
+      const y = e.touches[0].clientY;
+      const dy = y - zStartY;
       const dx = e.touches[0].clientX - zStartX;
-      if (!zDecided) {
-        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) { zDecided = true; zDrag = false; return; }
-        if (Math.abs(dy) > 6 || Math.abs(dx) > 6) {
-          zDecided = true;
-          zDrag = (dy > 0 && scroller.scrollTop <= 0);   // тягнути закриття лише з самого верху
-          if (zDrag) modal.style.transition = 'none';
-        }
+      // Горизонтальний свайп (галерея) — не перехоплюємо
+      if (!zDrag && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) return;
+      // Вмикаємо закриття коли тягнемо вниз і тіло вже на верху (перевірка щоразу)
+      if (!zDrag && dy > 0 && scroller.scrollTop <= 0) {
+        zDrag = true;
+        zStartY = y;                       // переякорюємо → без стрибка
+        modal.style.transition = 'none';
       }
-      if (!zDrag) return;                                 // інакше — нативний скрол тіла
-      zDelta = Math.max(0, e.touches[0].clientY - zStartY);
+      if (!zDrag) return;                  // інакше — нативний скрол тіла
+      zDelta = y - zStartY;
+      if (zDelta <= 0) {                   // потягли назад угору — відпускаємо назад у скрол
+        zDrag = false;
+        modal.style.transform = '';
+        return;
+      }
       e.preventDefault();
       modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
     }, { passive: false });
