@@ -1605,25 +1605,37 @@
   border-radius: 3px;
   background: rgba(0,0,0,0.18);
 }
-/* ── Згортна шапка (як найперший раз): head (фото + під-шапка) — єдиний закріплений блок зверху ──
-   Фото в рамці 4:3; при скролі body JS зменшує height рамки → під-шапка (заголовок) ПРИКЛЕЄНА
-   прямо під фото і їде вгору разом з ним (без перекриття). Текст body скролиться під head.
-   min-height:0 дозволяє рамці стискатись. */
-.cm-board-modal-head {
-  flex: 0 0 auto;
-  position: relative;
-  z-index: 2;
-  background: inherit;
+/* ── Згортна шапка через АБСОЛЮТНИЙ оверлей (щоб скрол не клинило) ──
+   .cm-board-modal-scrollarea — єдиний скролер (у потоці). Усередині: spacer (резервує висоту під
+   повне фото = fullH, задає JS) + subhead (sticky top:72 — тримається під стиснутим фото) + текст.
+   Фото .cm-board-modal-photo — АБСОЛЮТНЕ (поза потоком) → стискання його height НЕ ресайзить скролер. */
+.cm-board-modal-scrollarea {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
-.cm-board-modal-photoframe {
-  position: relative;
+.cm-board-modal-spacer {
   width: 100%;
-  aspect-ratio: 4 / 3;          /* стартова висота; далі height задає JS при скролі */
-  min-height: 0;                /* дозволяє рамці стискатись */
-  overflow: hidden;
+  aspect-ratio: 4 / 3;          /* запас до виміру JS (далі JS ставить точну height = fullH) */
 }
-/* Під-шапка: категорія+заголовок — прямо під фото (у head), не sticky (рухається з фото) */
+/* Фото — абсолютний оверлей відносно модалки (top:38 = висота смужки-ручки). height задає JS:
+   видима висота зменшується ЗНИЗУ ВГОРУ (бокс теж стискається, тому НЕ перекриває під-шапку). */
+.cm-board-modal-photo {
+  position: absolute;
+  top: 38px;
+  left: 0; right: 0;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  z-index: 2;
+}
+/* Під-шапка: категорія+заголовок. sticky top:72(=MIN_H) → тримається рівно під стиснутим фото.
+   z-index:1, opaque фон — текст ховається під неї лише коли фото стиснулось. */
 .cm-board-modal-subhead {
+  position: sticky;
+  top: 72px;
+  z-index: 1;
   background: inherit;
   padding: 10px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
@@ -1665,15 +1677,6 @@
   transition: background 0.15s, transform 0.15s;
 }
 .cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
-/* Тіло — скролиться (лише текст опису). min-height:0 для flex-скролу.
-   overscroll-behavior:contain — прибирає iOS-«відскок», що конфліктував зі свайп-закриттям. */
-.cm-board-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
-}
 .cm-board-modal-content { padding: 12px 20px 16px; }
 /* Закріплений футер: автор/дата + контакт + реакції/збереження/шер — завжди внизу модалки.
    flex:0 0 auto (не скролиться); z-index:3 + opaque фон → завжди поверх фото-оверлея і тексту. */
