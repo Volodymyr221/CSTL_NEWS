@@ -1068,6 +1068,7 @@ function initBoardNoteExpand(root) {
       ? renderAdModal(post)
       : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
     document.body.appendChild(modal);
+    document.body.classList.add('cm-zoom-open');   // блокуємо скрол фону (.app-main)
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
@@ -1107,42 +1108,38 @@ function initBoardNoteExpand(root) {
       }, { passive: true });
     }
 
-    // Свайп вниз → згорнути. Скролер — тіло (.cm-board-modal-body); тягнемо лише коли воно вгорі.
-    // Горизонтальний рух (свайп галереї) НЕ перехоплюємо.
+    // Свайп вниз → закрити. Напрям визначаємо на ходу (а не лише на старті): закриття вмикається
+    // ТІЛЬКИ якщо тягнемо ВНИЗ і тіло вже прокручене до самого верху (scrollTop<=0). Тож після
+    // читання достатньо догорнути вгору і одразу тягнути вниз — закриється. Горизонталь = свайп галереї.
     const scroller = body || modal;
-    let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
+    let zStartY = 0, zStartX = 0, zDrag = false, zDecided = false, zDelta = 0;
     modal.addEventListener('touchstart', e => {
-      zDrag = scroller.scrollTop <= 2;  // тягнемо лише коли вгорі
-      zLocked = false;
-      if (!zDrag) return;
       zStartY = e.touches[0].clientY;
       zStartX = e.touches[0].clientX;
-      zDelta = 0;
-      modal.style.transition = 'none';
+      zDelta = 0; zDrag = false; zDecided = false;
     }, { passive: true });
     modal.addEventListener('touchmove', e => {
-      if (!zDrag) return;
       const dy = e.touches[0].clientY - zStartY;
       const dx = e.touches[0].clientX - zStartX;
-      // Перший суттєвий рух горизонтальний → це свайп галереї, не закриття модалки
-      if (!zLocked && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-        zLocked = true;
-        if (Math.abs(dx) > Math.abs(dy)) { zDrag = false; return; }
+      if (!zDecided) {
+        if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) { zDecided = true; zDrag = false; return; }
+        if (Math.abs(dy) > 6 || Math.abs(dx) > 6) {
+          zDecided = true;
+          zDrag = (dy > 0 && scroller.scrollTop <= 0);   // тягнути закриття лише з самого верху
+          if (zDrag) modal.style.transition = 'none';
+        }
       }
-      zDelta = dy;
-      if (zDelta <= 0) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; return; }
+      if (!zDrag) return;                                 // інакше — нативний скрол тіла
+      zDelta = Math.max(0, e.touches[0].clientY - zStartY);
       e.preventDefault();
       modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
     }, { passive: false });
     modal.addEventListener('touchend', () => {
       if (!zDrag) return;
       zDrag = false;
-      modal.style.transition = '';           // повертаємо CSS-перехід
-      if (zDelta > 90) {
-        collapse();                          // згорнути (fade на місці пальця)
-      } else {
-        modal.style.transform = '';          // назад у центр через CSS .visible
-      }
+      modal.style.transition = '';
+      if (zDelta > 90) collapse();
+      else modal.style.transform = '';
       zDelta = 0;
     }, { passive: true });
 
@@ -1169,6 +1166,7 @@ function initBoardNoteExpand(root) {
     modal.classList.remove('visible');
     backdrop.classList.remove('visible');
     note.classList.remove('cm-board-note--hidden');
+    document.body.classList.remove('cm-zoom-open');   // розблоковуємо скрол фону
 
     setTimeout(() => {
       modal.remove();
