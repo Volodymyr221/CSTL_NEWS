@@ -696,13 +696,13 @@ function renderAdModal(p) {
         if (isPhone) return `
           <div class="cm-board-modal-meta">
             <div class="cm-board-modal-meta-main">
-              <div class="cm-board-modal-meta-left">
-                <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+              <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+              <div class="cm-board-modal-meta-right">
                 <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-              </div>
-              <div class="cm-board-modal-meta-btns">
-                <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
-                <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+                <div class="cm-board-modal-meta-btns">
+                  <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
+                  <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+                </div>
               </div>
             </div>
             <span class="cm-board-time">${formatTime(postTime(p))}</span>

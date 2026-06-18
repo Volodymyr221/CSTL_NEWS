@@ -1696,8 +1696,11 @@
   padding-top: 6px;
 }
 
-/* ── Новий мета-блок футера: автор + тел + кнопки ── */
-.cm-board-modal-foot { border-top: none; }
+/* ── Новий мета-блок футера: автор навпроти тел + кнопки ── */
+.cm-board-modal-foot {
+  border-top: none;
+  box-shadow: 0 -6px 16px rgba(0,0,0,0.08);
+}
 .cm-board-modal-meta { padding-top: 10px; }
 .cm-board-modal-meta-main {
   display: flex;
@@ -1705,19 +1708,24 @@
   justify-content: space-between;
   gap: 8px;
 }
-.cm-board-modal-meta-left {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-.cm-board-modal-meta-left .cm-board-author {
+.cm-board-modal-meta-main > .cm-board-author {
   font-size: 13px;
   font-weight: 600;
   color: rgba(43,43,43,0.6);
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-.cm-board-modal-meta-left .cm-board-contact-num {
-  font-size: 16px;
+.cm-board-modal-meta-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cm-board-modal-meta-right .cm-board-contact-num {
+  font-size: 15px;
   font-weight: 700;
   color: #8B3A4A;
 }
