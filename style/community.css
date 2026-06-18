@@ -1605,10 +1605,10 @@
   border-radius: 3px;
   background: rgba(0,0,0,0.18);
 }
-/* ── Згортна шапка через АБСОЛЮТНИЙ оверлей (щоб скрол не клинило) ──
-   .cm-board-modal-scrollarea — єдиний скролер (у потоці). Усередині: spacer (резервує висоту під
-   повне фото = fullH, задає JS) + subhead (sticky top:72 — тримається під стиснутим фото) + текст.
-   Фото .cm-board-modal-photo — АБСОЛЮТНЕ (поза потоком) → стискання його height НЕ ресайзить скролер. */
+/* ── Згортна шапка через АБСОЛЮТНУ шапку-оверлей (щоб скрол не клинило) ──
+   .cm-board-modal-scrollarea — єдиний скролер (у потоці): spacer (резерв під увесь оверлей =
+   фото+під-шапка, задає JS) + текст. .cm-board-modal-head — АБСОЛЮТНА шапка (поза потоком):
+   фото + під-шапка ПІД ним; стискання height фото НЕ ресайзить скролер. */
 .cm-board-modal-scrollarea {
   flex: 1 1 auto;
   min-height: 0;
@@ -1618,24 +1618,25 @@
 }
 .cm-board-modal-spacer {
   width: 100%;
-  aspect-ratio: 4 / 3;          /* запас до виміру JS (далі JS ставить точну height = fullH) */
+  aspect-ratio: 4 / 3;          /* запас до виміру JS (далі JS ставить точну height) */
 }
-/* Фото — абсолютний оверлей відносно модалки (top:38 = висота смужки-ручки). Ширина — повна
-   (left:0; right:0); ВИСОТУ задає JS (стартова + при скролі). БЕЗ aspect-ratio — інакше WebKit
-   бере ширину з пропорції і стискає фото в лівий кут. Тут стискання ЗНИЗУ ВГОРУ, ширина повна. */
-.cm-board-modal-photo {
+/* Шапка-оверлей: фото + під-шапка. Абсолютна відносно модалки (top:38 = висота смужки-ручки). */
+.cm-board-modal-head {
   position: absolute;
   top: 38px;
   left: 0; right: 0;
-  overflow: hidden;
   z-index: 2;
+  background: inherit;
 }
-/* Під-шапка: категорія+заголовок. sticky top:72(=MIN_H) → тримається рівно під стиснутим фото.
-   z-index:1, opaque фон — текст ховається під неї лише коли фото стиснулось. */
+/* Фото — у потоці шапки (relative), повна ширина, ВИСОТУ задає JS (стискання знизу вгору). */
+.cm-board-modal-photo {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+}
+/* Під-шапка: категорія+заголовок — статична, ОДРАЗУ під фото (у шапці-оверлеї), не ховається під фото.
+   opaque фон — текст скролиться під неї. */
 .cm-board-modal-subhead {
-  position: sticky;
-  top: 72px;
-  z-index: 1;
   background: inherit;
   padding: 10px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
