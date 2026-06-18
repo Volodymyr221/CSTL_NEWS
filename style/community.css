@@ -1619,6 +1619,7 @@
   position: relative;
   width: 100%;
   aspect-ratio: 4 / 3;
+  max-height: 200px;
   overflow: hidden;
 }
 /* Під-шапка: категорія+заголовок — одразу під фото, скролиться разом. */
