@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-18T02:04:35.785106+03:00",
+  "fetched_at": "2026-06-18T05:01:33.094278+03:00",
   "date": "18.06.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -132,8 +132,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -177,8 +177,8 @@
       "carrier": "ТОВ \"ФЛОУ АВТОТРАНС\" м.Луцьк",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -207,8 +207,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -222,8 +222,8 @@
       "carrier": "Стамбульський О.Й.- м. Луцьк",
       "bus": "ПАЗ 32054",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
