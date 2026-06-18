@@ -22,6 +22,7 @@ const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fi
 const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 
 const TYPE_TABS = [
   { id: 'board',   label: 'ДОШКА',        emoji: '🛒' },
@@ -688,11 +689,31 @@ function renderAdModal(p) {
       </div>
     </div>
     <div class="cm-board-modal-foot">
-      <div class="cm-board-footer">
-        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
-      </div>
-      ${renderContact(p.contact)}
+      ${(()=>{
+        const contact = p.contact ? String(p.contact).trim() : '';
+        const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+        const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
+        if (isPhone) return `
+          <div class="cm-board-modal-meta">
+            <div class="cm-board-modal-meta-main">
+              <div class="cm-board-modal-meta-left">
+                <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+                <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
+              </div>
+              <div class="cm-board-modal-meta-btns">
+                <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
+                <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+              </div>
+            </div>
+            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          </div>`;
+        return `
+          <div class="cm-board-footer">
+            <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
+            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          </div>
+          ${contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ''}`;
+      })()}
       ${boardActionsHtml(p)}
     </div>
   `;
@@ -1271,6 +1292,14 @@ function attachBoardDelegation() {
       const id = Number(chatCard.dataset.chatOpen);
       const post = allPosts.find(p => p.id === id);
       if (post) openChatModal(post);
+      return;
+    }
+
+    // Кнопка «Повідомлення» — незабаром
+    const msgBtn = e.target.closest('[data-msg-soon]');
+    if (msgBtn) {
+      e.stopPropagation();
+      showToast('💬 Незабаром');
       return;
     }
 

@@ -1066,6 +1066,7 @@
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var TYPE_TABS2 = [
     { id: "board", label: "\u0414\u041E\u0428\u041A\u0410", emoji: "\u{1F6D2}" },
     { id: "saved", label: "\u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u0406", emoji: BOOKMARK_OUTLINE_SVG },
@@ -1642,11 +1643,32 @@ ${post.text}
       </div>
     </div>
     <div class="cm-board-modal-foot">
-      <div class="cm-board-footer">
-        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
-      </div>
-      ${renderContact(p.contact)}
+      ${(() => {
+      const contact = p.contact ? String(p.contact).trim() : "";
+      const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+      const tel = isPhone2 ? contact.replace(/[^\d+]/g, "") : "";
+      if (isPhone2)
+        return `
+          <div class="cm-board-modal-meta">
+            <div class="cm-board-modal-meta-main">
+              <div class="cm-board-modal-meta-left">
+                <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+                <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
+              </div>
+              <div class="cm-board-modal-meta-btns">
+                <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>
+                <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+              </div>
+            </div>
+            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          </div>`;
+      return `
+          <div class="cm-board-footer">
+            <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          </div>
+          ${contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}`;
+    })()}
       ${boardActionsHtml(p)}
     </div>
   `;
@@ -2148,6 +2170,12 @@ ${post.text}
         const post = allPosts.find((p) => p.id === id);
         if (post)
           openChatModal(post);
+        return;
+      }
+      const msgBtn = e.target.closest("[data-msg-soon]");
+      if (msgBtn) {
+        e.stopPropagation();
+        showToast("\u{1F4AC} \u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
         return;
       }
       const trigger = e.target.closest("[data-react-trigger]");
