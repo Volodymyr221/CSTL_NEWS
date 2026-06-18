@@ -1104,7 +1104,13 @@ function initBoardNoteExpand(root) {
     if (photo && area) {
       const MIN_H = 72;
       let fullH = 0, lastH = -1, ticking = false;
-      const measure = () => { fullH = Math.round(photo.clientWidth * 3 / 4); if (spacer) spacer.style.height = fullH + 'px'; };
+      const measure = () => {
+        fullH = Math.round(photo.clientWidth * 3 / 4);
+        if (spacer) spacer.style.height = fullH + 'px';
+        // стартова висота фото (без aspect-ratio фото інакше має 0 висоти)
+        const h0 = Math.max(MIN_H, fullH - area.scrollTop);
+        lastH = h0; photo.style.height = h0 + 'px';
+      };
       requestAnimationFrame(measure);
       const apply = () => {
         ticking = false;
