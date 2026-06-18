@@ -708,14 +708,14 @@ function renderAdModal(p) {
         const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
         if (isPhone) return `
           <div class="cm-board-modal-meta">
-            <div class="cm-board-modal-meta-main">
+            <div class="cm-board-modal-meta-text">
               <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> — ${escapeHtml(p.author || 'анонімно')}</span></span>
-              <div class="cm-board-modal-meta-btns">
-                <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-                <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
-              </div>
+              <span class="cm-board-time">${formatTime(postTime(p))}</span>
             </div>
-            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+            <div class="cm-board-modal-meta-btns">
+              <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
+            </div>
           </div>`;
         return `
           <div class="cm-board-footer">

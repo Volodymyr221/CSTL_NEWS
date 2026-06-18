@@ -1645,14 +1645,14 @@ ${post.text}
       if (isPhone2)
         return `
           <div class="cm-board-modal-meta">
-            <div class="cm-board-modal-meta-main">
+            <div class="cm-board-modal-meta-text">
               <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> \u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>
-              <div class="cm-board-modal-meta-btns">
-                <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-                <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>
-              </div>
+              <span class="cm-board-time">${formatTime(postTime(p))}</span>
             </div>
-            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+            <div class="cm-board-modal-meta-btns">
+              <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>
+            </div>
           </div>`;
       return `
           <div class="cm-board-footer">
