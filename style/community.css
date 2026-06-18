@@ -1668,7 +1668,7 @@
   transition: background 0.15s, transform 0.15s;
 }
 .cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
-.cm-board-modal-content { padding: 12px 20px 16px; }
+.cm-board-modal-content { padding: 20px 20px 16px; }
 /* Закріплений футер: автор/дата + контакт + реакції/збереження/шер — завжди внизу модалки.
    flex:0 0 auto (не скролиться); z-index:3 + opaque фон → завжди поверх фото-оверлея і тексту. */
 .cm-board-modal-foot {
