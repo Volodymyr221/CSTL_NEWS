@@ -1110,45 +1110,41 @@ function initBoardNoteExpand(root) {
       }, { passive: true });
     }
 
-    // Свайп вниз → закрити. Перевіряємо НА КОЖЕН РУХ: щойно тягнемо ВНИЗ і тіло на самому верху
-    // (scrollTop<=0) — вмикаємо закриття (навіть посеред жесту: прокрутив униз → догорнув угору →
-    // тягнеш далі вниз і воно закривається, без відриву пальця). Горизонталь = свайп галереї.
+    // Свайп вниз → закрити (перевірений патерн як у модалці статей: рішення на touchstart).
+    // Дозволяємо коли жест почався НА СМУЖЦІ-РУЧЦІ (.cm-board-modal-bar) — працює ЗАВЖДИ, навіть
+    // коли опис прокручено; АБО коли тіло вгорі (scrollTop<=2). Горизонталь = свайп галереї.
     const scroller = body || modal;
-    let zStartY = 0, zStartX = 0, zDrag = false, zDelta = 0;
+    const grip = modal.querySelector('.cm-board-modal-bar');
+    let sY = 0, sX = 0, canSwipe = false, swiping = false;
     modal.addEventListener('touchstart', e => {
-      zStartY = e.touches[0].clientY;
-      zStartX = e.touches[0].clientX;
-      zDelta = 0; zDrag = false;
+      const onGrip = grip && (e.target === grip || grip.contains(e.target));
+      canSwipe = onGrip || scroller.scrollTop <= 2;
+      sY = e.touches[0].clientY;
+      sX = e.touches[0].clientX;
+      swiping = false;
+      if (canSwipe) modal.style.transition = 'none';
     }, { passive: true });
     modal.addEventListener('touchmove', e => {
-      const y = e.touches[0].clientY;
-      const dy = y - zStartY;
-      const dx = e.touches[0].clientX - zStartX;
-      // Горизонтальний свайп (галерея) — не перехоплюємо
-      if (!zDrag && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) return;
-      // Вмикаємо закриття коли тягнемо вниз і тіло вже на верху (перевірка щоразу)
-      if (!zDrag && dy > 0 && scroller.scrollTop <= 0) {
-        zDrag = true;
-        zStartY = y;                       // переякорюємо → без стрибка
-        modal.style.transition = 'none';
+      if (!canSwipe) return;
+      const dy = e.touches[0].clientY - sY;
+      const dx = e.touches[0].clientX - sX;
+      // Перший рух горизонтальний → це свайп галереї, не закриття
+      if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
+      if (dy > 0) {
+        e.preventDefault();
+        swiping = true;
+        modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
+      } else if (swiping) {
+        modal.style.transform = 'translate(-50%, -50%) scale(1)';
       }
-      if (!zDrag) return;                  // інакше — нативний скрол тіла
-      zDelta = y - zStartY;
-      if (zDelta <= 0) {                   // потягли назад угору — відпускаємо назад у скрол
-        zDrag = false;
-        modal.style.transform = '';
-        return;
-      }
-      e.preventDefault();
-      modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
     }, { passive: false });
-    modal.addEventListener('touchend', () => {
-      if (!zDrag) return;
-      zDrag = false;
+    modal.addEventListener('touchend', e => {
+      if (!canSwipe) return;
       modal.style.transition = '';
-      if (zDelta > 90) collapse();
+      const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
+      if (swiping && dy > 90) collapse();
       else modal.style.transform = '';
-      zDelta = 0;
+      swiping = false; canSwipe = false;
     }, { passive: true });
 
     activeNote = note;
