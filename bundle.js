@@ -1983,6 +1983,9 @@ ${post.text}
           fullH = Math.round(photo.clientWidth * 3 / 4);
           if (spacer)
             spacer.style.height = fullH + "px";
+          const h0 = Math.max(MIN_H, fullH - area.scrollTop);
+          lastH = h0;
+          photo.style.height = h0 + "px";
         };
         requestAnimationFrame(measure);
         const apply = () => {
