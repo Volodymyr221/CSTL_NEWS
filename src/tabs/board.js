@@ -1045,6 +1045,8 @@ function renderBodyOnly(el) {
 }
 
 // Zoom-перегляд стікера через окрему модалку (тільки board)
+let _boardCollapseRef = null;   // покажчик на актуальний collapse (оновлюється при кожному init)
+let _boardTabHookSet = false;   // слухач зміни вкладки вішаємо лише раз
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
@@ -1192,6 +1194,13 @@ function initBoardNoteExpand(root) {
   });
 
   backdrop.addEventListener('click', collapse);
+
+  // Перемикання на будь-яку іншу вкладку меню → закрити модалку (вона лише для Дошки).
+  _boardCollapseRef = collapse;
+  if (!_boardTabHookSet) {
+    _boardTabHookSet = true;
+    window.addEventListener('cstl-tab-changed', () => { if (_boardCollapseRef) _boardCollapseRef(); });
+  }
 }
 
 // ── Document-level listener для реакцій + збережене + share ──────────────────

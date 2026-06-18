@@ -1932,6 +1932,8 @@ ${post.text}
     });
     initBoardNoteExpand(el);
   }
+  var _boardCollapseRef = null;
+  var _boardTabHookSet = false;
   function initBoardNoteExpand(root) {
     const backdrop = root.querySelector("#board-backdrop");
     if (!backdrop)
@@ -2066,6 +2068,14 @@ ${post.text}
       });
     });
     backdrop.addEventListener("click", collapse);
+    _boardCollapseRef = collapse;
+    if (!_boardTabHookSet) {
+      _boardTabHookSet = true;
+      window.addEventListener("cstl-tab-changed", () => {
+        if (_boardCollapseRef)
+          _boardCollapseRef();
+      });
+    }
   }
   var _delegationAttached = false;
   function attachBoardDelegation() {
