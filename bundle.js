@@ -1621,7 +1621,7 @@ ${post.text}
     const hasPhoto = photos.length > 0;
     const multi = photos.length > 1;
     const photoHtml = hasPhoto ? `
-    <div class="cm-board-modal-photoframe">
+    <div class="cm-board-modal-photo">
       <div class="cm-board-modal-gallery"${multi ? " data-multi" : ""}>
         ${photos.map((ph, i) => `<div class="cm-board-modal-slide"><img src="${escapeHtml(ph)}" alt="" data-photo-full="${escapeHtml(ph)}" data-photo-idx="${i}" loading="lazy" onerror="this.closest('.cm-board-modal-slide').style.display='none'"></div>`).join("")}
       </div>
@@ -1632,14 +1632,12 @@ ${post.text}
     <div class="cm-board-modal-bar">
       <span class="cm-board-modal-grip"></span>
     </div>
-    <div class="cm-board-modal-head">
-      ${photoHtml}
-      <div class="cm-board-modal-subhead">
+    <div class="cm-board-modal-scrollarea">
+      ${hasPhoto ? '<div class="cm-board-modal-spacer"></div>' : ""}
+      <div class="cm-board-modal-subhead"${hasPhoto ? "" : ' style="position:static"'}>
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
-    </div>
-    <div class="cm-board-modal-body">
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
       </div>
@@ -1652,6 +1650,7 @@ ${post.text}
       ${renderContact(p.contact)}
       ${boardActionsHtml(p)}
     </div>
+    ${photoHtml}
   `;
   }
   function openPhotoLightbox(photos, startIdx) {
@@ -1949,7 +1948,7 @@ ${post.text}
       const modal = document.createElement("article");
       modal.className = note.className + " cm-board-modal-note";
       const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
-      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
+      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
@@ -1974,33 +1973,36 @@ ${post.text}
           }, { passive: true });
         }
       }
-      const frame = modal.querySelector(".cm-board-modal-photoframe");
-      const body = modal.querySelector(".cm-board-modal-body");
-      if (frame && body) {
+      const photo = modal.querySelector(".cm-board-modal-photo");
+      const area = modal.querySelector(".cm-board-modal-scrollarea");
+      const spacer = modal.querySelector(".cm-board-modal-spacer");
+      if (photo && area) {
         const MIN_H = 72;
         let fullH = 0, lastH = -1, ticking = false;
         const measure = () => {
-          fullH = Math.round(frame.clientWidth * 3 / 4);
+          fullH = Math.round(photo.clientWidth * 3 / 4);
+          if (spacer)
+            spacer.style.height = fullH + "px";
         };
         requestAnimationFrame(measure);
         const apply = () => {
           ticking = false;
           if (!fullH)
             measure();
-          const h = Math.max(MIN_H, fullH - body.scrollTop);
+          const h = Math.max(MIN_H, fullH - area.scrollTop);
           if (h !== lastH) {
             lastH = h;
-            frame.style.height = h + "px";
+            photo.style.height = h + "px";
           }
         };
-        body.addEventListener("scroll", () => {
+        area.addEventListener("scroll", () => {
           if (!ticking) {
             ticking = true;
             requestAnimationFrame(apply);
           }
         }, { passive: true });
       }
-      const scroller = body || modal;
+      const scroller = area || modal;
       const grip = modal.querySelector(".cm-board-modal-bar");
       let sY = 0, sX = 0, canSwipe = false, swiping = false;
       modal.addEventListener("touchstart", (e) => {
