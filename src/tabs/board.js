@@ -1097,16 +1097,23 @@ function initBoardNoteExpand(root) {
 
     // Згортна шапка (як найперший раз): при скролі body JS зменшує height рамки фото; під-шапка
     // (категорія+заголовок) приклеєна прямо під фото і їде вгору разом з ним. min-height:0 → стискається.
+    // ВАЖЛИВО: оновлення height БАТЧИМО через rAF (раз на кадр) + пропускаємо якщо не змінилось —
+    // інакше синхронний reflow на КОЖНУ подію скролу смикає/застопорює нативний скрол на iOS.
     const frame = modal.querySelector('.cm-board-modal-photoframe');
     const body = modal.querySelector('.cm-board-modal-body');
     if (frame && body) {
       const MIN_H = 72;
-      let fullH = 0;
+      let fullH = 0, lastH = -1, ticking = false;
       const measure = () => { fullH = Math.round(frame.clientWidth * 3 / 4); };
       requestAnimationFrame(measure);
-      body.addEventListener('scroll', () => {
+      const apply = () => {
+        ticking = false;
         if (!fullH) measure();
-        frame.style.height = Math.max(MIN_H, fullH - body.scrollTop) + 'px';
+        const h = Math.max(MIN_H, fullH - body.scrollTop);
+        if (h !== lastH) { lastH = h; frame.style.height = h + 'px'; }
+      };
+      body.addEventListener('scroll', () => {
+        if (!ticking) { ticking = true; requestAnimationFrame(apply); }
       }, { passive: true });
     }
 
