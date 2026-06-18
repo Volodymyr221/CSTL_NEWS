@@ -1625,14 +1625,17 @@
 }
 /* Під-шапка: категорія+заголовок — одразу під фото, скролиться разом. */
 /* Під-шапка липне (sticky) до верху скрол-зони: фото йде вгору і ховається,
-   а категорія+заголовок зупиняються одразу під смужкою-грабером і опис гортається під ними. */
+   а категорія+заголовок зупиняються одразу під смужкою-грабером і опис гортається під ними.
+   top:-1px + padding компенсація — прибирає субпіксельну щілину на стику з грабером (там просвічував текст).
+   box-shadow вниз — тінь прилипає разом з під-шапкою, видно її поки гортаєш опис. */
 .cm-board-modal-subhead {
   background: inherit;
-  padding: 10px 20px 8px;
+  padding: 11px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
   position: sticky;
-  top: 0;
+  top: -1px;
   z-index: 2;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.08);
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 .cm-board-modal-subhead .cm-board-title { margin: 0; }
@@ -1671,14 +1674,9 @@
   transition: background 0.15s, transform 0.15s;
 }
 .cm-board-modal-dot.active { background: #fff; transform: scale(1.25); }
-/* Блок опису: тінь падає тільки від країв (від заголовку зверху, від футера знизу),
-   середина чиста. Негативний spread (-8px) стискає тінь до самого краю. */
-.cm-board-modal-content {
-  padding: 16px 20px;
-  box-shadow:
-    inset 0 8px 8px -8px rgba(0,0,0,0.13),
-    inset 0 -8px 8px -8px rgba(0,0,0,0.13);
-}
+/* Тінь на опис відкидають сусідні блоки самі: під-шапка (sticky, зверху) і футер (знизу).
+   Сам блок опису без тіні — середина чиста. */
+.cm-board-modal-content { padding: 16px 20px; }
 /* Закріплений футер: автор/дата + контакт + реакції/збереження/шер — завжди внизу модалки.
    flex:0 0 auto (не скролиться); z-index:3 + opaque фон → завжди поверх фото-оверлея і тексту. */
 .cm-board-modal-foot {
