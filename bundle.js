@@ -1949,6 +1949,7 @@ ${post.text}
       const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
       modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-body"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
       document.body.appendChild(modal);
+      document.body.classList.add("cm-zoom-open");
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -1987,34 +1988,33 @@ ${post.text}
         }, { passive: true });
       }
       const scroller = body || modal;
-      let zStartY = 0, zStartX = 0, zDrag = false, zLocked = false, zDelta = 0;
+      let zStartY = 0, zStartX = 0, zDrag = false, zDecided = false, zDelta = 0;
       modal.addEventListener("touchstart", (e) => {
-        zDrag = scroller.scrollTop <= 2;
-        zLocked = false;
-        if (!zDrag)
-          return;
         zStartY = e.touches[0].clientY;
         zStartX = e.touches[0].clientX;
         zDelta = 0;
-        modal.style.transition = "none";
+        zDrag = false;
+        zDecided = false;
       }, { passive: true });
       modal.addEventListener("touchmove", (e) => {
-        if (!zDrag)
-          return;
         const dy = e.touches[0].clientY - zStartY;
         const dx = e.touches[0].clientX - zStartX;
-        if (!zLocked && (Math.abs(dx) > 8 || Math.abs(dy) > 8)) {
-          zLocked = true;
-          if (Math.abs(dx) > Math.abs(dy)) {
+        if (!zDecided) {
+          if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 8) {
+            zDecided = true;
             zDrag = false;
             return;
           }
+          if (Math.abs(dy) > 6 || Math.abs(dx) > 6) {
+            zDecided = true;
+            zDrag = dy > 0 && scroller.scrollTop <= 0;
+            if (zDrag)
+              modal.style.transition = "none";
+          }
         }
-        zDelta = dy;
-        if (zDelta <= 0) {
-          modal.style.transform = "translate(-50%, -50%) scale(1)";
+        if (!zDrag)
           return;
-        }
+        zDelta = Math.max(0, e.touches[0].clientY - zStartY);
         e.preventDefault();
         modal.style.transform = `translate(-50%, calc(-50% + ${zDelta}px)) scale(1)`;
       }, { passive: false });
@@ -2023,11 +2023,10 @@ ${post.text}
           return;
         zDrag = false;
         modal.style.transition = "";
-        if (zDelta > 90) {
+        if (zDelta > 90)
           collapse();
-        } else {
+        else
           modal.style.transform = "";
-        }
         zDelta = 0;
       }, { passive: true });
       activeNote = note;
@@ -2050,6 +2049,7 @@ ${post.text}
       modal.classList.remove("visible");
       backdrop.classList.remove("visible");
       note.classList.remove("cm-board-note--hidden");
+      document.body.classList.remove("cm-zoom-open");
       setTimeout(() => {
         modal.remove();
         activeNote = null;
