@@ -1702,12 +1702,19 @@
   box-shadow: 0 -6px 16px rgba(0,0,0,0.08);
   padding: 0 20px 6px;
 }
-.cm-board-modal-meta { padding-top: 6px; }
-.cm-board-modal-meta-main {
+.cm-board-modal-meta {
+  padding-top: 6px;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+}
+.cm-board-modal-meta-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 .cm-board-contact-line {
   font-size: 14px;
@@ -1731,10 +1738,8 @@
   flex-shrink: 0;
 }
 .cm-board-modal-meta .cm-board-time {
-  display: block;
   font-size: 11px;
   color: rgba(43,43,43,0.5);
-  margin-top: 5px;
 }
 .cm-board-msg-btn {
   flex-shrink: 0;
