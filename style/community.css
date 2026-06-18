@@ -1613,6 +1613,7 @@
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
+  background: inherit;   /* колір картки → щоб sticky під-шапка мала непрозорий фон */
 }
 /* Фото — фіксований розмір 4:3, повна ширина, у потоці (скролиться разом з текстом). */
 .cm-board-modal-photo {
@@ -1623,11 +1624,14 @@
   overflow: hidden;
 }
 /* Під-шапка: категорія+заголовок — одразу під фото, скролиться разом. */
+/* Під-шапка липне (sticky) до верху скрол-зони: фото йде вгору і ховається,
+   а категорія+заголовок зупиняються одразу під смужкою-грабером і опис гортається під ними. */
 .cm-board-modal-subhead {
   background: inherit;
   padding: 10px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
-  position: relative;
+  position: sticky;
+  top: 0;
   z-index: 2;
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
