@@ -135,21 +135,22 @@ export async function fetchAllReactions(anonId) {
   return map;
 }
 
-// Поставити / змінити / зняти свою реакцію
-// emoji = null → знімаємо
-export async function setReaction(postId, anonId, emoji) {
+// Поставити / змінити / зняти свою реакцію. emoji = null → знімаємо.
+// userId — uid залогіненого жителя (auth.uid()). Після RLS-перепису Етапу 3
+// політика вимагає user_id = auth.uid()::text, тож реагувати може лише акаунт.
+export async function setReaction(postId, userId, emoji) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   if (emoji == null) {
     const { error } = await supa.from('reactions')
       .delete()
       .eq('post_id', postId)
-      .eq('user_id', anonId);
+      .eq('user_id', userId);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
   }
   // upsert через onConflict (post_id, user_id) — або INSERT, або UPDATE emoji
   const { error } = await supa.from('reactions')
-    .upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: 'post_id,user_id' });
+    .upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: 'post_id,user_id' });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
@@ -175,10 +176,14 @@ export async function fetchAllComments() {
   return map;
 }
 
-export async function addComment(postId, author, text) {
+// senderUid — uid автора (auth.uid()). Обов'язковий після RLS-перепису Етапу 3
+// (політика "Auth post comment" вимагає sender_uid = auth.uid()).
+export async function addComment(postId, author, text, senderUid) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const row = { post_id: postId, author: author || null, text };
+  if (senderUid) row.sender_uid = senderUid;
   const { data, error } = await supa.from('comments')
-    .insert({ post_id: postId, author: author || null, text })
+    .insert(row)
     .select()
     .single();
   if (error) return { ok: false, error: error.message };
@@ -217,6 +222,138 @@ export async function uploadPhotoToStorage(blob) {
 
   const { data } = supa.storage.from('community-photos').getPublicUrl(path);
   return { url: data?.publicUrl || null, error: null };
+}
+
+// ── ПРИВАТНИЙ ЧАТ (Фаза Б, Етап 4) ───────────────────────────────────────
+// Усі функції приймають uid аргументом (не імпортуємо auth.js — циклічна
+// залежність). RLS у БД все одно перевіряє auth.uid() на сервері.
+
+// Мої оголошення (для «Мої оголошення» у Кабінеті) — усі статуси, нові зверху.
+export async function fetchMyPosts(uid) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('posts')
+    .select('*').eq('owner_uid', uid).order('created_at', { ascending: false });
+  if (error) { console.warn('[supabase] fetchMyPosts:', error.message); return []; }
+  return data || [];
+}
+
+// Мої треди (вхідні + вихідні) з даними оголошення. Нові зверху.
+export async function fetchMyThreads(uid) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('threads')
+    .select('*, post:posts(id, title, text, category, photos)')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`)
+    .order('last_message_at', { ascending: false });
+  if (error) { console.warn('[supabase] fetchMyThreads:', error.message); return []; }
+  return data || [];
+}
+
+// Знайти або створити тред покупця на оголошенні. authorUid = власник посту.
+// authorName/buyerName зберігаємо денормалізовано (profiles приватний — див. SQL).
+export async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const { data: existing } = await supa.from('threads')
+    .select('*').eq('post_id', postId).eq('buyer_uid', buyerUid).maybeSingle();
+  if (existing) return { ok: true, thread: existing };
+  const { data, error } = await supa.from('threads')
+    .insert({
+      post_id: postId, author_uid: authorUid, buyer_uid: buyerUid,
+      author_name: authorName || null, buyer_name: buyerName || null,
+    })
+    .select().single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, thread: data };
+}
+
+// Повідомлення треда (старі → нові).
+export async function fetchMessages(threadId) {
+  if (!supa) return [];
+  const { data, error } = await supa.from('messages')
+    .select('*').eq('thread_id', threadId).order('created_at', { ascending: true });
+  if (error) { console.warn('[supabase] fetchMessages:', error.message); return []; }
+  return data || [];
+}
+
+// Надіслати повідомлення + оновити час треда + штовхнути push отримувачу.
+export async function sendMessage({ threadId, senderUid, text }) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const { data, error } = await supa.from('messages')
+    .insert({ thread_id: threadId, sender_uid: senderUid, text }).select().single();
+  if (error) return { ok: false, error: error.message };
+  // Оновлюємо час + прев'ю останнього повідомлення (для сортування й списку тредів)
+  await supa.from('threads')
+    .update({ last_message_at: new Date().toISOString(), last_message_text: text })
+    .eq('id', threadId);
+  // Push отримувачу (не блокуємо UI — помилка пуша не валить відправку)
+  supa.functions.invoke('send-chat-push', { body: { message_id: data.id } })
+    .catch(e => console.warn('[supabase] send-chat-push:', e?.message));
+  return { ok: true, message: data };
+}
+
+// Позначити вхідні повідомлення треда прочитаними (read_at).
+export async function markThreadRead(threadId, uid) {
+  if (!supa || !uid) return;
+  await supa.from('messages').update({ read_at: new Date().toISOString() })
+    .eq('thread_id', threadId).neq('sender_uid', uid).is('read_at', null);
+}
+
+// Скільки непрочитаних повідомлень адресовано мені (для бейджа).
+export async function fetchUnreadCount(uid) {
+  if (!supa || !uid) return 0;
+  // Беремо id моїх тредів, тоді рахуємо чужі непрочитані в них.
+  const { data: th } = await supa.from('threads').select('id')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+  const ids = (th || []).map(t => t.id);
+  if (!ids.length) return 0;
+  const { count } = await supa.from('messages')
+    .select('id', { count: 'exact', head: true })
+    .in('thread_id', ids).neq('sender_uid', uid).is('read_at', null);
+  return count || 0;
+}
+
+// Непрочитані по кожному треду → Map<thread_id, count> (для бейджів у списку).
+export async function fetchUnreadByThread(uid) {
+  const map = new Map();
+  if (!supa || !uid) return map;
+  const { data: th } = await supa.from('threads').select('id')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+  const ids = (th || []).map(t => t.id);
+  if (!ids.length) return map;
+  // Тягнемо непрочитані чужі повідомлення цих тредів і рахуємо на клієнті.
+  const { data } = await supa.from('messages').select('thread_id')
+    .in('thread_id', ids).neq('sender_uid', uid).is('read_at', null);
+  for (const m of (data || [])) map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
+  return map;
+}
+
+// Зберегти push-пристрій під акаунт (для чат-сповіщень).
+export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
+  if (!supa || !uid) return { ok: false };
+  const { error } = await supa.from('user_push_devices')
+    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' });
+  if (error) { console.warn('[supabase] saveUserPushDevice:', error.message); return { ok: false }; }
+  return { ok: true };
+}
+
+// Realtime: нові повідомлення в одному треді.
+export function subscribeThreadMessages(threadId, onInsert) {
+  if (!supa) return () => {};
+  const ch = supa.channel(`thread-${threadId}`)
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
+        payload => onInsert(payload.new))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
+// Realtime: будь-яка зміна моїх тредів (для оновлення списку/бейджа).
+export function subscribeMyThreads(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('my-threads')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, p => onChange(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' },  p => onChange(p))
+    .subscribe();
+  return () => supa.removeChannel(ch);
 }
 
 // ── REALTIME — підписка на зміни таблиць ─────────────────────────────────

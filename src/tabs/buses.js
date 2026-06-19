@@ -5,6 +5,7 @@ import {
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
 import { getAnonId, savePushSubscription, deletePushSubscription } from '../core/supabase.js';
+import { isLoggedIn, currentUserId, requireAuth } from '../core/auth.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -154,7 +155,8 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
 
     const subJson = sub.toJSON();
     const payload = {
-      user_uuid:      getAnonId(),
+      // uid залогіненого жителя (Етап 2). RLS-перепис вимагає user_uuid = auth.uid()::text.
+      user_uuid:      currentUserId() || getAnonId(),
       endpoint:       subJson.endpoint,
       p256dh:         subJson.keys.p256dh,
       auth_key:       subJson.keys.auth,
@@ -1464,6 +1466,8 @@ function renderRouteList() {
         }
         checkTrackNotifications(false);
       } else {
+        // Гейтинг (Етап 2): відстеження + push-сповіщення — лише для залогінених.
+        if (!isLoggedIn()) { requireAuth('відстежувати автобус', () => {}); return; }
         // Дані рейсу денормалізуємо у запис → модалка «Збережені» малюється будь-де
         // (на будь-якій вкладці), без доступу до даних розкладу.
         const route   = (getDayData().routes || []).find(r => r.id === rid);
@@ -1789,6 +1793,8 @@ function unsaveRoute(rid, date, from, to) {
 function toggleRouteReminders(rid, date, from, to) {
   const entry = findTrackedEntry(rid, from || null, to || null, date);
   if (!entry) return;
+  // Гейтинг (Етап 2): вмикання сповіщень створює push-підписку → лише залогінені.
+  if (entry.notify === false && !isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   entry.notify = entry.notify === false;   // off→on / on→off
   if (entry.notify) {
     subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
@@ -1801,6 +1807,7 @@ function toggleRouteReminders(rid, date, from, to) {
 // Тап по дзвіночку у стані ⚠️: пробуємо реально увімкнути сповіщення.
 // Якщо дозвіл відхилено/недоступно — чесно пояснюємо тостом, не вдаючи що ОК.
 async function requestPushForSavedRoute(rid, date, from, to) {
+  if (!isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   if (!isPushCapable()) { showToast('Сповіщення недоступні на цьому пристрої'); return; }
   if (Notification.permission === 'denied') {
     showToast('Сповіщення вимкнені в налаштуваннях телефону/браузера. Увімкніть їх, щоб отримувати нагадування.');

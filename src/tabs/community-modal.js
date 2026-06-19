@@ -8,6 +8,7 @@
 
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
+import { currentUserId } from '../core/auth.js';
 
 const TYPE_TABS = [
   { id: 'board',    emoji: '🛒', label: 'Оголошення' },
@@ -522,6 +523,9 @@ function buildPayload(state) {
     author:   state.author.trim() || null,
     photos:   state.photos.filter(Boolean),
     status:   'pending',
+    // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).
+    // Гість → null (анонімне оголошення, чат недоступний — лише телефон).
+    owner_uid: currentUserId() || null,
   };
   if (state.type === 'board') {
     const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
