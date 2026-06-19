@@ -8,6 +8,7 @@
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 import { startChatFromPost, openThreadsList, openMyAds } from '../core/messages-ui.js';
+import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   getAnonId, fetchAllReactions, setReaction,
@@ -948,11 +949,13 @@ export async function renderBoard() {
 
   // 1. Supabase: пости + анонси + реакції + коментарі паралельно
   if (isSupabaseReady()) {
-    const anonId = getAnonId();
+    // Ідентичність для «моєї» реакції: uid залогіненого, інакше анонімний id
+    // (старі анонімні реакції лишаються видимими; нові робить лише акаунт).
+    const myId = currentUserId() || getAnonId();
     const [posts, anns, reactions, comments] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
-      fetchAllReactions(anonId),
+      fetchAllReactions(myId),
       fetchAllComments(),
     ]);
     if (posts !== null) {
@@ -1049,11 +1052,11 @@ function renderAll(el) {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
       closeFab();
-      if (act === 'post') { openBoardModal(); return; }
-      // «Мої оголошення» / «Повідомлення» — приватний чат (Фаза Б, Етапи 4–5).
-      // Гостю requireAuth() усередині запропонує увійти.
-      if (act === 'mine') openMyAds();
-      if (act === 'msgs') openThreadsList();
+      // Усі три дії — лише для залогінених (Етап 2). Гостю requireAuth()
+      // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).
+      if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
+      if (act === 'mine') openMyAds();        // requireAuth усередині openMyAds
+      if (act === 'msgs') openThreadsList();  // requireAuth усередині openThreadsList
     });
   });
 
@@ -1280,6 +1283,9 @@ function attachBoardDelegation() {
     const text   = (input?.value || '').trim();
     if (!text) { input?.focus(); return; }
 
+    // Гейтинг (Етап 2): коментувати можуть лише залогінені жителі.
+    if (!isLoggedIn()) { requireAuth('залишити коментар', () => {}); return; }
+
     // Фільтр матюків / спаму / флуду — блокуємо ДО відправки
     if (containsProfanity(text)) { showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error'); return; }
     if (looksLikeSpam(text))     { showToast('🚫 Повідомлення схоже на спам і не надіслане', 4000, 'error'); return; }
@@ -1288,10 +1294,11 @@ function attachBoardDelegation() {
     recordSentMsg(text);
 
     // Optimistic: миттєво у DOM
+    const myName = currentUserName();
     const tempComment = {
       id: 'temp-' + Date.now(),
       post_id: postId,
-      author: null,
+      author: myName,
       text,
       created_at: new Date().toISOString(),
     };
@@ -1305,7 +1312,7 @@ function attachBoardDelegation() {
 
     // POST у Supabase
     if (isSupabaseReady()) {
-      const result = await addComment(postId, null, text);
+      const result = await addComment(postId, myName, text, currentUserId());
       if (!result.ok) {
         // Помилка — забираємо optimistic коментар
         const filtered = (commentsByPost.get(postId) || []).filter(c => c.id !== tempComment.id);
@@ -1381,6 +1388,8 @@ function attachBoardDelegation() {
     const opt = e.target.closest('[data-react-opt]');
     if (opt) {
       e.stopPropagation();
+      // Гейтинг (Етап 2): реагувати можуть лише залогінені жителі.
+      if (!isLoggedIn()) { closeReactionPopup(); requireAuth('реагувати', () => {}); return; }
       const id = Number(opt.dataset.reactPost);
       const emoji = opt.dataset.reactOpt;
       const current = getMyReaction(id);
@@ -1403,7 +1412,7 @@ function attachBoardDelegation() {
 
       // Async POST у Supabase
       if (isSupabaseReady()) {
-        setReaction(id, getAnonId(), newReaction).then(result => {
+        setReaction(id, currentUserId(), newReaction).then(result => {
           if (!result.ok) {
             console.warn('[reactions] помилка збереження:', result.error);
             // (UI rollback опускаємо — спам у комюніті не критично)
@@ -1467,8 +1476,8 @@ function onReactionRealtimeEvent(payload) {
   if (!row || !row.post_id) return;
   const postId = row.post_id;
   // Найпростіше — повний refetch цього поста для коректних counts/my
-  const anonId = getAnonId();
-  fetchAllReactions(anonId).then(fresh => {
+  const myId = currentUserId() || getAnonId();
+  fetchAllReactions(myId).then(fresh => {
     // Беремо тільки запис для цього post_id, мерджимо у локальну map
     const r = fresh.get(postId) || { counts: {}, my: null };
     reactionsByPost.set(postId, r);

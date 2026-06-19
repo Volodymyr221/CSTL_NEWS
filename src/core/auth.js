@@ -6,19 +6,27 @@
 // UI входу (екран «Приєднайтесь», Кабінет) — окремий шар, будується пізніше.
 // Тут — лише логіка: вхід/вихід, поточний користувач, гейтинг, профіль.
 //
-// ⚠️ Етап 1 (фундамент): гейтинг ще НЕ ввімкнено в діях. requireAuth() готовий,
-// але викликаємо його лише коли Google-провайдер налаштований (Етап 0) і вхід
-// перевірено наживо. До того додаток поводиться як зараз (анонімно).
+// Етап 2: гейтинг увімкнено в діях (подача оголошення, реакції, коментарі,
+// трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
 import { getSupabase } from './supabase.js';
 import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
+let _profileName = null; // кеш імені з профілю (для підпису коментарів) — без зайвих запитів
 const _listeners = [];   // підписники на зміну стану входу
 
 export function currentUser()   { return _user; }
 export function currentUserId() { return _user ? _user.id : null; }
 export function isLoggedIn()     { return !!_user; }
+
+// Ім'я для відображення (коментарі тощо): профіль → Google-метадані → дефолт.
+// Синхронно (без запиту в БД): кеш _profileName заповнюється у getProfile/saveProfile.
+export function currentUserName() {
+  if (_profileName) return _profileName;
+  const m = _user && _user.user_metadata;
+  return (m && (m.name || m.full_name)) || 'Житель';
+}
 
 // Підписка на зміну стану входу (повертає функцію відписки)
 export function onAuthChange(cb) {
@@ -60,12 +68,13 @@ export async function signOut() {
   if (!supa) return;
   await supa.auth.signOut();
   _user = null;
+  _profileName = null;
   emitAuthChange();
 }
 
 // Єдина точка гейтингу (gating — обмеження дії для гостя).
 // Залогінений → виконує дію. Гість → м'яко просить увійти + подія для UI-шару.
-// ⚠️ Поки НЕ підключений до дій (Етап 1). Підключимо в Етапі 2 після робочого входу.
+// Етап 2: підключено до дій (подача оголошення, реакції, коментарі, трек автобуса).
 export function requireAuth(actionLabel, fn) {
   if (isLoggedIn()) { fn(); return true; }
   showToast('Щоб ' + actionLabel + ', увійдіть', 3500);
@@ -79,6 +88,7 @@ export async function getProfile() {
   if (!supa || !_user) return null;
   const { data, error } = await supa.from('profiles').select('*').eq('uid', _user.id).maybeSingle();
   if (error) { console.warn('[auth] getProfile:', error.message); return null; }
+  if (data && data.name) _profileName = data.name;   // кеш для currentUserName()
   return data;
 }
 export async function saveProfile({ name, birth_date }) {
@@ -87,5 +97,6 @@ export async function saveProfile({ name, birth_date }) {
   const row = { uid: _user.id, name: name || null, email: _user.email || null, birth_date: birth_date || null };
   const { error } = await supa.from('profiles').upsert(row, { onConflict: 'uid' });
   if (error) return { ok: false, error: error.message };
+  if (name) _profileName = name;   // кеш для currentUserName()
   return { ok: true };
 }

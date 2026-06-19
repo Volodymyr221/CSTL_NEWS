@@ -5,6 +5,25 @@
 
 ---
 
+## 🟢 ФАЗА Б — Етап 0 (вхід) + Етап 2 (гейтинг) ЗРОБЛЕНО 19.06 (гілка `vova/auth-phase-b`, ще НЕ в main)
+
+**Етап 0 — ГОТОВО (руки Вови):** Google Cloud OAuth client (Web application, redirect `…supabase.co/auth/v1/callback`) + Supabase Auth → Providers → Google увімкнено + Site URL/Redirect `https://volodymyr221.github.io/CSTL_NEWS/`. Вхід можна тестувати наживо ПІСЛЯ деплою.
+
+**Бекенд чату — ГОТОВО:** міграція `supabase_phase_b_chat.sql` застосована повністю (через SQL Editor — MCP у веб-сесії не пише, вимагає інтерактивного підтвердження якого нема). Edge Function `send-chat-push` задеплоєна (verify_jwt on). Секрет `VAPID_PRIVATE_KEY` на місці.
+
+**Етап 2 — гейтинг ЗРОБЛЕНО (рішення Вови: закрити ВСЕ за входом):**
+- `src/core/auth.js` — додано `currentUserName()` (ім'я для коментарів: кеш профілю → Google-метадані → «Житель»); кеш чиститься при `signOut`.
+- `src/tabs/board.js` — `requireAuth` на: подачу оголошення (FAB), реакції, коментарі. Реакції тепер пишуть `currentUserId()` (було `getAnonId()`); коментарі несуть `sender_uid=uid` + ім'я автора; «моя» реакція визначається за `uid||anonId`.
+- `src/tabs/buses.js` — `requireAuth` на вмикання трекінгу/сповіщень (кнопка трек, дзвіночок-on, ⚠️-bell). `user_uuid` push = `currentUserId()`.
+- `src/core/supabase.js` — `addComment(...,senderUid)`, `setReaction` параметр перейменовано на `userId`.
+- Build чистий, `bundle.js` перезібрано. CACHE_NAME → `cstl-20260619-1730`.
+
+**Узгоджено з RLS:** значення `auth.uid()` пишуться скрізь (reactions.user_id, comments.sender_uid, push.user_uuid) → після Етапу 3 (RLS-перепис) залогінені вставки проходять, аноніми блокуються на рівні БД.
+
+**ЗАЛИШИЛОСЬ:** (1) деплой гілки в main через `/finish`; (2) Вова тестує Google-вхід наживо; (3) ТІЛЬКИ після робочого входу — застосувати `scripts/supabase_phase_b_rls.sql` (жорсткий гейтинг; до того НЕ запускати — заблокує всіх). Чат-UI (`messages-ui.js`) уже готовий (комміт `5e28597`).
+
+---
+
 ## 🔵 ФАЗА Б РОЗПОЧАТА 19.06 (гілка `vova/auth-phase-b`) — Етап 1: фундамент авторизації
 
 > Рішення Вови 19.06: вхід **м'який (soft)**; модерація залогінених — **лишити pending**; Етап 0 (Google Cloud + Supabase provider) Вова зробить **ввечері**. Повна карта — `docs/BOARD_FINAL_PLAN.md` секція «Фаза Б». CACHE_NAME → `cstl-20260619-0847`.

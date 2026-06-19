@@ -135,21 +135,22 @@ export async function fetchAllReactions(anonId) {
   return map;
 }
 
-// Поставити / змінити / зняти свою реакцію
-// emoji = null → знімаємо
-export async function setReaction(postId, anonId, emoji) {
+// Поставити / змінити / зняти свою реакцію. emoji = null → знімаємо.
+// userId — uid залогіненого жителя (auth.uid()). Після RLS-перепису Етапу 3
+// політика вимагає user_id = auth.uid()::text, тож реагувати може лише акаунт.
+export async function setReaction(postId, userId, emoji) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   if (emoji == null) {
     const { error } = await supa.from('reactions')
       .delete()
       .eq('post_id', postId)
-      .eq('user_id', anonId);
+      .eq('user_id', userId);
     if (error) return { ok: false, error: error.message };
     return { ok: true };
   }
   // upsert через onConflict (post_id, user_id) — або INSERT, або UPDATE emoji
   const { error } = await supa.from('reactions')
-    .upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: 'post_id,user_id' });
+    .upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: 'post_id,user_id' });
   if (error) return { ok: false, error: error.message };
   return { ok: true };
 }
@@ -175,10 +176,14 @@ export async function fetchAllComments() {
   return map;
 }
 
-export async function addComment(postId, author, text) {
+// senderUid — uid автора (auth.uid()). Обов'язковий після RLS-перепису Етапу 3
+// (політика "Auth post comment" вимагає sender_uid = auth.uid()).
+export async function addComment(postId, author, text, senderUid) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const row = { post_id: postId, author: author || null, text };
+  if (senderUid) row.sender_uid = senderUid;
   const { data, error } = await supa.from('comments')
-    .insert({ post_id: postId, author: author || null, text })
+    .insert(row)
     .select()
     .single();
   if (error) return { ok: false, error: error.message };

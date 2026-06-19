@@ -471,16 +471,16 @@
     }
     return map;
   }
-  async function setReaction(postId, anonId, emoji) {
+  async function setReaction(postId, userId, emoji) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (emoji == null) {
-      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", anonId);
+      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId);
       if (error2)
         return { ok: false, error: error2.message };
       return { ok: true };
     }
-    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: anonId, emoji }, { onConflict: "post_id,user_id" });
+    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" });
     if (error)
       return { ok: false, error: error.message };
     return { ok: true };
@@ -501,10 +501,13 @@
     }
     return map;
   }
-  async function addComment(postId, author, text) {
+  async function addComment(postId, author, text, senderUid) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("comments").insert({ post_id: postId, author: author || null, text }).select().single();
+    const row = { post_id: postId, author: author || null, text };
+    if (senderUid)
+      row.sender_uid = senderUid;
+    const { data, error } = await supa.from("comments").insert(row).select().single();
     if (error)
       return { ok: false, error: error.message };
     return { ok: true, comment: data };
@@ -687,6 +690,7 @@
 
   // src/core/auth.js
   var _user = null;
+  var _profileName = null;
   var _listeners = [];
   function currentUser() {
     return _user;
@@ -696,6 +700,12 @@
   }
   function isLoggedIn() {
     return !!_user;
+  }
+  function currentUserName() {
+    if (_profileName)
+      return _profileName;
+    const m = _user && _user.user_metadata;
+    return m && (m.name || m.full_name) || "\u0416\u0438\u0442\u0435\u043B\u044C";
   }
   function onAuthChange(cb) {
     _listeners.push(cb);
@@ -746,6 +756,7 @@
       return;
     await supa2.auth.signOut();
     _user = null;
+    _profileName = null;
     emitAuthChange();
   }
   function requireAuth(actionLabel, fn) {
@@ -766,6 +777,8 @@
       console.warn("[auth] getProfile:", error.message);
       return null;
     }
+    if (data && data.name)
+      _profileName = data.name;
     return data;
   }
   async function saveProfile({ name, birth_date }) {
@@ -776,6 +789,8 @@
     const { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
     if (error)
       return { ok: false, error: error.message };
+    if (name)
+      _profileName = name;
     return { ok: true };
   }
 
@@ -2451,11 +2466,11 @@ ${post.text}
     if (!el)
       return;
     if (isSupabaseReady()) {
-      const anonId = getAnonId();
+      const myId = currentUserId() || getAnonId();
       const [posts, anns, reactions, comments] = await Promise.all([
         fetchPublishedPosts(),
         fetchPublishedAnnouncements(),
-        fetchAllReactions(anonId),
+        fetchAllReactions(myId),
         fetchAllComments()
       ]);
       if (posts !== null) {
@@ -2547,7 +2562,7 @@ ${post.text}
         const act = item.dataset.fab;
         closeFab();
         if (act === "post") {
-          openBoardModal();
+          requireAuth("\u043F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", openBoardModal);
           return;
         }
         if (act === "mine")
@@ -2756,6 +2771,11 @@ ${post.text}
         input?.focus();
         return;
       }
+      if (!isLoggedIn()) {
+        requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
+        });
+        return;
+      }
       if (containsProfanity(text)) {
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
         return;
@@ -2773,10 +2793,11 @@ ${post.text}
         return;
       }
       recordSentMsg(text);
+      const myName = currentUserName();
       const tempComment = {
         id: "temp-" + Date.now(),
         post_id: postId,
-        author: null,
+        author: myName,
         text,
         created_at: (/* @__PURE__ */ new Date()).toISOString()
       };
@@ -2789,7 +2810,7 @@ ${post.text}
       rerenderCommentsBlock(postId);
       input?.focus();
       if (isSupabaseReady()) {
-        const result = await addComment(postId, null, text);
+        const result = await addComment(postId, myName, text, currentUserId());
         if (!result.ok) {
           const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
           commentsByPost.set(postId, filtered);
@@ -2858,6 +2879,12 @@ ${post.text}
       const opt = e.target.closest("[data-react-opt]");
       if (opt) {
         e.stopPropagation();
+        if (!isLoggedIn()) {
+          closeReactionPopup();
+          requireAuth("\u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438", () => {
+          });
+          return;
+        }
         const id = Number(opt.dataset.reactPost);
         const emoji = opt.dataset.reactOpt;
         const current = getMyReaction(id);
@@ -2874,7 +2901,7 @@ ${post.text}
           btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === id) || { id });
         });
         if (isSupabaseReady()) {
-          setReaction(id, getAnonId(), newReaction).then((result) => {
+          setReaction(id, currentUserId(), newReaction).then((result) => {
             if (!result.ok) {
               console.warn("[reactions] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F:", result.error);
             }
@@ -2922,8 +2949,8 @@ ${post.text}
     if (!row || !row.post_id)
       return;
     const postId = row.post_id;
-    const anonId = getAnonId();
-    fetchAllReactions(anonId).then((fresh) => {
+    const myId = currentUserId() || getAnonId();
+    fetchAllReactions(myId).then((fresh) => {
       const r = fresh.get(postId) || { counts: {}, my: null };
       reactionsByPost.set(postId, r);
       document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
@@ -3216,7 +3243,8 @@ ${post.text}
       }
       const subJson = sub.toJSON();
       const payload = {
-        user_uuid: getAnonId(),
+        // uid залогіненого жителя (Етап 2). RLS-перепис вимагає user_uuid = auth.uid()::text.
+        user_uuid: currentUserId() || getAnonId(),
         endpoint: subJson.endpoint,
         p256dh: subJson.keys.p256dh,
         auth_key: subJson.keys.auth,
@@ -4300,6 +4328,11 @@ ${post.text}
           }
           checkTrackNotifications(false);
         } else {
+          if (!isLoggedIn()) {
+            requireAuth("\u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0443\u0432\u0430\u0442\u0438 \u0430\u0432\u0442\u043E\u0431\u0443\u0441", () => {
+            });
+            return;
+          }
           const route = (getDayData().routes || []).find((r) => r.id === rid);
           const segFrom = fromStop || null;
           const segTo = toStop || null;
@@ -4578,6 +4611,11 @@ ${post.text}
     const entry = findTrackedEntry(rid, from || null, to || null, date);
     if (!entry)
       return;
+    if (entry.notify === false && !isLoggedIn()) {
+      requireAuth("\u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F", () => {
+      });
+      return;
+    }
     entry.notify = entry.notify === false;
     if (entry.notify) {
       subscribeToPush(rid, entry.title || "", from || null, to || null, date, entry.depTime || null);
@@ -4587,6 +4625,11 @@ ${post.text}
     saveTrackedRoute();
   }
   async function requestPushForSavedRoute(rid, date, from, to) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F", () => {
+      });
+      return;
+    }
     if (!isPushCapable()) {
       showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457");
       return;
