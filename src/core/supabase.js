@@ -219,6 +219,117 @@ export async function uploadPhotoToStorage(blob) {
   return { url: data?.publicUrl || null, error: null };
 }
 
+// ── ПРИВАТНИЙ ЧАТ (Фаза Б, Етап 4) ───────────────────────────────────────
+// Усі функції приймають uid аргументом (не імпортуємо auth.js — циклічна
+// залежність). RLS у БД все одно перевіряє auth.uid() на сервері.
+
+// Мої оголошення (для «Мої оголошення» у Кабінеті) — усі статуси, нові зверху.
+export async function fetchMyPosts(uid) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('posts')
+    .select('*').eq('owner_uid', uid).order('created_at', { ascending: false });
+  if (error) { console.warn('[supabase] fetchMyPosts:', error.message); return []; }
+  return data || [];
+}
+
+// Мої треди (вхідні + вихідні) з даними оголошення. Нові зверху.
+export async function fetchMyThreads(uid) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('threads')
+    .select('*, post:posts(id, title, text, category, photos)')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`)
+    .order('last_message_at', { ascending: false });
+  if (error) { console.warn('[supabase] fetchMyThreads:', error.message); return []; }
+  return data || [];
+}
+
+// Знайти або створити тред покупця на оголошенні. authorUid = власник посту.
+export async function getOrCreateThread({ postId, authorUid, buyerUid }) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const { data: existing } = await supa.from('threads')
+    .select('*').eq('post_id', postId).eq('buyer_uid', buyerUid).maybeSingle();
+  if (existing) return { ok: true, thread: existing };
+  const { data, error } = await supa.from('threads')
+    .insert({ post_id: postId, author_uid: authorUid, buyer_uid: buyerUid })
+    .select().single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, thread: data };
+}
+
+// Повідомлення треда (старі → нові).
+export async function fetchMessages(threadId) {
+  if (!supa) return [];
+  const { data, error } = await supa.from('messages')
+    .select('*').eq('thread_id', threadId).order('created_at', { ascending: true });
+  if (error) { console.warn('[supabase] fetchMessages:', error.message); return []; }
+  return data || [];
+}
+
+// Надіслати повідомлення + оновити час треда + штовхнути push отримувачу.
+export async function sendMessage({ threadId, senderUid, text }) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const { data, error } = await supa.from('messages')
+    .insert({ thread_id: threadId, sender_uid: senderUid, text }).select().single();
+  if (error) return { ok: false, error: error.message };
+  // Оновлюємо last_message_at (для сортування тредів)
+  await supa.from('threads').update({ last_message_at: new Date().toISOString() }).eq('id', threadId);
+  // Push отримувачу (не блокуємо UI — помилка пуша не валить відправку)
+  supa.functions.invoke('send-chat-push', { body: { message_id: data.id } })
+    .catch(e => console.warn('[supabase] send-chat-push:', e?.message));
+  return { ok: true, message: data };
+}
+
+// Позначити вхідні повідомлення треда прочитаними (read_at).
+export async function markThreadRead(threadId, uid) {
+  if (!supa || !uid) return;
+  await supa.from('messages').update({ read_at: new Date().toISOString() })
+    .eq('thread_id', threadId).neq('sender_uid', uid).is('read_at', null);
+}
+
+// Скільки непрочитаних повідомлень адресовано мені (для бейджа).
+export async function fetchUnreadCount(uid) {
+  if (!supa || !uid) return 0;
+  // Беремо id моїх тредів, тоді рахуємо чужі непрочитані в них.
+  const { data: th } = await supa.from('threads').select('id')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+  const ids = (th || []).map(t => t.id);
+  if (!ids.length) return 0;
+  const { count } = await supa.from('messages')
+    .select('id', { count: 'exact', head: true })
+    .in('thread_id', ids).neq('sender_uid', uid).is('read_at', null);
+  return count || 0;
+}
+
+// Зберегти push-пристрій під акаунт (для чат-сповіщень).
+export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
+  if (!supa || !uid) return { ok: false };
+  const { error } = await supa.from('user_push_devices')
+    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' });
+  if (error) { console.warn('[supabase] saveUserPushDevice:', error.message); return { ok: false }; }
+  return { ok: true };
+}
+
+// Realtime: нові повідомлення в одному треді.
+export function subscribeThreadMessages(threadId, onInsert) {
+  if (!supa) return () => {};
+  const ch = supa.channel(`thread-${threadId}`)
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
+        payload => onInsert(payload.new))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
+// Realtime: будь-яка зміна моїх тредів (для оновлення списку/бейджа).
+export function subscribeMyThreads(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('my-threads')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, p => onChange(p))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' },  p => onChange(p))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // ── REALTIME — підписка на зміни таблиць ─────────────────────────────────
 // Викликає callback при INSERT/UPDATE/DELETE у відповідній таблиці.
 // Повертає функцію-unsubscribe.
