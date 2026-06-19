@@ -395,9 +395,15 @@
   var supa = null;
   if (typeof window !== "undefined" && window.supabase && SUPABASE_URL && SUPABASE_ANON_KEY) {
     supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-      auth: { persistSession: false }
-      // на основному сайті auth не потрібна — тільки публічне читання + INSERT pending
+      // Фаза Б: тримаємо сесію входу між запусками + ловимо її після повернення
+      // з Google OAuth (редірект назад містить токен у URL). Без цього Google-вхід
+      // не зберігається. persistSession — пам'ятати вхід; detectSessionInUrl —
+      // підхопити токен з URL після редіректу; autoRefreshToken — продовжувати сесію.
+      auth: { persistSession: true, detectSessionInUrl: true, autoRefreshToken: true }
     });
+  }
+  function getSupabase() {
+    return supa;
   }
   function isSupabaseReady() {
     return supa !== null;
@@ -1882,10 +1888,27 @@ ${post.text}
     `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
-    <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
-      <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
-      <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-    </button>
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="msgs" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u{1F4AC}</span>
+        </button>
+        <button class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u{1F4CB}</span>
+        </button>
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u270F\uFE0F</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
+        <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+      </button>
+    </div>
   `;
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
@@ -1893,7 +1916,37 @@ ${post.text}
     const catsEl = el.querySelector(".bd-categories");
     if (catsEl)
       catsEl.scrollLeft = savedCatScroll;
-    document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
+    const fab = document.getElementById("board-fab");
+    const fabBtn = document.getElementById("board-trigger");
+    const fabBack = document.getElementById("board-fab-backdrop");
+    const closeFab = () => {
+      if (!fab)
+        return;
+      fab.classList.remove("open");
+      fabBtn?.setAttribute("aria-expanded", "false");
+    };
+    const toggleFab = () => {
+      if (!fab)
+        return;
+      const open = fab.classList.toggle("open");
+      fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    fabBtn?.addEventListener("click", toggleFab);
+    fabBack?.addEventListener("click", closeFab);
+    fab?.querySelectorAll(".board-fab-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const act = item.dataset.fab;
+        closeFab();
+        if (act === "post") {
+          openBoardModal();
+          return;
+        }
+        if (act === "mine")
+          showToast("\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2014 \u0441\u043A\u043E\u0440\u043E", 2500);
+        if (act === "msgs")
+          showToast("\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0441\u043A\u043E\u0440\u043E", 2500);
+      });
+    });
     const searchInput = document.getElementById("bd-search-input");
     if (searchInput) {
       let debounce = null;
@@ -5998,6 +6051,221 @@ END:VEVENT`
     });
   }
 
+  // src/core/auth.js
+  var _user = null;
+  var _listeners = [];
+  function currentUser() {
+    return _user;
+  }
+  function isLoggedIn() {
+    return !!_user;
+  }
+  function onAuthChange(cb) {
+    _listeners.push(cb);
+    return () => {
+      const i = _listeners.indexOf(cb);
+      if (i >= 0)
+        _listeners.splice(i, 1);
+    };
+  }
+  function emitAuthChange() {
+    _listeners.forEach((cb) => {
+      try {
+        cb(_user);
+      } catch (_) {
+      }
+    });
+  }
+  async function initAuth() {
+    const supa2 = getSupabase();
+    if (!supa2)
+      return;
+    try {
+      const { data } = await supa2.auth.getSession();
+      _user = data && data.session ? data.session.user : null;
+      emitAuthChange();
+    } catch (e) {
+      console.warn("[auth] getSession:", e && e.message);
+    }
+    supa2.auth.onAuthStateChange((_event, session) => {
+      _user = session ? session.user : null;
+      emitAuthChange();
+    });
+  }
+  async function signInWithGoogle() {
+    const supa2 = getSupabase();
+    if (!supa2) {
+      showToast("\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u0437 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C", 3e3, "error");
+      return;
+    }
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await supa2.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error)
+      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438: " + error.message, 4e3, "error");
+  }
+  async function signOut() {
+    const supa2 = getSupabase();
+    if (!supa2)
+      return;
+    await supa2.auth.signOut();
+    _user = null;
+    emitAuthChange();
+  }
+  async function getProfile() {
+    const supa2 = getSupabase();
+    if (!supa2 || !_user)
+      return null;
+    const { data, error } = await supa2.from("profiles").select("*").eq("uid", _user.id).maybeSingle();
+    if (error) {
+      console.warn("[auth] getProfile:", error.message);
+      return null;
+    }
+    return data;
+  }
+  async function saveProfile({ name, birth_date }) {
+    const supa2 = getSupabase();
+    if (!supa2 || !_user)
+      return { ok: false, error: "\u043D\u0435 \u0437\u0430\u043B\u043E\u0433\u0456\u043D\u0435\u043D\u043E" };
+    const row = { uid: _user.id, name: name || null, email: _user.email || null, birth_date: birth_date || null };
+    const { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true };
+  }
+
+  // src/core/account-ui.js
+  var _modal = null;
+  var _newUserChecked = false;
+  function updateHeaderBtn() {
+    const btn = document.getElementById("account-btn");
+    if (!btn)
+      return;
+    btn.classList.toggle("account-btn--in", isLoggedIn());
+    btn.setAttribute("aria-label", isLoggedIn() ? "\u041A\u0430\u0431\u0456\u043D\u0435\u0442 \u0436\u0438\u0442\u0435\u043B\u044F" : "\u0423\u0432\u0456\u0439\u0442\u0438");
+  }
+  function closeModal() {
+    if (!_modal)
+      return;
+    const m = _modal;
+    _modal = null;
+    m.classList.remove("open");
+    document.body.classList.remove("modal-open");
+    setTimeout(() => m.remove(), 220);
+  }
+  function openModal(innerHtml) {
+    closeModal();
+    const wrap = document.createElement("div");
+    wrap.className = "acc-modal";
+    wrap.innerHTML = `
+    <div class="acc-backdrop"></div>
+    <div class="acc-card" role="dialog" aria-modal="true">${innerHtml}</div>`;
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    _modal = wrap;
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    wrap.querySelector(".acc-backdrop").addEventListener("click", closeModal);
+    return wrap;
+  }
+  function openJoin(reason) {
+    const sub = reason ? `\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 ${escapeHtml(reason)}.` : "\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u0438\u0441\u0430\u0442\u0438 \u0439 \u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438.";
+    const wrap = openModal(`
+    <div class="acc-emoji">\u{1F464}</div>
+    <h2 class="acc-title">\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0434\u043E \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
+    <p class="acc-sub">${sub}</p>
+    <button class="acc-google" type="button">
+      <span class="acc-g">G</span> \u0423\u0432\u0456\u0439\u0442\u0438 \u0437 Gmail
+    </button>
+    <button class="acc-skip" type="button">\u041F\u043E\u043A\u0438 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438</button>`);
+    wrap.querySelector(".acc-google").addEventListener("click", () => signInWithGoogle());
+    wrap.querySelector(".acc-skip").addEventListener("click", closeModal);
+  }
+  function openProfile() {
+    const u = currentUser();
+    if (!u)
+      return;
+    const defaultName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
+    const wrap = openModal(`
+    <h2 class="acc-title">\u0420\u0430\u0434\u0456 \u0432\u0430\u0441 \u0431\u0430\u0447\u0438\u0442\u0438!</h2>
+    <label class="acc-label">\u0406\u043C'\u044F</label>
+    <input class="acc-input" id="acc-name" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(defaultName)}">
+    <label class="acc-label">\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</label>
+    <input class="acc-input" id="acc-bdate" type="date" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}">
+    <button class="acc-primary" type="button" id="acc-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+    <button class="acc-skip" type="button" id="acc-later">\u041F\u0456\u0437\u043D\u0456\u0448\u0435</button>`);
+    const finish = async (withDate) => {
+      const name = wrap.querySelector("#acc-name").value.trim();
+      const bd = wrap.querySelector("#acc-bdate").value;
+      const res = await saveProfile({ name, birth_date: withDate ? bd : null });
+      if (!res.ok) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
+        return;
+      }
+      closeModal();
+      if (withDate)
+        showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
+    };
+    wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
+    wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
+  }
+  async function openAccount() {
+    const u = currentUser();
+    if (!u)
+      return;
+    const profile = await getProfile();
+    const name = profile && profile.name || u.user_metadata && u.user_metadata.full_name || "\u0416\u0438\u0442\u0435\u043B\u044C";
+    const email = u.email || "";
+    const bdate = profile && profile.birth_date;
+    const bdateRow = bdate ? `<div class="acc-row acc-row--static">\u{1F382} ${escapeHtml(bdate)}</div>` : `<button class="acc-row" id="acc-add-bdate" type="button">\u2795 \u0414\u043E\u0434\u0430\u0442\u0438 \u0434\u0430\u0442\u0443 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</button>`;
+    const wrap = openModal(`
+    <div class="acc-emoji">\u{1F464}</div>
+    <h2 class="acc-title">${escapeHtml(name)}</h2>
+    <p class="acc-sub">${escapeHtml(email)}</p>
+    <div class="acc-rows">
+      ${bdateRow}
+      <div class="acc-row acc-row--soon">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F <span class="acc-soon">\u0441\u043A\u043E\u0440\u043E</span></div>
+    </div>
+    <button class="acc-logout" type="button" id="acc-logout">\u0412\u0438\u0439\u0442\u0438</button>`);
+    const addBd = wrap.querySelector("#acc-add-bdate");
+    if (addBd)
+      addBd.addEventListener("click", () => {
+        closeModal();
+        openProfile();
+      });
+    wrap.querySelector("#acc-logout").addEventListener("click", async () => {
+      await signOut();
+      closeModal();
+      showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438", 2200);
+    });
+  }
+  function onHeaderClick() {
+    if (isLoggedIn())
+      openAccount();
+    else
+      openJoin();
+  }
+  function initAccountUI() {
+    const btn = document.getElementById("account-btn");
+    if (btn && !btn.dataset.wired) {
+      btn.dataset.wired = "1";
+      btn.addEventListener("click", onHeaderClick);
+    }
+    updateHeaderBtn();
+    document.addEventListener("cstl-need-login", (e) => {
+      if (isLoggedIn())
+        return;
+      openJoin(e.detail && e.detail.actionLabel);
+    });
+    onAuthChange(async (user) => {
+      updateHeaderBtn();
+      if (!user || _newUserChecked)
+        return;
+      _newUserChecked = true;
+      const profile = await getProfile();
+      if (!profile)
+        openProfile();
+    });
+  }
+
   // src/app.js
   var currentTab = "community";
   window.switchTab = function(tab) {
@@ -6148,6 +6416,8 @@ END:VEVENT`
   }
   function init() {
     bootApp();
+    initAuth();
+    initAccountUI();
     initModalSwipe();
     initWeather();
     initCommunity();

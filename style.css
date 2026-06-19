@@ -17,3 +17,4 @@
 @import url('style/modal.css');      /* .article-modal — sticky-header, swipe, body */
 @import url('style/tabbar.css');     /* .tab-bar, .tab-item, .tab-icon, .tab-label */
 @import url('style/community.css');  /* .cm-* — вкладка Громада, D2 colored blocks, hero, board */
+@import url('style/account.css');    /* .acc-* — Фаза Б: вхід, профіль, Кабінет жителя + іконка 👤 */
