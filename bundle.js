@@ -1888,10 +1888,27 @@ ${post.text}
     `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
-    <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
-      <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
-      <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-    </button>
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="msgs" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u{1F4AC}</span>
+        </button>
+        <button class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u{1F4CB}</span>
+        </button>
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u270F\uFE0F</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
+        <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+      </button>
+    </div>
   `;
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
@@ -1899,7 +1916,37 @@ ${post.text}
     const catsEl = el.querySelector(".bd-categories");
     if (catsEl)
       catsEl.scrollLeft = savedCatScroll;
-    document.getElementById("board-trigger")?.addEventListener("click", openBoardModal);
+    const fab = document.getElementById("board-fab");
+    const fabBtn = document.getElementById("board-trigger");
+    const fabBack = document.getElementById("board-fab-backdrop");
+    const closeFab = () => {
+      if (!fab)
+        return;
+      fab.classList.remove("open");
+      fabBtn?.setAttribute("aria-expanded", "false");
+    };
+    const toggleFab = () => {
+      if (!fab)
+        return;
+      const open = fab.classList.toggle("open");
+      fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
+    };
+    fabBtn?.addEventListener("click", toggleFab);
+    fabBack?.addEventListener("click", closeFab);
+    fab?.querySelectorAll(".board-fab-item").forEach((item) => {
+      item.addEventListener("click", () => {
+        const act = item.dataset.fab;
+        closeFab();
+        if (act === "post") {
+          openBoardModal();
+          return;
+        }
+        if (act === "mine")
+          showToast("\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2014 \u0441\u043A\u043E\u0440\u043E", 2500);
+        if (act === "msgs")
+          showToast("\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0441\u043A\u043E\u0440\u043E", 2500);
+      });
+    });
     const searchInput = document.getElementById("bd-search-input");
     if (searchInput) {
       let debounce = null;

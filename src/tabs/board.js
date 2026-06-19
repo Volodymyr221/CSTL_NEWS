@@ -998,10 +998,27 @@ function renderAll(el) {
     `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
-    <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button">
-      <span class="cm-board-trigger-icon">✏️</span>
-      <span class="cm-board-trigger-text">Подати оголошення</span>
-    </button>
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="msgs" type="button">
+          <span class="board-fab-label">Повідомлення</span>
+          <span class="board-fab-ic">💬</span>
+        </button>
+        <button class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">Мої оголошення</span>
+          <span class="board-fab-ic">📋</span>
+        </button>
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">Подати оголошення</span>
+          <span class="board-fab-ic">✏️</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
+        <span class="cm-board-trigger-icon">✏️</span>
+        <span class="cm-board-trigger-text">Подати оголошення</span>
+      </button>
+    </div>
   `;
 
   el.style.backgroundImage = '';
@@ -1011,8 +1028,32 @@ function renderAll(el) {
   const catsEl = el.querySelector('.bd-categories');
   if (catsEl) catsEl.scrollLeft = savedCatScroll;
 
-  // Submit-форма
-  document.getElementById('board-trigger')?.addEventListener('click', openBoardModal);
+  // FAB-підменю (speed-dial): тап по кнопці розкриває дії; повторний/фон — закриває.
+  const fab     = document.getElementById('board-fab');
+  const fabBtn  = document.getElementById('board-trigger');
+  const fabBack = document.getElementById('board-fab-backdrop');
+  const closeFab = () => {
+    if (!fab) return;
+    fab.classList.remove('open');
+    fabBtn?.setAttribute('aria-expanded', 'false');
+  };
+  const toggleFab = () => {
+    if (!fab) return;
+    const open = fab.classList.toggle('open');
+    fabBtn?.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  fabBtn?.addEventListener('click', toggleFab);
+  fabBack?.addEventListener('click', closeFab);
+  fab?.querySelectorAll('.board-fab-item').forEach(item => {
+    item.addEventListener('click', () => {
+      const act = item.dataset.fab;
+      closeFab();
+      if (act === 'post') { openBoardModal(); return; }
+      // «Мої оголошення» / «Повідомлення» — Фаза Б, Етапи 4–5 (буде з входом).
+      if (act === 'mine') showToast('Мої оголошення — скоро', 2500);
+      if (act === 'msgs') showToast('Повідомлення — скоро', 2500);
+    });
+  });
 
   // Пошук
   const searchInput = document.getElementById('bd-search-input');
