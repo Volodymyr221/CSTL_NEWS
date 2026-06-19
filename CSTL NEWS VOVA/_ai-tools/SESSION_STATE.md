@@ -5,6 +5,33 @@
 
 ---
 
+## 🔵 ФАЗА Б РОЗПОЧАТА 19.06 (гілка `vova/auth-phase-b`) — Етап 1: фундамент авторизації
+
+> Рішення Вови 19.06: вхід **м'який (soft)**; модерація залогінених — **лишити pending**; Етап 0 (Google Cloud + Supabase provider) Вова зробить **ввечері**. Повна карта — `docs/BOARD_FINAL_PLAN.md` секція «Фаза Б». CACHE_NAME → `cstl-20260619-0847`.
+
+**Етап 1 — ЗРОБЛЕНО (фундамент, гейтинг ВИМКНЕНО, нічого не ламає для анонімів):**
+- `src/core/supabase.js` — клієнт `auth: { persistSession:true, detectSessionInUrl:true, autoRefreshToken:true }` (було `persistSession:false` — головна дірка: без цього Google-вхід не зберігався).
+- `src/core/auth.js` — НОВИЙ модуль (логіка входу): `initAuth/currentUser/currentUserId/isLoggedIn/onAuthChange/signInWithGoogle/signOut/requireAuth/getProfile/saveProfile`. `requireAuth` готовий, але ще НЕ підключений до дій (Етап 2).
+- `src/app.js` — доданий імпорт + `initAuth()` у `init()` (відновлює сесію; гість → no-op). Порядок існуючих імпортів не чіпано.
+- Таблиця `public.profiles` (uid→auth.users, name, email, birth_date) + RLS «тільки свій профіль» — створено через Supabase MCP (міграція `phase_b_profiles`). SQL у репо: `scripts/supabase_profiles.sql`.
+
+**Етап 0 — ТВОЇ РУКИ (блокер, ввечері):** Google Cloud OAuth client + Supabase Auth → Providers → Google + Redirect `https://volodymyr221.github.io/CSTL_NEWS/`. Без цього вхід не тестується.
+
+**Далі (мій код, після Етапу 0):** UI входу (екран «Приєднайтесь» soft + «Доповніть профіль» дата народження + «Кабінет жителя») — макет на затвердження; потім Етап 2+3 (гейтинг `requireAuth` на дії + переписати RLS reactions/comments/push → `auth.uid()`, закриває попередження безпеки) — деплоїться РАЗОМ і лише після робочого входу; Етап 4 (приватний чат покупець↔продавець: `threads`/`messages`+RLS, «Написати», `send-chat-push`); Етап 5 (дії над повідомленнями: `comments.sender_uid`).
+
+⚠️ **Мертві нюанси (враховано):** (1) RLS не вмикати до робочого входу — інакше блокує анонімів; (2) старі пости без `owner_uid` → «Написати» лише на нових; (3) старі анонімні реакції/коментарі лишаються читабельні.
+
+---
+
+## ✅ СЕСІЯ ВОВИ 19.06 (бекенд Supabase) — Cron-дубль прибрано + звірка send-bus-push
+
+> Через Supabase MCP (проект Olyka Castle `uabyfecseqnemvcqhdem`):
+- **Звірка функції:** задеплоєна Edge Function `send-bus-push` (версія 10) байт-у-байт = репо (`supabase/functions/send-bus-push/index.ts`). Розбіжностей нема.
+- **Cron-дубль прибрано:** було `jobid 1` (кожні 5 хв) + `jobid 4` (щохв) — обидва б'ють у `send-bus-push`. Виконано `SELECT cron.unschedule(1)`. Лишилось одне завдання `jobid 4`. Закриває хвіст BACKLOG.
+- Це бекенд-зміна (база), коду в репо не чіпала.
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 19.06 (гілка `vova/modal-paragraphs`) — Абзаци в описі модалки оголошення
 
 > «Роби» Вови (скрін: суцільний текст без абзаців). Гілка `vova/...` (НЕ автомерджиться — через `/finish`). CACHE_NAME → `cstl-20260619-0649`.
