@@ -1433,6 +1433,8 @@ function attachBoardDelegation() {
     const saveBtn = e.target.closest('[data-save-id]');
     if (saveBtn) {
       e.stopPropagation();
+      // Гейтинг (Етап 2): зберігати у «Мої» (закладки) — лише залогінені.
+      if (!isLoggedIn()) { requireAuth('зберігати оголошення', () => {}); return; }
       const id = Number(saveBtn.dataset.saveId);
       toggleSaved(id);
       const nowSaved = isSaved(id);

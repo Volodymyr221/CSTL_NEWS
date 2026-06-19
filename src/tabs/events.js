@@ -1,4 +1,5 @@
 import { escapeHtml, sharePost } from '../core/utils.js';
+import { isLoggedIn, requireAuth } from '../core/auth.js';
 
 // Категорії для фільтрів (categories for filters)
 const CATEGORY_FILTERS = ['Всі', 'Свята', 'Культура', 'Спорт', 'Благодійність'];
@@ -356,6 +357,8 @@ function renderList() {
   el.querySelectorAll('.ev-ics-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
+      // Гейтинг (Етап 2): створення нагадування про подію — лише залогінені.
+      if (!isLoggedIn()) { requireAuth('створити нагадування', () => {}); return; }
       const ev = allEvents.find(ev => ev.id === Number(btn.dataset.id));
       if (ev) downloadIcs(ev);
     });
