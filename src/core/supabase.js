@@ -244,13 +244,17 @@ export async function fetchMyThreads(uid) {
 }
 
 // Знайти або створити тред покупця на оголошенні. authorUid = власник посту.
-export async function getOrCreateThread({ postId, authorUid, buyerUid }) {
+// authorName/buyerName зберігаємо денормалізовано (profiles приватний — див. SQL).
+export async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
   if (!supa) return { ok: false, error: 'no-supa' };
   const { data: existing } = await supa.from('threads')
     .select('*').eq('post_id', postId).eq('buyer_uid', buyerUid).maybeSingle();
   if (existing) return { ok: true, thread: existing };
   const { data, error } = await supa.from('threads')
-    .insert({ post_id: postId, author_uid: authorUid, buyer_uid: buyerUid })
+    .insert({
+      post_id: postId, author_uid: authorUid, buyer_uid: buyerUid,
+      author_name: authorName || null, buyer_name: buyerName || null,
+    })
     .select().single();
   if (error) return { ok: false, error: error.message };
   return { ok: true, thread: data };
@@ -271,8 +275,10 @@ export async function sendMessage({ threadId, senderUid, text }) {
   const { data, error } = await supa.from('messages')
     .insert({ thread_id: threadId, sender_uid: senderUid, text }).select().single();
   if (error) return { ok: false, error: error.message };
-  // Оновлюємо last_message_at (для сортування тредів)
-  await supa.from('threads').update({ last_message_at: new Date().toISOString() }).eq('id', threadId);
+  // Оновлюємо час + прев'ю останнього повідомлення (для сортування й списку тредів)
+  await supa.from('threads')
+    .update({ last_message_at: new Date().toISOString(), last_message_text: text })
+    .eq('id', threadId);
   // Push отримувачу (не блокуємо UI — помилка пуша не валить відправку)
   supa.functions.invoke('send-chat-push', { body: { message_id: data.id } })
     .catch(e => console.warn('[supabase] send-chat-push:', e?.message));
@@ -298,6 +304,21 @@ export async function fetchUnreadCount(uid) {
     .select('id', { count: 'exact', head: true })
     .in('thread_id', ids).neq('sender_uid', uid).is('read_at', null);
   return count || 0;
+}
+
+// Непрочитані по кожному треду → Map<thread_id, count> (для бейджів у списку).
+export async function fetchUnreadByThread(uid) {
+  const map = new Map();
+  if (!supa || !uid) return map;
+  const { data: th } = await supa.from('threads').select('id')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+  const ids = (th || []).map(t => t.id);
+  if (!ids.length) return map;
+  // Тягнемо непрочитані чужі повідомлення цих тредів і рахуємо на клієнті.
+  const { data } = await supa.from('messages').select('thread_id')
+    .in('thread_id', ids).neq('sender_uid', uid).is('read_at', null);
+  for (const m of (data || [])) map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
+  return map;
 }
 
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).

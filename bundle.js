@@ -530,6 +530,119 @@
     const { data } = supa.storage.from("community-photos").getPublicUrl(path);
     return { url: data?.publicUrl || null, error: null };
   }
+  async function fetchMyPosts(uid) {
+    if (!supa || !uid)
+      return [];
+    const { data, error } = await supa.from("posts").select("*").eq("owner_uid", uid).order("created_at", { ascending: false });
+    if (error) {
+      console.warn("[supabase] fetchMyPosts:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function fetchMyThreads(uid) {
+    if (!supa || !uid)
+      return [];
+    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
+    if (error) {
+      console.warn("[supabase] fetchMyThreads:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    const { data: existing } = await supa.from("threads").select("*").eq("post_id", postId).eq("buyer_uid", buyerUid).maybeSingle();
+    if (existing)
+      return { ok: true, thread: existing };
+    const { data, error } = await supa.from("threads").insert({
+      post_id: postId,
+      author_uid: authorUid,
+      buyer_uid: buyerUid,
+      author_name: authorName || null,
+      buyer_name: buyerName || null
+    }).select().single();
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true, thread: data };
+  }
+  async function fetchMessages(threadId) {
+    if (!supa)
+      return [];
+    const { data, error } = await supa.from("messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true });
+    if (error) {
+      console.warn("[supabase] fetchMessages:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function sendMessage({ threadId, senderUid, text }) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    const { data, error } = await supa.from("messages").insert({ thread_id: threadId, sender_uid: senderUid, text }).select().single();
+    if (error)
+      return { ok: false, error: error.message };
+    await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: text }).eq("id", threadId);
+    supa.functions.invoke("send-chat-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-chat-push:", e?.message));
+    return { ok: true, message: data };
+  }
+  async function markThreadRead(threadId, uid) {
+    if (!supa || !uid)
+      return;
+    await supa.from("messages").update({ read_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("thread_id", threadId).neq("sender_uid", uid).is("read_at", null);
+  }
+  async function fetchUnreadCount(uid) {
+    if (!supa || !uid)
+      return 0;
+    const { data: th } = await supa.from("threads").select("id").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+    const ids = (th || []).map((t) => t.id);
+    if (!ids.length)
+      return 0;
+    const { count } = await supa.from("messages").select("id", { count: "exact", head: true }).in("thread_id", ids).neq("sender_uid", uid).is("read_at", null);
+    return count || 0;
+  }
+  async function fetchUnreadByThread(uid) {
+    const map = /* @__PURE__ */ new Map();
+    if (!supa || !uid)
+      return map;
+    const { data: th } = await supa.from("threads").select("id").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+    const ids = (th || []).map((t) => t.id);
+    if (!ids.length)
+      return map;
+    const { data } = await supa.from("messages").select("thread_id").in("thread_id", ids).neq("sender_uid", uid).is("read_at", null);
+    for (const m of data || [])
+      map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
+    return map;
+  }
+  async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
+    if (!supa || !uid)
+      return { ok: false };
+    const { error } = await supa.from("user_push_devices").upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: "uid,endpoint" });
+    if (error) {
+      console.warn("[supabase] saveUserPushDevice:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
+  }
+  function subscribeThreadMessages(threadId, onInsert) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel(`thread-${threadId}`).on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
+      (payload) => onInsert(payload.new)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
+  function subscribeMyThreads(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("my-threads").on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => onChange(p)).on("postgres_changes", { event: "*", schema: "public", table: "threads" }, (p) => onChange(p)).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   async function savePushSubscription(payload) {
     if (!supa)
       return { ok: false, error: "no-supa" };
@@ -570,6 +683,100 @@
       (payload) => onChange(payload)
     ).subscribe();
     return () => supa.removeChannel(ch);
+  }
+
+  // src/core/auth.js
+  var _user = null;
+  var _listeners = [];
+  function currentUser() {
+    return _user;
+  }
+  function currentUserId() {
+    return _user ? _user.id : null;
+  }
+  function isLoggedIn() {
+    return !!_user;
+  }
+  function onAuthChange(cb) {
+    _listeners.push(cb);
+    return () => {
+      const i = _listeners.indexOf(cb);
+      if (i >= 0)
+        _listeners.splice(i, 1);
+    };
+  }
+  function emitAuthChange() {
+    _listeners.forEach((cb) => {
+      try {
+        cb(_user);
+      } catch (_) {
+      }
+    });
+  }
+  async function initAuth() {
+    const supa2 = getSupabase();
+    if (!supa2)
+      return;
+    try {
+      const { data } = await supa2.auth.getSession();
+      _user = data && data.session ? data.session.user : null;
+      emitAuthChange();
+    } catch (e) {
+      console.warn("[auth] getSession:", e && e.message);
+    }
+    supa2.auth.onAuthStateChange((_event, session) => {
+      _user = session ? session.user : null;
+      emitAuthChange();
+    });
+  }
+  async function signInWithGoogle() {
+    const supa2 = getSupabase();
+    if (!supa2) {
+      showToast("\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u0437 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C", 3e3, "error");
+      return;
+    }
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await supa2.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error)
+      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438: " + error.message, 4e3, "error");
+  }
+  async function signOut() {
+    const supa2 = getSupabase();
+    if (!supa2)
+      return;
+    await supa2.auth.signOut();
+    _user = null;
+    emitAuthChange();
+  }
+  function requireAuth(actionLabel, fn) {
+    if (isLoggedIn()) {
+      fn();
+      return true;
+    }
+    showToast("\u0429\u043E\u0431 " + actionLabel + ", \u0443\u0432\u0456\u0439\u0434\u0456\u0442\u044C", 3500);
+    document.dispatchEvent(new CustomEvent("cstl-need-login", { detail: { actionLabel } }));
+    return false;
+  }
+  async function getProfile() {
+    const supa2 = getSupabase();
+    if (!supa2 || !_user)
+      return null;
+    const { data, error } = await supa2.from("profiles").select("*").eq("uid", _user.id).maybeSingle();
+    if (error) {
+      console.warn("[auth] getProfile:", error.message);
+      return null;
+    }
+    return data;
+  }
+  async function saveProfile({ name, birth_date }) {
+    const supa2 = getSupabase();
+    if (!supa2 || !_user)
+      return { ok: false, error: "\u043D\u0435 \u0437\u0430\u043B\u043E\u0433\u0456\u043D\u0435\u043D\u043E" };
+    const row = { uid: _user.id, name: name || null, email: _user.email || null, birth_date: birth_date || null };
+    const { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true };
   }
 
   // src/tabs/community-modal.js
@@ -1044,7 +1251,10 @@
       text: state.text.trim(),
       author: state.author.trim() || null,
       photos: state.photos.filter(Boolean),
-      status: "pending"
+      status: "pending",
+      // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).
+      // Гість → null (анонімне оголошення, чат недоступний — лише телефон).
+      owner_uid: currentUserId() || null
     };
     if (state.type === "board") {
       const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
@@ -1065,6 +1275,405 @@
       };
     }
     return base;
+  }
+
+  // src/core/messages-ui.js
+  var _openScreens = [];
+  function buildScreen(innerHtml, extraClass = "") {
+    const backdrop = document.createElement("div");
+    backdrop.className = "pm-backdrop";
+    const screen = document.createElement("div");
+    screen.className = "pm-screen " + extraClass;
+    screen.innerHTML = innerHtml;
+    document.body.appendChild(backdrop);
+    document.body.appendChild(screen);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => {
+      backdrop.classList.add("visible");
+      screen.classList.add("visible");
+    });
+    const api = { screen, backdrop, _cleanup: [] };
+    const close = () => closeScreen(api);
+    backdrop.addEventListener("click", close);
+    screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
+    api.close = close;
+    _openScreens.push(api);
+    return api;
+  }
+  function closeScreen(api) {
+    if (!api || api._closed)
+      return;
+    api._closed = true;
+    api._cleanup.forEach((fn) => {
+      try {
+        fn();
+      } catch (_) {
+      }
+    });
+    api.screen.classList.remove("visible");
+    api.backdrop.classList.remove("visible");
+    _openScreens = _openScreens.filter((s) => s !== api);
+    if (!_openScreens.length)
+      document.body.classList.remove("modal-open");
+    setTimeout(() => {
+      api.screen.remove();
+      api.backdrop.remove();
+    }, 240);
+  }
+  function avatar(name) {
+    const a = String(name || "").trim();
+    if (!a)
+      return '<span class="pm-avatar pm-avatar--anon">\u{1F464}</span>';
+    const letter = a.charAt(0).toUpperCase();
+    const hue = a.charCodeAt(0) * 47 % 360;
+    return `<span class="pm-avatar" style="background:hsl(${hue}deg 60% 72%)">${escapeHtml(letter)}</span>`;
+  }
+  function otherName(thread) {
+    const me = currentUserId();
+    if (me && me === thread.author_uid)
+      return thread.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
+    return thread.author_name || "\u041F\u0440\u043E\u0434\u0430\u0432\u0435\u0446\u044C";
+  }
+  function threadPostTitle(thread) {
+    const p = thread.post || {};
+    return p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+  }
+  var _chatUnsub = null;
+  async function openChat(thread, post) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", () => {
+      });
+      return;
+    }
+    const me = currentUserId();
+    const title = post ? post.title || (post.text ? post.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F") : threadPostTitle(thread);
+    const partner = otherName(thread);
+    const api = buildScreen(`
+    <header class="pm-head">
+      <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <div class="pm-head-titles">
+        <div class="pm-head-name">${escapeHtml(partner)}</div>
+        <div class="pm-head-sub">${escapeHtml(title)}</div>
+      </div>
+    </header>
+    <div class="pm-stream" id="pm-stream">
+      <div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </div>
+    <form class="pm-form" id="pm-form">
+      <input class="pm-input" id="pm-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026"
+             aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" autocomplete="off">
+      <button class="pm-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
+    </form>
+  `, "pm-screen--chat");
+    const streamEl = api.screen.querySelector("#pm-stream");
+    const form = api.screen.querySelector("#pm-form");
+    const input = api.screen.querySelector("#pm-input");
+    let messages = [];
+    const renderStream = () => {
+      if (!messages.length) {
+        streamEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4AC}</span>\u041F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443 \u2014 \u043D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>`;
+        return;
+      }
+      const groups = [];
+      messages.forEach((m) => {
+        const mine = m.sender_uid === me;
+        const last = groups[groups.length - 1];
+        if (last && last.mine === mine)
+          last.msgs.push(m);
+        else
+          groups.push({ mine, msgs: [m] });
+      });
+      streamEl.innerHTML = groups.map((g) => {
+        const bubbles = g.msgs.map((m) => `
+        <div class="pm-bubble">
+          <span class="pm-bubble-text">${escapeHtml(m.text)}</span>
+          <span class="pm-bubble-time">${formatTime(postTime(m))}</span>
+        </div>`).join("");
+        return `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${bubbles}</div>`;
+      }).join("");
+    };
+    const scrollBottom = () => {
+      streamEl.scrollTop = streamEl.scrollHeight;
+    };
+    messages = await fetchMessages(thread.id);
+    renderStream();
+    setTimeout(scrollBottom, 50);
+    markThreadRead(thread.id, me).then(refreshUnreadBadge);
+    if (_chatUnsub) {
+      try {
+        _chatUnsub();
+      } catch (_) {
+      }
+    }
+    _chatUnsub = subscribeThreadMessages(thread.id, (msg) => {
+      if (messages.some((m) => m.id === msg.id))
+        return;
+      messages.push(msg);
+      renderStream();
+      scrollBottom();
+      if (msg.sender_uid !== me)
+        markThreadRead(thread.id, me).then(refreshUnreadBadge);
+    });
+    api._cleanup.push(() => {
+      if (_chatUnsub) {
+        _chatUnsub();
+        _chatUnsub = null;
+      }
+    });
+    api._cleanup.push(refreshUnreadBadge);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text)
+        return;
+      if (containsProfanity(text)) {
+        showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
+        return;
+      }
+      input.value = "";
+      const temp = { id: "tmp-" + Date.now(), thread_id: thread.id, sender_uid: me, text, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+      messages.push(temp);
+      renderStream();
+      scrollBottom();
+      const res = await sendMessage({ threadId: thread.id, senderUid: me, text });
+      if (!res.ok) {
+        messages = messages.filter((m) => m.id !== temp.id);
+        renderStream();
+        showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438: " + (res.error || ""), 4e3, "error");
+        input.value = text;
+        return;
+      }
+      const idx = messages.findIndex((m) => m.id === temp.id);
+      if (idx >= 0 && res.message)
+        messages[idx] = res.message;
+      renderStream();
+    });
+    api.screen.querySelector(".pm-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
+    setupKeyboardResize(api.screen);
+    setTimeout(() => input.focus(), 250);
+    return api;
+  }
+  function setupKeyboardResize(screen) {
+    const vv = window.visualViewport;
+    if (!vv)
+      return;
+    const fullH = window.innerHeight;
+    const apply = () => {
+      const open = vv.height < fullH - 80;
+      if (open) {
+        screen.style.height = vv.height - 2 + "px";
+        screen.style.top = vv.offsetTop + "px";
+        const stream = screen.querySelector("#pm-stream");
+        if (stream)
+          stream.scrollTop = stream.scrollHeight;
+      } else {
+        screen.style.height = "";
+        screen.style.top = "";
+      }
+    };
+    let t = null;
+    const h = () => {
+      clearTimeout(t);
+      t = setTimeout(apply, 80);
+    };
+    vv.addEventListener("resize", h);
+    vv.addEventListener("scroll", h);
+  }
+  function openThreadsList() {
+    requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", async () => {
+      const me = currentUserId();
+      const api = buildScreen(`
+      <header class="pm-head pm-head--list">
+        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <div class="pm-head-titles"><div class="pm-head-name">\u{1F4AC} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div></div>
+      </header>
+      <div class="pm-list" id="pm-list"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+    `, "pm-screen--list");
+      const listEl = api.screen.querySelector("#pm-list");
+      const [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+      if (api._closed)
+        return;
+      if (!threads.length) {
+        listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4ED}</span>\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0440\u043E\u0437\u043C\u043E\u0432.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044E \u043D\u0430 \u0434\u043E\u0448\u0446\u0456 \u0430\u0431\u043E \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.</div>`;
+        return;
+      }
+      listEl.innerHTML = threads.map((t) => {
+        const n = unread.get(t.id) || 0;
+        const name = otherName(t);
+        const preview = t.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
+        return `
+        <button class="pm-row" type="button" data-thread="${t.id}">
+          ${avatar(name)}
+          <div class="pm-row-body">
+            <div class="pm-row-top">
+              <span class="pm-row-name">${escapeHtml(name)}</span>
+              <span class="pm-row-time">${formatTime(new Date(t.last_message_at).getTime())}</span>
+            </div>
+            <div class="pm-row-post">${escapeHtml(threadPostTitle(t))}</div>
+            <div class="pm-row-last">${escapeHtml(preview)}</div>
+          </div>
+          ${n > 0 ? `<span class="pm-row-badge">${n}</span>` : ""}
+        </button>`;
+      }).join("");
+      listEl.querySelectorAll("[data-thread]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const t = threads.find((x) => String(x.id) === btn.dataset.thread);
+          if (t)
+            openChat(t, t.post);
+        });
+      });
+    });
+  }
+  function openMyAds() {
+    requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0430\u0448\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", async () => {
+      const me = currentUserId();
+      const api = buildScreen(`
+      <header class="pm-head pm-head--list">
+        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <div class="pm-head-titles"><div class="pm-head-name">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</div></div>
+      </header>
+      <div class="pm-list" id="pm-ads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+    `, "pm-screen--ads");
+      const listEl = api.screen.querySelector("#pm-ads");
+      const [posts, threads, unread] = await Promise.all([
+        fetchMyPosts(me),
+        fetchMyThreads(me),
+        fetchUnreadByThread(me)
+      ]);
+      if (api._closed)
+        return;
+      if (!posts.length) {
+        listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u0447\u0435\u0440\u0435\u0437 \u043A\u043D\u043E\u043F\u043A\u0443 \u270F\uFE0F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</div>`;
+        return;
+      }
+      const byPost = /* @__PURE__ */ new Map();
+      threads.filter((t) => t.author_uid === me).forEach((t) => {
+        if (!byPost.has(t.post_id))
+          byPost.set(t.post_id, []);
+        byPost.get(t.post_id).push(t);
+      });
+      const statusLabel = { published: "\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u043E\u0432\u0430\u043D\u043E", pending: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", rejected: "\u0432\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043E" };
+      listEl.innerHTML = posts.map((p) => {
+        const ths = byPost.get(p.id) || [];
+        const convos = ths.length ? ths.map((t) => {
+          const n = unread.get(t.id) || 0;
+          const name = t.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
+          return `
+          <button class="pm-subrow" type="button" data-thread="${t.id}">
+            ${avatar(name)}
+            <div class="pm-subrow-body">
+              <span class="pm-subrow-name">${escapeHtml(name)}</span>
+              <span class="pm-subrow-last">${escapeHtml(t.last_message_text || "\u041D\u0430\u043F\u0438\u0441\u0430\u0432(\u043B\u0430) \u0432\u0430\u043C")}</span>
+            </div>
+            ${n > 0 ? `<span class="pm-row-badge">${n}</span>` : ""}
+          </button>`;
+        }).join("") : '<div class="pm-noconvo">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C</div>';
+        const st = statusLabel[p.status] || p.status || "";
+        return `
+        <div class="pm-ad">
+          <div class="pm-ad-head">
+            <span class="pm-ad-title">${escapeHtml(p.title || p.text?.slice(0, 50) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F")}</span>
+            <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}">${escapeHtml(st)}</span>
+          </div>
+          <div class="pm-ad-convos">${convos}</div>
+        </div>`;
+      }).join("");
+      listEl.querySelectorAll("[data-thread]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const t = threads.find((x) => String(x.id) === btn.dataset.thread);
+          if (t)
+            openChat(t, t.post);
+        });
+      });
+    });
+  }
+  function startChatFromPost(post) {
+    requireAuth("\u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044E", async () => {
+      const me = currentUserId();
+      if (!post.owner_uid) {
+        showToast("\u0410\u0432\u0442\u043E\u0440 \u043D\u0435 \u0437\u0430\u043B\u0438\u0448\u0438\u0432 \u0430\u043A\u0430\u0443\u043D\u0442\u0443 \u2014 \u0437\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0439\u0442\u0435 \u0437\u0430 \u043D\u043E\u043C\u0435\u0440\u043E\u043C", 3500);
+        return;
+      }
+      if (post.owner_uid === me) {
+        showToast("\u0426\u0435 \u0432\u0430\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2014 \u0437\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F \u0434\u0438\u0432\u0456\u0442\u044C\u0441\u044F \u0443 \xAB\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\xBB", 3500);
+        return;
+      }
+      const myProfile = await getProfile();
+      const myName = myProfile && myProfile.name || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      const res = await getOrCreateThread({
+        postId: post.id,
+        authorUid: post.owner_uid,
+        buyerUid: me,
+        authorName: post.author || "\u041F\u0440\u043E\u0434\u0430\u0432\u0435\u0446\u044C",
+        buyerName: myName
+      });
+      if (!res.ok) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442: " + (res.error || ""), 4e3, "error");
+        return;
+      }
+      openChat(res.thread, post);
+    });
+  }
+  async function refreshUnreadBadge() {
+    const btn = document.getElementById("account-btn");
+    if (!btn)
+      return;
+    let badge = btn.querySelector(".account-unread");
+    if (!isLoggedIn()) {
+      badge?.remove();
+      return;
+    }
+    const n = await fetchUnreadCount(currentUserId());
+    if (n > 0) {
+      if (!badge) {
+        badge = document.createElement("span");
+        badge.className = "account-unread";
+        btn.appendChild(badge);
+      }
+      badge.textContent = n > 99 ? "99+" : String(n);
+    } else {
+      badge?.remove();
+    }
+  }
+  async function registerChatPushDevice() {
+    try {
+      if (!isLoggedIn())
+        return;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window))
+        return;
+      if (Notification.permission !== "granted")
+        return;
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (!sub)
+        return;
+      const j = sub.toJSON();
+      await saveUserPushDevice({
+        uid: currentUserId(),
+        endpoint: j.endpoint,
+        p256dh: j.keys.p256dh,
+        auth_key: j.keys.auth
+      });
+    } catch (e) {
+      console.warn("[chat-push] register:", e && e.message);
+    }
+  }
+  var _threadsUnsub = null;
+  function initMessages() {
+    refreshUnreadBadge();
+    onAuthChange(() => {
+      refreshUnreadBadge();
+      registerChatPushDevice();
+      if (_threadsUnsub) {
+        try {
+          _threadsUnsub();
+        } catch (_) {
+        }
+        _threadsUnsub = null;
+      }
+      if (isLoggedIn())
+        _threadsUnsub = subscribeMyThreads(() => refreshUnreadBadge());
+    });
   }
 
   // src/tabs/board.js
@@ -1942,9 +2551,9 @@ ${post.text}
           return;
         }
         if (act === "mine")
-          showToast("\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2014 \u0441\u043A\u043E\u0440\u043E", 2500);
+          openMyAds();
         if (act === "msgs")
-          showToast("\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u2014 \u0441\u043A\u043E\u0440\u043E", 2500);
+          openThreadsList();
       });
     });
     const searchInput = document.getElementById("bd-search-input");
@@ -2013,6 +2622,8 @@ ${post.text}
       const modal = document.createElement("article");
       modal.className = note.className + " cm-board-modal-note";
       const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
+      if (note.dataset.postId)
+        modal.dataset.postId = note.dataset.postId;
       modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
@@ -2220,7 +2831,13 @@ ${post.text}
       const msgBtn = e.target.closest("[data-msg-soon]");
       if (msgBtn) {
         e.stopPropagation();
-        showToast("\u{1F4AC} \u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C");
+        const holder = msgBtn.closest("[data-post-id]");
+        const id = holder ? Number(holder.dataset.postId) : null;
+        const post = id != null ? allPosts.find((p) => p.id === id) : null;
+        if (post)
+          startChatFromPost(post);
+        else
+          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", 2500);
         return;
       }
       const trigger = e.target.closest("[data-react-trigger]");
@@ -6051,88 +6668,6 @@ END:VEVENT`
     });
   }
 
-  // src/core/auth.js
-  var _user = null;
-  var _listeners = [];
-  function currentUser() {
-    return _user;
-  }
-  function isLoggedIn() {
-    return !!_user;
-  }
-  function onAuthChange(cb) {
-    _listeners.push(cb);
-    return () => {
-      const i = _listeners.indexOf(cb);
-      if (i >= 0)
-        _listeners.splice(i, 1);
-    };
-  }
-  function emitAuthChange() {
-    _listeners.forEach((cb) => {
-      try {
-        cb(_user);
-      } catch (_) {
-      }
-    });
-  }
-  async function initAuth() {
-    const supa2 = getSupabase();
-    if (!supa2)
-      return;
-    try {
-      const { data } = await supa2.auth.getSession();
-      _user = data && data.session ? data.session.user : null;
-      emitAuthChange();
-    } catch (e) {
-      console.warn("[auth] getSession:", e && e.message);
-    }
-    supa2.auth.onAuthStateChange((_event, session) => {
-      _user = session ? session.user : null;
-      emitAuthChange();
-    });
-  }
-  async function signInWithGoogle() {
-    const supa2 = getSupabase();
-    if (!supa2) {
-      showToast("\u041D\u0435\u043C\u0430\u0454 \u0437\u0432\u02BC\u044F\u0437\u043A\u0443 \u0437 \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C", 3e3, "error");
-      return;
-    }
-    const redirectTo = window.location.origin + window.location.pathname;
-    const { error } = await supa2.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error)
-      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438: " + error.message, 4e3, "error");
-  }
-  async function signOut() {
-    const supa2 = getSupabase();
-    if (!supa2)
-      return;
-    await supa2.auth.signOut();
-    _user = null;
-    emitAuthChange();
-  }
-  async function getProfile() {
-    const supa2 = getSupabase();
-    if (!supa2 || !_user)
-      return null;
-    const { data, error } = await supa2.from("profiles").select("*").eq("uid", _user.id).maybeSingle();
-    if (error) {
-      console.warn("[auth] getProfile:", error.message);
-      return null;
-    }
-    return data;
-  }
-  async function saveProfile({ name, birth_date }) {
-    const supa2 = getSupabase();
-    if (!supa2 || !_user)
-      return { ok: false, error: "\u043D\u0435 \u0437\u0430\u043B\u043E\u0433\u0456\u043D\u0435\u043D\u043E" };
-    const row = { uid: _user.id, name: name || null, email: _user.email || null, birth_date: birth_date || null };
-    const { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true };
-  }
-
   // src/core/account-ui.js
   var _modal = null;
   var _newUserChecked = false;
@@ -6222,7 +6757,8 @@ END:VEVENT`
     <p class="acc-sub">${escapeHtml(email)}</p>
     <div class="acc-rows">
       ${bdateRow}
-      <div class="acc-row acc-row--soon">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F <span class="acc-soon">\u0441\u043A\u043E\u0440\u043E</span></div>
+      <button class="acc-row" id="acc-msgs" type="button">\u{1F4AC} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</button>
+      <button class="acc-row" id="acc-myads" type="button">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</button>
     </div>
     <button class="acc-logout" type="button" id="acc-logout">\u0412\u0438\u0439\u0442\u0438</button>`);
     const addBd = wrap.querySelector("#acc-add-bdate");
@@ -6231,6 +6767,14 @@ END:VEVENT`
         closeModal();
         openProfile();
       });
+    wrap.querySelector("#acc-msgs")?.addEventListener("click", () => {
+      closeModal();
+      openThreadsList();
+    });
+    wrap.querySelector("#acc-myads")?.addEventListener("click", () => {
+      closeModal();
+      openMyAds();
+    });
     wrap.querySelector("#acc-logout").addEventListener("click", async () => {
       await signOut();
       closeModal();
@@ -6418,6 +6962,7 @@ END:VEVENT`
     bootApp();
     initAuth();
     initAccountUI();
+    initMessages();
     initModalSwipe();
     initWeather();
     initCommunity();

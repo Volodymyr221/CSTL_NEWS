@@ -8,6 +8,7 @@ import { initPower } from './tabs/power.js';
 import { initBoard } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
+import { initMessages } from './core/messages-ui.js';
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -166,6 +167,7 @@ function init() {
   bootApp();
   initAuth();   // Фаза Б: відновити сесію входу (гість → no-op). Гейтинг ще вимкнено.
   initAccountUI();   // Фаза Б: іконка 👤 в шапці + екрани входу/Кабінету
+  initMessages();    // Фаза Б: приватний чат — бейдж непрочитаних + realtime
   initModalSwipe();
   initWeather();
   initCommunity();

@@ -9,6 +9,7 @@ import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile,
 } from './auth.js';
+import { openThreadsList, openMyAds } from './messages-ui.js';
 import { escapeHtml, showToast } from './utils.js';
 
 let _modal = null;            // поточна відкрита модалка (або null)
@@ -108,12 +109,15 @@ async function openAccount() {
     <p class="acc-sub">${escapeHtml(email)}</p>
     <div class="acc-rows">
       ${bdateRow}
-      <div class="acc-row acc-row--soon">📋 Мої оголошення <span class="acc-soon">скоро</span></div>
+      <button class="acc-row" id="acc-msgs" type="button">💬 Повідомлення</button>
+      <button class="acc-row" id="acc-myads" type="button">📋 Мої оголошення</button>
     </div>
     <button class="acc-logout" type="button" id="acc-logout">Вийти</button>`);
 
   const addBd = wrap.querySelector('#acc-add-bdate');
   if (addBd) addBd.addEventListener('click', () => { closeModal(); openProfile(); });
+  wrap.querySelector('#acc-msgs')?.addEventListener('click', () => { closeModal(); openThreadsList(); });
+  wrap.querySelector('#acc-myads')?.addEventListener('click', () => { closeModal(); openMyAds(); });
   wrap.querySelector('#acc-logout').addEventListener('click', async () => {
     await signOut();
     closeModal();

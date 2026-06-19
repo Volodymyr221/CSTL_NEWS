@@ -7,6 +7,7 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
+import { startChatFromPost, openThreadsList, openMyAds } from '../core/messages-ui.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   getAnonId, fetchAllReactions, setReaction,
@@ -1049,9 +1050,10 @@ function renderAll(el) {
       const act = item.dataset.fab;
       closeFab();
       if (act === 'post') { openBoardModal(); return; }
-      // «Мої оголошення» / «Повідомлення» — Фаза Б, Етапи 4–5 (буде з входом).
-      if (act === 'mine') showToast('Мої оголошення — скоро', 2500);
-      if (act === 'msgs') showToast('Повідомлення — скоро', 2500);
+      // «Мої оголошення» / «Повідомлення» — приватний чат (Фаза Б, Етапи 4–5).
+      // Гостю requireAuth() усередині запропонує увійти.
+      if (act === 'mine') openMyAds();
+      if (act === 'msgs') openThreadsList();
     });
   });
 
@@ -1135,6 +1137,7 @@ function initBoardNoteExpand(root) {
     // повний текст, чорний колір, без обрізки фото скролом. Fallback на клон якщо
     // пост раптом не знайдено (officials виключені, тож для оголошень не трапляється).
     const post = allPosts.find(x => String(x.id) === note.dataset.postId);
+    if (note.dataset.postId) modal.dataset.postId = note.dataset.postId;  // для кнопки «Повідомлення»
     modal.innerHTML = post
       ? renderAdModal(post)
       : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
@@ -1346,11 +1349,15 @@ function attachBoardDelegation() {
       return;
     }
 
-    // Кнопка «Повідомлення» — незабаром
+    // Кнопка «Повідомлення» 💬 — приватний чат з автором оголошення
     const msgBtn = e.target.closest('[data-msg-soon]');
     if (msgBtn) {
       e.stopPropagation();
-      showToast('💬 Незабаром');
+      const holder = msgBtn.closest('[data-post-id]');
+      const id = holder ? Number(holder.dataset.postId) : null;
+      const post = id != null ? allPosts.find(p => p.id === id) : null;
+      if (post) startChatFromPost(post);
+      else showToast('Не вдалося відкрити чат', 2500);
       return;
     }
 

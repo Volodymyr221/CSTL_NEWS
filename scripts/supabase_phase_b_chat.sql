@@ -8,17 +8,35 @@
 
 -- ── 1. Хто подав оголошення (якщо був залогінений). Старі пости → NULL. ──
 alter table public.posts add column if not exists owner_uid uuid references auth.users(id);
+create index if not exists idx_posts_owner on public.posts (owner_uid);
+
+-- Власник бачить ВСІ свої оголошення (зокрема pending/rejected) — для «Мої оголошення».
+-- Адитивно: розширює SELECT лише на власні рядки, публічне читання published лишається.
+drop policy if exists "Owner reads own posts" on public.posts;
+create policy "Owner reads own posts" on public.posts for select
+  using (owner_uid = auth.uid());
 
 -- ── 2. Треди (гілки приватних розмов): один покупець = один тред на оголошення ──
+-- Імена учасників зберігаємо ДЕНОРМАЛІЗОВАНО (author_name/buyer_name), бо RLS
+-- таблиці profiles приватний (кожен бачить лише свій профіль). Покупець знає
+-- своє ім'я (свій профіль) і ім'я продавця (post.author) → заповнює обидва при
+-- створенні треда. last_message_text — прев'ю для списку «Повідомлення».
 create table if not exists public.threads (
-  id              bigserial primary key,
-  post_id         bigint not null references public.posts(id) on delete cascade,
-  author_uid      uuid not null,   -- продавець (власник оголошення)
-  buyer_uid       uuid not null,   -- покупець (ініціатор)
-  created_at      timestamptz default now(),
-  last_message_at timestamptz default now(),
+  id                bigserial primary key,
+  post_id           bigint not null references public.posts(id) on delete cascade,
+  author_uid        uuid not null,   -- продавець (власник оголошення)
+  buyer_uid         uuid not null,   -- покупець (ініціатор)
+  author_name       text,            -- ім'я продавця (з post.author) — для списку
+  buyer_name        text,            -- ім'я покупця (з його профілю) — для списку
+  last_message_text text,            -- прев'ю останнього повідомлення
+  created_at        timestamptz default now(),
+  last_message_at   timestamptz default now(),
   unique (post_id, buyer_uid)
 );
+-- Ідемпотентно додаємо нові колонки, якщо таблиця вже існувала зі старою схемою
+alter table public.threads add column if not exists author_name       text;
+alter table public.threads add column if not exists buyer_name        text;
+alter table public.threads add column if not exists last_message_text text;
 create index if not exists idx_threads_author on public.threads (author_uid, last_message_at desc);
 create index if not exists idx_threads_buyer  on public.threads (buyer_uid,  last_message_at desc);
 
