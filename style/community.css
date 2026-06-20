@@ -1713,6 +1713,8 @@
   background: inherit;
   padding: 11px 20px 8px;
   border-bottom: 1px solid rgba(0,0,0,0.06);
+  border-bottom-left-radius: 10px;
+  border-bottom-right-radius: 10px;
   position: sticky;
   top: -1px;
   z-index: 2;
@@ -1795,6 +1797,8 @@
 /* ── Мета-блок футера модалки: «номер — ім'я» + кнопки ── */
 .cm-board-modal-foot {
   border-top: none;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
   box-shadow: 0 -6px 16px rgba(0,0,0,0.08);
   padding: 0 20px 6px;
 }
