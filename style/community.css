@@ -2275,7 +2275,9 @@
 /* Попап з вибором емоції — над тригером, capsule з 8 emoji */
 .bd-react-popup {
   position: absolute;
-  z-index: 200;
+  /* вище відкритої модалки оголошення (.cm-board-modal-note z-index:220),
+     інакше emoji над футером модалки перекриті і не натискаються */
+  z-index: 1300;
   display: flex;
   gap: 2px;
   padding: 6px;
