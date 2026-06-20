@@ -1513,9 +1513,10 @@
 }
 .board-fab.open .board-fab-item { opacity: 1; transform: none; }
 /* Каскад появи знизу вгору */
-.board-fab.open .board-fab-item:nth-child(3) { transition-delay: 0.02s; }
-.board-fab.open .board-fab-item:nth-child(2) { transition-delay: 0.06s; }
-.board-fab.open .board-fab-item:nth-child(1) { transition-delay: 0.10s; }
+.board-fab.open .board-fab-item:nth-child(4) { transition-delay: 0.02s; }
+.board-fab.open .board-fab-item:nth-child(3) { transition-delay: 0.05s; }
+.board-fab.open .board-fab-item:nth-child(2) { transition-delay: 0.08s; }
+.board-fab.open .board-fab-item:nth-child(1) { transition-delay: 0.11s; }
 
 .board-fab-label {
   background: #fff;
@@ -2132,6 +2133,16 @@
   border-radius: 50%;
   padding: 2px 0 0 0;
   gap: 0;
+}
+/* Роздільник «|» між табами ДОШКА та ОБГОВОРЕННЯ */
+.bd-tab-sep {
+  flex: 0 0 auto;
+  align-self: center;
+  color: rgba(0,0,0,0.30);
+  font-size: 18px;
+  font-weight: 300;
+  line-height: 1;
+  user-select: none;
 }
 
 /* Категорії-чіпи (другий ряд, тільки для табу board) */

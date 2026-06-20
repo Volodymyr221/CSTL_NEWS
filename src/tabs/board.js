@@ -866,17 +866,14 @@ function getFilteredPosts() {
 // ── Рендеринг панелі ─────────────────────────────────────────────────────────
 
 function renderHeader() {
-  // Таб «Збережені» — персональний, лише для залогінених (анонім його не бачить).
-  const visibleTabs = isLoggedIn() ? TYPE_TABS : TYPE_TABS.filter(t => t.id !== 'saved');
-  const tabs = visibleTabs.map(t => {
-    const isRound = t.id === 'saved';
-    return `
-      <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}${isRound ? ' bd-tab--round' : ''}" type="button" data-bd-tab="${t.id}">
+  // Верхні таби: ДОШКА | ОБГОВОРЕННЯ. «Збережені» перенесено у FAB-підменю (персональне).
+  const topTabs = TYPE_TABS.filter(t => t.id !== 'saved');
+  const tabs = topTabs.map(t => `
+      <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}" type="button" data-bd-tab="${t.id}">
         <span class="bd-tab-emoji">${t.emoji}</span>
-        ${isRound ? '' : `<span class="bd-tab-label">${escapeHtml(t.label)}</span>`}
+        <span class="bd-tab-label">${escapeHtml(t.label)}</span>
       </button>
-    `;
-  }).join('');
+    `).join('<span class="bd-tab-sep" aria-hidden="true">|</span>');
 
   const showCategories = activeType === 'board';
   const chipHtml = c => `
@@ -1020,6 +1017,10 @@ function renderAll(el) {
           <span class="board-fab-label">Мої оголошення</span>
           <span class="board-fab-ic">📋</span>
         </button>
+        <button class="board-fab-item" data-fab="saved" type="button">
+          <span class="board-fab-label">Збережені</span>
+          <span class="board-fab-ic">🔖</span>
+        </button>
         <button class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">Подати оголошення</span>
           <span class="board-fab-ic">✏️</span>
@@ -1062,6 +1063,7 @@ function renderAll(el) {
       // Усі три дії — лише для залогінених (Етап 2). Гостю requireAuth()
       // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).
       if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
+      if (act === 'saved') { requireAuth('переглянути збережені', () => { activeType = 'saved'; activeCategory = 'all'; renderAll(el); }); return; }
       if (act === 'mine') openMyAds();        // requireAuth усередині openMyAds
       if (act === 'msgs') openThreadsList();  // requireAuth усередині openThreadsList
     });
