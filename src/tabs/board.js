@@ -638,7 +638,7 @@ function buildShareText(post) {
 
 // BOARD: стікер на корку (як було, з реакціями і ❤️-зберегти)
 function renderBoardCard(p) {
-  const tilt = ((p.id * 7) % 5) - 2;
+  const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
   const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const contact = p.contact ? String(p.contact).trim() : '';
   const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
@@ -773,7 +773,7 @@ function openPhotoLightbox(photos, startIdx) {
 
 // OFFICIAL: офіційне оголошення сільради (для табу «Усі»)
 function renderOfficialCard(a) {
-  const tilt = ((a.id * 5) % 5) - 2;
+  const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
   return `
     <article class="cm-board-note bd-card bd-card--official cm-board-note--official" style="--tilt:${tilt}deg">
       <span class="cm-board-pin cm-board-pin--gold"></span>

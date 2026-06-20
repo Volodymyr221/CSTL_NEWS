@@ -2270,7 +2270,7 @@ ${post.text}
     return post.text || "";
   }
   function renderBoardCard(p) {
-    const tilt = p.id * 7 % 5 - 2;
+    const tilt = 0;
     const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
     const contact = p.contact ? String(p.contact).trim() : "";
     const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
