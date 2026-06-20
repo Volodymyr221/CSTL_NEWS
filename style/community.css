@@ -2107,7 +2107,7 @@
 /* Горизонтальна роздільна лінія під кнопками ДОШКА/ОБГОВОРЕННЯ — затухає по краях */
 .bd-tabs-rule {
   height: 1px;
-  margin: 2px 0 0;
+  margin: -8px 0 0;
   background: linear-gradient(to right,
     transparent 0%,
     rgba(0,0,0,0.20) 50%,
