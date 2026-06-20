@@ -162,7 +162,7 @@ export async function fetchAllComments() {
   if (!supa) return new Map();
   const { data, error } = await supa
     .from('comments')
-    .select('id, post_id, author, text, created_at')
+    .select('id, post_id, author, text, created_at, sender_uid')
     .order('created_at', { ascending: true });
   if (error) {
     console.warn('[supabase] fetchAllComments error:', error.message);
@@ -354,6 +354,69 @@ export function subscribeMyThreads(onChange) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' },  p => onChange(p))
     .subscribe();
   return () => supa.removeChannel(ch);
+}
+
+// ── ЗБЕРЕЖЕНІ ОГОЛОШЕННЯ (закладки) — per-uid у БД (синхрон між пристроями) ──
+// Таблиця saved_posts(uid, post_id) + RLS «лише свої». Анонім → нічого.
+
+export async function fetchSavedPostIds(uid) {
+  const set = new Set();
+  if (!supa || !uid) return set;
+  const { data, error } = await supa.from('saved_posts').select('post_id').eq('uid', uid);
+  if (error) { console.warn('[supabase] fetchSavedPostIds:', error.message); return set; }
+  for (const r of (data || [])) set.add(r.post_id);
+  return set;
+}
+
+export async function addSavedPost(uid, postId) {
+  if (!supa || !uid) return { ok: false };
+  const { error } = await supa.from('saved_posts')
+    .upsert({ uid, post_id: postId }, { onConflict: 'uid,post_id' });
+  if (error) { console.warn('[supabase] addSavedPost:', error.message); return { ok: false }; }
+  return { ok: true };
+}
+
+export async function removeSavedPost(uid, postId) {
+  if (!supa || !uid) return { ok: false };
+  const { error } = await supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId);
+  if (error) { console.warn('[supabase] removeSavedPost:', error.message); return { ok: false }; }
+  return { ok: true };
+}
+
+// ── ВІДСТЕЖУВАНІ РЕЙСИ — гідрація з push_subscriptions (синхрон між пристроями) ──
+// Push уже per-uid у БД. Для показу на ІНШОМУ пристрої читаємо підписки акаунта
+// (сьогодні+майбутні) і реконструюємо записи trackedRoutes для hero/модалки.
+export async function fetchTrackedRoutesFromDB(uid, todayISO) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('push_subscriptions')
+    .select('route_id, route_name, boarding_stop, alighting_stop, track_date, dep_time, notified_dep, notified_warning, notified_canc')
+    .eq('user_uuid', uid)
+    .gte('track_date', todayISO);
+  if (error) { console.warn('[supabase] fetchTrackedRoutesFromDB:', error.message); return []; }
+  // Унікалізуємо за (route_id, track_date, boarding, alighting) — у БД на пристрій
+  // може бути кілька рядків з тим самим рейсом (різні endpoint).
+  const seen = new Set();
+  const out = [];
+  for (const r of (data || [])) {
+    const key = `${r.route_id}|${r.track_date}|${r.boarding_stop || ''}|${r.alighting_stop || ''}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    out.push({
+      routeId:         r.route_id,
+      trackDate:       r.track_date,
+      boardingStop:    r.boarding_stop  || null,
+      alightingStop:   r.alighting_stop || null,
+      depTime:         r.dep_time || '',
+      title:           r.route_name || '',
+      notify:          true,
+      notifiedDep:     !!r.notified_dep,
+      notifiedWarning: !!r.notified_warning,
+      notifiedCanc:    !!r.notified_canc,
+      notifiedBoard:   false,
+      notifiedFuture:  true,   // не показувати повторний банер «майбутній» на новому пристрої
+    });
+  }
+  return out;
 }
 
 // ── REALTIME — підписка на зміни таблиць ─────────────────────────────────

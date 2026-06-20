@@ -17,15 +17,18 @@ import {
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints } from './buses.js';
+import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 
 let cmBusIndex = 0;
 let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
 
 const CM_TRACK_KEY = 'bus_track_v2';
-// Читає відстежувані рейси з localStorage (тільки сьогодні і майбутні)
+// Читає відстежувані рейси ПОТОЧНОГО акаунта (per-uid key). Гість → нічого
+// персонального (показуємо лише загальний найближчий рейс — публічний розклад).
 function loadCmTracked(todayISO) {
+  if (!isLoggedIn()) return [];
   try {
-    const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY));
+    const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY + ':' + currentUserId()));
     if (d?.routes?.length) return d.routes.filter(t => t.trackDate >= todayISO);
   } catch { /* пусто */ }
   return [];
@@ -34,6 +37,8 @@ function loadCmTracked(todayISO) {
 // Вкладка Автобуси змінила відстеження → одразу перемальовуємо віджет Громади
 // (якщо вкладка Громада зараз не в DOM — renderBusBlock тихо вийде на null).
 window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
+// Вхід/вихід → теж оновити віджет (персональні відстеження з'являються/зникають).
+onAuthChange(() => { renderBusBlock(); });
 
 // Типи у міні-блоці Дошки — свайп циклічно
 const BOARD_MINI_TYPES = [

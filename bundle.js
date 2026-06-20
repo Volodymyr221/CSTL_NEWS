@@ -488,7 +488,7 @@
   async function fetchAllComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at").order("created_at", { ascending: true });
+    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at, sender_uid").order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchAllComments error:", error.message);
       return /* @__PURE__ */ new Map();
@@ -645,6 +645,72 @@
       };
     const ch = supa.channel("my-threads").on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => onChange(p)).on("postgres_changes", { event: "*", schema: "public", table: "threads" }, (p) => onChange(p)).subscribe();
     return () => supa.removeChannel(ch);
+  }
+  async function fetchSavedPostIds(uid) {
+    const set = /* @__PURE__ */ new Set();
+    if (!supa || !uid)
+      return set;
+    const { data, error } = await supa.from("saved_posts").select("post_id").eq("uid", uid);
+    if (error) {
+      console.warn("[supabase] fetchSavedPostIds:", error.message);
+      return set;
+    }
+    for (const r of data || [])
+      set.add(r.post_id);
+    return set;
+  }
+  async function addSavedPost(uid, postId) {
+    if (!supa || !uid)
+      return { ok: false };
+    const { error } = await supa.from("saved_posts").upsert({ uid, post_id: postId }, { onConflict: "uid,post_id" });
+    if (error) {
+      console.warn("[supabase] addSavedPost:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
+  }
+  async function removeSavedPost(uid, postId) {
+    if (!supa || !uid)
+      return { ok: false };
+    const { error } = await supa.from("saved_posts").delete().eq("uid", uid).eq("post_id", postId);
+    if (error) {
+      console.warn("[supabase] removeSavedPost:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
+  }
+  async function fetchTrackedRoutesFromDB(uid, todayISO) {
+    if (!supa || !uid)
+      return [];
+    const { data, error } = await supa.from("push_subscriptions").select("route_id, route_name, boarding_stop, alighting_stop, track_date, dep_time, notified_dep, notified_warning, notified_canc").eq("user_uuid", uid).gte("track_date", todayISO);
+    if (error) {
+      console.warn("[supabase] fetchTrackedRoutesFromDB:", error.message);
+      return [];
+    }
+    const seen = /* @__PURE__ */ new Set();
+    const out = [];
+    for (const r of data || []) {
+      const key = `${r.route_id}|${r.track_date}|${r.boarding_stop || ""}|${r.alighting_stop || ""}`;
+      if (seen.has(key))
+        continue;
+      seen.add(key);
+      out.push({
+        routeId: r.route_id,
+        trackDate: r.track_date,
+        boardingStop: r.boarding_stop || null,
+        alightingStop: r.alighting_stop || null,
+        depTime: r.dep_time || "",
+        title: r.route_name || "",
+        notify: true,
+        notifiedDep: !!r.notified_dep,
+        notifiedWarning: !!r.notified_warning,
+        notifiedCanc: !!r.notified_canc,
+        notifiedBoard: false,
+        notifiedFuture: true
+        // не показувати повторний банер «майбутній» на новому пристрої
+      });
+    }
+    return out;
   }
   async function savePushSubscription(payload) {
     if (!supa)
@@ -1727,8 +1793,7 @@
   var searchQuery = "";
   var reactionsByPost = /* @__PURE__ */ new Map();
   var commentsByPost = /* @__PURE__ */ new Map();
-  var LS_SAVED = "cstl-saved-v1";
-  var LS_MY_COMMENTS = "cstl-my-comments-v1";
+  var savedIds = /* @__PURE__ */ new Set();
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
   function lsGet(key, fallback) {
     try {
@@ -1759,15 +1824,9 @@
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
   }
-  function getMyCommentIds() {
-    return new Set(lsGet(LS_MY_COMMENTS, []));
-  }
-  function addMyCommentId(id) {
-    const arr = lsGet(LS_MY_COMMENTS, []);
-    if (!arr.includes(id)) {
-      arr.push(id);
-      lsSet(LS_MY_COMMENTS, arr);
-    }
+  function isMyComment(c) {
+    const uid = currentUserId();
+    return !!uid && c.sender_uid === uid;
   }
   function getChatSeen(postId) {
     const m = lsGet(LS_CHAT_SEEN, {});
@@ -1829,19 +1888,22 @@
     return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432";
   }
   function getSavedIds() {
-    return new Set(lsGet(LS_SAVED, []));
+    return savedIds;
   }
   function isSaved(postId) {
-    return getSavedIds().has(postId);
+    return savedIds.has(postId);
   }
   function toggleSaved(postId) {
-    const arr = lsGet(LS_SAVED, []);
-    const idx = arr.indexOf(postId);
-    if (idx >= 0)
-      arr.splice(idx, 1);
-    else
-      arr.push(postId);
-    lsSet(LS_SAVED, arr);
+    const uid = currentUserId();
+    if (!uid)
+      return;
+    if (savedIds.has(postId)) {
+      savedIds.delete(postId);
+      removeSavedPost(uid, postId);
+    } else {
+      savedIds.add(postId);
+      addSavedPost(uid, postId);
+    }
   }
   function authorAvatar(author) {
     const a = String(author || "").trim();
@@ -1905,7 +1967,6 @@
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">\u{1F4AC}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>
     </div>`;
     }
-    const myIds = getMyCommentIds();
     const dividerTs = _chatDividerTs;
     let hadOld = false, dividerPlaced = false;
     const groups = [];
@@ -1914,7 +1975,7 @@
       if (!isNew)
         hadOld = true;
       const needDivider = isNew && hadOld && !dividerPlaced;
-      const mine = myIds.has(c.id);
+      const mine = isMyComment(c);
       const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
       const key = mine ? "__me" : author;
       const last = groups[groups.length - 1];
@@ -2371,10 +2432,10 @@ ${post.text}
   }
   function getFilteredPosts() {
     const q = searchQuery.trim().toLowerCase();
-    const savedIds = activeType === "saved" ? getSavedIds() : null;
+    const savedIds2 = activeType === "saved" ? getSavedIds() : null;
     return allPosts.filter((p) => {
       if (activeType === "saved") {
-        if (!savedIds.has(p.id))
+        if (!savedIds2.has(p.id))
           return false;
       } else if (p.type !== activeType) {
         return false;
@@ -2398,7 +2459,8 @@ ${post.text}
     });
   }
   function renderHeader() {
-    const tabs = TYPE_TABS2.map((t) => {
+    const visibleTabs = isLoggedIn() ? TYPE_TABS2 : TYPE_TABS2.filter((t) => t.id !== "saved");
+    const tabs = visibleTabs.map((t) => {
       const isRound = t.id === "saved";
       return `
       <button class="bd-tab${t.id === activeType ? " bd-tab--active" : ""}${isRound ? " bd-tab--round" : ""}" type="button" data-bd-tab="${t.id}">
@@ -2466,18 +2528,20 @@ ${post.text}
     if (!el)
       return;
     if (isSupabaseReady()) {
-      const myId = currentUserId() || getAnonId();
-      const [posts, anns, reactions, comments] = await Promise.all([
+      const uid = currentUserId();
+      const [posts, anns, reactions, comments, saved] = await Promise.all([
         fetchPublishedPosts(),
         fetchPublishedAnnouncements(),
-        fetchAllReactions(myId),
-        fetchAllComments()
+        fetchAllReactions(uid),
+        fetchAllComments(),
+        uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set())
       ]);
       if (posts !== null) {
         allPosts = posts;
         allAnnouncements = anns || [];
         reactionsByPost = reactions;
         commentsByPost = comments;
+        savedIds = saved;
         renderAll(el);
         return;
       }
@@ -2799,12 +2863,13 @@ ${post.text}
         post_id: postId,
         author: myName,
         text,
-        created_at: (/* @__PURE__ */ new Date()).toISOString()
+        created_at: (/* @__PURE__ */ new Date()).toISOString(),
+        sender_uid: currentUserId()
+        // → isMyComment() підсвітить як мій одразу
       };
       const list = commentsByPost.get(postId) || [];
       list.push(tempComment);
       commentsByPost.set(postId, list);
-      addMyCommentId(tempComment.id);
       if (input)
         input.value = "";
       rerenderCommentsBlock(postId);
@@ -2821,7 +2886,6 @@ ${post.text}
             (c) => c.id === tempComment.id ? result.comment : c
           );
           commentsByPost.set(postId, updated);
-          addMyCommentId(result.comment.id);
           rerenderCommentsBlock(postId);
         }
       }
@@ -2954,8 +3018,7 @@ ${post.text}
     if (!row || !row.post_id)
       return;
     const postId = row.post_id;
-    const myId = currentUserId() || getAnonId();
-    fetchAllReactions(myId).then((fresh) => {
+    fetchAllReactions(currentUserId()).then((fresh) => {
       const r = fresh.get(postId) || { counts: {}, my: null };
       reactionsByPost.set(postId, r);
       document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
@@ -3017,6 +3080,14 @@ ${post.text}
     attachBoardDelegation();
     attachRealtime();
     renderBoard();
+    onAuthChange(() => {
+      if (!isLoggedIn()) {
+        savedIds = /* @__PURE__ */ new Set();
+        if (activeType === "saved")
+          activeType = "board";
+      }
+      renderBoard();
+    });
   }
 
   // src/core/bus-schedule.js
@@ -3287,28 +3358,55 @@ ${post.text}
       console.warn("[push] unsubscribe error:", err);
     }
   }
+  function trackKey() {
+    return TRACK_KEY + ":" + (currentUserId() || "");
+  }
   function loadTrackedRoute() {
+    if (!isLoggedIn()) {
+      trackedRoutes = [];
+      return;
+    }
     try {
       const today = getTodayISO();
-      const d = JSON.parse(localStorage.getItem(TRACK_KEY));
+      const d = JSON.parse(localStorage.getItem(trackKey()));
       if (Array.isArray(d?.routes)) {
         trackedRoutes = d.routes.filter((t) => t.trackDate >= today);
       } else {
         trackedRoutes = [];
       }
       if (!trackedRoutes.length)
-        localStorage.removeItem(TRACK_KEY);
+        localStorage.removeItem(trackKey());
     } catch {
       trackedRoutes = [];
     }
   }
   function saveTrackedRoute() {
-    if (!trackedRoutes.length) {
-      localStorage.removeItem(TRACK_KEY);
-    } else {
-      localStorage.setItem(TRACK_KEY, JSON.stringify({ routes: trackedRoutes }));
+    if (isLoggedIn()) {
+      if (!trackedRoutes.length)
+        localStorage.removeItem(trackKey());
+      else
+        localStorage.setItem(trackKey(), JSON.stringify({ routes: trackedRoutes }));
     }
     window.dispatchEvent(new CustomEvent("cstl-bus-track-changed"));
+  }
+  async function hydrateTrackedFromDB() {
+    if (!isLoggedIn())
+      return;
+    try {
+      const rows = await fetchTrackedRoutesFromDB(currentUserId(), getTodayISO());
+      let added = false;
+      for (const r of rows) {
+        const dup = trackedRoutes.some((t) => t.routeId === r.routeId && t.trackDate === r.trackDate && (t.boardingStop || null) === (r.boardingStop || null) && (t.alightingStop || null) === (r.alightingStop || null));
+        if (!dup) {
+          trackedRoutes.push(r);
+          added = true;
+        }
+      }
+      if (added)
+        saveTrackedRoute();
+    } catch (e) {
+      console.warn("[bus] hydrateTrackedFromDB:", e && e.message);
+    }
   }
   function removeTrackedEntry(entry) {
     const idx = trackedRoutes.indexOf(entry);
@@ -4665,7 +4763,7 @@ ${post.text}
       return;
     const n = getSavedCount();
     const onBuses = document.querySelector(".app-main")?.dataset.tab === "buses";
-    btn.hidden = n === 0 || !onBuses;
+    btn.hidden = n === 0 || !onBuses || !isLoggedIn();
     const cnt = document.getElementById("saved-routes-count");
     if (cnt)
       cnt.textContent = n > 0 ? String(n) : "";
@@ -4802,6 +4900,16 @@ ${post.text}
       updateBannerBell();
     });
     window.addEventListener("cstl-tab-changed", updateSavedBadge);
+    onAuthChange(async () => {
+      loadTrackedRoute();
+      await hydrateTrackedFromDB();
+      updateSavedBadge();
+      if (document.getElementById("bus-list")) {
+        renderSmartRow();
+        renderRouteList();
+      }
+      window.dispatchEvent(new CustomEvent("cstl-bus-track-changed"));
+    });
   }
   async function initBuses() {
     const el = document.getElementById("buses-content");
@@ -4953,8 +5061,10 @@ ${post.text}
   var cmBusEntries = [];
   var CM_TRACK_KEY = "bus_track_v2";
   function loadCmTracked(todayISO) {
+    if (!isLoggedIn())
+      return [];
     try {
-      const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY));
+      const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY + ":" + currentUserId()));
       if (d?.routes?.length)
         return d.routes.filter((t) => t.trackDate >= todayISO);
     } catch {
@@ -4962,6 +5072,9 @@ ${post.text}
     return [];
   }
   window.addEventListener("cstl-bus-track-changed", () => {
+    renderBusBlock();
+  });
+  onAuthChange(() => {
     renderBusBlock();
   });
   var BOARD_MINI_TYPES = [
