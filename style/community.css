@@ -2099,10 +2099,10 @@
   padding-bottom: 6px;
 }
 .bd-tab { flex: 1; justify-content: center; }
-/* Вміст кнопок присунутий до роздільної лінії «|»:
-   ДОШКА (ліва) — вправо, ОБГОВОРЕННЯ (права) — вліво */
-.bd-tabs .bd-tab:first-child { justify-content: flex-end; }
-.bd-tabs .bd-tab:last-child  { justify-content: flex-start; }
+/* Кнопки трішки зсунуті до роздільної лінії «|» (вміст лишається по центру кнопки).
+   Зовнішні поля 14px + вужчий роздільник (нижче) зберігають ту саму ширину кнопок. */
+.bd-tabs .bd-tab:first-child { margin-left: 14px; }
+.bd-tabs .bd-tab:last-child  { margin-right: 14px; }
 .bd-tabs::-webkit-scrollbar { display: none; }
 .bd-tab {
   display: inline-flex;
@@ -2139,10 +2139,10 @@
   gap: 0;
 }
 /* Роздільник «|» між табами ДОШКА та ОБГОВОРЕННЯ.
-   Ширина 42px = розмір колишньої кнопки-закладки → ДОШКА/ОБГОВОРЕННЯ
-   зберігають точно попередню ширину (не розтягуються, ободок лишається округлим). */
+   Ширина 14px (вузька) + зовнішні поля 14px на кнопках → кнопки зберігають
+   попередню ширину, але присунуті до роздільної лінії. */
 .bd-tab-sep {
-  flex: 0 0 42px;
+  flex: 0 0 14px;
   align-self: stretch;
   display: flex;
   align-items: center;
