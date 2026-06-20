@@ -2459,16 +2459,13 @@ ${post.text}
     });
   }
   function renderHeader() {
-    const visibleTabs = isLoggedIn() ? TYPE_TABS2 : TYPE_TABS2.filter((t) => t.id !== "saved");
-    const tabs = visibleTabs.map((t) => {
-      const isRound = t.id === "saved";
-      return `
-      <button class="bd-tab${t.id === activeType ? " bd-tab--active" : ""}${isRound ? " bd-tab--round" : ""}" type="button" data-bd-tab="${t.id}">
+    const topTabs = TYPE_TABS2.filter((t) => t.id !== "saved");
+    const tabs = topTabs.map((t) => `
+      <button class="bd-tab${t.id === activeType ? " bd-tab--active" : ""}" type="button" data-bd-tab="${t.id}">
         <span class="bd-tab-emoji">${t.emoji}</span>
-        ${isRound ? "" : `<span class="bd-tab-label">${escapeHtml(t.label)}</span>`}
+        <span class="bd-tab-label">${escapeHtml(t.label)}</span>
       </button>
-    `;
-    }).join("");
+    `).join('<span class="bd-tab-sep" aria-hidden="true">|</span>');
     const showCategories = activeType === "board";
     const chipHtml = (c) => `
     <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
@@ -2587,6 +2584,10 @@ ${post.text}
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">\u{1F4CB}</span>
         </button>
+        <button class="board-fab-item" data-fab="saved" type="button">
+          <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
+          <span class="board-fab-ic">\u{1F516}</span>
+        </button>
         <button class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">\u270F\uFE0F</span>
@@ -2627,6 +2628,14 @@ ${post.text}
         closeFab();
         if (act === "post") {
           requireAuth("\u043F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", openBoardModal);
+          return;
+        }
+        if (act === "saved") {
+          requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
+            activeType = "saved";
+            activeCategory = "all";
+            renderAll(el);
+          });
           return;
         }
         if (act === "mine")
