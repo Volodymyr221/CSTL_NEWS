@@ -1,6 +1,10 @@
 {
   "permissions": {
     "allow": [
+      "mcp__supabase",
+      "mcp__supabase__*",
+      "mcp__5c20a406-7f30-4b2c-8326-9c11ad1589ac",
+      "mcp__5c20a406-7f30-4b2c-8326-9c11ad1589ac__*",
       "Bash(node*)",
       "Bash(git status*)",
       "Bash(git diff*)",

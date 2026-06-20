@@ -5,6 +5,26 @@
 
 ---
 
+## 🟢 ФАЗА Б — приватність персонального стану (синхрон між пристроями) 20.06 (гілка `vova/auth-phase-b`)
+
+> Рішення Вови: персональний стан (закладки, відстеження, «мій лайк/коментар») —
+> прив'язаний до акаунта, синхрон між пристроями; анонім бачить ЛИШЕ публічні
+> агрегати (лічильники реакцій/коментарів, автори/час), нічого персонального.
+
+**ЗРОБЛЕНО (код, гілка):**
+- `scripts`/SQL: нова таблиця `saved_posts(uid, post_id)` + RLS «лише свої» — **Вова виконує в SQL Editor** (MCP-запис у веб-сесії не працює).
+- `supabase.js`: `fetchSavedPostIds/addSavedPost/removeSavedPost` (закладки в БД); `fetchTrackedRoutesFromDB` (гідрація відстежень з `push_subscriptions` для крос-девайс); `fetchAllComments` додано `sender_uid`.
+- `board.js`: закладки тепер у БД (пам'ять `savedIds`, заповнюється у renderBoard); «моя» реакція/коментар — за uid (currentUserId/sender_uid), лише залогінений; таб «Збережені» прихований гостю; `onAuthChange → renderBoard`. Прибрано localStorage `cstl-saved-v1`, `cstl-my-comments-v1`.
+- `buses.js`: ключ відстеження per-uid (`bus_track_v2:<uid>`); гідрація з БД при вході (крос-девайс); бейдж/hero/іконки приховані гостю; `onAuthChange` → перезавантаження.
+- `community-blocks.js`: віджет автобуса читає per-uid; `onAuthChange → renderBusBlock`.
+- CACHE_NAME → `cstl-20260620-0829`. Build чистий.
+
+**Межі:** без авто-міграції старих анонімних localStorage у БД (інакше витік на чужий акаунт) — старі ключі orphaned. Заглушений рейс (notify=false) крос-девайс не з'явиться (mute видаляє push-рядок) — дрібне обмеження.
+
+**ЗАЛИШИЛОСЬ:** виконати SQL `saved_posts` у Supabase; деплой через `/finish`; перевірка наживо (анонім нічого персонального не бачить; крос-девайс).
+
+---
+
 ## 🟢 ФАЗА Б — Етап 0 (вхід) + Етап 2 (гейтинг) ЗРОБЛЕНО 19.06 (гілка `vova/auth-phase-b`, ще НЕ в main)
 
 **Етап 0 — ГОТОВО (руки Вови):** Google Cloud OAuth client (Web application, redirect `…supabase.co/auth/v1/callback`) + Supabase Auth → Providers → Google увімкнено + Site URL/Redirect `https://volodymyr221.github.io/CSTL_NEWS/`. Вхід можна тестувати наживо ПІСЛЯ деплою.
@@ -23,7 +43,7 @@
 
 **Узгоджено з RLS:** значення `auth.uid()` пишуться скрізь (reactions.user_id, comments.sender_uid, push.user_uuid) → після Етапу 3 (RLS-перепис) залогінені вставки проходять, аноніми блокуються на рівні БД.
 
-**ЗАЛИШИЛОСЬ:** (1) деплой гілки в main через `/finish`; (2) Вова тестує Google-вхід наживо; (3) ТІЛЬКИ після робочого входу — застосувати `scripts/supabase_phase_b_rls.sql` (жорсткий гейтинг; до того НЕ запускати — заблокує всіх). Чат-UI (`messages-ui.js`) уже готовий (комміт `5e28597`).
+**ЗАЛИШИЛОСЬ:** — нічого, Фаза Б закрита. ✅ Деплой у main (PR #119 + #120), вхід Google перевірено наживо, RLS-перепис (`supabase_phase_b_rls.sql`) застосовано через SQL Editor (реакції/коментарі/push → `auth.uid()`, анонімний запис заблоковано на рівні БД, читання публічне). Чат-UI (`messages-ui.js`) живий. CACHE_NAME → `cstl-20260619-2220`.
 
 ---
 

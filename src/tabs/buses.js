@@ -4,8 +4,8 @@ import {
   getStopMins, getStopHHMM, getRouteState, getRouteTimings,
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
-import { getAnonId, savePushSubscription, deletePushSubscription } from '../core/supabase.js';
-import { isLoggedIn, currentUserId, requireAuth } from '../core/auth.js';
+import { getAnonId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
+import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -203,28 +203,48 @@ async function unsubscribeFromPush(routeId, trackDate) {
 }
 
 // ── Track route (відстеження рейсу) ──────────────────────────────────
+// Ключ per-uid — відстеження прив'язане до акаунта (анонім/чужий акаунт не бачить).
+function trackKey() { return TRACK_KEY + ':' + (currentUserId() || ''); }
+
 function loadTrackedRoute() {
+  if (!isLoggedIn()) { trackedRoutes = []; return; }   // гість → нічого персонального
   try {
     const today = getTodayISO();
-    // Спроба нового формату v2
-    const d = JSON.parse(localStorage.getItem(TRACK_KEY));
+    const d = JSON.parse(localStorage.getItem(trackKey()));
     if (Array.isArray(d?.routes)) {
       trackedRoutes = d.routes.filter(t => t.trackDate >= today);
     } else {
       trackedRoutes = [];
     }
-    if (!trackedRoutes.length) localStorage.removeItem(TRACK_KEY);
+    if (!trackedRoutes.length) localStorage.removeItem(trackKey());
   } catch { trackedRoutes = []; }
 }
 
 function saveTrackedRoute() {
-  if (!trackedRoutes.length) {
-    localStorage.removeItem(TRACK_KEY);
-  } else {
-    localStorage.setItem(TRACK_KEY, JSON.stringify({ routes: trackedRoutes }));
+  if (isLoggedIn()) {
+    if (!trackedRoutes.length) localStorage.removeItem(trackKey());
+    else localStorage.setItem(trackKey(), JSON.stringify({ routes: trackedRoutes }));
   }
   // Сигнал для інших вкладок (Громада) — оновити їхній віджет автобуса в реальному часі
   window.dispatchEvent(new CustomEvent('cstl-bus-track-changed'));
+}
+
+// Гідрація з БД при вході: рейси, відстежені на ІНШОМУ пристрої (push_subscriptions
+// per-uid), підтягуємо у локальний кеш → з'являються у hero/модалці тут.
+async function hydrateTrackedFromDB() {
+  if (!isLoggedIn()) return;
+  try {
+    const rows = await fetchTrackedRoutesFromDB(currentUserId(), getTodayISO());
+    let added = false;
+    for (const r of rows) {
+      const dup = trackedRoutes.some(t =>
+        t.routeId === r.routeId && t.trackDate === r.trackDate &&
+        (t.boardingStop || null) === (r.boardingStop || null) &&
+        (t.alightingStop || null) === (r.alightingStop || null));
+      if (!dup) { trackedRoutes.push(r); added = true; }
+    }
+    if (added) saveTrackedRoute();
+  } catch (e) { console.warn('[bus] hydrateTrackedFromDB:', e && e.message); }
 }
 
 function removeTrackedEntry(entry) {
@@ -1840,7 +1860,7 @@ function updateSavedBadge() {
   if (!btn) return;
   const n = getSavedCount();
   const onBuses = document.querySelector('.app-main')?.dataset.tab === 'buses';
-  btn.hidden = n === 0 || !onBuses;
+  btn.hidden = n === 0 || !onBuses || !isLoggedIn();
   const cnt = document.getElementById('saved-routes-count');
   if (cnt) cnt.textContent = n > 0 ? String(n) : '';
 }
@@ -1978,6 +1998,15 @@ export function initSavedRoutesHeader() {
   });
   // Перемикання вкладок → показати/сховати іконку (вона лише на Автобусах)
   window.addEventListener('cstl-tab-changed', updateSavedBadge);
+  // Вхід/вихід → перезавантажити відстеження (per-uid) + підтягнути з БД (крос-девайс).
+  // Гість → trackedRoutes порожні, hero/бейдж/іконки зникають.
+  onAuthChange(async () => {
+    loadTrackedRoute();
+    await hydrateTrackedFromDB();
+    updateSavedBadge();
+    if (document.getElementById('bus-list')) { renderSmartRow(); renderRouteList(); }
+    window.dispatchEvent(new CustomEvent('cstl-bus-track-changed'));
+  });
 }
 
 export async function initBuses() {

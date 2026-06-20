@@ -8,12 +8,13 @@
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 import { startChatFromPost, openThreadsList, openMyAds } from '../core/messages-ui.js';
-import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
+import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
-  getAnonId, fetchAllReactions, setReaction,
+  fetchAllReactions, setReaction,
   fetchAllComments, addComment,
   subscribeReactions, subscribeComments,
+  fetchSavedPostIds, addSavedPost, removeSavedPost,
 } from '../core/supabase.js';
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
@@ -70,11 +71,10 @@ let searchQuery    = '';
 // Supabase у renderBoard(), оновлюється при кліках через optimistic update.
 let reactionsByPost = new Map();  // postId → { counts: {emoji: count}, my: emoji|null }
 let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
+let savedIds        = new Set();  // postId закладок ПОТОЧНОГО акаунта (з БД saved_posts)
 
-// ── localStorage: тільки «Збережені» (✅ це per-device, у Supabase не йде) ──
+// ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
 
-const LS_SAVED = 'cstl-saved-v1';   // [postId, postId, ...]
-const LS_MY_COMMENTS = 'cstl-my-comments-v1';  // id повідомлень які я написав (для right-вирівнювання)
 const LS_CHAT_SEEN = 'cstl-chat-seen-v1';  // { postId: timestamp останнього перегляду теми (ms) }
 
 function lsGet(key, fallback) {
@@ -108,14 +108,11 @@ function getComments(postId) {
   return commentsByPost.get(postId) || [];
 }
 
-// Чи це моє повідомлення (для right-вирівнювання у чаті). До авторизації —
-// позначаємо локально per-device; коли буде Google-логін, замінимо на sender_uid.
-function getMyCommentIds() {
-  return new Set(lsGet(LS_MY_COMMENTS, []));
-}
-function addMyCommentId(id) {
-  const arr = lsGet(LS_MY_COMMENTS, []);
-  if (!arr.includes(id)) { arr.push(id); lsSet(LS_MY_COMMENTS, arr); }
+// Чи це моє повідомлення (для right-вирівнювання у чаті) — за sender_uid з БД,
+// тільки коли залогінений (account-bound, синхрон між пристроями).
+function isMyComment(c) {
+  const uid = currentUserId();
+  return !!uid && c.sender_uid === uid;
 }
 
 // Час останнього перегляду теми (per-device) — для роздільника «Нові повідомлення».
@@ -182,18 +179,25 @@ function partWord(n) {
   return 'учасників';
 }
 
+// Закладки тепер у БД per-uid (saved_posts) — синхрон між пристроями.
+// savedIds тримаємо в пам'яті (заповнюється у renderBoard з fetchSavedPostIds).
 function getSavedIds() {
-  return new Set(lsGet(LS_SAVED, []));
+  return savedIds;
 }
 function isSaved(postId) {
-  return getSavedIds().has(postId);
+  return savedIds.has(postId);
 }
+// Оптимістично оновлюємо пам'ять + пишемо в БД. Гість сюди не доходить (гейт у кліку).
 function toggleSaved(postId) {
-  const arr = lsGet(LS_SAVED, []);
-  const idx = arr.indexOf(postId);
-  if (idx >= 0) arr.splice(idx, 1);
-  else arr.push(postId);
-  lsSet(LS_SAVED, arr);
+  const uid = currentUserId();
+  if (!uid) return;
+  if (savedIds.has(postId)) {
+    savedIds.delete(postId);
+    removeSavedPost(uid, postId);
+  } else {
+    savedIds.add(postId);
+    addSavedPost(uid, postId);
+  }
 }
 
 // ── Утиліти ──────────────────────────────────────────────────────────────────
@@ -318,7 +322,6 @@ function chatMessagesHtml(post) {
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">💬</span>Поки порожньо.<br>Напишіть перше повідомлення 👋</div>
     </div>`;
   }
-  const myIds = getMyCommentIds();
   // Роздільник «Нові повідомлення» ставимо перед першим повідомленням, новішим за
   // час останнього перегляду — але лише якщо до нього є хоч одне «старе» (щоб не
   // ліпити роздільник на самому верху при першому вході).
@@ -330,7 +333,7 @@ function chatMessagesHtml(post) {
     const isNew = dividerTs > 0 && postTime(c) > dividerTs;
     if (!isNew) hadOld = true;
     const needDivider = isNew && hadOld && !dividerPlaced;
-    const mine = myIds.has(c.id);
+    const mine = isMyComment(c);
     const author = c.author || 'Житель';
     const key = mine ? '__me' : author;
     const last = groups[groups.length - 1];
@@ -863,7 +866,9 @@ function getFilteredPosts() {
 // ── Рендеринг панелі ─────────────────────────────────────────────────────────
 
 function renderHeader() {
-  const tabs = TYPE_TABS.map(t => {
+  // Таб «Збережені» — персональний, лише для залогінених (анонім його не бачить).
+  const visibleTabs = isLoggedIn() ? TYPE_TABS : TYPE_TABS.filter(t => t.id !== 'saved');
+  const tabs = visibleTabs.map(t => {
     const isRound = t.id === 'saved';
     return `
       <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}${isRound ? ' bd-tab--round' : ''}" type="button" data-bd-tab="${t.id}">
@@ -947,22 +952,24 @@ export async function renderBoard() {
   const el = document.getElementById('board-content');
   if (!el) return;
 
-  // 1. Supabase: пости + анонси + реакції + коментарі паралельно
+  // 1. Supabase: пости + анонси + реакції + коментарі + закладки паралельно
   if (isSupabaseReady()) {
-    // Ідентичність для «моєї» реакції: uid залогіненого, інакше анонімний id
-    // (старі анонімні реакції лишаються видимими; нові робить лише акаунт).
-    const myId = currentUserId() || getAnonId();
-    const [posts, anns, reactions, comments] = await Promise.all([
+    // «Моя» реакція/закладка — лише для залогіненого акаунта (uid). Гість → нічого
+    // персонального; старі анонімні реакції лишаються видимими як публічні лічильники.
+    const uid = currentUserId();
+    const [posts, anns, reactions, comments, saved] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
-      fetchAllReactions(myId),
+      fetchAllReactions(uid),
       fetchAllComments(),
+      uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
     ]);
     if (posts !== null) {
       allPosts         = posts;
       allAnnouncements = anns || [];
       reactionsByPost  = reactions;
       commentsByPost   = comments;
+      savedIds         = saved;
       renderAll(el);
       return;
     }
@@ -1301,11 +1308,11 @@ function attachBoardDelegation() {
       author: myName,
       text,
       created_at: new Date().toISOString(),
+      sender_uid: currentUserId(),   // → isMyComment() підсвітить як мій одразу
     };
     const list = commentsByPost.get(postId) || [];
     list.push(tempComment);
     commentsByPost.set(postId, list);
-    addMyCommentId(tempComment.id);
     if (input) input.value = '';
     rerenderCommentsBlock(postId);
     input?.focus();   // лишаємо фокус → клавіатура не ховається після надсилання
@@ -1325,7 +1332,6 @@ function attachBoardDelegation() {
           c.id === tempComment.id ? result.comment : c
         );
         commentsByPost.set(postId, updated);
-        addMyCommentId(result.comment.id);
         rerenderCommentsBlock(postId);
       }
     }
@@ -1478,8 +1484,7 @@ function onReactionRealtimeEvent(payload) {
   if (!row || !row.post_id) return;
   const postId = row.post_id;
   // Найпростіше — повний refetch цього поста для коректних counts/my
-  const myId = currentUserId() || getAnonId();
-  fetchAllReactions(myId).then(fresh => {
+  fetchAllReactions(currentUserId()).then(fresh => {
     // Беремо тільки запис для цього post_id, мерджимо у локальну map
     const r = fresh.get(postId) || { counts: {}, my: null };
     reactionsByPost.set(postId, r);
@@ -1546,4 +1551,12 @@ export function initBoard() {
   attachBoardDelegation();
   attachRealtime();
   renderBoard();
+  // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
+  onAuthChange(() => {
+    if (!isLoggedIn()) {
+      savedIds = new Set();
+      if (activeType === 'saved') activeType = 'board';   // персональний таб зник
+    }
+    renderBoard();
+  });
 }
