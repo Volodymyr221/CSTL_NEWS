@@ -62,19 +62,23 @@
 
 ---
 
-## 🚀 Поточний стан проекту (на 2026-05-17)
+## 🚀 Поточний стан проекту (на 2026-06-20)
 
 - **Фаза 1 А+ — ЗАВЕРШЕНА ✅** Сайт живий, автодеплой, лічильник версії
-- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, **7 джерел** (Волинь×2, Україна×1, Світ×1, Район.Ківерці, Олицька громада×2 через Cloudflare Worker), cron кожні 30 хв
-- **Фаза 2 (Модалка) — ЗАВЕРШЕНА ✅** Повна стаття, свайп, анімація, футер з автором
-- **Фаза 3 MVP (Світло) — ЗАВЕРШЕНА ✅** Таймлайн, 11 сіл ОТГ, DEMO дані. Зараз приховано з tab-bar (Tier 1)
-- **Фаза 8 (Громада) — ЗАВЕРШЕНА ✅** головна вкладка-дашборд, 7 блоків, дизайн D2 «Поле»
-- **Фаза 8.5 (Редизайн усіх вкладок, Tier 0-6) — ЗАВЕРШЕНА ✅** бордо-бренд, CSTL NEWS → CSTL LIFE, Подати оголошення з фото, 25 свят, magazine-cover Новин
-- **Наступне 🔜** — Фаза 9 (Дошка громади 2.0 + Supabase): чекає твоїх URL+anon-key
+- **Фаза 2.1 (Новини) — ЗАВЕРШЕНА ✅** RSS-парсер, 7 джерел, cron 30 хв
+- **Фаза 8 (Громада) + 8.5 (редизайн усіх вкладок) — ЗАВЕРШЕНІ ✅** бордо-бренд, CSTL LIFE
+- **Дошка громади 2.0 + Supabase — ЗАВЕРШЕНА ✅** оголошення/обговорення, реакції, коментарі, фото у Storage
+- **🆕 ФАЗА Б (акаунти + приватність) — ЗАВЕРШЕНА І ЗАДЕПЛОЄНА ✅ (20.06)**
+  - Вхід через Google (Supabase Auth) + Кабінет жителя
+  - Приватний чат покупець↔продавець (realtime + push)
+  - Гейтинг усіх дій (анонім = тільки перегляд; дії — після входу)
+  - Приватність персонального стану (закладки/відстеження/«моє») + синхрон між пристроями
+  - Деталі — `_ai-tools/SESSION_STATE.md` (секція «⭐ ХЕНДОВЕР»)
+- **Наступне 🔜** — за роадмапом (контент/маркетинг громади); опц. дрібниці по чату/push
 
 **URL сайту:** https://volodymyr221.github.io/CSTL_NEWS/
-**Робоча гілка (поточна сесія):** `claude/start-session-XXX` — створюється автоматично
-**Production-гілка (бойова):** `main` — мердж тільки через скіл `/finish` коли готово
+**Гілка Фази Б:** `vova/auth-phase-b` (змерджена в `main`)
+**Робоча гілка (нова сесія):** `claude/start-session-XXX` або `vova/<тема>` — мердж через `/finish`
 **Репозиторій:** https://github.com/Volodymyr221/CSTL_NEWS
 
 ---
@@ -142,9 +146,14 @@ CSTL_NEWS/
 │   └── auto-merge.yml            # claude/** → main, BUILD_NUM з --no-merges
 │
 ├── cloudflare/worker.js          # Proxy для olytska-gromada.gov.ua
+├── .mcp.json                     # Конфіг MCP Supabase (write-enabled; читається на старті сесії)
+├── supabase/functions/
+│   ├── send-bus-push/            # Edge Function: push про автобуси (cron щохв)
+│   └── send-chat-push/           # Фаза Б: Edge Function: push про повідомлення чату
 ├── scripts/
 │   ├── parse_rss.py              # 7 джерел, fetch_full_article, класифікатор news/event
-│   └── test_worker.py            # Тест Cloudflare Worker
+│   ├── test_worker.py            # Тест Cloudflare Worker
+│   └── supabase_*.sql            # Фаза Б: міграції (profiles, chat, RLS, saved_posts) — застосовані
 │
 ├── data/
 │   ├── articles.json             # Статті (авто RSS + ручні)
@@ -160,14 +169,19 @@ CSTL_NEWS/
 │   ├── core/
 │   │   ├── boot.js               # PWA + Service Worker init
 │   │   ├── utils.js              # formatTime, escapeHtml, showToast, pad, todayKey, getCoords, getCityName
-│   │   └── weather.js            # Погода у шапці (Open-Meteo API)
+│   │   ├── weather.js            # Погода у шапці (Open-Meteo API)
+│   │   ├── supabase.js           # Клієнт Supabase + дата-шар (пости/реакції/коментарі/чат/закладки/push)
+│   │   ├── auth.js               # Фаза Б: вхід Google, currentUser, requireAuth (гейтинг), профіль
+│   │   ├── account-ui.js         # Фаза Б: екрани Приєднайтесь/Профіль/Кабінет
+│   │   └── messages-ui.js        # Фаза Б: приватний чат (розмова, Повідомлення, Мої оголошення)
 │   └── tabs/
 │       ├── community.js          # Громада — entry: рендерить вкладку + блоки
 │       ├── community-blocks.js   # Блоки Громади (board, weather, bus, event, contacts)
 │       ├── community-modal.js    # Bottom-sheet "Подати оголошення" з категоріями+фото
+│       ├── board.js              # Дошка громади 2.0: оголошення/обговорення, реакції, коментарі, закладки, FAB
 │       ├── news.js               # Новини: featured magazine-cover + кольорові бейджі
 │       ├── events.js             # Події: календарна стрічка 21 день + 25 свят
-│       ├── buses.js              # Розклад + smart-row + isDayActive
+│       ├── buses.js              # Розклад + smart-row + відстеження рейсів + push
 │       └── power.js              # Світло (приховано з tab-bar, код збережений)
 │
 ├── backup/                       # Точки відкату (design-v1, design-v2-pre-D2, style-D2-pre-split, community-pre-split)

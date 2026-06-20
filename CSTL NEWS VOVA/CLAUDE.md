@@ -163,11 +163,23 @@ main отримує мердж-коміт
 | `src/core/boot.js` | PWA setup, Service Worker |
 | `src/core/utils.js` | `formatTime`, `escapeHtml`, `showToast`, `formatEventDate` |
 | `src/core/weather.js` | Віджет погоди у шапці (Open-Meteo API + geolocation з utils.js) |
-| `src/tabs/community.js` | Головна вкладка-дашборд: hero фото, greeting, дошка громади, погода, світло, автобус, подія, контакти |
+| `src/core/supabase.js` | Клієнт Supabase + увесь дата-шар (пости, реакції, коментарі, чат, закладки, push) |
+| `src/core/auth.js` | **Фаза Б:** вхід Google, поточний користувач, `requireAuth` (гейтинг), профіль |
+| `src/core/account-ui.js` | **Фаза Б:** екрани «Приєднайтесь» / «Доповніть профіль» / «Кабінет жителя» |
+| `src/core/messages-ui.js` | **Фаза Б:** приватний чат — розмова, «Повідомлення», «Мої оголошення», бейдж |
+| `src/tabs/community.js` | Головна вкладка-дашборд (рендер-блоки винесено в community-blocks.js) |
+| `src/tabs/community-blocks.js` | Render-блоки Громади: погода, світло, автобус, дошка, подія, контакти |
+| `src/tabs/community-modal.js` | Bottom-sheet модалка «Додати на Дошку» (оголошення / розмова) |
 | `src/tabs/news.js` | Стрічка новин, фільтри |
 | `src/tabs/events.js` | Афіша подій |
-| `src/tabs/buses.js` | Розклад автобусів |
+| `src/tabs/buses.js` | Розклад автобусів + відстеження рейсів + push |
+| `src/tabs/board.js` | Дошка громади: оголошення/обговорення, реакції, коментарі, закладки, FAB |
 | `src/tabs/power.js` | Графік відключень електрики |
+| `style/*.css` | Стилі по модулях (account.css, messages.css, community.css…) — підключені в `style.css` |
+| `supabase/functions/send-bus-push/` | Edge Function: push про автобусні рейси (cron щохв) |
+| `supabase/functions/send-chat-push/` | **Фаза Б:** Edge Function: push про нове повідомлення чату |
+| `scripts/*.sql` | SQL міграцій Supabase (profiles, chat, RLS, saved_posts) — застосовані в БД |
+| `.mcp.json` | Конфіг MCP Supabase (write-enabled; читається на старті сесії) |
 | `data/community.json` | Офіційні оголошення (для дошки громади) + контакти |
 | `data/community-board.json` | Пости мешканців на дошці громади |
 
