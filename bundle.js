@@ -2916,6 +2916,11 @@ ${post.text}
       const saveBtn = e.target.closest("[data-save-id]");
       if (saveBtn) {
         e.stopPropagation();
+        if (!isLoggedIn()) {
+          requireAuth("\u0437\u0431\u0435\u0440\u0456\u0433\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", () => {
+          });
+          return;
+        }
         const id = Number(saveBtn.dataset.saveId);
         toggleSaved(id);
         const nowSaved = isSaved(id);
@@ -6198,6 +6203,11 @@ ${post.text}
     el.querySelectorAll(".ev-ics-btn").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
+        if (!isLoggedIn()) {
+          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
+          });
+          return;
+        }
         const ev = allEvents.find((ev2) => ev2.id === Number(btn.dataset.id));
         if (ev)
           downloadIcs(ev);
