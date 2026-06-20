@@ -2099,6 +2099,10 @@
   padding-bottom: 6px;
 }
 .bd-tab { flex: 1; justify-content: center; }
+/* Вміст кнопок присунутий до роздільної лінії «|»:
+   ДОШКА (ліва) — вправо, ОБГОВОРЕННЯ (права) — вліво */
+.bd-tabs .bd-tab:first-child { justify-content: flex-end; }
+.bd-tabs .bd-tab:last-child  { justify-content: flex-start; }
 .bd-tabs::-webkit-scrollbar { display: none; }
 .bd-tab {
   display: inline-flex;
