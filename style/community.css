@@ -2134,10 +2134,15 @@
   padding: 2px 0 0 0;
   gap: 0;
 }
-/* Роздільник «|» між табами ДОШКА та ОБГОВОРЕННЯ */
+/* Роздільник «|» між табами ДОШКА та ОБГОВОРЕННЯ.
+   Ширина 42px = розмір колишньої кнопки-закладки → ДОШКА/ОБГОВОРЕННЯ
+   зберігають точно попередню ширину (не розтягуються, ободок лишається округлим). */
 .bd-tab-sep {
-  flex: 0 0 auto;
-  align-self: center;
+  flex: 0 0 42px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   color: rgba(0,0,0,0.30);
   font-size: 18px;
   font-weight: 300;
