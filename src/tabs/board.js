@@ -896,6 +896,7 @@ function renderHeader() {
   return `
     <div class="bd-controls">
       <div class="bd-tabs">${tabs}</div>
+      <div class="bd-tabs-rule" aria-hidden="true"></div>
       <div class="bd-search">
         <span class="bd-search-icon">🔍</span>
         <input class="bd-search-input" id="bd-search-input" type="search"

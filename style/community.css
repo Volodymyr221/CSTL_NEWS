@@ -2104,6 +2104,15 @@
 .bd-tabs .bd-tab:first-child { margin-left: 14px; }
 .bd-tabs .bd-tab:last-child  { margin-right: 14px; }
 .bd-tabs::-webkit-scrollbar { display: none; }
+/* Горизонтальна роздільна лінія під кнопками ДОШКА/ОБГОВОРЕННЯ — затухає по краях */
+.bd-tabs-rule {
+  height: 1px;
+  margin: 2px 0 10px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0,0,0,0.20) 50%,
+    transparent 100%);
+}
 .bd-tab {
   display: inline-flex;
   align-items: center;
