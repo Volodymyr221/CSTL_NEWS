@@ -2104,12 +2104,12 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 7px 12px;
+  padding: 9px 12px;
   border-radius: 14px;
   border: 1.5px solid rgba(0,0,0,0.28);
   background: var(--card-cream);
   color: var(--black);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
   font-family: inherit;
   cursor: pointer;
@@ -2125,7 +2125,7 @@
   font-weight: 700;
   box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
 }
-.bd-tab-emoji { font-size: 14px; }
+.bd-tab-emoji { font-size: 15px; }
 .bd-tab--round {
   flex: none;
   width: 42px;
