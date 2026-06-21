@@ -1625,7 +1625,7 @@
 /* На стікері з фото меншу к-сть рядків тексту (місця менше) */
 .cm-board-note--has-photo .cm-board-text {
   display: -webkit-box;
-  -webkit-line-clamp: 3;
+  -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1964,9 +1964,8 @@
   align-items: center;
   gap: 8px;
   justify-content: space-between;
-  /* штрихпунктирна лінія тут; час публікації — у рядку з ім'ям нижче.
-     margin-top опускає лінію + номер + іконки нижче */
-  margin-top: 16px;
+  /* штрихпунктирна лінія тут; час публікації — у рядку з ім'ям нижче */
+  margin-top: 6px;
   border-top: 1px dashed rgba(0,0,0,0.12);
   padding-top: 6px;
 }
