@@ -2599,7 +2599,7 @@ ${post.text}
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon">\u2726</span>
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1 Q 13.5 10.5 23 12 Q 13.5 13.5 12 23 Q 10.5 13.5 1 12 Q 10.5 10.5 12 1 Z"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     </div>

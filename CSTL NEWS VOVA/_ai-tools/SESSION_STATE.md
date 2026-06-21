@@ -11,6 +11,7 @@
 > - **Іконка FAB** (`.cm-board-trigger-icon`): inline SVG-плюс → гліф `✦` (той самий що у чіпі «ВСІ» фільтрів → єдиний почерк). `src/tabs/board.js:1035`.
 > - **CSS** (`style/community.css` `.board-trigger--fixed .cm-board-trigger-icon`): прибрано правило `svg{width/height}`, додано `font-size:26px; line-height:1; align/justify center` під гліф.
 > - **Механіка Б (як було у плюса):** при відкритті підменю іскра обертається на 45° (`.board-fab.open … transform: rotate(45deg)` — НЕ чіпав, рядок 1558). Cross-fade у чистий ✕ (варіант а) НЕ робив.
+> - **Фікс після перевірки Вови (гліф ✦ виглядав кволо — системний шрифт):** гліф → **SVG-іскра** (4 промені з увігнутими боками, `fill=currentColor`, бордова, 26px, рендериться однаково на всіх ОС). CSS: прибрано `font-size`, повернуто `svg{width/height:26px}`. CACHE_NAME → `cstl-20260621-1332`.
 > - Файли: `src/tabs/board.js`, `style/community.css`, `sw.js`, `bundle.js`. ⏸️ Чекає перевірки Вови наживо.
 
 ---

@@ -1479,10 +1479,10 @@
   align-items: center;
   justify-content: center;
   color: var(--red);
-  font-size: 26px;
   line-height: 1;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
+.board-trigger--fixed .cm-board-trigger-icon svg { width: 26px; height: 26px; }
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
