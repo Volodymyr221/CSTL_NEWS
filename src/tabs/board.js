@@ -1032,7 +1032,7 @@ function renderAll(el) {
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-icon">✦</span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
       </button>
     </div>

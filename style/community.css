@@ -1476,10 +1476,13 @@
 .board-trigger--fixed .cm-board-trigger-text { display: none; }
 .board-trigger--fixed .cm-board-trigger-icon {
   display: flex;
+  align-items: center;
+  justify-content: center;
   color: var(--red);
+  font-size: 26px;
+  line-height: 1;
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.board-trigger--fixed .cm-board-trigger-icon svg { width: 24px; height: 24px; }
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
