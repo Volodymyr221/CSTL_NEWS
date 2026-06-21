@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260621-1102';
+const CACHE_NAME = 'cstl-20260621-1117';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -113,7 +113,9 @@ self.addEventListener('fetch', e => {
   const isAppCode = url.pathname.endsWith('.css') || url.pathname.endsWith('bundle.js');
   if (isAppCode) {
     e.respondWith(
-      fetch(e.request)
+      // { cache: 'reload' } — обходимо HTTP-кеш браузера (GitHub Pages віддає
+      // CSS/JS з max-age ~10хв), інакше fetch повертав би застарілий код.
+      fetch(e.request, { cache: 'reload' })
         .then(r => {
           if (r.ok) {
             const clone = r.clone();
