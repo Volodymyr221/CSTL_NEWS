@@ -1961,11 +1961,11 @@
 /* ── Контакт-телефон з кнопкою виклика праворуч ── */
 .cm-board-contact--phone {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
   justify-content: space-between;
-  /* штрихпунктирна лінія тепер тут (час перенесено під кнопки).
-     margin-top опускає лінію + номер + іконки нижче (компенсує прибраний рядок часу) */
+  /* штрихпунктирна лінія тут; час публікації — у рядку з ім'ям нижче.
+     margin-top опускає лінію + номер + іконки нижче */
   margin-top: 16px;
   border-top: 1px dashed rgba(0,0,0,0.12);
   padding-top: 6px;
@@ -1974,18 +1974,6 @@
   display: flex;
   gap: 6px;
   flex-shrink: 0;
-}
-/* Правий стовпчик: кнопки 💬/📞, під ними — час публікації */
-.cm-board-contact-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 3px;
-  flex-shrink: 0;
-}
-.cm-board-contact-right .cm-board-time {
-  color: rgba(43,43,43,0.5);
-  font-weight: 500;
 }
 /* Менші кнопки на картці щоб номер завжди влазив */
 .cm-board-contact--phone .cm-board-msg-btn,
@@ -1999,12 +1987,22 @@
   height: 13px;
 }
 /* Ім'я під номером телефону на картці */
+/* Рядок під контактом: ім'я (зліва) + час публікації (справа) на одному рівні */
+.cm-board-author-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 4px;
+}
 .cm-board-author--card {
-  display: block;
   font-size: 11px;
   font-weight: 600;
   color: rgba(43,43,43,0.5);
-  margin-top: 3px;
+}
+.cm-board-author-row .cm-board-time {
+  color: rgba(43,43,43,0.5);
+  flex-shrink: 0;
 }
 .cm-board-contact-num {
   flex: 1;

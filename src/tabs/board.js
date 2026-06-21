@@ -662,15 +662,15 @@ function renderBoardCard(p) {
       ${isPhone ? `
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-          <div class="cm-board-contact-right">
-            <div class="cm-board-contact-btns">
-              <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
-            </div>
-            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          <div class="cm-board-contact-btns">
+            <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
           </div>
         </div>
-        <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
+        <div class="cm-board-author-row">
+          <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
+          <span class="cm-board-time">${formatTime(postTime(p))}</span>
+        </div>
       ` : (contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : '')}
       ${boardActionsHtml(p)}
     </article>
