@@ -2018,6 +2018,11 @@
   color: rgba(43,43,43,0.5);
   flex-shrink: 0;
 }
+/* Ім'я автора і дата в оголошенні — завжди ВЕЛИКИМИ буквами (і на картці, і в модалці) */
+.cm-board-author,
+.cm-board-author--card,
+.cm-board-contact-name,
+.cm-board-time { text-transform: uppercase; }
 .cm-board-contact-num {
   flex: 1;
   min-width: 0;
