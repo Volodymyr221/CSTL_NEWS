@@ -2448,6 +2448,7 @@
   position: relative;
   margin-top: 8px;
   padding-top: 8px;
+  border-top: none;   /* прибираємо штрихпунктир (.bd-actions--board-compact), лишається ::before суцільна */
 }
 /* Суцільна роздільна лінія над реакціями, затухає по краях (як під описом, без тіні) */
 .bd-card--board .bd-actions::before {
