@@ -19,7 +19,7 @@ import {
 } from './auth.js';
 import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
-  fetchMyThreads, fetchMyPosts, fetchUnreadByThread, fetchUnreadCount,
+  fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
 } from './supabase.js';
 import { escapeHtml, showToast, formatTime, postTime, containsProfanity } from './utils.js';
@@ -350,23 +350,36 @@ export function startChatFromPost(post) {
   });
 }
 
-// ── Бейдж непрочитаних (на іконці акаунта в шапці) ────────────────────────
+// ── Бейдж непрочитаних: іконка акаунта (шапка) + FAB Дошки + пункт «Повідомлення» ──
+// Число всюди однакове = кількість ЧАТІВ (розмов) з хоча б одним непрочитаним.
 export async function refreshUnreadBadge() {
-  const btn = document.getElementById('account-btn');
-  if (!btn) return;
-  let badge = btn.querySelector('.account-unread');
-  if (!isLoggedIn()) { badge?.remove(); return; }
-  const n = await fetchUnreadCount(currentUserId());
-  if (n > 0) {
+  const accBtn   = document.getElementById('account-btn');
+  const fabBadge = document.getElementById('board-trigger-badge');
+  const msgBadge = document.getElementById('board-fab-msgs-badge');
+
+  const hideAll = () => {
+    accBtn?.querySelector('.account-unread')?.remove();
+    if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
+    if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
+  };
+  if (!isLoggedIn()) { hideAll(); return; }
+
+  // Кількість розмов з непрочитаними = розмір Map<thread_id, count>
+  const chats = (await fetchUnreadByThread(currentUserId())).size;
+  if (chats <= 0) { hideAll(); return; }
+  const label = chats > 99 ? '99+' : String(chats);
+
+  if (accBtn) {
+    let badge = accBtn.querySelector('.account-unread');
     if (!badge) {
       badge = document.createElement('span');
       badge.className = 'account-unread';
-      btn.appendChild(badge);
+      accBtn.appendChild(badge);
     }
-    badge.textContent = n > 99 ? '99+' : String(n);
-  } else {
-    badge?.remove();
+    badge.textContent = label;
   }
+  if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
+  if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
 }
 
 // ── Реєстрація push-пристрою під акаунт (без запиту дозволу) ───────────────

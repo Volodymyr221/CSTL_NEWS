@@ -11,8 +11,13 @@
 > - **Іконка FAB** (`.cm-board-trigger-icon`): inline SVG-плюс → гліф `✦` (той самий що у чіпі «ВСІ» фільтрів → єдиний почерк). `src/tabs/board.js:1035`.
 > - **CSS** (`style/community.css` `.board-trigger--fixed .cm-board-trigger-icon`): прибрано правило `svg{width/height}`, додано `font-size:26px; line-height:1; align/justify center` під гліф.
 > - **Механіка Б (як було у плюса):** при відкритті підменю іскра обертається на 45° (`.board-fab.open … transform: rotate(45deg)` — НЕ чіпав, рядок 1558). Cross-fade у чистий ✕ (варіант а) НЕ робив.
-> - **Фікс після перевірки Вови (гліф ✦ виглядав кволо — системний шрифт):** гліф → **SVG-іскра** (4 промені з увігнутими боками, `fill=currentColor`, бордова, 26px, рендериться однаково на всіх ОС). CSS: прибрано `font-size`, повернуто `svg{width/height:26px}`. CACHE_NAME → `cstl-20260621-1332`.
-> - Файли: `src/tabs/board.js`, `style/community.css`, `sw.js`, `bundle.js`. ⏸️ Чекає перевірки Вови наживо.
+> - **Фікс після перевірки Вови (гліф ✦ виглядав кволо — системний шрифт):** гліф → **SVG-іскра** (4 промені з увігнутими боками, `fill=currentColor`, бордова, 26px). CACHE_NAME → `cstl-20260621-1332`.
+> - **Фінал (Вова: іскра не по темі — це хаб дій/чатів, не магія). CACHE_NAME → `cstl-20260621-1409`:**
+>   - **Іконка → бульбашка-чат** (SVG, форма з `MSG_ICON_SVG`) + окремий шар `.cm-board-trigger-close` (✕). При відкритті — **cross-fade** (бульбашка `opacity:0`, ✕ `opacity:1`); прибрано `rotate(45deg)`. Обидва шари `position:absolute; inset:0`.
+>   - **Бейджі непрочитаних = кількість ЧАТІВ** (розмов з непрочитаними, `fetchUnreadByThread().size`): кутик FAB (`#board-trigger-badge`), пункт «Повідомлення» (`#board-fab-msgs-badge`), і шапка-акаунт — усі однакове число. `refreshUnreadBadge()` (messages-ui.js) розширено: рахує чати, ставить 3 бейджі; шапку переведено з `fetchUnreadCount`(повідомлення) на чати (одне число скрізь). Прибрано непотрібний імпорт `fetchUnreadCount`.
+>   - Біля кожного чату в списку «Повідомлення» — кількість непрочитаних повідомлень (`.pm-row-badge`) **вже було**, не чіпав.
+>   - **Пункти підменю:** ВЕЛИКІ букви (`text-transform:uppercase`) + стиль скла як FAB (`.board-fab-label` + `.board-fab-ic`: напівпрозоре скло + blur + бордовий контур замість суцільного білого).
+> - Файли: `src/tabs/board.js`, `src/core/messages-ui.js`, `style/community.css`, `sw.js`, `bundle.js`. ⏸️ Чекає перевірки Вови наживо (залогінений, з непрочитаними).
 
 ---
 

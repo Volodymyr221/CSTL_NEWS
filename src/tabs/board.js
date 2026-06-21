@@ -1015,7 +1015,7 @@ function renderAll(el) {
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu">
         <button class="board-fab-item" data-fab="msgs" type="button">
-          <span class="board-fab-label">Повідомлення</span>
+          <span class="board-fab-label">Повідомлення<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">💬</span>
         </button>
         <button class="board-fab-item" data-fab="mine" type="button">
@@ -1032,7 +1032,9 @@ function renderAll(el) {
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1 Q 13.5 10.5 23 12 Q 13.5 13.5 12 23 Q 10.5 13.5 1 12 Q 10.5 10.5 12 1 Z"/></svg></span>
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
       </button>
     </div>

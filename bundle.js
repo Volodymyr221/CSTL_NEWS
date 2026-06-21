@@ -595,16 +595,6 @@
       return;
     await supa.from("messages").update({ read_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("thread_id", threadId).neq("sender_uid", uid).is("read_at", null);
   }
-  async function fetchUnreadCount(uid) {
-    if (!supa || !uid)
-      return 0;
-    const { data: th } = await supa.from("threads").select("id").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
-    const ids = (th || []).map((t) => t.id);
-    if (!ids.length)
-      return 0;
-    const { count } = await supa.from("messages").select("id", { count: "exact", head: true }).in("thread_id", ids).neq("sender_uid", uid).is("read_at", null);
-    return count || 0;
-  }
   async function fetchUnreadByThread(uid) {
     const map = /* @__PURE__ */ new Map();
     if (!supa || !uid)
@@ -1696,24 +1686,46 @@
     });
   }
   async function refreshUnreadBadge() {
-    const btn = document.getElementById("account-btn");
-    if (!btn)
-      return;
-    let badge = btn.querySelector(".account-unread");
+    const accBtn = document.getElementById("account-btn");
+    const fabBadge = document.getElementById("board-trigger-badge");
+    const msgBadge = document.getElementById("board-fab-msgs-badge");
+    const hideAll = () => {
+      accBtn?.querySelector(".account-unread")?.remove();
+      if (fabBadge) {
+        fabBadge.textContent = "";
+        fabBadge.style.display = "none";
+      }
+      if (msgBadge) {
+        msgBadge.textContent = "";
+        msgBadge.style.display = "none";
+      }
+    };
     if (!isLoggedIn()) {
-      badge?.remove();
+      hideAll();
       return;
     }
-    const n = await fetchUnreadCount(currentUserId());
-    if (n > 0) {
+    const chats = (await fetchUnreadByThread(currentUserId())).size;
+    if (chats <= 0) {
+      hideAll();
+      return;
+    }
+    const label = chats > 99 ? "99+" : String(chats);
+    if (accBtn) {
+      let badge = accBtn.querySelector(".account-unread");
       if (!badge) {
         badge = document.createElement("span");
         badge.className = "account-unread";
-        btn.appendChild(badge);
+        accBtn.appendChild(badge);
       }
-      badge.textContent = n > 99 ? "99+" : String(n);
-    } else {
-      badge?.remove();
+      badge.textContent = label;
+    }
+    if (fabBadge) {
+      fabBadge.textContent = label;
+      fabBadge.style.display = "block";
+    }
+    if (msgBadge) {
+      msgBadge.textContent = label;
+      msgBadge.style.display = "inline-block";
     }
   }
   async function registerChatPushDevice() {
@@ -2582,7 +2594,7 @@ ${post.text}
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu">
         <button class="board-fab-item" data-fab="msgs" type="button">
-          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">\u{1F4AC}</span>
         </button>
         <button class="board-fab-item" data-fab="mine" type="button">
@@ -2599,7 +2611,9 @@ ${post.text}
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 1 Q 13.5 10.5 23 12 Q 13.5 13.5 12 23 Q 10.5 13.5 1 12 Q 10.5 10.5 12 1 Z"/></svg></span>
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     </div>
