@@ -1981,6 +1981,8 @@
     transparent 0%,
     rgba(0,0,0,0.12) 50%,
     transparent 100%);
+  /* трішки тіні над лінією (drop-shadow затухає разом з лінією, без різких країв) */
+  filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.12));
 }
 .cm-board-contact-btns {
   display: flex;
@@ -2443,9 +2445,22 @@
 
 /* На board-стікері трохи більший контраст бо фон може бути темний */
 .bd-card--board .bd-actions {
-  border-top: 1px dashed rgba(0,0,0,0.18);
+  position: relative;
   margin-top: 8px;
   padding-top: 8px;
+}
+/* Суцільна роздільна лінія над реакціями, затухає по краях (як під описом, без тіні) */
+.bd-card--board .bd-actions::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0,0,0,0.12) 50%,
+    transparent 100%);
 }
 
 /* Ліва частина: тригер реакції + кнопка коментарів поряд */
