@@ -2595,7 +2595,7 @@ ${post.text}
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon">\u270F\uFE0F</span>
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     </div>

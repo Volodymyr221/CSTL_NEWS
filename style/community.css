@@ -1466,10 +1466,20 @@
   justify-content: center;
   gap: 0;
   z-index: 80;
-  box-shadow: 0 6px 20px rgba(114, 47, 55, 0.45), 0 2px 6px rgba(0,0,0,0.18);
+  /* Glassmorphism: напівпрозоре скло + розмиття фону під кнопкою + бордовий контур */
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  border: 1.5px solid rgba(114, 47, 55, 0.55);
+  box-shadow: 0 6px 18px rgba(0,0,0,0.16), inset 0 1px 2px rgba(255,255,255,0.65);
 }
 .board-trigger--fixed .cm-board-trigger-text { display: none; }
-.board-trigger--fixed .cm-board-trigger-icon { font-size: 22px; line-height: 1; }
+.board-trigger--fixed .cm-board-trigger-icon {
+  display: flex;
+  color: var(--red);
+  transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.board-trigger--fixed .cm-board-trigger-icon svg { width: 26px; height: 26px; }
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
@@ -1543,15 +1553,9 @@
 }
 
 /* Відкрито: кнопка над затемненням, олівець → ✕ */
-.board-fab.open .board-trigger--fixed { z-index: 152; background: var(--red-dark); }
-.board-fab.open .board-trigger--fixed .cm-board-trigger-icon { display: none; }
-.board-fab.open .board-trigger--fixed::after {
-  content: "✕";
-  color: #fff;
-  font-size: 22px;
-  font-weight: 600;
-  line-height: 1;
-}
+/* Відкрито: скло трохи щільніше, плюс повертається на 45° → стає ✕ */
+.board-fab.open .board-trigger--fixed { z-index: 152; background: rgba(255, 255, 255, 0.62); }
+.board-fab.open .board-trigger--fixed .cm-board-trigger-icon { transform: rotate(45deg); }
 
 /* ── Зум розгортання картки оголошення ── */
 /* Backdrop — плавне затемнення фону при відкритому стікері */

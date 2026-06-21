@@ -5,6 +5,16 @@
 
 ---
 
+## ✅ СЕСІЯ ВОВИ 21.06 — Новий стиль FAB-кнопки Дошки (glassmorphism)
+
+> «Роби» Вови (обрав варіант «Скляне коло» через AskUserQuestion). CACHE_NAME → `cstl-20260621-0748`. `node build.js` exit 0.
+> - **Кнопка** `.board-trigger--fixed`: фон `var(--red)` → **скло** `rgba(255,255,255,0.45)` + `backdrop-filter: blur(14px) saturate(1.5)` + бордовий контур `1.5px rgba(114,47,55,0.55)` + тінь з inset-підсвіткою.
+> - **Іконка:** emoji ✏️ → inline **SVG-плюс** (`stroke=currentColor`, колір `var(--red)`, 26px) — рівний на всіх ОС.
+> - **Відкрито:** скло щільніше (`rgba(255,255,255,0.62)`), плюс `transform: rotate(45deg)` → стає ✕ (прибрано старий `::after "✕"` і `display:none`).
+> - Файли: `src/tabs/board.js`, `style/community.css`, `sw.js`, `bundle.js`. ⏸️ Чекає перевірки Вови наживо.
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 20.06 — «Збережені» з верхнього меню → у FAB-підменю + роздільник табів
 
 > «Роби» Вови. CACHE_NAME → `cstl-20260620-1802`. `node build.js` exit 0, bundle оновлено.
