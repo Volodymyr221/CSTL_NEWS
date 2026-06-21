@@ -1556,7 +1556,7 @@
   -webkit-backdrop-filter: blur(14px) saturate(1.5);
   backdrop-filter: blur(14px) saturate(1.5);
   border: 1.5px solid rgba(114, 47, 55, 0.55);
-  color: var(--red);
+  color: var(--ink, #2B2B2B);
   font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
