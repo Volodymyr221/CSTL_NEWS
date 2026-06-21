@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260621-0915';
+const CACHE_NAME = 'cstl-20260621-0936';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -105,7 +105,28 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Статичні файли (style.css, bundle.js, logo.png, тощо) — cache-first
+  // Код застосунку (bundle.js + *.css) — network-first.
+  // Чому: на iOS PWA новий Service Worker активується із затримкою (часто аж після
+  // повного перезапуску), тому cache-first віддавав старий код навіть коли версія
+  // (index.html) вже свіжа. Network-first тягне свіжий код щоразу коли є мережа,
+  // а кеш лишається запасним для офлайну. Прибирає «застряглий старий вигляд».
+  const isAppCode = url.pathname.endsWith('.css') || url.pathname.endsWith('bundle.js');
+  if (isAppCode) {
+    e.respondWith(
+      fetch(e.request)
+        .then(r => {
+          if (r.ok) {
+            const clone = r.clone();
+            caches.open(CACHE_NAME).then(c => c.put(e.request, clone));
+          }
+          return r;
+        })
+        .catch(() => caches.match(e.request))
+    );
+    return;
+  }
+
+  // Статичні файли (logo.png, manifest.json, images, тощо) — cache-first
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;
