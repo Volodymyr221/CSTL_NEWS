@@ -1625,7 +1625,7 @@
 /* На стікері з фото меншу к-сть рядків тексту (місця менше) */
 .cm-board-note--has-photo .cm-board-text {
   display: -webkit-box;
-  -webkit-line-clamp: 2;
+  -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
@@ -1961,14 +1961,30 @@
 /* ── Контакт-телефон з кнопкою виклика праворуч ── */
 .cm-board-contact--phone {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   gap: 8px;
   justify-content: space-between;
+  /* штрихпунктирна лінія тепер тут (опущена до номера); час перенесено під кнопки */
+  margin-top: 0;
+  border-top: 1px dashed rgba(0,0,0,0.12);
+  padding-top: 6px;
 }
 .cm-board-contact-btns {
   display: flex;
   gap: 6px;
   flex-shrink: 0;
+}
+/* Правий стовпчик: кнопки 💬/📞, під ними — час публікації */
+.cm-board-contact-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 3px;
+  flex-shrink: 0;
+}
+.cm-board-contact-right .cm-board-time {
+  color: rgba(43,43,43,0.5);
+  font-weight: 500;
 }
 /* Менші кнопки на картці щоб номер завжди влазив */
 .cm-board-contact--phone .cm-board-msg-btn,
