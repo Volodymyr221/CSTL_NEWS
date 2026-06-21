@@ -1992,13 +1992,13 @@
 /* Менші кнопки на картці щоб номер завжди влазив */
 .cm-board-contact--phone .cm-board-msg-btn,
 .cm-board-contact--phone .cm-board-call {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
 }
 .cm-board-contact--phone .cm-board-msg-btn svg,
 .cm-board-contact--phone .cm-board-call svg {
-  width: 13px;
-  height: 13px;
+  width: 15px;
+  height: 15px;
 }
 /* Ім'я під номером телефону на картці */
 /* Рядок під контактом: ім'я (зліва) + час публікації (справа) на одному рівні */
