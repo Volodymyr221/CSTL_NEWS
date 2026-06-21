@@ -149,7 +149,7 @@ main отримує мердж-коміт
 |------|-----------------|
 | `index.html` | Весь UI. `<script src="bundle.js">`. Містить плейсхолдер лічильника версії `<div class="deploy-stamp">v1 · 01.01 00:00</div>` — CI його оновлює. |
 | `style.css` | Всі стилі. Включно з `.deploy-stamp` (маленький сірий лічильник знизу). |
-| `sw.js` | Service Worker. **`CACHE_NAME` міняти при кожному деплої коду.** `index.html` → network-first, інше → cache-first. |
+| `sw.js` | Service Worker. **`CACHE_NAME` міняти при кожному деплої коду.** Кешування (з 21.06.2026): `index.html` + `bundle.js` + усі `*.css` → **network-first** з `{ cache: 'reload' }` (обхід HTTP-кешу браузера — інакше GitHub Pages `max-age` тримав старий код); картинки/`manifest.json` → cache-first. Кеш = fallback офлайн. |
 | `bundle.js` | Згенерований esbuild. **У git як робоча база** (варіант Б, див. Деплой). |
 | `build.js` | Конфіг esbuild (8 рядків) |
 | `package.json` | Одна залежність: `esbuild` |
