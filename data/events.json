@@ -40,45 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 270,
-    "title": "Трамп зробив заяву про мита в Ормузькій протоці",
-    "description": "Трамп висловив своє бачення можливості мит в Ормузькій протоці.",
-    "date": "2026-06-20",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/b/854725/8bff81f75b718e631910e1045e800edb.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/21/8040359/",
-    "auto": true
-  },
-  {
-    "id": 269,
-    "title": "Делегація Ірану прибула до Швейцарії для проведення переговорів зі США – ЗМІ",
-    "description": "Іран відправив делегацію у Цюрих для переговорів із США.",
-    "date": "2026-06-20",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/3/854700/035033d527be6e63e31381cf37c62aef.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/21/8040355/",
-    "auto": true
-  },
-  {
-    "id": 77,
-    "title": "Шабуніна визнали винним у справі про побиття проросійського блогера: захист оскаржуватиме",
-    "description": "Дніпровський районний суд Києва ухвалив вирок у справі голови Центру протидії корупції Віталія Шабуніна через конфлікт із проросійським блогером Всеволодом Філімоненком.",
-    "date": "2026-06-20",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/9/0/827834/90e4e844017d5d940009901e325d96a2.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/05/13/8034537/",
-    "auto": true
-  },
-  {
     "id": 181,
     "title": "Держдеп США оприлюднив спільну заяву про перемир’я між Ізраїлем і Ліваном",
     "description": "Після багатогодинних перемовин Держдеп США оприлюднив спільну заяву про перемир’я між Ізраїлем і Ліваном.",
@@ -102,6 +63,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/5/4/841160/54e9ad0d4b62765d7f367d5af8952fad.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/03/8037518/",
+    "auto": true
+  },
+  {
+    "id": 271,
+    "title": "Сибіга розповів, коли Зеленський ухвалить рішення щодо участі в конференції у Гданську",
+    "description": "25-26 червня у Гданську пройде конференція з відновлення України. Зеленський прийме рішення про участь у понеділок.",
+    "date": "2026-06-26",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/0/854985/2029fb8bb66fe32fbb661be3747fe163.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/21/8040425/",
     "auto": true
   },
   {
