@@ -1960,14 +1960,27 @@
 
 /* ── Контакт-телефон з кнопкою виклика праворуч ── */
 .cm-board-contact--phone {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 8px;
   justify-content: space-between;
-  /* штрихпунктирна лінія тут; час публікації — у рядку з ім'ям нижче */
+  /* роздільна лінія — суцільна, затухає по краях (::before нижче); час у рядку з ім'ям */
   margin-top: 6px;
-  border-top: 1px dashed rgba(0,0,0,0.12);
   padding-top: 6px;
+}
+/* Суцільна роздільна лінія під описом, затухає по краях (колір як у штрихпунктира) */
+.cm-board-contact--phone::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0,0,0,0.12) 50%,
+    transparent 100%);
 }
 .cm-board-contact-btns {
   display: flex;
