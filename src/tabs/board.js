@@ -1014,6 +1014,10 @@ function renderAll(el) {
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">Подати оголошення</span>
+          <span class="board-fab-ic">✏️</span>
+        </button>
         <button class="board-fab-item" data-fab="msgs" type="button">
           <span class="board-fab-label">Повідомлення<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">💬</span>
@@ -1025,10 +1029,6 @@ function renderAll(el) {
         <button class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">🔖</span>
-        </button>
-        <button class="board-fab-item" data-fab="post" type="button">
-          <span class="board-fab-label">Подати оголошення</span>
-          <span class="board-fab-ic">✏️</span>
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
