@@ -11,6 +11,7 @@
 > - **Кнопка** `.board-trigger--fixed`: фон `var(--red)` → **скло** `rgba(255,255,255,0.45)` + `backdrop-filter: blur(14px) saturate(1.5)` + бордовий контур `1.5px rgba(114,47,55,0.55)` + тінь з inset-підсвіткою.
 > - **Іконка:** emoji ✏️ → inline **SVG-плюс** (`stroke=currentColor`, колір `var(--red)`, 26px) — рівний на всіх ОС.
 > - **Відкрито:** скло щільніше (`rgba(255,255,255,0.62)`), плюс `transform: rotate(45deg)` → стає ✕ (прибрано старий `::after "✕"` і `display:none`).
+> - **Зменшено розмір (запит Вови):** коло `56px→50px`, SVG-плюс `26px→24px`. CACHE_NAME → `cstl-20260621-0828`.
 > - Файли: `src/tabs/board.js`, `style/community.css`, `sw.js`, `bundle.js`. ⏸️ Чекає перевірки Вови наживо.
 
 ---

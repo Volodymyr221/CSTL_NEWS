@@ -1456,8 +1456,8 @@
   right: 18px;
   bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
   left: auto;
-  width: 56px;
-  height: 56px;
+  width: 50px;
+  height: 50px;
   border-radius: 50%;
   margin: 0;
   padding: 0;
@@ -1479,7 +1479,7 @@
   color: var(--red);
   transition: transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.board-trigger--fixed .cm-board-trigger-icon svg { width: 26px; height: 26px; }
+.board-trigger--fixed .cm-board-trigger-icon svg { width: 24px; height: 24px; }
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */
