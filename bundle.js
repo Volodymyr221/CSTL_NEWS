@@ -2292,15 +2292,15 @@ ${post.text}
       ${isPhone2 ? `
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-          <div class="cm-board-contact-right">
-            <div class="cm-board-contact-btns">
-              <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
-            </div>
-            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          <div class="cm-board-contact-btns">
+            <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
           </div>
         </div>
-        <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+        <div class="cm-board-author-row">
+          <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-time">${formatTime(postTime(p))}</span>
+        </div>
       ` : contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}
       ${boardActionsHtml(p)}
     </article>
