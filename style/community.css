@@ -1964,8 +1964,9 @@
   align-items: flex-start;
   gap: 8px;
   justify-content: space-between;
-  /* штрихпунктирна лінія тепер тут (опущена до номера); час перенесено під кнопки */
-  margin-top: 0;
+  /* штрихпунктирна лінія тепер тут (час перенесено під кнопки).
+     margin-top опускає лінію + номер + іконки нижче (компенсує прибраний рядок часу) */
+  margin-top: 16px;
   border-top: 1px dashed rgba(0,0,0,0.12);
   padding-top: 6px;
 }
