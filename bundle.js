@@ -2593,6 +2593,10 @@ ${post.text}
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
       <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">\u270F\uFE0F</span>
+        </button>
         <button class="board-fab-item" data-fab="msgs" type="button">
           <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">\u{1F4AC}</span>
@@ -2604,10 +2608,6 @@ ${post.text}
         <button class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">\u{1F516}</span>
-        </button>
-        <button class="board-fab-item" data-fab="post" type="button">
-          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">\u270F\uFE0F</span>
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
