@@ -2007,7 +2007,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: 8px;
-  margin-top: 4px;
+  margin-top: 8px;
 }
 .cm-board-author--card {
   font-size: 11px;
@@ -2446,7 +2446,7 @@
 /* На board-стікері трохи більший контраст бо фон може бути темний */
 .bd-card--board .bd-actions {
   position: relative;
-  margin-top: 8px;
+  margin-top: 3px;
   padding-top: 8px;
   border-top: none;   /* прибираємо штрихпунктир (.bd-actions--board-compact), лишається ::before суцільна */
 }
