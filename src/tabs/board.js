@@ -654,16 +654,20 @@ function renderBoardCard(p) {
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      ${!isPhone ? `
       <div class="cm-board-footer">
-        ${isPhone ? '' : `<span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>`}
+        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
         <span class="cm-board-time">${formatTime(postTime(p))}</span>
-      </div>
+      </div>` : ''}
       ${isPhone ? `
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-          <div class="cm-board-contact-btns">
-            <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
+          <div class="cm-board-contact-right">
+            <div class="cm-board-contact-btns">
+              <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
+            </div>
+            <span class="cm-board-time">${formatTime(postTime(p))}</span>
           </div>
         </div>
         <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
