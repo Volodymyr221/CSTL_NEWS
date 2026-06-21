@@ -30,6 +30,7 @@
 > - **Фікс: дашед лишався під суцільною** — штрихпунктир малювало ще `.bd-actions--board-compact` (рядок 2481), не перекрите. Додано `border-top: none` у `.bd-card--board .bd-actions`. CACHE_NAME → `cstl-20260621-1010`.
 > - **Рядок ім'я+дата ближче до нижньої лінії (запит Вови):** `.cm-board-author-row` margin-top `4→8px`; `.bd-card--board .bd-actions` margin-top `8→3px`. CACHE_NAME → `cstl-20260621-1049`.
 > - **Більші кнопки 💬/📞 на картці (запит Вови):** `28→32px`, svg `13→15px`. Номер центрується по середині іконок (`align-items:center` вже стояв). CACHE_NAME → `cstl-20260621-1057`.
+> - **Ім'я автора + дата ВЕЛИКИМИ (запит Вови):** `text-transform: uppercase` на `.cm-board-author/--card/.cm-board-contact-name/.cm-board-time` (картка + модалка). Місяць «20 ЧЕРВНЯ», ім'я завжди caps. CACHE_NAME → `cstl-20260621-1102`.
 
 ---
 
