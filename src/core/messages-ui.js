@@ -23,7 +23,7 @@ import {
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
 } from './supabase.js';
-import { escapeHtml, showToast, formatTime, postTime, containsProfanity } from './utils.js';
+import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
 
 // VAPID public key — той самий що для автобусних push (див. buses.js / Edge Function)
 const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
@@ -91,6 +91,13 @@ function threadPostTitle(thread) {
 
 // ── 1. Екран розмови 1-на-1 ──────────────────────────────────────────────
 let _chatUnsub = null;
+
+// Час повідомлення для бульбашки: год:хв (напр. 14:30)
+function clockTime(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
 
 // Підпис роздільника дати у стрічці: Сьогодні / Вчора / D місяця / D місяця РРРР
 function dayLabel(ts) {
@@ -203,7 +210,7 @@ export async function openChat(thread, post) {
       : '';
     const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : '';
     const edited = m.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
-    return `<div class="pm-bubble" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${formatTime(postTime(m))}</span></div>`;
+    return `<div class="pm-bubble" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
   };
   const renderGroup = (g) =>
     `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;
