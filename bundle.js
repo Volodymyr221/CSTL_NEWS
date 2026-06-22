@@ -1371,6 +1371,12 @@
   }
 
   // src/core/messages-ui.js
+  var ACT_ICONS = {
+    reply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
+    copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+    edit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+    delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>'
+  };
   var _openScreens = [];
   function buildScreen(innerHtml, extraClass = "") {
     const backdrop = document.createElement("div");
@@ -1711,10 +1717,10 @@
       sheet.className = "pm-actions-back";
       sheet.innerHTML = `
       <div class="pm-actions">
-        <button type="button" data-act="reply">\u21A9 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>
-        ${m.text ? '<button type="button" data-act="copy">\u29C9 \u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438</button>' : ""}
-        ${mine && m.text ? '<button type="button" data-act="edit">\u270E \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>' : ""}
-        ${mine ? '<button type="button" data-act="delete" class="pm-actions-danger">\u{1F5D1} \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>' : ""}
+        <button type="button" data-act="reply"><span class="pm-act-ic">${ACT_ICONS.reply}</span>\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>
+        ${m.text ? `<button type="button" data-act="copy"><span class="pm-act-ic">${ACT_ICONS.copy}</span>\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438</button>` : ""}
+        ${mine && m.text ? `<button type="button" data-act="edit"><span class="pm-act-ic">${ACT_ICONS.edit}</span>\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>` : ""}
+        ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
         <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
       </div>`;
       const close = () => sheet.remove();

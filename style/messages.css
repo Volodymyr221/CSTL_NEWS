@@ -420,12 +420,16 @@
   background: var(--card-cream, #FAF8EF);
 }
 .pm-actions button {
+  display: flex; align-items: center; gap: 13px;
   border: 0; background: #fff; color: var(--ink, #2A2520);
   font-size: 16px; padding: 15px 18px; text-align: left; cursor: pointer;
 }
 .pm-actions button:active { background: var(--paper-deep, #EAE4D2); }
+.pm-act-ic { display: inline-flex; flex-shrink: 0; color: var(--ink-soft, #5F5448); }
+.pm-act-ic svg { width: 21px; height: 21px; display: block; }
 .pm-actions-danger { color: #B3261E !important; }
-.pm-actions-cancel { margin-top: 8px; border-radius: 16px; font-weight: 700; text-align: center !important; }
+.pm-actions-danger .pm-act-ic { color: #B3261E; }
+.pm-actions-cancel { margin-top: 8px; border-radius: 16px; font-weight: 700; justify-content: center; }
 
 /* Лайтбокс фото (поверх чату) */
 .pm-lightbox {

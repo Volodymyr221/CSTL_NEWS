@@ -28,6 +28,14 @@ import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
 // VAPID public key — той самий що для автобусних push (див. buses.js / Edge Function)
 const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
 
+// Лінійні іконки для меню дій над повідомленням (монохром, у стилі чату)
+const ACT_ICONS = {
+  reply:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
+  copy:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
+  edit:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>',
+  delete: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>',
+};
+
 // ── Спільне: повноекранний sheet ─────────────────────────────────────────
 let _openScreens = [];   // стек відкритих екранів (для коректного закриття)
 
@@ -334,10 +342,10 @@ export async function openChat(thread, post) {
     sheet.className = 'pm-actions-back';
     sheet.innerHTML = `
       <div class="pm-actions">
-        <button type="button" data-act="reply">↩ Відповісти</button>
-        ${m.text ? '<button type="button" data-act="copy">⧉ Копіювати</button>' : ''}
-        ${mine && m.text ? '<button type="button" data-act="edit">✎ Редагувати</button>' : ''}
-        ${mine ? '<button type="button" data-act="delete" class="pm-actions-danger">🗑 Видалити</button>' : ''}
+        <button type="button" data-act="reply"><span class="pm-act-ic">${ACT_ICONS.reply}</span>Відповісти</button>
+        ${m.text ? `<button type="button" data-act="copy"><span class="pm-act-ic">${ACT_ICONS.copy}</span>Копіювати</button>` : ''}
+        ${mine && m.text ? `<button type="button" data-act="edit"><span class="pm-act-ic">${ACT_ICONS.edit}</span>Редагувати</button>` : ''}
+        ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>Видалити</button>` : ''}
         <button type="button" data-act="cancel" class="pm-actions-cancel">Скасувати</button>
       </div>`;
     const close = () => sheet.remove();
