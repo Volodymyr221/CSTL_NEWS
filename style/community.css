@@ -2656,6 +2656,9 @@
 .bd-chat-modal--kb {
   top: calc(env(safe-area-inset-top, 0px) + 6px);
 }
+/* Прибрати нижній safe-area відступ поля при відкритій клавіатурі (інакше кремова
+   смуга між полем і клавіатурою). Та сама логіка, що в приватному чаті (.pm-kb-open). */
+.bd-chat-modal--kb .bd-chat-modal-form { padding-bottom: 10px; }
 
 .bd-chat-modal-handle {
   width: 38px; height: 4px; border-radius: 2px;
