@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-23T00:32:45.695229+03:00",
+  "fetched_at": "2026-06-23T02:23:16.365563+03:00",
   "date": "23.06.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -102,8 +102,8 @@
       "carrier": "ТДВ \"Ковельське АТП \"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
