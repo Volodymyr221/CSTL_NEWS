@@ -71,6 +71,8 @@
   font-size: 15px; line-height: 1.35;
   word-wrap: break-word; overflow-wrap: anywhere;
   max-width: 100%;
+  /* Довге натискання → наше меню; рідне виділення тексту/лупу iOS вимикаємо */
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none;
 }
 .pm-group--other .pm-bubble {
   background: #fff; color: var(--ink, #2A2520);
