@@ -1560,6 +1560,11 @@ export function initBoard() {
   attachBoardDelegation();
   attachRealtime();
   renderBoard();
+  // Відкрити модалку оголошення з чату («Переглянути оголошення →» в розмові)
+  window.addEventListener('cstl-open-ad', (e) => {
+    const p = e.detail && e.detail.post;
+    if (p) renderAdModal(p);
+  });
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
     if (!isLoggedIn()) {

@@ -21,6 +21,7 @@ import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
   fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
+  editMessage, deleteMessage, uploadPhotoToStorage,
 } from './supabase.js';
 import { escapeHtml, showToast, formatTime, postTime, containsProfanity } from './utils.js';
 
@@ -85,25 +86,61 @@ function threadPostTitle(thread) {
 // ── 1. Екран розмови 1-на-1 ──────────────────────────────────────────────
 let _chatUnsub = null;
 
+// Підпис роздільника дати у стрічці: Сьогодні / Вчора / D місяця / D місяця РРРР
+function dayLabel(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayMs = 86400000;
+  if (d.getTime() >= startOfToday) return 'Сьогодні';
+  if (d.getTime() >= startOfToday - dayMs) return 'Вчора';
+  const base = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+  return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
+}
+
 export async function openChat(thread, post) {
   if (!isLoggedIn()) { requireAuth('відкрити чат', () => {}); return; }
   const me = currentUserId();
-  const title = post ? (post.title || (post.text ? post.text.slice(0, 60) : 'Оголошення'))
-                     : threadPostTitle(thread);
+  const p = post || thread.post || {};
+  const title = p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
   const partner = otherName(thread);
+  const cat = p.category || '';
+  const thumb = (p.photos && p.photos[0]) || '';
 
   const api = buildScreen(`
-    <header class="pm-head">
+    <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
+      ${avatar(partner)}
       <div class="pm-head-titles">
         <div class="pm-head-name">${escapeHtml(partner)}</div>
         <div class="pm-head-sub">${escapeHtml(title)}</div>
       </div>
     </header>
+    <button class="pm-ctx" type="button" data-pm-ctx aria-label="Переглянути оголошення">
+      ${thumb
+        ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>`
+        : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
+      <span class="pm-ctx-body">
+        <span class="pm-ctx-title">${escapeHtml(title)}</span>
+        ${cat ? `<span class="pm-ctx-cat">${escapeHtml(cat)}</span>` : ''}
+        <span class="pm-ctx-link">Переглянути оголошення →</span>
+      </span>
+    </button>
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">Завантаження…</div>
     </div>
+    <div class="pm-composebar" id="pm-composebar" hidden>
+      <span class="pm-composebar-ic" id="pm-composebar-ic">↩</span>
+      <div class="pm-composebar-body">
+        <span class="pm-composebar-title" id="pm-composebar-title"></span>
+        <span class="pm-composebar-text" id="pm-composebar-text"></span>
+      </div>
+      <button class="pm-composebar-x" type="button" id="pm-composebar-x" aria-label="Скасувати">✕</button>
+    </div>
     <form class="pm-form" id="pm-form">
+      <button class="pm-attach" type="button" id="pm-attach" aria-label="Додати фото">🖼</button>
+      <input class="pm-file" id="pm-file" type="file" accept="image/*" hidden>
       <input class="pm-input" id="pm-input" type="text" placeholder="Написати повідомлення…"
              aria-label="Повідомлення" autocomplete="off">
       <button class="pm-send" type="submit" aria-label="Надіслати">↑</button>
@@ -113,64 +150,126 @@ export async function openChat(thread, post) {
   const streamEl = api.screen.querySelector('#pm-stream');
   const form     = api.screen.querySelector('#pm-form');
   const input    = api.screen.querySelector('#pm-input');
+  const fileEl   = api.screen.querySelector('#pm-file');
+  const barEl    = api.screen.querySelector('#pm-composebar');
 
   let messages = [];
+  let msgById  = new Map();
+  let replyTo  = null;   // повідомлення на яке відповідаємо
+  let editing  = null;   // повідомлення яке редагуємо
+
+  // Бар «Відповідь / Редагування» над полем вводу
+  const clearCompose = () => {
+    replyTo = null; editing = null;
+    barEl.hidden = true;
+    input.placeholder = 'Написати повідомлення…';
+  };
+  const showCompose = (mode, m) => {
+    const snippet = (m.deleted_at ? 'Видалене' : (m.text || '📷 Фото')).slice(0, 90);
+    api.screen.querySelector('#pm-composebar-ic').textContent = mode === 'edit' ? '✎' : '↩';
+    api.screen.querySelector('#pm-composebar-title').textContent = mode === 'edit' ? 'Редагування' : 'Відповідь';
+    api.screen.querySelector('#pm-composebar-text').textContent = snippet;
+    barEl.hidden = false;
+  };
+  const startReply = (m) => { editing = null; replyTo = m; showCompose('reply', m); input.focus(); };
+  const startEdit  = (m) => { replyTo = null; editing = m; showCompose('edit', m); input.value = m.text || ''; input.focus(); };
+
+  // Перегляд фото на повний екран (локальний лайтбокс — поверх чату)
+  const openPhoto = (url) => {
+    const ov = document.createElement('div');
+    ov.className = 'pm-lightbox';
+    ov.innerHTML = `<img src="${escapeHtml(url)}" alt="фото">`;
+    ov.addEventListener('click', () => ov.remove());
+    document.body.appendChild(ov);
+  };
+
+  // Рендер однієї бульбашки (цитата відповіді + фото + текст + час; видалене/редаговане)
+  const renderBubble = (m) => {
+    if (m.deleted_at) {
+      return `<div class="pm-bubble pm-bubble--deleted" data-msg="${m.id}"><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
+    }
+    const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
+    const replyHtml = reply
+      ? `<span class="pm-quote">${escapeHtml((reply.deleted_at ? 'Видалене повідомлення' : (reply.text || '📷 Фото')).slice(0, 90))}</span>`
+      : '';
+    const photoHtml = m.photo_url
+      ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="фото" data-photo="${escapeHtml(m.photo_url)}">`
+      : '';
+    const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : '';
+    const edited = m.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
+    return `<div class="pm-bubble" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${formatTime(postTime(m))}</span></div>`;
+  };
+  const renderGroup = (g) =>
+    `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;
+
   const renderStream = () => {
     if (!messages.length) {
-      streamEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">💬</span>Почніть розмову — напишіть перше повідомлення 👋</div>`;
+      streamEl.innerHTML = `
+        <div class="pm-empty pm-empty--chat">
+          <span class="pm-empty-ic">💬</span>
+          <div class="pm-empty-sub">Поставте питання продавцю або уточніть деталі оголошення.</div>
+          <div class="pm-quick">
+            <button class="pm-quick-chip" type="button" data-quick="Яка ціна?">Яка ціна?</button>
+            <button class="pm-quick-chip" type="button" data-quick="Чи актуально?">Чи актуально?</button>
+            <button class="pm-quick-chip" type="button" data-quick="Де знаходиться?">Де знаходиться?</button>
+            <button class="pm-quick-chip" type="button" data-quick="Можна фото?">Можна фото?</button>
+          </div>
+        </div>`;
       return;
     }
-    // Групуємо підряд від одного відправника
-    const groups = [];
+    msgById = new Map(messages.map(m => [m.id, m]));
+    let html = '';
+    let lastDay = null;
+    let curGroup = null;
+    const flush = () => { if (curGroup) { html += renderGroup(curGroup); curGroup = null; } };
     messages.forEach(m => {
+      const ts = postTime(m);
+      const day = new Date(ts).toDateString();
+      if (day !== lastDay) { flush(); html += `<div class="pm-daysep"><span>${dayLabel(ts)}</span></div>`; lastDay = day; }
       const mine = m.sender_uid === me;
-      const last = groups[groups.length - 1];
-      if (last && last.mine === mine) last.msgs.push(m);
-      else groups.push({ mine, msgs: [m] });
+      if (curGroup && curGroup.mine === mine) curGroup.msgs.push(m);
+      else { flush(); curGroup = { mine, msgs: [m] }; }
     });
-    streamEl.innerHTML = groups.map(g => {
-      const bubbles = g.msgs.map(m => `
-        <div class="pm-bubble">
-          <span class="pm-bubble-text">${escapeHtml(m.text)}</span>
-          <span class="pm-bubble-time">${formatTime(postTime(m))}</span>
-        </div>`).join('');
-      return `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${bubbles}</div>`;
-    }).join('');
+    flush();
+    // Read receipt під останнім МОЇМ повідомленням
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {
+      html += `<div class="pm-receipt">${lastMsg.read_at ? 'Прочитано' : 'Надіслано'}</div>`;
+    }
+    streamEl.innerHTML = html;
   };
   const scrollBottom = () => { streamEl.scrollTop = streamEl.scrollHeight; };
 
-  // Початкове завантаження
-  messages = await fetchMessages(thread.id);
-  renderStream();
-  setTimeout(scrollBottom, 50);
-  // Позначити вхідні прочитаними + оновити бейдж
-  markThreadRead(thread.id, me).then(refreshUnreadBadge);
-
-  // Realtime — нові повідомлення треда
-  if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
-  _chatUnsub = subscribeThreadMessages(thread.id, (msg) => {
-    if (messages.some(m => m.id === msg.id)) return;   // вже є (мій optimistic)
-    messages.push(msg);
-    renderStream();
-    scrollBottom();
-    if (msg.sender_uid !== me) markThreadRead(thread.id, me).then(refreshUnreadBadge);
-  });
-  api._cleanup.push(() => { if (_chatUnsub) { _chatUnsub(); _chatUnsub = null; } });
-  api._cleanup.push(refreshUnreadBadge);
-
-  // Надсилання
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+  // Кнопка ↑ / Enter: редагування (якщо активне) або нове повідомлення
+  const submitText = async () => {
     const text = input.value.trim();
+    if (editing) {
+      if (!text) return;
+      if (containsProfanity(text)) { showToast('🚫 Повідомлення містить заборонені слова', 3500, 'error'); return; }
+      const target = editing;
+      input.value = ''; clearCompose();
+      const idx = messages.findIndex(m => m.id === target.id);
+      if (idx >= 0) { messages[idx] = { ...messages[idx], text, edited_at: new Date().toISOString() }; renderStream(); }
+      const res = await editMessage(target.id, text);
+      if (!res.ok) { showToast('❌ Не вдалося змінити: ' + (res.error || ''), 4000, 'error'); return; }
+      if (idx >= 0 && res.message) { messages[idx] = res.message; renderStream(); }
+      return;
+    }
+    sendText(text);
+  };
+
+  // Надсилання тексту (з поля або з кнопки-питання)
+  const sendText = async (raw) => {
+    const text = (raw || '').trim();
     if (!text) return;
     if (containsProfanity(text)) { showToast('🚫 Повідомлення містить заборонені слова', 3500, 'error'); return; }
-    input.value = '';
-    // Optimistic
-    const temp = { id: 'tmp-' + Date.now(), thread_id: thread.id, sender_uid: me, text, created_at: new Date().toISOString() };
+    const replyId = replyTo ? replyTo.id : null;
+    input.value = ''; clearCompose();
+    const temp = { id: 'tmp-' + Date.now(), thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     renderStream();
     scrollBottom();
-    const res = await sendMessage({ threadId: thread.id, senderUid: me, text });
+    const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId });
     if (!res.ok) {
       messages = messages.filter(m => m.id !== temp.id);
       renderStream();
@@ -178,10 +277,126 @@ export async function openChat(thread, post) {
       input.value = text;
       return;
     }
-    // Заміняємо temp на справжнє (з реальним id) — щоб realtime-дубль не додав другу копію
+    // Заміняємо temp на справжнє (з реальним id) — щоб realtime-дубль не додав копію
     const idx = messages.findIndex(m => m.id === temp.id);
     if (idx >= 0 && res.message) messages[idx] = res.message;
     renderStream();
+  };
+
+  // Надсилання фото (оптимістичний прев'ю → upload у Storage → insert)
+  const sendPhoto = async (file) => {
+    if (!file) return;
+    const replyId = replyTo ? replyTo.id : null;
+    clearCompose();
+    const localUrl = URL.createObjectURL(file);
+    const temp = { id: 'tmp-' + Date.now(), thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
+    messages.push(temp);
+    renderStream();
+    scrollBottom();
+    const up = await uploadPhotoToStorage(file);
+    if (!up.url) {
+      messages = messages.filter(m => m.id !== temp.id);
+      renderStream();
+      showToast('❌ Не вдалося завантажити фото: ' + (up.error || ''), 4000, 'error');
+      return;
+    }
+    const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId });
+    URL.revokeObjectURL(localUrl);
+    if (!res.ok) {
+      messages = messages.filter(m => m.id !== temp.id);
+      renderStream();
+      showToast('❌ Не вдалося надіслати фото: ' + (res.error || ''), 4000, 'error');
+      return;
+    }
+    const idx = messages.findIndex(m => m.id === temp.id);
+    if (idx >= 0 && res.message) messages[idx] = res.message;
+    renderStream();
+  };
+
+  // Меню дій над повідомленням (довге натискання / правий клік)
+  const openMsgActions = (m) => {
+    if (m.deleted_at) return;
+    const mine = m.sender_uid === me;
+    const sheet = document.createElement('div');
+    sheet.className = 'pm-actions-back';
+    sheet.innerHTML = `
+      <div class="pm-actions">
+        <button type="button" data-act="reply">↩ Відповісти</button>
+        ${m.text ? '<button type="button" data-act="copy">⧉ Копіювати</button>' : ''}
+        ${mine && m.text ? '<button type="button" data-act="edit">✎ Редагувати</button>' : ''}
+        ${mine ? '<button type="button" data-act="delete" class="pm-actions-danger">🗑 Видалити</button>' : ''}
+        <button type="button" data-act="cancel" class="pm-actions-cancel">Скасувати</button>
+      </div>`;
+    const close = () => sheet.remove();
+    sheet.addEventListener('click', async (e) => {
+      const b = e.target.closest('[data-act]');
+      if (!b) { if (e.target === sheet) close(); return; }
+      close();
+      const act = b.dataset.act;
+      if (act === 'reply') startReply(m);
+      else if (act === 'copy') { try { await navigator.clipboard.writeText(m.text || ''); showToast('Скопійовано'); } catch (_) {} }
+      else if (act === 'edit') startEdit(m);
+      else if (act === 'delete') {
+        const idx = messages.findIndex(x => x.id === m.id);
+        if (idx >= 0) { messages[idx] = { ...messages[idx], deleted_at: new Date().toISOString(), text: null, photo_url: null }; renderStream(); }
+        const res = await deleteMessage(m.id);
+        if (!res.ok) showToast('❌ Не вдалося видалити: ' + (res.error || ''), 4000, 'error');
+      }
+    });
+    api.screen.appendChild(sheet);
+  };
+
+  // Початкове завантаження
+  messages = await fetchMessages(thread.id);
+  if (api._closed) return api;
+  renderStream();
+  setTimeout(scrollBottom, 50);
+  // Позначити вхідні прочитаними + оновити бейдж
+  markThreadRead(thread.id, me).then(refreshUnreadBadge);
+
+  // Realtime — нові / редаговані / видалені / прочитані повідомлення треда
+  if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
+  _chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
+    if (!row) return;
+    if (type === 'INSERT') {
+      if (messages.some(m => m.id === row.id)) return;   // вже є (мій optimistic)
+      messages.push(row);
+      renderStream();
+      scrollBottom();
+      if (row.sender_uid !== me) markThreadRead(thread.id, me).then(refreshUnreadBadge);
+    } else if (type === 'UPDATE') {
+      const idx = messages.findIndex(m => m.id === row.id);
+      if (idx >= 0) { messages[idx] = row; renderStream(); }
+    }
+  });
+  api._cleanup.push(() => { if (_chatUnsub) { _chatUnsub(); _chatUnsub = null; } });
+  api._cleanup.push(refreshUnreadBadge);
+
+  // Поле / редагування + кнопки-питання + фото + перегляд фото
+  form.addEventListener('submit', (e) => { e.preventDefault(); submitText(); });
+  api.screen.querySelector('#pm-composebar-x')?.addEventListener('click', () => {
+    if (editing) input.value = '';
+    clearCompose();
+  });
+  api.screen.querySelector('#pm-attach')?.addEventListener('click', () => fileEl.click());
+  fileEl.addEventListener('change', () => { if (fileEl.files && fileEl.files[0]) sendPhoto(fileEl.files[0]); fileEl.value = ''; });
+  streamEl.addEventListener('click', (e) => {
+    const q = e.target.closest('[data-quick]');
+    if (q) { sendText(q.dataset.quick); return; }
+    const ph = e.target.closest('[data-photo]');
+    if (ph) openPhoto(ph.dataset.photo);
+  });
+  // Свайп вправо по бульбашці → відповідь; довге натискання → меню дій
+  setupBubbleGestures(streamEl, (id, kind) => {
+    const m = msgById.get(Number(id)) || msgById.get(id);
+    if (!m) return;
+    if (kind === 'reply') startReply(m);
+    else if (kind === 'menu') openMsgActions(m);
+  });
+  // «Переглянути оголошення» — закрити чат і відкрити модалку Дошки
+  api.screen.querySelector('[data-pm-ctx]')?.addEventListener('click', () => {
+    api.close();
+    setTimeout(() => window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } })), 260);
   });
   // Кнопка надсилання не забирає фокус (iOS клавіатура)
   api.screen.querySelector('.pm-send')?.addEventListener('pointerdown', e => e.preventDefault());
@@ -212,6 +427,47 @@ function setupKeyboardResize(screen) {
   const h = () => { clearTimeout(t); t = setTimeout(apply, 80); };
   vv.addEventListener('resize', h);
   vv.addEventListener('scroll', h);
+}
+
+// Жести над бульбашкою: свайп вправо → 'reply', довге натискання → 'menu'.
+// onAction(messageId, kind). Скрол вертикально / горизонтальний рух скасовують long-press.
+function setupBubbleGestures(container, onAction) {
+  let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false;
+  const clearLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
+  container.addEventListener('touchstart', (e) => {
+    const b = e.target.closest('.pm-bubble');
+    if (!b || b.classList.contains('pm-bubble--deleted')) { target = null; return; }
+    target = b; longFired = false;
+    const t = e.touches[0]; startX = t.clientX; startY = t.clientY;
+    clearLP();
+    lpTimer = setTimeout(() => {
+      longFired = true;
+      if (navigator.vibrate) { try { navigator.vibrate(10); } catch (_) {} }
+      onAction(target.dataset.msg, 'menu');
+    }, 500);
+  }, { passive: true });
+  container.addEventListener('touchmove', (e) => {
+    if (!target) return;
+    const t = e.touches[0];
+    const dx = t.clientX - startX, dy = t.clientY - startY;
+    if (Math.abs(dx) > 8 || Math.abs(dy) > 8) clearLP();
+    if (dx > 0 && Math.abs(dx) > Math.abs(dy)) target.style.transform = `translateX(${Math.min(dx, 60)}px)`;
+  }, { passive: true });
+  container.addEventListener('touchend', (e) => {
+    clearLP();
+    if (!target) return;
+    const b = target; target = null;
+    const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
+    const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : startY) - startY;
+    b.style.transition = 'transform 0.18s ease';
+    b.style.transform = '';
+    setTimeout(() => { b.style.transition = ''; }, 200);
+    if (!longFired && dx > 45 && Math.abs(dx) > Math.abs(dy)) onAction(b.dataset.msg, 'reply');
+  }, { passive: true });
+  container.addEventListener('contextmenu', (e) => {
+    const b = e.target.closest('.pm-bubble');
+    if (b && !b.classList.contains('pm-bubble--deleted')) { e.preventDefault(); onAction(b.dataset.msg, 'menu'); }
+  });
 }
 
 // ── 2. Список «Повідомлення» ──────────────────────────────────────────────
