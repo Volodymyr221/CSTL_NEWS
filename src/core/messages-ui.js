@@ -37,6 +37,9 @@ function buildScreen(innerHtml, extraClass = '') {
   const screen = document.createElement('div');
   screen.className = 'pm-screen ' + extraClass;
   screen.innerHTML = innerHtml;
+  // Сховати екран під цим (інакше при зумі/зміщенні нижній екран визирає згори)
+  const prevTop = _openScreens[_openScreens.length - 1];
+  if (prevTop) { prevTop.screen.style.display = 'none'; prevTop.backdrop.style.display = 'none'; }
   document.body.appendChild(backdrop);
   document.body.appendChild(screen);
   document.body.classList.add('modal-open');
@@ -57,6 +60,9 @@ function closeScreen(api) {
   api.screen.classList.remove('visible');
   api.backdrop.classList.remove('visible');
   _openScreens = _openScreens.filter(s => s !== api);
+  // Повернути видимість екрану під цим (список «Повідомлення»)
+  const newTop = _openScreens[_openScreens.length - 1];
+  if (newTop) { newTop.screen.style.display = ''; newTop.backdrop.style.display = ''; }
   if (!_openScreens.length) document.body.classList.remove('modal-open');
   setTimeout(() => { api.screen.remove(); api.backdrop.remove(); }, 240);
 }
