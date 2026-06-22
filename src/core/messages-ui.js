@@ -215,49 +215,115 @@ function setupKeyboardResize(screen) {
 }
 
 // ── 2. Список «Повідомлення» ──────────────────────────────────────────────
+// Розумний час для списку розмов: сьогодні → HH:MM, вчора → «Вчора»,
+// цей рік → «D місяця», інакше → DD.MM.YY.
+const MONTHS_GEN = ['січня', 'лютого', 'березня', 'квітня', 'травня', 'червня',
+  'липня', 'серпня', 'вересня', 'жовтня', 'листопада', 'грудня'];
+function threadListTime(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayMs = 86400000;
+  if (d.getTime() >= startOfToday) {
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  if (d.getTime() >= startOfToday - dayMs) return 'Вчора';
+  if (d.getFullYear() === now.getFullYear()) return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(-2)}`;
+}
+
 export function openThreadsList() {
   requireAuth('переглянути повідомлення', async () => {
     const me = currentUserId();
     const api = buildScreen(`
-      <header class="pm-head pm-head--list">
+      <header class="pm-head pm-head--bar">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <div class="pm-head-titles"><div class="pm-head-name">💬 Повідомлення</div></div>
       </header>
-      <div class="pm-list" id="pm-list"><div class="pm-loading">Завантаження…</div></div>
+      <div class="pm-list pm-list--threads" id="pm-list">
+        <h1 class="pm-bigtitle">Повідомлення</h1>
+        <div class="pm-search">
+          <span class="pm-search-ic" aria-hidden="true">🔍</span>
+          <input class="pm-search-input" id="pm-search" type="search"
+                 placeholder="Пошук повідомлень" aria-label="Пошук повідомлень" autocomplete="off">
+        </div>
+        <div class="pm-chips" id="pm-chips" role="tablist">
+          <button class="pm-chip pm-chip--active" type="button" data-filter="all">Усі</button>
+          <button class="pm-chip" type="button" data-filter="unread">Непрочитані</button>
+        </div>
+        <div class="pm-threads" id="pm-threads"><div class="pm-loading">Завантаження…</div></div>
+      </div>
     `, 'pm-screen--list');
 
-    const listEl = api.screen.querySelector('#pm-list');
+    const threadsEl = api.screen.querySelector('#pm-threads');
+    const searchEl  = api.screen.querySelector('#pm-search');
+    const chipsEl   = api.screen.querySelector('#pm-chips');
+
     const [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
     if (api._closed) return;
 
+    // Без жодної розмови — ховаємо пошук+фільтри, лишаємо чистий empty state
     if (!threads.length) {
-      listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">📭</span>Поки немає розмов.<br>Напишіть продавцю на дошці або зачекайте на відповідь.</div>`;
-      return;
+      api.screen.querySelector('.pm-search').style.display = 'none';
+      chipsEl.style.display = 'none';
     }
-    listEl.innerHTML = threads.map(t => {
-      const n = unread.get(t.id) || 0;
-      const name = otherName(t);
-      const preview = t.last_message_text || 'Розмову розпочато';
-      return `
-        <button class="pm-row" type="button" data-thread="${t.id}">
-          ${avatar(name)}
-          <div class="pm-row-body">
-            <div class="pm-row-top">
-              <span class="pm-row-name">${escapeHtml(name)}</span>
-              <span class="pm-row-time">${formatTime(new Date(t.last_message_at).getTime())}</span>
-            </div>
-            <div class="pm-row-post">${escapeHtml(threadPostTitle(t))}</div>
-            <div class="pm-row-last">${escapeHtml(preview)}</div>
-          </div>
-          ${n > 0 ? `<span class="pm-row-badge">${n}</span>` : ''}
-        </button>`;
-    }).join('');
 
-    listEl.querySelectorAll('[data-thread]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const t = threads.find(x => String(x.id) === btn.dataset.thread);
-        if (t) openChat(t, t.post);
+    let filter = 'all';   // all | unread
+    let query  = '';
+
+    const renderThreads = () => {
+      const q = query.trim().toLowerCase();
+      const list = threads.filter(t => {
+        if (filter === 'unread' && !(unread.get(t.id) > 0)) return false;
+        if (!q) return true;
+        const hay = `${otherName(t)} ${threadPostTitle(t)} ${t.last_message_text || ''}`.toLowerCase();
+        return hay.includes(q);
       });
+      if (!list.length) {
+        threadsEl.innerHTML = !threads.length
+          ? `<div class="pm-empty pm-empty--threads">
+               <span class="pm-empty-ic">💬</span>
+               <div class="pm-empty-title">Ваші повідомлення</div>
+               <div class="pm-empty-sub">Тут зʼявляться ваші розмови з покупцями та продавцями з дошки.</div>
+             </div>`
+          : `<div class="pm-empty pm-empty--mini">Нічого не знайдено</div>`;
+        return;
+      }
+      threadsEl.innerHTML = list.map(t => {
+        const n = unread.get(t.id) || 0;
+        const name = otherName(t);
+        const preview = t.last_message_text || 'Розмову розпочато';
+        return `
+          <button class="pm-thread ${n > 0 ? 'pm-thread--unread' : ''}" type="button" data-thread="${t.id}">
+            ${avatar(name)}
+            <div class="pm-thread-body">
+              <div class="pm-thread-top">
+                <span class="pm-thread-name">${escapeHtml(name)}</span>
+                <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
+              </div>
+              <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
+              <div class="pm-thread-last">${escapeHtml(preview)}</div>
+            </div>
+            ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ''}
+          </button>`;
+      }).join('');
+    };
+
+    renderThreads();
+
+    searchEl.addEventListener('input', () => { query = searchEl.value; renderThreads(); });
+    chipsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-filter]');
+      if (!btn) return;
+      filter = btn.dataset.filter;
+      chipsEl.querySelectorAll('.pm-chip').forEach(c => c.classList.toggle('pm-chip--active', c === btn));
+      renderThreads();
+    });
+    threadsEl.addEventListener('click', (e) => {
+      const btn = e.target.closest('[data-thread]');
+      if (!btn) return;
+      const t = threads.find(x => String(x.id) === btn.dataset.thread);
+      if (t) openChat(t, t.post);
     });
   });
 }

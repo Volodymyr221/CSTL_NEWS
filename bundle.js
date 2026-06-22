@@ -1550,48 +1550,126 @@
     vv.addEventListener("resize", h);
     vv.addEventListener("scroll", h);
   }
+  var MONTHS_GEN = [
+    "\u0441\u0456\u0447\u043D\u044F",
+    "\u043B\u044E\u0442\u043E\u0433\u043E",
+    "\u0431\u0435\u0440\u0435\u0437\u043D\u044F",
+    "\u043A\u0432\u0456\u0442\u043D\u044F",
+    "\u0442\u0440\u0430\u0432\u043D\u044F",
+    "\u0447\u0435\u0440\u0432\u043D\u044F",
+    "\u043B\u0438\u043F\u043D\u044F",
+    "\u0441\u0435\u0440\u043F\u043D\u044F",
+    "\u0432\u0435\u0440\u0435\u0441\u043D\u044F",
+    "\u0436\u043E\u0432\u0442\u043D\u044F",
+    "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430",
+    "\u0433\u0440\u0443\u0434\u043D\u044F"
+  ];
+  function threadListTime(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime()))
+      return "";
+    const now = /* @__PURE__ */ new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const dayMs = 864e5;
+    if (d.getTime() >= startOfToday) {
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+    if (d.getTime() >= startOfToday - dayMs)
+      return "\u0412\u0447\u043E\u0440\u0430";
+    if (d.getFullYear() === now.getFullYear())
+      return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
+  }
   function openThreadsList() {
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", async () => {
       const me = currentUserId();
       const api = buildScreen(`
-      <header class="pm-head pm-head--list">
+      <header class="pm-head pm-head--bar">
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <div class="pm-head-titles"><div class="pm-head-name">\u{1F4AC} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div></div>
       </header>
-      <div class="pm-list" id="pm-list"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+      <div class="pm-list pm-list--threads" id="pm-list">
+        <h1 class="pm-bigtitle">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</h1>
+        <div class="pm-search">
+          <span class="pm-search-ic" aria-hidden="true">\u{1F50D}</span>
+          <input class="pm-search-input" id="pm-search" type="search"
+                 placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" aria-label="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" autocomplete="off">
+        </div>
+        <div class="pm-chips" id="pm-chips" role="tablist">
+          <button class="pm-chip pm-chip--active" type="button" data-filter="all">\u0423\u0441\u0456</button>
+          <button class="pm-chip" type="button" data-filter="unread">\u041D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0456</button>
+        </div>
+        <div class="pm-threads" id="pm-threads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+      </div>
     `, "pm-screen--list");
-      const listEl = api.screen.querySelector("#pm-list");
+      const threadsEl = api.screen.querySelector("#pm-threads");
+      const searchEl = api.screen.querySelector("#pm-search");
+      const chipsEl = api.screen.querySelector("#pm-chips");
       const [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
       if (api._closed)
         return;
       if (!threads.length) {
-        listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4ED}</span>\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0440\u043E\u0437\u043C\u043E\u0432.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044E \u043D\u0430 \u0434\u043E\u0448\u0446\u0456 \u0430\u0431\u043E \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043D\u0430 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C.</div>`;
-        return;
+        api.screen.querySelector(".pm-search").style.display = "none";
+        chipsEl.style.display = "none";
       }
-      listEl.innerHTML = threads.map((t) => {
-        const n = unread.get(t.id) || 0;
-        const name = otherName(t);
-        const preview = t.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
-        return `
-        <button class="pm-row" type="button" data-thread="${t.id}">
-          ${avatar(name)}
-          <div class="pm-row-body">
-            <div class="pm-row-top">
-              <span class="pm-row-name">${escapeHtml(name)}</span>
-              <span class="pm-row-time">${formatTime(new Date(t.last_message_at).getTime())}</span>
-            </div>
-            <div class="pm-row-post">${escapeHtml(threadPostTitle(t))}</div>
-            <div class="pm-row-last">${escapeHtml(preview)}</div>
-          </div>
-          ${n > 0 ? `<span class="pm-row-badge">${n}</span>` : ""}
-        </button>`;
-      }).join("");
-      listEl.querySelectorAll("[data-thread]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const t = threads.find((x) => String(x.id) === btn.dataset.thread);
-          if (t)
-            openChat(t, t.post);
+      let filter = "all";
+      let query = "";
+      const renderThreads = () => {
+        const q = query.trim().toLowerCase();
+        const list = threads.filter((t) => {
+          if (filter === "unread" && !(unread.get(t.id) > 0))
+            return false;
+          if (!q)
+            return true;
+          const hay = `${otherName(t)} ${threadPostTitle(t)} ${t.last_message_text || ""}`.toLowerCase();
+          return hay.includes(q);
         });
+        if (!list.length) {
+          threadsEl.innerHTML = !threads.length ? `<div class="pm-empty pm-empty--threads">
+               <span class="pm-empty-ic">\u{1F4AC}</span>
+               <div class="pm-empty-title">\u0412\u0430\u0448\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div>
+               <div class="pm-empty-sub">\u0422\u0443\u0442 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0432\u0430\u0448\u0456 \u0440\u043E\u0437\u043C\u043E\u0432\u0438 \u0437 \u043F\u043E\u043A\u0443\u043F\u0446\u044F\u043C\u0438 \u0442\u0430 \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044F\u043C\u0438 \u0437 \u0434\u043E\u0448\u043A\u0438.</div>
+             </div>` : `<div class="pm-empty pm-empty--mini">\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
+          return;
+        }
+        threadsEl.innerHTML = list.map((t) => {
+          const n = unread.get(t.id) || 0;
+          const name = otherName(t);
+          const preview = t.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
+          return `
+          <button class="pm-thread ${n > 0 ? "pm-thread--unread" : ""}" type="button" data-thread="${t.id}">
+            ${avatar(name)}
+            <div class="pm-thread-body">
+              <div class="pm-thread-top">
+                <span class="pm-thread-name">${escapeHtml(name)}</span>
+                <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
+              </div>
+              <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
+              <div class="pm-thread-last">${escapeHtml(preview)}</div>
+            </div>
+            ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ""}
+          </button>`;
+        }).join("");
+      };
+      renderThreads();
+      searchEl.addEventListener("input", () => {
+        query = searchEl.value;
+        renderThreads();
+      });
+      chipsEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-filter]");
+        if (!btn)
+          return;
+        filter = btn.dataset.filter;
+        chipsEl.querySelectorAll(".pm-chip").forEach((c) => c.classList.toggle("pm-chip--active", c === btn));
+        renderThreads();
+      });
+      threadsEl.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-thread]");
+        if (!btn)
+          return;
+        const t = threads.find((x) => String(x.id) === btn.dataset.thread);
+        if (t)
+          openChat(t, t.post);
       });
     });
   }
