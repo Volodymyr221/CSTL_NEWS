@@ -407,28 +407,31 @@ export async function openChat(thread, post) {
 }
 
 // Підлаштування під екранну клавіатуру (iOS PWA) — sheet стискається над нею.
+// Верх фіксований (top:0 — вікно НЕ стрибає), висоту під клавіатуру підганяємо
+// щокадрово (requestAnimationFrame) → плавне слідування за анімацією, без «снапу».
 function setupKeyboardResize(screen) {
   const vv = window.visualViewport;
   if (!vv) return;
   const fullH = window.innerHeight;
+  let raf = null;
   const apply = () => {
+    raf = null;
     const open = vv.height < fullH - 80;
     if (open) {
-      screen.style.height = (vv.height - 2) + 'px';
-      screen.style.top = vv.offsetTop + 'px';
+      screen.style.top = '0px';
+      screen.style.height = Math.round(vv.height + vv.offsetTop) + 'px';
       screen.classList.add('pm-kb-open');
       const stream = screen.querySelector('#pm-stream');
       if (stream) stream.scrollTop = stream.scrollHeight;
     } else {
-      screen.style.height = '';
       screen.style.top = '';
+      screen.style.height = '';
       screen.classList.remove('pm-kb-open');
     }
   };
-  let t = null;
-  const h = () => { clearTimeout(t); t = setTimeout(apply, 80); };
-  vv.addEventListener('resize', h);
-  vv.addEventListener('scroll', h);
+  const schedule = () => { if (raf) cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); };
+  vv.addEventListener('resize', schedule);
+  vv.addEventListener('scroll', schedule);
 }
 
 // Жести над бульбашкою: свайп вправо → 'reply', довге натискання → 'menu'.
