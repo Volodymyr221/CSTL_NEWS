@@ -580,14 +580,36 @@
     }
     return data || [];
   }
-  async function sendMessage({ threadId, senderUid, text }) {
+  async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null }) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { data, error } = await supa.from("messages").insert({ thread_id: threadId, sender_uid: senderUid, text }).select().single();
+    const row = { thread_id: threadId, sender_uid: senderUid, text: text || null };
+    if (photoUrl)
+      row.photo_url = photoUrl;
+    if (replyToId)
+      row.reply_to_id = replyToId;
+    const { data, error } = await supa.from("messages").insert(row).select().single();
     if (error)
       return { ok: false, error: error.message };
-    await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: text }).eq("id", threadId);
+    const preview = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
+    await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: preview }).eq("id", threadId);
     supa.functions.invoke("send-chat-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-chat-push:", e?.message));
+    return { ok: true, message: data };
+  }
+  async function editMessage(messageId, text) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    const { data, error } = await supa.from("messages").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", messageId).select().single();
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true, message: data };
+  }
+  async function deleteMessage(messageId) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    const { data, error } = await supa.from("messages").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null }).eq("id", messageId).select().single();
+    if (error)
+      return { ok: false, error: error.message };
     return { ok: true, message: data };
   }
   async function markThreadRead(threadId, uid) {
@@ -618,14 +640,14 @@
     }
     return { ok: true };
   }
-  function subscribeThreadMessages(threadId, onInsert) {
+  function subscribeThreadMessages(threadId, onChange) {
     if (!supa)
       return () => {
       };
     const ch = supa.channel(`thread-${threadId}`).on(
       "postgres_changes",
-      { event: "INSERT", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
-      (payload) => onInsert(payload.new)
+      { event: "*", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
+      (payload) => onChange({ type: payload.eventType, row: payload.new || payload.old })
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
@@ -1456,7 +1478,17 @@
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </div>
+    <div class="pm-composebar" id="pm-composebar" hidden>
+      <span class="pm-composebar-ic" id="pm-composebar-ic">\u21A9</span>
+      <div class="pm-composebar-body">
+        <span class="pm-composebar-title" id="pm-composebar-title"></span>
+        <span class="pm-composebar-text" id="pm-composebar-text"></span>
+      </div>
+      <button class="pm-composebar-x" type="button" id="pm-composebar-x" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438">\u2715</button>
+    </div>
     <form class="pm-form" id="pm-form">
+      <button class="pm-attach" type="button" id="pm-attach" aria-label="\u0414\u043E\u0434\u0430\u0442\u0438 \u0444\u043E\u0442\u043E">\u{1F5BC}</button>
+      <input class="pm-file" id="pm-file" type="file" accept="image/*" hidden>
       <input class="pm-input" id="pm-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026"
              aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" autocomplete="off">
       <button class="pm-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
@@ -1465,15 +1497,57 @@
     const streamEl = api.screen.querySelector("#pm-stream");
     const form = api.screen.querySelector("#pm-form");
     const input = api.screen.querySelector("#pm-input");
+    const fileEl = api.screen.querySelector("#pm-file");
+    const barEl = api.screen.querySelector("#pm-composebar");
     let messages = [];
-    const renderGroup = (g) => {
-      const bubbles = g.msgs.map((m) => `
-      <div class="pm-bubble">
-        <span class="pm-bubble-text">${escapeHtml(m.text)}</span>
-        <span class="pm-bubble-time">${formatTime(postTime(m))}</span>
-      </div>`).join("");
-      return `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${bubbles}</div>`;
+    let msgById = /* @__PURE__ */ new Map();
+    let replyTo = null;
+    let editing = null;
+    const clearCompose = () => {
+      replyTo = null;
+      editing = null;
+      barEl.hidden = true;
+      input.placeholder = "\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026";
     };
+    const showCompose = (mode, m) => {
+      const snippet = (m.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435" : m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90);
+      api.screen.querySelector("#pm-composebar-ic").textContent = mode === "edit" ? "\u270E" : "\u21A9";
+      api.screen.querySelector("#pm-composebar-title").textContent = mode === "edit" ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F" : "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C";
+      api.screen.querySelector("#pm-composebar-text").textContent = snippet;
+      barEl.hidden = false;
+    };
+    const startReply = (m) => {
+      editing = null;
+      replyTo = m;
+      showCompose("reply", m);
+      input.focus();
+    };
+    const startEdit = (m) => {
+      replyTo = null;
+      editing = m;
+      showCompose("edit", m);
+      input.value = m.text || "";
+      input.focus();
+    };
+    const openPhoto = (url) => {
+      const ov = document.createElement("div");
+      ov.className = "pm-lightbox";
+      ov.innerHTML = `<img src="${escapeHtml(url)}" alt="\u0444\u043E\u0442\u043E">`;
+      ov.addEventListener("click", () => ov.remove());
+      document.body.appendChild(ov);
+    };
+    const renderBubble = (m) => {
+      if (m.deleted_at) {
+        return `<div class="pm-bubble pm-bubble--deleted" data-msg="${m.id}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
+      }
+      const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
+      const replyHtml = reply ? `<span class="pm-quote">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90))}</span>` : "";
+      const photoHtml = m.photo_url ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="\u0444\u043E\u0442\u043E" data-photo="${escapeHtml(m.photo_url)}">` : "";
+      const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : "";
+      const edited = m.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
+      return `<div class="pm-bubble" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${formatTime(postTime(m))}</span></div>`;
+    };
+    const renderGroup = (g) => `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${g.msgs.map(renderBubble).join("")}</div>`;
     const renderStream = () => {
       if (!messages.length) {
         streamEl.innerHTML = `
@@ -1489,6 +1563,7 @@
         </div>`;
         return;
       }
+      msgById = new Map(messages.map((m) => [m.id, m]));
       let html = "";
       let lastDay = null;
       let curGroup = null;
@@ -1516,13 +1591,43 @@
       });
       flush();
       const lastMsg = messages[messages.length - 1];
-      if (lastMsg && lastMsg.sender_uid === me) {
+      if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {
         html += `<div class="pm-receipt">${lastMsg.read_at ? "\u041F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u043E" : "\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E"}</div>`;
       }
       streamEl.innerHTML = html;
     };
     const scrollBottom = () => {
       streamEl.scrollTop = streamEl.scrollHeight;
+    };
+    const submitText = async () => {
+      const text = input.value.trim();
+      if (editing) {
+        if (!text)
+          return;
+        if (containsProfanity(text)) {
+          showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
+          return;
+        }
+        const target = editing;
+        input.value = "";
+        clearCompose();
+        const idx = messages.findIndex((m) => m.id === target.id);
+        if (idx >= 0) {
+          messages[idx] = { ...messages[idx], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
+          renderStream();
+        }
+        const res = await editMessage(target.id, text);
+        if (!res.ok) {
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043C\u0456\u043D\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
+          return;
+        }
+        if (idx >= 0 && res.message) {
+          messages[idx] = res.message;
+          renderStream();
+        }
+        return;
+      }
+      sendText(text);
     };
     const sendText = async (raw) => {
       const text = (raw || "").trim();
@@ -1532,12 +1637,14 @@
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
       }
+      const replyId = replyTo ? replyTo.id : null;
       input.value = "";
-      const temp = { id: "tmp-" + Date.now(), thread_id: thread.id, sender_uid: me, text, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+      clearCompose();
+      const temp = { id: "tmp-" + Date.now(), thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       renderStream();
       scrollBottom();
-      const res = await sendMessage({ threadId: thread.id, senderUid: me, text });
+      const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId });
       if (!res.ok) {
         messages = messages.filter((m) => m.id !== temp.id);
         renderStream();
@@ -1549,6 +1656,83 @@
       if (idx >= 0 && res.message)
         messages[idx] = res.message;
       renderStream();
+    };
+    const sendPhoto = async (file) => {
+      if (!file)
+        return;
+      const replyId = replyTo ? replyTo.id : null;
+      clearCompose();
+      const localUrl = URL.createObjectURL(file);
+      const temp = { id: "tmp-" + Date.now(), thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+      messages.push(temp);
+      renderStream();
+      scrollBottom();
+      const up = await uploadPhotoToStorage(file);
+      if (!up.url) {
+        messages = messages.filter((m) => m.id !== temp.id);
+        renderStream();
+        showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + (up.error || ""), 4e3, "error");
+        return;
+      }
+      const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId });
+      URL.revokeObjectURL(localUrl);
+      if (!res.ok) {
+        messages = messages.filter((m) => m.id !== temp.id);
+        renderStream();
+        showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0444\u043E\u0442\u043E: " + (res.error || ""), 4e3, "error");
+        return;
+      }
+      const idx = messages.findIndex((m) => m.id === temp.id);
+      if (idx >= 0 && res.message)
+        messages[idx] = res.message;
+      renderStream();
+    };
+    const openMsgActions = (m) => {
+      if (m.deleted_at)
+        return;
+      const mine = m.sender_uid === me;
+      const sheet = document.createElement("div");
+      sheet.className = "pm-actions-back";
+      sheet.innerHTML = `
+      <div class="pm-actions">
+        <button type="button" data-act="reply">\u21A9 \u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>
+        ${m.text ? '<button type="button" data-act="copy">\u29C9 \u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438</button>' : ""}
+        ${mine && m.text ? '<button type="button" data-act="edit">\u270E \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>' : ""}
+        ${mine ? '<button type="button" data-act="delete" class="pm-actions-danger">\u{1F5D1} \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>' : ""}
+        <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+      </div>`;
+      const close = () => sheet.remove();
+      sheet.addEventListener("click", async (e) => {
+        const b = e.target.closest("[data-act]");
+        if (!b) {
+          if (e.target === sheet)
+            close();
+          return;
+        }
+        close();
+        const act = b.dataset.act;
+        if (act === "reply")
+          startReply(m);
+        else if (act === "copy") {
+          try {
+            await navigator.clipboard.writeText(m.text || "");
+            showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
+          } catch (_) {
+          }
+        } else if (act === "edit")
+          startEdit(m);
+        else if (act === "delete") {
+          const idx = messages.findIndex((x) => x.id === m.id);
+          if (idx >= 0) {
+            messages[idx] = { ...messages[idx], deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null };
+            renderStream();
+          }
+          const res = await deleteMessage(m.id);
+          if (!res.ok)
+            showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
+        }
+      });
+      api.screen.appendChild(sheet);
     };
     messages = await fetchMessages(thread.id);
     if (api._closed)
@@ -1562,14 +1746,24 @@
       } catch (_) {
       }
     }
-    _chatUnsub = subscribeThreadMessages(thread.id, (msg) => {
-      if (messages.some((m) => m.id === msg.id))
+    _chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
+      if (!row)
         return;
-      messages.push(msg);
-      renderStream();
-      scrollBottom();
-      if (msg.sender_uid !== me)
-        markThreadRead(thread.id, me).then(refreshUnreadBadge);
+      if (type === "INSERT") {
+        if (messages.some((m) => m.id === row.id))
+          return;
+        messages.push(row);
+        renderStream();
+        scrollBottom();
+        if (row.sender_uid !== me)
+          markThreadRead(thread.id, me).then(refreshUnreadBadge);
+      } else if (type === "UPDATE") {
+        const idx = messages.findIndex((m) => m.id === row.id);
+        if (idx >= 0) {
+          messages[idx] = row;
+          renderStream();
+        }
+      }
     });
     api._cleanup.push(() => {
       if (_chatUnsub) {
@@ -1580,12 +1774,37 @@
     api._cleanup.push(refreshUnreadBadge);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
-      sendText(input.value);
+      submitText();
+    });
+    api.screen.querySelector("#pm-composebar-x")?.addEventListener("click", () => {
+      if (editing)
+        input.value = "";
+      clearCompose();
+    });
+    api.screen.querySelector("#pm-attach")?.addEventListener("click", () => fileEl.click());
+    fileEl.addEventListener("change", () => {
+      if (fileEl.files && fileEl.files[0])
+        sendPhoto(fileEl.files[0]);
+      fileEl.value = "";
     });
     streamEl.addEventListener("click", (e) => {
       const q = e.target.closest("[data-quick]");
-      if (q)
+      if (q) {
         sendText(q.dataset.quick);
+        return;
+      }
+      const ph = e.target.closest("[data-photo]");
+      if (ph)
+        openPhoto(ph.dataset.photo);
+    });
+    setupBubbleGestures(streamEl, (id, kind) => {
+      const m = msgById.get(Number(id)) || msgById.get(id);
+      if (!m)
+        return;
+      if (kind === "reply")
+        startReply(m);
+      else if (kind === "menu")
+        openMsgActions(m);
     });
     api.screen.querySelector("[data-pm-ctx]")?.addEventListener("click", () => {
       api.close();
@@ -1621,6 +1840,71 @@
     };
     vv.addEventListener("resize", h);
     vv.addEventListener("scroll", h);
+  }
+  function setupBubbleGestures(container, onAction) {
+    let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false;
+    const clearLP = () => {
+      if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    };
+    container.addEventListener("touchstart", (e) => {
+      const b = e.target.closest(".pm-bubble");
+      if (!b || b.classList.contains("pm-bubble--deleted")) {
+        target = null;
+        return;
+      }
+      target = b;
+      longFired = false;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      clearLP();
+      lpTimer = setTimeout(() => {
+        longFired = true;
+        if (navigator.vibrate) {
+          try {
+            navigator.vibrate(10);
+          } catch (_) {
+          }
+        }
+        onAction(target.dataset.msg, "menu");
+      }, 500);
+    }, { passive: true });
+    container.addEventListener("touchmove", (e) => {
+      if (!target)
+        return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      if (Math.abs(dx) > 8 || Math.abs(dy) > 8)
+        clearLP();
+      if (dx > 0 && Math.abs(dx) > Math.abs(dy))
+        target.style.transform = `translateX(${Math.min(dx, 60)}px)`;
+    }, { passive: true });
+    container.addEventListener("touchend", (e) => {
+      clearLP();
+      if (!target)
+        return;
+      const b = target;
+      target = null;
+      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
+      const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : startY) - startY;
+      b.style.transition = "transform 0.18s ease";
+      b.style.transform = "";
+      setTimeout(() => {
+        b.style.transition = "";
+      }, 200);
+      if (!longFired && dx > 45 && Math.abs(dx) > Math.abs(dy))
+        onAction(b.dataset.msg, "reply");
+    }, { passive: true });
+    container.addEventListener("contextmenu", (e) => {
+      const b = e.target.closest(".pm-bubble");
+      if (b && !b.classList.contains("pm-bubble--deleted")) {
+        e.preventDefault();
+        onAction(b.dataset.msg, "menu");
+      }
+    });
   }
   var MONTHS_GEN = [
     "\u0441\u0456\u0447\u043D\u044F",

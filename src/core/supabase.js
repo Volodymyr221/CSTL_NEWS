@@ -275,18 +275,41 @@ export async function fetchMessages(threadId) {
 }
 
 // Надіслати повідомлення + оновити час треда + штовхнути push отримувачу.
-export async function sendMessage({ threadId, senderUid, text }) {
+export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null }) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { data, error } = await supa.from('messages')
-    .insert({ thread_id: threadId, sender_uid: senderUid, text }).select().single();
+  const row = { thread_id: threadId, sender_uid: senderUid, text: text || null };
+  if (photoUrl) row.photo_url = photoUrl;
+  if (replyToId) row.reply_to_id = replyToId;
+  const { data, error } = await supa.from('messages').insert(row).select().single();
   if (error) return { ok: false, error: error.message };
   // Оновлюємо час + прев'ю останнього повідомлення (для сортування й списку тредів)
+  const preview = text || (photoUrl ? '📷 Фото' : '');
   await supa.from('threads')
-    .update({ last_message_at: new Date().toISOString(), last_message_text: text })
+    .update({ last_message_at: new Date().toISOString(), last_message_text: preview })
     .eq('id', threadId);
   // Push отримувачу (не блокуємо UI — помилка пуша не валить відправку)
   supa.functions.invoke('send-chat-push', { body: { message_id: data.id } })
     .catch(e => console.warn('[supabase] send-chat-push:', e?.message));
+  return { ok: true, message: data };
+}
+
+// Редагування свого повідомлення (текст + позначка edited_at)
+export async function editMessage(messageId, text) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const { data, error } = await supa.from('messages')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', messageId).select().single();
+  if (error) return { ok: false, error: error.message };
+  return { ok: true, message: data };
+}
+
+// М'яке видалення (soft-delete): лишаємо рядок, прибираємо вміст → плейсхолдер у UI
+export async function deleteMessage(messageId) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const { data, error } = await supa.from('messages')
+    .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+    .eq('id', messageId).select().single();
+  if (error) return { ok: false, error: error.message };
   return { ok: true, message: data };
 }
 
@@ -335,13 +358,14 @@ export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
   return { ok: true };
 }
 
-// Realtime: нові повідомлення в одному треді.
-export function subscribeThreadMessages(threadId, onInsert) {
+// Realtime: будь-яка зміна повідомлень одного треда (нові / редагування / видалення / прочитано).
+// onChange({ type: 'INSERT'|'UPDATE'|'DELETE', row }).
+export function subscribeThreadMessages(threadId, onChange) {
   if (!supa) return () => {};
   const ch = supa.channel(`thread-${threadId}`)
     .on('postgres_changes',
-        { event: 'INSERT', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
-        payload => onInsert(payload.new))
+        { event: '*', schema: 'public', table: 'messages', filter: `thread_id=eq.${threadId}` },
+        payload => onChange({ type: payload.eventType, row: payload.new || payload.old }))
     .subscribe();
   return () => supa.removeChannel(ch);
 }
