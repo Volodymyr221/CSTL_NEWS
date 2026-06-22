@@ -1842,12 +1842,19 @@
     vv.addEventListener("scroll", h);
   }
   function setupBubbleGestures(container, onAction) {
-    let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false;
+    let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false, lockDir = null;
     const clearLP = () => {
       if (lpTimer) {
         clearTimeout(lpTimer);
         lpTimer = null;
       }
+    };
+    const resetTransform = (b) => {
+      b.style.transition = "transform 0.18s ease";
+      b.style.transform = "";
+      setTimeout(() => {
+        b.style.transition = "";
+      }, 200);
     };
     container.addEventListener("touchstart", (e) => {
       const b = e.target.closest(".pm-bubble");
@@ -1857,6 +1864,7 @@
       }
       target = b;
       longFired = false;
+      lockDir = null;
       const t = e.touches[0];
       startX = t.clientX;
       startY = t.clientY;
@@ -1877,11 +1885,15 @@
         return;
       const t = e.touches[0];
       const dx = t.clientX - startX, dy = t.clientY - startY;
-      if (Math.abs(dx) > 8 || Math.abs(dy) > 8)
+      if (!lockDir && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+        lockDir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         clearLP();
-      if (dx > 0 && Math.abs(dx) > Math.abs(dy))
-        target.style.transform = `translateX(${Math.min(dx, 60)}px)`;
-    }, { passive: true });
+      }
+      if (lockDir === "h") {
+        e.preventDefault();
+        target.style.transform = `translateX(${Math.max(0, Math.min(dx, 56))}px)`;
+      }
+    }, { passive: false });
     container.addEventListener("touchend", (e) => {
       clearLP();
       if (!target)
@@ -1889,15 +1901,10 @@
       const b = target;
       target = null;
       const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
-      const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : startY) - startY;
-      b.style.transition = "transform 0.18s ease";
-      b.style.transform = "";
-      setTimeout(() => {
-        b.style.transition = "";
-      }, 200);
-      if (!longFired && dx > 45 && Math.abs(dx) > Math.abs(dy))
+      resetTransform(b);
+      if (!longFired && lockDir === "h" && dx > 45)
         onAction(b.dataset.msg, "reply");
-    }, { passive: true });
+    }, { passive: false });
     container.addEventListener("contextmenu", (e) => {
       const b = e.target.closest(".pm-bubble");
       if (b && !b.classList.contains("pm-bubble--deleted")) {
