@@ -1378,6 +1378,11 @@
     const screen = document.createElement("div");
     screen.className = "pm-screen " + extraClass;
     screen.innerHTML = innerHtml;
+    const prevTop = _openScreens[_openScreens.length - 1];
+    if (prevTop) {
+      prevTop.screen.style.display = "none";
+      prevTop.backdrop.style.display = "none";
+    }
     document.body.appendChild(backdrop);
     document.body.appendChild(screen);
     document.body.classList.add("modal-open");
@@ -1406,6 +1411,11 @@
     api.screen.classList.remove("visible");
     api.backdrop.classList.remove("visible");
     _openScreens = _openScreens.filter((s) => s !== api);
+    const newTop = _openScreens[_openScreens.length - 1];
+    if (newTop) {
+      newTop.screen.style.display = "";
+      newTop.backdrop.style.display = "";
+    }
     if (!_openScreens.length)
       document.body.classList.remove("modal-open");
     setTimeout(() => {
