@@ -1820,28 +1820,30 @@
     if (!vv)
       return;
     const fullH = window.innerHeight;
+    let raf = null;
     const apply = () => {
+      raf = null;
       const open = vv.height < fullH - 80;
       if (open) {
-        screen.style.height = vv.height - 2 + "px";
-        screen.style.top = vv.offsetTop + "px";
+        screen.style.top = "0px";
+        screen.style.height = Math.round(vv.height + vv.offsetTop) + "px";
         screen.classList.add("pm-kb-open");
         const stream = screen.querySelector("#pm-stream");
         if (stream)
           stream.scrollTop = stream.scrollHeight;
       } else {
-        screen.style.height = "";
         screen.style.top = "";
+        screen.style.height = "";
         screen.classList.remove("pm-kb-open");
       }
     };
-    let t = null;
-    const h = () => {
-      clearTimeout(t);
-      t = setTimeout(apply, 80);
+    const schedule = () => {
+      if (raf)
+        cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(apply);
     };
-    vv.addEventListener("resize", h);
-    vv.addEventListener("scroll", h);
+    vv.addEventListener("resize", schedule);
+    vv.addEventListener("scroll", schedule);
   }
   function setupBubbleGestures(container, onAction) {
     let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false, lockDir = null;
