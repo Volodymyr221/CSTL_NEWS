@@ -95,6 +95,10 @@
   border-top: 1px solid var(--hairline, rgba(60,50,30,0.10));
   flex-shrink: 0;
 }
+/* Коли клавіатура відкрита — прибрати нижній safe-area відступ (інакше кремова
+   смуга між полем і клавіатурою). Та сама логіка для чату Дошки (.bd-chat-modal--kb). */
+.pm-screen.pm-kb-open .pm-form { padding-bottom: 8px; }
+
 .pm-input {
   flex: 1; min-width: 0;
   border: 1px solid var(--border, #e5e5e5); border-radius: 22px;

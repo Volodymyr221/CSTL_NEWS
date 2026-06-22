@@ -1825,12 +1825,14 @@
       if (open) {
         screen.style.height = vv.height - 2 + "px";
         screen.style.top = vv.offsetTop + "px";
+        screen.classList.add("pm-kb-open");
         const stream = screen.querySelector("#pm-stream");
         if (stream)
           stream.scrollTop = stream.scrollHeight;
       } else {
         screen.style.height = "";
         screen.style.top = "";
+        screen.classList.remove("pm-kb-open");
       }
     };
     let t = null;
