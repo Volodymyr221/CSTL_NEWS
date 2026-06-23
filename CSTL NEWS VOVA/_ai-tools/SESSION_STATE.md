@@ -5,6 +5,15 @@
 
 ---
 
+## ✅ СЕСІЯ ВОВИ 23.06 — Чат: свайп-вліво для відповіді (Telegram) + стрибок по цитаті з блиманням. Гілка `vova/chat-reply-gestures`
+
+> «Роби» Вови. Файли: `src/core/messages-ui.js`, `style/messages.css`, `bundle.js`, `sw.js`. `node build.js` exit 0.
+> - **Свайп для відповіді: вправо → ВЛІВО** (`setupBubbleGestures`: clamp `[-64,0]`, тригер `dx < -45`). Кругла іконка `.pm-reply-reveal` (ACT_ICONS.reply) виїжджає з правого краю разом з бульбашкою (opacity+scale+translateX за прогресом свайпу), позиціонується абсолютно в `.pm-screen`, чиститься з екраном.
+> - **Тап по цитаті у відповіді** (`.pm-quote[data-jump]`) → `jumpToMessage`: `scrollIntoView({behavior:'smooth',block:'center'})` + одне «блимання» `.pm-bubble--flash` (box-shadow-ring keyframe 0.95s). Делеговано у streamEl click.
+> - Плавно, без ривків (узгоджено з smooth-скролом попереднього пакета).
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 23.06 — Чат: плавна поява повідомлення + smooth-скрол (прибрано «дьоргання»). Гілка `vova/chat-smooth-scroll`
 
 > «Роби» Вови (не скаче, але дьоргається — хотів плавно). КОРІНЬ: `style/messages.css` мав `.pm-bubble { animation: pm-bubble-in }` на ВСІХ бульбашках → при кожному повному перемальовуванні (innerHTML) вся стрічка переанімовувалась = ривок.

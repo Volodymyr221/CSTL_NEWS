@@ -215,7 +215,7 @@ export async function openChat(thread, post) {
     }
     const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
     const replyHtml = reply
-      ? `<span class="pm-quote">${escapeHtml((reply.deleted_at ? 'Видалене повідомлення' : (reply.text || '📷 Фото')).slice(0, 90))}</span>`
+      ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? 'Видалене повідомлення' : (reply.text || '📷 Фото')).slice(0, 90))}</span>`
       : '';
     const photoHtml = m.photo_url
       ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="фото" data-photo="${escapeHtml(m.photo_url)}">`
@@ -279,6 +279,17 @@ export async function openChat(thread, post) {
   const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   // Чи стрічка прокручена до низу (з допуском) — щоб не «смикати» коли читаєш історію.
   const atBottom = () => (streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight) < 120;
+
+  // Тап по цитаті у відповіді → плавно прокрутити до оригіналу + одне «блимання».
+  const jumpToMessage = (id) => {
+    const el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(id))}"]`);
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    el.classList.remove('pm-bubble--flash');
+    void el.offsetWidth;                 // reflow → анімація перезапускається щоразу
+    el.classList.add('pm-bubble--flash');
+    setTimeout(() => el.classList.remove('pm-bubble--flash'), 1100);
+  };
 
   // Множина вже показаних повідомлень (за стабільним ключем) — щоб анімація появи
   // програвалась РІВНО раз на повідомлення, а не на кожне перемальовування.
@@ -452,10 +463,12 @@ export async function openChat(thread, post) {
   streamEl.addEventListener('click', (e) => {
     const q = e.target.closest('[data-quick]');
     if (q) { sendText(q.dataset.quick); return; }
+    const jump = e.target.closest('[data-jump]');
+    if (jump) { jumpToMessage(jump.dataset.jump); return; }
     const ph = e.target.closest('[data-photo]');
     if (ph) openPhoto(ph.dataset.photo);
   });
-  // Свайп вправо по бульбашці → відповідь; довге натискання → меню дій
+  // Свайп ВЛІВО по бульбашці → відповідь; довге натискання → меню дій
   setupBubbleGestures(streamEl, (id, kind) => {
     const m = msgById.get(Number(id)) || msgById.get(id);
     if (!m) return;
@@ -501,8 +514,10 @@ function setupKeyboardResize(screen) {
   vv.addEventListener('scroll', h);
 }
 
-// Жести над бульбашкою: свайп вправо → 'reply', довге натискання → 'menu'.
+// Жести над бульбашкою: свайп ВЛІВО → 'reply' (Telegram-стиль, іконка виїжджає
+// з-за правого краю разом з бульбашкою), довге натискання → 'menu'.
 // onAction(messageId, kind). Скрол вертикально / горизонтальний рух скасовують long-press.
+const SWIPE_TRIGGER = 45;   // px вліво для спрацювання відповіді
 function setupBubbleGestures(container, onAction) {
   let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false, lockDir = null;
   const clearLP = () => { if (lpTimer) { clearTimeout(lpTimer); lpTimer = null; } };
@@ -511,11 +526,29 @@ function setupBubbleGestures(container, onAction) {
     b.style.transform = '';
     setTimeout(() => { b.style.transition = ''; }, 200);
   };
+  // Кругла іконка «відповісти» що проявляється з правого краю при свайпі вліво.
+  const host = container.parentElement || container;
+  const reveal = document.createElement('div');
+  reveal.className = 'pm-reply-reveal';
+  reveal.innerHTML = ACT_ICONS.reply;
+  host.appendChild(reveal);
+  const placeReveal = (b) => {
+    const hr = host.getBoundingClientRect();
+    const br = b.getBoundingClientRect();
+    reveal.style.top = (br.top - hr.top + br.height / 2) + 'px';
+  };
+  const setReveal = (prog) => {
+    reveal.style.opacity = String(prog);
+    // translateX від +22px (з-за краю) до 0 → іконка плавно виїжджає справа
+    reveal.style.transform = `translateY(-50%) translateX(${(1 - prog) * 22}px) scale(${0.55 + 0.45 * prog})`;
+  };
+  const hideReveal = () => { reveal.style.opacity = '0'; };
   container.addEventListener('touchstart', (e) => {
     const b = e.target.closest('.pm-bubble');
     if (!b || b.classList.contains('pm-bubble--deleted')) { target = null; return; }
     target = b; longFired = false; lockDir = null;
     const t = e.touches[0]; startX = t.clientX; startY = t.clientY;
+    placeReveal(b); setReveal(0);
     clearLP();
     lpTimer = setTimeout(() => {
       longFired = true;
@@ -534,7 +567,9 @@ function setupBubbleGestures(container, onAction) {
     }
     if (lockDir === 'h') {
       e.preventDefault();   // блокуємо рідний горизонтальний скрол → їде лише ця бульбашка
-      target.style.transform = `translateX(${Math.max(0, Math.min(dx, 56))}px)`;
+      const d = Math.max(Math.min(dx, 0), -64);   // лише вліво, до 64px
+      target.style.transform = `translateX(${d}px)`;
+      setReveal(Math.min(1, Math.abs(d) / SWIPE_TRIGGER));
     }
   }, { passive: false });
   container.addEventListener('touchend', (e) => {
@@ -542,8 +577,8 @@ function setupBubbleGestures(container, onAction) {
     if (!target) return;
     const b = target; target = null;
     const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
-    resetTransform(b);
-    if (!longFired && lockDir === 'h' && dx > 45) onAction(b.dataset.msg, 'reply');
+    resetTransform(b); hideReveal();
+    if (!longFired && lockDir === 'h' && dx < -SWIPE_TRIGGER) onAction(b.dataset.msg, 'reply');
   }, { passive: false });
   container.addEventListener('contextmenu', (e) => {
     const b = e.target.closest('.pm-bubble');

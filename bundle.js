@@ -1569,7 +1569,7 @@
         return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
       const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
-      const replyHtml = reply ? `<span class="pm-quote">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90))}</span>` : "";
+      const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90))}</span>` : "";
       const photoHtml = m.photo_url ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="\u0444\u043E\u0442\u043E" data-photo="${escapeHtml(m.photo_url)}">` : "";
       const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : "";
       const edited = m.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
@@ -1638,6 +1638,16 @@
     };
     const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? "smooth" : "auto" });
     const atBottom = () => streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight < 120;
+    const jumpToMessage = (id) => {
+      const el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(id))}"]`);
+      if (!el)
+        return;
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+      el.classList.remove("pm-bubble--flash");
+      void el.offsetWidth;
+      el.classList.add("pm-bubble--flash");
+      setTimeout(() => el.classList.remove("pm-bubble--flash"), 1100);
+    };
     const seen = /* @__PURE__ */ new Set();
     const msgKey = (m) => m.client_tag || m.id;
     let firstRender = true;
@@ -1852,6 +1862,11 @@
         sendText(q.dataset.quick);
         return;
       }
+      const jump = e.target.closest("[data-jump]");
+      if (jump) {
+        jumpToMessage(jump.dataset.jump);
+        return;
+      }
       const ph = e.target.closest("[data-photo]");
       if (ph)
         openPhoto(ph.dataset.photo);
@@ -1903,6 +1918,7 @@
     vv.addEventListener("resize", h);
     vv.addEventListener("scroll", h);
   }
+  var SWIPE_TRIGGER = 45;
   function setupBubbleGestures(container, onAction) {
     let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false, lockDir = null;
     const clearLP = () => {
@@ -1918,6 +1934,23 @@
         b.style.transition = "";
       }, 200);
     };
+    const host = container.parentElement || container;
+    const reveal = document.createElement("div");
+    reveal.className = "pm-reply-reveal";
+    reveal.innerHTML = ACT_ICONS.reply;
+    host.appendChild(reveal);
+    const placeReveal = (b) => {
+      const hr = host.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      reveal.style.top = br.top - hr.top + br.height / 2 + "px";
+    };
+    const setReveal = (prog) => {
+      reveal.style.opacity = String(prog);
+      reveal.style.transform = `translateY(-50%) translateX(${(1 - prog) * 22}px) scale(${0.55 + 0.45 * prog})`;
+    };
+    const hideReveal = () => {
+      reveal.style.opacity = "0";
+    };
     container.addEventListener("touchstart", (e) => {
       const b = e.target.closest(".pm-bubble");
       if (!b || b.classList.contains("pm-bubble--deleted")) {
@@ -1930,6 +1963,8 @@
       const t = e.touches[0];
       startX = t.clientX;
       startY = t.clientY;
+      placeReveal(b);
+      setReveal(0);
       clearLP();
       lpTimer = setTimeout(() => {
         longFired = true;
@@ -1953,7 +1988,9 @@
       }
       if (lockDir === "h") {
         e.preventDefault();
-        target.style.transform = `translateX(${Math.max(0, Math.min(dx, 56))}px)`;
+        const d = Math.max(Math.min(dx, 0), -64);
+        target.style.transform = `translateX(${d}px)`;
+        setReveal(Math.min(1, Math.abs(d) / SWIPE_TRIGGER));
       }
     }, { passive: false });
     container.addEventListener("touchend", (e) => {
@@ -1964,7 +2001,8 @@
       target = null;
       const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
       resetTransform(b);
-      if (!longFired && lockDir === "h" && dx > 45)
+      hideReveal();
+      if (!longFired && lockDir === "h" && dx < -SWIPE_TRIGGER)
         onAction(b.dataset.msg, "reply");
     }, { passive: false });
     container.addEventListener("contextmenu", (e) => {
