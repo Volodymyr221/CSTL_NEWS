@@ -1147,7 +1147,7 @@ function openAdModalStandalone(post) {
   backdrop.className = 'board-backdrop';
   backdrop.style.zIndex = '2599';
   const modal = document.createElement('article');
-  modal.className = 'cm-board-note cm-board-modal-note';
+  modal.className = 'cm-board-note cm-board-modal-note cm-board-modal--sheet';
   modal.style.zIndex = '2600';
   if (post.id != null) modal.dataset.postId = post.id;
   modal.innerHTML = renderAdModal(post);
