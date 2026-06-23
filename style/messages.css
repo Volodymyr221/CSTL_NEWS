@@ -300,6 +300,8 @@
   padding: 10px 14px; border: 0; cursor: pointer; flex-shrink: 0;
   background: var(--card-cream, #FAF8EF);
   border-bottom: 1px solid var(--hairline, rgba(60,50,30,0.10));
+  box-shadow: 0 4px 8px -4px rgba(0,0,0,0.14);
+  position: relative; z-index: 1;
 }
 .pm-ctx:active { background: var(--paper-deep, #EAE4D2); }
 .pm-ctx-thumb {
