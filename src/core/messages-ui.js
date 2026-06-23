@@ -126,7 +126,6 @@ export async function openChat(thread, post) {
   const p = post || thread.post || {};
   const title = p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
   const partner = otherName(thread);
-  const cat = p.category || '';
   const thumb = (p.photos && p.photos[0]) || '';
   const adAuthor = p.author ? String(p.author).trim() : '';
   const adContact = p.contact ? String(p.contact).trim() : '';
@@ -145,7 +144,6 @@ export async function openChat(thread, post) {
         : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
       <span class="pm-ctx-body">
         <span class="pm-ctx-title">${escapeHtml(title)}</span>
-        ${cat ? `<span class="pm-ctx-cat">${escapeHtml(cat)}</span>` : ''}
         ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
         <span class="pm-ctx-link">Переглянути оголошення →</span>
       </span>
