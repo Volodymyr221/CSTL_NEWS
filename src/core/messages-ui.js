@@ -160,7 +160,7 @@ export async function openChat(thread, post) {
       <button class="pm-composebar-x" type="button" id="pm-composebar-x" aria-label="Скасувати">✕</button>
     </div>
     <form class="pm-form" id="pm-form">
-      <button class="pm-attach" type="button" id="pm-attach" aria-label="Додати фото">🖼</button>
+      <button class="pm-attach" type="button" id="pm-attach" aria-label="Додати фото"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg></button>
       <input class="pm-file" id="pm-file" type="file" accept="image/*" hidden>
       <input class="pm-input" id="pm-input" type="text" placeholder="Написати повідомлення…"
              aria-label="Повідомлення" autocomplete="off">
