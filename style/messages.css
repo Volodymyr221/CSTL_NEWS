@@ -312,9 +312,17 @@
 .pm-ctx-call {
   flex-shrink: 0; width: 40px; height: 40px; margin-left: 8px;
   border-radius: 50%; display: flex; align-items: center; justify-content: center;
-  background: var(--brand-tint, #FAE2E6); color: var(--red, #722F37);
+  background: transparent; color: var(--red, #722F37);
+  border: 1px solid var(--red, #722F37);
+  box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
+  transition: background 0.15s, transform 0.1s, box-shadow 0.15s;
+  -webkit-tap-highlight-color: transparent; text-decoration: none;
 }
-.pm-ctx-call:active { background: #F3C9D0; }
+.pm-ctx-call:active {
+  background: var(--paper-deep, #EAE4D2);
+  transform: scale(0.92);
+  box-shadow: inset 0 2px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.10);
+}
 .pm-ctx-call svg { width: 20px; height: 20px; display: block; }
 .pm-ctx-title {
   font-weight: 700; font-size: 14.5px; color: var(--ink, #2A2520);
