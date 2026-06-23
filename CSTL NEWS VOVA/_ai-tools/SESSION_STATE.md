@@ -5,6 +5,16 @@
 
 ---
 
+## ✅ СЕСІЯ ВОВИ 23.06 — Чат: інкрементальний рендер (прибрано блимання при публікації). Гілка `vova/chat-incremental`
+
+> «Роби» Вови (плавно, але блимає при новому повідомленні). КОРІНЬ: `renderStream` робив `innerHTML = html` на КОЖНЕ повідомлення → перемальовувались ВСІ бульбашки і ФОТО (фото перезавантажувалось) = блимання всієї стрічки.
+> - **Фікс (messages-ui.js):** інкрементальний рендер. Нові хелпери `appendOne(m)` (вставляє ОДНУ бульбашку через insertAdjacentHTML, решта DOM недоторкана) + `replaceOne(m)` (заміна однієї бульбашки на місці за `data-msg`/`data-tag`) + `addReceiptIfNeeded`. `renderBubble` тепер несе `data-tag` (client_tag) для пошуку optimistic-бульбашки. `streamLastDay` для роздільників днів. `renderStream` (повний) лишився для початкового завантаження / помилок-відкату / fallback.
+> - **Перемкнено на інкрементал:** sendText/sendPhoto optimistic→appendOne, await→replaceOne; edit/delete→replaceOne; realtime INSERT 'add'→appendOne, 'update'→replaceOne, 'same'→нічого; realtime UPDATE→replaceOne. Решта стрічки і фото більше НЕ перемальовуються → без блимання.
+> - Плавність (keep-frame з попереднього пакета) збережена; appendOne скролить smooth-дельтою (DOM не скидається).
+> - Файли: `src/core/messages-ui.js`, `bundle.js`, `sw.js`. `node build.js` exit 0.
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 23.06 — Чат: справжня плавна поява (keep-frame), прибрано стрибок при надсиланні. Гілка `vova/chat-smooth-append`
 
 > «Роби» Вови (досі скаче при надсиланні). КОРІНЬ: `renderStream` робить `streamEl.innerHTML = html` → scrollTop скидається в 0 → smooth-скрол «пролітав» крізь усю історію = стрибок.

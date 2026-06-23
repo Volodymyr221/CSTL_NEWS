@@ -210,8 +210,9 @@ export async function openChat(thread, post) {
   // Рендер однієї бульбашки (цитата відповіді + фото + текст + час; видалене/редаговане)
   const renderBubble = (m) => {
     const enter = seen.has(msgKey(m)) ? '' : ' pm-bubble--enter';
+    const tagAttr = ` data-tag="${m.client_tag || ''}"`;   // для пошуку optimistic-бульбашки
     if (m.deleted_at) {
-      return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
+      return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"${tagAttr}><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
     }
     const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
     const replyHtml = reply
@@ -222,10 +223,12 @@ export async function openChat(thread, post) {
       : '';
     const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : '';
     const edited = m.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
-    return `<div class="pm-bubble${enter}" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
+    return `<div class="pm-bubble${enter}" data-msg="${m.id}"${tagAttr}>${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
   };
   const renderGroup = (g) =>
     `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;
+
+  let streamLastDay = null;   // день останньої відмальованої бульбашки (для appendOne)
 
   const renderStream = () => {
     const stick = atBottom();          // чи були ми внизу ДО перемальовування
@@ -258,6 +261,7 @@ export async function openChat(thread, post) {
       else { flush(); curGroup = { mine, msgs: [m] }; }
     });
     flush();
+    streamLastDay = new Date(postTime(messages[messages.length - 1])).toDateString();
     // Read receipt під останнім МОЇМ повідомленням
     const lastMsg = messages[messages.length - 1];
     if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {
@@ -285,6 +289,58 @@ export async function openChat(thread, post) {
   const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   // Чи стрічка прокручена до низу (з допуском) — щоб не «смикати» коли читаєш історію.
   const atBottom = () => (streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight) < 120;
+
+  // Read receipt («Прочитано/Надіслано») під останнім МОЇМ повідомленням.
+  const addReceiptIfNeeded = () => {
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {
+      streamEl.insertAdjacentHTML('beforeend',
+        `<div class="pm-receipt">${lastMsg.read_at ? 'Прочитано' : 'Надіслано'}</div>`);
+    }
+  };
+
+  // Інкрементальна ВСТАВКА однієї нової бульбашки (без перебудови всієї стрічки →
+  // решта DOM і фото не перемальовуються, тож НЕ блимає). Решта повідомлень на місці.
+  const appendOne = (m) => {
+    if (streamEl.querySelector('.pm-empty')) { renderStream(); return; }  // був empty-state
+    const stick = atBottom();
+    msgById.set(m.id, m);
+    streamEl.querySelector('.pm-receipt')?.remove();
+    const day = new Date(postTime(m)).toDateString();
+    const newDay = day !== streamLastDay;
+    if (newDay) {
+      streamEl.insertAdjacentHTML('beforeend', `<div class="pm-daysep"><span>${dayLabel(postTime(m))}</span></div>`);
+      streamLastDay = day;
+    }
+    const mine = m.sender_uid === me;
+    const lastEl = streamEl.lastElementChild;   // після прибрання receipt останній — група
+    const lastGroup = (!newDay && lastEl && lastEl.classList.contains('pm-group')) ? lastEl : null;
+    if (lastGroup && lastGroup.classList.contains(mine ? 'pm-group--mine' : 'pm-group--other')) {
+      lastGroup.insertAdjacentHTML('beforeend', renderBubble(m));
+    } else {
+      streamEl.insertAdjacentHTML('beforeend', renderGroup({ mine, msgs: [m] }));
+    }
+    seen.add(msgKey(m));
+    addReceiptIfNeeded();
+    if (stick) {
+      scrollBottom(true);                       // DOM не скидався → плавно лише дельта
+      const imgs = streamEl.querySelectorAll('.pm-bubble-photo');
+      const last = imgs[imgs.length - 1];
+      if (last && !last.complete) last.addEventListener('load', () => scrollBottom(true), { once: true });
+    }
+  };
+
+  // Інкрементальна ЗАМІНА однієї бульбашки на місці (optimistic→real, edit, delete).
+  // Знаходимо за реальним id або за data-tag (client_tag). Без чіпання решти стрічки.
+  const replaceOne = (m) => {
+    msgById.set(m.id, m);
+    let el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(m.id))}"]`);
+    if (!el && m.client_tag) el = streamEl.querySelector(`.pm-bubble[data-tag="${CSS.escape(String(m.client_tag))}"]`);
+    if (!el) { renderStream(); return; }        // не знайшли → запасний повний рендер
+    el.outerHTML = renderBubble(m);
+    streamEl.querySelector('.pm-receipt')?.remove();
+    addReceiptIfNeeded();
+  };
 
   // Тап по цитаті у відповіді → плавно прокрутити до оригіналу + одне «блимання».
   const jumpToMessage = (id) => {
@@ -332,10 +388,10 @@ export async function openChat(thread, post) {
       const target = editing;
       input.value = ''; clearCompose();
       const idx = messages.findIndex(m => m.id === target.id);
-      if (idx >= 0) { messages[idx] = { ...messages[idx], text, edited_at: new Date().toISOString() }; renderStream(); }
+      if (idx >= 0) { messages[idx] = { ...messages[idx], text, edited_at: new Date().toISOString() }; replaceOne(messages[idx]); }
       const res = await editMessage(target.id, text);
       if (!res.ok) { showToast('❌ Не вдалося змінити: ' + (res.error || ''), 4000, 'error'); return; }
-      if (idx >= 0 && res.message) { messages[idx] = res.message; renderStream(); }
+      if (idx >= 0 && res.message) { messages[idx] = res.message; replaceOne(res.message); }
       return;
     }
     sendText(text);
@@ -351,7 +407,7 @@ export async function openChat(thread, post) {
     const tag = newTag();
     const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
-    renderStream();
+    appendOne(temp);
     const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId, clientTag: tag });
     if (!res.ok) {
       messages = messages.filter(m => m.client_tag !== tag);
@@ -363,7 +419,7 @@ export async function openChat(thread, post) {
     // Реконсиляція: realtime INSERT міг уже замінити tmp — upsert за id/client_tag
     // гарантує рівно одне повідомлення незалежно від порядку подій.
     upsertMessage(res.message);
-    renderStream();
+    replaceOne(res.message);
   };
 
   // Надсилання фото (оптимістичний прев'ю → upload у Storage → insert)
@@ -375,7 +431,7 @@ export async function openChat(thread, post) {
     const tag = newTag();
     const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
-    renderStream();
+    appendOne(temp);
     const up = await uploadPhotoToStorage(file);
     if (!up.url) {
       messages = messages.filter(m => m.client_tag !== tag);
@@ -393,7 +449,7 @@ export async function openChat(thread, post) {
     }
     // Реконсиляція за id/client_tag — прибирає дубль «одне фото = два повідомлення».
     upsertMessage(res.message);
-    renderStream();
+    replaceOne(res.message);
   };
 
   // Меню дій над повідомленням (довге натискання / правий клік)
@@ -421,7 +477,7 @@ export async function openChat(thread, post) {
       else if (act === 'edit') startEdit(m);
       else if (act === 'delete') {
         const idx = messages.findIndex(x => x.id === m.id);
-        if (idx >= 0) { messages[idx] = { ...messages[idx], deleted_at: new Date().toISOString(), text: null, photo_url: null }; renderStream(); }
+        if (idx >= 0) { messages[idx] = { ...messages[idx], deleted_at: new Date().toISOString(), text: null, photo_url: null }; replaceOne(messages[idx]); }
         const res = await deleteMessage(m.id);
         if (!res.ok) showToast('❌ Не вдалося видалити: ' + (res.error || ''), 4000, 'error');
       }
@@ -444,11 +500,13 @@ export async function openChat(thread, post) {
     if (!row) return;
     if (type === 'INSERT') {
       const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
-      if (st !== 'same') renderStream();  // renderStream сам плавно тримає низ; 'same' = відлуння → не чіпаємо
+      if (st === 'add') appendOne(row);          // нове чуже → вставляємо одну бульбашку
+      else if (st === 'update') replaceOne(row); // realtime випередив await → заміна на місці
+      // 'same' = відлуння власного повідомлення → нічого не чіпаємо (без блимання)
       if (row.sender_uid !== me) markThreadRead(thread.id, me).then(refreshUnreadBadge);
     } else if (type === 'UPDATE') {
       const idx = messages.findIndex(m => m.id === row.id);
-      if (idx >= 0) { messages[idx] = row; renderStream(); }
+      if (idx >= 0) { messages[idx] = row; replaceOne(row); }
     }
   });
   api._cleanup.push(() => { if (_chatUnsub) { _chatUnsub(); _chatUnsub = null; } });

@@ -1565,17 +1565,19 @@
     };
     const renderBubble = (m) => {
       const enter = seen.has(msgKey(m)) ? "" : " pm-bubble--enter";
+      const tagAttr = ` data-tag="${m.client_tag || ""}"`;
       if (m.deleted_at) {
-        return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
+        return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"${tagAttr}><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
       const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90))}</span>` : "";
       const photoHtml = m.photo_url ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="\u0444\u043E\u0442\u043E" data-photo="${escapeHtml(m.photo_url)}">` : "";
       const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : "";
       const edited = m.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
-      return `<div class="pm-bubble${enter}" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
+      return `<div class="pm-bubble${enter}" data-msg="${m.id}"${tagAttr}>${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
     };
     const renderGroup = (g) => `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${g.msgs.map(renderBubble).join("")}</div>`;
+    let streamLastDay = null;
     const renderStream = () => {
       const stick = atBottom();
       const prevH = streamEl.scrollHeight;
@@ -1620,6 +1622,7 @@
         }
       });
       flush();
+      streamLastDay = new Date(postTime(messages[messages.length - 1])).toDateString();
       const lastMsg = messages[messages.length - 1];
       if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {
         html += `<div class="pm-receipt">${lastMsg.read_at ? "\u041F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u043E" : "\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E"}</div>`;
@@ -1642,6 +1645,60 @@
     };
     const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? "smooth" : "auto" });
     const atBottom = () => streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight < 120;
+    const addReceiptIfNeeded = () => {
+      const lastMsg = messages[messages.length - 1];
+      if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {
+        streamEl.insertAdjacentHTML(
+          "beforeend",
+          `<div class="pm-receipt">${lastMsg.read_at ? "\u041F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u043E" : "\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E"}</div>`
+        );
+      }
+    };
+    const appendOne = (m) => {
+      if (streamEl.querySelector(".pm-empty")) {
+        renderStream();
+        return;
+      }
+      const stick = atBottom();
+      msgById.set(m.id, m);
+      streamEl.querySelector(".pm-receipt")?.remove();
+      const day = new Date(postTime(m)).toDateString();
+      const newDay = day !== streamLastDay;
+      if (newDay) {
+        streamEl.insertAdjacentHTML("beforeend", `<div class="pm-daysep"><span>${dayLabel(postTime(m))}</span></div>`);
+        streamLastDay = day;
+      }
+      const mine = m.sender_uid === me;
+      const lastEl = streamEl.lastElementChild;
+      const lastGroup = !newDay && lastEl && lastEl.classList.contains("pm-group") ? lastEl : null;
+      if (lastGroup && lastGroup.classList.contains(mine ? "pm-group--mine" : "pm-group--other")) {
+        lastGroup.insertAdjacentHTML("beforeend", renderBubble(m));
+      } else {
+        streamEl.insertAdjacentHTML("beforeend", renderGroup({ mine, msgs: [m] }));
+      }
+      seen.add(msgKey(m));
+      addReceiptIfNeeded();
+      if (stick) {
+        scrollBottom(true);
+        const imgs = streamEl.querySelectorAll(".pm-bubble-photo");
+        const last = imgs[imgs.length - 1];
+        if (last && !last.complete)
+          last.addEventListener("load", () => scrollBottom(true), { once: true });
+      }
+    };
+    const replaceOne = (m) => {
+      msgById.set(m.id, m);
+      let el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(m.id))}"]`);
+      if (!el && m.client_tag)
+        el = streamEl.querySelector(`.pm-bubble[data-tag="${CSS.escape(String(m.client_tag))}"]`);
+      if (!el) {
+        renderStream();
+        return;
+      }
+      el.outerHTML = renderBubble(m);
+      streamEl.querySelector(".pm-receipt")?.remove();
+      addReceiptIfNeeded();
+    };
     const jumpToMessage = (id) => {
       const el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(id))}"]`);
       if (!el)
@@ -1686,7 +1743,7 @@
         const idx = messages.findIndex((m) => m.id === target.id);
         if (idx >= 0) {
           messages[idx] = { ...messages[idx], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
-          renderStream();
+          replaceOne(messages[idx]);
         }
         const res = await editMessage(target.id, text);
         if (!res.ok) {
@@ -1695,7 +1752,7 @@
         }
         if (idx >= 0 && res.message) {
           messages[idx] = res.message;
-          renderStream();
+          replaceOne(res.message);
         }
         return;
       }
@@ -1715,7 +1772,7 @@
       const tag = newTag();
       const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
-      renderStream();
+      appendOne(temp);
       const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId, clientTag: tag });
       if (!res.ok) {
         messages = messages.filter((m) => m.client_tag !== tag);
@@ -1725,7 +1782,7 @@
         return;
       }
       upsertMessage(res.message);
-      renderStream();
+      replaceOne(res.message);
     };
     const sendPhoto = async (file) => {
       if (!file)
@@ -1736,7 +1793,7 @@
       const tag = newTag();
       const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
-      renderStream();
+      appendOne(temp);
       const up = await uploadPhotoToStorage(file);
       if (!up.url) {
         messages = messages.filter((m) => m.client_tag !== tag);
@@ -1753,7 +1810,7 @@
         return;
       }
       upsertMessage(res.message);
-      renderStream();
+      replaceOne(res.message);
     };
     const openMsgActions = (m) => {
       if (m.deleted_at)
@@ -1793,7 +1850,7 @@
           const idx = messages.findIndex((x) => x.id === m.id);
           if (idx >= 0) {
             messages[idx] = { ...messages[idx], deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null };
-            renderStream();
+            replaceOne(messages[idx]);
           }
           const res = await deleteMessage(m.id);
           if (!res.ok)
@@ -1820,15 +1877,17 @@
         return;
       if (type === "INSERT") {
         const st = upsertMessage(row);
-        if (st !== "same")
-          renderStream();
+        if (st === "add")
+          appendOne(row);
+        else if (st === "update")
+          replaceOne(row);
         if (row.sender_uid !== me)
           markThreadRead(thread.id, me).then(refreshUnreadBadge);
       } else if (type === "UPDATE") {
         const idx = messages.findIndex((m) => m.id === row.id);
         if (idx >= 0) {
           messages[idx] = row;
-          renderStream();
+          replaceOne(row);
         }
       }
     });
