@@ -1578,6 +1578,7 @@
     const renderGroup = (g) => `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${g.msgs.map(renderBubble).join("")}</div>`;
     const renderStream = () => {
       const stick = atBottom();
+      const prevH = streamEl.scrollHeight;
       if (!messages.length) {
         streamEl.innerHTML = `
         <div class="pm-empty pm-empty--chat">
@@ -1625,12 +1626,15 @@
       }
       streamEl.innerHTML = html;
       if (stick) {
-        const smooth = !firstRender;
-        scrollBottom(smooth);
-        requestAnimationFrame(() => scrollBottom(smooth));
+        if (firstRender) {
+          streamEl.scrollTop = streamEl.scrollHeight;
+        } else {
+          streamEl.scrollTop = Math.max(0, prevH - streamEl.clientHeight);
+          requestAnimationFrame(() => scrollBottom(true));
+        }
         streamEl.querySelectorAll(".pm-bubble-photo").forEach((img) => {
           if (!img.complete)
-            img.addEventListener("load", () => scrollBottom(smooth), { once: true });
+            img.addEventListener("load", () => scrollBottom(!firstRender), { once: true });
         });
       }
       messages.forEach((m) => seen.add(msgKey(m)));

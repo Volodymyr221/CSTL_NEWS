@@ -5,6 +5,15 @@
 
 ---
 
+## ✅ СЕСІЯ ВОВИ 23.06 — Чат: справжня плавна поява (keep-frame), прибрано стрибок при надсиланні. Гілка `vova/chat-smooth-append`
+
+> «Роби» Вови (досі скаче при надсиланні). КОРІНЬ: `renderStream` робить `streamEl.innerHTML = html` → scrollTop скидається в 0 → smooth-скрол «пролітав» крізь усю історію = стрибок.
+> - **Фікс (messages-ui.js renderStream):** запам'ятовуємо `prevH = scrollHeight` ДО перемальовування; після `innerHTML` спершу `scrollTop = prevH - clientHeight` (відновлюємо ПОПЕРЕДНІЙ кадр без анімації, без «прольоту»), і ЛИШЕ тоді `requestAnimationFrame → scrollBottom(true)` (плавно докручуємо рівно на висоту нового повідомлення). firstRender → миттєво внизу.
+> - Ефект: старе плавно вгору, нове рівномірно зʼявляється знизу (+ CSS `.pm-bubble--enter` rise/fade). await-заміна tmp→real має ту саму висоту → скрол no-op (без другого стрибка). realtime 'same' не рендериться (попередній пакет).
+> - Файли: `src/core/messages-ui.js`, `bundle.js`, `sw.js`. `node build.js` exit 0.
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 23.06 — Чат: свайп-вліво для відповіді (Telegram) + стрибок по цитаті з блиманням. Гілка `vova/chat-reply-gestures`
 
 > «Роби» Вови. Файли: `src/core/messages-ui.js`, `style/messages.css`, `bundle.js`, `sw.js`. `node build.js` exit 0.
