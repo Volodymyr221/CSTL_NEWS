@@ -401,7 +401,8 @@
   flex-shrink: 0;
 }
 .pm-composebar[hidden] { display: none; }
-.pm-composebar-ic { font-size: 16px; color: var(--red, #722F37); flex-shrink: 0; }
+.pm-composebar-ic { font-size: 16px; color: var(--red, #722F37); flex-shrink: 0; display: flex; align-items: center; }
+.pm-composebar-ic svg { width: 18px; height: 18px; display: block; }
 .pm-composebar-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .pm-composebar-title { font-size: 12px; font-weight: 700; color: var(--red, #722F37); }
 .pm-composebar-text {
