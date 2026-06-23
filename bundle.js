@@ -1504,7 +1504,7 @@
       <div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </div>
     <div class="pm-composebar" id="pm-composebar" hidden>
-      <span class="pm-composebar-ic" id="pm-composebar-ic">\u21A9</span>
+      <span class="pm-composebar-ic" id="pm-composebar-ic">${ACT_ICONS.reply}</span>
       <div class="pm-composebar-body">
         <span class="pm-composebar-title" id="pm-composebar-title"></span>
         <span class="pm-composebar-text" id="pm-composebar-text"></span>
@@ -1536,8 +1536,8 @@
     };
     const showCompose = (mode, m) => {
       const snippet = (m.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435" : m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90);
-      api.screen.querySelector("#pm-composebar-ic").textContent = mode === "edit" ? "\u270E" : "\u21A9";
-      api.screen.querySelector("#pm-composebar-title").textContent = mode === "edit" ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F" : "\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C";
+      api.screen.querySelector("#pm-composebar-ic").innerHTML = mode === "edit" ? ACT_ICONS.edit : ACT_ICONS.reply;
+      api.screen.querySelector("#pm-composebar-title").textContent = mode === "edit" ? "\u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F:" : "\u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u042C:";
       api.screen.querySelector("#pm-composebar-text").textContent = snippet;
       barEl.hidden = false;
     };
