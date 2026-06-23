@@ -1478,7 +1478,6 @@
     const p = post || thread.post || {};
     const title = p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
     const partner = otherName(thread);
-    const cat = p.category || "";
     const thumb = p.photos && p.photos[0] || "";
     const adAuthor = p.author ? String(p.author).trim() : "";
     const adContact = p.contact ? String(p.contact).trim() : "";
@@ -1494,7 +1493,6 @@
       ${thumb ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>` : `<span class="pm-ctx-thumb pm-ctx-thumb--none">\u{1F3F7}\uFE0F</span>`}
       <span class="pm-ctx-body">
         <span class="pm-ctx-title">${escapeHtml(title)}</span>
-        ${cat ? `<span class="pm-ctx-cat">${escapeHtml(cat)}</span>` : ""}
         ${adAuthor || adContact ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ""}${adAuthor ? `${adContact ? " \u2014 " : ""}${escapeHtml(adAuthor)}` : ""}</span>` : ""}
         <span class="pm-ctx-link">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2192</span>
       </span>
