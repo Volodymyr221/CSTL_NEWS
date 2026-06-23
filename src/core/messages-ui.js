@@ -155,7 +155,7 @@ export async function openChat(thread, post) {
       <div class="pm-loading">Завантаження…</div>
     </div>
     <div class="pm-composebar" id="pm-composebar" hidden>
-      <span class="pm-composebar-ic" id="pm-composebar-ic">↩</span>
+      <span class="pm-composebar-ic" id="pm-composebar-ic">${ACT_ICONS.reply}</span>
       <div class="pm-composebar-body">
         <span class="pm-composebar-title" id="pm-composebar-title"></span>
         <span class="pm-composebar-text" id="pm-composebar-text"></span>
@@ -190,8 +190,8 @@ export async function openChat(thread, post) {
   };
   const showCompose = (mode, m) => {
     const snippet = (m.deleted_at ? 'Видалене' : (m.text || '📷 Фото')).slice(0, 90);
-    api.screen.querySelector('#pm-composebar-ic').textContent = mode === 'edit' ? '✎' : '↩';
-    api.screen.querySelector('#pm-composebar-title').textContent = mode === 'edit' ? 'Редагування' : 'Відповідь';
+    api.screen.querySelector('#pm-composebar-ic').innerHTML = mode === 'edit' ? ACT_ICONS.edit : ACT_ICONS.reply;
+    api.screen.querySelector('#pm-composebar-title').textContent = mode === 'edit' ? 'РЕДАГУВАННЯ:' : 'ВІДПОВІДЬ:';
     api.screen.querySelector('#pm-composebar-text').textContent = snippet;
     barEl.hidden = false;
   };
