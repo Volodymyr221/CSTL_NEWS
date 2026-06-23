@@ -228,7 +228,8 @@ export async function openChat(thread, post) {
     `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;
 
   const renderStream = () => {
-    const stick = atBottom();   // чи були ми внизу ДО перемальовування
+    const stick = atBottom();          // чи були ми внизу ДО перемальовування
+    const prevH = streamEl.scrollHeight;   // висота стрічки ДО перемальовування
     if (!messages.length) {
       streamEl.innerHTML = `
         <div class="pm-empty pm-empty--chat">
@@ -263,14 +264,19 @@ export async function openChat(thread, post) {
       html += `<div class="pm-receipt">${lastMsg.read_at ? 'Прочитано' : 'Надіслано'}</div>`;
     }
     streamEl.innerHTML = html;
-    // Якщо були внизу — лишаємось унизу (фокус на останньому повідомленні),
-    // у т.ч. ПІСЛЯ догрузки фото. Плавно (smooth), окрім першого відкриття чату.
+    // Плавна поява без стрибка: бо innerHTML скидає scrollTop у 0, спершу
+    // ВІДНОВЛЮЄМО попередній кадр (старий низ) БЕЗ анімації — щоб не «пролетіти»
+    // крізь усю історію — і ТОДІ плавно докручуємо рівно на висоту нового
+    // повідомлення (старе плавно вгору, нове рівномірно знизу).
     if (stick) {
-      const smooth = !firstRender;
-      scrollBottom(smooth);
-      requestAnimationFrame(() => scrollBottom(smooth));
+      if (firstRender) {
+        streamEl.scrollTop = streamEl.scrollHeight;            // перше відкриття — одразу внизу
+      } else {
+        streamEl.scrollTop = Math.max(0, prevH - streamEl.clientHeight);   // попередній кадр (без стрибка)
+        requestAnimationFrame(() => scrollBottom(true));      // плавно лише дельта
+      }
       streamEl.querySelectorAll('.pm-bubble-photo').forEach(img => {
-        if (!img.complete) img.addEventListener('load', () => scrollBottom(smooth), { once: true });
+        if (!img.complete) img.addEventListener('load', () => scrollBottom(!firstRender), { once: true });
       });
     }
     messages.forEach(m => seen.add(msgKey(m)));   // показані → анімація появи раз
