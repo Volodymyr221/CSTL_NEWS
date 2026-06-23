@@ -1509,7 +1509,7 @@
       <button class="pm-composebar-x" type="button" id="pm-composebar-x" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438">\u2715</button>
     </div>
     <form class="pm-form" id="pm-form">
-      <button class="pm-attach" type="button" id="pm-attach" aria-label="\u0414\u043E\u0434\u0430\u0442\u0438 \u0444\u043E\u0442\u043E">\u{1F5BC}</button>
+      <button class="pm-attach" type="button" id="pm-attach" aria-label="\u0414\u043E\u0434\u0430\u0442\u0438 \u0444\u043E\u0442\u043E"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.6"/><path d="M21 15l-5-5L5 21"/></svg></button>
       <input class="pm-file" id="pm-file" type="file" accept="image/*" hidden>
       <input class="pm-input" id="pm-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026"
              aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" autocomplete="off">

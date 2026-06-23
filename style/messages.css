@@ -400,8 +400,11 @@
 /* Кнопка фото у полі */
 .pm-attach {
   width: 42px; height: 42px; flex-shrink: 0; border: 0; border-radius: 50%;
-  background: rgba(0,0,0,0.05); font-size: 19px; line-height: 1; cursor: pointer;
+  background: rgba(0,0,0,0.05); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--red, #722F37);
 }
+.pm-attach svg { width: 22px; height: 22px; display: block; }
 .pm-attach:active { background: rgba(0,0,0,0.10); }
 
 /* Меню дій над повідомленням (bottom-sheet) */
