@@ -128,6 +128,8 @@ export async function openChat(thread, post) {
   const partner = otherName(thread);
   const cat = p.category || '';
   const thumb = (p.photos && p.photos[0]) || '';
+  const adAuthor = p.author ? String(p.author).trim() : '';
+  const adContact = p.contact ? String(p.contact).trim() : '';
 
   const api = buildScreen(`
     <header class="pm-head pm-head--chat">
@@ -144,6 +146,7 @@ export async function openChat(thread, post) {
       <span class="pm-ctx-body">
         <span class="pm-ctx-title">${escapeHtml(title)}</span>
         ${cat ? `<span class="pm-ctx-cat">${escapeHtml(cat)}</span>` : ''}
+        ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
         <span class="pm-ctx-link">Переглянути оголошення →</span>
       </span>
     </button>
