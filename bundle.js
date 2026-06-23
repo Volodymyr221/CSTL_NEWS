@@ -546,7 +546,7 @@
   async function fetchMyThreads(uid) {
     if (!supa || !uid)
       return [];
-    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
+    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos, author, contact, published_at, created_at)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyThreads:", error.message);
       return [];
