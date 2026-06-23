@@ -5,6 +5,16 @@
 
 ---
 
+## ✅ СЕСІЯ ВОВИ 23.06 — Чат: плавна поява повідомлення + smooth-скрол (прибрано «дьоргання»). Гілка `vova/chat-smooth-scroll`
+
+> «Роби» Вови (не скаче, але дьоргається — хотів плавно). КОРІНЬ: `style/messages.css` мав `.pm-bubble { animation: pm-bubble-in }` на ВСІХ бульбашках → при кожному повному перемальовуванні (innerHTML) вся стрічка переанімовувалась = ривок.
+> - **CSS:** анімацію перенесено `.pm-bubble` → `.pm-bubble--enter` (0.22s, translateY 8px) — грає ЛИШЕ на нових.
+> - **JS messages-ui.js:** множина `seen` (Set за `client_tag||id`) + `msgKey()` → клас `--enter` лише на не-показаних; історія сідиться у `seen` до першого рендеру (не анімується при відкритті). `firstRender` → перший скрол миттєвий, далі `scrollBottom(smooth)` через `scrollTo({behavior:'smooth'})`. `upsertMessage` повертає 'add'/'update'/'same'; realtime INSERT рендерить лише якщо не 'same' (прибрано зайвий ре-рендер на власне відлуння). Прибрано подвійні `scrollBottom()` після optimistic.
+> - Файли: `src/core/messages-ui.js`, `style/messages.css`, `bundle.js`, `sw.js`. `node build.js` exit 0.
+
+
+---
+
 ## ✅ СЕСІЯ ВОВИ 23.06 — Чат UX: автоскрол на фото + клавіатура не ховається на «додати фото». Гілка `vova/chat-keyboard-scroll`
 
 > «Роби» Вови (2 скріни). Частина аудиту чату (між пакетами — пріоритет з того що видно наживо).
