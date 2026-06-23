@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "23.06.2026",
-  "updatedTime": "09:11",
+  "updatedTime": "13:11",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -2052,7 +2052,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:20",
           "arrival_time": "10:15",
           "duration_min": 55,
@@ -2139,7 +2139,7 @@
           "bus": "БАЗ-А079.19",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:05",
           "arrival_time": "12:05",
           "duration_min": 120,
@@ -2236,7 +2236,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:10",
           "arrival_time": "11:45",
           "duration_min": 95,
@@ -2278,7 +2278,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:30",
           "arrival_time": "12:03",
           "duration_min": 93,
@@ -2370,7 +2370,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "11:30",
           "arrival_time": "13:10",
           "duration_min": 100,
@@ -2412,7 +2412,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:25",
           "arrival_time": "14:10",
           "duration_min": 105,
@@ -2454,7 +2454,7 @@
           "bus": "Баз  А  079.17",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:40",
           "arrival_time": "14:10",
           "duration_min": 90,
@@ -2546,7 +2546,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:05",
           "arrival_time": "14:30",
           "duration_min": 85,
@@ -3520,7 +3520,7 @@
         }
       ],
       "fetchedAt": "23.06.2026",
-      "fetchedTime": "09:11"
+      "fetchedTime": "13:11"
     },
     "2026-06-24": {
       "routes": [
@@ -5268,7 +5268,7 @@
         }
       ],
       "fetchedAt": "23.06.2026",
-      "fetchedTime": "09:11"
+      "fetchedTime": "13:11"
     },
     "2026-06-25": {
       "routes": [
