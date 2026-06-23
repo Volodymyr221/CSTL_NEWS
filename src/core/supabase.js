@@ -275,14 +275,16 @@ export async function fetchMessages(threadId) {
 }
 
 // Надіслати повідомлення + оновити час треда + штовхнути push отримувачу.
-export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null }) {
+export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
   if (!supa) return { ok: false, error: 'no-supa' };
   const row = { thread_id: threadId, sender_uid: senderUid, text: text || null };
   if (photoUrl) row.photo_url = photoUrl;
   if (replyToId) row.reply_to_id = replyToId;
+  if (clientTag) row.client_tag = clientTag;
   const { data, error } = await supa.from('messages').insert(row).select().single();
   if (error) return { ok: false, error: error.message };
-  // Оновлюємо час + прев'ю останнього повідомлення (для сортування й списку тредів)
+  // Час+прев'ю треда тепер ставить тригер trg_touch_thread у БД (надійно).
+  // Лишаємо клієнтський апдейт як підстраховку (ідемпотентно, не шкодить).
   const preview = text || (photoUrl ? '📷 Фото' : '');
   await supa.from('threads')
     .update({ last_message_at: new Date().toISOString(), last_message_text: preview })

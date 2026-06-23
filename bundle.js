@@ -580,7 +580,7 @@
     }
     return data || [];
   }
-  async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null }) {
+  async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
     if (!supa)
       return { ok: false, error: "no-supa" };
     const row = { thread_id: threadId, sender_uid: senderUid, text: text || null };
@@ -588,6 +588,8 @@
       row.photo_url = photoUrl;
     if (replyToId)
       row.reply_to_id = replyToId;
+    if (clientTag)
+      row.client_tag = clientTag;
     const { data, error } = await supa.from("messages").insert(row).select().single();
     if (error)
       return { ok: false, error: error.message };
@@ -1624,6 +1626,18 @@
     const scrollBottom = () => {
       streamEl.scrollTop = streamEl.scrollHeight;
     };
+    const upsertMessage = (row) => {
+      if (!row)
+        return;
+      let idx = messages.findIndex((m) => m.id === row.id);
+      if (idx < 0 && row.client_tag)
+        idx = messages.findIndex((m) => m.client_tag && m.client_tag === row.client_tag);
+      if (idx >= 0)
+        messages[idx] = row;
+      else
+        messages.push(row);
+    };
+    const newTag = () => typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "t-" + Date.now() + "-" + Math.random().toString(16).slice(2);
     const submitText = async () => {
       const text = input.value.trim();
       if (editing) {
@@ -1665,21 +1679,20 @@
       const replyId = replyTo ? replyTo.id : null;
       input.value = "";
       clearCompose();
-      const temp = { id: "tmp-" + Date.now(), thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const tag = newTag();
+      const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       renderStream();
       scrollBottom();
-      const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId });
+      const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId, clientTag: tag });
       if (!res.ok) {
-        messages = messages.filter((m) => m.id !== temp.id);
+        messages = messages.filter((m) => m.client_tag !== tag);
         renderStream();
         showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438: " + (res.error || ""), 4e3, "error");
         input.value = text;
         return;
       }
-      const idx = messages.findIndex((m) => m.id === temp.id);
-      if (idx >= 0 && res.message)
-        messages[idx] = res.message;
+      upsertMessage(res.message);
       renderStream();
     };
     const sendPhoto = async (file) => {
@@ -1688,28 +1701,27 @@
       const replyId = replyTo ? replyTo.id : null;
       clearCompose();
       const localUrl = URL.createObjectURL(file);
-      const temp = { id: "tmp-" + Date.now(), thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
+      const tag = newTag();
+      const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       renderStream();
       scrollBottom();
       const up = await uploadPhotoToStorage(file);
       if (!up.url) {
-        messages = messages.filter((m) => m.id !== temp.id);
+        messages = messages.filter((m) => m.client_tag !== tag);
         renderStream();
         showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + (up.error || ""), 4e3, "error");
         return;
       }
-      const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId });
+      const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId, clientTag: tag });
       URL.revokeObjectURL(localUrl);
       if (!res.ok) {
-        messages = messages.filter((m) => m.id !== temp.id);
+        messages = messages.filter((m) => m.client_tag !== tag);
         renderStream();
         showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0444\u043E\u0442\u043E: " + (res.error || ""), 4e3, "error");
         return;
       }
-      const idx = messages.findIndex((m) => m.id === temp.id);
-      if (idx >= 0 && res.message)
-        messages[idx] = res.message;
+      upsertMessage(res.message);
       renderStream();
     };
     const openMsgActions = (m) => {
@@ -1775,11 +1787,11 @@
       if (!row)
         return;
       if (type === "INSERT") {
-        if (messages.some((m) => m.id === row.id))
-          return;
-        messages.push(row);
+        const before = messages.length;
+        upsertMessage(row);
         renderStream();
-        scrollBottom();
+        if (messages.length > before)
+          scrollBottom();
         if (row.sender_uid !== me)
           markThreadRead(thread.id, me).then(refreshUnreadBadge);
       } else if (type === "UPDATE") {
