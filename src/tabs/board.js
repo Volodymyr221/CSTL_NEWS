@@ -1137,6 +1137,81 @@ function renderBodyOnly(el) {
 // Zoom-перегляд стікера через окрему модалку (тільки board)
 let _boardCollapseRef = null;   // покажчик на актуальний collapse (оновлюється при кожному init)
 let _boardTabHookSet = false;   // слухач зміни вкладки вішаємо лише раз
+// Відкрити модалку оголошення ПОЗА Дошкою (напр. з приватного чату), без картки-джерела.
+// Самодостатня: власна підкладка + той самий renderAdModal + галерея + свайп-закрити.
+// z-index інлайном вище за чат (.pm-screen=2401), щоб лягти ПОВЕРХ нього.
+// Дротування дзеркалить expand() (свідоме дрібне дублювання — щоб не чіпати робочу Дошку).
+function openAdModalStandalone(post) {
+  if (!post) return;
+  const backdrop = document.createElement('div');
+  backdrop.className = 'board-backdrop';
+  backdrop.style.zIndex = '2599';
+  const modal = document.createElement('article');
+  modal.className = 'cm-board-note cm-board-modal-note';
+  modal.style.zIndex = '2600';
+  if (post.id != null) modal.dataset.postId = post.id;
+  modal.innerHTML = renderAdModal(post);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(modal);
+  document.body.classList.add('cm-zoom-open');
+
+  let closed = false;
+  const close = () => {
+    if (closed) return;
+    closed = true;
+    modal.classList.remove('visible');
+    backdrop.classList.remove('visible');
+    document.body.classList.remove('cm-zoom-open');
+    setTimeout(() => { modal.remove(); backdrop.remove(); }, 240);
+  };
+  backdrop.addEventListener('click', close);
+
+  // Галерея фото: тап → повний екран; крапки оновлюються при свайпі
+  const gallery = modal.querySelector('.cm-board-modal-gallery');
+  if (gallery) {
+    const photoUrls = [...gallery.querySelectorAll('[data-photo-full]')].map(im => im.dataset.photoFull);
+    gallery.querySelectorAll('img[data-photo-idx]').forEach(im => {
+      im.addEventListener('click', e => { e.stopPropagation(); openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0); });
+    });
+    const dots = modal.querySelectorAll('.cm-board-modal-dot');
+    if (dots.length) {
+      gallery.addEventListener('scroll', () => {
+        const i = gallery.clientWidth ? Math.round(gallery.scrollLeft / gallery.clientWidth) : 0;
+        dots.forEach((d, di) => d.classList.toggle('active', di === i));
+      }, { passive: true });
+    }
+  }
+
+  // Свайп вниз → закрити (грип або скролер угорі); горизонталь = свайп галереї
+  const area = modal.querySelector('.cm-board-modal-scrollarea');
+  const scroller = area || modal;
+  const grip = modal.querySelector('.cm-board-modal-bar');
+  let sY = 0, sX = 0, canSwipe = false, swiping = false;
+  modal.addEventListener('touchstart', e => {
+    const onGrip = grip && (e.target === grip || grip.contains(e.target));
+    canSwipe = onGrip || scroller.scrollTop <= 2;
+    sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
+    if (canSwipe) modal.style.transition = 'none';
+  }, { passive: true });
+  modal.addEventListener('touchmove', e => {
+    if (!canSwipe) return;
+    const dy = e.touches[0].clientY - sY;
+    const dx = e.touches[0].clientX - sX;
+    if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
+    if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`; }
+    else if (swiping) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; }
+  }, { passive: false });
+  modal.addEventListener('touchend', e => {
+    if (!canSwipe) return;
+    modal.style.transition = '';
+    const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
+    if (swiping && dy > 90) close(); else modal.style.transform = '';
+    swiping = false; canSwipe = false;
+  }, { passive: true });
+
+  requestAnimationFrame(() => { backdrop.classList.add('visible'); modal.classList.add('visible'); });
+}
+
 function initBoardNoteExpand(root) {
   const backdrop = root.querySelector('#board-backdrop');
   if (!backdrop) return;
@@ -1563,7 +1638,7 @@ export function initBoard() {
   // Відкрити модалку оголошення з чату («Переглянути оголошення →» в розмові)
   window.addEventListener('cstl-open-ad', (e) => {
     const p = e.detail && e.detail.post;
-    if (p) renderAdModal(p);
+    if (p) openAdModalStandalone(p);
   });
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
