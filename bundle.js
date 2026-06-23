@@ -1576,6 +1576,7 @@
     };
     const renderGroup = (g) => `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${g.msgs.map(renderBubble).join("")}</div>`;
     const renderStream = () => {
+      const stick = atBottom();
       if (!messages.length) {
         streamEl.innerHTML = `
         <div class="pm-empty pm-empty--chat">
@@ -1622,10 +1623,19 @@
         html += `<div class="pm-receipt">${lastMsg.read_at ? "\u041F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u043E" : "\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E"}</div>`;
       }
       streamEl.innerHTML = html;
+      if (stick) {
+        scrollBottom();
+        requestAnimationFrame(scrollBottom);
+        streamEl.querySelectorAll(".pm-bubble-photo").forEach((img) => {
+          if (!img.complete)
+            img.addEventListener("load", scrollBottom, { once: true });
+        });
+      }
     };
     const scrollBottom = () => {
       streamEl.scrollTop = streamEl.scrollHeight;
     };
+    const atBottom = () => streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight < 120;
     const upsertMessage = (row) => {
       if (!row)
         return;
@@ -1818,7 +1828,13 @@
         input.value = "";
       clearCompose();
     });
-    api.screen.querySelector("#pm-attach")?.addEventListener("click", () => fileEl.click());
+    const attachBtn = api.screen.querySelector("#pm-attach");
+    attachBtn?.addEventListener("pointerdown", (e) => e.preventDefault());
+    attachBtn?.addEventListener("mousedown", (e) => e.preventDefault());
+    attachBtn?.addEventListener("click", () => {
+      input.focus();
+      fileEl.click();
+    });
     fileEl.addEventListener("change", () => {
       if (fileEl.files && fileEl.files[0])
         sendPhoto(fileEl.files[0]);
