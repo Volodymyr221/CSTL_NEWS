@@ -227,6 +227,7 @@ export async function openChat(thread, post) {
     `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;
 
   const renderStream = () => {
+    const stick = atBottom();   // чи були ми внизу ДО перемальовування
     if (!messages.length) {
       streamEl.innerHTML = `
         <div class="pm-empty pm-empty--chat">
@@ -261,8 +262,19 @@ export async function openChat(thread, post) {
       html += `<div class="pm-receipt">${lastMsg.read_at ? 'Прочитано' : 'Надіслано'}</div>`;
     }
     streamEl.innerHTML = html;
+    // Якщо були внизу — лишаємось унизу (фокус на останньому повідомленні),
+    // у т.ч. ПІСЛЯ догрузки фото (інакше картинка штовхає стрічку і вид «підскакує»).
+    if (stick) {
+      scrollBottom();
+      requestAnimationFrame(scrollBottom);
+      streamEl.querySelectorAll('.pm-bubble-photo').forEach(img => {
+        if (!img.complete) img.addEventListener('load', scrollBottom, { once: true });
+      });
+    }
   };
   const scrollBottom = () => { streamEl.scrollTop = streamEl.scrollHeight; };
+  // Чи стрічка прокручена до низу (з допуском) — щоб не «смикати» коли читаєш історію.
+  const atBottom = () => (streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight) < 120;
 
   // Єдина точка вставки/заміни повідомлення в масиві. Усуває дублі незалежно від
   // порядку приходу realtime-події vs await-відповіді: матч за реальним id, а для
@@ -417,7 +429,11 @@ export async function openChat(thread, post) {
     if (editing) input.value = '';
     clearCompose();
   });
-  api.screen.querySelector('#pm-attach')?.addEventListener('click', () => fileEl.click());
+  const attachBtn = api.screen.querySelector('#pm-attach');
+  // Не віддаємо фокус поля → клавіатура не ховається, бар не «зависає» в повітрі.
+  attachBtn?.addEventListener('pointerdown', e => e.preventDefault());
+  attachBtn?.addEventListener('mousedown', e => e.preventDefault());
+  attachBtn?.addEventListener('click', () => { input.focus(); fileEl.click(); });
   fileEl.addEventListener('change', () => { if (fileEl.files && fileEl.files[0]) sendPhoto(fileEl.files[0]); fileEl.value = ''; });
   streamEl.addEventListener('click', (e) => {
     const q = e.target.closest('[data-quick]');
