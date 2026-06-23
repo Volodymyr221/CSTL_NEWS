@@ -135,7 +135,6 @@ export async function openChat(thread, post) {
       ${avatar(partner)}
       <div class="pm-head-titles">
         <div class="pm-head-name">${escapeHtml(partner)}</div>
-        <div class="pm-head-sub">${escapeHtml(title)}</div>
       </div>
     </header>
     <button class="pm-ctx" type="button" data-pm-ctx aria-label="Переглянути оголошення">
@@ -415,9 +414,9 @@ export async function openChat(thread, post) {
     else if (kind === 'menu') openMsgActions(m);
   });
   // «Переглянути оголошення» — закрити чат і відкрити модалку Дошки
+  // «Переглянути оголошення» — модалка оголошення Дошки ПОВЕРХ чату (не закриваємо чат)
   api.screen.querySelector('[data-pm-ctx]')?.addEventListener('click', () => {
-    api.close();
-    setTimeout(() => window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } })), 260);
+    window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
   });
   // Кнопка надсилання не забирає фокус (iOS клавіатура)
   api.screen.querySelector('.pm-send')?.addEventListener('pointerdown', e => e.preventDefault());
