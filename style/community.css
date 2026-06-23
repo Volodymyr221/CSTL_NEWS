@@ -2555,6 +2555,22 @@
   align-items: center;
   justify-content: space-between;
   gap: 8px;
+  position: relative;
+  border-top: none;   /* штрихпунктир → суцільна затухаюча лінія (::before нижче) */
+}
+/* Роздільна лінія над реакціями у модалці — суцільна, затухає по краях (як на картці),
+   лишається лише під блоком «ім'я / номер телефону» */
+.cm-board-modal-note .bd-actions--board-compact::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(to right,
+    transparent 0%,
+    rgba(0,0,0,0.12) 50%,
+    transparent 100%);
 }
 .cm-board-modal-note .bd-actions-extra {
   display: flex;
