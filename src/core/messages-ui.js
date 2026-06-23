@@ -129,6 +129,8 @@ export async function openChat(thread, post) {
   const thumb = (p.photos && p.photos[0]) || '';
   const adAuthor = p.author ? String(p.author).trim() : '';
   const adContact = p.contact ? String(p.contact).trim() : '';
+  const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
+  const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, '') : '';
 
   const api = buildScreen(`
     <header class="pm-head pm-head--chat">
@@ -138,7 +140,7 @@ export async function openChat(thread, post) {
         <div class="pm-head-name">${escapeHtml(partner)}</div>
       </div>
     </header>
-    <button class="pm-ctx" type="button" data-pm-ctx aria-label="Переглянути оголошення">
+    <div class="pm-ctx" data-pm-ctx role="button" aria-label="Переглянути оголошення">
       ${thumb
         ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>`
         : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
@@ -147,7 +149,8 @@ export async function openChat(thread, post) {
         ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
         <span class="pm-ctx-link">Переглянути оголошення →</span>
       </span>
-    </button>
+      ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="Подзвонити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+    </div>
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">Завантаження…</div>
     </div>
@@ -416,7 +419,8 @@ export async function openChat(thread, post) {
   });
   // «Переглянути оголошення» — закрити чат і відкрити модалку Дошки
   // «Переглянути оголошення» — модалка оголошення Дошки ПОВЕРХ чату (не закриваємо чат)
-  api.screen.querySelector('[data-pm-ctx]')?.addEventListener('click', () => {
+  api.screen.querySelector('[data-pm-ctx]')?.addEventListener('click', (e) => {
+    if (e.target.closest('.pm-ctx-call')) return;   // дзвінок — не відкривати модалку
     window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
   });
   // Кнопка надсилання не забирає фокус (iOS клавіатура)
