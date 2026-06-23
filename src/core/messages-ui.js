@@ -264,6 +264,19 @@ export async function openChat(thread, post) {
   };
   const scrollBottom = () => { streamEl.scrollTop = streamEl.scrollHeight; };
 
+  // Єдина точка вставки/заміни повідомлення в масиві. Усуває дублі незалежно від
+  // порядку приходу realtime-події vs await-відповіді: матч за реальним id, а для
+  // своїх оптимістичних бульбашок — за client_tag (клієнтський ключ).
+  const upsertMessage = (row) => {
+    if (!row) return;
+    let idx = messages.findIndex(m => m.id === row.id);
+    if (idx < 0 && row.client_tag) idx = messages.findIndex(m => m.client_tag && m.client_tag === row.client_tag);
+    if (idx >= 0) messages[idx] = row;
+    else messages.push(row);
+  };
+  const newTag = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
+    ? crypto.randomUUID() : ('t-' + Date.now() + '-' + Math.random().toString(16).slice(2));
+
   // Кнопка ↑ / Enter: редагування (якщо активне) або нове повідомлення
   const submitText = async () => {
     const text = input.value.trim();
@@ -289,21 +302,22 @@ export async function openChat(thread, post) {
     if (containsProfanity(text)) { showToast('🚫 Повідомлення містить заборонені слова', 3500, 'error'); return; }
     const replyId = replyTo ? replyTo.id : null;
     input.value = ''; clearCompose();
-    const temp = { id: 'tmp-' + Date.now(), thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: new Date().toISOString() };
+    const tag = newTag();
+    const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     renderStream();
     scrollBottom();
-    const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId });
+    const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId, clientTag: tag });
     if (!res.ok) {
-      messages = messages.filter(m => m.id !== temp.id);
+      messages = messages.filter(m => m.client_tag !== tag);
       renderStream();
       showToast('❌ Не вдалося надіслати: ' + (res.error || ''), 4000, 'error');
       input.value = text;
       return;
     }
-    // Заміняємо temp на справжнє (з реальним id) — щоб realtime-дубль не додав копію
-    const idx = messages.findIndex(m => m.id === temp.id);
-    if (idx >= 0 && res.message) messages[idx] = res.message;
+    // Реконсиляція: realtime INSERT міг уже замінити tmp — upsert за id/client_tag
+    // гарантує рівно одне повідомлення незалежно від порядку подій.
+    upsertMessage(res.message);
     renderStream();
   };
 
@@ -313,27 +327,28 @@ export async function openChat(thread, post) {
     const replyId = replyTo ? replyTo.id : null;
     clearCompose();
     const localUrl = URL.createObjectURL(file);
-    const temp = { id: 'tmp-' + Date.now(), thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
+    const tag = newTag();
+    const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     renderStream();
     scrollBottom();
     const up = await uploadPhotoToStorage(file);
     if (!up.url) {
-      messages = messages.filter(m => m.id !== temp.id);
+      messages = messages.filter(m => m.client_tag !== tag);
       renderStream();
       showToast('❌ Не вдалося завантажити фото: ' + (up.error || ''), 4000, 'error');
       return;
     }
-    const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId });
+    const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId, clientTag: tag });
     URL.revokeObjectURL(localUrl);
     if (!res.ok) {
-      messages = messages.filter(m => m.id !== temp.id);
+      messages = messages.filter(m => m.client_tag !== tag);
       renderStream();
       showToast('❌ Не вдалося надіслати фото: ' + (res.error || ''), 4000, 'error');
       return;
     }
-    const idx = messages.findIndex(m => m.id === temp.id);
-    if (idx >= 0 && res.message) messages[idx] = res.message;
+    // Реконсиляція за id/client_tag — прибирає дубль «одне фото = два повідомлення».
+    upsertMessage(res.message);
     renderStream();
   };
 
@@ -383,10 +398,10 @@ export async function openChat(thread, post) {
   _chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
     if (!row) return;
     if (type === 'INSERT') {
-      if (messages.some(m => m.id === row.id)) return;   // вже є (мій optimistic)
-      messages.push(row);
+      const before = messages.length;
+      upsertMessage(row);                 // дедуплікація за id/client_tag (моє optimistic)
       renderStream();
-      scrollBottom();
+      if (messages.length > before) scrollBottom();   // скрол лише на справді нове
       if (row.sender_uid !== me) markThreadRead(thread.id, me).then(refreshUnreadBadge);
     } else if (type === 'UPDATE') {
       const idx = messages.findIndex(m => m.id === row.id);
