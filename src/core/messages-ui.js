@@ -209,8 +209,9 @@ export async function openChat(thread, post) {
 
   // Рендер однієї бульбашки (цитата відповіді + фото + текст + час; видалене/редаговане)
   const renderBubble = (m) => {
+    const enter = seen.has(msgKey(m)) ? '' : ' pm-bubble--enter';
     if (m.deleted_at) {
-      return `<div class="pm-bubble pm-bubble--deleted" data-msg="${m.id}"><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
+      return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
     }
     const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
     const replyHtml = reply
@@ -221,7 +222,7 @@ export async function openChat(thread, post) {
       : '';
     const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : '';
     const edited = m.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
-    return `<div class="pm-bubble" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
+    return `<div class="pm-bubble${enter}" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
   };
   const renderGroup = (g) =>
     `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;
@@ -263,28 +264,44 @@ export async function openChat(thread, post) {
     }
     streamEl.innerHTML = html;
     // Якщо були внизу — лишаємось унизу (фокус на останньому повідомленні),
-    // у т.ч. ПІСЛЯ догрузки фото (інакше картинка штовхає стрічку і вид «підскакує»).
+    // у т.ч. ПІСЛЯ догрузки фото. Плавно (smooth), окрім першого відкриття чату.
     if (stick) {
-      scrollBottom();
-      requestAnimationFrame(scrollBottom);
+      const smooth = !firstRender;
+      scrollBottom(smooth);
+      requestAnimationFrame(() => scrollBottom(smooth));
       streamEl.querySelectorAll('.pm-bubble-photo').forEach(img => {
-        if (!img.complete) img.addEventListener('load', scrollBottom, { once: true });
+        if (!img.complete) img.addEventListener('load', () => scrollBottom(smooth), { once: true });
       });
     }
+    messages.forEach(m => seen.add(msgKey(m)));   // показані → анімація появи раз
+    firstRender = false;
   };
-  const scrollBottom = () => { streamEl.scrollTop = streamEl.scrollHeight; };
+  const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   // Чи стрічка прокручена до низу (з допуском) — щоб не «смикати» коли читаєш історію.
   const atBottom = () => (streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight) < 120;
 
-  // Єдина точка вставки/заміни повідомлення в масиві. Усуває дублі незалежно від
-  // порядку приходу realtime-події vs await-відповіді: матч за реальним id, а для
-  // своїх оптимістичних бульбашок — за client_tag (клієнтський ключ).
+  // Множина вже показаних повідомлень (за стабільним ключем) — щоб анімація появи
+  // програвалась РІВНО раз на повідомлення, а не на кожне перемальовування.
+  const seen = new Set();
+  const msgKey = (m) => m.client_tag || m.id;
+  let firstRender = true;
+
+  // Єдина точка вставки/заміни повідомлення. Повертає 'add' | 'update' | 'same'
+  // ('same' = нічого візуально не змінилось → не перемальовуємо, без мікро-ривків).
+  // Дедуплікація за реальним id, а для своїх optimistic — за client_tag.
   const upsertMessage = (row) => {
-    if (!row) return;
+    if (!row) return 'none';
     let idx = messages.findIndex(m => m.id === row.id);
     if (idx < 0 && row.client_tag) idx = messages.findIndex(m => m.client_tag && m.client_tag === row.client_tag);
-    if (idx >= 0) messages[idx] = row;
-    else messages.push(row);
+    if (idx >= 0) {
+      const o = messages[idx];
+      const same = o.id === row.id && o.text === row.text && o.photo_url === row.photo_url
+        && o.deleted_at === row.deleted_at && o.edited_at === row.edited_at && o.read_at === row.read_at;
+      messages[idx] = row;
+      return same ? 'same' : 'update';
+    }
+    messages.push(row);
+    return 'add';
   };
   const newTag = () => (typeof crypto !== 'undefined' && crypto.randomUUID)
     ? crypto.randomUUID() : ('t-' + Date.now() + '-' + Math.random().toString(16).slice(2));
@@ -318,7 +335,6 @@ export async function openChat(thread, post) {
     const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     renderStream();
-    scrollBottom();
     const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId, clientTag: tag });
     if (!res.ok) {
       messages = messages.filter(m => m.client_tag !== tag);
@@ -343,7 +359,6 @@ export async function openChat(thread, post) {
     const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     renderStream();
-    scrollBottom();
     const up = await uploadPhotoToStorage(file);
     if (!up.url) {
       messages = messages.filter(m => m.client_tag !== tag);
@@ -400,8 +415,9 @@ export async function openChat(thread, post) {
   // Початкове завантаження
   messages = await fetchMessages(thread.id);
   if (api._closed) return api;
+  messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при відкритті
   renderStream();
-  setTimeout(scrollBottom, 50);
+  setTimeout(() => scrollBottom(false), 50);
   // Позначити вхідні прочитаними + оновити бейдж
   markThreadRead(thread.id, me).then(refreshUnreadBadge);
 
@@ -410,10 +426,8 @@ export async function openChat(thread, post) {
   _chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
     if (!row) return;
     if (type === 'INSERT') {
-      const before = messages.length;
-      upsertMessage(row);                 // дедуплікація за id/client_tag (моє optimistic)
-      renderStream();
-      if (messages.length > before) scrollBottom();   // скрол лише на справді нове
+      const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
+      if (st !== 'same') renderStream();  // renderStream сам плавно тримає низ; 'same' = відлуння → не чіпаємо
       if (row.sender_uid !== me) markThreadRead(thread.id, me).then(refreshUnreadBadge);
     } else if (type === 'UPDATE') {
       const idx = messages.findIndex(m => m.id === row.id);

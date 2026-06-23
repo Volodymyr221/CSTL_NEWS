@@ -1564,15 +1564,16 @@
       document.body.appendChild(ov);
     };
     const renderBubble = (m) => {
+      const enter = seen.has(msgKey(m)) ? "" : " pm-bubble--enter";
       if (m.deleted_at) {
-        return `<div class="pm-bubble pm-bubble--deleted" data-msg="${m.id}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
+        return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
       const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90))}</span>` : "";
       const photoHtml = m.photo_url ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="\u0444\u043E\u0442\u043E" data-photo="${escapeHtml(m.photo_url)}">` : "";
       const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : "";
       const edited = m.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
-      return `<div class="pm-bubble" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
+      return `<div class="pm-bubble${enter}" data-msg="${m.id}">${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
     };
     const renderGroup = (g) => `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${g.msgs.map(renderBubble).join("")}</div>`;
     const renderStream = () => {
@@ -1624,28 +1625,36 @@
       }
       streamEl.innerHTML = html;
       if (stick) {
-        scrollBottom();
-        requestAnimationFrame(scrollBottom);
+        const smooth = !firstRender;
+        scrollBottom(smooth);
+        requestAnimationFrame(() => scrollBottom(smooth));
         streamEl.querySelectorAll(".pm-bubble-photo").forEach((img) => {
           if (!img.complete)
-            img.addEventListener("load", scrollBottom, { once: true });
+            img.addEventListener("load", () => scrollBottom(smooth), { once: true });
         });
       }
+      messages.forEach((m) => seen.add(msgKey(m)));
+      firstRender = false;
     };
-    const scrollBottom = () => {
-      streamEl.scrollTop = streamEl.scrollHeight;
-    };
+    const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? "smooth" : "auto" });
     const atBottom = () => streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight < 120;
+    const seen = /* @__PURE__ */ new Set();
+    const msgKey = (m) => m.client_tag || m.id;
+    let firstRender = true;
     const upsertMessage = (row) => {
       if (!row)
-        return;
+        return "none";
       let idx = messages.findIndex((m) => m.id === row.id);
       if (idx < 0 && row.client_tag)
         idx = messages.findIndex((m) => m.client_tag && m.client_tag === row.client_tag);
-      if (idx >= 0)
+      if (idx >= 0) {
+        const o = messages[idx];
+        const same = o.id === row.id && o.text === row.text && o.photo_url === row.photo_url && o.deleted_at === row.deleted_at && o.edited_at === row.edited_at && o.read_at === row.read_at;
         messages[idx] = row;
-      else
-        messages.push(row);
+        return same ? "same" : "update";
+      }
+      messages.push(row);
+      return "add";
     };
     const newTag = () => typeof crypto !== "undefined" && crypto.randomUUID ? crypto.randomUUID() : "t-" + Date.now() + "-" + Math.random().toString(16).slice(2);
     const submitText = async () => {
@@ -1693,7 +1702,6 @@
       const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       renderStream();
-      scrollBottom();
       const res = await sendMessage({ threadId: thread.id, senderUid: me, text, replyToId: replyId, clientTag: tag });
       if (!res.ok) {
         messages = messages.filter((m) => m.client_tag !== tag);
@@ -1715,7 +1723,6 @@
       const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       renderStream();
-      scrollBottom();
       const up = await uploadPhotoToStorage(file);
       if (!up.url) {
         messages = messages.filter((m) => m.client_tag !== tag);
@@ -1784,8 +1791,9 @@
     messages = await fetchMessages(thread.id);
     if (api._closed)
       return api;
+    messages.forEach((m) => seen.add(msgKey(m)));
     renderStream();
-    setTimeout(scrollBottom, 50);
+    setTimeout(() => scrollBottom(false), 50);
     markThreadRead(thread.id, me).then(refreshUnreadBadge);
     if (_chatUnsub) {
       try {
@@ -1797,11 +1805,9 @@
       if (!row)
         return;
       if (type === "INSERT") {
-        const before = messages.length;
-        upsertMessage(row);
-        renderStream();
-        if (messages.length > before)
-          scrollBottom();
+        const st = upsertMessage(row);
+        if (st !== "same")
+          renderStream();
         if (row.sender_uid !== me)
           markThreadRead(thread.id, me).then(refreshUnreadBadge);
       } else if (type === "UPDATE") {
