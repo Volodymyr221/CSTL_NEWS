@@ -1499,8 +1499,55 @@
     backdrop.addEventListener("click", close);
     screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
     api.close = close;
+    setupEdgeBack(screen, close);
     _openScreens.push(api);
     return api;
+  }
+  function setupEdgeBack(screen, onClose) {
+    let sx = 0, sy = 0, dragging = false, lock = null;
+    const winW = () => window.innerWidth || screen.clientWidth || 360;
+    screen.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      if (t.clientX > 24) {
+        dragging = false;
+        return;
+      }
+      sx = t.clientX;
+      sy = t.clientY;
+      dragging = true;
+      lock = null;
+    }, { passive: true });
+    screen.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
+        lock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      if (lock === "v") {
+        dragging = false;
+        screen.style.transition = "";
+        screen.style.transform = "";
+        return;
+      }
+      if (lock === "h" && dx > 0) {
+        e.preventDefault();
+        screen.style.transition = "none";
+        screen.style.transform = `translateX(-50%) translateX(${dx}px)`;
+      }
+    }, { passive: false });
+    screen.addEventListener("touchend", (e) => {
+      if (!dragging)
+        return;
+      dragging = false;
+      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
+      screen.style.transition = "";
+      if (lock === "h" && dx > winW() * 0.33) {
+        screen.style.transform = `translateX(-50%) translateX(${winW()}px)`;
+        setTimeout(onClose, 180);
+      } else {
+        screen.style.transform = "";
+      }
+    }, { passive: false });
   }
   function closeScreen(api) {
     if (!api || api._closed)

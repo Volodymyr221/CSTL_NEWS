@@ -58,8 +58,44 @@ function buildScreen(innerHtml, extraClass = '') {
   backdrop.addEventListener('click', close);
   screen.querySelector('[data-pm-back]')?.addEventListener('click', close);
   api.close = close;
+  setupEdgeBack(screen, close);   // свайп від лівого краю → назад (як на iOS)
   _openScreens.push(api);
   return api;
+}
+
+// Свайп від ЛІВОГО краю екрану вправо → закрити (назад). Плавно: під час
+// перетягування transition вимкнено (йде за пальцем), на відпусканні — снап/закриття.
+function setupEdgeBack(screen, onClose) {
+  let sx = 0, sy = 0, dragging = false, lock = null;
+  const winW = () => window.innerWidth || screen.clientWidth || 360;
+  screen.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    if (t.clientX > 24) { dragging = false; return; }   // лише від самого лівого краю
+    sx = t.clientX; sy = t.clientY; dragging = true; lock = null;
+  }, { passive: true });
+  screen.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (lock === 'v') { dragging = false; screen.style.transition = ''; screen.style.transform = ''; return; }
+    if (lock === 'h' && dx > 0) {
+      e.preventDefault();
+      screen.style.transition = 'none';
+      screen.style.transform = `translateX(-50%) translateX(${dx}px)`;   // зберігаємо центрування -50%
+    }
+  }, { passive: false });
+  screen.addEventListener('touchend', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
+    screen.style.transition = '';   // повертаємо CSS-плавність (0.28s)
+    if (lock === 'h' && dx > winW() * 0.33) {
+      screen.style.transform = `translateX(-50%) translateX(${winW()}px)`;   // доїхати вправо
+      setTimeout(onClose, 180);
+    } else {
+      screen.style.transform = '';   // снап назад (центрування з CSS)
+    }
+  }, { passive: false });
 }
 
 function closeScreen(api) {
