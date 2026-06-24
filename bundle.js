@@ -1957,37 +1957,34 @@
       window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
     });
     api.screen.querySelector(".pm-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
-    setupKeyboardResize(api.screen);
+    api._cleanup.push(setupKeyboardResize(api.screen));
     setTimeout(() => input.focus(), 250);
     return api;
   }
   function setupKeyboardResize(screen) {
     const vv = window.visualViewport;
     if (!vv)
-      return;
-    const fullH = window.innerHeight;
+      return () => {
+      };
+    const stream = screen.querySelector("#pm-stream");
     const apply = () => {
-      const open = vv.height < fullH - 80;
-      if (open) {
-        screen.style.height = vv.height - 2 + "px";
-        screen.style.top = vv.offsetTop + "px";
-        screen.classList.add("pm-kb-open");
-        const stream = screen.querySelector("#pm-stream");
-        if (stream)
-          stream.scrollTop = stream.scrollHeight;
-      } else {
-        screen.style.height = "";
-        screen.style.top = "";
-        screen.classList.remove("pm-kb-open");
-      }
+      screen.style.height = vv.height + "px";
+      screen.style.top = vv.offsetTop + "px";
+      const open = window.innerHeight - vv.height > 80;
+      screen.classList.toggle("pm-kb-open", open);
+      if (open && stream)
+        stream.scrollTop = stream.scrollHeight;
     };
-    let t = null;
-    const h = () => {
-      clearTimeout(t);
-      t = setTimeout(apply, 80);
+    apply();
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      vv.removeEventListener("scroll", apply);
+      screen.style.height = "";
+      screen.style.top = "";
+      screen.classList.remove("pm-kb-open");
     };
-    vv.addEventListener("resize", h);
-    vv.addEventListener("scroll", h);
   }
   var SWIPE_TRIGGER = 45;
   function setupBubbleGestures(container, onAction) {
