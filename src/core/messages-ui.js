@@ -558,13 +558,43 @@ export async function openChat(thread, post) {
   return api;
 }
 
-// Модалка чату тримається країв видимої області (visualViewport) у реальному часі.
-// Відновлено робочу версію (real-time трекінг) — до спроб з top:0 / замком сторінки,
-// які ховали або не давали виграшу. Повертає функцію очистки.
+// Шапка+картка чату закріплені зверху і НЕ рухаються при появі/зникненні клавіатури.
+// Ключ: iOS «панорамує» (зсуває) документ під клавіатуру, тягнучи фіксований верх.
+// Тому на час чату ЗАМИКАЄМО сторінку (body→position:fixed) — панорамувати нема чому,
+// шапка стоїть мертво. Зберігаємо real-time висоту + автоскрол до низу при відкритті.
+// Повертає функцію очистки (знімає замок + слухачі).
 function setupKeyboardResize(screen) {
   const vv = window.visualViewport;
-  if (!vv) return () => {};
   const stream = screen.querySelector('#pm-stream');
+
+  // Замок сторінки: фіксуємо body, щоб iOS не зсував/скролив документ під клавіатуру.
+  const scrollY  = window.scrollY || 0;
+  const prevBody = {
+    position: document.body.style.position,
+    top:      document.body.style.top,
+    left:     document.body.style.left,
+    right:    document.body.style.right,
+    width:    document.body.style.width,
+    overflow: document.body.style.overflow,
+  };
+  document.body.style.position = 'fixed';
+  document.body.style.top      = `-${scrollY}px`;
+  document.body.style.left     = '0';
+  document.body.style.right    = '0';
+  document.body.style.width    = '100%';
+  document.body.style.overflow = 'hidden';
+  const unlock = () => {
+    document.body.style.position = prevBody.position;
+    document.body.style.top      = prevBody.top;
+    document.body.style.left     = prevBody.left;
+    document.body.style.right    = prevBody.right;
+    document.body.style.width    = prevBody.width;
+    document.body.style.overflow = prevBody.overflow;
+    window.scrollTo(0, scrollY);
+  };
+
+  if (!vv) return unlock;
+
   let wasOpen = false;
   const apply = () => {
     // Чи був користувач унизу стрічки ДО зміни висоти (щоб не збивати читання історії).
@@ -572,11 +602,9 @@ function setupKeyboardResize(screen) {
       ? (stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60)
       : false;
     screen.style.height = vv.height + 'px';   // точна висота видимої області
-    screen.style.top = vv.offsetTop + 'px';   // зсув коли клавіатура штовхає вгору
-    // Клавіатура відкрита? Міряємо стабільною висотою макета (clientHeight НЕ міняється
-    // від клавіатури). window.innerHeight у standalone-PWA на iOS теж зменшується разом
-    // з vv.height → різниця ≈ 0 → pm-kb-open не вмикався → у поля лишався великий
-    // safe-area відступ знизу (пустий блок між полем і клавіатурою).
+    // top=offsetTop як страховка; при замкненій сторінці offsetTop≈0 → шапка не дьоргається.
+    screen.style.top = vv.offsetTop + 'px';
+    // Клавіатура відкрита? Стабільна висота макета (clientHeight НЕ міняється від клавіатури).
     const open = (document.documentElement.clientHeight - vv.height) > 80;
     screen.classList.toggle('pm-kb-open', open);
     // Підтягнути стрічку до останнього повідомлення коли клавіатура ВІДКРИВАЄТЬСЯ
@@ -595,6 +623,7 @@ function setupKeyboardResize(screen) {
     vv.removeEventListener('scroll', apply);
     screen.style.height = ''; screen.style.top = '';
     screen.classList.remove('pm-kb-open');
+    unlock();
   };
 }
 

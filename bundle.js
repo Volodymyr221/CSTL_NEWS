@@ -1963,10 +1963,33 @@
   }
   function setupKeyboardResize(screen) {
     const vv = window.visualViewport;
-    if (!vv)
-      return () => {
-      };
     const stream = screen.querySelector("#pm-stream");
+    const scrollY = window.scrollY || 0;
+    const prevBody = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow
+    };
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+    const unlock = () => {
+      document.body.style.position = prevBody.position;
+      document.body.style.top = prevBody.top;
+      document.body.style.left = prevBody.left;
+      document.body.style.right = prevBody.right;
+      document.body.style.width = prevBody.width;
+      document.body.style.overflow = prevBody.overflow;
+      window.scrollTo(0, scrollY);
+    };
+    if (!vv)
+      return unlock;
     let wasOpen = false;
     const apply = () => {
       const atBottom = stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60 : false;
@@ -1990,6 +2013,7 @@
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");
+      unlock();
     };
   }
   var SWIPE_TRIGGER = 45;
