@@ -227,15 +227,40 @@
 
 /* Картки-діалоги */
 .pm-threads { display: flex; flex-direction: column; }
+/* Обгортка рядка: картка зверху (z-index 1), дії архів/видалити — ззаду справа. */
+.pm-thread-row {
+  position: relative;
+  margin: 0 16px 10px;
+  border-radius: 18px;
+  overflow: hidden;
+}
+.pm-thread-actions {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding-right: 14px; z-index: 0;
+}
+.pm-thread-act {
+  width: 52px; height: 52px; flex-shrink: 0;
+  border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(0.6);
+  transition: opacity 0.18s, transform 0.18s;
+}
+.pm-thread-row--open .pm-thread-act { opacity: 1; transform: scale(1); }
+.pm-thread-act svg { width: 22px; height: 22px; display: block; }
+.pm-thread-act--archive { background: var(--ink-mute, #9C9080); }
+.pm-thread-act--delete  { background: var(--red, #722F37); }
+.pm-thread-act:active { filter: brightness(0.92); }
 .pm-thread {
+  position: relative; z-index: 1; width: 100%;
   display: flex; align-items: center; gap: 12px;
   text-align: left; cursor: pointer;
-  margin: 0 16px 10px; padding: 12px 14px;
+  padding: 12px 14px;
   border: 0; border-radius: 18px;
   background: var(--card-cream, #FAF8EF);
   box-shadow: var(--card-shadow, 0 1px 2px rgba(70,45,20,0.05), 0 8px 24px rgba(70,45,20,0.08));
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
-.pm-thread:active { transform: scale(0.992); }
 .pm-thread-body { flex: 1; min-width: 0; }
 .pm-thread-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .pm-thread-name {

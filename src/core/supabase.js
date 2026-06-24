@@ -274,6 +274,30 @@ export async function fetchMyThreads(uid) {
   return data || [];
 }
 
+// Per-user стан розмов (архів / приховано) → Map<thread_id, {archived, hidden}>.
+export async function fetchThreadStates(uid) {
+  const map = new Map();
+  if (!supa || !uid) return map;
+  const { data, error } = await supa.from('thread_user_state')
+    .select('thread_id, archived, hidden').eq('uid', uid);
+  if (error) { console.warn('[supabase] fetchThreadStates:', error.message); return map; }
+  for (const r of (data || [])) map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden });
+  return map;
+}
+
+// Оновити стан розмови (upsert по (uid, thread_id)). patch = { archived?, hidden? }.
+export async function setThreadState(uid, threadId, patch) {
+  if (!supa || !uid) return { ok: false, error: 'no-supa' };
+  const row = { uid, thread_id: threadId, updated_at: new Date().toISOString(), ...patch };
+  try {
+    const { error } = await withTimeout(
+      supa.from('thread_user_state').upsert(row, { onConflict: 'uid,thread_id' })
+    );
+    if (error) return { ok: false, error: error.message };
+    return { ok: true };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 // Знайти або створити тред покупця на оголошенні. authorUid = власник посту.
 // authorName/buyerName зберігаємо денормалізовано (profiles приватний — див. SQL).
 export async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
