@@ -861,7 +861,8 @@ export function openThreadsList() {
     let openRow = null, suppressClick = false;
     const closeOpenRow = () => {
       if (!openRow) return;
-      openRow.querySelector('.pm-thread')?.style.removeProperty('transform');
+      const c = openRow.querySelector('.pm-thread');
+      if (c) { c.style.transition = ''; c.style.removeProperty('transform'); }   // плавне закриття
       openRow.classList.remove('pm-thread-row--open');
       openRow = null;
     };
@@ -878,6 +879,7 @@ export function openThreadsList() {
       if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) swLock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
       if (swLock === 'h') {
         e.preventDefault();
+        swCard.style.transition = 'none';   // реальний час — картка йде ЗА пальцем без анімації-затримки
         const base = (swRow === openRow) ? -140 : 0;
         const d = Math.max(Math.min(base + dx, 0), -140);
         swCard.style.transform = `translateX(${d}px)`;
@@ -889,6 +891,7 @@ export function openThreadsList() {
       swCard = null; swRow = null;
       if (lock !== 'h') return;
       suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+      c.style.transition = '';   // повертаємо CSS-плавність (0.22s) лише для фінального «снапу»
       const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sX) - sX;
       const wasOpen = (r === openRow);
       const open = wasOpen ? (dx < 60) : (dx < -70);
