@@ -279,9 +279,9 @@ export async function fetchThreadStates(uid) {
   const map = new Map();
   if (!supa || !uid) return map;
   const { data, error } = await supa.from('thread_user_state')
-    .select('thread_id, archived, hidden').eq('uid', uid);
+    .select('thread_id, archived, hidden, cleared_at').eq('uid', uid);
   if (error) { console.warn('[supabase] fetchThreadStates:', error.message); return map; }
-  for (const r of (data || [])) map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden });
+  for (const r of (data || [])) map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden, cleared_at: r.cleared_at || null });
   return map;
 }
 
@@ -316,12 +316,21 @@ export async function getOrCreateThread({ postId, authorUid, buyerUid, authorNam
 }
 
 // Повідомлення треда (старі → нові).
-export async function fetchMessages(threadId) {
+export async function fetchMessages(threadId, sinceTs = null) {
   if (!supa) return [];
-  const { data, error } = await supa.from('messages')
-    .select('*').eq('thread_id', threadId).order('created_at', { ascending: true });
+  let q = supa.from('messages').select('*').eq('thread_id', threadId);
+  if (sinceTs) q = q.gt('created_at', sinceTs);   // «чистий» вид після видалення (cleared_at)
+  const { data, error } = await q.order('created_at', { ascending: true });
   if (error) { console.warn('[supabase] fetchMessages:', error.message); return []; }
   return data || [];
+}
+
+// cleared_at цього користувача для треда (момент «видалення») або null.
+export async function fetchThreadClearedAt(uid, threadId) {
+  if (!supa || !uid) return null;
+  const { data } = await supa.from('thread_user_state')
+    .select('cleared_at').eq('uid', uid).eq('thread_id', threadId).maybeSingle();
+  return data?.cleared_at || null;
 }
 
 // Надіслати повідомлення + оновити час треда + штовхнути push отримувачу.
@@ -411,10 +420,18 @@ export async function fetchUnreadByThread(uid) {
     .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
   const ids = (th || []).map(t => t.id);
   if (!ids.length) return map;
-  // Тягнемо непрочитані чужі повідомлення цих тредів і рахуємо на клієнті.
-  const { data } = await supa.from('messages').select('thread_id')
+  // cleared_at цього юзера по тредах (момент «видалення») — непрочитані рахуємо лише ПІСЛЯ неї.
+  const { data: states } = await supa.from('thread_user_state')
+    .select('thread_id, cleared_at').eq('uid', uid).not('cleared_at', 'is', null);
+  const clearedMap = new Map((states || []).map(s => [s.thread_id, s.cleared_at]));
+  // Тягнемо непрочитані чужі повідомлення цих тредів і рахуємо на клієнті (з урахуванням cleared_at).
+  const { data } = await supa.from('messages').select('thread_id, created_at')
     .in('thread_id', ids).neq('sender_uid', uid).is('read_at', null);
-  for (const m of (data || [])) map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
+  for (const m of (data || [])) {
+    const cl = clearedMap.get(m.thread_id);
+    if (cl && new Date(m.created_at) <= new Date(cl)) continue;   // повідомлення до видалення — не рахуємо
+    map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
+  }
   return map;
 }
 

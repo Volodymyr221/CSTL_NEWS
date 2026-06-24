@@ -20,7 +20,7 @@ import {
 import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
   fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
-  fetchThreadStates, setThreadState,
+  fetchThreadStates, setThreadState, fetchThreadClearedAt,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
 } from './supabase.js';
@@ -514,8 +514,11 @@ export async function openChat(thread, post) {
     api.screen.appendChild(sheet);
   };
 
-  // Початкове завантаження
-  messages = await fetchMessages(thread.id);
+  // Початкове завантаження. Якщо чат раніше «видаляли» (cleared_at) — показуємо
+  // ЛИШЕ повідомлення після того моменту (чистий старт після повторного контакту).
+  const clearedAt = await fetchThreadClearedAt(me, thread.id);
+  if (api._closed) return api;
+  messages = await fetchMessages(thread.id, clearedAt);
   if (api._closed) return api;
   messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при відкритті
   renderStream();
@@ -800,7 +803,9 @@ export function openThreadsList() {
       const q = query.trim().toLowerCase();
       const list = threads.filter(t => {
         const s = stOf(t.id);
-        if (s.hidden) return false;                              // видалені з мого списку — ніде
+        // «Видалено» (cleared_at): ховаємо, ПОКИ нема нового повідомлення після видалення.
+        // Прийшло нове (last_message_at пізніше) → чат знову зʼявляється (чистий).
+        if (s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at))) return false;
         if (filter === 'archive') { if (!s.archived) return false; }
         else if (s.archived) return false;                      // архівні не в «Усі»/«Непрочитані»
         if (filter === 'unread' && !(unread.get(t.id) > 0)) return false;
@@ -906,11 +911,13 @@ export function openThreadsList() {
     // Зміна стану розмови (архів/приховано) — оптимістично + БД (повний стан → upsert).
     const applyThreadState = async (id, patch) => {
       const prev = { ...(states.get(id) || {}) };
-      const merged = { archived: !!prev.archived, hidden: !!prev.hidden, ...patch };
+      const merged = { ...prev, ...patch };   // зберігаємо cleared_at при архівуванні тощо
       states.set(id, merged);
       closeOpenRow();
       renderThreads();
-      const res = await setThreadState(me, id, { archived: !!merged.archived, hidden: !!merged.hidden });
+      const res = await setThreadState(me, id, {
+        archived: !!merged.archived, hidden: !!merged.hidden, cleared_at: merged.cleared_at || null,
+      });
       if (!res.ok) { states.set(id, prev); renderThreads(); showToast('❌ Не вдалося: ' + (res.error || ''), 4000, 'error'); }
     };
 
@@ -918,7 +925,7 @@ export function openThreadsList() {
       const arch = e.target.closest('[data-archive]');
       if (arch) { const id = Number(arch.dataset.archive); applyThreadState(id, { archived: !(stOf(id).archived) }); return; }
       const del = e.target.closest('[data-delete]');
-      if (del) { applyThreadState(Number(del.dataset.delete), { hidden: true }); return; }
+      if (del) { applyThreadState(Number(del.dataset.delete), { hidden: true, cleared_at: new Date().toISOString() }); return; }
       const btn = e.target.closest('[data-thread]');
       if (!btn) return;
       if (suppressClick) return;                 // щойно свайпнули — не відкривати чат
