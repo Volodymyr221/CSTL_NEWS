@@ -2362,7 +2362,11 @@
       const closeOpenRow = () => {
         if (!openRow)
           return;
-        openRow.querySelector(".pm-thread")?.style.removeProperty("transform");
+        const c = openRow.querySelector(".pm-thread");
+        if (c) {
+          c.style.transition = "";
+          c.style.removeProperty("transform");
+        }
         openRow.classList.remove("pm-thread-row--open");
         openRow = null;
       };
@@ -2387,6 +2391,7 @@
           swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (swLock === "h") {
           e.preventDefault();
+          swCard.style.transition = "none";
           const base = swRow === openRow ? -140 : 0;
           const d = Math.max(Math.min(base + dx, 0), -140);
           swCard.style.transform = `translateX(${d}px)`;
@@ -2404,6 +2409,7 @@
         setTimeout(() => {
           suppressClick = false;
         }, 60);
+        c.style.transition = "";
         const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sX) - sX;
         const wasOpen = r === openRow;
         const open = wasOpen ? dx < 60 : dx < -70;
