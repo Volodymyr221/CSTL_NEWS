@@ -566,8 +566,10 @@ function setupKeyboardResize(screen) {
   if (!vv) return () => {};
   const stream = screen.querySelector('#pm-stream');
   const apply = () => {
-    screen.style.height = vv.height + 'px';   // точна висота видимої області
-    screen.style.top = vv.offsetTop + 'px';   // зсув коли клавіатура штовхає вгору
+    // Верх ЗАВЖДИ прибитий до 0 (шапка + картка оголошення не рухаються),
+    // підлаштовуємо лише НИЗ під клавіатуру → край-у-край, без дьоргання верху.
+    screen.style.top = '0px';
+    screen.style.height = (vv.offsetTop + vv.height) + 'px';
     const open = (window.innerHeight - vv.height) > 80;
     screen.classList.toggle('pm-kb-open', open);
     if (open && stream) stream.scrollTop = stream.scrollHeight;

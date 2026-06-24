@@ -1968,8 +1968,8 @@
       };
     const stream = screen.querySelector("#pm-stream");
     const apply = () => {
-      screen.style.height = vv.height + "px";
-      screen.style.top = vv.offsetTop + "px";
+      screen.style.top = "0px";
+      screen.style.height = vv.offsetTop + vv.height + "px";
       const open = window.innerHeight - vv.height > 80;
       screen.classList.toggle("pm-kb-open", open);
       if (open && stream)
