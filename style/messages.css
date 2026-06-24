@@ -410,9 +410,12 @@
   display: block; max-width: 220px; max-height: 260px; width: 100%;
   border-radius: 12px; margin-bottom: 2px; object-fit: cover; cursor: pointer;
 }
-/* Бульбашка з фото: бордовий фон — тонкий ободок зверху/з боків навколо фото,
-   низ лишаємо м'якшим (там дата). Виглядає як рамка навколо знімка. */
+/* Бульбашка з фото: тонкий бордовий ободок (3px) зверху + з ВНУТРІШНЬОГО боку,
+   низ м'якший (там дата). Бік до СТІНКИ екрана лишаємо ширшим (як було, 12px) —
+   моє фото праворуч → ширший правий край; фото колеги ліворуч → ширший лівий. */
 .pm-bubble--photo { padding: 3px 3px 6px; }
+.pm-group--mine  .pm-bubble--photo { padding-right: 12px; }
+.pm-group--other .pm-bubble--photo { padding-left: 12px; }
 
 /* Мітка «змінено» + видалене повідомлення */
 .pm-bubble-edited { font-size: 10.5px; opacity: 0.6; font-style: italic; }
