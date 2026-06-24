@@ -440,16 +440,21 @@ export async function openChat(thread, post) {
       return;
     }
     const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId, clientTag: tag });
-    URL.revokeObjectURL(localUrl);
     if (!res.ok) {
+      URL.revokeObjectURL(localUrl);
       messages = messages.filter(m => m.client_tag !== tag);
       renderStream();
       showToast('❌ Не вдалося надіслати фото: ' + (res.error || ''), 4000, 'error');
       return;
     }
+    // Передзавантажуємо фото зі Storage ПЕРЕД заміною — щоб локальне прев'ю не
+    // зникало в порожнечу поки картинка вантажиться (інакше фото «пропадає»).
+    await new Promise((resolve) => { const pre = new Image(); pre.onload = pre.onerror = resolve; pre.src = up.url; });
+    if (api._closed) return;
     // Реконсиляція за id/client_tag — прибирає дубль «одне фото = два повідомлення».
     upsertMessage(res.message);
     replaceOne(res.message);
+    URL.revokeObjectURL(localUrl);   // прев'ю вже не потрібне — Storage-фото на місці
   };
 
   // Меню дій над повідомленням (довге натискання / правий клік)

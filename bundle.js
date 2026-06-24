@@ -1802,15 +1802,23 @@
         return;
       }
       const res = await sendMessage({ threadId: thread.id, senderUid: me, photoUrl: up.url, replyToId: replyId, clientTag: tag });
-      URL.revokeObjectURL(localUrl);
       if (!res.ok) {
+        URL.revokeObjectURL(localUrl);
         messages = messages.filter((m) => m.client_tag !== tag);
         renderStream();
         showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u0444\u043E\u0442\u043E: " + (res.error || ""), 4e3, "error");
         return;
       }
+      await new Promise((resolve) => {
+        const pre = new Image();
+        pre.onload = pre.onerror = resolve;
+        pre.src = up.url;
+      });
+      if (api._closed)
+        return;
       upsertMessage(res.message);
       replaceOne(res.message);
+      URL.revokeObjectURL(localUrl);
     };
     const openMsgActions = (m) => {
       if (m.deleted_at)
