@@ -758,14 +758,16 @@ export function openThreadsList() {
     const searchEl  = api.screen.querySelector('#pm-search');
     const chipsEl   = api.screen.querySelector('#pm-chips');
 
-    const [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+    let [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
     if (api._closed) return;
 
     // Без жодної розмови — ховаємо пошук+фільтри, лишаємо чистий empty state
-    if (!threads.length) {
-      api.screen.querySelector('.pm-search').style.display = 'none';
-      chipsEl.style.display = 'none';
-    }
+    const applyEmptyState = () => {
+      const show = threads.length ? '' : 'none';
+      api.screen.querySelector('.pm-search').style.display = show;
+      chipsEl.style.display = show;
+    };
+    applyEmptyState();
 
     let filter = 'all';   // all | unread
     let query  = '';
@@ -824,6 +826,23 @@ export function openThreadsList() {
       const t = threads.find(x => String(x.id) === btn.dataset.thread);
       if (t) openChat(t, t.post);
     });
+
+    // Живий список: нове повідомлення → перезавантажуємо треди (порядок за
+    // last_message_at — розмова підстрибує вгору) + непрочитані і перемальовуємо.
+    // Окремий канал (не конфліктує з глобальним бейджем). Дебаунс проти сплесків.
+    let refreshTimer = null;
+    const refresh = async () => {
+      const [t, u] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+      if (api._closed) return;
+      threads = t; unread = u;
+      applyEmptyState();
+      renderThreads();
+    };
+    const unsub = subscribeMyThreads(() => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(refresh, 250);
+    }, 'pm-threads-list');
+    api._cleanup.push(() => { if (refreshTimer) clearTimeout(refreshTimer); unsub(); });
   });
 }
 

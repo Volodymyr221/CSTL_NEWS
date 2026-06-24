@@ -373,9 +373,9 @@ export function subscribeThreadMessages(threadId, onChange) {
 }
 
 // Realtime: будь-яка зміна моїх тредів (для оновлення списку/бейджа).
-export function subscribeMyThreads(onChange) {
+export function subscribeMyThreads(onChange, channelName = 'my-threads') {
   if (!supa) return () => {};
-  const ch = supa.channel('my-threads')
+  const ch = supa.channel(channelName)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'messages' }, p => onChange(p))
     .on('postgres_changes', { event: '*', schema: 'public', table: 'threads' },  p => onChange(p))
     .subscribe();
