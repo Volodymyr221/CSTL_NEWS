@@ -590,13 +590,13 @@
     const map = /* @__PURE__ */ new Map();
     if (!supa || !uid)
       return map;
-    const { data, error } = await supa.from("thread_user_state").select("thread_id, archived, hidden").eq("uid", uid);
+    const { data, error } = await supa.from("thread_user_state").select("thread_id, archived, hidden, cleared_at").eq("uid", uid);
     if (error) {
       console.warn("[supabase] fetchThreadStates:", error.message);
       return map;
     }
     for (const r of data || [])
-      map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden });
+      map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden, cleared_at: r.cleared_at || null });
     return map;
   }
   async function setThreadState(uid, threadId, patch) {
@@ -631,15 +631,24 @@
       return { ok: false, error: error.message };
     return { ok: true, thread: data };
   }
-  async function fetchMessages(threadId) {
+  async function fetchMessages(threadId, sinceTs = null) {
     if (!supa)
       return [];
-    const { data, error } = await supa.from("messages").select("*").eq("thread_id", threadId).order("created_at", { ascending: true });
+    let q = supa.from("messages").select("*").eq("thread_id", threadId);
+    if (sinceTs)
+      q = q.gt("created_at", sinceTs);
+    const { data, error } = await q.order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchMessages:", error.message);
       return [];
     }
     return data || [];
+  }
+  async function fetchThreadClearedAt(uid, threadId) {
+    if (!supa || !uid)
+      return null;
+    const { data } = await supa.from("thread_user_state").select("cleared_at").eq("uid", uid).eq("thread_id", threadId).maybeSingle();
+    return data?.cleared_at || null;
   }
   var NET_TIMEOUT = 6e3;
   function withTimeout(thenable, ms = NET_TIMEOUT) {
@@ -708,9 +717,15 @@
     const ids = (th || []).map((t) => t.id);
     if (!ids.length)
       return map;
-    const { data } = await supa.from("messages").select("thread_id").in("thread_id", ids).neq("sender_uid", uid).is("read_at", null);
-    for (const m of data || [])
+    const { data: states } = await supa.from("thread_user_state").select("thread_id, cleared_at").eq("uid", uid).not("cleared_at", "is", null);
+    const clearedMap = new Map((states || []).map((s) => [s.thread_id, s.cleared_at]));
+    const { data } = await supa.from("messages").select("thread_id, created_at").in("thread_id", ids).neq("sender_uid", uid).is("read_at", null);
+    for (const m of data || []) {
+      const cl = clearedMap.get(m.thread_id);
+      if (cl && new Date(m.created_at) <= new Date(cl))
+        continue;
       map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
+    }
     return map;
   }
   async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
@@ -1969,7 +1984,10 @@
       });
       api.screen.appendChild(sheet);
     };
-    messages = await fetchMessages(thread.id);
+    const clearedAt = await fetchThreadClearedAt(me, thread.id);
+    if (api._closed)
+      return api;
+    messages = await fetchMessages(thread.id, clearedAt);
     if (api._closed)
       return api;
     messages.forEach((m) => seen.add(msgKey(m)));
@@ -2297,7 +2315,7 @@
         const q = query.trim().toLowerCase();
         const list = threads.filter((t) => {
           const s = stOf(t.id);
-          if (s.hidden)
+          if (s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at)))
             return false;
           if (filter === "archive") {
             if (!s.archived)
@@ -2428,11 +2446,15 @@
       }, { passive: false });
       const applyThreadState = async (id, patch) => {
         const prev = { ...states.get(id) || {} };
-        const merged = { archived: !!prev.archived, hidden: !!prev.hidden, ...patch };
+        const merged = { ...prev, ...patch };
         states.set(id, merged);
         closeOpenRow();
         renderThreads();
-        const res = await setThreadState(me, id, { archived: !!merged.archived, hidden: !!merged.hidden });
+        const res = await setThreadState(me, id, {
+          archived: !!merged.archived,
+          hidden: !!merged.hidden,
+          cleared_at: merged.cleared_at || null
+        });
         if (!res.ok) {
           states.set(id, prev);
           renderThreads();
@@ -2448,7 +2470,7 @@
         }
         const del = e.target.closest("[data-delete]");
         if (del) {
-          applyThreadState(Number(del.dataset.delete), { hidden: true });
+          applyThreadState(Number(del.dataset.delete), { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
           return;
         }
         const btn = e.target.closest("[data-thread]");
