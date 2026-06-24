@@ -558,28 +558,37 @@ export async function openChat(thread, post) {
   return api;
 }
 
-// Модалка чату точно займає видиму область (visualViewport), відстежуючи клавіатуру
-// В РЕАЛЬНОМУ ЧАСІ (без debounce) — щоб краї не «підвисали», не дьоргались і фон
-// позаду не прозирав. Повертає функцію очистки (знімає слухачі при закритті чату).
+// Модалка чату точно лягає на ВИДИМУ область екрану (visualViewport), відстежуючи
+// клавіатуру в реальному часі (без debounce). Повертає функцію очистки.
 function setupKeyboardResize(screen) {
   const vv = window.visualViewport;
   if (!vv) return () => {};
   const stream = screen.querySelector('#pm-stream');
+  let raf = 0;
   const apply = () => {
-    // Верх ЗАВЖДИ прибитий до 0 (шапка + картка оголошення не рухаються),
-    // підлаштовуємо лише НИЗ під клавіатуру → край-у-край, без дьоргання верху.
-    screen.style.top = '0px';
-    screen.style.height = (vv.offsetTop + vv.height) + 'px';
+    raf = 0;
+    // Прибиваємо модалку РІВНО до видимої області. iOS при відкритті клавіатури
+    // «панорамує» видиме вікно вниз на vv.offsetTop → шапку+картку треба зсунути
+    // на стільки ж (top = offsetTop), інакше вони опиняються вище видимого верху
+    // і зникають. Висота = рівно видима частина → поле сидить над клавіатурою.
+    screen.style.top = vv.offsetTop + 'px';
+    screen.style.height = vv.height + 'px';
     const open = (window.innerHeight - vv.height) > 80;
     screen.classList.toggle('pm-kb-open', open);
     if (open && stream) stream.scrollTop = stream.scrollHeight;
+    // Тримаємо документ у нулі — щоб скрол сторінки не додавав власного зсуву
+    // поверх панорами (інакше верх може дьоргатись при появі клавіатури).
+    if (window.scrollY) window.scrollTo(0, 0);
   };
+  // Коалесуємо кілька vv-подій в один кадр → менше «смикання» при анімації.
+  const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
   apply();
-  vv.addEventListener('resize', apply);   // без затримки → плавне відстеження
-  vv.addEventListener('scroll', apply);
+  vv.addEventListener('resize', schedule);
+  vv.addEventListener('scroll', schedule);
   return () => {
-    vv.removeEventListener('resize', apply);
-    vv.removeEventListener('scroll', apply);
+    vv.removeEventListener('resize', schedule);
+    vv.removeEventListener('scroll', schedule);
+    if (raf) cancelAnimationFrame(raf);
     screen.style.height = ''; screen.style.top = '';
     screen.classList.remove('pm-kb-open');
   };

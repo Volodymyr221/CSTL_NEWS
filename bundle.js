@@ -1967,20 +1967,30 @@
       return () => {
       };
     const stream = screen.querySelector("#pm-stream");
+    let raf = 0;
     const apply = () => {
-      screen.style.top = "0px";
-      screen.style.height = vv.offsetTop + vv.height + "px";
+      raf = 0;
+      screen.style.top = vv.offsetTop + "px";
+      screen.style.height = vv.height + "px";
       const open = window.innerHeight - vv.height > 80;
       screen.classList.toggle("pm-kb-open", open);
       if (open && stream)
         stream.scrollTop = stream.scrollHeight;
+      if (window.scrollY)
+        window.scrollTo(0, 0);
+    };
+    const schedule = () => {
+      if (!raf)
+        raf = requestAnimationFrame(apply);
     };
     apply();
-    vv.addEventListener("resize", apply);
-    vv.addEventListener("scroll", apply);
+    vv.addEventListener("resize", schedule);
+    vv.addEventListener("scroll", schedule);
     return () => {
-      vv.removeEventListener("resize", apply);
-      vv.removeEventListener("scroll", apply);
+      vv.removeEventListener("resize", schedule);
+      vv.removeEventListener("scroll", schedule);
+      if (raf)
+        cancelAnimationFrame(raf);
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");
