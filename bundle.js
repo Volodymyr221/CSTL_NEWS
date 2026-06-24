@@ -1923,7 +1923,7 @@
       } catch (_) {
       }
     }
-    _chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
+    const chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
       if (!row)
         return;
       if (type === "INSERT") {
@@ -1944,11 +1944,14 @@
         }
       }
     });
+    _chatUnsub = chatUnsub;
     api._cleanup.push(() => {
-      if (_chatUnsub) {
-        _chatUnsub();
-        _chatUnsub = null;
+      try {
+        chatUnsub();
+      } catch (_) {
       }
+      if (_chatUnsub === chatUnsub)
+        _chatUnsub = null;
     });
     api._cleanup.push(refreshUnreadBadge);
     form.addEventListener("submit", (e) => {
