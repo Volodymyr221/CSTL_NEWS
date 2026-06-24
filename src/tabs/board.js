@@ -7,7 +7,7 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { startChatFromPost, openThreadsList, openMyAds } from '../core/messages-ui.js';
+import { startChatFromPost, openThreadsList, openMyAds, refreshUnreadBadge } from '../core/messages-ui.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
@@ -1121,6 +1121,10 @@ function renderAll(el) {
 
   // Zoom-перегляд тільки для board-стікерів
   initBoardNoteExpand(el);
+
+  // FAB щойно перебудовано → заповнити його бейджі непрочитаних (інакше лишались
+  // порожні: refreshUnreadBadge до рендеру FAB не мав куди писати).
+  refreshUnreadBadge();
 }
 
 function renderBodyOnly(el) {

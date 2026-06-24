@@ -3408,6 +3408,7 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
+    refreshUnreadBadge();
   }
   function renderBodyOnly(el) {
     const body = document.getElementById("bd-body");
