@@ -1970,7 +1970,7 @@
     const apply = () => {
       screen.style.height = vv.height + "px";
       screen.style.top = vv.offsetTop + "px";
-      const open = window.innerHeight - vv.height > 80;
+      const open = document.documentElement.clientHeight - vv.height > 80;
       screen.classList.toggle("pm-kb-open", open);
       if (open && stream)
         stream.scrollTop = stream.scrollHeight;
