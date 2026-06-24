@@ -565,7 +565,12 @@ function setupKeyboardResize(screen) {
   const vv = window.visualViewport;
   if (!vv) return () => {};
   const stream = screen.querySelector('#pm-stream');
+  let wasOpen = false;
   const apply = () => {
+    // Чи був користувач унизу стрічки ДО зміни висоти (щоб не збивати читання історії).
+    const atBottom = stream
+      ? (stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60)
+      : false;
     screen.style.height = vv.height + 'px';   // точна висота видимої області
     screen.style.top = vv.offsetTop + 'px';   // зсув коли клавіатура штовхає вгору
     // Клавіатура відкрита? Міряємо стабільною висотою макета (clientHeight НЕ міняється
@@ -574,7 +579,13 @@ function setupKeyboardResize(screen) {
     // safe-area відступ знизу (пустий блок між полем і клавіатурою).
     const open = (document.documentElement.clientHeight - vv.height) > 80;
     screen.classList.toggle('pm-kb-open', open);
-    if (open && stream) stream.scrollTop = stream.scrollHeight;
+    // Підтягнути стрічку до останнього повідомлення коли клавіатура ВІДКРИВАЄТЬСЯ
+    // (!wasOpen) або поки тримається відкрита і ти й так унизу. rAF — щоб нова
+    // висота встигла застосуватись (інакше scrollHeight стара → не дотягує до низу).
+    if (open && stream && (!wasOpen || atBottom)) {
+      requestAnimationFrame(() => { stream.scrollTop = stream.scrollHeight; });
+    }
+    wasOpen = open;
   };
   apply();
   vv.addEventListener('resize', apply);   // без затримки → плавне відстеження
