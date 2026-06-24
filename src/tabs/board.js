@@ -7,12 +7,12 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { startChatFromPost, openThreadsList, openMyAds, refreshUnreadBadge } from '../core/messages-ui.js';
+import { startChatFromPost, openThreadsList, openMyAds, refreshUnreadBadge, setupBubbleGestures, ACT_ICONS } from '../core/messages-ui.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   fetchAllReactions, setReaction,
-  fetchAllComments, addComment,
+  fetchAllComments, addComment, editComment, deleteComment,
   subscribeReactions, subscribeComments,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
 } from '../core/supabase.js';
@@ -481,6 +481,17 @@ function openChatModal(post) {
       ${chatMessagesHtml(post)}
     </div>
     <button class="bd-chat-newpill" type="button" hidden>↓ <span class="bd-chat-newpill-n"></span></button>
+    <button class="pm-scrolldown" id="bd-scrolldown" type="button" aria-label="До останнього повідомлення">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="pm-composebar" id="bd-compose" hidden>
+      <span class="pm-composebar-ic" id="bd-compose-ic">${ACT_ICONS.reply}</span>
+      <div class="pm-composebar-body">
+        <span class="pm-composebar-title" id="bd-compose-title"></span>
+        <span class="pm-composebar-text" id="bd-compose-text"></span>
+      </div>
+      <button class="pm-composebar-x" type="button" id="bd-compose-x" aria-label="Скасувати">✕</button>
+    </div>
     <form class="bd-chat-modal-form" data-comment-form="${post.id}">
       <input class="bd-chat-modal-input" type="text" placeholder="Написати повідомлення…"
              aria-label="Повідомлення" data-comment-input="${post.id}">
@@ -506,14 +517,39 @@ function openChatModal(post) {
 
   // Скрол стрічки → коли користувач сам долистав до низу, ховаємо пігулку «нові»
   const bodyEl = modal.querySelector('#bd-chat-modal-body');
-  _chatScrollHandler = () => { if (chatBodyNearBottom()) { _chatUnseen = 0; hideChatPill(); } };
+  const scrollBtn = modal.querySelector('#bd-scrolldown');
+  _chatScrollHandler = () => {
+    const near = chatBodyNearBottom();
+    if (near) { _chatUnseen = 0; hideChatPill(); }
+    scrollBtn?.classList.toggle('visible', !near);   // кнопка-скло «вниз» коли прокрутив угору
+  };
   bodyEl?.addEventListener('scroll', _chatScrollHandler, { passive: true });
-  // Тап по пігулці → стрибок донизу
+  // Тап по пігулці / кнопці-скло → стрибок донизу
   modal.querySelector('.bd-chat-newpill')?.addEventListener('click', () => {
     scrollChatToBottom(); _chatUnseen = 0; hideChatPill();
   });
+  scrollBtn?.addEventListener('click', () => {
+    scrollChatToBottom(); _chatUnseen = 0; hideChatPill(); scrollBtn.classList.remove('visible');
+  });
   // Кнопка надсилання не має забирати фокус з поля (інакше iOS ховає клавіатуру)
   modal.querySelector('.bd-chat-modal-send')?.addEventListener('pointerdown', e => e.preventDefault());
+
+  // П7: жести над бульбашкою (свайп-вліво → відповідь, довге натискання → меню) +
+  // скасування compose-бару + стрибок по цитаті. Делеговано на тіло модалки (переживає
+  // перемальовування стрічки).
+  _discReplyTo = null; _discEditing = null;
+  setupBubbleGestures(bodyEl, onDiscBubbleAction);
+  modal.querySelector('#bd-compose-x')?.addEventListener('click', () => {
+    const input = modal.querySelector('[data-comment-input]');
+    if (_discEditing && input) input.value = '';   // скасування редагування — чистимо поле
+    clearDiscCompose();
+  });
+  bodyEl?.addEventListener('click', (e) => {
+    const jump = e.target.closest('[data-jump]');
+    if (!jump) return;
+    const b = bodyEl.querySelector(`.pm-bubble[data-msg="${jump.dataset.jump}"]`);
+    if (b) { b.scrollIntoView({ behavior: 'smooth', block: 'center' }); b.classList.add('pm-bubble--flash'); setTimeout(() => b.classList.remove('pm-bubble--flash'), 1000); }
+  });
 
   // Клавіатура на iOS PWA шле зливу подій під час анімації — щоб модалка НЕ
   // смикалась, збираємо їх через debounce (один виклик після паузи) → одна
@@ -600,6 +636,98 @@ function refreshChatCardPreview(postId) {
   if (!card) return;
   const post = allPosts.find(p => p.id === postId);
   if (post) card.outerHTML = renderChatCard(post);
+}
+
+// ── Багатий чат «Обговорень» (П7): перемальовування + reply/edit/delete/меню ──────
+function rerenderCommentsBlock(postId) {
+  const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+  if (!wrap) return;
+  const post = allPosts.find(p => p.id === postId);
+  if (!post) return;
+  wrap.outerHTML = chatMessagesHtml(post);
+  scrollChatToBottom();
+  _chatUnseen = 0; hideChatPill();
+  updateChatHeaderCount(postId);
+  refreshChatCardPreview(postId);
+}
+
+let _discReplyTo = null;   // коментар на який відповідаємо
+let _discEditing = null;   // коментар який редагуємо
+
+function findDiscComment(id) {
+  return (getComments(_chatOpenPostId) || []).find(c => String(c.id) === String(id)) || null;
+}
+function showDiscCompose(title, text, mode) {
+  const bar = document.getElementById('bd-compose'); if (!bar) return;
+  const ic = document.getElementById('bd-compose-ic'); if (ic) ic.innerHTML = mode === 'edit' ? ACT_ICONS.edit : ACT_ICONS.reply;
+  const t  = document.getElementById('bd-compose-title'); if (t) t.textContent = title;
+  const x  = document.getElementById('bd-compose-text');  if (x) x.textContent = (text || '').slice(0, 90);
+  bar.hidden = false;
+  _chatModalEl?.querySelector('[data-comment-input]')?.focus();
+}
+function clearDiscCompose() {
+  _discReplyTo = null; _discEditing = null;
+  const bar = document.getElementById('bd-compose'); if (bar) bar.hidden = true;
+}
+function startDiscReply(c) {
+  _discEditing = null; _discReplyTo = c;
+  showDiscCompose('ВІДПОВІДЬ:', c.text || '', 'reply');
+}
+function startDiscEdit(c) {
+  _discReplyTo = null; _discEditing = c;
+  showDiscCompose('РЕДАГУВАННЯ:', c.text || '', 'edit');
+  const input = _chatModalEl?.querySelector('[data-comment-input]');
+  if (input) { input.value = c.text || ''; input.focus(); }
+}
+function onDiscBubbleAction(id, kind) {
+  const c = findDiscComment(id);
+  if (!c) return;
+  if (kind === 'reply') startDiscReply(c);
+  else if (kind === 'menu') openDiscActions(c);
+}
+function openDiscActions(c) {
+  if (c.deleted_at) return;
+  const mine = isMyComment(c);
+  const sheet = document.createElement('div');
+  sheet.className = 'pm-actions-back';
+  sheet.innerHTML = `
+    <div class="pm-actions">
+      <button type="button" data-act="reply"><span class="pm-act-ic">${ACT_ICONS.reply}</span>Відповісти</button>
+      ${c.text ? `<button type="button" data-act="copy"><span class="pm-act-ic">${ACT_ICONS.copy}</span>Копіювати</button>` : ''}
+      ${mine && c.text ? `<button type="button" data-act="edit"><span class="pm-act-ic">${ACT_ICONS.edit}</span>Редагувати</button>` : ''}
+      ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>Видалити</button>` : ''}
+      <button type="button" data-act="cancel" class="pm-actions-cancel">Скасувати</button>
+    </div>`;
+  const close = () => sheet.remove();
+  sheet.addEventListener('click', async (e) => {
+    const b = e.target.closest('[data-act]');
+    if (!b) { if (e.target === sheet) close(); return; }
+    close();
+    const act = b.dataset.act;
+    if (act === 'reply') startDiscReply(c);
+    else if (act === 'copy') { try { await navigator.clipboard.writeText(c.text || ''); showToast('Скопійовано'); } catch (_) {} }
+    else if (act === 'edit') startDiscEdit(c);
+    else if (act === 'delete') doDiscDelete(c);
+  });
+  (_chatModalEl || document.body).appendChild(sheet);
+}
+async function doDiscDelete(c) {
+  const postId = c.post_id;
+  const list = commentsByPost.get(postId) || [];
+  const idx = list.findIndex(x => x.id === c.id);
+  const prev = idx >= 0 ? list[idx] : null;
+  if (idx >= 0) {
+    list[idx] = { ...list[idx], deleted_at: new Date().toISOString(), text: '' };
+    commentsByPost.set(postId, list);
+    rerenderCommentsBlock(postId);
+  }
+  const res = await deleteComment(c.id);
+  if (!res.ok) {
+    const l = commentsByPost.get(postId) || [];
+    const i = l.findIndex(x => x.id === c.id);
+    if (i >= 0 && prev) { l[i] = prev; commentsByPost.set(postId, l); rerenderCommentsBlock(postId); }
+    showToast('❌ Не вдалося видалити: ' + (res.error || ''), 4000, 'error');
+  }
 }
 
 // Попап вибору реакції — додається у body над кнопкою-тригером
@@ -1417,6 +1545,31 @@ function attachBoardDelegation() {
     if (isFlooding())            { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
     recordSentMsg(text);
 
+    // П7 — режим РЕДАГУВАННЯ: міняємо існуючий коментар (оптимістично + відкат)
+    if (_discEditing && _discEditing.post_id === postId) {
+      const target = _discEditing;
+      const l0 = commentsByPost.get(postId) || [];
+      const i0 = l0.findIndex(c => c.id === target.id);
+      const prev0 = i0 >= 0 ? l0[i0] : null;
+      if (i0 >= 0) { l0[i0] = { ...l0[i0], text, edited_at: new Date().toISOString() }; commentsByPost.set(postId, l0); }
+      if (input) input.value = '';
+      clearDiscCompose();
+      rerenderCommentsBlock(postId);
+      const res = await editComment(target.id, text);
+      if (!res.ok) {
+        const l = commentsByPost.get(postId) || []; const i = l.findIndex(c => c.id === target.id);
+        if (i >= 0 && prev0) { l[i] = prev0; commentsByPost.set(postId, l); rerenderCommentsBlock(postId); }
+        showToast('❌ Не вдалося змінити: ' + (res.error || ''), 4000, 'error');
+      } else if (res.comment) {
+        const l = commentsByPost.get(postId) || []; const i = l.findIndex(c => c.id === target.id);
+        if (i >= 0) { l[i] = res.comment; commentsByPost.set(postId, l); rerenderCommentsBlock(postId); }
+      }
+      return;
+    }
+
+    // Відповідь (П7): на яке повідомлення відповідаємо (якщо активний reply-режим)
+    const replyId = (_discReplyTo && _discReplyTo.post_id === postId) ? _discReplyTo.id : null;
+
     // Optimistic: миттєво у DOM
     const myName = currentUserName();
     const tempComment = {
@@ -1426,17 +1579,19 @@ function attachBoardDelegation() {
       text,
       created_at: new Date().toISOString(),
       sender_uid: currentUserId(),   // → isMyComment() підсвітить як мій одразу
+      reply_to_id: replyId,
     };
     const list = commentsByPost.get(postId) || [];
     list.push(tempComment);
     commentsByPost.set(postId, list);
     if (input) input.value = '';
+    clearDiscCompose();
     rerenderCommentsBlock(postId);
     input?.focus();   // лишаємо фокус → клавіатура не ховається після надсилання
 
     // POST у Supabase
     if (isSupabaseReady()) {
-      const result = await addComment(postId, myName, text, currentUserId());
+      const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId });
       if (!result.ok) {
         // Помилка — забираємо optimistic коментар
         const filtered = (commentsByPost.get(postId) || []).filter(c => c.id !== tempComment.id);
@@ -1454,19 +1609,8 @@ function attachBoardDelegation() {
     }
   });
 
-  function rerenderCommentsBlock(postId) {
-    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-    if (!wrap) return;
-    const post = allPosts.find(p => p.id === postId);
-    if (!post) return;
-    wrap.outerHTML = chatMessagesHtml(post);
-    // Власне повідомлення — користувач завжди має опинитись внизу
-    scrollChatToBottom();
-    _chatUnseen = 0; hideChatPill();
-    updateChatHeaderCount(postId);
-    // Оновити лічильник/прев'ю на картці у списку (якщо вона в DOM)
-    refreshChatCardPreview(postId);
-  }
+  // rerenderCommentsBlock винесено на module-рівень (нижче) — щоб меню дій/видалення
+  // над повідомленням (теж module-рівень) могли його викликати.
 
   document.addEventListener('click', e => {
     // Тап по картці обговорення → повноекранна модалка-чат

@@ -521,6 +521,30 @@
       return { ok: false, error: e.message };
     }
   }
+  async function editComment(commentId, text) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    try {
+      const { data, error } = await withTimeout(supa.from("comments").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId).select().single());
+      if (error)
+        return { ok: false, error: error.message };
+      return { ok: true, comment: data };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
+  async function deleteComment(commentId) {
+    if (!supa)
+      return { ok: false, error: "no-supa" };
+    try {
+      const { data, error } = await withTimeout(supa.from("comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: "" }).eq("id", commentId).select().single());
+      if (error)
+        return { ok: false, error: error.message };
+      return { ok: true, comment: data };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
   async function uploadPhotoToStorage(blob) {
     if (!supa)
       return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
@@ -2874,6 +2898,17 @@
       ${chatMessagesHtml(post)}
     </div>
     <button class="bd-chat-newpill" type="button" hidden>\u2193 <span class="bd-chat-newpill-n"></span></button>
+    <button class="pm-scrolldown" id="bd-scrolldown" type="button" aria-label="\u0414\u043E \u043E\u0441\u0442\u0430\u043D\u043D\u044C\u043E\u0433\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
+    <div class="pm-composebar" id="bd-compose" hidden>
+      <span class="pm-composebar-ic" id="bd-compose-ic">${ACT_ICONS.reply}</span>
+      <div class="pm-composebar-body">
+        <span class="pm-composebar-title" id="bd-compose-title"></span>
+        <span class="pm-composebar-text" id="bd-compose-text"></span>
+      </div>
+      <button class="pm-composebar-x" type="button" id="bd-compose-x" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438">\u2715</button>
+    </div>
     <form class="bd-chat-modal-form" data-comment-form="${post.id}">
       <input class="bd-chat-modal-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026"
              aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" data-comment-input="${post.id}">
@@ -2894,11 +2929,14 @@
     modal.querySelector(".bd-chat-modal-close")?.addEventListener("click", closeChatModal);
     document.addEventListener("keydown", onChatEsc);
     const bodyEl = modal.querySelector("#bd-chat-modal-body");
+    const scrollBtn = modal.querySelector("#bd-scrolldown");
     _chatScrollHandler = () => {
-      if (chatBodyNearBottom()) {
+      const near = chatBodyNearBottom();
+      if (near) {
         _chatUnseen = 0;
         hideChatPill();
       }
+      scrollBtn?.classList.toggle("visible", !near);
     };
     bodyEl?.addEventListener("scroll", _chatScrollHandler, { passive: true });
     modal.querySelector(".bd-chat-newpill")?.addEventListener("click", () => {
@@ -2906,7 +2944,33 @@
       _chatUnseen = 0;
       hideChatPill();
     });
+    scrollBtn?.addEventListener("click", () => {
+      scrollChatToBottom();
+      _chatUnseen = 0;
+      hideChatPill();
+      scrollBtn.classList.remove("visible");
+    });
     modal.querySelector(".bd-chat-modal-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
+    _discReplyTo = null;
+    _discEditing = null;
+    setupBubbleGestures(bodyEl, onDiscBubbleAction);
+    modal.querySelector("#bd-compose-x")?.addEventListener("click", () => {
+      const input2 = modal.querySelector("[data-comment-input]");
+      if (_discEditing && input2)
+        input2.value = "";
+      clearDiscCompose();
+    });
+    bodyEl?.addEventListener("click", (e) => {
+      const jump = e.target.closest("[data-jump]");
+      if (!jump)
+        return;
+      const b = bodyEl.querySelector(`.pm-bubble[data-msg="${jump.dataset.jump}"]`);
+      if (b) {
+        b.scrollIntoView({ behavior: "smooth", block: "center" });
+        b.classList.add("pm-bubble--flash");
+        setTimeout(() => b.classList.remove("pm-bubble--flash"), 1e3);
+      }
+    });
     const vv = window.visualViewport;
     const input = modal.querySelector(".bd-chat-modal-input");
     const fullH = window.innerHeight;
@@ -3000,6 +3064,133 @@
     const post = allPosts.find((p) => p.id === postId);
     if (post)
       card.outerHTML = renderChatCard(post);
+  }
+  function rerenderCommentsBlock(postId) {
+    const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+    if (!wrap)
+      return;
+    const post = allPosts.find((p) => p.id === postId);
+    if (!post)
+      return;
+    wrap.outerHTML = chatMessagesHtml(post);
+    scrollChatToBottom();
+    _chatUnseen = 0;
+    hideChatPill();
+    updateChatHeaderCount(postId);
+    refreshChatCardPreview(postId);
+  }
+  var _discReplyTo = null;
+  var _discEditing = null;
+  function findDiscComment(id) {
+    return (getComments(_chatOpenPostId) || []).find((c) => String(c.id) === String(id)) || null;
+  }
+  function showDiscCompose(title, text, mode) {
+    const bar = document.getElementById("bd-compose");
+    if (!bar)
+      return;
+    const ic = document.getElementById("bd-compose-ic");
+    if (ic)
+      ic.innerHTML = mode === "edit" ? ACT_ICONS.edit : ACT_ICONS.reply;
+    const t = document.getElementById("bd-compose-title");
+    if (t)
+      t.textContent = title;
+    const x = document.getElementById("bd-compose-text");
+    if (x)
+      x.textContent = (text || "").slice(0, 90);
+    bar.hidden = false;
+    _chatModalEl?.querySelector("[data-comment-input]")?.focus();
+  }
+  function clearDiscCompose() {
+    _discReplyTo = null;
+    _discEditing = null;
+    const bar = document.getElementById("bd-compose");
+    if (bar)
+      bar.hidden = true;
+  }
+  function startDiscReply(c) {
+    _discEditing = null;
+    _discReplyTo = c;
+    showDiscCompose("\u0412\u0406\u0414\u041F\u041E\u0412\u0406\u0414\u042C:", c.text || "", "reply");
+  }
+  function startDiscEdit(c) {
+    _discReplyTo = null;
+    _discEditing = c;
+    showDiscCompose("\u0420\u0415\u0414\u0410\u0413\u0423\u0412\u0410\u041D\u041D\u042F:", c.text || "", "edit");
+    const input = _chatModalEl?.querySelector("[data-comment-input]");
+    if (input) {
+      input.value = c.text || "";
+      input.focus();
+    }
+  }
+  function onDiscBubbleAction(id, kind) {
+    const c = findDiscComment(id);
+    if (!c)
+      return;
+    if (kind === "reply")
+      startDiscReply(c);
+    else if (kind === "menu")
+      openDiscActions(c);
+  }
+  function openDiscActions(c) {
+    if (c.deleted_at)
+      return;
+    const mine = isMyComment(c);
+    const sheet = document.createElement("div");
+    sheet.className = "pm-actions-back";
+    sheet.innerHTML = `
+    <div class="pm-actions">
+      <button type="button" data-act="reply"><span class="pm-act-ic">${ACT_ICONS.reply}</span>\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>
+      ${c.text ? `<button type="button" data-act="copy"><span class="pm-act-ic">${ACT_ICONS.copy}</span>\u041A\u043E\u043F\u0456\u044E\u0432\u0430\u0442\u0438</button>` : ""}
+      ${mine && c.text ? `<button type="button" data-act="edit"><span class="pm-act-ic">${ACT_ICONS.edit}</span>\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>` : ""}
+      ${mine ? `<button type="button" data-act="delete" class="pm-actions-danger"><span class="pm-act-ic">${ACT_ICONS.delete}</span>\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}
+      <button type="button" data-act="cancel" class="pm-actions-cancel">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+    </div>`;
+    const close = () => sheet.remove();
+    sheet.addEventListener("click", async (e) => {
+      const b = e.target.closest("[data-act]");
+      if (!b) {
+        if (e.target === sheet)
+          close();
+        return;
+      }
+      close();
+      const act = b.dataset.act;
+      if (act === "reply")
+        startDiscReply(c);
+      else if (act === "copy") {
+        try {
+          await navigator.clipboard.writeText(c.text || "");
+          showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
+        } catch (_) {
+        }
+      } else if (act === "edit")
+        startDiscEdit(c);
+      else if (act === "delete")
+        doDiscDelete(c);
+    });
+    (_chatModalEl || document.body).appendChild(sheet);
+  }
+  async function doDiscDelete(c) {
+    const postId = c.post_id;
+    const list = commentsByPost.get(postId) || [];
+    const idx = list.findIndex((x) => x.id === c.id);
+    const prev = idx >= 0 ? list[idx] : null;
+    if (idx >= 0) {
+      list[idx] = { ...list[idx], deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: "" };
+      commentsByPost.set(postId, list);
+      rerenderCommentsBlock(postId);
+    }
+    const res = await deleteComment(c.id);
+    if (!res.ok) {
+      const l = commentsByPost.get(postId) || [];
+      const i = l.findIndex((x) => x.id === c.id);
+      if (i >= 0 && prev) {
+        l[i] = prev;
+        commentsByPost.set(postId, l);
+        rerenderCommentsBlock(postId);
+      }
+      showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
+    }
   }
   function openReactionPopup(triggerBtn, postId) {
     closeReactionPopup();
@@ -3754,6 +3945,41 @@ ${post.text}
         return;
       }
       recordSentMsg(text);
+      if (_discEditing && _discEditing.post_id === postId) {
+        const target = _discEditing;
+        const l0 = commentsByPost.get(postId) || [];
+        const i0 = l0.findIndex((c) => c.id === target.id);
+        const prev0 = i0 >= 0 ? l0[i0] : null;
+        if (i0 >= 0) {
+          l0[i0] = { ...l0[i0], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
+          commentsByPost.set(postId, l0);
+        }
+        if (input)
+          input.value = "";
+        clearDiscCompose();
+        rerenderCommentsBlock(postId);
+        const res = await editComment(target.id, text);
+        if (!res.ok) {
+          const l = commentsByPost.get(postId) || [];
+          const i = l.findIndex((c) => c.id === target.id);
+          if (i >= 0 && prev0) {
+            l[i] = prev0;
+            commentsByPost.set(postId, l);
+            rerenderCommentsBlock(postId);
+          }
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043C\u0456\u043D\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
+        } else if (res.comment) {
+          const l = commentsByPost.get(postId) || [];
+          const i = l.findIndex((c) => c.id === target.id);
+          if (i >= 0) {
+            l[i] = res.comment;
+            commentsByPost.set(postId, l);
+            rerenderCommentsBlock(postId);
+          }
+        }
+        return;
+      }
+      const replyId = _discReplyTo && _discReplyTo.post_id === postId ? _discReplyTo.id : null;
       const myName = currentUserName();
       const tempComment = {
         id: "temp-" + Date.now(),
@@ -3761,18 +3987,20 @@ ${post.text}
         author: myName,
         text,
         created_at: (/* @__PURE__ */ new Date()).toISOString(),
-        sender_uid: currentUserId()
+        sender_uid: currentUserId(),
         // → isMyComment() підсвітить як мій одразу
+        reply_to_id: replyId
       };
       const list = commentsByPost.get(postId) || [];
       list.push(tempComment);
       commentsByPost.set(postId, list);
       if (input)
         input.value = "";
+      clearDiscCompose();
       rerenderCommentsBlock(postId);
       input?.focus();
       if (isSupabaseReady()) {
-        const result = await addComment(postId, myName, text, currentUserId());
+        const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId });
         if (!result.ok) {
           const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
           commentsByPost.set(postId, filtered);
@@ -3787,20 +4015,6 @@ ${post.text}
         }
       }
     });
-    function rerenderCommentsBlock(postId) {
-      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-      if (!wrap)
-        return;
-      const post = allPosts.find((p) => p.id === postId);
-      if (!post)
-        return;
-      wrap.outerHTML = chatMessagesHtml(post);
-      scrollChatToBottom();
-      _chatUnseen = 0;
-      hideChatPill();
-      updateChatHeaderCount(postId);
-      refreshChatCardPreview(postId);
-    }
     document.addEventListener("click", (e) => {
       const chatCard = e.target.closest("[data-chat-open]");
       if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]")) {
