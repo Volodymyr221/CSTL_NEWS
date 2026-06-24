@@ -143,6 +143,7 @@ export function showToast(msg, duration = 3000, type = '') {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'cstl-toast';
+    toast.className = 'toast';   // без цього класу CSS .toast не діяв → тост опинявся у потоці сторінки (під модалками)
     document.body.appendChild(toast);
   }
   toast.textContent = msg;
