@@ -568,7 +568,11 @@ function setupKeyboardResize(screen) {
   const apply = () => {
     screen.style.height = vv.height + 'px';   // точна висота видимої області
     screen.style.top = vv.offsetTop + 'px';   // зсув коли клавіатура штовхає вгору
-    const open = (window.innerHeight - vv.height) > 80;
+    // Клавіатура відкрита? Міряємо стабільною висотою макета (clientHeight НЕ міняється
+    // від клавіатури). window.innerHeight у standalone-PWA на iOS теж зменшується разом
+    // з vv.height → різниця ≈ 0 → pm-kb-open не вмикався → у поля лишався великий
+    // safe-area відступ знизу (пустий блок між полем і клавіатурою).
+    const open = (document.documentElement.clientHeight - vv.height) > 80;
     screen.classList.toggle('pm-kb-open', open);
     if (open && stream) stream.scrollTop = stream.scrollHeight;
   };
