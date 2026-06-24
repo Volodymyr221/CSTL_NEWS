@@ -200,9 +200,9 @@ body.cm-zoom-open .app-main { overflow: hidden; }
 /* ===== TOAST ===== */
 .toast {
   position: fixed;
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 36px);
+  top: calc(env(safe-area-inset-top, 0px) + 14px);   /* наверху — видно навіть коли відкрита клавіатура/чат */
   left: 50%;
-  transform: translateX(-50%) translateY(20px);
+  transform: translateX(-50%) translateY(-20px);
   background: var(--black);
   color: white;
   padding: 10px 18px;
@@ -213,7 +213,7 @@ body.cm-zoom-open .app-main { overflow: hidden; }
   transition: opacity 0.2s, transform 0.2s;
   pointer-events: none;
   white-space: nowrap;
-  z-index: 2000;   /* вище чат-модалки (1100) — щоб сповіщення було видно поверх неї */
+  z-index: 3000;   /* вище за все: чат-модалка 2401, меню дій 2500, лайтбокс 2600 */
   max-width: calc(100vw - 32px);
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }

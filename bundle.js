@@ -157,6 +157,7 @@
     if (!toast) {
       toast = document.createElement("div");
       toast.id = "cstl-toast";
+      toast.className = "toast";
       document.body.appendChild(toast);
     }
     toast.textContent = msg;
@@ -580,6 +581,13 @@
     }
     return data || [];
   }
+  var NET_TIMEOUT = 6e3;
+  function withTimeout(thenable, ms = NET_TIMEOUT) {
+    return Promise.race([
+      Promise.resolve(thenable),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("\u041D\u0435\u043C\u0430\u0454 \u0437\u0432'\u044F\u0437\u043A\u0443")), ms))
+    ]);
+  }
   async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
     if (!supa)
       return { ok: false, error: "no-supa" };
@@ -590,7 +598,12 @@
       row.reply_to_id = replyToId;
     if (clientTag)
       row.client_tag = clientTag;
-    const { data, error } = await supa.from("messages").insert(row).select().single();
+    let data, error;
+    try {
+      ({ data, error } = await withTimeout(supa.from("messages").insert(row).select().single()));
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
     if (error)
       return { ok: false, error: error.message };
     const preview = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
@@ -601,18 +614,26 @@
   async function editMessage(messageId, text) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { data, error } = await supa.from("messages").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", messageId).select().single();
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true, message: data };
+    try {
+      const { data, error } = await withTimeout(supa.from("messages").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", messageId).select().single());
+      if (error)
+        return { ok: false, error: error.message };
+      return { ok: true, message: data };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   }
   async function deleteMessage(messageId) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { data, error } = await supa.from("messages").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null }).eq("id", messageId).select().single();
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true, message: data };
+    try {
+      const { data, error } = await withTimeout(supa.from("messages").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null }).eq("id", messageId).select().single());
+      if (error)
+        return { ok: false, error: error.message };
+      return { ok: true, message: data };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   }
   async function markThreadRead(threadId, uid) {
     if (!supa || !uid)

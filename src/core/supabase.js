@@ -275,13 +275,26 @@ export async function fetchMessages(threadId) {
 }
 
 // Надіслати повідомлення + оновити час треда + штовхнути push отримувачу.
+// Таймаут для мережевих викликів — щоб помилка зв'язку приходила швидко,
+// а не висіла поки браузер довго чекає відповіді (важливо для відкату B).
+const NET_TIMEOUT = 6000;
+function withTimeout(thenable, ms = NET_TIMEOUT) {
+  return Promise.race([
+    Promise.resolve(thenable),
+    new Promise((_, reject) => setTimeout(() => reject(new Error('Немає зв\'язку')), ms)),
+  ]);
+}
+
 export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
   if (!supa) return { ok: false, error: 'no-supa' };
   const row = { thread_id: threadId, sender_uid: senderUid, text: text || null };
   if (photoUrl) row.photo_url = photoUrl;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  const { data, error } = await supa.from('messages').insert(row).select().single();
+  let data, error;
+  try {
+    ({ data, error } = await withTimeout(supa.from('messages').insert(row).select().single()));
+  } catch (e) { return { ok: false, error: e.message }; }
   if (error) return { ok: false, error: error.message };
   // Час+прев'ю треда тепер ставить тригер trg_touch_thread у БД (надійно).
   // Лишаємо клієнтський апдейт як підстраховку (ідемпотентно, не шкодить).
@@ -298,21 +311,25 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
 // Редагування свого повідомлення (текст + позначка edited_at)
 export async function editMessage(messageId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { data, error } = await supa.from('messages')
-    .update({ text, edited_at: new Date().toISOString() })
-    .eq('id', messageId).select().single();
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, message: data };
+  try {
+    const { data, error } = await withTimeout(supa.from('messages')
+      .update({ text, edited_at: new Date().toISOString() })
+      .eq('id', messageId).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: data };
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
 // М'яке видалення (soft-delete): лишаємо рядок, прибираємо вміст → плейсхолдер у UI
 export async function deleteMessage(messageId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { data, error } = await supa.from('messages')
-    .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
-    .eq('id', messageId).select().single();
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, message: data };
+  try {
+    const { data, error } = await withTimeout(supa.from('messages')
+      .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+      .eq('id', messageId).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: data };
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
 // Позначити вхідні повідомлення треда прочитаними (read_at).
