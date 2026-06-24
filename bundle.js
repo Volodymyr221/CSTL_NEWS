@@ -1742,12 +1742,18 @@
         input.value = "";
         clearCompose();
         const idx = messages.findIndex((m) => m.id === target.id);
+        const prevMsg = idx >= 0 ? messages[idx] : null;
         if (idx >= 0) {
           messages[idx] = { ...messages[idx], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
           replaceOne(messages[idx]);
         }
         const res = await editMessage(target.id, text);
         if (!res.ok) {
+          const i = messages.findIndex((m) => m.id === target.id);
+          if (i >= 0 && prevMsg) {
+            messages[i] = prevMsg;
+            replaceOne(prevMsg);
+          }
           showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043C\u0456\u043D\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
           return;
         }
@@ -1857,13 +1863,20 @@
           startEdit(m);
         else if (act === "delete") {
           const idx = messages.findIndex((x) => x.id === m.id);
+          const prevMsg = idx >= 0 ? messages[idx] : null;
           if (idx >= 0) {
             messages[idx] = { ...messages[idx], deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null };
             replaceOne(messages[idx]);
           }
           const res = await deleteMessage(m.id);
-          if (!res.ok)
+          if (!res.ok) {
+            const i = messages.findIndex((x) => x.id === m.id);
+            if (i >= 0 && prevMsg) {
+              messages[i] = prevMsg;
+              replaceOne(prevMsg);
+            }
             showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
+          }
         }
       });
       api.screen.appendChild(sheet);
