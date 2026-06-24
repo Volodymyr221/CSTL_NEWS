@@ -59,6 +59,10 @@
 .pm-group { display: flex; flex-direction: column; gap: 3px; margin-bottom: 8px; max-width: 80%; }
 .pm-group--mine  { align-self: flex-end; align-items: flex-end; }
 .pm-group--other { align-self: flex-start; align-items: flex-start; }
+/* «Обговорення» (публічний, багато людей): аватар + ім'я автора у групі чужих */
+.pm-group--disc.pm-group--other { flex-direction: row; align-items: flex-end; gap: 8px; }
+.pm-disc-col  { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.pm-disc-name { font-size: 12px; font-weight: 700; color: var(--red, #722F37); margin: 0 0 2px 2px; }
 
 .pm-bubble {
   position: relative;
