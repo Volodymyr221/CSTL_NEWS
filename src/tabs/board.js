@@ -115,6 +115,27 @@ function isMyComment(c) {
   return !!uid && c.sender_uid === uid;
 }
 
+// Конкретний час HH:MM (як у приватному чаті — замість «2 год тому»).
+function clockTime(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+}
+// Роздільник дня: Сьогодні / Вчора / «20 червня» (як у приватному чаті).
+const CHAT_MONTHS_GEN = ['січня','лютого','березня','квітня','травня','червня',
+                         'липня','серпня','вересня','жовтня','листопада','грудня'];
+function chatDayLabel(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const sToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const day = 86400000;
+  if (d.getTime() >= sToday) return 'Сьогодні';
+  if (d.getTime() >= sToday - day) return 'Вчора';
+  if (d.getFullYear() === now.getFullYear()) return `${d.getDate()} ${CHAT_MONTHS_GEN[d.getMonth()]}`;
+  return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
+}
+
 // Час останнього перегляду теми (per-device) — для роздільника «Нові повідомлення».
 function getChatSeen(postId) {
   const m = lsGet(LS_CHAT_SEEN, {});
@@ -322,47 +343,55 @@ function chatMessagesHtml(post) {
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">💬</span>Поки порожньо.<br>Напишіть перше повідомлення 👋</div>
     </div>`;
   }
-  // Роздільник «Нові повідомлення» ставимо перед першим повідомленням, новішим за
-  // час останнього перегляду — але лише якщо до нього є хоч одне «старе» (щоб не
-  // ліпити роздільник на самому верху при першому вході).
+  const byId = new Map(items.map(c => [c.id, c]));
   const dividerTs = _chatDividerTs;
-  let hadOld = false, dividerPlaced = false;
-  // Групуємо підряд повідомлення від одного автора (месенджер-стиль)
-  const groups = [];
+  let hadOld = false, dividerPlaced = false, lastDay = null;
+
+  // Бульбашка у форматі приватного чату: цитата-відповідь + текст + конкретний час;
+  // плейсхолдери видаленого/редагованого. data-msg/data-tag — для жестів/меню (UI-B).
+  const renderDiscBubble = (c) => {
+    if (c.deleted_at) {
+      return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ''}"><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
+    }
+    const reply = c.reply_to_id ? byId.get(c.reply_to_id) : null;
+    const replyHtml = reply
+      ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? 'Видалене повідомлення' : (reply.text || '')).slice(0, 90))}</span>`
+      : '';
+    const edited = c.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
+    return `<div class="pm-bubble" data-msg="${c.id}" data-tag="${c.client_tag || ''}">${replyHtml}<span class="pm-bubble-text">${escapeHtml(c.text)}</span><span class="pm-bubble-time">${edited}${clockTime(postTime(c))}</span></div>`;
+  };
+
+  // Збираємо: роздільники днів (Сьогодні/Вчора) + роздільник «Нові» + групи за автором.
+  let html = '';
+  let group = null;   // { key, mine, author, bubbles:[] }
+  const flush = () => {
+    if (!group) return;
+    if (group.mine) {
+      html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join('')}</div>`;
+    } else {
+      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join('')}</div></div>`;
+    }
+    group = null;
+  };
   items.forEach(c => {
-    const isNew = dividerTs > 0 && postTime(c) > dividerTs;
+    const t = postTime(c);
+    const day = chatDayLabel(t);
+    if (day && day !== lastDay) { flush(); html += `<div class="pm-daysep"><span>${day}</span></div>`; lastDay = day; }
+    const isNew = dividerTs > 0 && t > dividerTs;
     if (!isNew) hadOld = true;
-    const needDivider = isNew && hadOld && !dividerPlaced;
+    if (isNew && hadOld && !dividerPlaced) {
+      flush();
+      html += '<div class="bd-chat-divider" data-chat-divider><span>Нові повідомлення</span></div>';
+      dividerPlaced = true;
+    }
     const mine = isMyComment(c);
     const author = c.author || 'Житель';
     const key = mine ? '__me' : author;
-    const last = groups[groups.length - 1];
-    if (last && last.key === key && !needDivider) last.msgs.push(c);
-    else groups.push({ key, mine, author, first: c, msgs: [c], dividerBefore: needDivider });
-    if (needDivider) dividerPlaced = true;
+    if (group && group.key === key) group.bubbles.push(renderDiscBubble(c));
+    else { flush(); group = { key, mine, author, bubbles: [renderDiscBubble(c)] }; }
   });
-  const groupsHtml = groups.map(g => {
-    const divider = g.dividerBefore
-      ? '<div class="bd-chat-divider" data-chat-divider><span>Нові повідомлення</span></div>'
-      : '';
-    const bubbles = g.msgs.map(c => `
-      <div class="bd-msg-bubble">
-        <span class="bd-msg-text">${escapeHtml(c.text)}</span>
-        <span class="bd-msg-time">${formatTime(postTime(c))}</span>
-      </div>`).join('');
-    if (g.mine) {
-      return divider + `<div class="bd-msg-group bd-msg-group--mine"><div class="bd-msg-col">${bubbles}</div></div>`;
-    }
-    return divider + `
-      <div class="bd-msg-group bd-msg-group--other">
-        ${authorAvatar(g.first.author)}
-        <div class="bd-msg-col">
-          <span class="bd-msg-name">${escapeHtml(g.author)}</span>
-          ${bubbles}
-        </div>
-      </div>`;
-  }).join('');
-  return `<div class="bd-chat-stream" data-comments-for="${post.id}">${groupsHtml}</div>`;
+  flush();
+  return `<div class="bd-chat-stream" data-comments-for="${post.id}">${html}</div>`;
 }
 
 // Прокрутити стрічку модалки донизу (до найновіших)
