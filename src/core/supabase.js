@@ -162,7 +162,7 @@ export async function fetchAllComments() {
   if (!supa) return new Map();
   const { data, error } = await supa
     .from('comments')
-    .select('id, post_id, author, text, created_at, sender_uid')
+    .select('id, post_id, author, text, created_at, sender_uid, reply_to_id, edited_at, deleted_at, client_tag')
     .order('created_at', { ascending: true });
   if (error) {
     console.warn('[supabase] fetchAllComments error:', error.message);
@@ -178,16 +178,42 @@ export async function fetchAllComments() {
 
 // senderUid — uid автора (auth.uid()). Обов'язковий після RLS-перепису Етапу 3
 // (політика "Auth post comment" вимагає sender_uid = auth.uid()).
-export async function addComment(postId, author, text, senderUid) {
+export async function addComment(postId, author, text, senderUid, { replyToId = null, clientTag = null } = {}) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const row = { post_id: postId, author: author || null, text };
   if (senderUid) row.sender_uid = senderUid;
-  const { data, error } = await supa.from('comments')
-    .insert(row)
-    .select()
-    .single();
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, comment: data };
+  if (replyToId) row.reply_to_id = replyToId;
+  if (clientTag) row.client_tag = clientTag;
+  try {
+    const { data, error } = await withTimeout(supa.from('comments').insert(row).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, comment: data };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// Редагування свого коментаря «Обговорень» (текст + позначка edited_at)
+export async function editComment(commentId, text) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  try {
+    const { data, error } = await withTimeout(supa.from('comments')
+      .update({ text, edited_at: new Date().toISOString() })
+      .eq('id', commentId).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, comment: data };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
+// М'яке видалення коментаря (лишаємо рядок, ставимо deleted_at → плейсхолдер у UI).
+// text='' бо колонка може бути NOT NULL; UI орієнтується на deleted_at.
+export async function deleteComment(commentId) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  try {
+    const { data, error } = await withTimeout(supa.from('comments')
+      .update({ deleted_at: new Date().toISOString(), text: '' })
+      .eq('id', commentId).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, comment: data };
+  } catch (e) { return { ok: false, error: e.message }; }
 }
 
 // ── STORAGE: завантаження фото у bucket community-photos ─────────────────

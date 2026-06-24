@@ -489,7 +489,7 @@
   async function fetchAllComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at, sender_uid").order("created_at", { ascending: true });
+    const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at, sender_uid, reply_to_id, edited_at, deleted_at, client_tag").order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchAllComments error:", error.message);
       return /* @__PURE__ */ new Map();
@@ -502,16 +502,24 @@
     }
     return map;
   }
-  async function addComment(postId, author, text, senderUid) {
+  async function addComment(postId, author, text, senderUid, { replyToId = null, clientTag = null } = {}) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const row = { post_id: postId, author: author || null, text };
     if (senderUid)
       row.sender_uid = senderUid;
-    const { data, error } = await supa.from("comments").insert(row).select().single();
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true, comment: data };
+    if (replyToId)
+      row.reply_to_id = replyToId;
+    if (clientTag)
+      row.client_tag = clientTag;
+    try {
+      const { data, error } = await withTimeout(supa.from("comments").insert(row).select().single());
+      if (error)
+        return { ok: false, error: error.message };
+      return { ok: true, comment: data };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
   }
   async function uploadPhotoToStorage(blob) {
     if (!supa)
