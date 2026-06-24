@@ -558,29 +558,51 @@ export async function openChat(thread, post) {
   return api;
 }
 
-// Модалка чату точно лягає на ВИДИМУ область екрану (visualViewport), відстежуючи
-// клавіатуру в реальному часі (без debounce). Повертає функцію очистки.
+// Шапка+картка чату ЗАВЖДИ прибиті до фізичного верху екрану і не рухаються при
+// появі/зникненні клавіатури. Ключ: iOS «панорамує» (зсуває) документ під клавіатуру,
+// тягнучи за собою фіксовану шапку вгору за межі екрану. Тому на час чату ЗАМИКАЄМО
+// сторінку (body → position:fixed) — панорамувати нема чому, шапка стоїть на місці.
+// Підлаштовуємо лише висоту модалки під видиму область, щоб поле сиділо над клавіатурою.
+// Повертає функцію очистки (знімає замок + слухачі).
 function setupKeyboardResize(screen) {
   const vv = window.visualViewport;
-  if (!vv) return () => {};
+
+  // Замок сторінки: фіксуємо body, щоб iOS не міг зсувати/скролити документ під
+  // клавіатуру (саме це раніше тягнуло шапку за межі екрану).
+  const scrollY  = window.scrollY || 0;
+  const prevBody = {
+    position: document.body.style.position,
+    top:      document.body.style.top,
+    width:    document.body.style.width,
+    overflow: document.body.style.overflow,
+  };
+  document.body.style.position = 'fixed';
+  document.body.style.top      = `-${scrollY}px`;
+  document.body.style.width    = '100%';
+  document.body.style.overflow = 'hidden';
+  const unlock = () => {
+    document.body.style.position = prevBody.position;
+    document.body.style.top      = prevBody.top;
+    document.body.style.width    = prevBody.width;
+    document.body.style.overflow = prevBody.overflow;
+    window.scrollTo(0, scrollY);
+  };
+
+  if (!vv) return unlock;
+
   const stream = screen.querySelector('#pm-stream');
   let raf = 0;
   const apply = () => {
     raf = 0;
-    // Прибиваємо модалку РІВНО до видимої області. iOS при відкритті клавіатури
-    // «панорамує» видиме вікно вниз на vv.offsetTop → шапку+картку треба зсунути
-    // на стільки ж (top = offsetTop), інакше вони опиняються вище видимого верху
-    // і зникають. Висота = рівно видима частина → поле сидить над клавіатурою.
-    screen.style.top = vv.offsetTop + 'px';
+    // Верх — на фізичному верху (offsetTop ≈ 0 бо сторінка замкнена). offsetTop тут
+    // лише як страховка: якщо iOS усе ж зсунув — шапка опуститься до видимого верху,
+    // а не зникне за край. Висота = видима область → поле над клавіатурою.
+    screen.style.top    = vv.offsetTop + 'px';
     screen.style.height = vv.height + 'px';
     const open = (window.innerHeight - vv.height) > 80;
     screen.classList.toggle('pm-kb-open', open);
     if (open && stream) stream.scrollTop = stream.scrollHeight;
-    // Тримаємо документ у нулі — щоб скрол сторінки не додавав власного зсуву
-    // поверх панорами (інакше верх може дьоргатись при появі клавіатури).
-    if (window.scrollY) window.scrollTo(0, 0);
   };
-  // Коалесуємо кілька vv-подій в один кадр → менше «смикання» при анімації.
   const schedule = () => { if (!raf) raf = requestAnimationFrame(apply); };
   apply();
   vv.addEventListener('resize', schedule);
@@ -591,6 +613,7 @@ function setupKeyboardResize(screen) {
     if (raf) cancelAnimationFrame(raf);
     screen.style.height = ''; screen.style.top = '';
     screen.classList.remove('pm-kb-open');
+    unlock();
   };
 }
 
