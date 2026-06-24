@@ -4718,7 +4718,6 @@ ${post.text}
       (_, i) => `<span class="bhv4-dot-nav${i === index ? " bhv4-dot-nav--active" : ""}" data-idx="${i}"></span>`
     ).join("") : "";
     const heroTrackBtnHtml = seg ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u0441\u0442\u0435\u0436\u0435\u043D\u043D\u044F"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>` : "";
-    const routeTitle = hasSeg ? `${escapeHtml(segFrom.toUpperCase())} \u2192 ${escapeHtml(segTo.toUpperCase())}` : `${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}`;
     const routeFullHtml = hasSeg ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}</div>` : "";
     return `
     <div class="bhv4${isUrgent ? " bhv4--urgent" : ""}${isEnroute ? " bhv4--enroute" : ""}">
@@ -4743,6 +4742,7 @@ ${post.text}
 
         <div class="bhv4-body">
           <div class="bhv4-left">
+            ${routeFullHtml}
             <div class="bhv4-route-name bhv4-dyn">${escapeHtml(hasSeg ? `${segFrom.toUpperCase()} \u2192 ${segTo.toUpperCase()}` : `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`)}</div>
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || "\u2014")} \u2192 ${escapeHtml(toTime || "\u2014")}</span></span>
@@ -4752,7 +4752,6 @@ ${post.text}
           </div>
         </div>
 
-        ${hasSeg ? `<div class="bhv4-full-route bhv4-dyn">${escapeHtml(routeA.toUpperCase())} \u2192 ${escapeHtml(routeB.toUpperCase())}</div>` : ""}
         <div class="bhv4-map-outer">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
@@ -4905,7 +4904,7 @@ ${post.text}
             const fullEl = document.createElement("div");
             fullEl.className = "bhv4-route-full bhv4-dyn";
             fullEl.textContent = `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`;
-            nameEl.insertAdjacentElement("afterend", fullEl);
+            nameEl.insertAdjacentElement("beforebegin", fullEl);
           }
         } else {
           nameEl.textContent = `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`;

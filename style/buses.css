@@ -358,14 +358,17 @@
 }
 .bhv4-hero-track-btn:active { opacity: 0.5; }
 
-/* Підзаголовок: повна назва маршруту під сегментом (наприклад ЛУЦЬК → ОЛИКА) */
+/* Eyebrow (надзаголовок): повна назва маршруту НАД сегментом (напр. ЛУЦЬК → ОЛИКА) */
 .bhv4-route-full {
   font-size: 11px;
   font-weight: 600;
   color: rgba(255,255,255,0.55);
   letter-spacing: 0.3px;
-  margin-bottom: 7px;
+  margin-bottom: 2px;
   text-transform: uppercase;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* Рядок з капсулою часу і тривалістю */
@@ -413,19 +416,6 @@
   object-position: right bottom;
   flex-shrink: 0;
   filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));
-}
-
-/* Повний рейс над шкалою A/B — тільки при сегментному відстеженні */
-.bhv4-full-route {
-  font-size: 10px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.55);
-  letter-spacing: 0.6px;
-  text-align: center;
-  margin-bottom: 3px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 /* ── Маршрутна шкала (v4) — в нормальному потоці після тексту ── */
