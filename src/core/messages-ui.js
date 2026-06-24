@@ -526,7 +526,7 @@ export async function openChat(thread, post) {
 
   // Realtime — нові / редаговані / видалені / прочитані повідомлення треда
   if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
-  _chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
+  const chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
     if (!row) return;
     if (type === 'INSERT') {
       const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
@@ -539,7 +539,10 @@ export async function openChat(thread, post) {
       if (idx >= 0) { messages[idx] = row; replaceOne(row); }
     }
   });
-  api._cleanup.push(() => { if (_chatUnsub) { _chatUnsub(); _chatUnsub = null; } });
+  _chatUnsub = chatUnsub;
+  // Очищаємо САМЕ цю підписку (не module-level змінну) → надійно навіть якщо колись
+  // відкриють інший чат поверх. Module-ref обнуляємо лише якщо він ще наш.
+  api._cleanup.push(() => { try { chatUnsub(); } catch (_) {} if (_chatUnsub === chatUnsub) _chatUnsub = null; });
   api._cleanup.push(refreshUnreadBadge);
 
   // Поле / редагування + кнопки-питання + фото + перегляд фото
