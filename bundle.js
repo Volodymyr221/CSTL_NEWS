@@ -1963,53 +1963,27 @@
   }
   function setupKeyboardResize(screen) {
     const vv = window.visualViewport;
-    const scrollY = window.scrollY || 0;
-    const prevBody = {
-      position: document.body.style.position,
-      top: document.body.style.top,
-      width: document.body.style.width,
-      overflow: document.body.style.overflow
-    };
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
-    const unlock = () => {
-      document.body.style.position = prevBody.position;
-      document.body.style.top = prevBody.top;
-      document.body.style.width = prevBody.width;
-      document.body.style.overflow = prevBody.overflow;
-      window.scrollTo(0, scrollY);
-    };
     if (!vv)
-      return unlock;
+      return () => {
+      };
     const stream = screen.querySelector("#pm-stream");
-    let raf = 0;
     const apply = () => {
-      raf = 0;
-      screen.style.top = vv.offsetTop + "px";
       screen.style.height = vv.height + "px";
+      screen.style.top = vv.offsetTop + "px";
       const open = window.innerHeight - vv.height > 80;
       screen.classList.toggle("pm-kb-open", open);
       if (open && stream)
         stream.scrollTop = stream.scrollHeight;
     };
-    const schedule = () => {
-      if (!raf)
-        raf = requestAnimationFrame(apply);
-    };
     apply();
-    vv.addEventListener("resize", schedule);
-    vv.addEventListener("scroll", schedule);
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
     return () => {
-      vv.removeEventListener("resize", schedule);
-      vv.removeEventListener("scroll", schedule);
-      if (raf)
-        cancelAnimationFrame(raf);
+      vv.removeEventListener("resize", apply);
+      vv.removeEventListener("scroll", apply);
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");
-      unlock();
     };
   }
   var SWIPE_TRIGGER = 45;
