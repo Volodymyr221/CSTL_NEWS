@@ -915,9 +915,8 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
     ? `<button class="bhv4-hero-track-btn" data-untrack-id="${escapeHtml(route.id)}" aria-label="Скасувати відстеження"><svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg></button>`
     : '';
 
-  const routeTitle    = hasSeg
-    ? `${escapeHtml(segFrom.toUpperCase())} → ${escapeHtml(segTo.toUpperCase())}`
-    : `${escapeHtml(routeA.toUpperCase())} → ${escapeHtml(routeB.toUpperCase())}`;
+  // Повний маршрут — eyebrow (надзаголовок) НАД назвою сегмента. Тільки при
+  // сегментному відстеженні (коли назва-заголовок = проміжний відрізок).
   const routeFullHtml = hasSeg
     ? `<div class="bhv4-route-full bhv4-dyn">${escapeHtml(routeA.toUpperCase())} → ${escapeHtml(routeB.toUpperCase())}</div>`
     : '';
@@ -948,6 +947,7 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
 
         <div class="bhv4-body">
           <div class="bhv4-left">
+            ${routeFullHtml}
             <div class="bhv4-route-name bhv4-dyn">${escapeHtml(hasSeg ? `${segFrom.toUpperCase()} → ${segTo.toUpperCase()}` : `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`)}</div>
             <div class="bhv4-times-row">
               <span class="bhv4-time-capsule"><span class="bhv4-dyn bhv4-capsule-inner">${escapeHtml(fromTime || '—')} → ${escapeHtml(toTime || '—')}</span></span>
@@ -957,7 +957,6 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
           </div>
         </div>
 
-        ${hasSeg ? `<div class="bhv4-full-route bhv4-dyn">${escapeHtml(routeA.toUpperCase())} → ${escapeHtml(routeB.toUpperCase())}</div>` : ''}
         <div class="bhv4-map-outer">${renderRouteMapV4(route, timings)}</div>
       </div>
     </div>`;
@@ -1130,7 +1129,7 @@ function switchHeroCard() {
           const fullEl = document.createElement('div');
           fullEl.className = 'bhv4-route-full bhv4-dyn';
           fullEl.textContent = `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`;
-          nameEl.insertAdjacentElement('afterend', fullEl);
+          nameEl.insertAdjacentElement('beforebegin', fullEl);   // eyebrow НАД назвою
         }
       } else {
         nameEl.textContent = `${routeA.toUpperCase()} → ${routeB.toUpperCase()}`;
