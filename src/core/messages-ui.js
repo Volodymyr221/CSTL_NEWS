@@ -154,6 +154,9 @@ export async function openChat(thread, post) {
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">Завантаження…</div>
     </div>
+    <button class="pm-scrolldown" id="pm-scrolldown" type="button" aria-label="До останнього повідомлення">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     <div class="pm-composebar" id="pm-composebar" hidden>
       <span class="pm-composebar-ic" id="pm-composebar-ic">${ACT_ICONS.reply}</span>
       <div class="pm-composebar-body">
@@ -290,6 +293,12 @@ export async function openChat(thread, post) {
   const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? 'smooth' : 'auto' });
   // Чи стрічка прокручена до низу (з допуском) — щоб не «смикати» коли читаєш історію.
   const atBottom = () => (streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight) < 120;
+
+  // Кнопка «вниз» (як у Telegram): зʼявляється коли прокрутив угору, тап → у кінець.
+  const scrollDownBtn = api.screen.querySelector('#pm-scrolldown');
+  const updateScrollBtn = () => scrollDownBtn?.classList.toggle('visible', !atBottom());
+  streamEl.addEventListener('scroll', updateScrollBtn, { passive: true });
+  scrollDownBtn?.addEventListener('click', () => scrollBottom(true));
 
   // Read receipt («Прочитано/Надіслано») під останнім МОЇМ повідомленням.
   const addReceiptIfNeeded = () => {

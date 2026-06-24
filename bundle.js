@@ -1526,6 +1526,9 @@
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </div>
+    <button class="pm-scrolldown" id="pm-scrolldown" type="button" aria-label="\u0414\u043E \u043E\u0441\u0442\u0430\u043D\u043D\u044C\u043E\u0433\u043E \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
+    </button>
     <div class="pm-composebar" id="pm-composebar" hidden>
       <span class="pm-composebar-ic" id="pm-composebar-ic">${ACT_ICONS.reply}</span>
       <div class="pm-composebar-body">
@@ -1667,6 +1670,10 @@
     };
     const scrollBottom = (smooth) => streamEl.scrollTo({ top: streamEl.scrollHeight, behavior: smooth ? "smooth" : "auto" });
     const atBottom = () => streamEl.scrollHeight - streamEl.scrollTop - streamEl.clientHeight < 120;
+    const scrollDownBtn = api.screen.querySelector("#pm-scrolldown");
+    const updateScrollBtn = () => scrollDownBtn?.classList.toggle("visible", !atBottom());
+    streamEl.addEventListener("scroll", updateScrollBtn, { passive: true });
+    scrollDownBtn?.addEventListener("click", () => scrollBottom(true));
     const addReceiptIfNeeded = () => {
       const lastMsg = messages[messages.length - 1];
       if (lastMsg && lastMsg.sender_uid === me && !lastMsg.deleted_at) {

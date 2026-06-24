@@ -113,6 +113,24 @@
 }
 .pm-send:active { background: var(--red-dark, #5A2329); }
 
+/* Кнопка «вниз» (Telegram-стиль): зʼявляється коли прокрутив угору. Абсолютно
+   позиціонована в .pm-screen (position:fixed), над полем вводу справа. */
+.pm-scrolldown {
+  position: absolute; right: 14px; bottom: 76px;
+  width: 40px; height: 40px; border-radius: 50%;
+  background: var(--card-cream, #FAF8EF);
+  border: 1px solid var(--hairline, rgba(60,50,30,0.12));
+  box-shadow: 0 2px 12px rgba(40, 25, 10, 0.22);
+  color: var(--red, #722F37);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; z-index: 5;
+  opacity: 0; transform: translateY(8px); pointer-events: none;
+  transition: opacity 0.18s, transform 0.18s;
+}
+.pm-scrolldown.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.pm-scrolldown:active { background: var(--paper-deep, #EAE4D2); }
+.pm-scrolldown svg { width: 22px; height: 22px; display: block; }
+
 /* ── Список розмов / оголошень ────────────────────────────────────── */
 .pm-list {
   flex: 1; overflow-y: auto;
