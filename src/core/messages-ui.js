@@ -223,7 +223,8 @@ export async function openChat(thread, post) {
       : '';
     const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : '';
     const edited = m.edited_at ? '<span class="pm-bubble-edited">змінено</span> ' : '';
-    return `<div class="pm-bubble${enter}" data-msg="${m.id}"${tagAttr}>${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
+    const photoCls = m.photo_url ? ' pm-bubble--photo' : '';   // тонкий ободок навколо фото
+    return `<div class="pm-bubble${photoCls}${enter}" data-msg="${m.id}"${tagAttr}>${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
   };
   const renderGroup = (g) =>
     `<div class="pm-group ${g.mine ? 'pm-group--mine' : 'pm-group--other'}">${g.msgs.map(renderBubble).join('')}</div>`;

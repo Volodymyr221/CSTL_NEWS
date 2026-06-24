@@ -1574,7 +1574,8 @@
       const photoHtml = m.photo_url ? `<img class="pm-bubble-photo" src="${escapeHtml(m.photo_url)}" alt="\u0444\u043E\u0442\u043E" data-photo="${escapeHtml(m.photo_url)}">` : "";
       const textHtml = m.text ? `<span class="pm-bubble-text">${escapeHtml(m.text)}</span>` : "";
       const edited = m.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
-      return `<div class="pm-bubble${enter}" data-msg="${m.id}"${tagAttr}>${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
+      const photoCls = m.photo_url ? " pm-bubble--photo" : "";
+      return `<div class="pm-bubble${photoCls}${enter}" data-msg="${m.id}"${tagAttr}>${replyHtml}${photoHtml}${textHtml}<span class="pm-bubble-time">${edited}${clockTime(postTime(m))}</span></div>`;
     };
     const renderGroup = (g) => `<div class="pm-group ${g.mine ? "pm-group--mine" : "pm-group--other"}">${g.msgs.map(renderBubble).join("")}</div>`;
     let streamLastDay = null;
