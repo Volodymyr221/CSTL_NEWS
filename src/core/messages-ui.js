@@ -389,9 +389,16 @@ export async function openChat(thread, post) {
       const target = editing;
       input.value = ''; clearCompose();
       const idx = messages.findIndex(m => m.id === target.id);
+      const prevMsg = idx >= 0 ? messages[idx] : null;   // знімок для відкату при провалі
       if (idx >= 0) { messages[idx] = { ...messages[idx], text, edited_at: new Date().toISOString() }; replaceOne(messages[idx]); }
       const res = await editMessage(target.id, text);
-      if (!res.ok) { showToast('❌ Не вдалося змінити: ' + (res.error || ''), 4000, 'error'); return; }
+      if (!res.ok) {
+        // Відкат: повертаємо оригінал на місце (БД не змінилась)
+        const i = messages.findIndex(m => m.id === target.id);
+        if (i >= 0 && prevMsg) { messages[i] = prevMsg; replaceOne(prevMsg); }
+        showToast('❌ Не вдалося змінити: ' + (res.error || ''), 4000, 'error');
+        return;
+      }
       if (idx >= 0 && res.message) { messages[idx] = res.message; replaceOne(res.message); }
       return;
     }
@@ -483,9 +490,15 @@ export async function openChat(thread, post) {
       else if (act === 'edit') startEdit(m);
       else if (act === 'delete') {
         const idx = messages.findIndex(x => x.id === m.id);
+        const prevMsg = idx >= 0 ? messages[idx] : null;   // знімок для відкату при провалі
         if (idx >= 0) { messages[idx] = { ...messages[idx], deleted_at: new Date().toISOString(), text: null, photo_url: null }; replaceOne(messages[idx]); }
         const res = await deleteMessage(m.id);
-        if (!res.ok) showToast('❌ Не вдалося видалити: ' + (res.error || ''), 4000, 'error');
+        if (!res.ok) {
+          // Відкат: повертаємо повідомлення (у БД не видалилось)
+          const i = messages.findIndex(x => x.id === m.id);
+          if (i >= 0 && prevMsg) { messages[i] = prevMsg; replaceOne(prevMsg); }
+          showToast('❌ Не вдалося видалити: ' + (res.error || ''), 4000, 'error');
+        }
       }
     });
     api.screen.appendChild(sheet);
