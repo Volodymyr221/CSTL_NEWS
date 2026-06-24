@@ -586,6 +586,34 @@
     }
     return data || [];
   }
+  async function fetchThreadStates(uid) {
+    const map = /* @__PURE__ */ new Map();
+    if (!supa || !uid)
+      return map;
+    const { data, error } = await supa.from("thread_user_state").select("thread_id, archived, hidden").eq("uid", uid);
+    if (error) {
+      console.warn("[supabase] fetchThreadStates:", error.message);
+      return map;
+    }
+    for (const r of data || [])
+      map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden });
+    return map;
+  }
+  async function setThreadState(uid, threadId, patch) {
+    if (!supa || !uid)
+      return { ok: false, error: "no-supa" };
+    const row = { uid, thread_id: threadId, updated_at: (/* @__PURE__ */ new Date()).toISOString(), ...patch };
+    try {
+      const { error } = await withTimeout(
+        supa.from("thread_user_state").upsert(row, { onConflict: "uid,thread_id" })
+      );
+      if (error)
+        return { ok: false, error: error.message };
+      return { ok: true };
+    } catch (e) {
+      return { ok: false, error: e.message };
+    }
+  }
   async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
     if (!supa)
       return { ok: false, error: "no-supa" };
@@ -2238,6 +2266,7 @@
         <div class="pm-chips" id="pm-chips" role="tablist">
           <button class="pm-chip pm-chip--active" type="button" data-filter="all">\u0423\u0441\u0456</button>
           <button class="pm-chip" type="button" data-filter="unread">\u041D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0456</button>
+          <button class="pm-chip" type="button" data-filter="archive">\u0410\u0440\u0445\u0456\u0432</button>
         </div>
         <div class="pm-threads" id="pm-threads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
       </div>
@@ -2245,9 +2274,16 @@
       const threadsEl = api.screen.querySelector("#pm-threads");
       const searchEl = api.screen.querySelector("#pm-search");
       const chipsEl = api.screen.querySelector("#pm-chips");
-      let [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+      let [threads, unread, states] = await Promise.all([
+        fetchMyThreads(me),
+        fetchUnreadByThread(me),
+        fetchThreadStates(me)
+      ]);
       if (api._closed)
         return;
+      const ICON_ARCHIVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9 13l3 3 3-3"/></svg>';
+      const ICON_UNARCHIVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9 15l3-3 3 3"/></svg>';
+      const ICON_TRASH = ACT_ICONS.delete;
       const applyEmptyState = () => {
         const show = threads.length ? "" : "none";
         api.screen.querySelector(".pm-search").style.display = show;
@@ -2256,9 +2292,18 @@
       applyEmptyState();
       let filter = "all";
       let query = "";
+      const stOf = (id) => states.get(id) || {};
       const renderThreads = () => {
         const q = query.trim().toLowerCase();
         const list = threads.filter((t) => {
+          const s = stOf(t.id);
+          if (s.hidden)
+            return false;
+          if (filter === "archive") {
+            if (!s.archived)
+              return false;
+          } else if (s.archived)
+            return false;
           if (filter === "unread" && !(unread.get(t.id) > 0))
             return false;
           if (!q)
@@ -2267,30 +2312,37 @@
           return hay.includes(q);
         });
         if (!list.length) {
-          threadsEl.innerHTML = !threads.length ? `<div class="pm-empty pm-empty--threads">
-               <span class="pm-empty-ic">\u{1F4AC}</span>
-               <div class="pm-empty-title">\u0412\u0430\u0448\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div>
-               <div class="pm-empty-sub">\u0422\u0443\u0442 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0432\u0430\u0448\u0456 \u0440\u043E\u0437\u043C\u043E\u0432\u0438 \u0437 \u043F\u043E\u043A\u0443\u043F\u0446\u044F\u043C\u0438 \u0442\u0430 \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044F\u043C\u0438 \u0437 \u0434\u043E\u0448\u043A\u0438.</div>
-             </div>` : `<div class="pm-empty pm-empty--mini">\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
+          threadsEl.innerHTML = filter === "archive" ? `<div class="pm-empty pm-empty--mini">\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439</div>` : !threads.length ? `<div class="pm-empty pm-empty--threads">
+                 <span class="pm-empty-ic">\u{1F4AC}</span>
+                 <div class="pm-empty-title">\u0412\u0430\u0448\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div>
+                 <div class="pm-empty-sub">\u0422\u0443\u0442 \u0437\u02BC\u044F\u0432\u043B\u044F\u0442\u044C\u0441\u044F \u0432\u0430\u0448\u0456 \u0440\u043E\u0437\u043C\u043E\u0432\u0438 \u0437 \u043F\u043E\u043A\u0443\u043F\u0446\u044F\u043C\u0438 \u0442\u0430 \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044F\u043C\u0438 \u0437 \u0434\u043E\u0448\u043A\u0438.</div>
+               </div>` : `<div class="pm-empty pm-empty--mini">\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
           return;
         }
         threadsEl.innerHTML = list.map((t) => {
           const n = unread.get(t.id) || 0;
           const name = otherName(t);
           const preview = t.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
+          const archived = !!stOf(t.id).archived;
           return `
-          <button class="pm-thread ${n > 0 ? "pm-thread--unread" : ""}" type="button" data-thread="${t.id}">
-            ${avatar(name)}
-            <div class="pm-thread-body">
-              <div class="pm-thread-top">
-                <span class="pm-thread-name">${escapeHtml(name)}</span>
-                <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
-              </div>
-              <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
-              <div class="pm-thread-last">${escapeHtml(preview)}</div>
+          <div class="pm-thread-row" data-row="${t.id}">
+            <div class="pm-thread-actions">
+              <button class="pm-thread-act pm-thread-act--archive" type="button" data-archive="${t.id}" aria-label="${archived ? "\u0420\u043E\u0437\u0430\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438" : "\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438"}">${archived ? ICON_UNARCHIVE : ICON_ARCHIVE}</button>
+              <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${t.id}" aria-label="\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438">${ICON_TRASH}</button>
             </div>
-            ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ""}
-          </button>`;
+            <button class="pm-thread ${n > 0 ? "pm-thread--unread" : ""}" type="button" data-thread="${t.id}">
+              ${avatar(name)}
+              <div class="pm-thread-body">
+                <div class="pm-thread-top">
+                  <span class="pm-thread-name">${escapeHtml(name)}</span>
+                  <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
+                </div>
+                <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
+                <div class="pm-thread-last">${escapeHtml(preview)}</div>
+              </div>
+              ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ""}
+            </button>
+          </div>`;
         }).join("");
       };
       renderThreads();
@@ -2306,21 +2358,114 @@
         chipsEl.querySelectorAll(".pm-chip").forEach((c) => c.classList.toggle("pm-chip--active", c === btn));
         renderThreads();
       });
+      let openRow = null, suppressClick = false;
+      const closeOpenRow = () => {
+        if (!openRow)
+          return;
+        openRow.querySelector(".pm-thread")?.style.removeProperty("transform");
+        openRow.classList.remove("pm-thread-row--open");
+        openRow = null;
+      };
+      let sX = 0, sY = 0, swCard = null, swRow = null, swLock = null;
+      threadsEl.addEventListener("touchstart", (e) => {
+        const c = e.target.closest(".pm-thread");
+        if (!c) {
+          swCard = null;
+          return;
+        }
+        swCard = c;
+        swRow = c.closest(".pm-thread-row");
+        swLock = null;
+        sX = e.touches[0].clientX;
+        sY = e.touches[0].clientY;
+      }, { passive: true });
+      threadsEl.addEventListener("touchmove", (e) => {
+        if (!swCard)
+          return;
+        const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
+        if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
+          swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (swLock === "h") {
+          e.preventDefault();
+          const base = swRow === openRow ? -140 : 0;
+          const d = Math.max(Math.min(base + dx, 0), -140);
+          swCard.style.transform = `translateX(${d}px)`;
+        }
+      }, { passive: false });
+      threadsEl.addEventListener("touchend", (e) => {
+        if (!swCard)
+          return;
+        const c = swCard, r = swRow, lock = swLock;
+        swCard = null;
+        swRow = null;
+        if (lock !== "h")
+          return;
+        suppressClick = true;
+        setTimeout(() => {
+          suppressClick = false;
+        }, 60);
+        const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sX) - sX;
+        const wasOpen = r === openRow;
+        const open = wasOpen ? dx < 60 : dx < -70;
+        if (open) {
+          if (openRow && openRow !== r)
+            closeOpenRow();
+          c.style.transform = "translateX(-140px)";
+          r.classList.add("pm-thread-row--open");
+          openRow = r;
+        } else {
+          c.style.transform = "";
+          r.classList.remove("pm-thread-row--open");
+          if (openRow === r)
+            openRow = null;
+        }
+      }, { passive: false });
+      const applyThreadState = async (id, patch) => {
+        const prev = { ...states.get(id) || {} };
+        const merged = { archived: !!prev.archived, hidden: !!prev.hidden, ...patch };
+        states.set(id, merged);
+        closeOpenRow();
+        renderThreads();
+        const res = await setThreadState(me, id, { archived: !!merged.archived, hidden: !!merged.hidden });
+        if (!res.ok) {
+          states.set(id, prev);
+          renderThreads();
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F: " + (res.error || ""), 4e3, "error");
+        }
+      };
       threadsEl.addEventListener("click", (e) => {
+        const arch = e.target.closest("[data-archive]");
+        if (arch) {
+          const id = Number(arch.dataset.archive);
+          applyThreadState(id, { archived: !stOf(id).archived });
+          return;
+        }
+        const del = e.target.closest("[data-delete]");
+        if (del) {
+          applyThreadState(Number(del.dataset.delete), { hidden: true });
+          return;
+        }
         const btn = e.target.closest("[data-thread]");
         if (!btn)
           return;
+        if (suppressClick)
+          return;
+        if (openRow) {
+          closeOpenRow();
+          return;
+        }
         const t = threads.find((x) => String(x.id) === btn.dataset.thread);
         if (t)
           openChat(t, t.post);
       });
       let refreshTimer = null;
       const refresh = async () => {
-        const [t, u] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+        const [t, u, s] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me), fetchThreadStates(me)]);
         if (api._closed)
           return;
         threads = t;
         unread = u;
+        states = s;
         applyEmptyState();
         renderThreads();
       };

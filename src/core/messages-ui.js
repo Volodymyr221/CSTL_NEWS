@@ -20,6 +20,7 @@ import {
 import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
   fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
+  fetchThreadStates, setThreadState,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
 } from './supabase.js';
@@ -763,6 +764,7 @@ export function openThreadsList() {
         <div class="pm-chips" id="pm-chips" role="tablist">
           <button class="pm-chip pm-chip--active" type="button" data-filter="all">Усі</button>
           <button class="pm-chip" type="button" data-filter="unread">Непрочитані</button>
+          <button class="pm-chip" type="button" data-filter="archive">Архів</button>
         </div>
         <div class="pm-threads" id="pm-threads"><div class="pm-loading">Завантаження…</div></div>
       </div>
@@ -772,8 +774,15 @@ export function openThreadsList() {
     const searchEl  = api.screen.querySelector('#pm-search');
     const chipsEl   = api.screen.querySelector('#pm-chips');
 
-    let [threads, unread] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+    let [threads, unread, states] = await Promise.all([
+      fetchMyThreads(me), fetchUnreadByThread(me), fetchThreadStates(me),
+    ]);
     if (api._closed) return;
+
+    // Іконки для свайп-дій картки розмови
+    const ICON_ARCHIVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9 13l3 3 3-3"/></svg>';
+    const ICON_UNARCHIVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9 15l3-3 3 3"/></svg>';
+    const ICON_TRASH = ACT_ICONS.delete;
 
     // Без жодної розмови — ховаємо пошук+фільтри, лишаємо чистий empty state
     const applyEmptyState = () => {
@@ -786,41 +795,55 @@ export function openThreadsList() {
     let filter = 'all';   // all | unread
     let query  = '';
 
+    const stOf = (id) => states.get(id) || {};
     const renderThreads = () => {
       const q = query.trim().toLowerCase();
       const list = threads.filter(t => {
+        const s = stOf(t.id);
+        if (s.hidden) return false;                              // видалені з мого списку — ніде
+        if (filter === 'archive') { if (!s.archived) return false; }
+        else if (s.archived) return false;                      // архівні не в «Усі»/«Непрочитані»
         if (filter === 'unread' && !(unread.get(t.id) > 0)) return false;
         if (!q) return true;
         const hay = `${otherName(t)} ${threadPostTitle(t)} ${t.last_message_text || ''}`.toLowerCase();
         return hay.includes(q);
       });
       if (!list.length) {
-        threadsEl.innerHTML = !threads.length
-          ? `<div class="pm-empty pm-empty--threads">
-               <span class="pm-empty-ic">💬</span>
-               <div class="pm-empty-title">Ваші повідомлення</div>
-               <div class="pm-empty-sub">Тут зʼявляться ваші розмови з покупцями та продавцями з дошки.</div>
-             </div>`
-          : `<div class="pm-empty pm-empty--mini">Нічого не знайдено</div>`;
+        threadsEl.innerHTML = (filter === 'archive')
+          ? `<div class="pm-empty pm-empty--mini">Архів порожній</div>`
+          : !threads.length
+            ? `<div class="pm-empty pm-empty--threads">
+                 <span class="pm-empty-ic">💬</span>
+                 <div class="pm-empty-title">Ваші повідомлення</div>
+                 <div class="pm-empty-sub">Тут зʼявляться ваші розмови з покупцями та продавцями з дошки.</div>
+               </div>`
+            : `<div class="pm-empty pm-empty--mini">Нічого не знайдено</div>`;
         return;
       }
       threadsEl.innerHTML = list.map(t => {
         const n = unread.get(t.id) || 0;
         const name = otherName(t);
         const preview = t.last_message_text || 'Розмову розпочато';
+        const archived = !!stOf(t.id).archived;
         return `
-          <button class="pm-thread ${n > 0 ? 'pm-thread--unread' : ''}" type="button" data-thread="${t.id}">
-            ${avatar(name)}
-            <div class="pm-thread-body">
-              <div class="pm-thread-top">
-                <span class="pm-thread-name">${escapeHtml(name)}</span>
-                <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
-              </div>
-              <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
-              <div class="pm-thread-last">${escapeHtml(preview)}</div>
+          <div class="pm-thread-row" data-row="${t.id}">
+            <div class="pm-thread-actions">
+              <button class="pm-thread-act pm-thread-act--archive" type="button" data-archive="${t.id}" aria-label="${archived ? 'Розархівувати' : 'Архівувати'}">${archived ? ICON_UNARCHIVE : ICON_ARCHIVE}</button>
+              <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${t.id}" aria-label="Видалити">${ICON_TRASH}</button>
             </div>
-            ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ''}
-          </button>`;
+            <button class="pm-thread ${n > 0 ? 'pm-thread--unread' : ''}" type="button" data-thread="${t.id}">
+              ${avatar(name)}
+              <div class="pm-thread-body">
+                <div class="pm-thread-top">
+                  <span class="pm-thread-name">${escapeHtml(name)}</span>
+                  <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
+                </div>
+                <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
+                <div class="pm-thread-last">${escapeHtml(preview)}</div>
+              </div>
+              ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ''}
+            </button>
+          </div>`;
       }).join('');
     };
 
@@ -834,9 +857,69 @@ export function openThreadsList() {
       chipsEl.querySelectorAll('.pm-chip').forEach(c => c.classList.toggle('pm-chip--active', c === btn));
       renderThreads();
     });
+    // Свайп-вліво по картці розмови → виїжджають дві дії (архів + видалити) ззаду.
+    let openRow = null, suppressClick = false;
+    const closeOpenRow = () => {
+      if (!openRow) return;
+      openRow.querySelector('.pm-thread')?.style.removeProperty('transform');
+      openRow.classList.remove('pm-thread-row--open');
+      openRow = null;
+    };
+    let sX = 0, sY = 0, swCard = null, swRow = null, swLock = null;
+    threadsEl.addEventListener('touchstart', (e) => {
+      const c = e.target.closest('.pm-thread');
+      if (!c) { swCard = null; return; }
+      swCard = c; swRow = c.closest('.pm-thread-row'); swLock = null;
+      sX = e.touches[0].clientX; sY = e.touches[0].clientY;
+    }, { passive: true });
+    threadsEl.addEventListener('touchmove', (e) => {
+      if (!swCard) return;
+      const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
+      if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) swLock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (swLock === 'h') {
+        e.preventDefault();
+        const base = (swRow === openRow) ? -140 : 0;
+        const d = Math.max(Math.min(base + dx, 0), -140);
+        swCard.style.transform = `translateX(${d}px)`;
+      }
+    }, { passive: false });
+    threadsEl.addEventListener('touchend', (e) => {
+      if (!swCard) return;
+      const c = swCard, r = swRow, lock = swLock;
+      swCard = null; swRow = null;
+      if (lock !== 'h') return;
+      suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sX) - sX;
+      const wasOpen = (r === openRow);
+      const open = wasOpen ? (dx < 60) : (dx < -70);
+      if (open) {
+        if (openRow && openRow !== r) closeOpenRow();
+        c.style.transform = 'translateX(-140px)'; r.classList.add('pm-thread-row--open'); openRow = r;
+      } else {
+        c.style.transform = ''; r.classList.remove('pm-thread-row--open'); if (openRow === r) openRow = null;
+      }
+    }, { passive: false });
+
+    // Зміна стану розмови (архів/приховано) — оптимістично + БД (повний стан → upsert).
+    const applyThreadState = async (id, patch) => {
+      const prev = { ...(states.get(id) || {}) };
+      const merged = { archived: !!prev.archived, hidden: !!prev.hidden, ...patch };
+      states.set(id, merged);
+      closeOpenRow();
+      renderThreads();
+      const res = await setThreadState(me, id, { archived: !!merged.archived, hidden: !!merged.hidden });
+      if (!res.ok) { states.set(id, prev); renderThreads(); showToast('❌ Не вдалося: ' + (res.error || ''), 4000, 'error'); }
+    };
+
     threadsEl.addEventListener('click', (e) => {
+      const arch = e.target.closest('[data-archive]');
+      if (arch) { const id = Number(arch.dataset.archive); applyThreadState(id, { archived: !(stOf(id).archived) }); return; }
+      const del = e.target.closest('[data-delete]');
+      if (del) { applyThreadState(Number(del.dataset.delete), { hidden: true }); return; }
       const btn = e.target.closest('[data-thread]');
       if (!btn) return;
+      if (suppressClick) return;                 // щойно свайпнули — не відкривати чат
+      if (openRow) { closeOpenRow(); return; }   // є відкрита картка → спершу закрити
       const t = threads.find(x => String(x.id) === btn.dataset.thread);
       if (t) openChat(t, t.post);
     });
@@ -846,9 +929,9 @@ export function openThreadsList() {
     // Окремий канал (не конфліктує з глобальним бейджем). Дебаунс проти сплесків.
     let refreshTimer = null;
     const refresh = async () => {
-      const [t, u] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me)]);
+      const [t, u, s] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me), fetchThreadStates(me)]);
       if (api._closed) return;
-      threads = t; unread = u;
+      threads = t; unread = u; states = s;
       applyEmptyState();
       renderThreads();
     };
