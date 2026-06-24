@@ -1908,7 +1908,8 @@
     messages.forEach((m) => seen.add(msgKey(m)));
     renderStream();
     setTimeout(() => scrollBottom(false), 50);
-    markThreadRead(thread.id, me).then(refreshUnreadBadge);
+    _readThreads.add(thread.id);
+    markThreadRead(thread.id, me).finally(refreshUnreadBadge);
     if (_chatUnsub) {
       try {
         _chatUnsub();
@@ -1924,8 +1925,10 @@
           appendOne(row);
         else if (st === "update")
           replaceOne(row);
-        if (row.sender_uid !== me)
-          markThreadRead(thread.id, me).then(refreshUnreadBadge);
+        if (row.sender_uid !== me) {
+          _readThreads.add(thread.id);
+          markThreadRead(thread.id, me).finally(refreshUnreadBadge);
+        }
       } else if (type === "UPDATE") {
         const idx = messages.findIndex((m) => m.id === row.id);
         if (idx >= 0) {
@@ -2381,6 +2384,7 @@
       openChat(res.thread, post);
     });
   }
+  var _readThreads = /* @__PURE__ */ new Set();
   async function refreshUnreadBadge() {
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
@@ -2400,7 +2404,10 @@
       hideAll();
       return;
     }
-    const chats = (await fetchUnreadByThread(currentUserId())).size;
+    const map = await fetchUnreadByThread(currentUserId());
+    for (const id of _readThreads)
+      map.delete(id);
+    const chats = map.size;
     if (chats <= 0) {
       hideAll();
       return;
@@ -2461,7 +2468,13 @@
         _threadsUnsub = null;
       }
       if (isLoggedIn())
-        _threadsUnsub = subscribeMyThreads(() => refreshUnreadBadge());
+        _threadsUnsub = subscribeMyThreads((p) => {
+          const row = p && p.new;
+          if (row && row.thread_id != null && row.sender_uid && row.sender_uid !== currentUserId()) {
+            _readThreads.delete(row.thread_id);
+          }
+          refreshUnreadBadge();
+        });
     });
   }
 

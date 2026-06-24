@@ -510,8 +510,10 @@ export async function openChat(thread, post) {
   messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при відкритті
   renderStream();
   setTimeout(() => scrollBottom(false), 50);
-  // Позначити вхідні прочитаними + оновити бейдж
-  markThreadRead(thread.id, me).then(refreshUnreadBadge);
+  // Позначити вхідні прочитаними + оновити бейдж. _readThreads = оптимістично
+  // (бейдж прибираємо одразу, не чекаючи БД — надійно навіть при затримці/збої).
+  _readThreads.add(thread.id);
+  markThreadRead(thread.id, me).finally(refreshUnreadBadge);
 
   // Realtime — нові / редаговані / видалені / прочитані повідомлення треда
   if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
@@ -522,7 +524,7 @@ export async function openChat(thread, post) {
       if (st === 'add') appendOne(row);          // нове чуже → вставляємо одну бульбашку
       else if (st === 'update') replaceOne(row); // realtime випередив await → заміна на місці
       // 'same' = відлуння власного повідомлення → нічого не чіпаємо (без блимання)
-      if (row.sender_uid !== me) markThreadRead(thread.id, me).then(refreshUnreadBadge);
+      if (row.sender_uid !== me) { _readThreads.add(thread.id); markThreadRead(thread.id, me).finally(refreshUnreadBadge); }
     } else if (type === 'UPDATE') {
       const idx = messages.findIndex(m => m.id === row.id);
       if (idx >= 0) { messages[idx] = row; replaceOne(row); }
@@ -936,6 +938,9 @@ export function startChatFromPost(post) {
 
 // ── Бейдж непрочитаних: іконка акаунта (шапка) + FAB Дошки + пункт «Повідомлення» ──
 // Число всюди однакове = кількість ЧАТІВ (розмов) з хоча б одним непрочитаним.
+// _readThreads — треди, які ми ЩОЙНО прочитали (відкрили чат). Виключаємо їх з
+// лічильника одразу, не чекаючи поки БД оновить read_at → бейдж зникає надійно.
+const _readThreads = new Set();
 export async function refreshUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
   const fabBadge = document.getElementById('board-trigger-badge');
@@ -949,7 +954,9 @@ export async function refreshUnreadBadge() {
   if (!isLoggedIn()) { hideAll(); return; }
 
   // Кількість розмов з непрочитаними = розмір Map<thread_id, count>
-  const chats = (await fetchUnreadByThread(currentUserId())).size;
+  const map = await fetchUnreadByThread(currentUserId());
+  for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
+  const chats = map.size;
   if (chats <= 0) { hideAll(); return; }
   const label = chats > 99 ? '99+' : String(chats);
 
@@ -993,6 +1000,13 @@ export function initMessages() {
     registerChatPushDevice();
     // realtime по всіх моїх тредах → оновлення бейджа в реальному часі
     if (_threadsUnsub) { try { _threadsUnsub(); } catch (_) {} _threadsUnsub = null; }
-    if (isLoggedIn()) _threadsUnsub = subscribeMyThreads(() => refreshUnreadBadge());
+    if (isLoggedIn()) _threadsUnsub = subscribeMyThreads((p) => {
+      // нове чуже повідомлення → тред знову непрочитаний (прибрати з локально-прочитаних)
+      const row = p && p.new;
+      if (row && row.thread_id != null && row.sender_uid && row.sender_uid !== currentUserId()) {
+        _readThreads.delete(row.thread_id);
+      }
+      refreshUnreadBadge();
+    });
   });
 }
