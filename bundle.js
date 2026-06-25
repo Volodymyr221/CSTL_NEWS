@@ -1012,7 +1012,8 @@
 
   // src/tabs/community-modal.js
   var TYPE_TABS = [
-    { id: "board", emoji: "\u{1F6D2}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F" },
+    // Назва типу = «Дошка» (а не «Оголошення») — щоб не дублювати категорію 📢 Оголошення.
+    { id: "board", emoji: "\u{1F6D2}", label: "\u0414\u043E\u0448\u043A\u0430" },
     { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" }
   ];
   var BOARD_CATEGORIES = [

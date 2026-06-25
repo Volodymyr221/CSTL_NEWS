@@ -11,7 +11,8 @@ import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supab
 import { currentUserId, isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 
 const TYPE_TABS = [
-  { id: 'board',    emoji: '🛒', label: 'Оголошення' },
+  // Назва типу = «Дошка» (а не «Оголошення») — щоб не дублювати категорію 📢 Оголошення.
+  { id: 'board',    emoji: '🛒', label: 'Дошка' },
   { id: 'chat',     emoji: '💬', label: 'Розмова' },
 ];
 
