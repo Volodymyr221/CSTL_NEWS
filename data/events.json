@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 284,
+    "title": "Офіційно: ЄС продовжив економічні санкції проти РФ на рік",
+    "description": "25 червня Рада Євросоюзу продовжила дію обмежувальних заходів ЄС у зв'язку з триваючими діями Російської Федерації, спрямованими на дестабілізацію ситуації в Україні, ще на 12 місяців – до 31 липня 2027 року.",
+    "date": "2026-06-25",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/a/858271/aab55c27a82be9639132709d1081a63e.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/25/8041148/",
+    "auto": true
+  },
+  {
     "id": 283,
     "title": "Зеленський: Білорусь розбудовує своє прикордоння під \"СВО\". Це треба зупинити",
     "description": "Президент Володимир Зеленськмй заявив, що, за даними розвідки, Білорусь готується до потенційного розширення агресії проти України.",
@@ -362,6 +375,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/8/3/826309/8341a8b686c182af9cd6d4ec44e03abb.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/11/8034119/",
+    "auto": true
+  },
+  {
+    "id": 285,
+    "title": "Данія не надаватиме захист українським чоловікам призовного віку",
+    "description": "Уряд Данії змінить правила щодо того, хто може отримати тимчасовий захист у країні.",
+    "date": "2027-03-04",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/4/c/858269/4cb0647bf20695d476c5a90693313213.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/25/8041147/",
     "auto": true
   },
   {
