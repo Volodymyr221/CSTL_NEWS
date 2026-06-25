@@ -302,11 +302,33 @@
 }
 .pm-ad-tab.active { background: var(--red, #722F37); color: #fff; }
 
+/* Обгортка-рядок: картка зверху (z-index 1) ковзає, свайп-дії — ззаду справа. */
+.pm-ad-row { position: relative; margin: 10px 12px; }
+.pm-ad-swipe {
+  position: absolute; top: 0; right: 0; bottom: 0;
+  display: flex; align-items: center; gap: 8px;
+  padding-right: 10px; z-index: 0;
+}
+.pm-ad-swipe-btn {
+  width: 52px; height: 52px; flex-shrink: 0;
+  border: 0; border-radius: 50%; cursor: pointer; color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transform: scale(0.6);
+  transition: opacity 0.18s, transform 0.18s;
+}
+.pm-ad-row--open .pm-ad-swipe-btn { opacity: 1; transform: scale(1); }
+.pm-ad-swipe-btn svg { width: 22px; height: 22px; display: block; }
+.pm-ad-swipe-btn--done    { background: #3C6B2A; }
+.pm-ad-swipe-btn--restore { background: var(--ink-mute, #9C9080); }
+.pm-ad-swipe-btn--delete  { background: var(--red, #722F37); }
+.pm-ad-swipe-btn:active { filter: brightness(0.92); }
+
 .pm-ad {
   background: var(--card-cream, #FAF8EF);
-  margin: 10px 12px; border-radius: 16px;
+  border-radius: 16px;
   box-shadow: 0 1px 2px rgba(60, 40, 20, 0.06);
-  position: relative;
+  position: relative; z-index: 1;
+  transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .pm-ad-main { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; }
 .pm-ad-thumb {
@@ -383,7 +405,7 @@
   background: var(--red, #722F37); color: #fff; font-size: 24px;
   box-shadow: 0 4px 16px rgba(80, 25, 35, 0.42); cursor: pointer; z-index: 6;
 }
-.pm-ad-tabs ~ .pm-list { padding-bottom: 90px; }   /* місце під FAB */
+.pm-ad-tabs ~ .pm-list { padding-bottom: 90px; overflow-x: hidden; }   /* місце під FAB; клип свайпу */
 
 /* ── Бейдж непрочитаних на іконці акаунта в шапці ──────────────────── */
 .account-btn { position: relative; }

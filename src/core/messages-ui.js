@@ -23,7 +23,7 @@ import {
   fetchThreadStates, setThreadState, fetchThreadClearedAt,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
-  bumpPost, closePost, deleteMyPost,
+  bumpPost, closePost, deleteMyPost, restorePost,
 } from './supabase.js';
 import { openBoardModal } from '../tabs/community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
@@ -1074,6 +1074,24 @@ export function openMyAds() {
 
     let filter = 'active';
 
+    // Іконки для свайп-дій картки оголошення (ті самі стилі, що у списку розмов)
+    const ICON_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+    const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg>';
+    const ICON_TRASH = ACT_ICONS.delete;
+
+    // Дії, що виїжджають при свайпі вліво (ззаду картки). Залежать від статусу:
+    //  published → Завершити + Видалити; closed → Повернути + Видалити; решта → Видалити.
+    function swipeActions(p) {
+      const btns = [];
+      if (p.status === 'published') {
+        btns.push(`<button class="pm-ad-swipe-btn pm-ad-swipe-btn--done" type="button" data-act="close" data-id="${p.id}" aria-label="Завершити">${ICON_DONE}</button>`);
+      } else if (p.status === 'closed') {
+        btns.push(`<button class="pm-ad-swipe-btn pm-ad-swipe-btn--restore" type="button" data-act="restore" data-id="${p.id}" aria-label="Повернути">${ICON_BACK}</button>`);
+      }
+      btns.push(`<button class="pm-ad-swipe-btn pm-ad-swipe-btn--delete" type="button" data-act="delete" data-id="${p.id}" aria-label="Видалити">${ICON_TRASH}</button>`);
+      return { html: `<div class="pm-ad-swipe">${btns.join('')}</div>`, openW: btns.length > 1 ? 134 : 70 };
+    }
+
     function adCard(p) {
       const meta = AD_STATUS[p.status] || { label: p.status || '', icon: '', group: 'active' };
       const photo = Array.isArray(p.photos) ? p.photos.find(x => x) : null;
@@ -1094,28 +1112,44 @@ export function openMyAds() {
         actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
       }
 
-      // Меню дій: «Завершити» лише для published; «Видалити» завжди
+      // Меню дій: «Завершити» лише для published; «Повернути» лише для closed; «Видалити» завжди
       const menuItems = [
         isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">✓ Завершити</button>` : '',
+        p.status === 'closed' ? `<button class="pm-ad-mi" type="button" data-act="restore" data-id="${p.id}">↩️ Повернути в активні</button>` : '',
         `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">🗑️ Видалити</button>`,
       ].join('');
 
+      const sw = swipeActions(p);
       return `
-        <div class="pm-ad" data-ad="${p.id}">
-          <div class="pm-ad-main" data-open-ad="${p.id}">
-            ${thumb}
-            <div class="pm-ad-info">
-              <span class="pm-ad-title">${title}</span>
-              <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+        <div class="pm-ad-row" data-row="${p.id}" data-open-w="${sw.openW}">
+          ${sw.html}
+          <div class="pm-ad" data-ad="${p.id}">
+            <div class="pm-ad-main" data-open-ad="${p.id}">
+              ${thumb}
+              <div class="pm-ad-info">
+                <span class="pm-ad-title">${title}</span>
+                <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+              </div>
+              <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="Дії">⋯</button>
             </div>
-            <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="Дії">⋯</button>
+            ${actionsRow}
+            <div class="pm-ad-menu" id="pm-ad-menu-${p.id}" hidden>${menuItems}</div>
           </div>
-          ${actionsRow}
-          <div class="pm-ad-menu" id="pm-ad-menu-${p.id}" hidden>${menuItems}</div>
         </div>`;
     }
 
+    // Стан свайпу картки (рядок з відкритими діями)
+    let openRow = null, suppressClick = false;
+    const closeOpenRow = () => {
+      if (!openRow) return;
+      const c = openRow.querySelector('.pm-ad');
+      if (c) { c.style.transition = ''; c.style.removeProperty('transform'); }
+      openRow.classList.remove('pm-ad-row--open');
+      openRow = null;
+    };
+
     function render() {
+      openRow = null;   // innerHTML перемальовується — стара відкрита картка зникає
       const list = posts.filter(p => (AD_STATUS[p.status]?.group || 'active') === filter);
       if (!list.length) {
         listEl.innerHTML = filter === 'active'
@@ -1140,10 +1174,57 @@ export function openMyAds() {
     // FAB → модалка нового оголошення (та сама що на Дошці)
     api.screen.querySelector('[data-new-ad]')?.addEventListener('click', () => openBoardModal());
 
+    // Свайп вліво по картці → виїжджають дії (Завершити/Повернути + Видалити) ззаду.
+    let sX = 0, sY = 0, swCard = null, swRow = null, swLock = null;
+    const rowOpenW = (row) => Number(row?.dataset.openW) || 134;
+    listEl.addEventListener('touchstart', (e) => {
+      const c = e.target.closest('.pm-ad');
+      if (!c) { swCard = null; return; }
+      swCard = c; swRow = c.closest('.pm-ad-row'); swLock = null;
+      sX = e.touches[0].clientX; sY = e.touches[0].clientY;
+    }, { passive: true });
+    listEl.addEventListener('touchmove', (e) => {
+      if (!swCard) return;
+      const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
+      if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) swLock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+      if (swLock === 'h') {
+        e.preventDefault();
+        swCard.style.transition = 'none';
+        const w = rowOpenW(swRow);
+        const base = (swRow === openRow) ? -w : 0;
+        const d = Math.max(Math.min(base + dx, 0), -w);
+        swCard.style.transform = `translateX(${d}px)`;
+      }
+    }, { passive: false });
+    listEl.addEventListener('touchend', (e) => {
+      if (!swCard) return;
+      const c = swCard, r = swRow, lock = swLock;
+      swCard = null; swRow = null;
+      if (lock !== 'h') return;
+      suppressClick = true; setTimeout(() => { suppressClick = false; }, 60);
+      c.style.transition = '';
+      const w = rowOpenW(r);
+      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sX) - sX;
+      const wasOpen = (r === openRow);
+      const open = wasOpen ? (dx < 60) : (dx < -70);
+      if (open) {
+        if (openRow && openRow !== r) closeOpenRow();
+        c.style.transform = `translateX(${-w}px)`; r.classList.add('pm-ad-row--open'); openRow = r;
+      } else {
+        c.style.transform = ''; r.classList.remove('pm-ad-row--open'); if (openRow === r) openRow = null;
+      }
+    }, { passive: false });
+
     const closeMenus = (except) => api.screen.querySelectorAll('.pm-ad-menu').forEach(m => { if (m !== except) m.hidden = true; });
 
     // Делеговані дії по списку
     listEl.addEventListener('click', async (e) => {
+      if (suppressClick) return;   // щойно був свайп — не реагуємо на синтетичний клік
+      // Відкритий свайп-рядок: дозволяємо лише його дії, будь-який інший тап — закрити рядок
+      if (openRow) {
+        const actInOpen = e.target.closest('[data-act]');
+        if (!actInOpen || !openRow.contains(actInOpen)) { closeOpenRow(); return; }
+      }
       const menuBtn = e.target.closest('[data-menu]');
       if (menuBtn) {
         const menu = api.screen.querySelector(`#pm-ad-menu-${menuBtn.dataset.menu}`);
@@ -1188,6 +1269,16 @@ export function openMyAds() {
             showToast('Оголошення завершено — у Архіві', 2800);
             render();
           } else showToast('Не вдалося завершити. Спробуйте ще раз.', 3000);
+        } else if (act.dataset.act === 'restore') {
+          const r = await restorePost(id);
+          if (r.ok) {
+            const p = posts.find(x => x.id === id);
+            if (p) p.status = 'published';   // bumped_at не змінився → той самий час підняття
+            showToast('↩️ Оголошення повернуто в активні', 2800);
+            render();
+          } else if (r.error === 'not_restorable') {
+            showToast('Повернути можна лише завершені оголошення', 3000);
+          } else showToast('Не вдалося повернути. Спробуйте ще раз.', 3000);
         } else if (act.dataset.act === 'delete') {
           if (!confirm('Видалити оголошення назавжди? Розмови по ньому теж зникнуть.')) return;
           const r = await deleteMyPost(id);

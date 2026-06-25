@@ -288,6 +288,15 @@ export async function deleteMyPost(postId) {
   return data || { ok: false, error: 'no_data' };
 }
 
+// Повернути завершене оголошення в активні (closed → published).
+// bumped_at не змінюється → той самий час підняття/кулдауну, що був до завершення.
+export async function restorePost(postId) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('restore_post', { p_id: postId });
+  if (error) { console.warn('[supabase] restorePost:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
 // Мої треди (вхідні + вихідні) з даними оголошення. Нові зверху.
 export async function fetchMyThreads(uid) {
   if (!supa || !uid) return [];
