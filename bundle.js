@@ -1032,6 +1032,9 @@
     const w = String(full || "").trim().split(/\s+/)[0] || "";
     return w === "\u0416\u0438\u0442\u0435\u043B\u044C" ? "" : w;
   }
+  function accountAuthorName() {
+    return firstNameOnly(currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
+  }
   function parseTags(str) {
     return String(str || "").split(/\s+/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith("#") ? s : "#" + s);
   }
@@ -1078,10 +1081,8 @@
       // URL-и фото: blob: під час upload, https: після
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
-      // Залогінений → підставляємо його ім'я (без прізвища); гість → порожньо (анонім).
-      author: isLoggedIn() ? firstNameOnly(currentUserName()) : "",
-      authorTouched: false,
-      // користувач сам редагував поле → не перезаписувати автозаповненням
+      // Ім'я з акаунта (без прізвища) — завжди. Анонімність прибрано (рішення Вови).
+      author: accountAuthorName(),
       // BOARD
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
@@ -1239,8 +1240,8 @@
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(state.author)}">
+        <label class="bm-label">\u0406\u043C'\u044F</label>
+        <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
       </div>
     `;
       bindCommonFields();
@@ -1280,8 +1281,8 @@
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-author">\u0406\u043C'\u044F <span class="bm-label-hint">(\u043F\u043E\u0440\u043E\u0436\u043D\u0454 \u2014 \u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(state.author)}">
+        <label class="bm-label">\u0406\u043C'\u044F</label>
+        <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
       </div>
     `;
       bindCommonFields();
@@ -1294,11 +1295,6 @@
     function bindCommonFields() {
       dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
         state.text = e.target.value;
-        renderPreview();
-      });
-      dynamicEl.querySelector("#bm-author")?.addEventListener("input", (e) => {
-        state.author = e.target.value;
-        state.authorTouched = true;
         renderPreview();
       });
     }
@@ -1413,7 +1409,7 @@
         ${state.title.trim() ? `<h3 class="cm-board-title">${escapeHtml(state.title.trim())}</h3>` : ""}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
-          <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>
           <span class="cm-board-time">\u0449\u043E\u0439\u043D\u043E</span>
         </div>
         ${contactHtml}
@@ -1424,7 +1420,7 @@
       const tags = parseTags(state.tagsRaw);
       const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
       const firstPhoto = state.photos.find((p) => p);
-      const author = state.author.trim();
+      const author = state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C";
       const initial = author ? author.charAt(0).toUpperCase() : "\u{1F464}";
       const hue = author ? author.charCodeAt(0) * 47 % 360 : 0;
       const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
@@ -1448,15 +1444,13 @@
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
     if (isLoggedIn()) {
       getProfile().then((p) => {
-        if (state.authorTouched)
-          return;
-        const nm = firstNameOnly(p && p.name || currentUserName());
-        if (!nm || nm === state.author)
+        const nm = firstNameOnly(p && p.name || currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
+        if (nm === state.author)
           return;
         state.author = nm;
-        const inp = dynamicEl.querySelector("#bm-author");
-        if (inp)
-          inp.value = nm;
+        const el = dynamicEl.querySelector("#bm-author-fixed");
+        if (el)
+          el.textContent = `\u{1F464} ${nm}`;
         renderPreview();
       }).catch(() => {
       });
@@ -1468,7 +1462,7 @@
         wrap.querySelector("#bm-text")?.focus();
         return;
       }
-      if (containsProfanity(state.text) || containsProfanity(state.contact) || containsProfanity(state.author) || containsProfanity(state.tagsRaw)) {
+      if (containsProfanity(state.text) || containsProfanity(state.contact) || containsProfanity(state.tagsRaw)) {
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
         wrap.querySelector("#bm-text")?.focus();
         return;
@@ -1504,7 +1498,8 @@
     const base = {
       type: state.type,
       text: state.text.trim(),
-      author: state.author.trim() || null,
+      author: state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C",
+      // завжди ім'я з акаунта, без анонімності
       photos: state.photos.filter(Boolean),
       status: "pending",
       // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).

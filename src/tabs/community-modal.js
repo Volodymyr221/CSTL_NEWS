@@ -40,6 +40,13 @@ function firstNameOnly(full) {
   return w === 'Житель' ? '' : w;
 }
 
+// Ім'я для підпису поста = ім'я з акаунта (без прізвища). Анонімність прибрано:
+// постити можна лише залогіненим (модалка під requireAuth), тож ім'я завжди є.
+// Якщо справжнього імені нема — службовий дефолт «Житель».
+function accountAuthorName() {
+  return firstNameOnly(currentUserName()) || 'Житель';
+}
+
 // Парсинг хештегів з рядка «#громада #дороги #свято» → ['#громада', '#дороги', '#свято']
 function parseTags(str) {
   return String(str || '')
@@ -90,9 +97,8 @@ export function openBoardModal() {
     text: '',
     photos: [],         // URL-и фото: blob: під час upload, https: після
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
-    // Залогінений → підставляємо його ім'я (без прізвища); гість → порожньо (анонім).
-    author: isLoggedIn() ? firstNameOnly(currentUserName()) : '',
-    authorTouched: false,   // користувач сам редагував поле → не перезаписувати автозаповненням
+    // Ім'я з акаунта (без прізвища) — завжди. Анонімність прибрано (рішення Вови).
+    author: accountAuthorName(),
     // BOARD
     category: 'оголошення',
     contact: '',
@@ -248,8 +254,8 @@ export function openBoardModal() {
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-author">Ім'я <span class="bm-label-hint">(порожнє — анонімно)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="Ваше ім'я" value="${escapeHtml(state.author)}">
+        <label class="bm-label">Ім'я</label>
+        <div class="bm-author-fixed" id="bm-author-fixed">👤 ${escapeHtml(state.author)}</div>
       </div>
     `;
     bindCommonFields();
@@ -293,8 +299,8 @@ export function openBoardModal() {
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-author">Ім'я <span class="bm-label-hint">(порожнє — анонімно)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-author" type="text" placeholder="Ваше ім'я" value="${escapeHtml(state.author)}">
+        <label class="bm-label">Ім'я</label>
+        <div class="bm-author-fixed" id="bm-author-fixed">👤 ${escapeHtml(state.author)}</div>
       </div>
     `;
     bindCommonFields();
@@ -306,15 +312,10 @@ export function openBoardModal() {
     bindPhotoSlots();
   }
 
-  // Спільні поля: text + author
+  // Спільне поле: text (ім'я не редагується — береться з акаунта)
   function bindCommonFields() {
     dynamicEl.querySelector('#bm-text')?.addEventListener('input', e => {
       state.text = e.target.value;
-      renderPreview();
-    });
-    dynamicEl.querySelector('#bm-author')?.addEventListener('input', e => {
-      state.author = e.target.value;
-      state.authorTouched = true;   // далі не перезаписуємо автозаповненням з профілю
       renderPreview();
     });
   }
@@ -440,7 +441,7 @@ export function openBoardModal() {
         ${state.title.trim() ? `<h3 class="cm-board-title">${escapeHtml(state.title.trim())}</h3>` : ''}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
-          <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'анонімно')}</span>
+          <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
           <span class="cm-board-time">щойно</span>
         </div>
         ${contactHtml}
@@ -452,7 +453,7 @@ export function openBoardModal() {
     const tags = parseTags(state.tagsRaw);
     const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map(t => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(' ')}</div>` : '';
     const firstPhoto = state.photos.find(p => p);
-    const author = state.author.trim();
+    const author = state.author.trim() || 'Житель';
     const initial = author ? author.charAt(0).toUpperCase() : '👤';
     const hue = author ? (author.charCodeAt(0) * 47) % 360 : 0;
     const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : 'background:#f5f5f5;color:#666;font-size:18px';
@@ -478,15 +479,13 @@ export function openBoardModal() {
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
 
   // Уточнюємо ім'я з профілю в БД (кеш міг бути ще не готовий при відкритті).
-  // Якщо користувач сам не правив поле — підставляємо збережене ім'я (без прізвища).
   if (isLoggedIn()) {
     getProfile().then(p => {
-      if (state.authorTouched) return;
-      const nm = firstNameOnly((p && p.name) || currentUserName());
-      if (!nm || nm === state.author) return;
+      const nm = firstNameOnly((p && p.name) || currentUserName()) || 'Житель';
+      if (nm === state.author) return;
       state.author = nm;
-      const inp = dynamicEl.querySelector('#bm-author');
-      if (inp) inp.value = nm;
+      const el = dynamicEl.querySelector('#bm-author-fixed');
+      if (el) el.textContent = `👤 ${nm}`;
       renderPreview();
     }).catch(() => {});
   }
@@ -499,9 +498,9 @@ export function openBoardModal() {
       wrap.querySelector('#bm-text')?.focus();
       return;
     }
-    // Фільтр матюків/образ — у тексті, контакті, імені, тегах
+    // Фільтр матюків/образ — у тексті, контакті, тегах (ім'я — з акаунта, не перевіряємо)
     if (containsProfanity(state.text) || containsProfanity(state.contact)
-        || containsProfanity(state.author) || containsProfanity(state.tagsRaw)) {
+        || containsProfanity(state.tagsRaw)) {
       showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error');
       wrap.querySelector('#bm-text')?.focus();
       return;
@@ -547,7 +546,7 @@ function buildPayload(state) {
   const base = {
     type:     state.type,
     text:     state.text.trim(),
-    author:   state.author.trim() || null,
+    author:   state.author.trim() || 'Житель',   // завжди ім'я з акаунта, без анонімності
     photos:   state.photos.filter(Boolean),
     status:   'pending',
     // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).

@@ -1017,6 +1017,19 @@
   letter-spacing: 0;
   margin-left: 4px;
 }
+/* Ім'я з акаунта — нередаговане (анонімність прибрано) */
+.bm-author-fixed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 14px;
+  border-radius: 12px;
+  background: var(--paper, #F4F1E6);
+  border: 1px solid var(--hairline, rgba(60,50,30,0.12));
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink, #2A2520);
+}
 
 /* Категорії — чіпи */
 .bm-chips {
