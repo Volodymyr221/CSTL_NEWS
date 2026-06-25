@@ -1268,6 +1268,7 @@ export function openMyAds() {
             if (p) p.status = 'closed';
             showToast('Оголошення завершено — у Архіві', 2800);
             render();
+            window.dispatchEvent(new Event('cstl-posts-changed'));   // дошка зникне зразу
           } else showToast('Не вдалося завершити. Спробуйте ще раз.', 3000);
         } else if (act.dataset.act === 'restore') {
           const r = await restorePost(id);
@@ -1276,6 +1277,7 @@ export function openMyAds() {
             if (p) p.status = 'published';   // bumped_at не змінився → той самий час підняття
             showToast('↩️ Оголошення повернуто в активні', 2800);
             render();
+            window.dispatchEvent(new Event('cstl-posts-changed'));   // зразу зʼявиться на дошці
           } else if (r.error === 'not_restorable') {
             showToast('Повернути можна лише завершені оголошення', 3000);
           } else showToast('Не вдалося повернути. Спробуйте ще раз.', 3000);

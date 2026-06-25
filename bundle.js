@@ -2893,6 +2893,7 @@
                 p.status = "closed";
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2014 \u0443 \u0410\u0440\u0445\u0456\u0432\u0456", 2800);
               render();
+              window.dispatchEvent(new Event("cstl-posts-changed"));
             } else
               showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
           } else if (act.dataset.act === "restore") {
@@ -2903,6 +2904,7 @@
                 p.status = "published";
               showToast("\u21A9\uFE0F \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u043E \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456", 2800);
               render();
+              window.dispatchEvent(new Event("cstl-posts-changed"));
             } else if (r.error === "not_restorable") {
               showToast("\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u043B\u0438\u0448\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 3e3);
             } else
@@ -4727,6 +4729,7 @@ ${post.text}
       if (p)
         openAdModalStandalone(p);
     });
+    window.addEventListener("cstl-posts-changed", () => renderBoard());
     onAuthChange(() => {
       if (!isLoggedIn()) {
         savedIds = /* @__PURE__ */ new Set();

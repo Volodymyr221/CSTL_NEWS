@@ -1817,6 +1817,9 @@ export function initBoard() {
     const p = e.detail && e.detail.post;
     if (p) openAdModalStandalone(p);
   });
+  // Зміна статусу власних постів («Мої оголошення»: завершити/повернути/видалити)
+  // → одразу перезавантажуємо дошку, щоб зміна була видима без перезапуску застосунку.
+  window.addEventListener('cstl-posts-changed', () => renderBoard());
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
     if (!isLoggedIn()) {
