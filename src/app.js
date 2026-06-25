@@ -15,6 +15,13 @@ let currentTab = 'community';
 
 // Переключення між вкладками з плавною анімацією
 window.switchTab = function(tab) {
+  // «Події» переїхали у вкладку «Новини» як підрозділ. Перенаправляємо вхід
+  // 'events' → 'news' + активуємо підрозділ. Прямий вхід 'news' → підрозділ Новини.
+  let seg = null;
+  if (tab === 'events') { seg = 'events'; tab = 'news'; }
+  else if (tab === 'news') { seg = 'news'; }
+  if (seg && typeof window.cstlShowNewsSegment === 'function') window.cstlShowNewsSegment(seg);
+
   if (tab === currentTab) return;
 
   const oldPage = document.getElementById(`page-${currentTab}`);

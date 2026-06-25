@@ -52,22 +52,35 @@
       <div id="cm-content" class="cm-content"></div>
     </div>
 
-    <!-- Вкладка: Новини -->
+    <!-- Вкладка: Новини (містить 2 підрозділи: Новини | Події) -->
     <div id="page-news" class="page" style="display:none">
-      <div class="filters-bar">
-        <div id="geo-filters" class="chips-row"></div>
+      <!-- Сегмент-перемикач (фіксований під шапкою) -->
+      <div class="news-seg">
+        <button class="news-seg-btn active" type="button" data-news-seg="news">📰 Новини</button>
+        <button class="news-seg-btn" type="button" data-news-seg="events">📅 Події</button>
       </div>
-      <div id="news-list" class="news-list"></div>
+
+      <!-- Підрозділ: Новини -->
+      <div id="news-seg-news" class="news-seg-pane">
+        <div class="filters-bar">
+          <div id="geo-filters" class="chips-row"></div>
+        </div>
+        <div id="news-list" class="news-list"></div>
+      </div>
+
+      <!-- Підрозділ: Події (перенесено сюди зі старої вкладки «Події») -->
+      <div id="news-seg-events" class="news-seg-pane" style="display:none">
+        <div class="events-filters-bar">
+          <div id="events-calendar" class="events-calendar"></div>
+          <div id="events-filters" class="chips-row"></div>
+        </div>
+        <div id="events-list" class="events-list"></div>
+      </div>
     </div>
 
-    <!-- Вкладка: події -->
-    <div id="page-events" class="page" style="display:none">
-      <div class="events-filters-bar">
-        <div id="events-calendar" class="events-calendar"></div>
-        <div id="events-filters" class="chips-row"></div>
-      </div>
-      <div id="events-list" class="events-list"></div>
-    </div>
+    <!-- Стара вкладка «Події» — спорожнена; контент переїхав у «Новини».
+         div лишаємо щоб switchTab('events') не падав (перенаправляється у news). -->
+    <div id="page-events" class="page" style="display:none"></div>
 
     <!-- Вкладка: Автобуси -->
     <div id="page-buses" class="page" style="display:none">

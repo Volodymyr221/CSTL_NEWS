@@ -15,15 +15,17 @@
   padding: 0 0 6px;
   background: var(--bg-page);
   position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  /* зсунуто вниз на висоту сегмента «Новини | Події» */
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + var(--news-seg-h));
   left: 0;
   right: 0;
   z-index: 90;
   border-bottom: 1px solid var(--border);
 }
-/* Компенсація висоти fixed filters-bar (calendar ~60px + chips ~38px = ~98px) */
-#page-events {
-  padding-top: 102px;
+/* Компенсація висоти fixed filters-bar (calendar ~60px + chips ~38px = ~98px)
+   + висота сегмента. Події тепер у підрозділі #news-seg-events вкладки Новини. */
+#news-seg-events {
+  padding-top: calc(102px + var(--news-seg-h));
 }
 
 /* ── Календарна стрічка (Tier 5 — 16.05.2026) ── */

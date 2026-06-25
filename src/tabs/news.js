@@ -31,6 +31,21 @@ const GEO_COLORS = {
 function catColor(c) { return CATEGORY_COLORS[c] || '#546e7a'; }
 function geoColor(g) { return GEO_COLORS[g]      || '#546e7a'; }
 
+// Перемикач підрозділів вкладки Новини: 'news' | 'events'.
+// Події переїхали сюди зі старої вкладки «Події» — рендеряться у власні id
+// (#events-*), тут лише показуємо/ховаємо відповідний підрозділ.
+export function showNewsSegment(seg) {
+  const isEvents = seg === 'events';
+  const paneNews = document.getElementById('news-seg-news');
+  const paneEv   = document.getElementById('news-seg-events');
+  if (paneNews) paneNews.style.display = isEvents ? 'none' : 'block';
+  if (paneEv)   paneEv.style.display   = isEvents ? 'block' : 'none';
+  document.querySelectorAll('.news-seg-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.newsSeg === seg));
+}
+// Доступ ззовні (напр. switchTab('events') перенаправляє сюди)
+window.cstlShowNewsSegment = showNewsSegment;
+
 export async function initNews() {
   try {
     const res = await fetch('./data/articles.json');
@@ -46,6 +61,11 @@ export async function initNews() {
 // B-15 fix: event delegation замість inline onclick (XSS hardening).
 // Один listener на батьківському контейнері ловить клік на дочірніх .chip / .news-card-*.
 function attachNewsListeners() {
+  // Сегмент-перемикач Новини | Події
+  document.querySelectorAll('.news-seg-btn').forEach(btn => {
+    btn.addEventListener('click', () => showNewsSegment(btn.dataset.newsSeg));
+  });
+
   const filters = document.getElementById('geo-filters');
   if (filters) {
     filters.addEventListener('click', e => {
