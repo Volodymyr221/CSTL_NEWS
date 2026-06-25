@@ -2163,12 +2163,18 @@
     };
     if (!vv)
       return unlock;
-    let wasOpen = false;
+    const input = screen.querySelector(".pm-input");
+    let wasOpen = false, focused = false;
     const apply = () => {
       const atBottom = stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60 : false;
-      screen.style.height = vv.height + "px";
-      screen.style.top = vv.offsetTop + "px";
-      const open = document.documentElement.clientHeight - vv.height > 80;
+      const open = focused && document.documentElement.clientHeight - vv.height > 80;
+      if (open) {
+        screen.style.height = vv.height + "px";
+        screen.style.top = vv.offsetTop + "px";
+      } else {
+        screen.style.height = "";
+        screen.style.top = "";
+      }
       screen.classList.toggle("pm-kb-open", open);
       if (open && stream && (!wasOpen || atBottom)) {
         requestAnimationFrame(() => {
@@ -2177,12 +2183,24 @@
       }
       wasOpen = open;
     };
+    const onFocus = () => {
+      focused = true;
+      requestAnimationFrame(apply);
+    };
+    const onBlur = () => {
+      focused = false;
+      requestAnimationFrame(apply);
+    };
+    input?.addEventListener("focus", onFocus);
+    input?.addEventListener("blur", onBlur);
     apply();
     vv.addEventListener("resize", apply);
     vv.addEventListener("scroll", apply);
     return () => {
       vv.removeEventListener("resize", apply);
       vv.removeEventListener("scroll", apply);
+      input?.removeEventListener("focus", onFocus);
+      input?.removeEventListener("blur", onBlur);
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");

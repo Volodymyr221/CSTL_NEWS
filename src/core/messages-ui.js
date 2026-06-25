@@ -663,32 +663,41 @@ function setupKeyboardResize(screen) {
 
   if (!vv) return unlock;
 
-  let wasOpen = false;
+  const input = screen.querySelector('.pm-input');
+  let wasOpen = false, focused = false;
   const apply = () => {
     // Чи був користувач унизу стрічки ДО зміни висоти (щоб не збивати читання історії).
     const atBottom = stream
       ? (stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60)
       : false;
-    screen.style.height = vv.height + 'px';   // точна висота видимої області
-    // top=offsetTop як страховка; при замкненій сторінці offsetTop≈0 → шапка не дьоргається.
-    screen.style.top = vv.offsetTop + 'px';
-    // Клавіатура відкрита? Стабільна висота макета (clientHeight НЕ міняється від клавіатури).
-    const open = (document.documentElement.clientHeight - vv.height) > 80;
+    // Клавіатура «відкрита» лише коли поле У ФОКУСІ і видима область помітно менша.
+    // БЕЗ фокусу не покладаємось на vv.height (під body-lock він буває «застряглий»
+    // на значенні з відкритою клавіатурою → екран лишався коротким, знизу визирала Дошка).
+    const open = focused && (document.documentElement.clientHeight - vv.height) > 80;
+    if (open) {
+      screen.style.height = vv.height + 'px';
+      screen.style.top = vv.offsetTop + 'px';
+    } else {
+      screen.style.height = ''; screen.style.top = '';   // повна висота з CSS (top:0; bottom:0)
+    }
     screen.classList.toggle('pm-kb-open', open);
-    // Підтягнути стрічку до останнього повідомлення коли клавіатура ВІДКРИВАЄТЬСЯ
-    // (!wasOpen) або поки тримається відкрита і ти й так унизу. rAF — щоб нова
-    // висота встигла застосуватись (інакше scrollHeight стара → не дотягує до низу).
     if (open && stream && (!wasOpen || atBottom)) {
       requestAnimationFrame(() => { stream.scrollTop = stream.scrollHeight; });
     }
     wasOpen = open;
   };
+  const onFocus = () => { focused = true; requestAnimationFrame(apply); };
+  const onBlur  = () => { focused = false; requestAnimationFrame(apply); };
+  input?.addEventListener('focus', onFocus);
+  input?.addEventListener('blur', onBlur);
   apply();
   vv.addEventListener('resize', apply);   // без затримки → плавне відстеження
   vv.addEventListener('scroll', apply);
   return () => {
     vv.removeEventListener('resize', apply);
     vv.removeEventListener('scroll', apply);
+    input?.removeEventListener('focus', onFocus);
+    input?.removeEventListener('blur', onBlur);
     screen.style.height = ''; screen.style.top = '';
     screen.classList.remove('pm-kb-open');
     unlock();
