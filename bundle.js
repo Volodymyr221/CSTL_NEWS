@@ -1499,13 +1499,26 @@
     backdrop.addEventListener("click", close);
     screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
     api.close = close;
-    setupEdgeBack(screen, close);
+    setupEdgeBack(api);
     _openScreens.push(api);
     return api;
   }
-  function setupEdgeBack(screen, onClose) {
-    let sx = 0, sy = 0, dragging = false, lock = null;
+  function setupEdgeBack(api) {
+    const screen = api.screen;
+    let sx = 0, sy = 0, dragging = false, lock = null, below = null;
     const winW = () => window.innerWidth || screen.clientWidth || 360;
+    const findBelow = () => {
+      const i = _openScreens.indexOf(api);
+      return i > 0 ? _openScreens[i - 1] : null;
+    };
+    const showBelow = () => {
+      if (below)
+        below.screen.style.display = "";
+    };
+    const hideBelow = () => {
+      if (below)
+        below.screen.style.display = "none";
+    };
     screen.addEventListener("touchstart", (e) => {
       const t = e.touches[0];
       if (t.clientX > 24) {
@@ -1516,17 +1529,22 @@
       sy = t.clientY;
       dragging = true;
       lock = null;
+      below = findBelow();
     }, { passive: true });
     screen.addEventListener("touchmove", (e) => {
       if (!dragging)
         return;
       const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-      if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
+      if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
         lock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (lock === "h")
+          showBelow();
+      }
       if (lock === "v") {
         dragging = false;
         screen.style.transition = "";
         screen.style.transform = "";
+        hideBelow();
         return;
       }
       if (lock === "h" && dx > 0) {
@@ -1543,9 +1561,10 @@
       screen.style.transition = "";
       if (lock === "h" && dx > winW() * 0.33) {
         screen.style.transform = `translateX(-50%) translateX(${winW()}px)`;
-        setTimeout(onClose, 180);
+        setTimeout(() => api.close(), 180);
       } else {
         screen.style.transform = "";
+        hideBelow();
       }
     }, { passive: false });
   }
