@@ -23,8 +23,12 @@ import {
   fetchThreadStates, setThreadState, fetchThreadClearedAt,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
+  bumpPost, closePost, deleteMyPost,
 } from './supabase.js';
+import { openBoardModal } from '../tabs/community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
+
+const BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1000;   // кулдаун підняття: 3 год
 
 // VAPID public key — той самий що для автобусних push (див. buses.js / Edge Function)
 const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
@@ -1004,7 +1008,39 @@ export function openThreadsList() {
   });
 }
 
-// ── 3. «Мої оголошення» (мої пости + вхідні розмови по кожному) ────────────
+// ── 3. «Мої оголошення» (керування власними оголошеннями) ──────────────────
+// Дві вкладки: Активні (published+pending) / Архів (rejected+closed).
+// Картка: фото/emoji + назва + мета(категорія·дата·статус) + бейдж звернень,
+// кнопка «Підняти» (тільки published, кулдаун 3 год) + меню дій (⋯).
+// Чати тут НЕ розкриваємо — бейдж веде у «Повідомлення».
+const AD_STATUS = {
+  published: { label: 'активне',      icon: '✅', group: 'active'  },
+  pending:   { label: 'на перевірці', icon: '⏳', group: 'active'  },
+  closed:    { label: 'завершено',    icon: '✔️', group: 'archive' },
+  rejected:  { label: 'відхилено',    icon: '❌', group: 'archive' },
+};
+
+function adDate(p) {
+  const ms = (p.bumped_at && new Date(p.bumped_at).getTime()) || p.ts
+    || (p.published_at && new Date(p.published_at).getTime())
+    || (p.created_at && new Date(p.created_at).getTime()) || 0;
+  if (!ms) return '';
+  const d = new Date(ms);
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function bumpRow(p) {
+  const last = p.bumped_at ? new Date(p.bumped_at).getTime() : 0;
+  const leftMs = last + BUMP_COOLDOWN_MS - Date.now();
+  if (leftMs > 0) {
+    const h = Math.floor(leftMs / 3600000);
+    const m = Math.max(1, Math.ceil((leftMs % 3600000) / 60000));
+    const t = h > 0 ? `${h} год` : `${m} хв`;
+    return `<button class="pm-ad-bump pm-ad-bump--wait" type="button" disabled>🔼 Можна через ${t}</button>`;
+  }
+  return `<button class="pm-ad-bump" type="button" data-bump="${p.id}">🔼 Підняти вгору</button>`;
+}
+
 export function openMyAds() {
   requireAuth('переглянути ваші оголошення', async () => {
     const me = currentUserId();
@@ -1013,58 +1049,167 @@ export function openMyAds() {
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
         <div class="pm-head-titles"><div class="pm-head-name">📋 Мої оголошення</div></div>
       </header>
+      <div class="pm-ad-tabs">
+        <button class="pm-ad-tab active" type="button" data-filter="active">Активні</button>
+        <button class="pm-ad-tab" type="button" data-filter="archive">Архів</button>
+      </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">Завантаження…</div></div>
+      <button class="pm-fab-ad" type="button" data-new-ad aria-label="Нове оголошення">✏️</button>
     `, 'pm-screen--ads');
 
     const listEl = api.screen.querySelector('#pm-ads');
-    const [posts, threads, unread] = await Promise.all([
+    let [posts, threads, unread] = await Promise.all([
       fetchMyPosts(me), fetchMyThreads(me), fetchUnreadByThread(me),
     ]);
     if (api._closed) return;
 
-    if (!posts.length) {
-      listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">📋</span>У вас ще немає оголошень.<br>Подайте перше через кнопку ✏️ на дошці.</div>`;
-      return;
-    }
-    // Треди де я — продавець, згруповані за оголошенням
+    // Звернення (треди де я продавець), згруповані за оголошенням
     const byPost = new Map();
     threads.filter(t => t.author_uid === me).forEach(t => {
       if (!byPost.has(t.post_id)) byPost.set(t.post_id, []);
       byPost.get(t.post_id).push(t);
     });
+    const unreadFor = (postId) => (byPost.get(postId) || []).reduce((s, t) => s + (unread.get(t.id) || 0), 0);
+    const threadsFor = (postId) => (byPost.get(postId) || []).length;
 
-    const statusLabel = { published: 'опубліковано', pending: 'на перевірці', rejected: 'відхилено' };
-    listEl.innerHTML = posts.map(p => {
-      const ths = byPost.get(p.id) || [];
-      const convos = ths.length ? ths.map(t => {
-        const n = unread.get(t.id) || 0;
-        const name = t.buyer_name || 'Покупець';
-        return `
-          <button class="pm-subrow" type="button" data-thread="${t.id}">
-            ${avatar(name)}
-            <div class="pm-subrow-body">
-              <span class="pm-subrow-name">${escapeHtml(name)}</span>
-              <span class="pm-subrow-last">${escapeHtml(t.last_message_text || 'Написав(ла) вам')}</span>
-            </div>
-            ${n > 0 ? `<span class="pm-row-badge">${n}</span>` : ''}
-          </button>`;
-      }).join('') : '<div class="pm-noconvo">Поки немає звернень</div>';
-      const st = statusLabel[p.status] || p.status || '';
+    let filter = 'active';
+
+    function adCard(p) {
+      const meta = AD_STATUS[p.status] || { label: p.status || '', icon: '', group: 'active' };
+      const photo = Array.isArray(p.photos) ? p.photos.find(x => x) : null;
+      const thumb = photo
+        ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
+        : `<div class="pm-ad-thumb" style="background:${escapeHtml(p.cover_gradient || 'linear-gradient(135deg,#ece4d8,#dccfba)')}"><span>${escapeHtml(p.cover_emoji || '📋')}</span></div>`;
+      const title = escapeHtml((p.title && p.title.trim()) || (p.text || '').trim().slice(0, 54) || 'Оголошення');
+      const cat = p.category ? `${escapeHtml(p.category)} · ` : '';
+      const isPublished = p.status === 'published';
+
+      // Бейдж звернень + кнопка підняти — тільки для активних published
+      let actionsRow = '';
+      if (isPublished) {
+        const tn = threadsFor(p.id), un = unreadFor(p.id);
+        const badge = tn > 0
+          ? `<button class="pm-ad-msgs" type="button" data-badge="1">💬 ${tn} ${tn === 1 ? 'звернення' : 'звернень'}${un > 0 ? `<span class="pm-ad-unread">${un}</span>` : ''}</button>`
+          : `<span class="pm-ad-msgs pm-ad-msgs--none">💬 Поки немає звернень</span>`;
+        actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
+      }
+
+      // Меню дій: «Завершити» лише для published; «Видалити» завжди
+      const menuItems = [
+        isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">✓ Завершити</button>` : '',
+        `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">🗑️ Видалити</button>`,
+      ].join('');
+
       return `
-        <div class="pm-ad">
-          <div class="pm-ad-head">
-            <span class="pm-ad-title">${escapeHtml(p.title || p.text?.slice(0, 50) || 'Оголошення')}</span>
-            <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}">${escapeHtml(st)}</span>
+        <div class="pm-ad" data-ad="${p.id}">
+          <div class="pm-ad-main" data-open-ad="${p.id}">
+            ${thumb}
+            <div class="pm-ad-info">
+              <span class="pm-ad-title">${title}</span>
+              <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+            </div>
+            <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="Дії">⋯</button>
           </div>
-          <div class="pm-ad-convos">${convos}</div>
+          ${actionsRow}
+          <div class="pm-ad-menu" id="pm-ad-menu-${p.id}" hidden>${menuItems}</div>
         </div>`;
-    }).join('');
+    }
 
-    listEl.querySelectorAll('[data-thread]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const t = threads.find(x => String(x.id) === btn.dataset.thread);
-        if (t) openChat(t, t.post);
+    function render() {
+      const list = posts.filter(p => (AD_STATUS[p.status]?.group || 'active') === filter);
+      if (!list.length) {
+        listEl.innerHTML = filter === 'active'
+          ? `<div class="pm-empty"><span class="pm-empty-ic">📋</span>У вас ще немає активних оголошень.<br>Подайте перше — кнопка ✏️ внизу.</div>`
+          : `<div class="pm-empty"><span class="pm-empty-ic">🗄️</span>Архів порожній.</div>`;
+        return;
+      }
+      listEl.innerHTML = list.map(adCard).join('');
+    }
+    render();
+
+    // Перемикання вкладок
+    api.screen.querySelectorAll('.pm-ad-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        if (tab.dataset.filter === filter) return;
+        filter = tab.dataset.filter;
+        api.screen.querySelectorAll('.pm-ad-tab').forEach(t => t.classList.toggle('active', t === tab));
+        render();
       });
+    });
+
+    // FAB → модалка нового оголошення (та сама що на Дошці)
+    api.screen.querySelector('[data-new-ad]')?.addEventListener('click', () => openBoardModal());
+
+    const closeMenus = (except) => api.screen.querySelectorAll('.pm-ad-menu').forEach(m => { if (m !== except) m.hidden = true; });
+
+    // Делеговані дії по списку
+    listEl.addEventListener('click', async (e) => {
+      const menuBtn = e.target.closest('[data-menu]');
+      if (menuBtn) {
+        const menu = api.screen.querySelector(`#pm-ad-menu-${menuBtn.dataset.menu}`);
+        closeMenus(menu);
+        if (menu) menu.hidden = !menu.hidden;
+        return;
+      }
+      const bumpBtn = e.target.closest('[data-bump]');
+      if (bumpBtn) {
+        bumpBtn.disabled = true;
+        const r = await bumpPost(Number(bumpBtn.dataset.bump));
+        if (r.ok) {
+          const p = posts.find(x => String(x.id) === bumpBtn.dataset.bump);
+          if (p) p.bumped_at = r.bumped_at || new Date().toISOString();
+          showToast('🔼 Оголошення піднято вгору', 2500);
+          render();
+        } else if (r.error === 'cooldown') {
+          const h = Math.floor((r.seconds_left || 0) / 3600);
+          const m = Math.max(1, Math.ceil(((r.seconds_left || 0) % 3600) / 60));
+          showToast(`Підняти можна раз на 3 год. Спробуйте через ${h > 0 ? h + ' год' : m + ' хв'}.`, 3500);
+          const p = posts.find(x => String(x.id) === bumpBtn.dataset.bump);
+          if (p) p.bumped_at = new Date(Date.now() - (BUMP_COOLDOWN_MS - (r.seconds_left || 0) * 1000)).toISOString();
+          render();
+        } else {
+          showToast('Не вдалося підняти. Спробуйте ще раз.', 3000);
+          bumpBtn.disabled = false;
+        }
+        return;
+      }
+      const badgeBtn = e.target.closest('[data-badge]');
+      if (badgeBtn) { openThreadsList(); return; }
+
+      const act = e.target.closest('[data-act]');
+      if (act) {
+        closeMenus(null);
+        const id = Number(act.dataset.id);
+        if (act.dataset.act === 'close') {
+          const r = await closePost(id);
+          if (r.ok) {
+            const p = posts.find(x => x.id === id);
+            if (p) p.status = 'closed';
+            showToast('Оголошення завершено — у Архіві', 2800);
+            render();
+          } else showToast('Не вдалося завершити. Спробуйте ще раз.', 3000);
+        } else if (act.dataset.act === 'delete') {
+          if (!confirm('Видалити оголошення назавжди? Розмови по ньому теж зникнуть.')) return;
+          const r = await deleteMyPost(id);
+          if (r.ok) {
+            posts = posts.filter(x => x.id !== id);
+            showToast('Оголошення видалено', 2500);
+            render();
+          } else showToast('Не вдалося видалити. Спробуйте ще раз.', 3000);
+        }
+        return;
+      }
+
+      // Тап по тілу картки → перегляд оголошення (модалка Дошки)
+      const open = e.target.closest('[data-open-ad]');
+      if (open) {
+        const p = posts.find(x => String(x.id) === open.dataset.openAd);
+        if (p) window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
+      }
+    });
+    // Клік поза меню — закрити відкриті меню
+    api.screen.addEventListener('click', (e) => {
+      if (!e.target.closest('.pm-ad-menu') && !e.target.closest('[data-menu]')) closeMenus(null);
     });
   });
 }

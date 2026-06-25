@@ -36,7 +36,7 @@ export function isSupabaseReady() {
 // ── ПОСТИ ────────────────────────────────────────────────────────────────
 
 // Усі опубліковані пости (для Дошки громади 2.0)
-// Сортування за published_at DESC (нові зверху).
+// Сортування за bumped_at DESC (підняті/свіжі зверху; bumped_at заповнено для всіх).
 // Якщо БД недоступна або порожня — повертаємо null (caller fall back на JSON).
 export async function fetchPublishedPosts() {
   if (!supa) return null;
@@ -44,7 +44,7 @@ export async function fetchPublishedPosts() {
     .from('posts')
     .select('*')
     .eq('status', 'published')
-    .order('published_at', { ascending: false, nullsLast: true })
+    .order('bumped_at', { ascending: false, nullsLast: true })
     .limit(200);
   if (error) {
     console.warn('[supabase] fetchPublishedPosts error:', error.message);
@@ -261,6 +261,31 @@ export async function fetchMyPosts(uid) {
     .select('*').eq('owner_uid', uid).order('created_at', { ascending: false });
   if (error) { console.warn('[supabase] fetchMyPosts:', error.message); return []; }
   return data || [];
+}
+
+// Підняти власний опублікований пост угору стрічки (кулдаун 3 год — на сервері).
+// Повертає { ok:true, bumped_at } або { ok:false, error, seconds_left? }.
+export async function bumpPost(postId) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('bump_post', { p_id: postId });
+  if (error) { console.warn('[supabase] bumpPost:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+// Завершити власний пост (status=closed → зникає з дошки, лишається в архіві).
+export async function closePost(postId) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('close_post', { p_id: postId });
+  if (error) { console.warn('[supabase] closePost:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+// Видалити власний пост (CASCADE прибере треди/коментарі/реакції/закладки).
+export async function deleteMyPost(postId) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('delete_my_post', { p_id: postId });
+  if (error) { console.warn('[supabase] deleteMyPost:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
 }
 
 // Мої треди (вхідні + вихідні) з даними оголошення. Нові зверху.
