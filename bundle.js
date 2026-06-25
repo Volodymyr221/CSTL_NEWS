@@ -412,7 +412,7 @@
   async function fetchPublishedPosts() {
     if (!supa)
       return null;
-    const { data, error } = await supa.from("posts").select("*").eq("status", "published").order("published_at", { ascending: false, nullsLast: true }).limit(200);
+    const { data, error } = await supa.from("posts").select("*").eq("status", "published").order("bumped_at", { ascending: false, nullsLast: true }).limit(200);
     if (error) {
       console.warn("[supabase] fetchPublishedPosts error:", error.message);
       return null;
@@ -575,6 +575,36 @@
       return [];
     }
     return data || [];
+  }
+  async function bumpPost(postId) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("bump_post", { p_id: postId });
+    if (error) {
+      console.warn("[supabase] bumpPost:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
+  async function closePost(postId) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("close_post", { p_id: postId });
+    if (error) {
+      console.warn("[supabase] closePost:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
+  async function deleteMyPost(postId) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("delete_my_post", { p_id: postId });
+    if (error) {
+      console.warn("[supabase] deleteMyPost:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
   }
   async function fetchMyThreads(uid) {
     if (!supa || !uid)
@@ -1469,6 +1499,7 @@
   }
 
   // src/core/messages-ui.js
+  var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
   var ACT_ICONS = {
     reply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
@@ -2593,6 +2624,30 @@
       });
     });
   }
+  var AD_STATUS = {
+    published: { label: "\u0430\u043A\u0442\u0438\u0432\u043D\u0435", icon: "\u2705", group: "active" },
+    pending: { label: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", icon: "\u23F3", group: "active" },
+    closed: { label: "\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E", icon: "\u2714\uFE0F", group: "archive" },
+    rejected: { label: "\u0432\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043E", icon: "\u274C", group: "archive" }
+  };
+  function adDate(p) {
+    const ms = p.bumped_at && new Date(p.bumped_at).getTime() || p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime() || 0;
+    if (!ms)
+      return "";
+    const d = new Date(ms);
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  function bumpRow(p) {
+    const last = p.bumped_at ? new Date(p.bumped_at).getTime() : 0;
+    const leftMs = last + BUMP_COOLDOWN_MS - Date.now();
+    if (leftMs > 0) {
+      const h = Math.floor(leftMs / 36e5);
+      const m = Math.max(1, Math.ceil(leftMs % 36e5 / 6e4));
+      const t = h > 0 ? `${h} \u0433\u043E\u0434` : `${m} \u0445\u0432`;
+      return `<button class="pm-ad-bump pm-ad-bump--wait" type="button" disabled>\u{1F53C} \u041C\u043E\u0436\u043D\u0430 \u0447\u0435\u0440\u0435\u0437 ${t}</button>`;
+    }
+    return `<button class="pm-ad-bump" type="button" data-bump="${p.id}">\u{1F53C} \u041F\u0456\u0434\u043D\u044F\u0442\u0438 \u0432\u0433\u043E\u0440\u0443</button>`;
+  }
   function openMyAds() {
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0430\u0448\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", async () => {
       const me = currentUserId();
@@ -2601,58 +2656,159 @@
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
         <div class="pm-head-titles"><div class="pm-head-name">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</div></div>
       </header>
+      <div class="pm-ad-tabs">
+        <button class="pm-ad-tab active" type="button" data-filter="active">\u0410\u043A\u0442\u0438\u0432\u043D\u0456</button>
+        <button class="pm-ad-tab" type="button" data-filter="archive">\u0410\u0440\u0445\u0456\u0432</button>
+      </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+      <button class="pm-fab-ad" type="button" data-new-ad aria-label="\u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">\u270F\uFE0F</button>
     `, "pm-screen--ads");
       const listEl = api.screen.querySelector("#pm-ads");
-      const [posts, threads, unread] = await Promise.all([
+      let [posts, threads, unread] = await Promise.all([
         fetchMyPosts(me),
         fetchMyThreads(me),
         fetchUnreadByThread(me)
       ]);
       if (api._closed)
         return;
-      if (!posts.length) {
-        listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u0447\u0435\u0440\u0435\u0437 \u043A\u043D\u043E\u043F\u043A\u0443 \u270F\uFE0F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</div>`;
-        return;
-      }
       const byPost = /* @__PURE__ */ new Map();
       threads.filter((t) => t.author_uid === me).forEach((t) => {
         if (!byPost.has(t.post_id))
           byPost.set(t.post_id, []);
         byPost.get(t.post_id).push(t);
       });
-      const statusLabel = { published: "\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u043E\u0432\u0430\u043D\u043E", pending: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", rejected: "\u0432\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043E" };
-      listEl.innerHTML = posts.map((p) => {
-        const ths = byPost.get(p.id) || [];
-        const convos = ths.length ? ths.map((t) => {
-          const n = unread.get(t.id) || 0;
-          const name = t.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
-          return `
-          <button class="pm-subrow" type="button" data-thread="${t.id}">
-            ${avatar(name)}
-            <div class="pm-subrow-body">
-              <span class="pm-subrow-name">${escapeHtml(name)}</span>
-              <span class="pm-subrow-last">${escapeHtml(t.last_message_text || "\u041D\u0430\u043F\u0438\u0441\u0430\u0432(\u043B\u0430) \u0432\u0430\u043C")}</span>
-            </div>
-            ${n > 0 ? `<span class="pm-row-badge">${n}</span>` : ""}
-          </button>`;
-        }).join("") : '<div class="pm-noconvo">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C</div>';
-        const st = statusLabel[p.status] || p.status || "";
+      const unreadFor = (postId) => (byPost.get(postId) || []).reduce((s, t) => s + (unread.get(t.id) || 0), 0);
+      const threadsFor = (postId) => (byPost.get(postId) || []).length;
+      let filter = "active";
+      function adCard(p) {
+        const meta = AD_STATUS[p.status] || { label: p.status || "", icon: "", group: "active" };
+        const photo = Array.isArray(p.photos) ? p.photos.find((x) => x) : null;
+        const thumb = photo ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : `<div class="pm-ad-thumb" style="background:${escapeHtml(p.cover_gradient || "linear-gradient(135deg,#ece4d8,#dccfba)")}"><span>${escapeHtml(p.cover_emoji || "\u{1F4CB}")}</span></div>`;
+        const title = escapeHtml(p.title && p.title.trim() || (p.text || "").trim().slice(0, 54) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+        const cat = p.category ? `${escapeHtml(p.category)} \xB7 ` : "";
+        const isPublished = p.status === "published";
+        let actionsRow = "";
+        if (isPublished) {
+          const tn = threadsFor(p.id), un = unreadFor(p.id);
+          const badge = tn > 0 ? `<button class="pm-ad-msgs" type="button" data-badge="1">\u{1F4AC} ${tn} ${tn === 1 ? "\u0437\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F" : "\u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C"}${un > 0 ? `<span class="pm-ad-unread">${un}</span>` : ""}</button>` : `<span class="pm-ad-msgs pm-ad-msgs--none">\u{1F4AC} \u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C</span>`;
+          actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
+        }
+        const menuItems = [
+          isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">\u2713 \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438</button>` : "",
+          `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`
+        ].join("");
         return `
-        <div class="pm-ad">
-          <div class="pm-ad-head">
-            <span class="pm-ad-title">${escapeHtml(p.title || p.text?.slice(0, 50) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F")}</span>
-            <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}">${escapeHtml(st)}</span>
+        <div class="pm-ad" data-ad="${p.id}">
+          <div class="pm-ad-main" data-open-ad="${p.id}">
+            ${thumb}
+            <div class="pm-ad-info">
+              <span class="pm-ad-title">${title}</span>
+              <span class="pm-ad-meta">${cat}${adDate(p)} \xB7 <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+            </div>
+            <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="\u0414\u0456\u0457">\u22EF</button>
           </div>
-          <div class="pm-ad-convos">${convos}</div>
+          ${actionsRow}
+          <div class="pm-ad-menu" id="pm-ad-menu-${p.id}" hidden>${menuItems}</div>
         </div>`;
-      }).join("");
-      listEl.querySelectorAll("[data-thread]").forEach((btn) => {
-        btn.addEventListener("click", () => {
-          const t = threads.find((x) => String(x.id) === btn.dataset.thread);
-          if (t)
-            openChat(t, t.post);
+      }
+      function render() {
+        const list = posts.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
+        if (!list.length) {
+          listEl.innerHTML = filter === "active" ? `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u270F\uFE0F \u0432\u043D\u0438\u0437\u0443.</div>` : `<div class="pm-empty"><span class="pm-empty-ic">\u{1F5C4}\uFE0F</span>\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.</div>`;
+          return;
+        }
+        listEl.innerHTML = list.map(adCard).join("");
+      }
+      render();
+      api.screen.querySelectorAll(".pm-ad-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          if (tab.dataset.filter === filter)
+            return;
+          filter = tab.dataset.filter;
+          api.screen.querySelectorAll(".pm-ad-tab").forEach((t) => t.classList.toggle("active", t === tab));
+          render();
         });
+      });
+      api.screen.querySelector("[data-new-ad]")?.addEventListener("click", () => openBoardModal());
+      const closeMenus = (except) => api.screen.querySelectorAll(".pm-ad-menu").forEach((m) => {
+        if (m !== except)
+          m.hidden = true;
+      });
+      listEl.addEventListener("click", async (e) => {
+        const menuBtn = e.target.closest("[data-menu]");
+        if (menuBtn) {
+          const menu = api.screen.querySelector(`#pm-ad-menu-${menuBtn.dataset.menu}`);
+          closeMenus(menu);
+          if (menu)
+            menu.hidden = !menu.hidden;
+          return;
+        }
+        const bumpBtn = e.target.closest("[data-bump]");
+        if (bumpBtn) {
+          bumpBtn.disabled = true;
+          const r = await bumpPost(Number(bumpBtn.dataset.bump));
+          if (r.ok) {
+            const p = posts.find((x) => String(x.id) === bumpBtn.dataset.bump);
+            if (p)
+              p.bumped_at = r.bumped_at || (/* @__PURE__ */ new Date()).toISOString();
+            showToast("\u{1F53C} \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u043E \u0432\u0433\u043E\u0440\u0443", 2500);
+            render();
+          } else if (r.error === "cooldown") {
+            const h = Math.floor((r.seconds_left || 0) / 3600);
+            const m = Math.max(1, Math.ceil((r.seconds_left || 0) % 3600 / 60));
+            showToast(`\u041F\u0456\u0434\u043D\u044F\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u0440\u0430\u0437 \u043D\u0430 3 \u0433\u043E\u0434. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0447\u0435\u0440\u0435\u0437 ${h > 0 ? h + " \u0433\u043E\u0434" : m + " \u0445\u0432"}.`, 3500);
+            const p = posts.find((x) => String(x.id) === bumpBtn.dataset.bump);
+            if (p)
+              p.bumped_at = new Date(Date.now() - (BUMP_COOLDOWN_MS - (r.seconds_left || 0) * 1e3)).toISOString();
+            render();
+          } else {
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+            bumpBtn.disabled = false;
+          }
+          return;
+        }
+        const badgeBtn = e.target.closest("[data-badge]");
+        if (badgeBtn) {
+          openThreadsList();
+          return;
+        }
+        const act = e.target.closest("[data-act]");
+        if (act) {
+          closeMenus(null);
+          const id = Number(act.dataset.id);
+          if (act.dataset.act === "close") {
+            const r = await closePost(id);
+            if (r.ok) {
+              const p = posts.find((x) => x.id === id);
+              if (p)
+                p.status = "closed";
+              showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2014 \u0443 \u0410\u0440\u0445\u0456\u0432\u0456", 2800);
+              render();
+            } else
+              showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+          } else if (act.dataset.act === "delete") {
+            if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438? \u0420\u043E\u0437\u043C\u043E\u0432\u0438 \u043F\u043E \u043D\u044C\u043E\u043C\u0443 \u0442\u0435\u0436 \u0437\u043D\u0438\u043A\u043D\u0443\u0442\u044C."))
+              return;
+            const r = await deleteMyPost(id);
+            if (r.ok) {
+              posts = posts.filter((x) => x.id !== id);
+              showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2500);
+              render();
+            } else
+              showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+          }
+          return;
+        }
+        const open = e.target.closest("[data-open-ad]");
+        if (open) {
+          const p = posts.find((x) => String(x.id) === open.dataset.openAd);
+          if (p)
+            window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
+        }
+      });
+      api.screen.addEventListener("click", (e) => {
+        if (!e.target.closest(".pm-ad-menu") && !e.target.closest("[data-menu]"))
+          closeMenus(null);
       });
     });
   }
@@ -3740,11 +3896,8 @@ ${post.text}
       const msg = activeType === "saved" ? "\u0423 \xAB\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445\xBB \u043F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E. \u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0437\u0430\u043A\u043B\u0430\u0434\u043A\u0443 \u043D\u0430 \u043F\u043E\u0441\u0442\u0456 \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438." : searchQuery ? `\u0417\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(searchQuery)}\xBB \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E` : "\u0423 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E";
       return `<div class="bd-empty">${msg}</div>`;
     }
-    const sorted = [...filtered].sort((a, b) => {
-      const ta = a.ts || a.published_at && new Date(a.published_at).getTime() || 0;
-      const tb = b.ts || b.published_at && new Date(b.published_at).getTime() || 0;
-      return tb - ta;
-    });
+    const rankTs = (x) => x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
+    const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
     if (activeType === "board") {
       const leftCards = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join("");
       const rightCards = sorted.filter((_, i) => i % 2 === 1).map(renderBoardCard).join("");

@@ -1081,11 +1081,11 @@ function renderBody() {
     return `<div class="bd-empty">${msg}</div>`;
   }
 
-  const sorted = [...filtered].sort((a, b) => {
-    const ta = a.ts || (a.published_at && new Date(a.published_at).getTime()) || 0;
-    const tb = b.ts || (b.published_at && new Date(b.published_at).getTime()) || 0;
-    return tb - ta;
-  });
+  // Порядок: спершу bumped_at (підняте власником угору), далі ts/published_at.
+  const rankTs = (x) =>
+    (x.bumped_at && new Date(x.bumped_at).getTime()) ||
+    x.ts || (x.published_at && new Date(x.published_at).getTime()) || 0;
+  const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
 
   if (activeType === 'board') {
     const leftCards  = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
