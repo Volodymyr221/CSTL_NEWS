@@ -606,6 +606,16 @@
     }
     return data || { ok: false, error: "no_data" };
   }
+  async function restorePost(postId) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("restore_post", { p_id: postId });
+    if (error) {
+      console.warn("[supabase] restorePost:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
   async function fetchMyThreads(uid) {
     if (!supa || !uid)
       return [];
@@ -2680,6 +2690,19 @@
       const unreadFor = (postId) => (byPost.get(postId) || []).reduce((s, t) => s + (unread.get(t.id) || 0), 0);
       const threadsFor = (postId) => (byPost.get(postId) || []).length;
       let filter = "active";
+      const ICON_DONE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>';
+      const ICON_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14l-4-4 4-4"/><path d="M5 10h11a4 4 0 0 1 0 8h-1"/></svg>';
+      const ICON_TRASH = ACT_ICONS.delete;
+      function swipeActions(p) {
+        const btns = [];
+        if (p.status === "published") {
+          btns.push(`<button class="pm-ad-swipe-btn pm-ad-swipe-btn--done" type="button" data-act="close" data-id="${p.id}" aria-label="\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438">${ICON_DONE}</button>`);
+        } else if (p.status === "closed") {
+          btns.push(`<button class="pm-ad-swipe-btn pm-ad-swipe-btn--restore" type="button" data-act="restore" data-id="${p.id}" aria-label="\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438">${ICON_BACK}</button>`);
+        }
+        btns.push(`<button class="pm-ad-swipe-btn pm-ad-swipe-btn--delete" type="button" data-act="delete" data-id="${p.id}" aria-label="\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438">${ICON_TRASH}</button>`);
+        return { html: `<div class="pm-ad-swipe">${btns.join("")}</div>`, openW: btns.length > 1 ? 134 : 70 };
+      }
       function adCard(p) {
         const meta = AD_STATUS[p.status] || { label: p.status || "", icon: "", group: "active" };
         const photo = Array.isArray(p.photos) ? p.photos.find((x) => x) : null;
@@ -2695,23 +2718,41 @@
         }
         const menuItems = [
           isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">\u2713 \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438</button>` : "",
+          p.status === "closed" ? `<button class="pm-ad-mi" type="button" data-act="restore" data-id="${p.id}">\u21A9\uFE0F \u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456</button>` : "",
           `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`
         ].join("");
+        const sw = swipeActions(p);
         return `
-        <div class="pm-ad" data-ad="${p.id}">
-          <div class="pm-ad-main" data-open-ad="${p.id}">
-            ${thumb}
-            <div class="pm-ad-info">
-              <span class="pm-ad-title">${title}</span>
-              <span class="pm-ad-meta">${cat}${adDate(p)} \xB7 <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+        <div class="pm-ad-row" data-row="${p.id}" data-open-w="${sw.openW}">
+          ${sw.html}
+          <div class="pm-ad" data-ad="${p.id}">
+            <div class="pm-ad-main" data-open-ad="${p.id}">
+              ${thumb}
+              <div class="pm-ad-info">
+                <span class="pm-ad-title">${title}</span>
+                <span class="pm-ad-meta">${cat}${adDate(p)} \xB7 <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+              </div>
+              <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="\u0414\u0456\u0457">\u22EF</button>
             </div>
-            <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="\u0414\u0456\u0457">\u22EF</button>
+            ${actionsRow}
+            <div class="pm-ad-menu" id="pm-ad-menu-${p.id}" hidden>${menuItems}</div>
           </div>
-          ${actionsRow}
-          <div class="pm-ad-menu" id="pm-ad-menu-${p.id}" hidden>${menuItems}</div>
         </div>`;
       }
+      let openRow = null, suppressClick = false;
+      const closeOpenRow = () => {
+        if (!openRow)
+          return;
+        const c = openRow.querySelector(".pm-ad");
+        if (c) {
+          c.style.transition = "";
+          c.style.removeProperty("transform");
+        }
+        openRow.classList.remove("pm-ad-row--open");
+        openRow = null;
+      };
       function render() {
+        openRow = null;
         const list = posts.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
         if (!list.length) {
           listEl.innerHTML = filter === "active" ? `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u270F\uFE0F \u0432\u043D\u0438\u0437\u0443.</div>` : `<div class="pm-empty"><span class="pm-empty-ic">\u{1F5C4}\uFE0F</span>\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.</div>`;
@@ -2730,11 +2771,79 @@
         });
       });
       api.screen.querySelector("[data-new-ad]")?.addEventListener("click", () => openBoardModal());
+      let sX = 0, sY = 0, swCard = null, swRow = null, swLock = null;
+      const rowOpenW = (row) => Number(row?.dataset.openW) || 134;
+      listEl.addEventListener("touchstart", (e) => {
+        const c = e.target.closest(".pm-ad");
+        if (!c) {
+          swCard = null;
+          return;
+        }
+        swCard = c;
+        swRow = c.closest(".pm-ad-row");
+        swLock = null;
+        sX = e.touches[0].clientX;
+        sY = e.touches[0].clientY;
+      }, { passive: true });
+      listEl.addEventListener("touchmove", (e) => {
+        if (!swCard)
+          return;
+        const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
+        if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
+          swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (swLock === "h") {
+          e.preventDefault();
+          swCard.style.transition = "none";
+          const w = rowOpenW(swRow);
+          const base = swRow === openRow ? -w : 0;
+          const d = Math.max(Math.min(base + dx, 0), -w);
+          swCard.style.transform = `translateX(${d}px)`;
+        }
+      }, { passive: false });
+      listEl.addEventListener("touchend", (e) => {
+        if (!swCard)
+          return;
+        const c = swCard, r = swRow, lock = swLock;
+        swCard = null;
+        swRow = null;
+        if (lock !== "h")
+          return;
+        suppressClick = true;
+        setTimeout(() => {
+          suppressClick = false;
+        }, 60);
+        c.style.transition = "";
+        const w = rowOpenW(r);
+        const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sX) - sX;
+        const wasOpen = r === openRow;
+        const open = wasOpen ? dx < 60 : dx < -70;
+        if (open) {
+          if (openRow && openRow !== r)
+            closeOpenRow();
+          c.style.transform = `translateX(${-w}px)`;
+          r.classList.add("pm-ad-row--open");
+          openRow = r;
+        } else {
+          c.style.transform = "";
+          r.classList.remove("pm-ad-row--open");
+          if (openRow === r)
+            openRow = null;
+        }
+      }, { passive: false });
       const closeMenus = (except) => api.screen.querySelectorAll(".pm-ad-menu").forEach((m) => {
         if (m !== except)
           m.hidden = true;
       });
       listEl.addEventListener("click", async (e) => {
+        if (suppressClick)
+          return;
+        if (openRow) {
+          const actInOpen = e.target.closest("[data-act]");
+          if (!actInOpen || !openRow.contains(actInOpen)) {
+            closeOpenRow();
+            return;
+          }
+        }
         const menuBtn = e.target.closest("[data-menu]");
         if (menuBtn) {
           const menu = api.screen.querySelector(`#pm-ad-menu-${menuBtn.dataset.menu}`);
@@ -2786,6 +2895,18 @@
               render();
             } else
               showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+          } else if (act.dataset.act === "restore") {
+            const r = await restorePost(id);
+            if (r.ok) {
+              const p = posts.find((x) => x.id === id);
+              if (p)
+                p.status = "published";
+              showToast("\u21A9\uFE0F \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u043E \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456", 2800);
+              render();
+            } else if (r.error === "not_restorable") {
+              showToast("\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u043B\u0438\u0448\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 3e3);
+            } else
+              showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
           } else if (act.dataset.act === "delete") {
             if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438? \u0420\u043E\u0437\u043C\u043E\u0432\u0438 \u043F\u043E \u043D\u044C\u043E\u043C\u0443 \u0442\u0435\u0436 \u0437\u043D\u0438\u043A\u043D\u0443\u0442\u044C."))
               return;

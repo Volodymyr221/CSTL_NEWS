@@ -897,7 +897,7 @@
 /* Модалка «Подати оголошення» — повноекранна, з білою панеллю знизу */
 .cm-board-modal {
   position: fixed; inset: 0;
-  z-index: 1200;
+  z-index: 2700;   /* вище екрана «Мої оголошення» (2401) — інакше модалка ховається під ним */
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.2s;
