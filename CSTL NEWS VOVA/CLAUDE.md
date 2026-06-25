@@ -267,6 +267,7 @@ main отримує мердж-коміт
 - `docs/CONTENT_STRATEGY.md` — джерела новин, фільтри, ручна публікація
 - `docs/RULES.md` — правила роботи Claude
 - `docs/DESIGN_SYSTEM.md` — UI-патерни
+- `docs/MARKETING_PLAYBOOK.md` — маркетингові важелі (адаптовано з coreyhaines31/marketingskills) для розвитку проекту
 - `_ai-tools/SESSION_STATE.md` — поточний стан сесії
 - `_ai-tools/BACKLOG.md` — єдиний список задач
 - `CSTL_BUGS.md` — відомі баги
