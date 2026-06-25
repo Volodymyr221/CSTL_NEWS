@@ -7518,6 +7518,17 @@ ${post.text}
   function geoColor(g) {
     return GEO_COLORS[g] || "#546e7a";
   }
+  function showNewsSegment(seg) {
+    const isEvents = seg === "events";
+    const paneNews = document.getElementById("news-seg-news");
+    const paneEv = document.getElementById("news-seg-events");
+    if (paneNews)
+      paneNews.style.display = isEvents ? "none" : "block";
+    if (paneEv)
+      paneEv.style.display = isEvents ? "block" : "none";
+    document.querySelectorAll(".news-seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.newsSeg === seg));
+  }
+  window.cstlShowNewsSegment = showNewsSegment;
   async function initNews() {
     try {
       const res = await fetch("./data/articles.json");
@@ -7530,6 +7541,9 @@ ${post.text}
     attachNewsListeners();
   }
   function attachNewsListeners() {
+    document.querySelectorAll(".news-seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => showNewsSegment(btn.dataset.newsSeg));
+    });
     const filters = document.getElementById("geo-filters");
     if (filters) {
       filters.addEventListener("click", (e) => {
@@ -8647,6 +8661,15 @@ END:VEVENT`
   // src/app.js
   var currentTab = "community";
   window.switchTab = function(tab) {
+    let seg = null;
+    if (tab === "events") {
+      seg = "events";
+      tab = "news";
+    } else if (tab === "news") {
+      seg = "news";
+    }
+    if (seg && typeof window.cstlShowNewsSegment === "function")
+      window.cstlShowNewsSegment(seg);
     if (tab === currentTab)
       return;
     const oldPage = document.getElementById(`page-${currentTab}`);

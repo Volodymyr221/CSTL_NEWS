@@ -1,16 +1,38 @@
+/* ===== Сегмент-перемикач у вкладці Новини: «Новини | Події» ===== */
+/* Висота сегмента — на неї зсуваються фіксовані фільтр-бари обох підрозділів */
+:root { --news-seg-h: 50px; }
+.news-seg {
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0; right: 0; z-index: 91;
+  display: flex; gap: 6px;
+  padding: 7px 14px;
+  background: var(--bg-page);
+}
+.news-seg-btn {
+  flex: 1; padding: 9px 0; border: 0; border-radius: 12px;
+  background: var(--bg-card); color: var(--ink);
+  font-size: 14px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+.news-seg-btn.active { background: var(--red); color: #fff; }
+
 /* ===== FILTERS ===== */
 .filters-bar {
   padding: 6px 14px 0;
   background: var(--bg-page);
   position: fixed;
-  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  /* зсунуто вниз на висоту сегмента «Новини | Події» */
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + var(--news-seg-h));
   left: 0;
   right: 0;
   z-index: 90;
 }
-/* Компенсація висоти фіксованих фільтрів щоб контент не ховався під ними */
-#page-news {
-  padding-top: 46px;
+/* Компенсація висоти фіксованих фільтрів щоб контент не ховався під ними.
+   46px (фільтри) + висота сегмента. */
+#news-seg-news {
+  padding-top: calc(46px + var(--news-seg-h));
 }
 .chips-row {
   display: flex;
