@@ -8,26 +8,35 @@
 
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
-import { currentUserId } from '../core/auth.js';
+import { currentUserId, isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 
 const TYPE_TABS = [
   { id: 'board',    emoji: '🛒', label: 'Оголошення' },
   { id: 'chat',     emoji: '💬', label: 'Розмова' },
 ];
 
+// Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
+// купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
 const BOARD_CATEGORIES = [
   { id: 'продам',     emoji: '💰', color: 'yellow' },
   { id: 'куплю',      emoji: '🛒', color: 'green'  },
   { id: 'шукаю',      emoji: '🔍', color: 'blue'   },
+  { id: 'послуга',    emoji: '🔧', color: 'blue'   },
   { id: 'знайдено',   emoji: '🎁', color: 'yellow' },
   { id: 'загубилось', emoji: '😟', color: 'pink'   },
-  { id: 'послуга',    emoji: '🔧', color: 'blue'   },
   { id: 'оголошення', emoji: '📢', color: 'pink'   },
 ];
 
 // Чи виглядає рядок як телефон
 function isPhone(s) {
   return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || '').trim());
+}
+
+// Лише ім'я (перше слово) без прізвища — щоб не займало багато місця в підписі.
+// 'Житель' — службовий дефолт (не справжнє ім'я) → вважаємо порожнім.
+function firstNameOnly(full) {
+  const w = String(full || '').trim().split(/\s+/)[0] || '';
+  return w === 'Житель' ? '' : w;
 }
 
 // Парсинг хештегів з рядка «#громада #дороги #свято» → ['#громада', '#дороги', '#свято']
@@ -80,7 +89,9 @@ export function openBoardModal() {
     text: '',
     photos: [],         // URL-и фото: blob: під час upload, https: після
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
-    author: '',
+    // Залогінений → підставляємо його ім'я (без прізвища); гість → порожньо (анонім).
+    author: isLoggedIn() ? firstNameOnly(currentUserName()) : '',
+    authorTouched: false,   // користувач сам редагував поле → не перезаписувати автозаповненням
     // BOARD
     category: 'оголошення',
     contact: '',
@@ -302,6 +313,7 @@ export function openBoardModal() {
     });
     dynamicEl.querySelector('#bm-author')?.addEventListener('input', e => {
       state.author = e.target.value;
+      state.authorTouched = true;   // далі не перезаписуємо автозаповненням з профілю
       renderPreview();
     });
   }
@@ -463,6 +475,20 @@ export function openBoardModal() {
   renderDynamic();
   renderPreview();
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
+
+  // Уточнюємо ім'я з профілю в БД (кеш міг бути ще не готовий при відкритті).
+  // Якщо користувач сам не правив поле — підставляємо збережене ім'я (без прізвища).
+  if (isLoggedIn()) {
+    getProfile().then(p => {
+      if (state.authorTouched) return;
+      const nm = firstNameOnly((p && p.name) || currentUserName());
+      if (!nm || nm === state.author) return;
+      state.author = nm;
+      const inp = dynamicEl.querySelector('#bm-author');
+      if (inp) inp.value = nm;
+      renderPreview();
+    }).catch(() => {});
+  }
 
   // ── Submit ──
   wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', async (e) => {

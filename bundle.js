@@ -1019,13 +1019,17 @@
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
     { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
     { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
     { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
   ];
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
+  }
+  function firstNameOnly(full) {
+    const w = String(full || "").trim().split(/\s+/)[0] || "";
+    return w === "\u0416\u0438\u0442\u0435\u043B\u044C" ? "" : w;
   }
   function parseTags(str) {
     return String(str || "").split(/\s+/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith("#") ? s : "#" + s);
@@ -1073,7 +1077,10 @@
       // URL-и фото: blob: під час upload, https: після
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
-      author: "",
+      // Залогінений → підставляємо його ім'я (без прізвища); гість → порожньо (анонім).
+      author: isLoggedIn() ? firstNameOnly(currentUserName()) : "",
+      authorTouched: false,
+      // користувач сам редагував поле → не перезаписувати автозаповненням
       // BOARD
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
@@ -1290,6 +1297,7 @@
       });
       dynamicEl.querySelector("#bm-author")?.addEventListener("input", (e) => {
         state.author = e.target.value;
+        state.authorTouched = true;
         renderPreview();
       });
     }
@@ -1437,6 +1445,21 @@
     renderDynamic();
     renderPreview();
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
+    if (isLoggedIn()) {
+      getProfile().then((p) => {
+        if (state.authorTouched)
+          return;
+        const nm = firstNameOnly(p && p.name || currentUserName());
+        if (!nm || nm === state.author)
+          return;
+        state.author = nm;
+        const inp = dynamicEl.querySelector("#bm-author");
+        if (inp)
+          inp.value = nm;
+        renderPreview();
+      }).catch(() => {
+      });
+    }
     wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
       if (!state.text.trim()) {
