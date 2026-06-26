@@ -678,3 +678,26 @@
 .gr-emoji.active { background: var(--red, #722F37); }
 .gr-submit { margin-top: 14px; padding: 13px 0; border: 0; border-radius: 14px; background: var(--red, #722F37); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
 .gr-submit:disabled { opacity: 0.6; }
+
+/* Кнопка керування у шапці групового чату */
+.gr-manage-btn { flex-shrink: 0; width: 36px; height: 36px; border: 0; border-radius: 50%; background: rgba(255,255,255,0.16); color: #fff; font-size: 17px; cursor: pointer; margin-left: auto; }
+.gr-manage-btn:active { background: rgba(255,255,255,0.28); }
+
+/* Екран керування групою */
+.gr-mng { padding: 14px 16px 90px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px; }
+.gr-mng-desc { font-size: 14px; color: var(--ink-soft, #5F5448); margin: 0; }
+.gr-mng-sec { display: flex; flex-direction: column; gap: 8px; }
+.gr-mng-h { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; color: var(--ink-mute, #9C9080); }
+.gr-mbr {
+  display: flex; align-items: center; justify-content: space-between; gap: 10px;
+  padding: 11px 14px; border-radius: 12px; background: var(--card-cream, #FAF8EF);
+}
+.gr-mbr-name { font-size: 15px; font-weight: 600; color: var(--ink, #2A2520); }
+.gr-mbr-tag { font-size: 10.5px; font-weight: 700; color: var(--red, #722F37); text-transform: uppercase; }
+.gr-mbr-acts { display: flex; gap: 8px; flex-shrink: 0; }
+.gr-mbr-ok, .gr-mbr-no {
+  border: 0; border-radius: 9px; padding: 6px 12px; font-size: 13px; font-weight: 700; cursor: pointer;
+}
+.gr-mbr-ok { background: #E3F0DC; color: #3C6B2A; }
+.gr-mbr-no { background: #F6DAD9; color: #8A2222; }
+.gr-leave { margin-top: 8px; padding: 12px 0; border: 0; border-radius: 12px; background: #F6DAD9; color: #8A2222; font-size: 14px; font-weight: 700; cursor: pointer; }

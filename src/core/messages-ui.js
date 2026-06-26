@@ -26,7 +26,7 @@ import {
   bumpPost, closePost, deleteMyPost, restorePost,
   fetchMyGroups, createGroup, createGroupInvite, getGroupByInvite, joinGroupByToken,
   leaveGroup, fetchGroupMembers, fetchProfileNames, fetchGroupMessages, sendGroupMessage,
-  subscribeGroupMessages,
+  subscribeGroupMessages, approveMember, rejectMember,
 } from './supabase.js';
 import { openBoardModal } from '../tabs/community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
@@ -1105,24 +1105,120 @@ function openCreateGroup(onDone) {
   });
 }
 
-// Вступ за посиланням — вставити посилання/токен, прев'ю, приєднатись
+// Повне посилання-запрошення (з hash-routing — працює на GitHub Pages без 404)
+function buildInviteUrl(token) {
+  return `${location.origin}${location.pathname}#/join/${token}`;
+}
+
+// Вступ за посиланням — вставити посилання/токен вручну (fallback до hash-routing)
 function promptJoinByLink(onDone) {
   const raw = prompt('Встав посилання-запрошення або код групи:');
   if (!raw) return;
   const m = String(raw).trim().match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-  const token = m ? m[0] : null;
-  if (!token) { showToast('Не схоже на дійсне посилання', 3000); return; }
-  (async () => {
+  if (!m) { showToast('Не схоже на дійсне посилання', 3000); return; }
+  openInviteJoin(m[0], onDone);
+}
+
+// Вступ за токеном: прев'ю → підтвердження → приєднання (миттєво або заявка).
+// Викликається і з вставленого посилання, і з hash-routing (#/join/<token>).
+export function openInviteJoin(token, onDone) {
+  requireAuth('приєднатись до групи', async () => {
     const g = await getGroupByInvite(token);
     if (!g.ok) { showToast('Запрошення недійсне або застаріле', 3500); return; }
-    if (g.my_status === 'member') { showToast('Ви вже в цій групі', 2500); return; }
-    const note = g.requires_approval ? '\n\nПісля вступу адмін має схвалити вас.' : '';
+    if (g.my_status === 'member') { showToast('Ви вже в цій групі', 2500); openGroupsList(); return; }
+    const note = g.requires_approval ? '\n\nПісля вступу адмін має вас схвалити.' : '';
     if (!confirm(`Приєднатись до «${g.name}»? (${g.members} учасн.)${note}`)) return;
     const r = await joinGroupByToken(token);
-    if (r.ok && r.status === 'member') { showToast('✅ Ви приєднались', 2500); if (onDone) onDone(); }
-    else if (r.ok && r.status === 'pending') { showToast('⏳ Заявку надіслано — чекайте схвалення адміна', 4000); }
+    if (r.ok && r.status === 'member') { showToast('✅ Ви приєднались', 2500); if (onDone) onDone(); else openGroupsList(); }
+    else if (r.ok && r.status === 'pending') { showToast('⏳ Заявку надіслано — чекайте схвалення адміна', 4200); }
     else showToast('Не вдалося приєднатись: ' + (r.error || ''), 3500, 'error');
-  })();
+  });
+}
+
+// Керування групою: запрошення (2 типи), заявки на схвалення, учасники, вихід
+export function openGroupManage(group) {
+  requireAuth('керувати групою', async () => {
+    const me = currentUserId();
+    const api = buildScreen(`
+      <header class="pm-head pm-head--list">
+        <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
+        <div class="pm-head-titles"><div class="pm-head-name">⚙️ ${escapeHtml(group.name)}</div></div>
+      </header>
+      <div class="gr-mng" id="gr-mng"><div class="pm-loading">Завантаження…</div></div>
+    `, 'pm-screen--groups');
+    const wrap = api.screen.querySelector('#gr-mng');
+
+    const makeInvite = async (requiresApproval) => {
+      const r = await createGroupInvite(group.id, requiresApproval);
+      if (!r.ok) { showToast('Не вдалося створити посилання: ' + (r.error || ''), 3500, 'error'); return; }
+      const url = buildInviteUrl(r.token);
+      const label = requiresApproval ? 'зі схваленням адміна' : 'миттєвий вступ';
+      if (navigator.share) {
+        try { await navigator.share({ title: group.name, text: `Приєднуйся до «${group.name}» (${label})`, url }); return; } catch (_) {}
+      }
+      try { await navigator.clipboard.writeText(url); showToast(`🔗 Посилання (${label}) скопійовано`, 3000); }
+      catch { prompt('Скопіюй посилання:', url); }
+    };
+
+    const render = async () => {
+      const members = await fetchGroupMembers(group.id);
+      if (api._closed) return;
+      const names = await fetchProfileNames(members.map(m => m.uid));
+      const myRole = (members.find(m => m.uid === me) || {}).role;
+      const isAdmin = myRole === 'admin';
+      const isOwner = group.owner_uid === me;
+      const pending = members.filter(m => m.status === 'pending');
+      const active  = members.filter(m => m.status === 'member');
+      const nm = (uid) => escapeHtml(names.get(uid) || 'Житель');
+
+      wrap.innerHTML = `
+        ${group.description ? `<p class="gr-mng-desc">${escapeHtml(group.description)}</p>` : ''}
+        ${isAdmin ? `
+          <div class="gr-mng-sec">
+            <div class="gr-mng-h">Запросити</div>
+            <button class="gr-act" type="button" data-inv="0">🔗 Посилання — миттєвий вступ</button>
+            <button class="gr-act gr-act--ghost" type="button" data-inv="1">🔗 Посилання — зі схваленням</button>
+          </div>` : ''}
+        ${isAdmin && pending.length ? `
+          <div class="gr-mng-sec">
+            <div class="gr-mng-h">Заявки на вступ (${pending.length})</div>
+            ${pending.map(m => `
+              <div class="gr-mbr">
+                <span class="gr-mbr-name">${nm(m.uid)}</span>
+                <span class="gr-mbr-acts">
+                  <button class="gr-mbr-ok" type="button" data-approve="${m.uid}">✓</button>
+                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">✕</button>
+                </span>
+              </div>`).join('')}
+          </div>` : ''}
+        <div class="gr-mng-sec">
+          <div class="gr-mng-h">Учасники (${active.length})</div>
+          ${active.map(m => `
+            <div class="gr-mbr">
+              <span class="gr-mbr-name">${nm(m.uid)}${m.role === 'admin' ? ' <span class="gr-mbr-tag">адмін</span>' : ''}</span>
+              ${isAdmin && m.uid !== group.owner_uid && m.uid !== me ? `<span class="gr-mbr-acts"><button class="gr-mbr-no" type="button" data-reject="${m.uid}">видалити</button></span>` : ''}
+            </div>`).join('')}
+        </div>
+        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>Вийти з групи</button>` : `<p class="gr-hint" style="padding:0 4px">Ви власник групи.</p>`}
+      `;
+    };
+    await render();
+
+    wrap.addEventListener('click', async (e) => {
+      const inv = e.target.closest('[data-inv]');
+      if (inv) { makeInvite(inv.dataset.inv === '1'); return; }
+      const ap = e.target.closest('[data-approve]');
+      if (ap) { const r = await approveMember(group.id, ap.dataset.approve); if (r.ok) { showToast('✅ Схвалено', 2000); render(); } else showToast('Помилка: ' + (r.error || ''), 3000); return; }
+      const rj = e.target.closest('[data-reject]');
+      if (rj) { if (!confirm('Прибрати цього користувача?')) return; const r = await rejectMember(group.id, rj.dataset.reject); if (r.ok) { showToast('Готово', 2000); render(); } else showToast('Помилка: ' + (r.error || ''), 3000); return; }
+      if (e.target.closest('[data-leave]')) {
+        if (!confirm('Вийти з групи?')) return;
+        const r = await leaveGroup(group.id);
+        if (r.ok) { showToast('Ви вийшли з групи', 2500); api.close(); }
+        else showToast('Не вдалося вийти: ' + (r.error || ''), 3500, 'error');
+      }
+    });
+  });
 }
 
 // Груповий чат (v1: текст + realtime + імена відправників)
@@ -1134,6 +1230,7 @@ export function openGroupChat(group) {
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
         <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ''}">${escapeHtml(group.avatar_emoji || '👥')}</span>
         <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
+        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="Керування групою">⚙️</button>
       </header>
       <div class="pm-stream" id="gr-stream"><div class="pm-loading">Завантаження…</div></div>
       <form class="pm-form" id="gr-form">
@@ -1169,6 +1266,8 @@ export function openGroupChat(group) {
     (await fetchGroupMessages(group.id)).forEach(addMsg);
     if (api._closed) return;
     render();
+
+    api.screen.querySelector('[data-gr-manage]')?.addEventListener('click', () => openGroupManage(group));
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();

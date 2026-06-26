@@ -642,6 +642,16 @@
     }
     return { ok: true, id: data };
   }
+  async function createGroupInvite(groupId, requiresApproval = false) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("create_group_invite", { p_gid: groupId, p_requires_approval: requiresApproval });
+    if (error) {
+      console.warn("[supabase] createGroupInvite:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true, token: data };
+  }
   async function getGroupByInvite(token) {
     if (!supa)
       return { ok: false, error: "no_supa" };
@@ -658,6 +668,36 @@
     const { data, error } = await supa.rpc("join_group_by_token", { p_token: token });
     if (error) {
       console.warn("[supabase] joinGroupByToken:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
+  async function leaveGroup(groupId) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("leave_group", { p_gid: groupId });
+    if (error) {
+      console.warn("[supabase] leaveGroup:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
+  async function approveMember(groupId, uid) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("approve_member", { p_gid: groupId, p_uid: uid });
+    if (error) {
+      console.warn("[supabase] approveMember:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
+  async function rejectMember(groupId, uid) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("reject_member", { p_gid: groupId, p_uid: uid });
+    if (error) {
+      console.warn("[supabase] rejectMember:", error.message);
       return { ok: false, error: error.message };
     }
     return data || { ok: false, error: "no_data" };
@@ -2859,17 +2899,22 @@
       }
     });
   }
+  function buildInviteUrl(token) {
+    return `${location.origin}${location.pathname}#/join/${token}`;
+  }
   function promptJoinByLink(onDone) {
     const raw = prompt("\u0412\u0441\u0442\u0430\u0432 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F-\u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u043A\u043E\u0434 \u0433\u0440\u0443\u043F\u0438:");
     if (!raw)
       return;
     const m = String(raw).trim().match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    const token = m ? m[0] : null;
-    if (!token) {
+    if (!m) {
       showToast("\u041D\u0435 \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0434\u0456\u0439\u0441\u043D\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 3e3);
       return;
     }
-    (async () => {
+    openInviteJoin(m[0], onDone);
+  }
+  function openInviteJoin(token, onDone) {
+    requireAuth("\u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \u0433\u0440\u0443\u043F\u0438", async () => {
       const g = await getGroupByInvite(token);
       if (!g.ok) {
         showToast("\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u0456\u0439\u0441\u043D\u0435 \u0430\u0431\u043E \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0435", 3500);
@@ -2877,9 +2922,10 @@
       }
       if (g.my_status === "member") {
         showToast("\u0412\u0438 \u0432\u0436\u0435 \u0432 \u0446\u0456\u0439 \u0433\u0440\u0443\u043F\u0456", 2500);
+        openGroupsList();
         return;
       }
-      const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438 \u0432\u0430\u0441." : "";
+      const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
       if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note}`))
         return;
       const r = await joinGroupByToken(token);
@@ -2887,11 +2933,130 @@
         showToast("\u2705 \u0412\u0438 \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u043B\u0438\u0441\u044C", 2500);
         if (onDone)
           onDone();
+        else
+          openGroupsList();
       } else if (r.ok && r.status === "pending") {
-        showToast("\u23F3 \u0417\u0430\u044F\u0432\u043A\u0443 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F \u0430\u0434\u043C\u0456\u043D\u0430", 4e3);
+        showToast("\u23F3 \u0417\u0430\u044F\u0432\u043A\u0443 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F \u0430\u0434\u043C\u0456\u043D\u0430", 4200);
       } else
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C: " + (r.error || ""), 3500, "error");
-    })();
+    });
+  }
+  function openGroupManage(group) {
+    requireAuth("\u043A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u044E", async () => {
+      const me = currentUserId();
+      const api = buildScreen(`
+      <header class="pm-head pm-head--list">
+        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <div class="pm-head-titles"><div class="pm-head-name">\u2699\uFE0F ${escapeHtml(group.name)}</div></div>
+      </header>
+      <div class="gr-mng" id="gr-mng"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+    `, "pm-screen--groups");
+      const wrap = api.screen.querySelector("#gr-mng");
+      const makeInvite = async (requiresApproval) => {
+        const r = await createGroupInvite(group.id, requiresApproval);
+        if (!r.ok) {
+          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F: " + (r.error || ""), 3500, "error");
+          return;
+        }
+        const url = buildInviteUrl(r.token);
+        const label = requiresApproval ? "\u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C \u0430\u0434\u043C\u0456\u043D\u0430" : "\u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F";
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: group.name, text: `\u041F\u0440\u0438\u0454\u0434\u043D\u0443\u0439\u0441\u044F \u0434\u043E \xAB${group.name}\xBB (${label})`, url });
+            return;
+          } catch (_) {
+          }
+        }
+        try {
+          await navigator.clipboard.writeText(url);
+          showToast(`\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F (${label}) \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E`, 3e3);
+        } catch {
+          prompt("\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F:", url);
+        }
+      };
+      const render = async () => {
+        const members = await fetchGroupMembers(group.id);
+        if (api._closed)
+          return;
+        const names = await fetchProfileNames(members.map((m) => m.uid));
+        const myRole = (members.find((m) => m.uid === me) || {}).role;
+        const isAdmin = myRole === "admin";
+        const isOwner = group.owner_uid === me;
+        const pending = members.filter((m) => m.status === "pending");
+        const active = members.filter((m) => m.status === "member");
+        const nm = (uid) => escapeHtml(names.get(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C");
+        wrap.innerHTML = `
+        ${group.description ? `<p class="gr-mng-desc">${escapeHtml(group.description)}</p>` : ""}
+        ${isAdmin ? `
+          <div class="gr-mng-sec">
+            <div class="gr-mng-h">\u0417\u0430\u043F\u0440\u043E\u0441\u0438\u0442\u0438</div>
+            <button class="gr-act" type="button" data-inv="0">\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F</button>
+            <button class="gr-act gr-act--ghost" type="button" data-inv="1">\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C</button>
+          </div>` : ""}
+        ${isAdmin && pending.length ? `
+          <div class="gr-mng-sec">
+            <div class="gr-mng-h">\u0417\u0430\u044F\u0432\u043A\u0438 \u043D\u0430 \u0432\u0441\u0442\u0443\u043F (${pending.length})</div>
+            ${pending.map((m) => `
+              <div class="gr-mbr">
+                <span class="gr-mbr-name">${nm(m.uid)}</span>
+                <span class="gr-mbr-acts">
+                  <button class="gr-mbr-ok" type="button" data-approve="${m.uid}">\u2713</button>
+                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u2715</button>
+                </span>
+              </div>`).join("")}
+          </div>` : ""}
+        <div class="gr-mng-sec">
+          <div class="gr-mng-h">\u0423\u0447\u0430\u0441\u043D\u0438\u043A\u0438 (${active.length})</div>
+          ${active.map((m) => `
+            <div class="gr-mbr">
+              <span class="gr-mbr-name">${nm(m.uid)}${m.role === "admin" ? ' <span class="gr-mbr-tag">\u0430\u0434\u043C\u0456\u043D</span>' : ""}</span>
+              ${isAdmin && m.uid !== group.owner_uid && m.uid !== me ? `<span class="gr-mbr-acts"><button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button></span>` : ""}
+            </div>`).join("")}
+        </div>
+        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438</button>` : `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0433\u0440\u0443\u043F\u0438.</p>`}
+      `;
+      };
+      await render();
+      wrap.addEventListener("click", async (e) => {
+        const inv = e.target.closest("[data-inv]");
+        if (inv) {
+          makeInvite(inv.dataset.inv === "1");
+          return;
+        }
+        const ap = e.target.closest("[data-approve]");
+        if (ap) {
+          const r = await approveMember(group.id, ap.dataset.approve);
+          if (r.ok) {
+            showToast("\u2705 \u0421\u0445\u0432\u0430\u043B\u0435\u043D\u043E", 2e3);
+            render();
+          } else
+            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          return;
+        }
+        const rj = e.target.closest("[data-reject]");
+        if (rj) {
+          if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430?"))
+            return;
+          const r = await rejectMember(group.id, rj.dataset.reject);
+          if (r.ok) {
+            showToast("\u0413\u043E\u0442\u043E\u0432\u043E", 2e3);
+            render();
+          } else
+            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          return;
+        }
+        if (e.target.closest("[data-leave]")) {
+          if (!confirm("\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438?"))
+            return;
+          const r = await leaveGroup(group.id);
+          if (r.ok) {
+            showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438", 2500);
+            api.close();
+          } else
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0439\u0442\u0438: " + (r.error || ""), 3500, "error");
+        }
+      });
+    });
   }
   function openGroupChat(group) {
     requireAuth("\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u0432\u0438\u0439 \u0447\u0430\u0442", async () => {
@@ -2901,6 +3066,7 @@
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
         <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ""}">${escapeHtml(group.avatar_emoji || "\u{1F465}")}</span>
         <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
+        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0433\u0440\u0443\u043F\u043E\u044E">\u2699\uFE0F</button>
       </header>
       <div class="pm-stream" id="gr-stream"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
       <form class="pm-form" id="gr-form">
@@ -2936,6 +3102,7 @@
       if (api._closed)
         return;
       render();
+      api.screen.querySelector("[data-gr-manage]")?.addEventListener("click", () => openGroupManage(group));
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const text = input.value.trim();
@@ -9141,6 +9308,13 @@ END:VEVENT`
         openGroupsList();
     });
   }
+  function handleInviteHash() {
+    const m = (location.hash || "").match(/^#\/join\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+    if (!m)
+      return;
+    history.replaceState(null, "", location.pathname + location.search);
+    openInviteJoin(m[1]);
+  }
   function init() {
     bootApp();
     initAuth();
@@ -9161,6 +9335,8 @@ END:VEVENT`
     initBoard();
     initChatsHub();
     initAdminShortcut();
+    handleInviteHash();
+    window.addEventListener("hashchange", handleInviteHash);
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {
