@@ -8,8 +8,7 @@ import { initPower } from './tabs/power.js';
 import { initBoard, setBoardActiveType } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
-import { initMessages, openThreadsList } from './core/messages-ui.js';
-import { showToast } from './core/utils.js';
+import { initMessages, openThreadsList, openGroupsList } from './core/messages-ui.js';
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -181,7 +180,7 @@ function initChatsHub() {
     const k = btn.dataset.chats;
     if (k === 'messages')        openThreadsList();
     else if (k === 'discussions') { window.switchTab('board'); setBoardActiveType('chat'); }
-    else if (k === 'groups')      showToast('Приватні групи спільнот — скоро 👥', 2800);
+    else if (k === 'groups')      openGroupsList();
   });
 }
 

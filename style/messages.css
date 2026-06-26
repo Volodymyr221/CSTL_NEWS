@@ -646,3 +646,35 @@
   background: var(--ink-mute, #9C9080); color: #fff;
   padding: 2px 7px; border-radius: 8px; margin-left: 6px; vertical-align: middle;
 }
+
+/* ── Приватні групи (Етап 2) ─────────────────────────────────────── */
+.gr-actions { display: flex; gap: 8px; padding: 10px 16px 4px; }
+.gr-act {
+  flex: 1; padding: 11px 0; border: 0; border-radius: 12px;
+  background: var(--red, #722F37); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+}
+.gr-act--ghost { background: rgba(0,0,0,0.05); color: var(--ink, #2A2520); }
+.gr-act:active { filter: brightness(0.95); }
+.gr-avatar {
+  flex-shrink: 0; width: 48px; height: 48px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-size: 24px;
+  background: var(--card-cream, #ECE4D8);
+}
+.gr-avatar--head { width: 34px; height: 34px; font-size: 17px; }
+.gr-row { gap: 12px; }
+.gr-sender { display: block; font-size: 11.5px; font-weight: 700; color: var(--red, #722F37); margin-bottom: 2px; }
+
+/* Форма створення групи */
+.gr-form { padding: 16px; display: flex; flex-direction: column; gap: 8px; overflow-y: auto; }
+.gr-label { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.4px; color: var(--ink-soft, #5F5448); margin-top: 6px; }
+.gr-hint { font-weight: 500; text-transform: none; color: var(--ink-mute, #9C9080); }
+.gr-input {
+  width: 100%; box-sizing: border-box; padding: 11px 13px; border-radius: 12px;
+  border: 1px solid var(--hairline, rgba(60,50,30,0.14)); background: #fff;
+  font-size: 15px; color: var(--ink, #2A2520); font-family: inherit; resize: none;
+}
+.gr-emoji-row { display: flex; flex-wrap: wrap; gap: 6px; }
+.gr-emoji { width: 44px; height: 44px; border: 0; border-radius: 12px; background: rgba(0,0,0,0.05); font-size: 22px; cursor: pointer; }
+.gr-emoji.active { background: var(--red, #722F37); }
+.gr-submit { margin-top: 14px; padding: 13px 0; border: 0; border-radius: 14px; background: var(--red, #722F37); color: #fff; font-size: 15px; font-weight: 700; cursor: pointer; }
+.gr-submit:disabled { opacity: 0.6; }
