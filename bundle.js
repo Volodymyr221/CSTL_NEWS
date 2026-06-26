@@ -8815,6 +8815,24 @@ END:VEVENT`
       }
     });
   }
+  function initChatsHub() {
+    const page = document.getElementById("page-chats");
+    if (!page)
+      return;
+    page.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-chats]");
+      if (!btn)
+        return;
+      const k = btn.dataset.chats;
+      if (k === "messages")
+        openThreadsList();
+      else if (k === "discussions") {
+        window.switchTab("board");
+        setBoardActiveType("chat");
+      } else if (k === "groups")
+        showToast("\u041F\u0440\u0438\u0432\u0430\u0442\u043D\u0456 \u0433\u0440\u0443\u043F\u0438 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442 \u2014 \u0441\u043A\u043E\u0440\u043E \u{1F465}", 2800);
+    });
+  }
   function init() {
     bootApp();
     initAuth();
@@ -8833,6 +8851,7 @@ END:VEVENT`
         window.switchTab("community");
     });
     initBoard();
+    initChatsHub();
     initAdminShortcut();
     setTimeout(() => {
       const splash = document.getElementById("splash");

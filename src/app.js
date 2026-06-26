@@ -5,10 +5,11 @@ import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
-import { initBoard } from './tabs/board.js';
+import { initBoard, setBoardActiveType } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
-import { initMessages } from './core/messages-ui.js';
+import { initMessages, openThreadsList } from './core/messages-ui.js';
+import { showToast } from './core/utils.js';
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -169,6 +170,21 @@ function initAdminShortcut() {
   });
 }
 
+// Хаб «Чати» (Етап 2a — лаунчер): 3 входи переюзовують наявні екрани.
+// Повідомлення → overlay-список; Обговорення → Дошка в режимі чату; Групи → скоро (Етап 2b).
+function initChatsHub() {
+  const page = document.getElementById('page-chats');
+  if (!page) return;
+  page.addEventListener('click', (e) => {
+    const btn = e.target.closest('[data-chats]');
+    if (!btn) return;
+    const k = btn.dataset.chats;
+    if (k === 'messages')        openThreadsList();
+    else if (k === 'discussions') { window.switchTab('board'); setBoardActiveType('chat'); }
+    else if (k === 'groups')      showToast('Приватні групи спільнот — скоро 👥', 2800);
+  });
+}
+
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
@@ -189,6 +205,7 @@ function init() {
     if (document.visibilityState === 'visible') window.switchTab('community');
   });
   initBoard();
+  initChatsHub();
   initAdminShortcut();
 
   // Splash screen — прибираємо після завантаження
