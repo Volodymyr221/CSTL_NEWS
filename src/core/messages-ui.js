@@ -1011,6 +1011,13 @@ export function openThreadsList() {
   });
 }
 
+// Лінійні іконки груп (монохром, стиль чату — не Apple-емодзі)
+const GR_SVG = {
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.5a3.5 3.5 0 0 1 0 6.8"/></svg>',
+};
+
 // ── 4. Приватні групові чати (Етап 2) ──────────────────────────────────────
 // Список «Групи» (з вкладки Чати) → груповий чат. Створення + вступ за посиланням.
 // v1 чату: текст + realtime + імена відправників. Фото/відповіді/свайп — далі.
@@ -1019,11 +1026,11 @@ export function openGroupsList() {
     const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <div class="pm-head-titles"><div class="pm-head-name">👥 Групи</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name">Групи</div></div>
       </header>
       <div class="gr-actions">
-        <button class="gr-act" type="button" data-gr-new>＋ Створити групу</button>
-        <button class="gr-act gr-act--ghost" type="button" data-gr-join>🔗 Вступ за посиланням</button>
+        <button class="gr-act" type="button" data-gr-new><span class="gr-act-ic">＋</span> Створити групу</button>
+        <button class="gr-act gr-act--ghost" type="button" data-gr-join><span class="gr-act-ic">${GR_SVG.link}</span> Вступ за посиланням</button>
       </div>
       <div class="pm-list" id="gr-list"><div class="pm-loading">Завантаження…</div></div>
     `, 'pm-screen--groups');
@@ -1031,11 +1038,11 @@ export function openGroupsList() {
     const listEl = api.screen.querySelector('#gr-list');
     let groups = [];
     const groupRow = (g) => {
-      const cover = g.avatar_emoji || '👥';
+      const cover = g.avatar_emoji ? escapeHtml(g.avatar_emoji) : GR_SVG.users;
       const last = g.last_message_text ? escapeHtml(g.last_message_text) : 'Немає повідомлень';
       return `
         <button class="pm-thread gr-row" type="button" data-group="${g.id}">
-          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ''}">${escapeHtml(cover)}</span>
+          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ''}">${cover}</span>
           <div class="pm-thread-body">
             <div class="pm-thread-top">
               <span class="pm-thread-name">${escapeHtml(g.name)}</span>
@@ -1142,7 +1149,7 @@ export function openGroupManage(group) {
     const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <div class="pm-head-titles"><div class="pm-head-name">⚙️ ${escapeHtml(group.name)}</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name">Керування · ${escapeHtml(group.name)}</div></div>
       </header>
       <div class="gr-mng" id="gr-mng"><div class="pm-loading">Завантаження…</div></div>
     `, 'pm-screen--groups');
@@ -1176,8 +1183,8 @@ export function openGroupManage(group) {
         ${isAdmin ? `
           <div class="gr-mng-sec">
             <div class="gr-mng-h">Запросити</div>
-            <button class="gr-act" type="button" data-inv="0">🔗 Посилання — миттєвий вступ</button>
-            <button class="gr-act gr-act--ghost" type="button" data-inv="1">🔗 Посилання — зі схваленням</button>
+            <button class="gr-act" type="button" data-inv="0"><span class="gr-act-ic">${GR_SVG.link}</span> Посилання — миттєвий вступ</button>
+            <button class="gr-act gr-act--ghost" type="button" data-inv="1"><span class="gr-act-ic">${GR_SVG.link}</span> Посилання — зі схваленням</button>
           </div>` : ''}
         ${isAdmin && pending.length ? `
           <div class="gr-mng-sec">
@@ -1228,9 +1235,9 @@ export function openGroupChat(group) {
     const api = buildScreen(`
       <header class="pm-head pm-head--chat">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ''}">${escapeHtml(group.avatar_emoji || '👥')}</span>
+        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ''}">${group.avatar_emoji ? escapeHtml(group.avatar_emoji) : GR_SVG.users}</span>
         <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
-        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="Керування групою">⚙️</button>
+        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="Керування групою">${GR_SVG.gear}</button>
       </header>
       <div class="pm-stream" id="gr-stream"><div class="pm-loading">Завантаження…</div></div>
       <form class="pm-form" id="gr-form">

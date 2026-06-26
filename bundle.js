@@ -2802,27 +2802,32 @@
       });
     });
   }
+  var GR_SVG = {
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.5a3.5 3.5 0 0 1 0 6.8"/></svg>'
+  };
   function openGroupsList() {
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0433\u0440\u0443\u043F\u0438", async () => {
       const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <div class="pm-head-titles"><div class="pm-head-name">\u{1F465} \u0413\u0440\u0443\u043F\u0438</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name">\u0413\u0440\u0443\u043F\u0438</div></div>
       </header>
       <div class="gr-actions">
-        <button class="gr-act" type="button" data-gr-new>\uFF0B \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u0443</button>
-        <button class="gr-act gr-act--ghost" type="button" data-gr-join>\u{1F517} \u0412\u0441\u0442\u0443\u043F \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C</button>
+        <button class="gr-act" type="button" data-gr-new><span class="gr-act-ic">\uFF0B</span> \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u0443</button>
+        <button class="gr-act gr-act--ghost" type="button" data-gr-join><span class="gr-act-ic">${GR_SVG.link}</span> \u0412\u0441\u0442\u0443\u043F \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C</button>
       </div>
       <div class="pm-list" id="gr-list"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
     `, "pm-screen--groups");
       const listEl = api.screen.querySelector("#gr-list");
       let groups = [];
       const groupRow = (g) => {
-        const cover = g.avatar_emoji || "\u{1F465}";
+        const cover = g.avatar_emoji ? escapeHtml(g.avatar_emoji) : GR_SVG.users;
         const last = g.last_message_text ? escapeHtml(g.last_message_text) : "\u041D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
         return `
         <button class="pm-thread gr-row" type="button" data-group="${g.id}">
-          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ""}">${escapeHtml(cover)}</span>
+          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ""}">${cover}</span>
           <div class="pm-thread-body">
             <div class="pm-thread-top">
               <span class="pm-thread-name">${escapeHtml(g.name)}</span>
@@ -2947,7 +2952,7 @@
       const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <div class="pm-head-titles"><div class="pm-head-name">\u2699\uFE0F ${escapeHtml(group.name)}</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name">\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \xB7 ${escapeHtml(group.name)}</div></div>
       </header>
       <div class="gr-mng" id="gr-mng"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
     `, "pm-screen--groups");
@@ -2990,8 +2995,8 @@
         ${isAdmin ? `
           <div class="gr-mng-sec">
             <div class="gr-mng-h">\u0417\u0430\u043F\u0440\u043E\u0441\u0438\u0442\u0438</div>
-            <button class="gr-act" type="button" data-inv="0">\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F</button>
-            <button class="gr-act gr-act--ghost" type="button" data-inv="1">\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C</button>
+            <button class="gr-act" type="button" data-inv="0"><span class="gr-act-ic">${GR_SVG.link}</span> \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F</button>
+            <button class="gr-act gr-act--ghost" type="button" data-inv="1"><span class="gr-act-ic">${GR_SVG.link}</span> \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C</button>
           </div>` : ""}
         ${isAdmin && pending.length ? `
           <div class="gr-mng-sec">
@@ -3064,9 +3069,9 @@
       const api = buildScreen(`
       <header class="pm-head pm-head--chat">
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ""}">${escapeHtml(group.avatar_emoji || "\u{1F465}")}</span>
+        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ""}">${group.avatar_emoji ? escapeHtml(group.avatar_emoji) : GR_SVG.users}</span>
         <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
-        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0433\u0440\u0443\u043F\u043E\u044E">\u2699\uFE0F</button>
+        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0433\u0440\u0443\u043F\u043E\u044E">${GR_SVG.gear}</button>
       </header>
       <div class="pm-stream" id="gr-stream"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
       <form class="pm-form" id="gr-form">

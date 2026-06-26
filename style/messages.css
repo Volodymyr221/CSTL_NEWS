@@ -652,7 +652,16 @@
 .gr-act {
   flex: 1; padding: 11px 0; border: 0; border-radius: 12px;
   background: var(--red, #722F37); color: #fff; font-size: 14px; font-weight: 700; cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
 }
+.gr-act-ic { display: inline-flex; align-items: center; }
+.gr-act-ic svg { width: 18px; height: 18px; display: block; }
+/* SVG-іконки в хабі Чати (замість Apple-емодзі) */
+.chats-entry-ic { color: var(--red, #722F37); }
+.chats-entry-ic svg { width: 26px; height: 26px; display: block; }
+.gr-manage-btn svg { width: 20px; height: 20px; display: block; margin: auto; }
+.gr-avatar svg { width: 26px; height: 26px; display: block; color: var(--ink-soft, #5F5448); }
+.gr-avatar--head svg { width: 19px; height: 19px; }
 .gr-act--ghost { background: rgba(0,0,0,0.05); color: var(--ink, #2A2520); }
 .gr-act:active { filter: brightness(0.95); }
 .gr-avatar {
