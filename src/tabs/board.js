@@ -1027,14 +1027,15 @@ function getFilteredPosts() {
 // ── Рендеринг панелі ─────────────────────────────────────────────────────────
 
 function renderHeader() {
-  // Верхні таби: ДОШКА | ОБГОВОРЕННЯ. «Збережені» перенесено у FAB-підменю (персональне).
-  const topTabs = TYPE_TABS.filter(t => t.id !== 'saved');
-  const tabs = topTabs.map(t => `
-      <button class="bd-tab${t.id === activeType ? ' bd-tab--active' : ''}" type="button" data-bd-tab="${t.id}">
-        <span class="bd-tab-emoji">${t.emoji}</span>
-        <span class="bd-tab-label">${escapeHtml(t.label)}</span>
-      </button>
-    `).join('<span class="bd-tab-sep" aria-hidden="true">|</span>');
+  // Перемикач Дошка|Обговорення прибрано (Етап 1 крок 2b): Дошка = чистий маркетплейс.
+  // «Обговорення» відкриваються з вкладки «Чати» (режим activeType='chat') і мають
+  // власну шапку з кнопкою «← назад» (веде у вкладку Чати). «Збережені» — з FAB-підменю.
+  const discHead = activeType === 'chat'
+    ? `<div class="bd-disc-head">
+         <button class="bd-disc-back" type="button" data-bd-back aria-label="Назад до Чатів">←</button>
+         <span class="bd-disc-title">📢 Обговорення</span>
+       </div>`
+    : '';
 
   const showCategories = activeType === 'board';
   const chipHtml = c => `
@@ -1056,8 +1057,7 @@ function renderHeader() {
 
   return `
     <div class="bd-controls">
-      <div class="bd-tabs">${tabs}</div>
-      <div class="bd-tabs-rule" aria-hidden="true"></div>
+      ${discHead}
       <div class="bd-search">
         <span class="bd-search-icon">🔍</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
@@ -1248,14 +1248,8 @@ function renderAll(el) {
     renderAll(el);
   });
 
-  // Таби
-  el.querySelectorAll('[data-bd-tab]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeType = btn.dataset.bdTab;
-      activeCategory = 'all';   // скидаємо категорію при зміні табу
-      renderAll(el);
-    });
-  });
+  // «← Назад» з режиму «Обговорення» → у вкладку «Чати» (Дошка лишається маркетплейсом)
+  el.querySelector('[data-bd-back]')?.addEventListener('click', () => window.switchTab('chats'));
 
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {
@@ -1820,6 +1814,16 @@ export function initBoard() {
   // Зміна статусу власних постів («Мої оголошення»: завершити/повернути/видалити)
   // → одразу перезавантажуємо дошку, щоб зміна була видима без перезапуску застосунку.
   window.addEventListener('cstl-posts-changed', () => renderBoard());
+  // Вхід на вкладку «Дошка» завжди = маркетплейс. Якщо лишився режим «Обговорення»
+  // (відкривався з Чатів і рендериться на цій же сторінці) — скидаємо на 'board'.
+  window.addEventListener('cstl-tab-changed', () => {
+    const main = document.querySelector('.app-main');
+    if (main && main.dataset.tab === 'board' && activeType === 'chat') {
+      activeType = 'board'; activeCategory = 'all';
+      const el = document.getElementById('board-content');
+      if (el) renderAll(el);
+    }
+  });
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
     if (!isLoggedIn()) {

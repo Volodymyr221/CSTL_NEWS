@@ -2127,6 +2127,26 @@
   flex-direction: column;
   gap: 8px;
 }
+/* Шапка режиму «Обговорення» (відкривається з вкладки Чати) */
+.bd-disc-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.bd-disc-back {
+  flex-shrink: 0;
+  width: 34px; height: 34px;
+  border: 0; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.05);
+  color: var(--ink);
+  font-size: 20px; line-height: 1;
+  cursor: pointer;
+}
+.bd-disc-back:active { background: rgba(0, 0, 0, 0.1); }
+.bd-disc-title {
+  font-size: 18px; font-weight: 800;
+  color: var(--ink);
+}
 .bd-controls::after {
   content: '';
   position: absolute;
