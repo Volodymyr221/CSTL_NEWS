@@ -103,13 +103,19 @@
 6. **Інвайт-посилання груп (Етап 2):** GitHub Pages статичний → прямий перехід дає 404. Обов'язково hash-routing (`#/join/<token>`) або `404.html`-редирект.
 
 ### Етап 2 — приватні групові чати (бекенд + UI)
-- [ ] БД Supabase: `chat_groups` (назва, тип, приватність, власник, аватар),
-      `chat_group_members` (group_id, uid, роль admin/member, статус), `chat_group_messages`.
-- [ ] **RLS** (Row Level Security): читати/писати може лише учасник групи.
-- [ ] Вступ: інвайт-посилання (+ hash-routing) + схвалення адміна. Створення груп — з модерацією.
-- [ ] Груповий чат — переюзати наявний UI чату (бульбашки, свайп-відповідь, меню, push).
+- [x] **Е2-1 БД Supabase** (застосовано через MCP): `chat_groups`, `chat_group_members`
+      (role admin/member, status member/pending/invited), `chat_group_messages` (дзеркало
+      `messages` → переюз UI), `chat_group_invites` (token+expires).
+- [x] **RLS** на всіх 4 таблицях: читати/писати лише учасник (`is_group_member` SECURITY
+      DEFINER); членство/запрошення — лише через RPC.
+- [x] **RPC**: `create_group`, `create_group_invite` (admin), `get_group_by_invite`,
+      `join_group_by_token` (вступ одразу), `leave_group`; тригер `cg_touch_last_message`.
+- [ ] **Е2-2 UI**: список груп у вкладці Чати (підрозділ «Групи») + груповий чат на наявному
+      UI чату + екран створення групи + кнопка «Запросити» (Share-посилання).
+- [ ] **Е2-3 hash-routing** для інвайт-посилань (`#/join/<token>`) + прев'ю+вступ.
 - [ ] Push учасникам (розширити `send-chat-push`).
-- [ ] Модерація + дайджест-бот + онбординг порожнього стану.
+- [ ] Модерація + дайджест-бот + онбординг порожнього стану + (відкладено) «pending+схвалення»
+      для заявок БЕЗ інвайта (статус `pending` уже є в схемі, RPC схвалення — потім).
 
 ---
 
