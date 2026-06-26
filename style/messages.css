@@ -613,3 +613,36 @@
   animation: pm-fade-in 0.18s ease;
 }
 .pm-lightbox img { max-width: 96%; max-height: 92%; border-radius: 8px; }
+
+/* ── Вкладка «Чати» — хаб-лаунчер (Етап 2a) ──────────────────────── */
+.chats-hub {
+  padding: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 12px) 14px 90px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.chats-hub-title {
+  font-size: 24px; font-weight: 800; color: var(--ink, #2A2520);
+  margin: 6px 2px 8px;
+}
+.chats-entry {
+  display: flex; align-items: center; gap: 14px;
+  width: 100%; text-align: left; cursor: pointer;
+  padding: 16px; border: 0; border-radius: 18px;
+  background: var(--card-cream, #FAF8EF);
+  box-shadow: 0 1px 2px rgba(70,45,20,0.05), 0 8px 24px rgba(70,45,20,0.06);
+}
+.chats-entry:active { filter: brightness(0.97); }
+.chats-entry-ic {
+  flex-shrink: 0; width: 48px; height: 48px; border-radius: 14px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 24px; background: rgba(114, 47, 55, 0.08);
+}
+.chats-entry-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.chats-entry-name { font-size: 16px; font-weight: 700; color: var(--ink, #2A2520); }
+.chats-entry-sub  { font-size: 13px; color: var(--ink-mute, #9C9080); }
+.chats-entry-arrow { flex-shrink: 0; font-size: 22px; color: var(--ink-mute, #9C9080); }
+.chats-entry--soon { opacity: 0.9; }
+.chats-soon-tag {
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase;
+  background: var(--ink-mute, #9C9080); color: #fff;
+  padding: 2px 7px; border-radius: 8px; margin-left: 6px; vertical-align: middle;
+}
