@@ -360,6 +360,14 @@ export async function rejectMember(groupId, uid) {
   return data || { ok: false, error: 'no_data' };
 }
 
+// Передати власника групи іншому учаснику (потім старий власник може вийти)
+export async function transferGroupOwner(groupId, uid) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('transfer_group_owner', { p_gid: groupId, p_uid: uid });
+  if (error) { console.warn('[supabase] transferGroupOwner:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
 // Учасники групи (RLS: бачить лише учасник). Імена резолвимо окремо через fetchProfileNames.
 export async function fetchGroupMembers(groupId) {
   if (!supa) return [];

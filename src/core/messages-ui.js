@@ -26,7 +26,7 @@ import {
   bumpPost, closePost, deleteMyPost, restorePost,
   fetchMyGroups, createGroup, createGroupInvite, getGroupByInvite, joinGroupByToken,
   leaveGroup, fetchGroupMembers, fetchProfileNames, fetchGroupMessages, sendGroupMessage,
-  subscribeGroupMessages, approveMember, rejectMember,
+  subscribeGroupMessages, approveMember, rejectMember, transferGroupOwner,
 } from './supabase.js';
 import { openBoardModal } from '../tabs/community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
@@ -1011,6 +1011,13 @@ export function openThreadsList() {
   });
 }
 
+// Лінійні іконки груп (монохром, стиль чату — не Apple-емодзі)
+const GR_SVG = {
+  link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+  gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+  users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.5a3.5 3.5 0 0 1 0 6.8"/></svg>',
+};
+
 // ── 4. Приватні групові чати (Етап 2) ──────────────────────────────────────
 // Список «Групи» (з вкладки Чати) → груповий чат. Створення + вступ за посиланням.
 // v1 чату: текст + realtime + імена відправників. Фото/відповіді/свайп — далі.
@@ -1019,11 +1026,11 @@ export function openGroupsList() {
     const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <div class="pm-head-titles"><div class="pm-head-name">👥 Групи</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name">Групи</div></div>
       </header>
       <div class="gr-actions">
-        <button class="gr-act" type="button" data-gr-new>＋ Створити групу</button>
-        <button class="gr-act gr-act--ghost" type="button" data-gr-join>🔗 Вступ за посиланням</button>
+        <button class="gr-act" type="button" data-gr-new><span class="gr-act-ic">＋</span> Створити групу</button>
+        <button class="gr-act gr-act--ghost" type="button" data-gr-join><span class="gr-act-ic">${GR_SVG.link}</span> Вступ за посиланням</button>
       </div>
       <div class="pm-list" id="gr-list"><div class="pm-loading">Завантаження…</div></div>
     `, 'pm-screen--groups');
@@ -1031,11 +1038,11 @@ export function openGroupsList() {
     const listEl = api.screen.querySelector('#gr-list');
     let groups = [];
     const groupRow = (g) => {
-      const cover = g.avatar_emoji || '👥';
+      const cover = g.avatar_emoji ? escapeHtml(g.avatar_emoji) : GR_SVG.users;
       const last = g.last_message_text ? escapeHtml(g.last_message_text) : 'Немає повідомлень';
       return `
         <button class="pm-thread gr-row" type="button" data-group="${g.id}">
-          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ''}">${escapeHtml(cover)}</span>
+          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ''}">${cover}</span>
           <div class="pm-thread-body">
             <div class="pm-thread-top">
               <span class="pm-thread-name">${escapeHtml(g.name)}</span>
@@ -1119,20 +1126,41 @@ function promptJoinByLink(onDone) {
   openInviteJoin(m[0], onDone);
 }
 
+const PENDING_INVITE_KEY = 'cstl-pending-invite';
+
 // Вступ за токеном: прев'ю → підтвердження → приєднання (миттєво або заявка).
-// Викликається і з вставленого посилання, і з hash-routing (#/join/<token>).
+// Якщо НЕ залогінений — зберігаємо токен у localStorage і відкриваємо вхід; після
+// авторизації (redirect Google повертає БЕЗ hash) consumePendingInvite() доведе вступ.
 export function openInviteJoin(token, onDone) {
-  requireAuth('приєднатись до групи', async () => {
+  if (!isLoggedIn()) {
+    try { localStorage.setItem(PENDING_INVITE_KEY, token); } catch (_) {}
+    requireAuth('приєднатись до групи', () => {});   // відкриває вхід
+    return;
+  }
+  (async () => {
     const g = await getGroupByInvite(token);
     if (!g.ok) { showToast('Запрошення недійсне або застаріле', 3500); return; }
-    if (g.my_status === 'member') { showToast('Ви вже в цій групі', 2500); openGroupsList(); return; }
+    const openGrp = async (gid) => {
+      const grp = (await fetchMyGroups()).find(x => x.id === gid);
+      if (grp) openGroupChat(grp); else openGroupsList();
+    };
+    if (g.my_status === 'member') { showToast('Ви вже в цій групі', 2500); openGrp(g.id); return; }
     const note = g.requires_approval ? '\n\nПісля вступу адмін має вас схвалити.' : '';
     if (!confirm(`Приєднатись до «${g.name}»? (${g.members} учасн.)${note}`)) return;
     const r = await joinGroupByToken(token);
-    if (r.ok && r.status === 'member') { showToast('✅ Ви приєднались', 2500); if (onDone) onDone(); else openGroupsList(); }
+    if (r.ok && r.status === 'member') { showToast('✅ Ви приєднались', 2500); openGrp(r.group_id || g.id); if (onDone) onDone(); }
     else if (r.ok && r.status === 'pending') { showToast('⏳ Заявку надіслано — чекайте схвалення адміна', 4200); }
     else showToast('Не вдалося приєднатись: ' + (r.error || ''), 3500, 'error');
-  });
+  })();
+}
+
+// Доводить відкладений вступ (після авторизації або при старті, коли вже залогінений).
+export function consumePendingInvite() {
+  let t = null;
+  try { t = localStorage.getItem(PENDING_INVITE_KEY); } catch (_) {}
+  if (!t || !isLoggedIn()) return;
+  try { localStorage.removeItem(PENDING_INVITE_KEY); } catch (_) {}
+  openInviteJoin(t);
 }
 
 // Керування групою: запрошення (2 типи), заявки на схвалення, учасники, вихід
@@ -1142,7 +1170,7 @@ export function openGroupManage(group) {
     const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <div class="pm-head-titles"><div class="pm-head-name">⚙️ ${escapeHtml(group.name)}</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name">Керування · ${escapeHtml(group.name)}</div></div>
       </header>
       <div class="gr-mng" id="gr-mng"><div class="pm-loading">Завантаження…</div></div>
     `, 'pm-screen--groups');
@@ -1176,8 +1204,8 @@ export function openGroupManage(group) {
         ${isAdmin ? `
           <div class="gr-mng-sec">
             <div class="gr-mng-h">Запросити</div>
-            <button class="gr-act" type="button" data-inv="0">🔗 Посилання — миттєвий вступ</button>
-            <button class="gr-act gr-act--ghost" type="button" data-inv="1">🔗 Посилання — зі схваленням</button>
+            <button class="gr-act" type="button" data-inv="0"><span class="gr-act-ic">${GR_SVG.link}</span> Посилання — миттєвий вступ</button>
+            <button class="gr-act gr-act--ghost" type="button" data-inv="1"><span class="gr-act-ic">${GR_SVG.link}</span> Посилання — зі схваленням</button>
           </div>` : ''}
         ${isAdmin && pending.length ? `
           <div class="gr-mng-sec">
@@ -1193,13 +1221,19 @@ export function openGroupManage(group) {
           </div>` : ''}
         <div class="gr-mng-sec">
           <div class="gr-mng-h">Учасники (${active.length})</div>
-          ${active.map(m => `
-            <div class="gr-mbr">
-              <span class="gr-mbr-name">${nm(m.uid)}${m.role === 'admin' ? ' <span class="gr-mbr-tag">адмін</span>' : ''}</span>
-              ${isAdmin && m.uid !== group.owner_uid && m.uid !== me ? `<span class="gr-mbr-acts"><button class="gr-mbr-no" type="button" data-reject="${m.uid}">видалити</button></span>` : ''}
-            </div>`).join('')}
+          ${active.map(m => {
+            const acts = [];
+            if (isOwner && m.uid !== me) acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">зробити власником</button>`);
+            if (isAdmin && m.uid !== group.owner_uid && m.uid !== me) acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">видалити</button>`);
+            const tag = m.uid === group.owner_uid ? ' <span class="gr-mbr-tag">власник</span>' : (m.role === 'admin' ? ' <span class="gr-mbr-tag">адмін</span>' : '');
+            return `<div class="gr-mbr"><span class="gr-mbr-name">${nm(m.uid)}${tag}</span>${acts.length ? `<span class="gr-mbr-acts">${acts.join('')}</span>` : ''}</div>`;
+          }).join('')}
         </div>
-        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>Вийти з групи</button>` : `<p class="gr-hint" style="padding:0 4px">Ви власник групи.</p>`}
+        ${!isOwner
+          ? `<button class="gr-leave" type="button" data-leave>Вийти з групи</button>`
+          : (active.length > 1
+              ? `<p class="gr-hint" style="padding:0 4px">Ви власник. Щоб вийти — спершу передайте власника комусь із учасників (кнопка «зробити власником»).</p>`
+              : `<p class="gr-hint" style="padding:0 4px">Ви власник єдиний у групі.</p>`)}
       `;
     };
     await render();
@@ -1211,6 +1245,14 @@ export function openGroupManage(group) {
       if (ap) { const r = await approveMember(group.id, ap.dataset.approve); if (r.ok) { showToast('✅ Схвалено', 2000); render(); } else showToast('Помилка: ' + (r.error || ''), 3000); return; }
       const rj = e.target.closest('[data-reject]');
       if (rj) { if (!confirm('Прибрати цього користувача?')) return; const r = await rejectMember(group.id, rj.dataset.reject); if (r.ok) { showToast('Готово', 2000); render(); } else showToast('Помилка: ' + (r.error || ''), 3000); return; }
+      const mo = e.target.closest('[data-makeowner]');
+      if (mo) {
+        if (!confirm('Передати власника цьому учаснику? Ви станете звичайним адміном.')) return;
+        const r = await transferGroupOwner(group.id, mo.dataset.makeowner);
+        if (r.ok) { group.owner_uid = mo.dataset.makeowner; showToast('✅ Власника передано', 2500); render(); }
+        else showToast('Помилка: ' + (r.error || ''), 3000);
+        return;
+      }
       if (e.target.closest('[data-leave]')) {
         if (!confirm('Вийти з групи?')) return;
         const r = await leaveGroup(group.id);
@@ -1228,9 +1270,9 @@ export function openGroupChat(group) {
     const api = buildScreen(`
       <header class="pm-head pm-head--chat">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ''}">${escapeHtml(group.avatar_emoji || '👥')}</span>
+        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ''}">${group.avatar_emoji ? escapeHtml(group.avatar_emoji) : GR_SVG.users}</span>
         <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
-        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="Керування групою">⚙️</button>
+        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="Керування групою">${GR_SVG.gear}</button>
       </header>
       <div class="pm-stream" id="gr-stream"><div class="pm-loading">Завантаження…</div></div>
       <form class="pm-form" id="gr-form">
@@ -1671,9 +1713,11 @@ async function registerChatPushDevice() {
 let _threadsUnsub = null;
 export function initMessages() {
   refreshUnreadBadge();
+  consumePendingInvite();   // якщо токен запрошення лишився з минулого відкриття
   onAuthChange(() => {
     refreshUnreadBadge();
     registerChatPushDevice();
+    consumePendingInvite();   // після входу (redirect Google) — доводимо вступ за посиланням
     // realtime по всіх моїх тредах → оновлення бейджа в реальному часі
     if (_threadsUnsub) { try { _threadsUnsub(); } catch (_) {} _threadsUnsub = null; }
     if (isLoggedIn()) _threadsUnsub = subscribeMyThreads((p) => {
