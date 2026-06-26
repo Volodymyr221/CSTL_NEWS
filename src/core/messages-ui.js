@@ -26,7 +26,7 @@ import {
   bumpPost, closePost, deleteMyPost, restorePost,
   fetchMyGroups, createGroup, createGroupInvite, getGroupByInvite, joinGroupByToken,
   leaveGroup, fetchGroupMembers, fetchProfileNames, fetchGroupMessages, sendGroupMessage,
-  subscribeGroupMessages, approveMember, rejectMember,
+  subscribeGroupMessages, approveMember, rejectMember, transferGroupOwner,
 } from './supabase.js';
 import { openBoardModal } from '../tabs/community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from './utils.js';
@@ -1126,20 +1126,41 @@ function promptJoinByLink(onDone) {
   openInviteJoin(m[0], onDone);
 }
 
+const PENDING_INVITE_KEY = 'cstl-pending-invite';
+
 // Вступ за токеном: прев'ю → підтвердження → приєднання (миттєво або заявка).
-// Викликається і з вставленого посилання, і з hash-routing (#/join/<token>).
+// Якщо НЕ залогінений — зберігаємо токен у localStorage і відкриваємо вхід; після
+// авторизації (redirect Google повертає БЕЗ hash) consumePendingInvite() доведе вступ.
 export function openInviteJoin(token, onDone) {
-  requireAuth('приєднатись до групи', async () => {
+  if (!isLoggedIn()) {
+    try { localStorage.setItem(PENDING_INVITE_KEY, token); } catch (_) {}
+    requireAuth('приєднатись до групи', () => {});   // відкриває вхід
+    return;
+  }
+  (async () => {
     const g = await getGroupByInvite(token);
     if (!g.ok) { showToast('Запрошення недійсне або застаріле', 3500); return; }
-    if (g.my_status === 'member') { showToast('Ви вже в цій групі', 2500); openGroupsList(); return; }
+    const openGrp = async (gid) => {
+      const grp = (await fetchMyGroups()).find(x => x.id === gid);
+      if (grp) openGroupChat(grp); else openGroupsList();
+    };
+    if (g.my_status === 'member') { showToast('Ви вже в цій групі', 2500); openGrp(g.id); return; }
     const note = g.requires_approval ? '\n\nПісля вступу адмін має вас схвалити.' : '';
     if (!confirm(`Приєднатись до «${g.name}»? (${g.members} учасн.)${note}`)) return;
     const r = await joinGroupByToken(token);
-    if (r.ok && r.status === 'member') { showToast('✅ Ви приєднались', 2500); if (onDone) onDone(); else openGroupsList(); }
+    if (r.ok && r.status === 'member') { showToast('✅ Ви приєднались', 2500); openGrp(r.group_id || g.id); if (onDone) onDone(); }
     else if (r.ok && r.status === 'pending') { showToast('⏳ Заявку надіслано — чекайте схвалення адміна', 4200); }
     else showToast('Не вдалося приєднатись: ' + (r.error || ''), 3500, 'error');
-  });
+  })();
+}
+
+// Доводить відкладений вступ (після авторизації або при старті, коли вже залогінений).
+export function consumePendingInvite() {
+  let t = null;
+  try { t = localStorage.getItem(PENDING_INVITE_KEY); } catch (_) {}
+  if (!t || !isLoggedIn()) return;
+  try { localStorage.removeItem(PENDING_INVITE_KEY); } catch (_) {}
+  openInviteJoin(t);
 }
 
 // Керування групою: запрошення (2 типи), заявки на схвалення, учасники, вихід
@@ -1200,13 +1221,19 @@ export function openGroupManage(group) {
           </div>` : ''}
         <div class="gr-mng-sec">
           <div class="gr-mng-h">Учасники (${active.length})</div>
-          ${active.map(m => `
-            <div class="gr-mbr">
-              <span class="gr-mbr-name">${nm(m.uid)}${m.role === 'admin' ? ' <span class="gr-mbr-tag">адмін</span>' : ''}</span>
-              ${isAdmin && m.uid !== group.owner_uid && m.uid !== me ? `<span class="gr-mbr-acts"><button class="gr-mbr-no" type="button" data-reject="${m.uid}">видалити</button></span>` : ''}
-            </div>`).join('')}
+          ${active.map(m => {
+            const acts = [];
+            if (isOwner && m.uid !== me) acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">зробити власником</button>`);
+            if (isAdmin && m.uid !== group.owner_uid && m.uid !== me) acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">видалити</button>`);
+            const tag = m.uid === group.owner_uid ? ' <span class="gr-mbr-tag">власник</span>' : (m.role === 'admin' ? ' <span class="gr-mbr-tag">адмін</span>' : '');
+            return `<div class="gr-mbr"><span class="gr-mbr-name">${nm(m.uid)}${tag}</span>${acts.length ? `<span class="gr-mbr-acts">${acts.join('')}</span>` : ''}</div>`;
+          }).join('')}
         </div>
-        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>Вийти з групи</button>` : `<p class="gr-hint" style="padding:0 4px">Ви власник групи.</p>`}
+        ${!isOwner
+          ? `<button class="gr-leave" type="button" data-leave>Вийти з групи</button>`
+          : (active.length > 1
+              ? `<p class="gr-hint" style="padding:0 4px">Ви власник. Щоб вийти — спершу передайте власника комусь із учасників (кнопка «зробити власником»).</p>`
+              : `<p class="gr-hint" style="padding:0 4px">Ви власник єдиний у групі.</p>`)}
       `;
     };
     await render();
@@ -1218,6 +1245,14 @@ export function openGroupManage(group) {
       if (ap) { const r = await approveMember(group.id, ap.dataset.approve); if (r.ok) { showToast('✅ Схвалено', 2000); render(); } else showToast('Помилка: ' + (r.error || ''), 3000); return; }
       const rj = e.target.closest('[data-reject]');
       if (rj) { if (!confirm('Прибрати цього користувача?')) return; const r = await rejectMember(group.id, rj.dataset.reject); if (r.ok) { showToast('Готово', 2000); render(); } else showToast('Помилка: ' + (r.error || ''), 3000); return; }
+      const mo = e.target.closest('[data-makeowner]');
+      if (mo) {
+        if (!confirm('Передати власника цьому учаснику? Ви станете звичайним адміном.')) return;
+        const r = await transferGroupOwner(group.id, mo.dataset.makeowner);
+        if (r.ok) { group.owner_uid = mo.dataset.makeowner; showToast('✅ Власника передано', 2500); render(); }
+        else showToast('Помилка: ' + (r.error || ''), 3000);
+        return;
+      }
       if (e.target.closest('[data-leave]')) {
         if (!confirm('Вийти з групи?')) return;
         const r = await leaveGroup(group.id);
@@ -1678,9 +1713,11 @@ async function registerChatPushDevice() {
 let _threadsUnsub = null;
 export function initMessages() {
   refreshUnreadBadge();
+  consumePendingInvite();   // якщо токен запрошення лишився з минулого відкриття
   onAuthChange(() => {
     refreshUnreadBadge();
     registerChatPushDevice();
+    consumePendingInvite();   // після входу (redirect Google) — доводимо вступ за посиланням
     // realtime по всіх моїх тредах → оновлення бейджа в реальному часі
     if (_threadsUnsub) { try { _threadsUnsub(); } catch (_) {} _threadsUnsub = null; }
     if (isLoggedIn()) _threadsUnsub = subscribeMyThreads((p) => {

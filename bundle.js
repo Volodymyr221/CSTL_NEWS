@@ -702,6 +702,16 @@
     }
     return data || { ok: false, error: "no_data" };
   }
+  async function transferGroupOwner(groupId, uid) {
+    if (!supa)
+      return { ok: false, error: "no_supa" };
+    const { data, error } = await supa.rpc("transfer_group_owner", { p_gid: groupId, p_uid: uid });
+    if (error) {
+      console.warn("[supabase] transferGroupOwner:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return data || { ok: false, error: "no_data" };
+  }
   async function fetchGroupMembers(groupId) {
     if (!supa)
       return [];
@@ -2918,16 +2928,33 @@
     }
     openInviteJoin(m[0], onDone);
   }
+  var PENDING_INVITE_KEY = "cstl-pending-invite";
   function openInviteJoin(token, onDone) {
-    requireAuth("\u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \u0433\u0440\u0443\u043F\u0438", async () => {
+    if (!isLoggedIn()) {
+      try {
+        localStorage.setItem(PENDING_INVITE_KEY, token);
+      } catch (_) {
+      }
+      requireAuth("\u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \u0433\u0440\u0443\u043F\u0438", () => {
+      });
+      return;
+    }
+    (async () => {
       const g = await getGroupByInvite(token);
       if (!g.ok) {
         showToast("\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u0456\u0439\u0441\u043D\u0435 \u0430\u0431\u043E \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0435", 3500);
         return;
       }
+      const openGrp = async (gid) => {
+        const grp = (await fetchMyGroups()).find((x) => x.id === gid);
+        if (grp)
+          openGroupChat(grp);
+        else
+          openGroupsList();
+      };
       if (g.my_status === "member") {
         showToast("\u0412\u0438 \u0432\u0436\u0435 \u0432 \u0446\u0456\u0439 \u0433\u0440\u0443\u043F\u0456", 2500);
-        openGroupsList();
+        openGrp(g.id);
         return;
       }
       const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
@@ -2936,15 +2963,28 @@
       const r = await joinGroupByToken(token);
       if (r.ok && r.status === "member") {
         showToast("\u2705 \u0412\u0438 \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u043B\u0438\u0441\u044C", 2500);
+        openGrp(r.group_id || g.id);
         if (onDone)
           onDone();
-        else
-          openGroupsList();
       } else if (r.ok && r.status === "pending") {
         showToast("\u23F3 \u0417\u0430\u044F\u0432\u043A\u0443 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F \u0430\u0434\u043C\u0456\u043D\u0430", 4200);
       } else
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C: " + (r.error || ""), 3500, "error");
-    });
+    })();
+  }
+  function consumePendingInvite() {
+    let t = null;
+    try {
+      t = localStorage.getItem(PENDING_INVITE_KEY);
+    } catch (_) {
+    }
+    if (!t || !isLoggedIn())
+      return;
+    try {
+      localStorage.removeItem(PENDING_INVITE_KEY);
+    } catch (_) {
+    }
+    openInviteJoin(t);
   }
   function openGroupManage(group) {
     requireAuth("\u043A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u044E", async () => {
@@ -3012,13 +3052,17 @@
           </div>` : ""}
         <div class="gr-mng-sec">
           <div class="gr-mng-h">\u0423\u0447\u0430\u0441\u043D\u0438\u043A\u0438 (${active.length})</div>
-          ${active.map((m) => `
-            <div class="gr-mbr">
-              <span class="gr-mbr-name">${nm(m.uid)}${m.role === "admin" ? ' <span class="gr-mbr-tag">\u0430\u0434\u043C\u0456\u043D</span>' : ""}</span>
-              ${isAdmin && m.uid !== group.owner_uid && m.uid !== me ? `<span class="gr-mbr-acts"><button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button></span>` : ""}
-            </div>`).join("")}
+          ${active.map((m) => {
+          const acts = [];
+          if (isOwner && m.uid !== me)
+            acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C</button>`);
+          if (isAdmin && m.uid !== group.owner_uid && m.uid !== me)
+            acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`);
+          const tag = m.uid === group.owner_uid ? ' <span class="gr-mbr-tag">\u0432\u043B\u0430\u0441\u043D\u0438\u043A</span>' : m.role === "admin" ? ' <span class="gr-mbr-tag">\u0430\u0434\u043C\u0456\u043D</span>' : "";
+          return `<div class="gr-mbr"><span class="gr-mbr-name">${nm(m.uid)}${tag}</span>${acts.length ? `<span class="gr-mbr-acts">${acts.join("")}</span>` : ""}</div>`;
+        }).join("")}
         </div>
-        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438</button>` : `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0433\u0440\u0443\u043F\u0438.</p>`}
+        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438</button>` : active.length > 1 ? `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A. \u0429\u043E\u0431 \u0432\u0438\u0439\u0442\u0438 \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u0435\u0440\u0435\u0434\u0430\u0439\u0442\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043A\u043E\u043C\u0443\u0441\u044C \u0456\u0437 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432 (\u043A\u043D\u043E\u043F\u043A\u0430 \xAB\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C\xBB).</p>` : `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0454\u0434\u0438\u043D\u0438\u0439 \u0443 \u0433\u0440\u0443\u043F\u0456.</p>`}
       `;
       };
       await render();
@@ -3045,6 +3089,19 @@
           const r = await rejectMember(group.id, rj.dataset.reject);
           if (r.ok) {
             showToast("\u0413\u043E\u0442\u043E\u0432\u043E", 2e3);
+            render();
+          } else
+            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          return;
+        }
+        const mo = e.target.closest("[data-makeowner]");
+        if (mo) {
+          if (!confirm("\u041F\u0435\u0440\u0435\u0434\u0430\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0446\u044C\u043E\u043C\u0443 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0443? \u0412\u0438 \u0441\u0442\u0430\u043D\u0435\u0442\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0430\u0434\u043C\u0456\u043D\u043E\u043C."))
+            return;
+          const r = await transferGroupOwner(group.id, mo.dataset.makeowner);
+          if (r.ok) {
+            group.owner_uid = mo.dataset.makeowner;
+            showToast("\u2705 \u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E", 2500);
             render();
           } else
             showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
@@ -3539,9 +3596,11 @@
   var _threadsUnsub = null;
   function initMessages() {
     refreshUnreadBadge();
+    consumePendingInvite();
     onAuthChange(() => {
       refreshUnreadBadge();
       registerChatPushDevice();
+      consumePendingInvite();
       if (_threadsUnsub) {
         try {
           _threadsUnsub();
