@@ -16,3 +16,4 @@ Thumbs.db
 *.tmp
 .env
 .env.local
+graphify-out/
