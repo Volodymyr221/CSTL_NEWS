@@ -297,6 +297,139 @@ export async function restorePost(postId) {
   return data || { ok: false, error: 'no_data' };
 }
 
+// ── Приватні групові чати (Етап 2) ───────────────────────────────────────
+// Мої групи (RLS повертає лише ті, де я учасник/власник). Нові зверху за останнім повідомленням.
+export async function fetchMyGroups() {
+  if (!supa) return [];
+  const { data, error } = await supa.from('chat_groups').select('*')
+    .order('last_message_at', { ascending: false, nullsFirst: false })
+    .order('created_at', { ascending: false });
+  if (error) { console.warn('[supabase] fetchMyGroups:', error.message); return []; }
+  return data || [];
+}
+
+export async function createGroup({ name, description = null, type = 'locality', emoji = null, gradient = null }) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('create_group', {
+    p_name: name, p_description: description, p_type: type, p_emoji: emoji, p_gradient: gradient,
+  });
+  if (error) { console.warn('[supabase] createGroup:', error.message); return { ok: false, error: error.message }; }
+  return { ok: true, id: data };
+}
+
+// requiresApproval: true → посилання зі схваленням адміна; false → миттєвий вступ
+export async function createGroupInvite(groupId, requiresApproval = false) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('create_group_invite', { p_gid: groupId, p_requires_approval: requiresApproval });
+  if (error) { console.warn('[supabase] createGroupInvite:', error.message); return { ok: false, error: error.message }; }
+  return { ok: true, token: data };
+}
+
+export async function getGroupByInvite(token) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('get_group_by_invite', { p_token: token });
+  if (error) { console.warn('[supabase] getGroupByInvite:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+export async function joinGroupByToken(token) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('join_group_by_token', { p_token: token });
+  if (error) { console.warn('[supabase] joinGroupByToken:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+export async function leaveGroup(groupId) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('leave_group', { p_gid: groupId });
+  if (error) { console.warn('[supabase] leaveGroup:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+export async function approveMember(groupId, uid) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('approve_member', { p_gid: groupId, p_uid: uid });
+  if (error) { console.warn('[supabase] approveMember:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+export async function rejectMember(groupId, uid) {
+  if (!supa) return { ok: false, error: 'no_supa' };
+  const { data, error } = await supa.rpc('reject_member', { p_gid: groupId, p_uid: uid });
+  if (error) { console.warn('[supabase] rejectMember:', error.message); return { ok: false, error: error.message }; }
+  return data || { ok: false, error: 'no_data' };
+}
+
+// Учасники групи (RLS: бачить лише учасник). Імена резолвимо окремо через fetchProfileNames.
+export async function fetchGroupMembers(groupId) {
+  if (!supa) return [];
+  const { data, error } = await supa.from('chat_group_members').select('*').eq('group_id', groupId);
+  if (error) { console.warn('[supabase] fetchGroupMembers:', error.message); return []; }
+  return data || [];
+}
+
+// Імена за списком uid → Map<uid, name> (для підпису відправників у груповому чаті)
+export async function fetchProfileNames(uids) {
+  if (!supa || !uids || !uids.length) return new Map();
+  const { data, error } = await supa.from('profiles').select('uid, name').in('uid', uids);
+  if (error) { console.warn('[supabase] fetchProfileNames:', error.message); return new Map(); }
+  return new Map((data || []).map(p => [p.uid, p.name]));
+}
+
+export async function fetchGroupMessages(groupId, sinceTs = null) {
+  if (!supa) return [];
+  let q = supa.from('chat_group_messages').select('*').eq('group_id', groupId);
+  if (sinceTs) q = q.gt('created_at', sinceTs);
+  const { data, error } = await q.order('created_at', { ascending: true });
+  if (error) { console.warn('[supabase] fetchGroupMessages:', error.message); return []; }
+  return data || [];
+}
+
+export async function sendGroupMessage({ groupId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  const row = { group_id: groupId, sender_uid: senderUid, text: text || null };
+  if (photoUrl) row.photo_url = photoUrl;
+  if (replyToId) row.reply_to_id = replyToId;
+  if (clientTag) row.client_tag = clientTag;
+  try {
+    const { data, error } = await withTimeout(supa.from('chat_group_messages').insert(row).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: data };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+}
+
+export async function editGroupMessage(messageId, text) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  try {
+    const { data, error } = await withTimeout(supa.from('chat_group_messages')
+      .update({ text, edited_at: new Date().toISOString() })
+      .eq('id', messageId).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: data };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+}
+
+export async function deleteGroupMessage(messageId) {
+  if (!supa) return { ok: false, error: 'no-supa' };
+  try {
+    const { data, error } = await withTimeout(supa.from('chat_group_messages')
+      .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+      .eq('id', messageId).select().single());
+    if (error) return { ok: false, error: error.message };
+    return { ok: true, message: data };
+  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+}
+
+export function subscribeGroupMessages(groupId, onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel(`group-${groupId}`)
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'chat_group_messages', filter: `group_id=eq.${groupId}` },
+        payload => onChange({ type: payload.eventType, row: payload.new || payload.old }))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // Мої треди (вхідні + вихідні) з даними оголошення. Нові зверху.
 export async function fetchMyThreads(uid) {
   if (!supa || !uid) return [];

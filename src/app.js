@@ -8,8 +8,7 @@ import { initPower } from './tabs/power.js';
 import { initBoard, setBoardActiveType } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
-import { initMessages, openThreadsList } from './core/messages-ui.js';
-import { showToast } from './core/utils.js';
+import { initMessages, openThreadsList, openGroupsList, openInviteJoin } from './core/messages-ui.js';
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -181,8 +180,17 @@ function initChatsHub() {
     const k = btn.dataset.chats;
     if (k === 'messages')        openThreadsList();
     else if (k === 'discussions') { window.switchTab('board'); setBoardActiveType('chat'); }
-    else if (k === 'groups')      showToast('Приватні групи спільнот — скоро 👥', 2800);
+    else if (k === 'groups')      openGroupsList();
   });
+}
+
+// Hash-routing для інвайт-посилань груп: #/join/<token>. На GitHub Pages (статичний
+// хостинг) звичайний шлях дав би 404 — тому вступ через hash. Після обробки чистимо hash.
+function handleInviteHash() {
+  const m = (location.hash || '').match(/^#\/join\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  openInviteJoin(m[1]);
 }
 
 // Ініціалізація при завантаженні сторінки
@@ -207,6 +215,8 @@ function init() {
   initBoard();
   initChatsHub();
   initAdminShortcut();
+  handleInviteHash();                              // вступ за посиланням при відкритті
+  window.addEventListener('hashchange', handleInviteHash);
 
   // Splash screen — прибираємо після завантаження
   setTimeout(() => {
