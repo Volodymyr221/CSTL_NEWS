@@ -40,45 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 284,
-    "title": "Офіційно: ЄС продовжив економічні санкції проти РФ на рік",
-    "description": "25 червня Рада Євросоюзу продовжила дію обмежувальних заходів ЄС у зв'язку з триваючими діями Російської Федерації, спрямованими на дестабілізацію ситуації в Україні, ще на 12 місяців – до 31 липня 2027 року.",
-    "date": "2026-06-25",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/a/858271/aab55c27a82be9639132709d1081a63e.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/25/8041148/",
-    "auto": true
-  },
-  {
-    "id": 283,
-    "title": "Зеленський: Білорусь розбудовує своє прикордоння під \"СВО\". Це треба зупинити",
-    "description": "Президент Володимир Зеленськмй заявив, що, за даними розвідки, Білорусь готується до потенційного розширення агресії проти України.",
-    "date": "2026-06-25",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/f/858068/ffde82264d18f4eee9ba07a8e5cbf55f.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/25/8041106/",
-    "auto": true
-  },
-  {
-    "id": 282,
-    "title": "Генштаб: ЗСУ вночі уразили автомобільний і залізничні мости на окупованій території та РЛС у Криму",
-    "description": "Українські сили знищили мости, склади і нафтобазу, що забезпечували війська РФ на окупованих територіях.",
-    "date": "2026-06-25",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/1/857826/c1676e842ceb77e9228a32e38d849a44.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/25/8041050/",
-    "auto": true
-  },
-  {
     "id": 280,
     "title": "У Туска вважають, що Навроцький хотів зірвати конференцію з відновлення – ЗМІ",
     "description": "У польському уряді вважають, що президент Кароль Навроцький навмисно позбавив президента України Володимира Зеленського ордена Білого Орла саме перед Конференцією з відновлення України у Гданську.",
@@ -115,6 +76,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/c/5/831821/c5ef36ea2369ff0b6ea813ccd3d90f75.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/05/19/8035483/",
+    "auto": true
+  },
+  {
+    "id": 286,
+    "title": "Рютте перед самітом НАТО звернувся до РФ: \"Знаємо, що ви робите, і ми в цьому кращі\"",
+    "description": "На липневому саміті НАТО країни Альянсу анонсують нові оборонні контракти та угоди.",
+    "date": "2026-07-07",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/d/858343/fdccbfc43536605a0d002f89707dc993.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/26/8041163/",
     "auto": true
   },
   {
