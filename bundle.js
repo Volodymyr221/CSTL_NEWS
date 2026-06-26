@@ -3081,11 +3081,6 @@
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  var TYPE_TABS2 = [
-    { id: "board", label: "\u0414\u041E\u0428\u041A\u0410", emoji: "\u{1F6D2}" },
-    { id: "saved", label: "\u0417\u0411\u0415\u0420\u0415\u0416\u0415\u041D\u0406", emoji: BOOKMARK_OUTLINE_SVG },
-    { id: "chat", label: "\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", emoji: "\u{1F4AC}" }
-  ];
   var BOARD_CATEGORIES2 = [
     { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726", match: null },
     { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
@@ -3996,13 +3991,10 @@ ${post.text}
     });
   }
   function renderHeader() {
-    const topTabs = TYPE_TABS2.filter((t) => t.id !== "saved");
-    const tabs = topTabs.map((t) => `
-      <button class="bd-tab${t.id === activeType ? " bd-tab--active" : ""}" type="button" data-bd-tab="${t.id}">
-        <span class="bd-tab-emoji">${t.emoji}</span>
-        <span class="bd-tab-label">${escapeHtml(t.label)}</span>
-      </button>
-    `).join('<span class="bd-tab-sep" aria-hidden="true">|</span>');
+    const discHead = activeType === "chat" ? `<div class="bd-disc-head">
+         <button class="bd-disc-back" type="button" data-bd-back aria-label="\u041D\u0430\u0437\u0430\u0434 \u0434\u043E \u0427\u0430\u0442\u0456\u0432">\u2190</button>
+         <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+       </div>` : "";
     const showCategories = activeType === "board";
     const chipHtml = (c) => `
     <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
@@ -4020,8 +4012,7 @@ ${post.text}
   ` : "";
     return `
     <div class="bd-controls">
-      <div class="bd-tabs">${tabs}</div>
-      <div class="bd-tabs-rule" aria-hidden="true"></div>
+      ${discHead}
       <div class="bd-search">
         <span class="bd-search-icon">\u{1F50D}</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
@@ -4194,13 +4185,7 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    el.querySelectorAll("[data-bd-tab]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeType = btn.dataset.bdTab;
-        activeCategory = "all";
-        renderAll(el);
-      });
-    });
+    el.querySelector("[data-bd-back]")?.addEventListener("click", () => window.switchTab("chats"));
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
@@ -4749,6 +4734,16 @@ ${post.text}
         openAdModalStandalone(p);
     });
     window.addEventListener("cstl-posts-changed", () => renderBoard());
+    window.addEventListener("cstl-tab-changed", () => {
+      const main = document.querySelector(".app-main");
+      if (main && main.dataset.tab === "board" && activeType === "chat") {
+        activeType = "board";
+        activeCategory = "all";
+        const el = document.getElementById("board-content");
+        if (el)
+          renderAll(el);
+      }
+    });
     onAuthChange(() => {
       if (!isLoggedIn()) {
         savedIds = /* @__PURE__ */ new Set();
