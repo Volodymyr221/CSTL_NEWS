@@ -2158,10 +2158,38 @@
   pointer-events: none;
 }
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
-   Висота без категорій: tabs 38 + gap 8 + search 40 + padding 18 ≈ 110
-   Висота з категоріями (тип board): +8 gap +30 chip ≈ 148 */
+   Перемикач «Дошка|Обговорення» (~38px) прибрано (Крок 2b) → меню стало нижчим,
+   тож відступи зменшено, щоб картки не висіли низько з широкою смугою корка.
+   Без категорій (chat-overlay має шапку «← Обговорення», saved — лише пошук): ≈ 100.
+   З категоріями (тип board): пошук 40 + чіпи 32 + відступи 18 ≈ 98 + зазор ≈ 110. */
 .bd-body { padding-top: 124px; }
-.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 162px; }
+.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 110px; }
+
+/* Overlay «Обговорення» (варіант Б): повноекранний шар поверх вкладки «Чати».
+   Стартує під шапкою (вона лишається видимою), низом накриває таб-бар (z 1000) —
+   тож таб-бар не блимає на «Дошці». Чат-модалка обговорень (z 1100) і popup реакцій
+   (z 1300) — body-рівня, тож лягають ПОВЕРХ цього overlay. #disc-content усередині
+   поводиться як .board-content на сторінці Дошки (ті самі fixed-контролі та bd-body). */
+.disc-screen {
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0; right: 0; bottom: 0;
+  z-index: 1010;
+  overflow-y: auto;
+  overflow-x: hidden;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  background: var(--bg-page);
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.26s ease, transform 0.26s ease;
+}
+.disc-screen.visible { opacity: 1; transform: none; }
+/* Коли поверх обговорень відкрита чат-модалка/popup — заморожуємо скрол overlay
+   (всі дії в модалці), як це робиться для .app-main. */
+body.modal-open .disc-screen,
+body.cm-zoom-open .disc-screen { overflow: hidden; }
 
 /* Пошук */
 .bd-search {

@@ -1108,7 +1108,7 @@ function renderBody() {
 }
 
 export async function renderBoard() {
-  const el = document.getElementById('board-content');
+  const el = getBoardRoot();
   if (!el) return;
 
   // 1. Supabase: пости + анонси + реакції + коментарі + закладки паралельно
@@ -1154,8 +1154,11 @@ export async function renderBoard() {
   renderAll(el);
 }
 
-// Перерендер тільки контейнера дошки (без перезавантаження даних)
-function renderAll(el) {
+// Перерендер тільки контейнера дошки (без перезавантаження даних).
+// Корінь (#board-content / #disc-content) визначається getBoardRoot() за станом overlay.
+function renderAll() {
+  const el = getBoardRoot();
+  if (!el) return;
   const savedCatScroll = el.querySelector('.bd-categories')?.scrollLeft ?? 0;
   const hasCork = activeType === 'board';
   el.innerHTML = `
@@ -1227,7 +1230,12 @@ function renderAll(el) {
       // Усі три дії — лише для залогінених (Етап 2). Гостю requireAuth()
       // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).
       if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
-      if (act === 'saved') { requireAuth('переглянути збережені', () => { activeType = 'saved'; activeCategory = 'all'; renderAll(el); }); return; }
+      if (act === 'saved') { requireAuth('переглянути збережені', () => {
+        // «Збережені» — маркетплейс-таб на сторінці Дошки. З overlay Обговорень
+        // виходимо у Дошку; інакше перемикаємось у тип на місці.
+        if (discOpen) { closeDiscussions(); window.switchTab('board'); }
+        setBoardActiveType('saved');
+      }); return; }
       if (act === 'mine') openMyAds();        // requireAuth усередині openMyAds
       if (act === 'msgs') openThreadsList();  // requireAuth усередині openThreadsList
     });
@@ -1248,8 +1256,8 @@ function renderAll(el) {
     renderAll(el);
   });
 
-  // «← Назад» з режиму «Обговорення» → у вкладку «Чати» (Дошка лишається маркетплейсом)
-  el.querySelector('[data-bd-back]')?.addEventListener('click', () => window.switchTab('chats'));
+  // «← Назад» з overlay «Обговорення» → закрити overlay (повертаємось на вкладку «Чати»)
+  el.querySelector('[data-bd-back]')?.addEventListener('click', () => closeDiscussions());
 
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {
@@ -1278,9 +1286,11 @@ function renderAll(el) {
   refreshUnreadBadge();
 }
 
-function renderBodyOnly(el) {
+function renderBodyOnly() {
+  const el = getBoardRoot();
+  if (!el) return;
   const body = document.getElementById('bd-body');
-  if (!body) return renderAll(el);
+  if (!body) return renderAll();
   body.innerHTML = renderBody();
   // Перепідключаємо handlers для cm-board-call всередині нового HTML
   body.querySelectorAll('.cm-board-call').forEach(btn => {
@@ -1706,8 +1716,7 @@ function attachBoardDelegation() {
       // → collapse) і перерендерити стрічку (картка зникає)
       if (activeType === 'saved' && !nowSaved) {
         document.querySelector('#board-backdrop.visible')?.click();
-        const el = document.getElementById('board-content');
-        if (el) renderBodyOnly(el);
+        renderBodyOnly();
       }
       return;
     }
@@ -1791,15 +1800,73 @@ function attachRealtime() {
   subscribeComments(onCommentRealtimeEvent);
 }
 
+// ── «Обговорення» як повноекранний overlay поверх вкладки «Чати» (варіант Б) ──
+// Той самий рушій board.js (картки/реакції/коментарі/realtime) рендериться у
+// #disc-content замість сторінки Дошки. Таб-бар лишається на «Чати».
+let discOpen = false;
+
+// Корінь рендера Дошки: відкритий overlay → #disc-content, інакше → #board-content.
+// Щоб не було ДУБЛІВ id (bd-body/board-fab/...) — контент тримаємо лише в одному
+// корені за раз (openDiscussions чистить board-content, closeDiscussions відновлює).
+function getBoardRoot() {
+  return discOpen
+    ? document.getElementById('disc-content')
+    : document.getElementById('board-content');
+}
+
+export function openDiscussions() {
+  const screen = document.getElementById('page-discussions');
+  if (!screen) return;
+  // Таб-бар має показувати «Чати»: якщо зайшли не з Чатів (напр. CTA з Громади) —
+  // перемикаємось на Чати ДО відкриття overlay. discOpen ще false → слухач
+  // cstl-tab-changed не закриє overlay.
+  if (typeof window.switchTab === 'function') window.switchTab('chats');
+  // Прибрати контент сторінки Дошки, поки overlay активний (інакше дублі id).
+  const boardEl = document.getElementById('board-content');
+  if (boardEl) boardEl.innerHTML = '';
+  discOpen = true;
+  activeType = 'chat';
+  activeCategory = 'all';
+  searchQuery = '';
+  screen.hidden = false;
+  void screen.offsetWidth;            // reflow → transition hidden→visible спрацює
+  screen.classList.add('visible');
+  document.body.classList.add('disc-open');
+  // Дані вже в пам'яті (initBoard→renderBoard при старті) — рендеримо миттєво.
+  if (allPosts && allPosts.length) renderAll();
+  else renderBoard();
+}
+
+export function closeDiscussions() {
+  const screen = document.getElementById('page-discussions');
+  discOpen = false;
+  activeType = 'board';
+  activeCategory = 'all';
+  searchQuery = '';
+  document.body.classList.remove('disc-open');
+  if (screen) {
+    screen.classList.remove('visible');
+    setTimeout(() => {
+      if (discOpen) return;            // встигли відкрити знову — не чіпаємо
+      screen.hidden = true;
+      const c = document.getElementById('disc-content');
+      if (c) c.innerHTML = '';
+    }, 280);
+  }
+  // Відновити сторінку Дошки (її контент чистили при відкритті overlay), щоб
+  // вкладка «Дошка» була готова. discOpen=false → renderAll() пише у #board-content.
+  renderAll();
+}
+
 // Зовнішнє переключення активного типу (для CTA з міні-блока Дошки на Громаді).
 // type: 'all' | 'board' | 'chat' | 'greeting' | 'saved'
 export function setBoardActiveType(type) {
   if (!type) return;
+  if (type === 'chat') { openDiscussions(); return; }   // Обговорення → overlay
   activeType = type;
   activeCategory = 'all';
   searchQuery = '';
-  const el = document.getElementById('board-content');
-  if (el) renderAll(el);
+  renderAll();
 }
 
 export function initBoard() {
@@ -1814,15 +1881,11 @@ export function initBoard() {
   // Зміна статусу власних постів («Мої оголошення»: завершити/повернути/видалити)
   // → одразу перезавантажуємо дошку, щоб зміна була видима без перезапуску застосунку.
   window.addEventListener('cstl-posts-changed', () => renderBoard());
-  // Вхід на вкладку «Дошка» завжди = маркетплейс. Якщо лишився режим «Обговорення»
-  // (відкривався з Чатів і рендериться на цій же сторінці) — скидаємо на 'board'.
+  // Перемикання будь-якої вкладки → закрити overlay «Обговорення» (він належить
+  // вкладці «Чати»). openDiscussions сам викликає switchTab('chats') ДО discOpen=true,
+  // тож відкриття overlay себе не закриває.
   window.addEventListener('cstl-tab-changed', () => {
-    const main = document.querySelector('.app-main');
-    if (main && main.dataset.tab === 'board' && activeType === 'chat') {
-      activeType = 'board'; activeCategory = 'all';
-      const el = document.getElementById('board-content');
-      if (el) renderAll(el);
-    }
+    if (discOpen) closeDiscussions();
   });
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {

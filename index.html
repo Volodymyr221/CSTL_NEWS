@@ -142,6 +142,13 @@
 
   </main>
 
+  <!-- Обговорення — повноекранний overlay поверх вкладки «Чати» (варіант Б).
+       Рендериться board.js у #disc-content (той самий рушій карток/реакцій/realtime),
+       але таб-бар лишається на «Чати», а не на «Дошці». -->
+  <div id="page-discussions" class="disc-screen" hidden>
+    <div id="disc-content" class="board-content"></div>
+  </div>
+
   <!-- Модальне вікно статті (відкривається при натисканні на новину) -->
   <div id="article-modal" class="article-modal" onclick="if(event.target===this)closeArticleModal()">
     <div class="article-modal-inner">

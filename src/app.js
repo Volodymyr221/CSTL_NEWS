@@ -5,7 +5,7 @@ import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
-import { initBoard, setBoardActiveType } from './tabs/board.js';
+import { initBoard, openDiscussions } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
 import { initMessages, openThreadsList, openGroupsList, openInviteJoin } from './core/messages-ui.js';
@@ -179,7 +179,7 @@ function initChatsHub() {
     if (!btn) return;
     const k = btn.dataset.chats;
     if (k === 'messages')        openThreadsList();
-    else if (k === 'discussions') { window.switchTab('board'); setBoardActiveType('chat'); }
+    else if (k === 'discussions') openDiscussions();   // повноекранний overlay поверх «Чатів»
     else if (k === 'groups')      openGroupsList();
   });
 }
