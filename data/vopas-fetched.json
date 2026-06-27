@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-06-27T02:11:39.099423+03:00",
+  "fetched_at": "2026-06-27T04:28:43.935295+03:00",
   "date": "27.06.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -132,8 +132,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -177,8 +177,8 @@
       "carrier": "Мілінчук В.О. 45605 с.Боратин",
       "bus": "БАЗ 079-23",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
