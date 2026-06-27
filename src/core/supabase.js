@@ -402,6 +402,9 @@ export async function sendGroupMessage({ groupId, senderUid, text, photoUrl = nu
   try {
     const { data, error } = await withTimeout(supa.from('chat_group_messages').insert(row).select().single());
     if (error) return { ok: false, error: error.message };
+    // Push усім учасникам групи ≠ відправник (не блокуємо UI — помилка пуша не валить відправку)
+    supa.functions.invoke('send-group-push', { body: { message_id: data.id } })
+      .catch(e => console.warn('[supabase] send-group-push:', e?.message));
     return { ok: true, message: data };
   } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
 }

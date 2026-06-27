@@ -749,6 +749,7 @@
       const { data, error } = await withTimeout(supa.from("chat_group_messages").insert(row).select().single());
       if (error)
         return { ok: false, error: error.message };
+      supa.functions.invoke("send-group-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-group-push:", e?.message));
       return { ok: true, message: data };
     } catch (e) {
       return { ok: false, error: e && e.message || "timeout" };
