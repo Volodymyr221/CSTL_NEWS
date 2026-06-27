@@ -25,7 +25,7 @@ import {
   editMessage, deleteMessage, uploadPhotoToStorage,
   bumpPost, closePost, deleteMyPost, restorePost,
   fetchMyGroups, createGroup, createGroupInvite, getGroupByInvite, joinGroupByToken,
-  leaveGroup, fetchGroupMembers, fetchProfileNames, fetchGroupMessages, sendGroupMessage,
+  leaveGroup, fetchGroupMembers, fetchGroupMessages, sendGroupMessage,
   subscribeGroupMessages, approveMember, rejectMember, transferGroupOwner,
 } from './supabase.js';
 import { openBoardModal } from '../tabs/community-modal.js';
@@ -1191,13 +1191,12 @@ export function openGroupManage(group) {
     const render = async () => {
       const members = await fetchGroupMembers(group.id);
       if (api._closed) return;
-      const names = await fetchProfileNames(members.map(m => m.uid));
       const myRole = (members.find(m => m.uid === me) || {}).role;
       const isAdmin = myRole === 'admin';
       const isOwner = group.owner_uid === me;
       const pending = members.filter(m => m.status === 'pending');
       const active  = members.filter(m => m.status === 'member');
-      const nm = (uid) => escapeHtml(names.get(uid) || 'Житель');
+      const nm = (uid) => { const mm = members.find(x => x.uid === uid); return escapeHtml((mm && mm.name) || 'Житель'); };
 
       wrap.innerHTML = `
         ${group.description ? `<p class="gr-mng-desc">${escapeHtml(group.description)}</p>` : ''}
@@ -1302,9 +1301,10 @@ export function openGroupChat(group) {
     };
     const addMsg = (m) => { if (m && !ids.has(m.id)) { ids.add(m.id); messages.push(m); } };
 
-    // Імена учасників + повідомлення
+    // Імена учасників (денормалізовані в chat_group_members — не з profiles, бо RLS).
+    const firstName = (n) => (String(n || '').trim().split(/\s+/)[0]) || 'Житель';
     const members = await fetchGroupMembers(group.id);
-    names = await fetchProfileNames(members.map(x => x.uid));
+    names = new Map(members.map(m => [m.uid, firstName(m.name)]));
     (await fetchGroupMessages(group.id)).forEach(addMsg);
     if (api._closed) return;
     render();

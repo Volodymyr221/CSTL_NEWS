@@ -722,16 +722,6 @@
     }
     return data || [];
   }
-  async function fetchProfileNames(uids) {
-    if (!supa || !uids || !uids.length)
-      return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("profiles").select("uid, name").in("uid", uids);
-    if (error) {
-      console.warn("[supabase] fetchProfileNames:", error.message);
-      return /* @__PURE__ */ new Map();
-    }
-    return new Map((data || []).map((p) => [p.uid, p.name]));
-  }
   async function fetchGroupMessages(groupId, sinceTs = null) {
     if (!supa)
       return [];
@@ -3023,13 +3013,15 @@
         const members = await fetchGroupMembers(group.id);
         if (api._closed)
           return;
-        const names = await fetchProfileNames(members.map((m) => m.uid));
         const myRole = (members.find((m) => m.uid === me) || {}).role;
         const isAdmin = myRole === "admin";
         const isOwner = group.owner_uid === me;
         const pending = members.filter((m) => m.status === "pending");
         const active = members.filter((m) => m.status === "member");
-        const nm = (uid) => escapeHtml(names.get(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C");
+        const nm = (uid) => {
+          const mm = members.find((x) => x.uid === uid);
+          return escapeHtml(mm && mm.name || "\u0416\u0438\u0442\u0435\u043B\u044C");
+        };
         wrap.innerHTML = `
         ${group.description ? `<p class="gr-mng-desc">${escapeHtml(group.description)}</p>` : ""}
         ${isAdmin ? `
@@ -3158,8 +3150,9 @@
           messages.push(m);
         }
       };
+      const firstName = (n) => String(n || "").trim().split(/\s+/)[0] || "\u0416\u0438\u0442\u0435\u043B\u044C";
       const members = await fetchGroupMembers(group.id);
-      names = await fetchProfileNames(members.map((x) => x.uid));
+      names = new Map(members.map((m) => [m.uid, firstName(m.name)]));
       (await fetchGroupMessages(group.id)).forEach(addMsg);
       if (api._closed)
         return;
