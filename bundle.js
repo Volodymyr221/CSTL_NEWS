@@ -4584,7 +4584,7 @@ ${post.text}
     <div class="bd-stream">${sorted.map(renderCard).join("")}</div>`;
   }
   async function renderBoard() {
-    const el = document.getElementById("board-content");
+    const el = getBoardRoot();
     if (!el)
       return;
     if (isSupabaseReady()) {
@@ -4623,7 +4623,10 @@ ${post.text}
     }
     renderAll(el);
   }
-  function renderAll(el) {
+  function renderAll() {
+    const el = getBoardRoot();
+    if (!el)
+      return;
     const savedCatScroll = el.querySelector(".bd-categories")?.scrollLeft ?? 0;
     const hasCork = activeType === "board";
     el.innerHTML = `
@@ -4697,9 +4700,11 @@ ${post.text}
         }
         if (act === "saved") {
           requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
-            activeType = "saved";
-            activeCategory = "all";
-            renderAll(el);
+            if (discOpen) {
+              closeDiscussions();
+              window.switchTab("board");
+            }
+            setBoardActiveType("saved");
           });
           return;
         }
@@ -4722,7 +4727,7 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    el.querySelector("[data-bd-back]")?.addEventListener("click", () => window.switchTab("chats"));
+    el.querySelector("[data-bd-back]")?.addEventListener("click", () => closeDiscussions());
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
@@ -4741,10 +4746,13 @@ ${post.text}
     initBoardNoteExpand(el);
     refreshUnreadBadge();
   }
-  function renderBodyOnly(el) {
+  function renderBodyOnly() {
+    const el = getBoardRoot();
+    if (!el)
+      return;
     const body = document.getElementById("bd-body");
     if (!body)
-      return renderAll(el);
+      return renderAll();
     body.innerHTML = renderBody();
     body.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -5178,9 +5186,7 @@ ${post.text}
         saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
         if (activeType === "saved" && !nowSaved) {
           document.querySelector("#board-backdrop.visible")?.click();
-          const el = document.getElementById("board-content");
-          if (el)
-            renderBodyOnly(el);
+          renderBodyOnly();
         }
         return;
       }
@@ -5251,15 +5257,63 @@ ${post.text}
     subscribeReactions(onReactionRealtimeEvent);
     subscribeComments(onCommentRealtimeEvent);
   }
+  var discOpen = false;
+  function getBoardRoot() {
+    return discOpen ? document.getElementById("disc-content") : document.getElementById("board-content");
+  }
+  function openDiscussions() {
+    const screen = document.getElementById("page-discussions");
+    if (!screen)
+      return;
+    if (typeof window.switchTab === "function")
+      window.switchTab("chats");
+    const boardEl = document.getElementById("board-content");
+    if (boardEl)
+      boardEl.innerHTML = "";
+    discOpen = true;
+    activeType = "chat";
+    activeCategory = "all";
+    searchQuery = "";
+    screen.hidden = false;
+    void screen.offsetWidth;
+    screen.classList.add("visible");
+    document.body.classList.add("disc-open");
+    if (allPosts && allPosts.length)
+      renderAll();
+    else
+      renderBoard();
+  }
+  function closeDiscussions() {
+    const screen = document.getElementById("page-discussions");
+    discOpen = false;
+    activeType = "board";
+    activeCategory = "all";
+    searchQuery = "";
+    document.body.classList.remove("disc-open");
+    if (screen) {
+      screen.classList.remove("visible");
+      setTimeout(() => {
+        if (discOpen)
+          return;
+        screen.hidden = true;
+        const c = document.getElementById("disc-content");
+        if (c)
+          c.innerHTML = "";
+      }, 280);
+    }
+    renderAll();
+  }
   function setBoardActiveType(type) {
     if (!type)
       return;
+    if (type === "chat") {
+      openDiscussions();
+      return;
+    }
     activeType = type;
     activeCategory = "all";
     searchQuery = "";
-    const el = document.getElementById("board-content");
-    if (el)
-      renderAll(el);
+    renderAll();
   }
   function initBoard() {
     attachBoardDelegation();
@@ -5272,14 +5326,8 @@ ${post.text}
     });
     window.addEventListener("cstl-posts-changed", () => renderBoard());
     window.addEventListener("cstl-tab-changed", () => {
-      const main = document.querySelector(".app-main");
-      if (main && main.dataset.tab === "board" && activeType === "chat") {
-        activeType = "board";
-        activeCategory = "all";
-        const el = document.getElementById("board-content");
-        if (el)
-          renderAll(el);
-      }
+      if (discOpen)
+        closeDiscussions();
     });
     onAuthChange(() => {
       if (!isLoggedIn()) {
@@ -7632,6 +7680,10 @@ ${post.text}
         cta.addEventListener("click", (e) => {
           e.stopPropagation();
           const targetType = cfg.id === "official" ? "all" : cfg.id;
+          if (targetType === "chat") {
+            openDiscussions();
+            return;
+          }
           setBoardActiveType(targetType);
           if (typeof window.switchTab === "function")
             window.switchTab("board");
@@ -9358,10 +9410,9 @@ END:VEVENT`
       const k = btn.dataset.chats;
       if (k === "messages")
         openThreadsList();
-      else if (k === "discussions") {
-        window.switchTab("board");
-        setBoardActiveType("chat");
-      } else if (k === "groups")
+      else if (k === "discussions")
+        openDiscussions();
+      else if (k === "groups")
         openGroupsList();
     });
   }

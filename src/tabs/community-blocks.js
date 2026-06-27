@@ -8,7 +8,7 @@
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
-import { setBoardActiveType } from './board.js';
+import { setBoardActiveType, openDiscussions } from './board.js';
 import {
   nowMinutes,
   getStopMins as scheduleGetStopMins,
@@ -545,6 +545,8 @@ function renderBoardMiniSlide(el) {
       cta.addEventListener('click', e => {
         e.stopPropagation();
         const targetType = cfg.id === 'official' ? 'all' : cfg.id;
+        // «Розмови» (chat) → повноекранний overlay Обговорень поверх «Чатів».
+        if (targetType === 'chat') { openDiscussions(); return; }
         setBoardActiveType(targetType);
         if (typeof window.switchTab === 'function') window.switchTab('board');
       });
