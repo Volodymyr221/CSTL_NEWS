@@ -40,19 +40,6 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 291,
-    "title": "У російському Волгограді \"Фламінго\", імовірно, уразили воєнний завод",
-    "description": "Військовий завод у російському Волгограді, імовірно, зазнав ракетних ударів.",
-    "date": "2026-06-27",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/8/858966/f855e9bed073467edc6bea3caf4c14b5.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/27/8041321/",
-    "auto": true
-  },
-  {
     "id": 108,
     "title": "Санду: Молдова закликала почати переговори з ЄС за всіма кластерами",
     "description": "Президентка Молдови Санду заявила про готовність країни до переговорів з ЄС за всіма кластерами.",
@@ -206,6 +193,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/7/819005/3759ce9c081143435890aef0baf57770.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/04/29/8032277/",
+    "auto": true
+  },
+  {
+    "id": 293,
+    "title": "Медведєв заявив, що \"Єдина Росія\" висуне на вибори сотні учасників війни проти України",
+    "description": "Заступник голови Радбезу РФ та голова партії \"Єдина Росія\" Дмитро Медведєв заявив, що ця партія висуне на майбутні осінні вибори різних рівнів, у тому числі й до Держдуми РФ, кілька сотень учасників війни проти України.",
+    "date": "2026-09-20",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/3/1/859724/31b935cc5fe7b409a6912ceb3fc5aaad.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/28/8041485/",
     "auto": true
   },
   {
