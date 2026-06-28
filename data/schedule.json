@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "28.06.2026",
-  "updatedTime": "09:23",
+  "updatedTime": "12:42",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -10879,7 +10879,7 @@
           "bus": "БАЗ 079-23",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:06",
           "arrival_time": "12:05",
           "duration_min": 119,
@@ -10976,7 +10976,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:10",
           "arrival_time": "11:45",
           "duration_min": 95,
@@ -11110,7 +11110,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "11:30",
           "arrival_time": "13:10",
           "duration_min": 100,
@@ -11152,7 +11152,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:25",
           "arrival_time": "14:10",
           "duration_min": 105,
@@ -11194,7 +11194,7 @@
           "bus": "Баз  А  079.17",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:40",
           "arrival_time": "14:10",
           "duration_min": 90,
@@ -11285,8 +11285,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "АТАМАН А-09216",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "13:05",
           "arrival_time": "14:30",
           "duration_min": 85,
@@ -12260,7 +12260,7 @@
         }
       ],
       "fetchedAt": "28.06.2026",
-      "fetchedTime": "09:23"
+      "fetchedTime": "12:42"
     },
     "2026-06-29": {
       "routes": [
@@ -14008,7 +14008,7 @@
         }
       ],
       "fetchedAt": "28.06.2026",
-      "fetchedTime": "09:23"
+      "fetchedTime": "12:42"
     },
     "2026-06-30": {
       "routes": [
