@@ -40,42 +40,16 @@
     "image": "./images/kino-castle.jpg"
   },
   {
-    "id": 296,
-    "title": "Суд відмовився знімати з Єрмака е-браслет: запобіжний захід залишили без змін",
-    "description": "Вищий антикорупційний суд залишив без змін запобіжний захід ексголові Офісу президента України Андрію Єрмаку, він продовжить носити е-браслет.",
-    "date": "2026-06-29",
+    "id": 300,
+    "title": "За добу на фронті було 227 боєзіткнень, найбільше на Гуляйпільському напрямку",
+    "description": "За добу ЗСУ відбили 227 атак росіян, ворог випустив 3 ракети та 9 618 дронів-камікадзе.",
+    "date": "2026-06-30",
     "time": null,
     "location": null,
     "category": "Суспільство",
-    "image": null,
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/6/5/860932/6520354b06962ce0f249311dec768007.jpeg",
     "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/29/8041602/",
-    "auto": true
-  },
-  {
-    "id": 297,
-    "title": "Пєсков: Лукашенко не передавав Путіну жодного послання від Зеленського",
-    "description": "У Кремлі спростували, що Лукашенко є каналом зв’язку між Києвом і Москвою.",
-    "date": "2026-06-29",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/7/a/860419/7aed119807618c73b59e800ecfda0244.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/29/8041591/",
-    "auto": true
-  },
-  {
-    "id": 298,
-    "title": "Лукашенко від Путіна поїхав до Сі",
-    "description": "Самопроголошений президент Білорусі Олександр Лукашенко після зустрічі з правителем Росії Володимиром Путіним поїхав до лідера Китаю Сі Цзіньпіна.",
-    "date": "2026-06-29",
-    "time": null,
-    "location": null,
-    "category": "Суспільство",
-    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/0/7/860238/07ecabc8e2ad0879cdc7b114ce2fa682.jpeg",
-    "source": "Українська правда",
-    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/29/8041571/",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/06/30/8041714/",
     "auto": true
   },
   {
