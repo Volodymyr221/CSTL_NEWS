@@ -608,7 +608,7 @@ def _parse_date_uk(text: str) -> int | None:
     return None
 
 
-def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     """Парсить HTML-сторінку тега/рубрики (для сайтів без RSS).
 
     Очікує source["url"] = сторінка зі списком статей.
@@ -677,8 +677,9 @@ def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
             continue
         if href in seen_urls:
             continue
-        norm = normalize_title(title)
-        if norm in seen_titles:
+        section = section_of(source["geo"])
+        tokens = title_tokens(title)
+        if is_dup_title(tokens, section, seen_by_section):
             continue
 
         # Excerpt з контейнера (якщо є)
@@ -725,7 +726,7 @@ def parse_html_source(source: dict, seen_urls: set, seen_titles: set) -> list:
             "_type": entry_type,
         })
         seen_urls.add(href)
-        seen_titles.add(norm)
+        remember_title(tokens, section, seen_by_section)
 
     return articles
 
@@ -737,7 +738,7 @@ def gromada_url(path: str) -> str:
     return f"{GROMADA_PROXY}?path={urllib.parse.quote(path)}"
 
 
-def parse_gromada_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     """Парсить сайт Олицької громади через Cloudflare Worker.
 
     Сайт побудований на Joomla — типова платформа для держсайтів gov.ua.
@@ -801,8 +802,9 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_titles: set) -> list
             continue
         if href in seen_urls:
             continue
-        norm = normalize_title(title)
-        if norm in seen_titles:
+        section = section_of("Олика")
+        tokens = title_tokens(title)
+        if is_dup_title(tokens, section, seen_by_section):
             continue
 
         # Дата з контейнера
@@ -854,19 +856,19 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_titles: set) -> list
             "_type": entry_type,
         })
         seen_urls.add(href)
-        seen_titles.add(norm)
+        remember_title(tokens, section, seen_by_section)
 
     return articles
 
 
-def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
+def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     # Сайт Олицької громади через Cloudflare Worker
     if source.get("type") == "gromada":
-        return parse_gromada_source(source, seen_urls, seen_titles)
+        return parse_gromada_source(source, seen_urls, seen_by_section)
 
     # HTML-джерела (тег-сторінки без RSS) — окремий парсер
     if source.get("type") == "html":
-        return parse_html_source(source, seen_urls, seen_titles)
+        return parse_html_source(source, seen_urls, seen_by_section)
 
     try:
         raw, response_headers = fetch_rss(source["url"])
@@ -900,9 +902,6 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
             continue
         if link in seen_urls:
             continue
-        norm = normalize_title(title)
-        if norm in seen_titles:
-            continue  # та сама новина з іншого джерела — пропускаємо
 
         try:
             content = get_full_content(entry)
@@ -929,6 +928,12 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
                 if not is_world_relevant(text):
                     continue
 
+            # Нечітка дедуплікація в межах розділу (Крок 2)
+            section = section_of(geo)
+            tokens = title_tokens(title)
+            if is_dup_title(tokens, section, seen_by_section):
+                continue  # схожа новина вже є в цьому розділі
+
             category = detect_category(text)
             image = extract_image(entry)
             entry_type = classify_entry(title, excerpt + " " + content)
@@ -947,7 +952,7 @@ def parse_source(source: dict, seen_urls: set, seen_titles: set) -> list:
                 "_type": entry_type,
             })
             seen_urls.add(link)
-            seen_titles.add(norm)
+            remember_title(tokens, section, seen_by_section)
         except Exception:
             continue
 
@@ -966,7 +971,13 @@ def main():
             print(f"⚠ Помилка читання articles.json: {e}")
 
     seen_urls   = {a["sourceUrl"] for a in existing_articles if a.get("sourceUrl")}
-    seen_titles = {normalize_title(a["title"]) for a in existing_articles if a.get("title")}
+    # Дедуп заголовків — per-розділ (Крок 2): множини слів заголовків, згруповані
+    # за розділом (Україна та Світ / Волинь / Громада). Seed з наявних статей.
+    seen_by_section: dict = {}
+    for _a in existing_articles:
+        if _a.get("title"):
+            remember_title(title_tokens(_a["title"]),
+                           section_of(_a.get("geo", "")), seen_by_section)
     next_art_id = max(
         (a["id"] for a in existing_articles if isinstance(a.get("id"), int)),
         default=0,
@@ -981,15 +992,14 @@ def main():
             print(f"⚠ Помилка читання events.json: {e}")
 
     events_seen_urls   = {e["sourceUrl"] for e in existing_events if e.get("sourceUrl")}
-    events_seen_titles = {normalize_title(e["title"]) for e in existing_events if e.get("title")}
     next_evt_id = max(
         (e["id"] for e in existing_events if isinstance(e.get("id"), int)),
         default=0,
     ) + 1
 
-    # Об'єднані seen для дедуплікації між усіма джерелами
-    all_seen_urls   = seen_urls | events_seen_urls
-    all_seen_titles = seen_titles | events_seen_titles
+    # URL-дедуп — глобальний (той самий матеріал за посиланням не дублюється між
+    # новинами й подіями). Дедуп заголовків — у межах розділу (seen_by_section).
+    all_seen_urls = seen_urls | events_seen_urls
 
     # Парсинг усіх джерел
     new_articles: list = []
@@ -997,7 +1007,7 @@ def main():
 
     for source in SOURCES:
         try:
-            parsed = parse_source(source, all_seen_urls, all_seen_titles)
+            parsed = parse_source(source, all_seen_urls, seen_by_section)
             n_news = n_events = 0
             for item in parsed:
                 entry_type = item.pop("_type", "news")
@@ -1040,6 +1050,8 @@ def main():
     if new_articles:
         all_articles = new_articles + existing_articles
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
+        # Баланс розділу «Україна та Світ» — 60% Україна / 40% Світ (рішення Роби 01.07)
+        all_articles = balance_ua_world(all_articles)
         all_articles = all_articles[:MAX_ARTICLES]
         DATA_PATH.write_text(
             json.dumps(all_articles, ensure_ascii=False, indent=2),
