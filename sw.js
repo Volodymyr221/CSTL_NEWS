@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260701-1057';
+const CACHE_NAME = 'cstl-20260701-1120';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -22,6 +22,7 @@ const STATIC_ASSETS = [
   './style/messages.css',
   './bundle.js',
   './logo.png',
+  './icons/castle-icon.png',   // лого центральної кнопки ГРОМАДА — precache, щоб не зникало після bump CACHE
   './manifest.json',
   './images/cork2.png',
 ];
@@ -138,7 +139,9 @@ self.addEventListener('fetch', e => {
           caches.open(CACHE_NAME).then(cache => cache.put(e.request, clone));
         }
         return response;
-      }).catch(() => caches.match('./index.html'));
+      }).catch(() => new Response('', { status: 503 }));
+      // ↑ Раніше повертав index.html — для <img> це HTML замість картинки → «биті» фото.
+      //   Тепер порожня відповідь: браузер показує стандартний плейсхолдер, не сторінку.
     })
   );
 });
