@@ -1091,6 +1091,10 @@ def main():
             n_news = n_events = 0
             for item in parsed:
                 entry_type = item.pop("_type", "news")
+                # Події — ЛИШЕ з офіційного сайту громади (ТЗ). З інших джерел
+                # (УП, Волинь, Google News) «події» лишаємо як звичайні новини.
+                if entry_type == "event" and source.get("type") != "gromada":
+                    entry_type = "news"
                 if entry_type == "event":
                     evt = extract_event_data(
                         item["title"],
@@ -1145,14 +1149,19 @@ def main():
     else:
         print("Нових статей немає.")
 
-    # Зберегти events.json
-    if new_events:
-        today_str = datetime.date.today().strftime("%Y-%m-%d")
-        # Прибираємо застарілі автоматичні події (минула дата)
-        active_existing = [
-            e for e in existing_events
-            if not e.get("auto") or e.get("date", "9999") >= today_str
-        ]
+    # Зберегти events.json — події ЛИШЕ з громади (ТЗ) + ручні (Алла)
+    today_str = datetime.date.today().strftime("%Y-%m-%d")
+
+    def _keep_event(e):
+        if not e.get("auto"):
+            return True                              # ручні (Алла) — завжди лишаємо
+        if e.get("source") != "Олицька громада":
+            return False                             # auto не з громади — прибрати (ТЗ)
+        return e.get("date", "9999") >= today_str    # застарілі (минула дата) — геть
+
+    active_existing = [e for e in existing_events if _keep_event(e)]
+    cleaned = len(existing_events) - len(active_existing)
+    if new_events or cleaned:
         all_events = new_events + active_existing
         all_events.sort(key=lambda e: (e.get("date") or "9999", e.get("time") or "00:00"))
         all_events = all_events[:MAX_EVENTS]
@@ -1160,9 +1169,12 @@ def main():
             json.dumps(all_events, ensure_ascii=False, indent=2),
             encoding="utf-8",
         )
-        print(f"✓ events.json: {len(all_events)} подій ({len(new_events)} нових)")
+        note = f"{len(new_events)} нових"
+        if cleaned:
+            note += f", прибрано {cleaned} не з громади/застарілих"
+        print(f"✓ events.json: {len(all_events)} подій ({note})")
     else:
-        print("Нових подій немає.")
+        print("Подій без змін.")
 
 
 if __name__ == "__main__":
