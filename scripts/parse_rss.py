@@ -297,6 +297,48 @@ def balance_ua_world(articles: list, ua_ratio: float = 0.6) -> list:
             if a.get("geo") not in ("Україна", "Світ") or id(a) in keep]
 
 
+# Денні ліміти НОВИХ статей на розділ — щоб стрічка не була кашею (рішення Роби 01.07).
+# Громада/Олика — БЕЗ ліміту (найцінніший локальний контент, його й так мало).
+DAILY_LIMIT_PER_SECTION = {
+    "Україна та Світ": 6,
+    "Волинь": 6,
+}
+
+
+def _added_date(a: dict):
+    """Дата коли парсер ДОДАВ статтю (за полем added_ts). None якщо поля нема (старі)."""
+    ts = a.get("added_ts")
+    if not ts:
+        return None
+    try:
+        return datetime.date.fromtimestamp(ts / 1000)
+    except Exception:
+        return None
+
+
+def apply_daily_limits(new_articles: list, existing_articles: list) -> list:
+    """Лишає не більше DAILY_LIMIT_PER_SECTION нових статей на розділ за сьогодні.
+
+    Рахує за полем added_ts (коли ДОДАНО, не коли опубліковано) — тож обмежує саме
+    денний ПРИТІК, а не дату публікації. Громада/Олика — без ліміту. Свіжіші
+    (за ts публікації) лишаються першими. Рішення Роби 01.07.
+    """
+    today = datetime.date.today()
+    count: dict = {}
+    for a in existing_articles:
+        if _added_date(a) == today:
+            s = section_of(a.get("geo", ""))
+            count[s] = count.get(s, 0) + 1
+    kept = []
+    for a in sorted(new_articles, key=lambda a: a.get("ts", 0), reverse=True):
+        s = section_of(a.get("geo", ""))
+        lim = DAILY_LIMIT_PER_SECTION.get(s)   # None = без ліміту (Громада/Олика)
+        if lim is None or count.get(s, 0) < lim:
+            kept.append(a)
+            count[s] = count.get(s, 0) + 1
+    return kept
+
+
 def detect_geo(text: str, default_geo: str) -> str:
     low = text.lower()
     if any(kw in low for kw in OLYKA_KEYWORDS):
@@ -1034,6 +1076,7 @@ def main():
                     n_events += 1
                 else:
                     item["id"] = next_art_id
+                    item["added_ts"] = int(time.time() * 1000)  # коли ДОДАЛИ (для денних лімітів)
                     next_art_id += 1
                     new_articles.append(item)
                     n_news += 1
@@ -1045,6 +1088,9 @@ def main():
         except Exception as e:
             print(f"✗ {source['name']}: {e}")
             traceback.print_exc()
+
+    # Денні ліміти на розділ — не більше 5-6 нових/день (Олика без ліміту)
+    new_articles = apply_daily_limits(new_articles, existing_articles)
 
     # Зберегти articles.json
     if new_articles:
