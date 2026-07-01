@@ -8062,7 +8062,8 @@ ${post.text}
   // src/tabs/news.js
   var allArticles = [];
   var activeGeo = "\u0412\u0441\u0456";
-  var GEO_FILTERS = ["\u0412\u0441\u0456", "\u041E\u043B\u0438\u043A\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430", "\u0421\u0432\u0456\u0442"];
+  var UA_WORLD = "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442";
+  var GEO_FILTERS = ["\u0412\u0441\u0456", "\u041E\u043B\u0438\u043A\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", UA_WORLD];
   var CATEGORY_COLORS = {
     "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
     // темно-сірий (новинний)
@@ -8094,8 +8095,10 @@ ${post.text}
     // золотий
     "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
     // синій
-    "\u0421\u0432\u0456\u0442": "#546e7a"
+    "\u0421\u0432\u0456\u0442": "#546e7a",
     // нейтрально-сірий
+    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
+    // синій — злитий розділ (на випадок майбутнього geo)
   };
   function catColor(c) {
     return CATEGORY_COLORS[c] || "#546e7a";
@@ -8172,7 +8175,13 @@ ${post.text}
   `).join("");
   }
   function getFiltered() {
-    return allArticles.filter((a) => activeGeo === "\u0412\u0441\u0456" || a.geo === activeGeo).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    return allArticles.filter((a) => {
+      if (activeGeo === "\u0412\u0441\u0456")
+        return true;
+      if (activeGeo === UA_WORLD)
+        return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
+      return a.geo === activeGeo;
+    }).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
   }
   function renderNews() {
     const el = document.getElementById("news-list");
