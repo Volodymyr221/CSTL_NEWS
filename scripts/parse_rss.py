@@ -62,6 +62,17 @@ SOURCES = [
         "geo": "Олика",
         "type": "gromada",
     },
+    {
+        # Розумний парсер (Крок 3b): Google News агрегує згадки про Олику з УСЬОГО
+        # інтернету одним RSS-запитом. Фільтр релевантності — is_olyka_relevant.
+        "url": ("https://news.google.com/rss/search?q="
+                + urllib.parse.quote(
+                    '"Олика" OR "Олицька громада" OR "Олицький замок" OR "Радзивілли Олика"')
+                + "&hl=uk&gl=UA&ceid=UA:uk"),
+        "name": "Google News",
+        "geo": "Олика",
+        "type": "gnews",
+    },
 ]
 
 # Cloudflare Worker (посередник між GitHub Actions і сайтом громади)
@@ -108,6 +119,21 @@ def is_allowed_url(url: str) -> bool:
     return True
 
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
+
+# Розумний парсер Олики (Крок 3b): релевантність за ЦІЛИМИ словами (\b — межа слова),
+# щоб не ловити хибне (напр. «дерно» всередині «модерно»). Олика + села громади +
+# історичні згадки (замок / Радзивілли).
+_OLYKA_TERMS = [
+    r"олик\w*", r"олиц\w*", r"радзивіл\w*",       # Олика / Олицька / Радзивілли
+    r"дідич\w*", r"залісоч\w*", r"горянівк\w*",    # села громади
+    r"хром[\W]?яків", r"дерно",                    # Хром'яків, Дерно
+]
+OLYKA_RE = re.compile(r"\b(" + "|".join(_OLYKA_TERMS) + r")\b", re.IGNORECASE)
+
+
+def is_olyka_relevant(text: str) -> bool:
+    """True якщо текст справді згадує Олику / села громади / замок (ціле слово)."""
+    return bool(OLYKA_RE.search(text or ""))
 MAX_ARTICLES     = 150
 MAX_PER_SOURCE   = 15   # не більше 15 статей з одного джерела за раз
 MAX_EVENTS       = 50
@@ -970,6 +996,18 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 if not is_world_relevant(text):
                     continue
 
+            # Розумний парсер Олики (Крок 3b): Google News → лишаємо тільки релевантне;
+            # джерелом показуємо реального видавця (не «Google News»)
+            src_name = source["name"]
+            if source.get("type") == "gnews":
+                if not is_olyka_relevant(title + " " + excerpt + " " + content):
+                    continue
+                geo = "Олика"
+                _pub = entry.get("source") or {}
+                _pt = _pub.get("title") if isinstance(_pub, dict) else None
+                if _pt:
+                    src_name = _pt
+
             # Нечітка дедуплікація в межах розділу (Крок 2)
             section = section_of(geo)
             tokens = title_tokens(title)
@@ -987,7 +1025,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 "category": category,
                 "geo": geo,
                 "image": image,
-                "source": source["name"],
+                "source": src_name,
                 "sourceUrl": link,
                 "exclusive": False,
                 "ts": ts,
