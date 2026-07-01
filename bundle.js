@@ -1161,11 +1161,6 @@
   }
 
   // src/tabs/community-modal.js
-  var TYPE_TABS = [
-    // Назва типу = «Дошка» (а не «Оголошення») — щоб не дублювати категорію 📢 Оголошення.
-    { id: "board", emoji: "\u{1F6D2}", label: "\u0414\u043E\u0448\u043A\u0430" },
-    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" }
-  ];
   var BOARD_CATEGORIES = [
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
     { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
@@ -1184,9 +1179,6 @@
   }
   function accountAuthorName() {
     return firstNameOnly(currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
-  }
-  function parseTags(str) {
-    return String(str || "").split(/\s+/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith("#") ? s : "#" + s);
   }
   function compressImage(file) {
     return new Promise(function executor(resolve, reject) {
@@ -1224,21 +1216,15 @@
     if (document.getElementById("cm-board-modal"))
       return;
     const state = {
-      type: "board",
-      // SPILNI
       text: "",
       photos: [],
       // URL-и фото: blob: під час upload, https: після
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
-      // Ім'я з акаунта (без прізвища) — завжди. Анонімність прибрано (рішення Вови).
       author: accountAuthorName(),
-      // BOARD
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
-      title: "",
-      // CHAT
-      tagsRaw: ""
+      title: ""
     };
     const wrap = document.createElement("div");
     wrap.id = "cm-board-modal";
@@ -1248,21 +1234,11 @@
     <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
       <div class="cm-board-modal-handle"></div>
       <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442</h3>
-      <p class="cm-board-modal-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0442\u0438\u043F \u0456 \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F.</p>
+      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+      <p class="cm-board-modal-sub">\u0417\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F \u043D\u0438\u0436\u0447\u0435.</p>
 
       <form id="cm-board-modal-form" novalidate>
-        <!-- \u041F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447 \u0442\u0438\u043F\u0443 (3 \u0442\u0430\u0431\u0438) -->
-        <div class="bm-type-tabs" id="bm-type-tabs">
-          ${TYPE_TABS.map((t) => `
-            <button type="button" class="bm-type-tab${t.id === state.type ? " active" : ""}" data-type="${t.id}">
-              <span class="bm-type-emoji">${t.emoji}</span>
-              <span class="bm-type-label">${t.label}</span>
-            </button>
-          `).join("")}
-        </div>
-
-        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u2014 \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0438\u043F -->
+        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 -->
         <div id="bm-dynamic"></div>
 
         <!-- LIVE-preview -->
@@ -1337,24 +1313,7 @@
       }
       dragDelta = 0;
     }, { passive: true });
-    wrap.querySelectorAll(".bm-type-tab").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (state.type === btn.dataset.type)
-          return;
-        wrap.querySelectorAll(".bm-type-tab").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.type = btn.dataset.type;
-        renderDynamic();
-        renderPreview();
-      });
-    });
     const dynamicEl = wrap.querySelector("#bm-dynamic");
-    function renderDynamic() {
-      if (state.type === "board")
-        return renderBoardFields();
-      if (state.type === "chat")
-        return renderChatFields();
-    }
     function renderBoardFields() {
       dynamicEl.innerHTML = `
       <div class="bm-section">
@@ -1394,7 +1353,6 @@
         <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
       </div>
     `;
-      bindCommonFields();
       dynamicEl.querySelectorAll(".bm-chip").forEach((btn) => {
         btn.addEventListener("click", () => {
           dynamicEl.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
@@ -1407,46 +1365,15 @@
         state.title = e.target.value;
         renderPreview();
       });
+      dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
+        state.text = e.target.value;
+        renderPreview();
+      });
       dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
         state.contact = e.target.value;
         renderPreview();
       });
       bindPhotoSlots();
-    }
-    function renderChatFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0425\u043E\u0447\u0443 \u0441\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-tags">\u0422\u0435\u043C\u0438 <span class="bm-label-hint">(\u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0456\u043B, \u043D\u0430\u043F\u0440. #\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-tags" type="text" placeholder="#\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438" value="${escapeHtml(state.tagsRaw)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, 1)</span></label>
-        ${photoSlotsHtml(1)}
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">\u0406\u043C'\u044F</label>
-        <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelector("#bm-tags")?.addEventListener("input", (e) => {
-        state.tagsRaw = e.target.value;
-        renderPreview();
-      });
-      bindPhotoSlots();
-    }
-    function bindCommonFields() {
-      dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
-        state.text = e.target.value;
-        renderPreview();
-      });
     }
     function photoSlotsHtml(count = 3) {
       return `
@@ -1538,12 +1465,6 @@
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
-      if (state.type === "board")
-        renderBoardPreview();
-      else if (state.type === "chat")
-        renderChatPreview();
-    }
-    function renderBoardPreview() {
       const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
@@ -1566,30 +1487,7 @@
       </article>
     `;
     }
-    function renderChatPreview() {
-      const tags = parseTags(state.tagsRaw);
-      const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
-      const firstPhoto = state.photos.find((p) => p);
-      const author = state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      const initial = author ? author.charAt(0).toUpperCase() : "\u{1F464}";
-      const hue = author ? author.charCodeAt(0) * 47 % 360 : 0;
-      const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
-      previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--chat">
-        <div class="bd-chat-head">
-          <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-          <div class="bd-chat-meta">
-            <span class="bd-chat-author">${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="bd-chat-time">\u0449\u043E\u0439\u043D\u043E</span>
-          </div>
-        </div>
-        <p class="bd-chat-text">${escapeHtml(state.text.trim() || "\u0412\u0430\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026")}</p>
-        ${firstPhoto ? `<img class="bd-chat-photo" src="${firstPhoto}" alt="">` : ""}
-        ${tagsHtml}
-      </article>
-    `;
-    }
-    renderDynamic();
+    renderBoardFields();
     renderPreview();
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
     if (isLoggedIn()) {
@@ -1612,7 +1510,7 @@
         wrap.querySelector("#bm-text")?.focus();
         return;
       }
-      if (containsProfanity(state.text) || containsProfanity(state.contact) || containsProfanity(state.tagsRaw)) {
+      if (containsProfanity(state.text) || containsProfanity(state.contact)) {
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
         wrap.querySelector("#bm-text")?.focus();
         return;
@@ -1645,36 +1543,20 @@
     });
   }
   function buildPayload(state) {
-    const base = {
-      type: state.type,
+    const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+    return {
+      type: "board",
       text: state.text.trim(),
       author: state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C",
-      // завжди ім'я з акаунта, без анонімності
       photos: state.photos.filter(Boolean),
       status: "pending",
-      // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).
-      // Гість → null (анонімне оголошення, чат недоступний — лише телефон).
-      owner_uid: currentUserId() || null
+      owner_uid: currentUserId() || null,
+      category: state.category,
+      color: cat.color,
+      contact: state.contact.trim() || null,
+      title: state.title.trim() || null,
+      tags: []
     };
-    if (state.type === "board") {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
-      return {
-        ...base,
-        category: state.category,
-        color: cat.color,
-        contact: state.contact.trim() || null,
-        title: state.title.trim() || null,
-        tags: []
-      };
-    }
-    if (state.type === "chat") {
-      return {
-        ...base,
-        category: null,
-        tags: parseTags(state.tagsRaw)
-      };
-    }
-    return base;
   }
 
   // src/core/messages-ui.js
