@@ -8153,6 +8153,7 @@ ${post.text}
         if (Number.isFinite(id))
           openArticle(id);
       });
+      list.addEventListener("error", handleImgError, true);
     }
     const modal = document.getElementById("article-modal");
     if (modal) {
@@ -8166,7 +8167,17 @@ ${post.text}
           url: btn.dataset.shareUrl
         });
       });
+      modal.addEventListener("error", handleImgError, true);
     }
+  }
+  function handleImgError(e) {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG")
+      return;
+    const ph = document.createElement("div");
+    ph.className = img.className + " img-fallback";
+    ph.textContent = "\u{1F3F0}";
+    img.replaceWith(ph);
   }
   function renderGeoFilters() {
     const el = document.getElementById("geo-filters");

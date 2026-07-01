@@ -89,6 +89,8 @@ function attachNewsListeners() {
       const id = Number(card.dataset.articleId);
       if (Number.isFinite(id)) openArticle(id);
     });
+    // Биті зображення → плейсхолдер (error не спливає → capture=true)
+    list.addEventListener('error', handleImgError, true);
   }
 
   // Кнопка 📤 «Поділитись» у модалці статті — Web Share API + fallback на clipboard.
@@ -104,7 +106,21 @@ function attachNewsListeners() {
         url:   btn.dataset.shareUrl,
       });
     });
+    // Биті зображення у модалці статті → плейсхолдер
+    modal.addEventListener('error', handleImgError, true);
   }
+}
+
+// Фото-плейсхолдер: якщо зовнішнє зображення не завантажилось (Конкурент та ін.
+// часто блокують хотлінк) — замінюємо биту картинку на брендовий плейсхолдер
+// замість системного «?». error НЕ спливає, тому слухаємо у фазі захоплення.
+function handleImgError(e) {
+  const img = e.target;
+  if (!img || img.tagName !== 'IMG') return;
+  const ph = document.createElement('div');
+  ph.className = img.className + ' img-fallback';
+  ph.textContent = '🏰';
+  img.replaceWith(ph);
 }
 
 function renderGeoFilters() {

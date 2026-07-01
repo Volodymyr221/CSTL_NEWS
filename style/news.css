@@ -173,6 +173,18 @@
   border-radius: 8px;
   flex-shrink: 0;
 }
+
+/* Плейсхолдер битого фото (успадковує розмір від класу картинки) */
+.img-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #722F37, #5a252c);
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 30px;
+  min-height: 80px;
+}
+.article-img.img-fallback { min-height: 180px; border-radius: 10px; }
 .news-card-row-body { flex: 1; min-width: 0; }
 .news-card-row-title {
   font-size: 16px;
