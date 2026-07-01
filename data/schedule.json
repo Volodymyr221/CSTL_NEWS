@@ -1,8 +1,8 @@
 {
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "updatedAt": "01.07.2026",
-  "updatedTime": "22:21",
+  "updatedAt": "02.07.2026",
+  "updatedTime": "00:07",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -7057,8 +7057,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=02.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "22:21"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-03": {
       "routes": [
@@ -8708,6 +8708,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=03.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956553",
+          "vopas_id": "1956553",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=03.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1951622",
           "vopas_id": "1951622",
           "name": "Луцьк Жорнище",
@@ -8805,8 +8847,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=03.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-04": {
       "routes": [
@@ -10456,6 +10498,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=04.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956555",
+          "vopas_id": "1956555",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=04.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1952043",
           "vopas_id": "1952043",
           "name": "Луцьк Жорнище",
@@ -10553,8 +10637,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=04.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-05": {
       "routes": [
@@ -12204,6 +12288,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956557",
+          "vopas_id": "1956557",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1952461",
           "vopas_id": "1952461",
           "name": "Луцьк Жорнище",
@@ -12301,8 +12427,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=05.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-06": {
       "routes": [
@@ -13952,6 +14078,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=06.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956559",
+          "vopas_id": "1956559",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=06.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1952888",
           "vopas_id": "1952888",
           "name": "Луцьк Жорнище",
@@ -14049,8 +14217,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=06.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-07": {
       "routes": [
@@ -15700,6 +15868,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=07.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956561",
+          "vopas_id": "1956561",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=07.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1953309",
           "vopas_id": "1953309",
           "name": "Луцьк Жорнище",
@@ -15797,8 +16007,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=07.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-08": {
       "routes": [
@@ -17448,6 +17658,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=08.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956563",
+          "vopas_id": "1956563",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=08.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1953767",
           "vopas_id": "1953767",
           "name": "Луцьк Жорнище",
@@ -17545,8 +17797,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=08.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-09": {
       "routes": [
@@ -19196,6 +19448,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=09.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956565",
+          "vopas_id": "1956565",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=09.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1954193",
           "vopas_id": "1954193",
           "name": "Луцьк Жорнище",
@@ -19293,8 +19587,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=09.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-10": {
       "routes": [
@@ -20944,6 +21238,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=10.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956567",
+          "vopas_id": "1956567",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=10.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1954622",
           "vopas_id": "1954622",
           "name": "Луцьк Жорнище",
@@ -21041,8 +21377,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=10.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-11": {
       "routes": [
@@ -22692,6 +23028,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=11.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956569",
+          "vopas_id": "1956569",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=11.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1955044",
           "vopas_id": "1955044",
           "name": "Луцьк Жорнище",
@@ -22789,8 +23167,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=11.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-12": {
       "routes": [
@@ -24440,6 +24818,48 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=12.07.2026&time=00+%3A+00"
         },
         {
+          "id": "vopas_1956571",
+          "vopas_id": "1956571",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=12.07.2026&time=00+%3A+00"
+        },
+        {
           "id": "vopas_1955466",
           "vopas_id": "1955466",
           "name": "Луцьк Жорнище",
@@ -24537,8 +24957,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=12.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "01.07.2026",
-      "fetchedTime": "00:15"
+      "fetchedAt": "02.07.2026",
+      "fetchedTime": "00:07"
     },
     "2026-07-13": {
       "routes": [],
