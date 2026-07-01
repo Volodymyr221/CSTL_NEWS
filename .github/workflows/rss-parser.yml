@@ -34,12 +34,16 @@ jobs:
       - name: Parse RSS feeds
         run: python scripts/parse_rss.py
 
+      # Монітор здоров'я даних (рішення Роми 01.07) — пише HEALTH.md лише при зміні стану
+      - name: Health check
+        run: python scripts/health_check.py
+
       - name: Commit data files if changed
         id: commit
         run: |
           git config user.name  "CSTL News Bot"
           git config user.email "bot@cstl-news"
-          git add data/articles.json data/events.json
+          git add data/articles.json data/events.json "CSTL NEWS VOVA/_ai-tools/HEALTH.md"
           if git diff --staged --quiet; then
             echo "Нових матеріалів немає — деплой не потрібен"
             echo "changed=false" >> "$GITHUB_OUTPUT"
