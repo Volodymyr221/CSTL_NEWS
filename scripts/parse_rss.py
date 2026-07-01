@@ -226,6 +226,77 @@ def normalize_title(title: str) -> str:
     return t
 
 
+# ── Дедуплікація (Крок 2 ТЗ парсерів, 01.07) — нечітка, у межах розділу ──────────
+# Ловить не лише 100% однакові заголовки, а й ПЕРЕФРАЗОВані про ту саму подію.
+# Порівнюємо заголовки як МНОЖИНИ значущих слів (Jaccard — % спільних слів від
+# їх об'єднання). Дедуп у МЕЖАХ РОЗДІЛУ (Україна та Світ / Волинь / Громада) —
+# та сама тема в різних розділах не зникає помилково.
+
+# Стоп-слова — службові слова без сенсу для порівняння (прийменники, сполучники)
+STOPWORDS_UK = {
+    "і", "й", "та", "а", "але", "або", "в", "у", "на", "з", "із", "зі", "до",
+    "за", "по", "про", "від", "для", "що", "як", "це", "не", "є", "під", "над",
+    "при", "о", "об", "the", "of", "in", "on", "and",
+}
+
+# Поріг схожості заголовків: ≥65% спільних слів → дубль (рішення Роми 01.07).
+TITLE_SIM_THRESHOLD = 0.65
+
+
+def section_of(geo: str) -> str:
+    """Розділ стрічки для дедуплікації (визначається за geo статті)."""
+    if geo in ("Україна", "Світ"):
+        return "Україна та Світ"
+    if geo == "Волинь":
+        return "Волинь"
+    if geo == "Олика":
+        return "Громада"
+    return geo or "інше"
+
+
+def title_tokens(title: str) -> set:
+    """Множина значущих слів заголовка (для порівняння схожості)."""
+    return {w for w in normalize_title(title).split()
+            if len(w) > 2 and w not in STOPWORDS_UK}
+
+
+def is_dup_title(tokens: set, section: str, seen_by_section: dict) -> bool:
+    """True якщо заголовок схожий на вже бачений У ЦЬОМУ Ж РОЗДІЛІ (Jaccard ≥ поріг)."""
+    if not tokens:
+        return False
+    for prev in seen_by_section.get(section, ()):
+        union = tokens | prev
+        if union and len(tokens & prev) / len(union) >= TITLE_SIM_THRESHOLD:
+            return True
+    return False
+
+
+def remember_title(tokens: set, section: str, seen_by_section: dict) -> None:
+    """Запам'ятати заголовок у його розділі (для подальших порівнянь)."""
+    if tokens:
+        seen_by_section.setdefault(section, []).append(tokens)
+
+
+def balance_ua_world(articles: list, ua_ratio: float = 0.6) -> list:
+    """Баланс розділу «Україна та Світ»: 60% Україна / 40% Світ (рішення Роби 01.07).
+
+    Не дає національним новинам витісняти світові й навпаки. Меншість задає
+    загальний обсяг розділу (тримаємо точну пропорцію). `articles` має бути вже
+    відсортований за часом (новіші зверху) — беремо найсвіжіші. Інші розділи
+    (Волинь / Громада) не чіпаємо; порядок за часом зберігається.
+    """
+    ua    = [a for a in articles if a.get("geo") == "Україна"]
+    world = [a for a in articles if a.get("geo") == "Світ"]
+    if not ua or not world:
+        return articles  # нема двох сторін — балансувати нічого
+    total   = int(min(len(ua) / ua_ratio, len(world) / (1 - ua_ratio)))
+    n_ua    = round(total * ua_ratio)
+    n_world = total - n_ua
+    keep = {id(a) for a in ua[:n_ua]} | {id(a) for a in world[:n_world]}
+    return [a for a in articles
+            if a.get("geo") not in ("Україна", "Світ") or id(a) in keep]
+
+
 def detect_geo(text: str, default_geo: str) -> str:
     low = text.lower()
     if any(kw in low for kw in OLYKA_KEYWORDS):
