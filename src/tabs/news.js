@@ -3,7 +3,11 @@ import { formatTime, escapeHtml, sharePost } from '../core/utils.js';
 let allArticles = [];
 let activeGeo = 'Всі';
 
-const GEO_FILTERS = ['Всі', 'Олика', 'Волинь', 'Україна', 'Світ'];
+// ТЗ парсерів (рішення Роми+Вови 01.07): «Україна» + «Світ» злиті в один розділ
+// «Україна та Світ». Дані лишаються з geo Україна/Світ окремо (без міграції) —
+// чіп-фільтр показує обидва разом (див. getFiltered).
+const UA_WORLD = 'Україна та Світ';
+const GEO_FILTERS = ['Всі', 'Олика', 'Волинь', UA_WORLD];
 
 // Кольори категорій — pill-бейдж на картці новини (Tier 6 — 17.05.2026)
 const CATEGORY_COLORS = {
@@ -26,6 +30,7 @@ const GEO_COLORS = {
   'Волинь':  '#9e7508',  // золотий
   'Україна': '#0057B7',  // синій
   'Світ':    '#546e7a',  // нейтрально-сірий
+  'Україна та Світ': '#0057B7',  // синій — злитий розділ (на випадок майбутнього geo)
 };
 
 function catColor(c) { return CATEGORY_COLORS[c] || '#546e7a'; }
@@ -112,7 +117,12 @@ function renderGeoFilters() {
 function getFiltered() {
   // B-12 fix: сортуємо за ts (новіші зверху), щоб featured завжди була найсвіжіша.
   return allArticles
-    .filter(a => activeGeo === 'Всі' || a.geo === activeGeo)
+    .filter(a => {
+      if (activeGeo === 'Всі') return true;
+      // Злитий розділ: «Україна та Світ» показує обидва geo разом
+      if (activeGeo === UA_WORLD) return a.geo === 'Україна' || a.geo === 'Світ';
+      return a.geo === activeGeo;
+    })
     .slice()
     .sort((a, b) => (b.ts || 0) - (a.ts || 0));
 }
