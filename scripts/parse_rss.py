@@ -91,6 +91,12 @@ ALLOWED_FETCH_DOMAINS = (
     "rayon.in.ua",
     "olytska-gromada.gov.ua",
     "cstl-proxy.volodymyrshevchuk19.workers.dev",
+    # Відомі видання що пишуть про Олику (для повного тексту gnews-статей, 01.07)
+    "vsn.ua",
+    "volynnews.com",
+    "volyn24.com",
+    "volyn.com.ua",
+    "suspilne.media",
 )
 
 
@@ -134,6 +140,43 @@ OLYKA_RE = re.compile(r"\b(" + "|".join(_OLYKA_TERMS) + r")\b", re.IGNORECASE)
 def is_olyka_relevant(text: str) -> bool:
     """True якщо текст справді згадує Олику / села громади / замок (ціле слово)."""
     return bool(OLYKA_RE.search(text or ""))
+
+
+def gnews_clean_title(title: str, entry) -> str:
+    """Прибирає суфікс « - Назва видання» з заголовка Google News.
+
+    Формат gnews: «Заголовок - Видавець». Спершу точний зріз за entry.source.title,
+    fallback — останній сегмент після « - » (для gnews він завжди видавець).
+    """
+    pub = entry.get("source") or {}
+    pt = pub.get("title") if isinstance(pub, dict) else None
+    if pt and title.endswith(" - " + pt):
+        return title[: -len(" - " + pt)].strip()
+    if " - " in title:
+        return title.rsplit(" - ", 1)[0].strip()
+    return title
+
+
+def resolve_gnews_url(link: str) -> str:
+    """Розв'язує redirect-посилання news.google.com у справжній URL видавця.
+
+    Дає: (1) «Читати оригінал» веде на сайт видання, не на Google; (2) дедуп за
+    справжнім URL; (3) повний текст статті — fetch_full_article пройде whitelist.
+    Тіло відповіді не читаємо — беремо лише фінальний URL після редиректів; сам
+    контент і далі тягнеться ТІЛЬКИ з ALLOWED_FETCH_DOMAINS (анти-SSRF збережено).
+    При будь-якій помилці повертає початкове посилання.
+    """
+    try:
+        req = urllib.request.Request(link, headers={"User-Agent": BROWSER_UA})
+        with urllib.request.urlopen(req, timeout=10) as r:
+            final = r.geturl()
+        if final and "news.google.com" not in (urllib.parse.urlparse(final).hostname or ""):
+            return final
+    except Exception:
+        pass
+    return link
+
+
 MAX_ARTICLES     = 150
 MAX_PER_SOURCE   = 15   # не більше 15 статей з одного джерела за раз
 MAX_EVENTS       = 50
@@ -1016,6 +1059,11 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             continue
         if not title or not link:
             continue
+        # Google News: чистимо суфікс « - Видавець» + розв'язуємо справжній URL
+        # видавця ДО дедупу/повного тексту (щоб усе працювало зі справжнім лінком)
+        if source.get("type") == "gnews":
+            title = gnews_clean_title(title, entry)
+            link = resolve_gnews_url(link)
         if link in seen_urls:
             continue
 
