@@ -40,6 +40,19 @@
     "image": "./images/kino-castle.jpg"
   },
   {
+    "id": 302,
+    "title": "Рада підтримала створення Українського національного пантеону",
+    "description": "Верховна Рада підтримала закон про Український національний пантеон для вшанування визначних українців.",
+    "date": "2026-07-01",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/2/e/861867/2ef3bab65aea86afc56d2746c6dc44dc.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/07/01/8041912/",
+    "auto": true
+  },
+  {
     "id": 301,
     "title": "Залужного викликали на зустріч до Зеленського, де його відмовляли від президентських амбіцій – УП",
     "description": "Залужний підтвердив намір брати участь у виборах президента, попри аргументи Банкової про можливий розкол.",
@@ -63,6 +76,19 @@
     "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/f/d/858343/fdccbfc43536605a0d002f89707dc993.jpeg",
     "source": "Українська правда",
     "sourceUrl": "https://www.pravda.com.ua/news/2026/06/26/8041163/",
+    "auto": true
+  },
+  {
+    "id": 303,
+    "title": "ЗМІ дізнались про проблеми навколо саміту НАТО-2027, який може не відбутися в Албанії",
+    "description": "Невизначеність щодо саміту НАТО-2027 в Албанії: США невдоволені витратами, остаточне рішення ще не прийняте.",
+    "date": "2026-07-08",
+    "time": null,
+    "location": null,
+    "category": "Суспільство",
+    "image": "https://uimg.pravda.com.ua/buckets/upstatic/images/doc/a/2/861745/a29def4f8d7ae3c3c1db6148da088ac7.jpeg",
+    "source": "Українська правда",
+    "sourceUrl": "https://www.pravda.com.ua/news/2026/07/01/8041884/",
     "auto": true
   },
   {
