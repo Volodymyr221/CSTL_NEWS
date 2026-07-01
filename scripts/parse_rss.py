@@ -139,6 +139,7 @@ MAX_PER_SOURCE   = 15   # не більше 15 статей з одного дж
 MAX_EVENTS       = 50
 DATA_PATH    = Path("data/articles.json")
 EVENTS_PATH  = Path("data/events.json")
+STORIES_PATH = Path("data/olyka-stories.json")   # пул історичних «історій Олики»
 
 # Ключові слова «загальнонаціональна вага» — для фільтра новин geo=Україна.
 # Новини Волині та Олики публікуються без фільтра.
@@ -363,6 +364,53 @@ def apply_daily_limits(new_articles: list, existing_articles: list) -> list:
             kept.append(a)
             count[s] = count.get(s, 0) + 1
     return kept
+
+
+def drip_story(existing_articles: list, next_id: int):
+    """Крапельний режим історичних «історій Олики» (рішення Роми 01.07).
+
+    Раз на день додає ОДНУ історію з пулу `data/olyka-stories.json` — щоб стрічка
+    Громади жила навіть коли свіжих новин нема. Ротація за днем (детерміновано,
+    без стану). Пропускає якщо історію вже додано сьогодні або вона вже у стрічці.
+    Повертає (стаття | None, next_id).
+    """
+    if not STORIES_PATH.exists():
+        return None, next_id
+    try:
+        stories = json.loads(STORIES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return None, next_id
+    if not stories:
+        return None, next_id
+
+    today = datetime.date.today()
+    # одна історія на день: якщо вже додали сьогодні — виходимо
+    for a in existing_articles:
+        if a.get("kind") == "story" and _added_date(a) == today:
+            return None, next_id
+
+    story = stories[today.toordinal() % len(stories)]   # ротація по пулу за днем
+    seen = {normalize_title(a.get("title", "")) for a in existing_articles}
+    if normalize_title(story.get("title", "")) in seen:
+        return None, next_id   # вже у стрічці — не дублюємо
+
+    now = int(time.time() * 1000)
+    art = {
+        "id": next_id,
+        "title": story.get("title", ""),
+        "excerpt": story.get("excerpt", ""),
+        "content": story.get("content", ""),
+        "category": story.get("category", "Історія"),
+        "geo": "Олика",
+        "image": story.get("image"),
+        "source": story.get("source", "CSTL LIFE"),
+        "sourceUrl": story.get("sourceUrl"),
+        "exclusive": True,
+        "ts": now,
+        "added_ts": now,
+        "kind": "story",
+    }
+    return art, next_id + 1
 
 
 def detect_geo(text: str, default_geo: str) -> str:
@@ -1133,6 +1181,12 @@ def main():
 
     # Денні ліміти на розділ — не більше 5-6 нових/день (Олика без ліміту)
     new_articles = apply_daily_limits(new_articles, existing_articles)
+
+    # Крапельна історична «історія Олики» (одна на день) — щоб стрічка жила в тишу
+    _story, next_art_id = drip_story(existing_articles, next_art_id)
+    if _story:
+        new_articles.append(_story)
+        print(f"✓ Історія Олики: +1 («{_story['title'][:40]}…»)")
 
     # Зберегти articles.json
     if new_articles:
