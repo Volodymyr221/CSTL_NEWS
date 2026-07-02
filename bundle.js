@@ -4529,10 +4529,6 @@ ${post.text}
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">\u270F\uFE0F</span>
         </button>
-        <button class="board-fab-item" data-fab="msgs" type="button">
-          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
-          <span class="board-fab-ic">\u{1F4AC}</span>
-        </button>
         <button class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">\u{1F4CB}</span>
@@ -4545,7 +4541,6 @@ ${post.text}
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     </div>
@@ -4593,8 +4588,6 @@ ${post.text}
         }
         if (act === "mine")
           openMyAds();
-        if (act === "msgs")
-          openThreadsList();
       });
     });
     const searchInput = document.getElementById("bd-search-input");
@@ -4627,7 +4620,6 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
-    refreshUnreadBadge();
   }
   function renderBodyOnly() {
     const el = getBoardRoot();

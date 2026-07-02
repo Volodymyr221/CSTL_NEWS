@@ -7,7 +7,7 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { startChatFromPost, openThreadsList, openMyAds, refreshUnreadBadge, setupBubbleGestures, ACT_ICONS } from '../core/messages-ui.js';
+import { startChatFromPost, openMyAds, setupBubbleGestures, ACT_ICONS } from '../core/messages-ui.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
@@ -19,19 +19,13 @@ import {
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
-// SVG-іконки (оголошені до TYPE_TABS — збережені-таб використовує закладку)
+// SVG-іконки для дій у картках і кнопках
 const PHONE_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
 const BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-
-const TYPE_TABS = [
-  { id: 'board',   label: 'ДОШКА',        emoji: '🛒' },
-  { id: 'saved',   label: 'ЗБЕРЕЖЕНІ',    emoji: BOOKMARK_OUTLINE_SVG },
-  { id: 'chat',    label: 'ОБГОВОРЕННЯ',   emoji: '💬' },
-];
 
 // Фільтр-чіпи (6 шт): деякі групують ДВІ конкретні категорії через `match`.
 // Пост зберігає конкретну категорію (продам/куплю/...), а чіп групує.
@@ -1178,10 +1172,6 @@ function renderAll() {
           <span class="board-fab-label">Подати оголошення</span>
           <span class="board-fab-ic">✏️</span>
         </button>
-        <button class="board-fab-item" data-fab="msgs" type="button">
-          <span class="board-fab-label">Повідомлення<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
-          <span class="board-fab-ic">💬</span>
-        </button>
         <button class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">Мої оголошення</span>
           <span class="board-fab-ic">📋</span>
@@ -1194,7 +1184,6 @@ function renderAll() {
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
       </button>
     </div>
@@ -1237,7 +1226,6 @@ function renderAll() {
         setBoardActiveType('saved');
       }); return; }
       if (act === 'mine') openMyAds();        // requireAuth усередині openMyAds
-      if (act === 'msgs') openThreadsList();  // requireAuth усередині openThreadsList
     });
   });
 
@@ -1281,9 +1269,6 @@ function renderAll() {
   // Zoom-перегляд тільки для board-стікерів
   initBoardNoteExpand(el);
 
-  // FAB щойно перебудовано → заповнити його бейджі непрочитаних (інакше лишались
-  // порожні: refreshUnreadBadge до рендеру FAB не мав куди писати).
-  refreshUnreadBadge();
 }
 
 function renderBodyOnly() {
