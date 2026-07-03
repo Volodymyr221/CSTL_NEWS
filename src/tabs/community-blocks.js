@@ -7,7 +7,7 @@
 // Помилка одного блоку не ламає інші.
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
-import { fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady } from '../core/supabase.js';
+import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType, openDiscussions } from './board.js';
 import {
   nowMinutes,
@@ -40,14 +40,15 @@ window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
 // Вхід/вихід → теж оновити віджет (персональні відстеження з'являються/зникають).
 onAuthChange(() => { renderBusBlock(); });
 
-// Типи у міні-блоці Дошки — свайп циклічно
+// Типи у міні-блоці Дошки — свайп циклічно.
+// «Офіційні» прибрано з віджета (рішення Роми 03.07) — вони живуть на повній
+// Дошці; віджет розчищено під майбутній скрол оголошень.
 const BOARD_MINI_TYPES = [
-  { id: 'official', label: 'Офіційні', emoji: '🏛️' },
   { id: 'board',    label: 'Дошка',    emoji: '🛒' },
   { id: 'chat',     label: 'Розмови',  emoji: '💬' },
 ];
 let _boardMiniTypeIdx = 0;   // індекс активного типу
-let _boardMiniData    = { userPosts: [], official: [] };   // кеш даних щоб не запитувати при свайпі
+let _boardMiniData    = { userPosts: [] };   // кеш даних щоб не запитувати при свайпі
 let _boardMiniDir     = 1;   // 1 = свайп вліво (наступний), -1 = свайп вправо (попередній)
 
 const POWER_PREFS_KEY = 'power_prefs_v2';
@@ -415,38 +416,24 @@ export async function renderBoardBlock() {
 
   try {
     // 1. Завантажуємо дані — Supabase спочатку, JSON якщо не вийшло
-    let userPosts = [], official = [], usedSupabase = false;
+    // («Офіційні» з віджета прибрано — оголошення ради більше не тягнемо)
+    let userPosts = [], usedSupabase = false;
 
     if (isSupabaseReady()) {
-      const [posts, anns] = await Promise.all([
-        fetchPublishedPosts(),
-        fetchPublishedAnnouncements(),
-      ]);
+      const posts = await fetchPublishedPosts();
       if (posts !== null) {
         userPosts = posts.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-        official  = (anns || []).slice().sort((a, b) => {
-          if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-          return (b.ts || 0) - (a.ts || 0);
-        });
         usedSupabase = true;
       }
     }
 
     if (!usedSupabase) {
-      const [boardRes, communityRes] = await Promise.all([
-        fetch('./data/community-board.json'),
-        fetch('./data/community.json'),
-      ]);
-      const boardData     = await boardRes.json();
-      const communityData = await communityRes.json();
+      const boardRes  = await fetch('./data/community-board.json');
+      const boardData = await boardRes.json();
       userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-      official  = (communityData.announcements || []).slice().sort((a, b) => {
-        if (a.pinned !== b.pinned) return a.pinned ? -1 : 1;
-        return (b.ts || 0) - (a.ts || 0);
-      });
     }
 
-    _boardMiniData = { userPosts, official };
+    _boardMiniData = { userPosts };
     renderBoardMiniSlide(el);
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Дошка тимчасово недоступна</div>';
@@ -456,23 +443,18 @@ export async function renderBoardBlock() {
 // Рендеримо ОДИН слайд міні-блоку (для активного типу). Свайп змінює _boardMiniTypeIdx.
 function renderBoardMiniSlide(el) {
   const cfg     = BOARD_MINI_TYPES[_boardMiniTypeIdx];
-  const { userPosts, official } = _boardMiniData;
+  const { userPosts } = _boardMiniData;
 
   // Беремо до 2 пости активного типу
-  let items = [];
-  if (cfg.id === 'official') {
-    items = official.slice(0, 2).map(a => ({ kind: 'official', title: a.title, text: a.body, ts: a.ts, id: a.id }));
-  } else {
-    items = userPosts
-      .filter(p => (p.type || 'board') === cfg.id)
-      .slice(0, 2)
-      .map(p => ({
-        kind: cfg.id, id: p.id, ts: p.ts || (p.created_at && new Date(p.created_at).getTime()),
-        category: p.category, text: p.text, color: p.color,
-        photo: (Array.isArray(p.photos) && p.photos[0]) || p.photo,
-        author: p.author,
-      }));
-  }
+  const items = userPosts
+    .filter(p => (p.type || 'board') === cfg.id)
+    .slice(0, 2)
+    .map(p => ({
+      kind: cfg.id, id: p.id, ts: p.ts || (p.created_at && new Date(p.created_at).getTime()),
+      category: p.category, text: p.text, color: p.color,
+      photo: (Array.isArray(p.photos) && p.photos[0]) || p.photo,
+      author: p.author,
+    }));
 
   const dotsHtml = BOARD_MINI_TYPES.map((t, i) =>
     `<span class="cm-board-mini-dot${i === _boardMiniTypeIdx ? ' active' : ''}" data-mini-idx="${i}"></span>`
@@ -489,8 +471,8 @@ function renderBoardMiniSlide(el) {
   const emptyHtml = `<div class="cm-board-mini-empty">У «${escapeHtml(cfg.label)}» поки порожньо</div>`;
 
   // BOARD — корок зі стікерами (з нахилами і шпильками)
-  // CHAT/OFFICIAL — простіший лейаут без корки
-  const isCorkType = cfg.id === 'board' || cfg.id === 'official';
+  // CHAT — простіший лейаут без корки
+  const isCorkType = cfg.id === 'board';
   let innerHtml;
   if (isCorkType) {
     if (items.length) {
@@ -511,13 +493,12 @@ function renderBoardMiniSlide(el) {
   // приходить справа, вправо (попередній) = слайд приходить зліва
   const slideClass = _boardMiniDir < 0 ? ' bd-mini-slide-back' : '';
 
+  // CTA «Перейти на …» прибрано (рішення Роми 03.07) — місце звільнено під
+  // майбутній скрол оголошень. Входи лишаються: таб-бар «Дошка», хаб «Чати».
   el.innerHTML = `
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
       ${labelHtml}
       <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
-      <button class="cm-board-preview-cta" type="button" data-mini-cta>
-        Перейти на ${escapeHtml(cfg.label.toLowerCase())} →
-      </button>
     </div>
   `;
 
@@ -538,16 +519,13 @@ function renderBoardMiniSlide(el) {
         renderBoardMiniSlide(el);
       });
     });
-    // CTA «Перейти на …» — перемикає на вкладку Дошка з активним типом
-    // що зараз вибраний у міні-блоці (official → 'all', решта → той самий ID).
-    const cta = wrap.querySelector('[data-mini-cta]');
-    if (cta) {
-      cta.addEventListener('click', e => {
-        e.stopPropagation();
-        const targetType = cfg.id === 'official' ? 'all' : cfg.id;
-        // «Розмови» (chat) → повноекранний overlay Обговорень поверх «Чатів».
-        if (targetType === 'chat') { openDiscussions(); return; }
-        setBoardActiveType(targetType);
+    // Тап по вмісту слайда → відповідний повний екран (замість прибраної CTA):
+    // «Дошка» → вкладка Дошка, «Розмови» → overlay Обговорень.
+    const content = wrap.querySelector('.cm-board-mini-content');
+    if (content) {
+      content.addEventListener('click', () => {
+        if (cfg.id === 'chat') { openDiscussions(); return; }
+        setBoardActiveType(cfg.id);
         if (typeof window.switchTab === 'function') window.switchTab('board');
       });
     }
@@ -555,18 +533,9 @@ function renderBoardMiniSlide(el) {
 }
 
 // Рендер однієї карточки в міні-блоці. Стиль залежить від типу.
+// («official» більше не рендериться — прибрано з віджета 03.07)
 function renderMiniCard(item, type) {
   const tilt = ((item.id * 7) % 5) - 2;
-
-  if (type === 'official') {
-    return `
-      <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
-        <span class="cm-board-pin cm-board-pin--gold"></span>
-        <span class="cm-board-cat cm-board-cat--official">🏛️ ОФІЦІЙНО</span>
-        <p class="cm-board-text">${escapeHtml(item.title)}</p>
-      </article>
-    `;
-  }
 
   if (type === 'board') {
     const emoji = CATEGORY_EMOJI[item.category] || '📌';
