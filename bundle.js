@@ -7327,12 +7327,11 @@ ${post.text}
     renderBusBlock();
   });
   var BOARD_MINI_TYPES = [
-    { id: "official", label: "\u041E\u0444\u0456\u0446\u0456\u0439\u043D\u0456", emoji: "\u{1F3DB}\uFE0F" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
     { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" }
   ];
   var _boardMiniTypeIdx = 0;
-  var _boardMiniData = { userPosts: [], official: [] };
+  var _boardMiniData = { userPosts: [] };
   var _boardMiniDir = 1;
   function weatherCodeInfo(code) {
     if (code === 0)
@@ -7561,37 +7560,20 @@ ${post.text}
     if (!el)
       return;
     try {
-      let userPosts = [], official = [], usedSupabase = false;
+      let userPosts = [], usedSupabase = false;
       if (isSupabaseReady()) {
-        const [posts, anns] = await Promise.all([
-          fetchPublishedPosts(),
-          fetchPublishedAnnouncements()
-        ]);
+        const posts = await fetchPublishedPosts();
         if (posts !== null) {
           userPosts = posts.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-          official = (anns || []).slice().sort((a, b) => {
-            if (a.pinned !== b.pinned)
-              return a.pinned ? -1 : 1;
-            return (b.ts || 0) - (a.ts || 0);
-          });
           usedSupabase = true;
         }
       }
       if (!usedSupabase) {
-        const [boardRes, communityRes] = await Promise.all([
-          fetch("./data/community-board.json"),
-          fetch("./data/community.json")
-        ]);
+        const boardRes = await fetch("./data/community-board.json");
         const boardData = await boardRes.json();
-        const communityData = await communityRes.json();
         userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-        official = (communityData.announcements || []).slice().sort((a, b) => {
-          if (a.pinned !== b.pinned)
-            return a.pinned ? -1 : 1;
-          return (b.ts || 0) - (a.ts || 0);
-        });
       }
-      _boardMiniData = { userPosts, official };
+      _boardMiniData = { userPosts };
       renderBoardMiniSlide(el);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
@@ -7599,22 +7581,17 @@ ${post.text}
   }
   function renderBoardMiniSlide(el) {
     const cfg = BOARD_MINI_TYPES[_boardMiniTypeIdx];
-    const { userPosts, official } = _boardMiniData;
-    let items = [];
-    if (cfg.id === "official") {
-      items = official.slice(0, 2).map((a) => ({ kind: "official", title: a.title, text: a.body, ts: a.ts, id: a.id }));
-    } else {
-      items = userPosts.filter((p) => (p.type || "board") === cfg.id).slice(0, 2).map((p) => ({
-        kind: cfg.id,
-        id: p.id,
-        ts: p.ts || p.created_at && new Date(p.created_at).getTime(),
-        category: p.category,
-        text: p.text,
-        color: p.color,
-        photo: Array.isArray(p.photos) && p.photos[0] || p.photo,
-        author: p.author
-      }));
-    }
+    const { userPosts } = _boardMiniData;
+    const items = userPosts.filter((p) => (p.type || "board") === cfg.id).slice(0, 2).map((p) => ({
+      kind: cfg.id,
+      id: p.id,
+      ts: p.ts || p.created_at && new Date(p.created_at).getTime(),
+      category: p.category,
+      text: p.text,
+      color: p.color,
+      photo: Array.isArray(p.photos) && p.photos[0] || p.photo,
+      author: p.author
+    }));
     const dotsHtml = BOARD_MINI_TYPES.map(
       (t, i) => `<span class="cm-board-mini-dot${i === _boardMiniTypeIdx ? " active" : ""}" data-mini-idx="${i}"></span>`
     ).join("");
@@ -7626,7 +7603,7 @@ ${post.text}
     </div>
   `;
     const emptyHtml = `<div class="cm-board-mini-empty">\u0423 \xAB${escapeHtml(cfg.label)}\xBB \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>`;
-    const isCorkType = cfg.id === "board" || cfg.id === "official";
+    const isCorkType = cfg.id === "board";
     let innerHtml;
     if (isCorkType) {
       if (items.length) {
@@ -7647,9 +7624,6 @@ ${post.text}
     <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
       ${labelHtml}
       <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
-      <button class="cm-board-preview-cta" type="button" data-mini-cta>
-        \u041F\u0435\u0440\u0435\u0439\u0442\u0438 \u043D\u0430 ${escapeHtml(cfg.label.toLowerCase())} \u2192
-      </button>
     </div>
   `;
     const wrap = document.getElementById("cm-board-preview");
@@ -7676,16 +7650,14 @@ ${post.text}
           renderBoardMiniSlide(el);
         });
       });
-      const cta = wrap.querySelector("[data-mini-cta]");
-      if (cta) {
-        cta.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const targetType = cfg.id === "official" ? "all" : cfg.id;
-          if (targetType === "chat") {
+      const content = wrap.querySelector(".cm-board-mini-content");
+      if (content) {
+        content.addEventListener("click", () => {
+          if (cfg.id === "chat") {
             openDiscussions();
             return;
           }
-          setBoardActiveType(targetType);
+          setBoardActiveType(cfg.id);
           if (typeof window.switchTab === "function")
             window.switchTab("board");
         });
@@ -7694,15 +7666,6 @@ ${post.text}
   }
   function renderMiniCard(item, type) {
     const tilt = item.id * 7 % 5 - 2;
-    if (type === "official") {
-      return `
-      <article class="cm-board-note cm-board-note--official cm-board-mini" style="--tilt:${tilt}deg">
-        <span class="cm-board-pin cm-board-pin--gold"></span>
-        <span class="cm-board-cat cm-board-cat--official">\u{1F3DB}\uFE0F \u041E\u0424\u0406\u0426\u0406\u0419\u041D\u041E</span>
-        <p class="cm-board-text">${escapeHtml(item.title)}</p>
-      </article>
-    `;
-    }
     if (type === "board") {
       const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
