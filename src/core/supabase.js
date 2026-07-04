@@ -729,14 +729,20 @@ export async function savePushSubscription(payload) {
 }
 
 // Видаляє конкретний рядок підписки (при знятті відстеження рейсу).
+// Повертає { ok } симетрично до savePushSubscription — щоб виклик міг
+// зробити повтор і не лишити висячу серверну підписку при збої мережі.
 export async function deletePushSubscription(endpoint, routeId, trackDate) {
-  if (!supa) return;
+  if (!supa) return { ok: false, error: 'no-supa' };
   const { error } = await supa.from('push_subscriptions')
     .delete()
     .eq('endpoint', endpoint)
     .eq('route_id', routeId)
     .eq('track_date', trackDate);
-  if (error) console.warn('[supabase] deletePushSubscription:', error.message);
+  if (error) {
+    console.warn('[supabase] deletePushSubscription:', error.message);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
 }
 
 // ── REALTIME ─────────────────────────────────────────────────────────────────

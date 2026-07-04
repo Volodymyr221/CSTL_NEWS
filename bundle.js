@@ -1026,10 +1026,13 @@
   }
   async function deletePushSubscription(endpoint, routeId, trackDate) {
     if (!supa)
-      return;
+      return { ok: false, error: "no-supa" };
     const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
-    if (error)
+    if (error) {
       console.warn("[supabase] deletePushSubscription:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
   }
   function subscribeReactions(onChange) {
     if (!supa)
@@ -5311,6 +5314,7 @@ ${post.text}
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
   var TRACK_KEY = "bus_track_v2";
+  var PENDING_UNSUB_KEY = "bus_pending_unsub_v1";
   var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
   var busData = null;
   var busDay = getTodayISO();
@@ -5463,6 +5467,8 @@ ${post.text}
       if (!res.ok) {
         console.warn("[push] \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0443:", res.error);
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437");
+      } else {
+        removePendingUnsub(subJson.endpoint, routeId, trackDate);
       }
     } catch (err) {
       console.warn("[push] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0438:", err);
@@ -5472,15 +5478,70 @@ ${post.text}
   async function unsubscribeFromPush(routeId, trackDate) {
     if (trackDate < getTodayISO())
       return;
+    let endpoint = null;
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub)
         return;
-      await deletePushSubscription(sub.endpoint, routeId, trackDate);
+      endpoint = sub.endpoint;
+      let res = await deletePushSubscription(endpoint, routeId, trackDate);
+      if (!res.ok) {
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await deletePushSubscription(endpoint, routeId, trackDate);
+      }
+      if (res.ok) {
+        removePendingUnsub(endpoint, routeId, trackDate);
+      } else {
+        addPendingUnsub(endpoint, routeId, trackDate);
+      }
     } catch (err) {
       console.warn("[push] unsubscribe error:", err);
+      if (endpoint)
+        addPendingUnsub(endpoint, routeId, trackDate);
     }
+  }
+  function loadPendingUnsub() {
+    try {
+      const d = JSON.parse(localStorage.getItem(PENDING_UNSUB_KEY));
+      return Array.isArray(d) ? d : [];
+    } catch {
+      return [];
+    }
+  }
+  function savePendingUnsub(list) {
+    if (list.length)
+      localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
+    else
+      localStorage.removeItem(PENDING_UNSUB_KEY);
+  }
+  function addPendingUnsub(endpoint, routeId, trackDate) {
+    const list = loadPendingUnsub();
+    if (!list.some((p) => p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)) {
+      list.push({ endpoint, routeId, trackDate });
+      savePendingUnsub(list);
+    }
+  }
+  function removePendingUnsub(endpoint, routeId, trackDate) {
+    savePendingUnsub(loadPendingUnsub().filter((p) => !(p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)));
+  }
+  async function flushPendingUnsub() {
+    const today = getTodayISO();
+    const list = loadPendingUnsub();
+    if (!list.length)
+      return;
+    const remaining = [];
+    for (const p of list) {
+      if (p.trackDate < today)
+        continue;
+      const reTracked = trackedRoutes.some((t) => t.routeId === p.routeId && t.trackDate === p.trackDate);
+      if (reTracked)
+        continue;
+      const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
+      if (!res.ok)
+        remaining.push(p);
+    }
+    savePendingUnsub(remaining);
   }
   function trackKey() {
     return TRACK_KEY + ":" + (currentUserId() || "");
@@ -7041,6 +7102,7 @@ ${post.text}
     loadPrefs();
     loadTrackedRoute();
     selfHealPushSubscriptions();
+    flushPendingUnsub();
     if (!document.getElementById("bs-dropdown")) {
       const dd = document.createElement("div");
       dd.id = "bs-dropdown";
