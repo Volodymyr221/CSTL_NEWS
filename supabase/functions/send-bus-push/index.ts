@@ -5,7 +5,7 @@
 //
 // Типи сповіщень:
 //   А. Проміжна зупинка (boarding ≠ перша зупинка маршруту):
-//      1. notified_warning: "Відправляється через ~15 хв · 07:45" — T-15 до зупинки посадки
+//      1. notified_warning: "Автобус буде на зупинці Олика через ~15 хв · 07:45" — T-15 до зупинки посадки
 //      2. notified_dep:     "Автобус на зупинці · Олика"          — T-0 (автобус на зупинці посадки)
 //   Б. Звичайний рейс (boarding = початкова зупинка або без сегменту):
 //      1. notified_warning: "Автобус відправляється через ~15 хв · 07:15" — T-15
@@ -124,18 +124,24 @@ serve(async () => {
 
     // ── 3. Попередження: T-15 хв до зупинки посадки (вікно 13-17 хв) ──────
     if (!sub.notified_warning && minsLeft >= 13 && minsLeft <= 17) {
+      // Початкова зупинка → «відправляється»; проміжна → «буде на зупинці X».
+      const warnBody = isOriginBoarding
+        ? `Автобус відправляється через ${minsLeft} хв · ${sub.dep_time}`
+        : `Автобус буде на зупинці ${sub.boarding_stop} через ${minsLeft} хв · ${sub.dep_time}`;
       const ok = await sendPush(sub, JSON.stringify({
         title: segLabel,
-        body:  `Автобус відправляється через ${minsLeft} хв · ${sub.dep_time}`,
+        body:  warnBody,
         tag:   `bus-warn-${sub.route_id}`,
       }));
       if (ok) await supa.from('push_subscriptions').update({ notified_warning: true }).eq('id', sub.id);
     }
 
-    // ── 4. T-0 (вікно від -1 до +1 хв) ───────────────────────────────────
+    // ── 4. T-0 (вікно від -3 до +1 хв) ───────────────────────────────────
     //   звичайний рейс → "Автобус вирушив" (момент відправлення з його зупинки)
     //   проміжна зупинка → "Автобус на зупинці · НАЗВА"
-    if (!sub.notified_dep && minsLeft >= -1 && minsLeft <= 1) {
+    //   Нижня межа -3 (а не -1): якщо cron моргне і пропустить хвилину, наступний
+    //   запуск (до 3 хв після відправлення) все одно надішле T-0, а не втратить його.
+    if (!sub.notified_dep && minsLeft >= -3 && minsLeft <= 1) {
       const body = isOriginBoarding
         ? `Автобус вирушив · ${sub.dep_time}`
         : `Автобус на зупинці · ${sub.boarding_stop}`;
