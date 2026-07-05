@@ -1562,8 +1562,7 @@
     };
   }
 
-  // src/core/messages-ui.js
-  var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
+  // src/core/chat-core.js
   var ACT_ICONS = {
     reply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
     copy: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>',
@@ -1696,23 +1695,26 @@
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="pm-avatar" style="background:hsl(${hue}deg 60% 72%)">${escapeHtml(letter)}</span>`;
   }
-  function otherName(thread) {
-    const me = currentUserId();
-    if (me && me === thread.author_uid)
-      return thread.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
-    return thread.author_name || "\u041F\u0440\u043E\u0434\u0430\u0432\u0435\u0446\u044C";
-  }
-  function threadPostTitle(thread) {
-    const p = thread.post || {};
-    return p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
-  }
-  var _chatUnsub = null;
   function clockTime(ts) {
     const d = new Date(ts);
     if (isNaN(d.getTime()))
       return "";
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
+  var MONTHS_GEN = [
+    "\u0441\u0456\u0447\u043D\u044F",
+    "\u043B\u044E\u0442\u043E\u0433\u043E",
+    "\u0431\u0435\u0440\u0435\u0437\u043D\u044F",
+    "\u043A\u0432\u0456\u0442\u043D\u044F",
+    "\u0442\u0440\u0430\u0432\u043D\u044F",
+    "\u0447\u0435\u0440\u0432\u043D\u044F",
+    "\u043B\u0438\u043F\u043D\u044F",
+    "\u0441\u0435\u0440\u043F\u043D\u044F",
+    "\u0432\u0435\u0440\u0435\u0441\u043D\u044F",
+    "\u0436\u043E\u0432\u0442\u043D\u044F",
+    "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430",
+    "\u0433\u0440\u0443\u0434\u043D\u044F"
+  ];
   function dayLabel(ts) {
     const d = new Date(ts);
     if (isNaN(d.getTime()))
@@ -1727,6 +1729,188 @@
     const base = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
     return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
   }
+  function setupKeyboardResize(screen) {
+    const vv = window.visualViewport;
+    const stream = screen.querySelector("#pm-stream");
+    const scrollY = window.scrollY || 0;
+    const prevBody = {
+      position: document.body.style.position,
+      top: document.body.style.top,
+      left: document.body.style.left,
+      right: document.body.style.right,
+      width: document.body.style.width,
+      overflow: document.body.style.overflow
+    };
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
+    const unlock = () => {
+      document.body.style.position = prevBody.position;
+      document.body.style.top = prevBody.top;
+      document.body.style.left = prevBody.left;
+      document.body.style.right = prevBody.right;
+      document.body.style.width = prevBody.width;
+      document.body.style.overflow = prevBody.overflow;
+      window.scrollTo(0, scrollY);
+    };
+    if (!vv)
+      return unlock;
+    const input = screen.querySelector(".pm-input");
+    let wasOpen = false, focused = false;
+    const apply = () => {
+      const atBottom = stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60 : false;
+      const open = focused && document.documentElement.clientHeight - vv.height > 80;
+      if (open) {
+        screen.style.height = vv.height + "px";
+        screen.style.top = vv.offsetTop + "px";
+      } else {
+        screen.style.height = "";
+        screen.style.top = "";
+      }
+      screen.classList.toggle("pm-kb-open", open);
+      if (open && stream && (!wasOpen || atBottom)) {
+        requestAnimationFrame(() => {
+          stream.scrollTop = stream.scrollHeight;
+        });
+      }
+      wasOpen = open;
+    };
+    const onFocus = () => {
+      focused = true;
+      requestAnimationFrame(apply);
+    };
+    const onBlur = () => {
+      focused = false;
+      requestAnimationFrame(apply);
+    };
+    input?.addEventListener("focus", onFocus);
+    input?.addEventListener("blur", onBlur);
+    apply();
+    vv.addEventListener("resize", apply);
+    vv.addEventListener("scroll", apply);
+    return () => {
+      vv.removeEventListener("resize", apply);
+      vv.removeEventListener("scroll", apply);
+      input?.removeEventListener("focus", onFocus);
+      input?.removeEventListener("blur", onBlur);
+      screen.style.height = "";
+      screen.style.top = "";
+      screen.classList.remove("pm-kb-open");
+      unlock();
+    };
+  }
+  var SWIPE_TRIGGER = 45;
+  function setupBubbleGestures(container, onAction) {
+    let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false, lockDir = null;
+    const clearLP = () => {
+      if (lpTimer) {
+        clearTimeout(lpTimer);
+        lpTimer = null;
+      }
+    };
+    const resetTransform = (b) => {
+      b.style.transition = "transform 0.18s ease";
+      b.style.transform = "";
+      setTimeout(() => {
+        b.style.transition = "";
+      }, 200);
+    };
+    const host = container.parentElement || container;
+    const reveal = document.createElement("div");
+    reveal.className = "pm-reply-reveal";
+    reveal.innerHTML = ACT_ICONS.reply;
+    host.appendChild(reveal);
+    const placeReveal = (b) => {
+      const hr = host.getBoundingClientRect();
+      const br = b.getBoundingClientRect();
+      reveal.style.top = br.top - hr.top + br.height / 2 + "px";
+    };
+    const setReveal = (prog) => {
+      reveal.style.opacity = String(prog);
+      reveal.style.transform = `translateY(-50%) translateX(${(1 - prog) * 22}px) scale(${0.55 + 0.45 * prog})`;
+    };
+    const hideReveal = () => {
+      reveal.style.opacity = "0";
+    };
+    container.addEventListener("touchstart", (e) => {
+      const b = e.target.closest(".pm-bubble");
+      if (!b || b.classList.contains("pm-bubble--deleted")) {
+        target = null;
+        return;
+      }
+      target = b;
+      longFired = false;
+      lockDir = null;
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      placeReveal(b);
+      setReveal(0);
+      clearLP();
+      lpTimer = setTimeout(() => {
+        longFired = true;
+        if (navigator.vibrate) {
+          try {
+            navigator.vibrate(10);
+          } catch (_) {
+          }
+        }
+        onAction(target.dataset.msg, "menu");
+      }, 500);
+    }, { passive: true });
+    container.addEventListener("touchmove", (e) => {
+      if (!target)
+        return;
+      const t = e.touches[0];
+      const dx = t.clientX - startX, dy = t.clientY - startY;
+      if (!lockDir && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+        lockDir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        clearLP();
+      }
+      if (lockDir === "h") {
+        e.preventDefault();
+        const d = Math.max(Math.min(dx, 0), -64);
+        target.style.transform = `translateX(${d}px)`;
+        setReveal(Math.min(1, Math.abs(d) / SWIPE_TRIGGER));
+      }
+    }, { passive: false });
+    container.addEventListener("touchend", (e) => {
+      clearLP();
+      if (!target)
+        return;
+      const b = target;
+      target = null;
+      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
+      resetTransform(b);
+      hideReveal();
+      if (!longFired && lockDir === "h" && dx < -SWIPE_TRIGGER)
+        onAction(b.dataset.msg, "reply");
+    }, { passive: false });
+    container.addEventListener("contextmenu", (e) => {
+      const b = e.target.closest(".pm-bubble");
+      if (b && !b.classList.contains("pm-bubble--deleted")) {
+        e.preventDefault();
+        onAction(b.dataset.msg, "menu");
+      }
+    });
+  }
+
+  // src/core/messages-ui.js
+  var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
+  function otherName(thread) {
+    const me = currentUserId();
+    if (me && me === thread.author_uid)
+      return thread.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
+    return thread.author_name || "\u041F\u0440\u043E\u0434\u0430\u0432\u0435\u0446\u044C";
+  }
+  function threadPostTitle(thread) {
+    const p = thread.post || {};
+    return p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+  }
+  var _chatUnsub = null;
   async function openChat(thread, post) {
     if (!isLoggedIn()) {
       requireAuth("\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", () => {
@@ -2248,188 +2432,6 @@
     setTimeout(() => input.focus(), 250);
     return api;
   }
-  function setupKeyboardResize(screen) {
-    const vv = window.visualViewport;
-    const stream = screen.querySelector("#pm-stream");
-    const scrollY = window.scrollY || 0;
-    const prevBody = {
-      position: document.body.style.position,
-      top: document.body.style.top,
-      left: document.body.style.left,
-      right: document.body.style.right,
-      width: document.body.style.width,
-      overflow: document.body.style.overflow
-    };
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
-    const unlock = () => {
-      document.body.style.position = prevBody.position;
-      document.body.style.top = prevBody.top;
-      document.body.style.left = prevBody.left;
-      document.body.style.right = prevBody.right;
-      document.body.style.width = prevBody.width;
-      document.body.style.overflow = prevBody.overflow;
-      window.scrollTo(0, scrollY);
-    };
-    if (!vv)
-      return unlock;
-    const input = screen.querySelector(".pm-input");
-    let wasOpen = false, focused = false;
-    const apply = () => {
-      const atBottom = stream ? stream.scrollHeight - stream.scrollTop - stream.clientHeight < 60 : false;
-      const open = focused && document.documentElement.clientHeight - vv.height > 80;
-      if (open) {
-        screen.style.height = vv.height + "px";
-        screen.style.top = vv.offsetTop + "px";
-      } else {
-        screen.style.height = "";
-        screen.style.top = "";
-      }
-      screen.classList.toggle("pm-kb-open", open);
-      if (open && stream && (!wasOpen || atBottom)) {
-        requestAnimationFrame(() => {
-          stream.scrollTop = stream.scrollHeight;
-        });
-      }
-      wasOpen = open;
-    };
-    const onFocus = () => {
-      focused = true;
-      requestAnimationFrame(apply);
-    };
-    const onBlur = () => {
-      focused = false;
-      requestAnimationFrame(apply);
-    };
-    input?.addEventListener("focus", onFocus);
-    input?.addEventListener("blur", onBlur);
-    apply();
-    vv.addEventListener("resize", apply);
-    vv.addEventListener("scroll", apply);
-    return () => {
-      vv.removeEventListener("resize", apply);
-      vv.removeEventListener("scroll", apply);
-      input?.removeEventListener("focus", onFocus);
-      input?.removeEventListener("blur", onBlur);
-      screen.style.height = "";
-      screen.style.top = "";
-      screen.classList.remove("pm-kb-open");
-      unlock();
-    };
-  }
-  var SWIPE_TRIGGER = 45;
-  function setupBubbleGestures(container, onAction) {
-    let startX = 0, startY = 0, target = null, lpTimer = null, longFired = false, lockDir = null;
-    const clearLP = () => {
-      if (lpTimer) {
-        clearTimeout(lpTimer);
-        lpTimer = null;
-      }
-    };
-    const resetTransform = (b) => {
-      b.style.transition = "transform 0.18s ease";
-      b.style.transform = "";
-      setTimeout(() => {
-        b.style.transition = "";
-      }, 200);
-    };
-    const host = container.parentElement || container;
-    const reveal = document.createElement("div");
-    reveal.className = "pm-reply-reveal";
-    reveal.innerHTML = ACT_ICONS.reply;
-    host.appendChild(reveal);
-    const placeReveal = (b) => {
-      const hr = host.getBoundingClientRect();
-      const br = b.getBoundingClientRect();
-      reveal.style.top = br.top - hr.top + br.height / 2 + "px";
-    };
-    const setReveal = (prog) => {
-      reveal.style.opacity = String(prog);
-      reveal.style.transform = `translateY(-50%) translateX(${(1 - prog) * 22}px) scale(${0.55 + 0.45 * prog})`;
-    };
-    const hideReveal = () => {
-      reveal.style.opacity = "0";
-    };
-    container.addEventListener("touchstart", (e) => {
-      const b = e.target.closest(".pm-bubble");
-      if (!b || b.classList.contains("pm-bubble--deleted")) {
-        target = null;
-        return;
-      }
-      target = b;
-      longFired = false;
-      lockDir = null;
-      const t = e.touches[0];
-      startX = t.clientX;
-      startY = t.clientY;
-      placeReveal(b);
-      setReveal(0);
-      clearLP();
-      lpTimer = setTimeout(() => {
-        longFired = true;
-        if (navigator.vibrate) {
-          try {
-            navigator.vibrate(10);
-          } catch (_) {
-          }
-        }
-        onAction(target.dataset.msg, "menu");
-      }, 500);
-    }, { passive: true });
-    container.addEventListener("touchmove", (e) => {
-      if (!target)
-        return;
-      const t = e.touches[0];
-      const dx = t.clientX - startX, dy = t.clientY - startY;
-      if (!lockDir && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-        lockDir = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
-        clearLP();
-      }
-      if (lockDir === "h") {
-        e.preventDefault();
-        const d = Math.max(Math.min(dx, 0), -64);
-        target.style.transform = `translateX(${d}px)`;
-        setReveal(Math.min(1, Math.abs(d) / SWIPE_TRIGGER));
-      }
-    }, { passive: false });
-    container.addEventListener("touchend", (e) => {
-      clearLP();
-      if (!target)
-        return;
-      const b = target;
-      target = null;
-      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
-      resetTransform(b);
-      hideReveal();
-      if (!longFired && lockDir === "h" && dx < -SWIPE_TRIGGER)
-        onAction(b.dataset.msg, "reply");
-    }, { passive: false });
-    container.addEventListener("contextmenu", (e) => {
-      const b = e.target.closest(".pm-bubble");
-      if (b && !b.classList.contains("pm-bubble--deleted")) {
-        e.preventDefault();
-        onAction(b.dataset.msg, "menu");
-      }
-    });
-  }
-  var MONTHS_GEN = [
-    "\u0441\u0456\u0447\u043D\u044F",
-    "\u043B\u044E\u0442\u043E\u0433\u043E",
-    "\u0431\u0435\u0440\u0435\u0437\u043D\u044F",
-    "\u043A\u0432\u0456\u0442\u043D\u044F",
-    "\u0442\u0440\u0430\u0432\u043D\u044F",
-    "\u0447\u0435\u0440\u0432\u043D\u044F",
-    "\u043B\u0438\u043F\u043D\u044F",
-    "\u0441\u0435\u0440\u043F\u043D\u044F",
-    "\u0432\u0435\u0440\u0435\u0441\u043D\u044F",
-    "\u0436\u043E\u0432\u0442\u043D\u044F",
-    "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430",
-    "\u0433\u0440\u0443\u0434\u043D\u044F"
-  ];
   function threadListTime(ts) {
     const d = new Date(ts);
     if (isNaN(d.getTime()))
@@ -4244,7 +4246,7 @@ ${post.text}
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
           <div class="cm-board-contact-btns">
-            <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+            <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
             <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
           </div>
         </div>
@@ -4296,7 +4298,7 @@ ${post.text}
               <span class="cm-board-time">${formatTime(postTime(p))}</span>
             </div>
             <div class="cm-board-modal-meta-btns">
-              <button class="cm-board-msg-btn" data-msg-soon aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+              <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
               <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>
             </div>
           </div>`;
@@ -4984,7 +4986,7 @@ ${post.text}
           openChatModal(post);
         return;
       }
-      const msgBtn = e.target.closest("[data-msg-soon]");
+      const msgBtn = e.target.closest("[data-open-chat]");
       if (msgBtn) {
         e.stopPropagation();
         const holder = msgBtn.closest("[data-post-id]");
