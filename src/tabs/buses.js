@@ -9,6 +9,10 @@ import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/au
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
+// Черга «незавершених скасувань»: якщо серверне видалення підписки не пройшло
+// (офлайн у момент «Скасувати») — запам'ятовуємо {endpoint,routeId,trackDate}
+// і доганяємо при наступному відкритті. Гарантує «жодних push після скасування».
+const PENDING_UNSUB_KEY = 'bus_pending_unsub_v1';
 
 // VAPID public key (публічний ключ — безпечно зберігати у коді).
 // Private key — тільки у Supabase Edge Function Secrets (VAPID_PRIVATE_KEY).
@@ -178,6 +182,10 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
     if (!res.ok) {
       console.warn('[push] не вдалося зберегти підписку:', res.error);
       showToast('Не вдалося увімкнути сповіщення — спробуйте ще раз');
+    } else {
+      // Знову відстежуємо цей рейс → скасовуємо застаріле «незавершене скасування»,
+      // інакше flushPendingUnsub згодом зняв би цю свіжу підписку.
+      removePendingUnsub(subJson.endpoint, routeId, trackDate);
     }
   } catch (err) {
     console.warn('[push] помилка підписки:', err);
@@ -192,14 +200,73 @@ async function unsubscribeFromPush(routeId, trackDate) {
   // інакше серверний рядок завтрашнього рейсу лишиться «висіти». Минуле сервер
   // прибирає сам (track_date<today), тож для нього нічого не робимо.
   if (trackDate < getTodayISO()) return;
+  let endpoint = null;
   try {
     const reg = await navigator.serviceWorker.ready;
     const sub = await reg.pushManager.getSubscription();
+    // Немає браузерної підписки → endpoint невідомий. Якщо серверний рядок висить
+    // під старим endpoint — сервер прибере його за track_date<today або за 410
+    // (мертвий endpoint) при спробі відправлення. Тут більше нічого не зробити.
     if (!sub) return;
-    await deletePushSubscription(sub.endpoint, routeId, trackDate);
+    endpoint = sub.endpoint;
+
+    // Повтор 1× (як у subscribeToPush): захист від разового обриву мережі.
+    let res = await deletePushSubscription(endpoint, routeId, trackDate);
+    if (!res.ok) {
+      await new Promise(r => setTimeout(r, 1500));
+      res = await deletePushSubscription(endpoint, routeId, trackDate);
+    }
+    if (res.ok) {
+      removePendingUnsub(endpoint, routeId, trackDate);
+    } else {
+      // Не вдалося — запам'ятовуємо, доженемо при відкритті (flushPendingUnsub).
+      addPendingUnsub(endpoint, routeId, trackDate);
+    }
   } catch (err) {
     console.warn('[push] unsubscribe error:', err);
+    if (endpoint) addPendingUnsub(endpoint, routeId, trackDate);
   }
+}
+
+// ── Черга незавершених скасувань (persist у localStorage) ─────────────
+function loadPendingUnsub() {
+  try {
+    const d = JSON.parse(localStorage.getItem(PENDING_UNSUB_KEY));
+    return Array.isArray(d) ? d : [];
+  } catch { return []; }
+}
+function savePendingUnsub(list) {
+  if (list.length) localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
+  else localStorage.removeItem(PENDING_UNSUB_KEY);
+}
+function addPendingUnsub(endpoint, routeId, trackDate) {
+  const list = loadPendingUnsub();
+  if (!list.some(p => p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)) {
+    list.push({ endpoint, routeId, trackDate });
+    savePendingUnsub(list);
+  }
+}
+function removePendingUnsub(endpoint, routeId, trackDate) {
+  savePendingUnsub(loadPendingUnsub().filter(p =>
+    !(p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)));
+}
+
+// Доганяє незавершені скасування при відкритті вкладки. Пропускає рейси які
+// користувач знову відстежує (routeId+trackDate у trackedRoutes) — щоб не зняти
+// свіжу підписку. Протерміновані сервер прибере сам (track_date<today).
+async function flushPendingUnsub() {
+  const today = getTodayISO();
+  const list = loadPendingUnsub();
+  if (!list.length) return;
+  const remaining = [];
+  for (const p of list) {
+    if (p.trackDate < today) continue;                 // сервер прибере сам
+    const reTracked = trackedRoutes.some(t => t.routeId === p.routeId && t.trackDate === p.trackDate);
+    if (reTracked) continue;                            // знову відстежується — не чіпати
+    const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
+    if (!res.ok) remaining.push(p);                     // не вдалося — лишаємо на потім
+  }
+  savePendingUnsub(remaining);
 }
 
 // ── Track route (відстеження рейсу) ──────────────────────────────────
@@ -2015,6 +2082,7 @@ export async function initBuses() {
   loadPrefs();
   loadTrackedRoute();
   selfHealPushSubscriptions();   // перепідписати втрачені push (тихо, лише якщо дозвіл є)
+  flushPendingUnsub();           // догнати скасування що не пройшли (напр. були офлайн)
 
   // Створюємо overlay дропдауна один раз (position: fixed — фіксована позиція)
   if (!document.getElementById('bs-dropdown')) {

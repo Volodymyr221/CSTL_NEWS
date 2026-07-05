@@ -1,20 +1,14 @@
 // src/tabs/community-modal.js
-// Bottom-sheet модалка «Додати на Дошку громади» — 2 типи постів:
+// Bottom-sheet модалка «Нове оголошення на Дошці громади» — ТІЛЬКИ маркетплейс.
 //
 //   🛒 Оголошення (board) — категорія + текст + фото + контакт + ім'я
-//   💬 Розмова (chat)     — текст + хештеги + фото + ім'я
 //
-// (Тип 🎉 Вітання і категорію ❤️ Подяка видалено 13.06.2026 — Фаза А Дошки.)
+// Тип 💬 Розмова (chat) прибрано 01.07.2026 — обговорення створюються
+// з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { currentUserId, isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
-
-const TYPE_TABS = [
-  // Назва типу = «Дошка» (а не «Оголошення») — щоб не дублювати категорію 📢 Оголошення.
-  { id: 'board',    emoji: '🛒', label: 'Дошка' },
-  { id: 'chat',     emoji: '💬', label: 'Розмова' },
-];
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
 // купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
@@ -33,32 +27,19 @@ function isPhone(s) {
   return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || '').trim());
 }
 
-// Лише ім'я (перше слово) без прізвища — щоб не займало багато місця в підписі.
+// Лише ім'я (перше слово) без прізвища.
 // 'Житель' — службовий дефолт (не справжнє ім'я) → вважаємо порожнім.
 function firstNameOnly(full) {
   const w = String(full || '').trim().split(/\s+/)[0] || '';
   return w === 'Житель' ? '' : w;
 }
 
-// Ім'я для підпису поста = ім'я з акаунта (без прізвища). Анонімність прибрано:
-// постити можна лише залогіненим (модалка під requireAuth), тож ім'я завжди є.
-// Якщо справжнього імені нема — службовий дефолт «Житель».
+// Ім'я для підпису поста = ім'я з акаунта (без прізвища).
 function accountAuthorName() {
   return firstNameOnly(currentUserName()) || 'Житель';
 }
 
-// Парсинг хештегів з рядка «#громада #дороги #свято» → ['#громада', '#дороги', '#свято']
-function parseTags(str) {
-  return String(str || '')
-    .split(/\s+/)
-    .map(s => s.trim())
-    .filter(Boolean)
-    .map(s => s.startsWith('#') ? s : '#' + s);
-}
-
 // Стискаємо фото на клієнті → повертаємо Blob (JPEG ~50-200KB).
-// Раніше повертали dataURL (base64) — лишило ~150KB тексту у БД на кожне фото.
-// Тепер blob йде у Supabase Storage, у БД зберігається тільки публічний URL.
 function compressImage(file) {
   return new Promise(function executor(resolve, reject) {
     const reader = new FileReader();
@@ -90,21 +71,15 @@ function compressImage(file) {
 export function openBoardModal() {
   if (document.getElementById('cm-board-modal')) return;
 
-  // Поточний стан форми
+  // Стан форми — тільки поля оголошення (chat/tagsRaw видалено)
   const state = {
-    type: 'board',
-    // SPILNI
     text: '',
     photos: [],         // URL-и фото: blob: під час upload, https: після
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
-    // Ім'я з акаунта (без прізвища) — завжди. Анонімність прибрано (рішення Вови).
     author: accountAuthorName(),
-    // BOARD
     category: 'оголошення',
     contact: '',
     title: '',
-    // CHAT
-    tagsRaw: '',
   };
 
   const wrap = document.createElement('div');
@@ -115,21 +90,11 @@ export function openBoardModal() {
     <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
       <div class="cm-board-modal-handle"></div>
       <button class="cm-board-modal-close" type="button" aria-label="Закрити">✕</button>
-      <h3 class="cm-board-modal-title">✏️ Новий пост</h3>
-      <p class="cm-board-modal-sub">Оберіть тип і заповніть поля.</p>
+      <h3 class="cm-board-modal-title">✏️ Нове оголошення</h3>
+      <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
 
       <form id="cm-board-modal-form" novalidate>
-        <!-- Перемикач типу (3 таби) -->
-        <div class="bm-type-tabs" id="bm-type-tabs">
-          ${TYPE_TABS.map(t => `
-            <button type="button" class="bm-type-tab${t.id === state.type ? ' active' : ''}" data-type="${t.id}">
-              <span class="bm-type-emoji">${t.emoji}</span>
-              <span class="bm-type-label">${t.label}</span>
-            </button>
-          `).join('')}
-        </div>
-
-        <!-- Динамічна частина — змінюється під тип -->
+        <!-- Динамічна частина -->
         <div id="bm-dynamic"></div>
 
         <!-- LIVE-preview -->
@@ -149,7 +114,6 @@ export function openBoardModal() {
 
   // ── Close ──
   function close() {
-    // Звільняємо blob:-посилання незавантажених фото (щоб не лишати витік пам'яті)
     state.photos.forEach(p => { if (p && p.startsWith('blob:')) URL.revokeObjectURL(p); });
     wrap.classList.remove('open');
     document.body.classList.remove('modal-open');
@@ -161,14 +125,13 @@ export function openBoardModal() {
     if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
   });
 
-  // ── Свайп вниз → закрити (з ручки або коли форма прокручена до верху) ──
+  // ── Свайп вниз → закрити ──
   const panel  = wrap.querySelector('.cm-board-modal-panel');
   const handle = wrap.querySelector('.cm-board-modal-handle');
   let dragStartY = 0, dragging = false, dragDelta = 0;
 
   panel.addEventListener('touchstart', e => {
     const onHandle = handle && (e.target === handle || handle.contains(e.target));
-    // тягнемо тільки з ручки або коли список прокручено до самого верху
     dragging = onHandle || panel.scrollTop <= 2;
     if (!dragging) return;
     dragStartY = e.touches[0].clientY;
@@ -179,19 +142,19 @@ export function openBoardModal() {
   panel.addEventListener('touchmove', e => {
     if (!dragging) return;
     dragDelta = e.touches[0].clientY - dragStartY;
-    if (dragDelta <= 0) { panel.style.transform = 'translateY(0)'; return; } // вгору — це скрол
-    e.preventDefault();                                   // вниз — перехоплюємо як закриття
+    if (dragDelta <= 0) { panel.style.transform = 'translateY(0)'; return; }
+    e.preventDefault();
     panel.style.transform = `translateY(${dragDelta}px)`;
   }, { passive: false });
 
   panel.addEventListener('touchend', () => {
     if (!dragging) return;
     dragging = false;
-    if (dragDelta > 90) {                                 // достатньо протягнув — закрити
+    if (dragDelta > 90) {
       panel.style.transition = 'transform 0.25s ease-in';
       panel.style.transform  = 'translateY(100%)';
       setTimeout(close, 240);
-    } else {                                              // мало — плавно повернути
+    } else {
       panel.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
       panel.style.transform  = 'translateY(0)';
       setTimeout(() => { panel.style.transition = ''; panel.style.transform = ''; }, 300);
@@ -199,25 +162,8 @@ export function openBoardModal() {
     dragDelta = 0;
   }, { passive: true });
 
-  // ── Перемикач типу ──
-  wrap.querySelectorAll('.bm-type-tab').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if (state.type === btn.dataset.type) return;
-      wrap.querySelectorAll('.bm-type-tab').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.type = btn.dataset.type;
-      renderDynamic();
-      renderPreview();
-    });
-  });
-
-  // ── Рендеримо динамічну частину під поточний тип ──
+  // ── Рендер полів оголошення ──
   const dynamicEl = wrap.querySelector('#bm-dynamic');
-
-  function renderDynamic() {
-    if (state.type === 'board') return renderBoardFields();
-    if (state.type === 'chat')  return renderChatFields();
-  }
 
   function renderBoardFields() {
     dynamicEl.innerHTML = `
@@ -258,7 +204,7 @@ export function openBoardModal() {
         <div class="bm-author-fixed" id="bm-author-fixed">👤 ${escapeHtml(state.author)}</div>
       </div>
     `;
-    bindCommonFields();
+
     // Категорії
     dynamicEl.querySelectorAll('.bm-chip').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -273,51 +219,17 @@ export function openBoardModal() {
       state.title = e.target.value;
       renderPreview();
     });
+    // Опис
+    dynamicEl.querySelector('#bm-text')?.addEventListener('input', e => {
+      state.text = e.target.value;
+      renderPreview();
+    });
     // Контакт
     dynamicEl.querySelector('#bm-contact')?.addEventListener('input', e => {
       state.contact = e.target.value;
       renderPreview();
     });
     bindPhotoSlots();
-  }
-
-  function renderChatFields() {
-    dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">Повідомлення</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="Хочу спитати громаду..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-tags">Теми <span class="bm-label-hint">(через пробіл, напр. #громада #дороги)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-tags" type="text" placeholder="#громада #дороги" value="${escapeHtml(state.tagsRaw)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">Фото <span class="bm-label-hint">(необов'язково, 1)</span></label>
-        ${photoSlotsHtml(1)}
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">Ім'я</label>
-        <div class="bm-author-fixed" id="bm-author-fixed">👤 ${escapeHtml(state.author)}</div>
-      </div>
-    `;
-    bindCommonFields();
-    // Теги
-    dynamicEl.querySelector('#bm-tags')?.addEventListener('input', e => {
-      state.tagsRaw = e.target.value;
-      renderPreview();
-    });
-    bindPhotoSlots();
-  }
-
-  // Спільне поле: text (ім'я не редагується — береться з акаунта)
-  function bindCommonFields() {
-    dynamicEl.querySelector('#bm-text')?.addEventListener('input', e => {
-      state.text = e.target.value;
-      renderPreview();
-    });
   }
 
   function photoSlotsHtml(count = 3) {
@@ -341,7 +253,6 @@ export function openBoardModal() {
         const file = input.files[0];
         if (!file) return;
 
-        // 1. Стискаємо у Blob і показуємо одразу через blob:URL — preview миттєвий
         let blob;
         try {
           blob = await compressImage(file);
@@ -357,7 +268,6 @@ export function openBoardModal() {
         slot.querySelector('.bm-photo-plus').classList.add('bm-photo-remove');
         renderPreview();
 
-        // 2. У фоні заливаємо у Supabase Storage, замінюємо blob:URL на https:URL
         state.uploadingCount++;
         updateSubmitState();
         const { url, error } = await uploadPhotoToStorage(blob);
@@ -378,7 +288,6 @@ export function openBoardModal() {
           return;
         }
 
-        // Slot все ще цей самий і користувач не видалив його за час upload
         if (state.photos[idx] === localUrl) {
           state.photos[idx] = url;
           slot.classList.remove('uploading');
@@ -416,15 +325,10 @@ export function openBoardModal() {
     }
   }
 
-  // ── LIVE-preview залежно від типу ──
+  // ── LIVE-preview ──
   const previewCanvas = wrap.querySelector('#bm-preview-canvas');
 
   function renderPreview() {
-    if (state.type === 'board') renderBoardPreview();
-    else if (state.type === 'chat') renderChatPreview();
-  }
-
-  function renderBoardPreview() {
     const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
       || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
     const firstPhoto = state.photos.find(p => p);
@@ -449,32 +353,8 @@ export function openBoardModal() {
     `;
   }
 
-  function renderChatPreview() {
-    const tags = parseTags(state.tagsRaw);
-    const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map(t => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(' ')}</div>` : '';
-    const firstPhoto = state.photos.find(p => p);
-    const author = state.author.trim() || 'Житель';
-    const initial = author ? author.charAt(0).toUpperCase() : '👤';
-    const hue = author ? (author.charCodeAt(0) * 47) % 360 : 0;
-    const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : 'background:#f5f5f5;color:#666;font-size:18px';
-    previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--chat">
-        <div class="bd-chat-head">
-          <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-          <div class="bd-chat-meta">
-            <span class="bd-chat-author">${escapeHtml(author || 'анонімно')}</span>
-            <span class="bd-chat-time">щойно</span>
-          </div>
-        </div>
-        <p class="bd-chat-text">${escapeHtml(state.text.trim() || 'Ваше повідомлення…')}</p>
-        ${firstPhoto ? `<img class="bd-chat-photo" src="${firstPhoto}" alt="">` : ''}
-        ${tagsHtml}
-      </article>
-    `;
-  }
-
   // Початковий рендер
-  renderDynamic();
+  renderBoardFields();
   renderPreview();
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
 
@@ -498,15 +378,11 @@ export function openBoardModal() {
       wrap.querySelector('#bm-text')?.focus();
       return;
     }
-    // Фільтр матюків/образ — у тексті, контакті, тегах (ім'я — з акаунта, не перевіряємо)
-    if (containsProfanity(state.text) || containsProfanity(state.contact)
-        || containsProfanity(state.tagsRaw)) {
+    if (containsProfanity(state.text) || containsProfanity(state.contact)) {
       showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error');
       wrap.querySelector('#bm-text')?.focus();
       return;
     }
-    // Захист: не пускаємо blob:URL у БД (фото ще не завантажилось у Storage).
-    // updateSubmitState() блокує кнопку, але це підстраховка на випадок race.
     if (state.uploadingCount > 0 || state.photos.some(p => p && p.startsWith('blob:'))) {
       showToast('Зачекай, фото завантажується…', 2500);
       return;
@@ -520,8 +396,6 @@ export function openBoardModal() {
 
     const payload = buildPayload(state);
 
-    // Якщо Supabase підключений — реальний POST у таблицю posts.
-    // Якщо ні (offline / SDK не завантажився) — показуємо заглушку як було.
     if (isSupabaseReady()) {
       const result = await submitPost(payload);
       if (!result.ok) {
@@ -541,36 +415,21 @@ export function openBoardModal() {
   });
 }
 
-// Готує payload у форматі майбутньої таблиці Supabase `posts`
+// Готує payload у форматі таблиці Supabase `posts` (тільки type='board')
 function buildPayload(state) {
-  const base = {
-    type:     state.type,
-    text:     state.text.trim(),
-    author:   state.author.trim() || 'Житель',   // завжди ім'я з акаунта, без анонімності
-    photos:   state.photos.filter(Boolean),
-    status:   'pending',
-    // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).
-    // Гість → null (анонімне оголошення, чат недоступний — лише телефон).
+  const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
+    || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
+  return {
+    type:      'board',
+    text:      state.text.trim(),
+    author:    state.author.trim() || 'Житель',
+    photos:    state.photos.filter(Boolean),
+    status:    'pending',
     owner_uid: currentUserId() || null,
+    category:  state.category,
+    color:     cat.color,
+    contact:   state.contact.trim() || null,
+    title:     state.title.trim() || null,
+    tags:      [],
   };
-  if (state.type === 'board') {
-    const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
-      || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
-    return {
-      ...base,
-      category: state.category,
-      color:    cat.color,
-      contact:  state.contact.trim() || null,
-      title:    state.title.trim() || null,
-      tags:     [],
-    };
-  }
-  if (state.type === 'chat') {
-    return {
-      ...base,
-      category: null,
-      tags:     parseTags(state.tagsRaw),
-    };
-  }
-  return base;
 }

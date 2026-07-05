@@ -1026,10 +1026,13 @@
   }
   async function deletePushSubscription(endpoint, routeId, trackDate) {
     if (!supa)
-      return;
+      return { ok: false, error: "no-supa" };
     const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
-    if (error)
+    if (error) {
       console.warn("[supabase] deletePushSubscription:", error.message);
+      return { ok: false, error: error.message };
+    }
+    return { ok: true };
   }
   function subscribeReactions(onChange) {
     if (!supa)
@@ -1161,11 +1164,6 @@
   }
 
   // src/tabs/community-modal.js
-  var TYPE_TABS = [
-    // Назва типу = «Дошка» (а не «Оголошення») — щоб не дублювати категорію 📢 Оголошення.
-    { id: "board", emoji: "\u{1F6D2}", label: "\u0414\u043E\u0448\u043A\u0430" },
-    { id: "chat", emoji: "\u{1F4AC}", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0430" }
-  ];
   var BOARD_CATEGORIES = [
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
     { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
@@ -1184,9 +1182,6 @@
   }
   function accountAuthorName() {
     return firstNameOnly(currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
-  }
-  function parseTags(str) {
-    return String(str || "").split(/\s+/).map((s) => s.trim()).filter(Boolean).map((s) => s.startsWith("#") ? s : "#" + s);
   }
   function compressImage(file) {
     return new Promise(function executor(resolve, reject) {
@@ -1224,21 +1219,15 @@
     if (document.getElementById("cm-board-modal"))
       return;
     const state = {
-      type: "board",
-      // SPILNI
       text: "",
       photos: [],
       // URL-и фото: blob: під час upload, https: після
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
-      // Ім'я з акаунта (без прізвища) — завжди. Анонімність прибрано (рішення Вови).
       author: accountAuthorName(),
-      // BOARD
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
-      title: "",
-      // CHAT
-      tagsRaw: ""
+      title: ""
     };
     const wrap = document.createElement("div");
     wrap.id = "cm-board-modal";
@@ -1248,21 +1237,11 @@
     <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
       <div class="cm-board-modal-handle"></div>
       <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442</h3>
-      <p class="cm-board-modal-sub">\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u0442\u0438\u043F \u0456 \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F.</p>
+      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+      <p class="cm-board-modal-sub">\u0417\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F \u043D\u0438\u0436\u0447\u0435.</p>
 
       <form id="cm-board-modal-form" novalidate>
-        <!-- \u041F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447 \u0442\u0438\u043F\u0443 (3 \u0442\u0430\u0431\u0438) -->
-        <div class="bm-type-tabs" id="bm-type-tabs">
-          ${TYPE_TABS.map((t) => `
-            <button type="button" class="bm-type-tab${t.id === state.type ? " active" : ""}" data-type="${t.id}">
-              <span class="bm-type-emoji">${t.emoji}</span>
-              <span class="bm-type-label">${t.label}</span>
-            </button>
-          `).join("")}
-        </div>
-
-        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 \u2014 \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u043F\u0456\u0434 \u0442\u0438\u043F -->
+        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 -->
         <div id="bm-dynamic"></div>
 
         <!-- LIVE-preview -->
@@ -1337,24 +1316,7 @@
       }
       dragDelta = 0;
     }, { passive: true });
-    wrap.querySelectorAll(".bm-type-tab").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        if (state.type === btn.dataset.type)
-          return;
-        wrap.querySelectorAll(".bm-type-tab").forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        state.type = btn.dataset.type;
-        renderDynamic();
-        renderPreview();
-      });
-    });
     const dynamicEl = wrap.querySelector("#bm-dynamic");
-    function renderDynamic() {
-      if (state.type === "board")
-        return renderBoardFields();
-      if (state.type === "chat")
-        return renderChatFields();
-    }
     function renderBoardFields() {
       dynamicEl.innerHTML = `
       <div class="bm-section">
@@ -1394,7 +1356,6 @@
         <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
       </div>
     `;
-      bindCommonFields();
       dynamicEl.querySelectorAll(".bm-chip").forEach((btn) => {
         btn.addEventListener("click", () => {
           dynamicEl.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
@@ -1407,46 +1368,15 @@
         state.title = e.target.value;
         renderPreview();
       });
+      dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
+        state.text = e.target.value;
+        renderPreview();
+      });
       dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
         state.contact = e.target.value;
         renderPreview();
       });
       bindPhotoSlots();
-    }
-    function renderChatFields() {
-      dynamicEl.innerHTML = `
-      <div class="bm-section">
-        <label class="bm-label" for="bm-text">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</label>
-        <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0425\u043E\u0447\u0443 \u0441\u043F\u0438\u0442\u0430\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0443..." required>${escapeHtml(state.text)}</textarea>
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label" for="bm-tags">\u0422\u0435\u043C\u0438 <span class="bm-label-hint">(\u0447\u0435\u0440\u0435\u0437 \u043F\u0440\u043E\u0431\u0456\u043B, \u043D\u0430\u043F\u0440. #\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-tags" type="text" placeholder="#\u0433\u0440\u043E\u043C\u0430\u0434\u0430 #\u0434\u043E\u0440\u043E\u0433\u0438" value="${escapeHtml(state.tagsRaw)}">
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, 1)</span></label>
-        ${photoSlotsHtml(1)}
-      </div>
-
-      <div class="bm-section">
-        <label class="bm-label">\u0406\u043C'\u044F</label>
-        <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
-      </div>
-    `;
-      bindCommonFields();
-      dynamicEl.querySelector("#bm-tags")?.addEventListener("input", (e) => {
-        state.tagsRaw = e.target.value;
-        renderPreview();
-      });
-      bindPhotoSlots();
-    }
-    function bindCommonFields() {
-      dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
-        state.text = e.target.value;
-        renderPreview();
-      });
     }
     function photoSlotsHtml(count = 3) {
       return `
@@ -1538,12 +1468,6 @@
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
-      if (state.type === "board")
-        renderBoardPreview();
-      else if (state.type === "chat")
-        renderChatPreview();
-    }
-    function renderBoardPreview() {
       const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
@@ -1566,30 +1490,7 @@
       </article>
     `;
     }
-    function renderChatPreview() {
-      const tags = parseTags(state.tagsRaw);
-      const tagsHtml = tags.length ? `<div class="bd-chat-tags">${tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
-      const firstPhoto = state.photos.find((p) => p);
-      const author = state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      const initial = author ? author.charAt(0).toUpperCase() : "\u{1F464}";
-      const hue = author ? author.charCodeAt(0) * 47 % 360 : 0;
-      const avatarStyle = author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
-      previewCanvas.innerHTML = `
-      <article class="bd-card bd-card--chat">
-        <div class="bd-chat-head">
-          <span class="bd-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-          <div class="bd-chat-meta">
-            <span class="bd-chat-author">${escapeHtml(author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="bd-chat-time">\u0449\u043E\u0439\u043D\u043E</span>
-          </div>
-        </div>
-        <p class="bd-chat-text">${escapeHtml(state.text.trim() || "\u0412\u0430\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F\u2026")}</p>
-        ${firstPhoto ? `<img class="bd-chat-photo" src="${firstPhoto}" alt="">` : ""}
-        ${tagsHtml}
-      </article>
-    `;
-    }
-    renderDynamic();
+    renderBoardFields();
     renderPreview();
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
     if (isLoggedIn()) {
@@ -1612,7 +1513,7 @@
         wrap.querySelector("#bm-text")?.focus();
         return;
       }
-      if (containsProfanity(state.text) || containsProfanity(state.contact) || containsProfanity(state.tagsRaw)) {
+      if (containsProfanity(state.text) || containsProfanity(state.contact)) {
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
         wrap.querySelector("#bm-text")?.focus();
         return;
@@ -1645,36 +1546,20 @@
     });
   }
   function buildPayload(state) {
-    const base = {
-      type: state.type,
+    const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+    return {
+      type: "board",
       text: state.text.trim(),
       author: state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C",
-      // завжди ім'я з акаунта, без анонімності
       photos: state.photos.filter(Boolean),
       status: "pending",
-      // Якщо залогінений — прив'язуємо оголошення до акаунта (для приватного чату).
-      // Гість → null (анонімне оголошення, чат недоступний — лише телефон).
-      owner_uid: currentUserId() || null
+      owner_uid: currentUserId() || null,
+      category: state.category,
+      color: cat.color,
+      contact: state.contact.trim() || null,
+      title: state.title.trim() || null,
+      tags: []
     };
-    if (state.type === "board") {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
-      return {
-        ...base,
-        category: state.category,
-        color: cat.color,
-        contact: state.contact.trim() || null,
-        title: state.title.trim() || null,
-        tags: []
-      };
-    }
-    if (state.type === "chat") {
-      return {
-        ...base,
-        category: null,
-        tags: parseTags(state.tagsRaw)
-      };
-    }
-    return base;
   }
 
   // src/core/messages-ui.js
@@ -4647,10 +4532,6 @@ ${post.text}
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">\u270F\uFE0F</span>
         </button>
-        <button class="board-fab-item" data-fab="msgs" type="button">
-          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-badge" id="board-fab-msgs-badge"></span></span>
-          <span class="board-fab-ic">\u{1F4AC}</span>
-        </button>
         <button class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">\u{1F4CB}</span>
@@ -4663,7 +4544,6 @@ ${post.text}
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
       </button>
     </div>
@@ -4711,8 +4591,6 @@ ${post.text}
         }
         if (act === "mine")
           openMyAds();
-        if (act === "msgs")
-          openThreadsList();
       });
     });
     const searchInput = document.getElementById("bd-search-input");
@@ -4745,7 +4623,6 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
-    refreshUnreadBadge();
   }
   function renderBodyOnly() {
     const el = getBoardRoot();
@@ -5437,6 +5314,7 @@ ${post.text}
   // src/tabs/buses.js
   var PREFS_KEY = "bus_prefs_v2";
   var TRACK_KEY = "bus_track_v2";
+  var PENDING_UNSUB_KEY = "bus_pending_unsub_v1";
   var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
   var busData = null;
   var busDay = getTodayISO();
@@ -5589,6 +5467,8 @@ ${post.text}
       if (!res.ok) {
         console.warn("[push] \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0443:", res.error);
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437");
+      } else {
+        removePendingUnsub(subJson.endpoint, routeId, trackDate);
       }
     } catch (err) {
       console.warn("[push] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u043F\u0456\u0434\u043F\u0438\u0441\u043A\u0438:", err);
@@ -5598,15 +5478,70 @@ ${post.text}
   async function unsubscribeFromPush(routeId, trackDate) {
     if (trackDate < getTodayISO())
       return;
+    let endpoint = null;
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
       if (!sub)
         return;
-      await deletePushSubscription(sub.endpoint, routeId, trackDate);
+      endpoint = sub.endpoint;
+      let res = await deletePushSubscription(endpoint, routeId, trackDate);
+      if (!res.ok) {
+        await new Promise((r) => setTimeout(r, 1500));
+        res = await deletePushSubscription(endpoint, routeId, trackDate);
+      }
+      if (res.ok) {
+        removePendingUnsub(endpoint, routeId, trackDate);
+      } else {
+        addPendingUnsub(endpoint, routeId, trackDate);
+      }
     } catch (err) {
       console.warn("[push] unsubscribe error:", err);
+      if (endpoint)
+        addPendingUnsub(endpoint, routeId, trackDate);
     }
+  }
+  function loadPendingUnsub() {
+    try {
+      const d = JSON.parse(localStorage.getItem(PENDING_UNSUB_KEY));
+      return Array.isArray(d) ? d : [];
+    } catch {
+      return [];
+    }
+  }
+  function savePendingUnsub(list) {
+    if (list.length)
+      localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
+    else
+      localStorage.removeItem(PENDING_UNSUB_KEY);
+  }
+  function addPendingUnsub(endpoint, routeId, trackDate) {
+    const list = loadPendingUnsub();
+    if (!list.some((p) => p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)) {
+      list.push({ endpoint, routeId, trackDate });
+      savePendingUnsub(list);
+    }
+  }
+  function removePendingUnsub(endpoint, routeId, trackDate) {
+    savePendingUnsub(loadPendingUnsub().filter((p) => !(p.endpoint === endpoint && p.routeId === routeId && p.trackDate === trackDate)));
+  }
+  async function flushPendingUnsub() {
+    const today = getTodayISO();
+    const list = loadPendingUnsub();
+    if (!list.length)
+      return;
+    const remaining = [];
+    for (const p of list) {
+      if (p.trackDate < today)
+        continue;
+      const reTracked = trackedRoutes.some((t) => t.routeId === p.routeId && t.trackDate === p.trackDate);
+      if (reTracked)
+        continue;
+      const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
+      if (!res.ok)
+        remaining.push(p);
+    }
+    savePendingUnsub(remaining);
   }
   function trackKey() {
     return TRACK_KEY + ":" + (currentUserId() || "");
@@ -7167,6 +7102,7 @@ ${post.text}
     loadPrefs();
     loadTrackedRoute();
     selfHealPushSubscriptions();
+    flushPendingUnsub();
     if (!document.getElementById("bs-dropdown")) {
       const dd = document.createElement("div");
       dd.id = "bs-dropdown";
