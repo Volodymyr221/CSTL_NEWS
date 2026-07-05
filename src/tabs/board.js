@@ -7,7 +7,7 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { startChatFromPost, openMyAds } from '../core/messages-ui.js';
+import { startChatFromPost, openMyAds } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {

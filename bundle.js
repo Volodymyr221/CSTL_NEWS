@@ -1729,6 +1729,22 @@
     const base = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
     return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
   }
+  function threadListTime(ts) {
+    const d = new Date(ts);
+    if (isNaN(d.getTime()))
+      return "";
+    const now = /* @__PURE__ */ new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const dayMs = 864e5;
+    if (d.getTime() >= startOfToday) {
+      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+    }
+    if (d.getTime() >= startOfToday - dayMs)
+      return "\u0412\u0447\u043E\u0440\u0430";
+    if (d.getFullYear() === now.getFullYear())
+      return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
+  }
   function setupKeyboardResize(screen) {
     const vv = window.visualViewport;
     const stream = screen.querySelector("#pm-stream");
@@ -1898,7 +1914,7 @@
     });
   }
 
-  // src/core/messages-ui.js
+  // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
   function otherName(thread) {
     const me = currentUserId();
@@ -2432,22 +2448,6 @@
     setTimeout(() => input.focus(), 250);
     return api;
   }
-  function threadListTime(ts) {
-    const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
-    const now = /* @__PURE__ */ new Date();
-    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-    const dayMs = 864e5;
-    if (d.getTime() >= startOfToday) {
-      return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
-    }
-    if (d.getTime() >= startOfToday - dayMs)
-      return "\u0412\u0447\u043E\u0440\u0430";
-    if (d.getFullYear() === now.getFullYear())
-      return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
-    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
-  }
   function openThreadsList() {
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", async () => {
       const me = currentUserId();
@@ -2688,392 +2688,6 @@
           clearTimeout(refreshTimer);
         unsub();
       });
-    });
-  }
-  var GR_SVG = {
-    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
-    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.5a3.5 3.5 0 0 1 0 6.8"/></svg>'
-  };
-  function openGroupsList() {
-    requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0433\u0440\u0443\u043F\u0438", async () => {
-      const api = buildScreen(`
-      <header class="pm-head pm-head--list">
-        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <div class="pm-head-titles"><div class="pm-head-name">\u0413\u0440\u0443\u043F\u0438</div></div>
-      </header>
-      <div class="gr-actions">
-        <button class="gr-act" type="button" data-gr-new><span class="gr-act-ic">\uFF0B</span> \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u0443</button>
-        <button class="gr-act gr-act--ghost" type="button" data-gr-join><span class="gr-act-ic">${GR_SVG.link}</span> \u0412\u0441\u0442\u0443\u043F \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C</button>
-      </div>
-      <div class="pm-list" id="gr-list"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
-    `, "pm-screen--groups");
-      const listEl = api.screen.querySelector("#gr-list");
-      let groups = [];
-      const groupRow = (g) => {
-        const cover = g.avatar_emoji ? escapeHtml(g.avatar_emoji) : GR_SVG.users;
-        const last = g.last_message_text ? escapeHtml(g.last_message_text) : "\u041D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
-        return `
-        <button class="pm-thread gr-row" type="button" data-group="${g.id}">
-          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ""}">${cover}</span>
-          <div class="pm-thread-body">
-            <div class="pm-thread-top">
-              <span class="pm-thread-name">${escapeHtml(g.name)}</span>
-              <span class="pm-thread-time">${g.last_message_at ? threadListTime(g.last_message_at) : ""}</span>
-            </div>
-            <div class="pm-thread-last">${last}</div>
-          </div>
-        </button>`;
-      };
-      const load = async () => {
-        groups = await fetchMyGroups();
-        if (api._closed)
-          return;
-        listEl.innerHTML = groups.length ? groups.map(groupRow).join("") : `<div class="pm-empty"><span class="pm-empty-ic">\u{1F465}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0433\u0440\u0443\u043F.<br>\u0421\u0442\u0432\u043E\u0440\u0456\u0442\u044C \u0441\u0432\u043E\u044E \u0430\u0431\u043E \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C.</div>`;
-      };
-      await load();
-      api.screen.querySelector("[data-gr-new]")?.addEventListener("click", () => openCreateGroup(load));
-      api.screen.querySelector("[data-gr-join]")?.addEventListener("click", () => promptJoinByLink(load));
-      listEl.addEventListener("click", (e) => {
-        const row = e.target.closest("[data-group]");
-        if (!row)
-          return;
-        const g = groups.find((x) => String(x.id) === row.dataset.group);
-        if (g)
-          openGroupChat(g);
-      });
-    });
-  }
-  function openCreateGroup(onDone) {
-    const EMOJIS = ["\u{1F465}", "\u{1F3D8}", "\u26BD", "\u{1F393}", "\u{1F69C}", "\u26EA", "\u{1F6D2}", "\u{1F3A3}"];
-    const api = buildScreen(`
-    <header class="pm-head pm-head--list">
-      <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-      <div class="pm-head-titles"><div class="pm-head-name">\uFF0B \u041D\u043E\u0432\u0430 \u0433\u0440\u0443\u043F\u0430</div></div>
-    </header>
-    <div class="gr-form">
-      <label class="gr-label">\u0415\u043C\u043E\u0434\u0437\u0456</label>
-      <div class="gr-emoji-row" id="gr-emoji">${EMOJIS.map((e, i) => `<button type="button" class="gr-emoji${i === 0 ? " active" : ""}" data-emoji="${e}">${e}</button>`).join("")}</div>
-      <label class="gr-label" for="gr-name">\u041D\u0430\u0437\u0432\u0430</label>
-      <input class="gr-input" id="gr-name" type="text" maxlength="60" placeholder="\u041D\u0430\u043F\u0440. \u041D\u0430\u0448\u0430 \u041C\u0438\u0442\u0435\u043B\u044C\u043D\u0435">
-      <label class="gr-label" for="gr-desc">\u041E\u043F\u0438\u0441 <span class="gr-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
-      <textarea class="gr-input" id="gr-desc" rows="3" maxlength="200" placeholder="\u041F\u0440\u043E \u0449\u043E \u0446\u044F \u0433\u0440\u0443\u043F\u0430?"></textarea>
-      <button class="gr-submit" type="button" id="gr-create">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438</button>
-    </div>
-  `, "pm-screen--groups");
-    let emoji = EMOJIS[0];
-    api.screen.querySelector("#gr-emoji").addEventListener("click", (e) => {
-      const b = e.target.closest("[data-emoji]");
-      if (!b)
-        return;
-      emoji = b.dataset.emoji;
-      api.screen.querySelectorAll(".gr-emoji").forEach((x) => x.classList.toggle("active", x === b));
-    });
-    api.screen.querySelector("#gr-create").addEventListener("click", async () => {
-      const name = api.screen.querySelector("#gr-name").value.trim();
-      const description = api.screen.querySelector("#gr-desc").value.trim();
-      if (!name) {
-        showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443 \u0433\u0440\u0443\u043F\u0438", 2500);
-        return;
-      }
-      const btn = api.screen.querySelector("#gr-create");
-      btn.disabled = true;
-      btn.textContent = "\u0421\u0442\u0432\u043E\u0440\u044E\u0454\u043C\u043E\u2026";
-      const r = await createGroup({ name, description, emoji });
-      if (r.ok) {
-        showToast("\u2705 \u0413\u0440\u0443\u043F\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E", 2500);
-        api.close();
-        if (onDone)
-          onDone();
-      } else {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438: " + (r.error || ""), 3500, "error");
-        btn.disabled = false;
-        btn.textContent = "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438";
-      }
-    });
-  }
-  function buildInviteUrl(token) {
-    return `${location.origin}${location.pathname}#/join/${token}`;
-  }
-  function promptJoinByLink(onDone) {
-    const raw = prompt("\u0412\u0441\u0442\u0430\u0432 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F-\u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u043A\u043E\u0434 \u0433\u0440\u0443\u043F\u0438:");
-    if (!raw)
-      return;
-    const m = String(raw).trim().match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
-    if (!m) {
-      showToast("\u041D\u0435 \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0434\u0456\u0439\u0441\u043D\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 3e3);
-      return;
-    }
-    openInviteJoin(m[0], onDone);
-  }
-  var PENDING_INVITE_KEY = "cstl-pending-invite";
-  function openInviteJoin(token, onDone) {
-    if (!isLoggedIn()) {
-      try {
-        localStorage.setItem(PENDING_INVITE_KEY, token);
-      } catch (_) {
-      }
-      requireAuth("\u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \u0433\u0440\u0443\u043F\u0438", () => {
-      });
-      return;
-    }
-    (async () => {
-      const g = await getGroupByInvite(token);
-      if (!g.ok) {
-        showToast("\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u0456\u0439\u0441\u043D\u0435 \u0430\u0431\u043E \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0435", 3500);
-        return;
-      }
-      const openGrp = async (gid) => {
-        const grp = (await fetchMyGroups()).find((x) => x.id === gid);
-        if (grp)
-          openGroupChat(grp);
-        else
-          openGroupsList();
-      };
-      if (g.my_status === "member") {
-        showToast("\u0412\u0438 \u0432\u0436\u0435 \u0432 \u0446\u0456\u0439 \u0433\u0440\u0443\u043F\u0456", 2500);
-        openGrp(g.id);
-        return;
-      }
-      const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
-      if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note}`))
-        return;
-      const r = await joinGroupByToken(token);
-      if (r.ok && r.status === "member") {
-        showToast("\u2705 \u0412\u0438 \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u043B\u0438\u0441\u044C", 2500);
-        openGrp(r.group_id || g.id);
-        if (onDone)
-          onDone();
-      } else if (r.ok && r.status === "pending") {
-        showToast("\u23F3 \u0417\u0430\u044F\u0432\u043A\u0443 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F \u0430\u0434\u043C\u0456\u043D\u0430", 4200);
-      } else
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C: " + (r.error || ""), 3500, "error");
-    })();
-  }
-  function consumePendingInvite() {
-    let t = null;
-    try {
-      t = localStorage.getItem(PENDING_INVITE_KEY);
-    } catch (_) {
-    }
-    if (!t || !isLoggedIn())
-      return;
-    try {
-      localStorage.removeItem(PENDING_INVITE_KEY);
-    } catch (_) {
-    }
-    openInviteJoin(t);
-  }
-  function openGroupManage(group) {
-    requireAuth("\u043A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u044E", async () => {
-      const me = currentUserId();
-      const api = buildScreen(`
-      <header class="pm-head pm-head--list">
-        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <div class="pm-head-titles"><div class="pm-head-name">\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \xB7 ${escapeHtml(group.name)}</div></div>
-      </header>
-      <div class="gr-mng" id="gr-mng"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
-    `, "pm-screen--groups");
-      const wrap = api.screen.querySelector("#gr-mng");
-      const makeInvite = async (requiresApproval) => {
-        const r = await createGroupInvite(group.id, requiresApproval);
-        if (!r.ok) {
-          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F: " + (r.error || ""), 3500, "error");
-          return;
-        }
-        const url = buildInviteUrl(r.token);
-        const label = requiresApproval ? "\u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C \u0430\u0434\u043C\u0456\u043D\u0430" : "\u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F";
-        if (navigator.share) {
-          try {
-            await navigator.share({ title: group.name, text: `\u041F\u0440\u0438\u0454\u0434\u043D\u0443\u0439\u0441\u044F \u0434\u043E \xAB${group.name}\xBB (${label})`, url });
-            return;
-          } catch (_) {
-          }
-        }
-        try {
-          await navigator.clipboard.writeText(url);
-          showToast(`\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F (${label}) \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E`, 3e3);
-        } catch {
-          prompt("\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F:", url);
-        }
-      };
-      const render = async () => {
-        const members = await fetchGroupMembers(group.id);
-        if (api._closed)
-          return;
-        const myRole = (members.find((m) => m.uid === me) || {}).role;
-        const isAdmin = myRole === "admin";
-        const isOwner = group.owner_uid === me;
-        const pending = members.filter((m) => m.status === "pending");
-        const active = members.filter((m) => m.status === "member");
-        const nm = (uid) => {
-          const mm = members.find((x) => x.uid === uid);
-          return escapeHtml(mm && mm.name || "\u0416\u0438\u0442\u0435\u043B\u044C");
-        };
-        wrap.innerHTML = `
-        ${group.description ? `<p class="gr-mng-desc">${escapeHtml(group.description)}</p>` : ""}
-        ${isAdmin ? `
-          <div class="gr-mng-sec">
-            <div class="gr-mng-h">\u0417\u0430\u043F\u0440\u043E\u0441\u0438\u0442\u0438</div>
-            <button class="gr-act" type="button" data-inv="0"><span class="gr-act-ic">${GR_SVG.link}</span> \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F</button>
-            <button class="gr-act gr-act--ghost" type="button" data-inv="1"><span class="gr-act-ic">${GR_SVG.link}</span> \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C</button>
-          </div>` : ""}
-        ${isAdmin && pending.length ? `
-          <div class="gr-mng-sec">
-            <div class="gr-mng-h">\u0417\u0430\u044F\u0432\u043A\u0438 \u043D\u0430 \u0432\u0441\u0442\u0443\u043F (${pending.length})</div>
-            ${pending.map((m) => `
-              <div class="gr-mbr">
-                <span class="gr-mbr-name">${nm(m.uid)}</span>
-                <span class="gr-mbr-acts">
-                  <button class="gr-mbr-ok" type="button" data-approve="${m.uid}">\u2713</button>
-                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u2715</button>
-                </span>
-              </div>`).join("")}
-          </div>` : ""}
-        <div class="gr-mng-sec">
-          <div class="gr-mng-h">\u0423\u0447\u0430\u0441\u043D\u0438\u043A\u0438 (${active.length})</div>
-          ${active.map((m) => {
-          const acts = [];
-          if (isOwner && m.uid !== me)
-            acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C</button>`);
-          if (isAdmin && m.uid !== group.owner_uid && m.uid !== me)
-            acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`);
-          const tag = m.uid === group.owner_uid ? ' <span class="gr-mbr-tag">\u0432\u043B\u0430\u0441\u043D\u0438\u043A</span>' : m.role === "admin" ? ' <span class="gr-mbr-tag">\u0430\u0434\u043C\u0456\u043D</span>' : "";
-          return `<div class="gr-mbr"><span class="gr-mbr-name">${nm(m.uid)}${tag}</span>${acts.length ? `<span class="gr-mbr-acts">${acts.join("")}</span>` : ""}</div>`;
-        }).join("")}
-        </div>
-        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438</button>` : active.length > 1 ? `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A. \u0429\u043E\u0431 \u0432\u0438\u0439\u0442\u0438 \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u0435\u0440\u0435\u0434\u0430\u0439\u0442\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043A\u043E\u043C\u0443\u0441\u044C \u0456\u0437 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432 (\u043A\u043D\u043E\u043F\u043A\u0430 \xAB\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C\xBB).</p>` : `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0454\u0434\u0438\u043D\u0438\u0439 \u0443 \u0433\u0440\u0443\u043F\u0456.</p>`}
-      `;
-      };
-      await render();
-      wrap.addEventListener("click", async (e) => {
-        const inv = e.target.closest("[data-inv]");
-        if (inv) {
-          makeInvite(inv.dataset.inv === "1");
-          return;
-        }
-        const ap = e.target.closest("[data-approve]");
-        if (ap) {
-          const r = await approveMember(group.id, ap.dataset.approve);
-          if (r.ok) {
-            showToast("\u2705 \u0421\u0445\u0432\u0430\u043B\u0435\u043D\u043E", 2e3);
-            render();
-          } else
-            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
-          return;
-        }
-        const rj = e.target.closest("[data-reject]");
-        if (rj) {
-          if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430?"))
-            return;
-          const r = await rejectMember(group.id, rj.dataset.reject);
-          if (r.ok) {
-            showToast("\u0413\u043E\u0442\u043E\u0432\u043E", 2e3);
-            render();
-          } else
-            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
-          return;
-        }
-        const mo = e.target.closest("[data-makeowner]");
-        if (mo) {
-          if (!confirm("\u041F\u0435\u0440\u0435\u0434\u0430\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0446\u044C\u043E\u043C\u0443 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0443? \u0412\u0438 \u0441\u0442\u0430\u043D\u0435\u0442\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0430\u0434\u043C\u0456\u043D\u043E\u043C."))
-            return;
-          const r = await transferGroupOwner(group.id, mo.dataset.makeowner);
-          if (r.ok) {
-            group.owner_uid = mo.dataset.makeowner;
-            showToast("\u2705 \u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E", 2500);
-            render();
-          } else
-            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
-          return;
-        }
-        if (e.target.closest("[data-leave]")) {
-          if (!confirm("\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438?"))
-            return;
-          const r = await leaveGroup(group.id);
-          if (r.ok) {
-            showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438", 2500);
-            api.close();
-          } else
-            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0439\u0442\u0438: " + (r.error || ""), 3500, "error");
-        }
-      });
-    });
-  }
-  function openGroupChat(group) {
-    requireAuth("\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u0432\u0438\u0439 \u0447\u0430\u0442", async () => {
-      const me = currentUserId();
-      const api = buildScreen(`
-      <header class="pm-head pm-head--chat">
-        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ""}">${group.avatar_emoji ? escapeHtml(group.avatar_emoji) : GR_SVG.users}</span>
-        <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
-        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0433\u0440\u0443\u043F\u043E\u044E">${GR_SVG.gear}</button>
-      </header>
-      <div class="pm-stream" id="gr-stream"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
-      <form class="pm-form" id="gr-form">
-        <input class="pm-input" id="gr-msg" type="text" placeholder="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0443 \u0433\u0440\u0443\u043F\u0443\u2026" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" autocomplete="off">
-        <button class="pm-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
-      </form>
-    `, "pm-screen--chat");
-      const streamEl = api.screen.querySelector("#gr-stream");
-      const form = api.screen.querySelector("#gr-form");
-      const input = api.screen.querySelector("#gr-msg");
-      let messages = [];
-      const ids = /* @__PURE__ */ new Set();
-      let names = /* @__PURE__ */ new Map();
-      const bubble = (m) => {
-        const mine = m.sender_uid === me;
-        const who = mine ? "" : `<span class="gr-sender">${escapeHtml(names.get(m.sender_uid) || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>`;
-        const txt = m.deleted_at ? "\u{1F5D1} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E" : m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E";
-        return `<div class="pm-group ${mine ? "pm-group--mine" : "pm-group--other"}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${escapeHtml(txt)}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
-      };
-      const render = () => {
-        streamEl.innerHTML = messages.length ? messages.map(bubble).join("") : `<div class="pm-empty pm-empty--chat"><span class="pm-empty-ic">\u{1F44B}</span>\u041F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443 \u0432 \u0433\u0440\u0443\u043F\u0456.</div>`;
-        streamEl.scrollTop = streamEl.scrollHeight;
-      };
-      const addMsg = (m) => {
-        if (m && !ids.has(m.id)) {
-          ids.add(m.id);
-          messages.push(m);
-        }
-      };
-      const firstName = (n) => String(n || "").trim().split(/\s+/)[0] || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      const members = await fetchGroupMembers(group.id);
-      names = new Map(members.map((m) => [m.uid, firstName(m.name)]));
-      (await fetchGroupMessages(group.id)).forEach(addMsg);
-      if (api._closed)
-        return;
-      render();
-      api.screen.querySelector("[data-gr-manage]")?.addEventListener("click", () => openGroupManage(group));
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        const text = input.value.trim();
-        if (!text)
-          return;
-        input.value = "";
-        const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text });
-        if (r.ok) {
-          addMsg(r.message);
-          render();
-        } else {
-          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438: " + (r.error || ""), 3e3, "error");
-          input.value = text;
-        }
-      });
-      const unsub = subscribeGroupMessages(group.id, ({ type, row }) => {
-        if (type === "INSERT" && row) {
-          addMsg(row);
-          render();
-        } else if (type === "UPDATE" && row) {
-          const i = messages.findIndex((x) => x.id === row.id);
-          if (i >= 0) {
-            messages[i] = row;
-            render();
-          }
-        }
-      });
-      api._cleanup.push(unsub);
     });
   }
   var AD_STATUS = {
@@ -3475,13 +3089,11 @@
     }
   }
   var _threadsUnsub = null;
-  function initMessages() {
+  function initBoardChat() {
     refreshUnreadBadge();
-    consumePendingInvite();
     onAuthChange(() => {
       refreshUnreadBadge();
       registerChatPushDevice();
-      consumePendingInvite();
       if (_threadsUnsub) {
         try {
           _threadsUnsub();
@@ -9166,6 +8778,400 @@ END:VEVENT`
     });
   }
 
+  // src/core/messages-ui.js
+  var GR_SVG = {
+    link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
+    gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
+    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.5a3.5 3.5 0 0 1 0 6.8"/></svg>'
+  };
+  function openGroupsList() {
+    requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0433\u0440\u0443\u043F\u0438", async () => {
+      const api = buildScreen(`
+      <header class="pm-head pm-head--list">
+        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <div class="pm-head-titles"><div class="pm-head-name">\u0413\u0440\u0443\u043F\u0438</div></div>
+      </header>
+      <div class="gr-actions">
+        <button class="gr-act" type="button" data-gr-new><span class="gr-act-ic">\uFF0B</span> \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u0443</button>
+        <button class="gr-act gr-act--ghost" type="button" data-gr-join><span class="gr-act-ic">${GR_SVG.link}</span> \u0412\u0441\u0442\u0443\u043F \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C</button>
+      </div>
+      <div class="pm-list" id="gr-list"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+    `, "pm-screen--groups");
+      const listEl = api.screen.querySelector("#gr-list");
+      let groups = [];
+      const groupRow = (g) => {
+        const cover = g.avatar_emoji ? escapeHtml(g.avatar_emoji) : GR_SVG.users;
+        const last = g.last_message_text ? escapeHtml(g.last_message_text) : "\u041D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
+        return `
+        <button class="pm-thread gr-row" type="button" data-group="${g.id}">
+          <span class="gr-avatar" style="${g.avatar_gradient ? `background:${escapeHtml(g.avatar_gradient)}` : ""}">${cover}</span>
+          <div class="pm-thread-body">
+            <div class="pm-thread-top">
+              <span class="pm-thread-name">${escapeHtml(g.name)}</span>
+              <span class="pm-thread-time">${g.last_message_at ? threadListTime(g.last_message_at) : ""}</span>
+            </div>
+            <div class="pm-thread-last">${last}</div>
+          </div>
+        </button>`;
+      };
+      const load = async () => {
+        groups = await fetchMyGroups();
+        if (api._closed)
+          return;
+        listEl.innerHTML = groups.length ? groups.map(groupRow).join("") : `<div class="pm-empty"><span class="pm-empty-ic">\u{1F465}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0433\u0440\u0443\u043F.<br>\u0421\u0442\u0432\u043E\u0440\u0456\u0442\u044C \u0441\u0432\u043E\u044E \u0430\u0431\u043E \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C.</div>`;
+      };
+      await load();
+      api.screen.querySelector("[data-gr-new]")?.addEventListener("click", () => openCreateGroup(load));
+      api.screen.querySelector("[data-gr-join]")?.addEventListener("click", () => promptJoinByLink(load));
+      listEl.addEventListener("click", (e) => {
+        const row = e.target.closest("[data-group]");
+        if (!row)
+          return;
+        const g = groups.find((x) => String(x.id) === row.dataset.group);
+        if (g)
+          openGroupChat(g);
+      });
+    });
+  }
+  function openCreateGroup(onDone) {
+    const EMOJIS = ["\u{1F465}", "\u{1F3D8}", "\u26BD", "\u{1F393}", "\u{1F69C}", "\u26EA", "\u{1F6D2}", "\u{1F3A3}"];
+    const api = buildScreen(`
+    <header class="pm-head pm-head--list">
+      <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <div class="pm-head-titles"><div class="pm-head-name">\uFF0B \u041D\u043E\u0432\u0430 \u0433\u0440\u0443\u043F\u0430</div></div>
+    </header>
+    <div class="gr-form">
+      <label class="gr-label">\u0415\u043C\u043E\u0434\u0437\u0456</label>
+      <div class="gr-emoji-row" id="gr-emoji">${EMOJIS.map((e, i) => `<button type="button" class="gr-emoji${i === 0 ? " active" : ""}" data-emoji="${e}">${e}</button>`).join("")}</div>
+      <label class="gr-label" for="gr-name">\u041D\u0430\u0437\u0432\u0430</label>
+      <input class="gr-input" id="gr-name" type="text" maxlength="60" placeholder="\u041D\u0430\u043F\u0440. \u041D\u0430\u0448\u0430 \u041C\u0438\u0442\u0435\u043B\u044C\u043D\u0435">
+      <label class="gr-label" for="gr-desc">\u041E\u043F\u0438\u0441 <span class="gr-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
+      <textarea class="gr-input" id="gr-desc" rows="3" maxlength="200" placeholder="\u041F\u0440\u043E \u0449\u043E \u0446\u044F \u0433\u0440\u0443\u043F\u0430?"></textarea>
+      <button class="gr-submit" type="button" id="gr-create">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438</button>
+    </div>
+  `, "pm-screen--groups");
+    let emoji = EMOJIS[0];
+    api.screen.querySelector("#gr-emoji").addEventListener("click", (e) => {
+      const b = e.target.closest("[data-emoji]");
+      if (!b)
+        return;
+      emoji = b.dataset.emoji;
+      api.screen.querySelectorAll(".gr-emoji").forEach((x) => x.classList.toggle("active", x === b));
+    });
+    api.screen.querySelector("#gr-create").addEventListener("click", async () => {
+      const name = api.screen.querySelector("#gr-name").value.trim();
+      const description = api.screen.querySelector("#gr-desc").value.trim();
+      if (!name) {
+        showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043D\u0430\u0437\u0432\u0443 \u0433\u0440\u0443\u043F\u0438", 2500);
+        return;
+      }
+      const btn = api.screen.querySelector("#gr-create");
+      btn.disabled = true;
+      btn.textContent = "\u0421\u0442\u0432\u043E\u0440\u044E\u0454\u043C\u043E\u2026";
+      const r = await createGroup({ name, description, emoji });
+      if (r.ok) {
+        showToast("\u2705 \u0413\u0440\u0443\u043F\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E", 2500);
+        api.close();
+        if (onDone)
+          onDone();
+      } else {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438: " + (r.error || ""), 3500, "error");
+        btn.disabled = false;
+        btn.textContent = "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438";
+      }
+    });
+  }
+  function buildInviteUrl(token) {
+    return `${location.origin}${location.pathname}#/join/${token}`;
+  }
+  function promptJoinByLink(onDone) {
+    const raw = prompt("\u0412\u0441\u0442\u0430\u0432 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F-\u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u043A\u043E\u0434 \u0433\u0440\u0443\u043F\u0438:");
+    if (!raw)
+      return;
+    const m = String(raw).trim().match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+    if (!m) {
+      showToast("\u041D\u0435 \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0434\u0456\u0439\u0441\u043D\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 3e3);
+      return;
+    }
+    openInviteJoin(m[0], onDone);
+  }
+  var PENDING_INVITE_KEY = "cstl-pending-invite";
+  function openInviteJoin(token, onDone) {
+    if (!isLoggedIn()) {
+      try {
+        localStorage.setItem(PENDING_INVITE_KEY, token);
+      } catch (_) {
+      }
+      requireAuth("\u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \u0433\u0440\u0443\u043F\u0438", () => {
+      });
+      return;
+    }
+    (async () => {
+      const g = await getGroupByInvite(token);
+      if (!g.ok) {
+        showToast("\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u0456\u0439\u0441\u043D\u0435 \u0430\u0431\u043E \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u043B\u0435", 3500);
+        return;
+      }
+      const openGrp = async (gid) => {
+        const grp = (await fetchMyGroups()).find((x) => x.id === gid);
+        if (grp)
+          openGroupChat(grp);
+        else
+          openGroupsList();
+      };
+      if (g.my_status === "member") {
+        showToast("\u0412\u0438 \u0432\u0436\u0435 \u0432 \u0446\u0456\u0439 \u0433\u0440\u0443\u043F\u0456", 2500);
+        openGrp(g.id);
+        return;
+      }
+      const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
+      if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note}`))
+        return;
+      const r = await joinGroupByToken(token);
+      if (r.ok && r.status === "member") {
+        showToast("\u2705 \u0412\u0438 \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u043B\u0438\u0441\u044C", 2500);
+        openGrp(r.group_id || g.id);
+        if (onDone)
+          onDone();
+      } else if (r.ok && r.status === "pending") {
+        showToast("\u23F3 \u0417\u0430\u044F\u0432\u043A\u0443 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F \u0430\u0434\u043C\u0456\u043D\u0430", 4200);
+      } else
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C: " + (r.error || ""), 3500, "error");
+    })();
+  }
+  function consumePendingInvite() {
+    let t = null;
+    try {
+      t = localStorage.getItem(PENDING_INVITE_KEY);
+    } catch (_) {
+    }
+    if (!t || !isLoggedIn())
+      return;
+    try {
+      localStorage.removeItem(PENDING_INVITE_KEY);
+    } catch (_) {
+    }
+    openInviteJoin(t);
+  }
+  function openGroupManage(group) {
+    requireAuth("\u043A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u044E", async () => {
+      const me = currentUserId();
+      const api = buildScreen(`
+      <header class="pm-head pm-head--list">
+        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <div class="pm-head-titles"><div class="pm-head-name">\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \xB7 ${escapeHtml(group.name)}</div></div>
+      </header>
+      <div class="gr-mng" id="gr-mng"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+    `, "pm-screen--groups");
+      const wrap = api.screen.querySelector("#gr-mng");
+      const makeInvite = async (requiresApproval) => {
+        const r = await createGroupInvite(group.id, requiresApproval);
+        if (!r.ok) {
+          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F: " + (r.error || ""), 3500, "error");
+          return;
+        }
+        const url = buildInviteUrl(r.token);
+        const label = requiresApproval ? "\u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C \u0430\u0434\u043C\u0456\u043D\u0430" : "\u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F";
+        if (navigator.share) {
+          try {
+            await navigator.share({ title: group.name, text: `\u041F\u0440\u0438\u0454\u0434\u043D\u0443\u0439\u0441\u044F \u0434\u043E \xAB${group.name}\xBB (${label})`, url });
+            return;
+          } catch (_) {
+          }
+        }
+        try {
+          await navigator.clipboard.writeText(url);
+          showToast(`\u{1F517} \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F (${label}) \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E`, 3e3);
+        } catch {
+          prompt("\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F:", url);
+        }
+      };
+      const render = async () => {
+        const members = await fetchGroupMembers(group.id);
+        if (api._closed)
+          return;
+        const myRole = (members.find((m) => m.uid === me) || {}).role;
+        const isAdmin = myRole === "admin";
+        const isOwner = group.owner_uid === me;
+        const pending = members.filter((m) => m.status === "pending");
+        const active = members.filter((m) => m.status === "member");
+        const nm = (uid) => {
+          const mm = members.find((x) => x.uid === uid);
+          return escapeHtml(mm && mm.name || "\u0416\u0438\u0442\u0435\u043B\u044C");
+        };
+        wrap.innerHTML = `
+        ${group.description ? `<p class="gr-mng-desc">${escapeHtml(group.description)}</p>` : ""}
+        ${isAdmin ? `
+          <div class="gr-mng-sec">
+            <div class="gr-mng-h">\u0417\u0430\u043F\u0440\u043E\u0441\u0438\u0442\u0438</div>
+            <button class="gr-act" type="button" data-inv="0"><span class="gr-act-ic">${GR_SVG.link}</span> \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u043C\u0438\u0442\u0442\u0454\u0432\u0438\u0439 \u0432\u0441\u0442\u0443\u043F</button>
+            <button class="gr-act gr-act--ghost" type="button" data-inv="1"><span class="gr-act-ic">${GR_SVG.link}</span> \u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u2014 \u0437\u0456 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F\u043C</button>
+          </div>` : ""}
+        ${isAdmin && pending.length ? `
+          <div class="gr-mng-sec">
+            <div class="gr-mng-h">\u0417\u0430\u044F\u0432\u043A\u0438 \u043D\u0430 \u0432\u0441\u0442\u0443\u043F (${pending.length})</div>
+            ${pending.map((m) => `
+              <div class="gr-mbr">
+                <span class="gr-mbr-name">${nm(m.uid)}</span>
+                <span class="gr-mbr-acts">
+                  <button class="gr-mbr-ok" type="button" data-approve="${m.uid}">\u2713</button>
+                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u2715</button>
+                </span>
+              </div>`).join("")}
+          </div>` : ""}
+        <div class="gr-mng-sec">
+          <div class="gr-mng-h">\u0423\u0447\u0430\u0441\u043D\u0438\u043A\u0438 (${active.length})</div>
+          ${active.map((m) => {
+          const acts = [];
+          if (isOwner && m.uid !== me)
+            acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C</button>`);
+          if (isAdmin && m.uid !== group.owner_uid && m.uid !== me)
+            acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`);
+          const tag = m.uid === group.owner_uid ? ' <span class="gr-mbr-tag">\u0432\u043B\u0430\u0441\u043D\u0438\u043A</span>' : m.role === "admin" ? ' <span class="gr-mbr-tag">\u0430\u0434\u043C\u0456\u043D</span>' : "";
+          return `<div class="gr-mbr"><span class="gr-mbr-name">${nm(m.uid)}${tag}</span>${acts.length ? `<span class="gr-mbr-acts">${acts.join("")}</span>` : ""}</div>`;
+        }).join("")}
+        </div>
+        ${!isOwner ? `<button class="gr-leave" type="button" data-leave>\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438</button>` : active.length > 1 ? `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A. \u0429\u043E\u0431 \u0432\u0438\u0439\u0442\u0438 \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u0435\u0440\u0435\u0434\u0430\u0439\u0442\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043A\u043E\u043C\u0443\u0441\u044C \u0456\u0437 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432 (\u043A\u043D\u043E\u043F\u043A\u0430 \xAB\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C\xBB).</p>` : `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0454\u0434\u0438\u043D\u0438\u0439 \u0443 \u0433\u0440\u0443\u043F\u0456.</p>`}
+      `;
+      };
+      await render();
+      wrap.addEventListener("click", async (e) => {
+        const inv = e.target.closest("[data-inv]");
+        if (inv) {
+          makeInvite(inv.dataset.inv === "1");
+          return;
+        }
+        const ap = e.target.closest("[data-approve]");
+        if (ap) {
+          const r = await approveMember(group.id, ap.dataset.approve);
+          if (r.ok) {
+            showToast("\u2705 \u0421\u0445\u0432\u0430\u043B\u0435\u043D\u043E", 2e3);
+            render();
+          } else
+            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          return;
+        }
+        const rj = e.target.closest("[data-reject]");
+        if (rj) {
+          if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430?"))
+            return;
+          const r = await rejectMember(group.id, rj.dataset.reject);
+          if (r.ok) {
+            showToast("\u0413\u043E\u0442\u043E\u0432\u043E", 2e3);
+            render();
+          } else
+            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          return;
+        }
+        const mo = e.target.closest("[data-makeowner]");
+        if (mo) {
+          if (!confirm("\u041F\u0435\u0440\u0435\u0434\u0430\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0446\u044C\u043E\u043C\u0443 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0443? \u0412\u0438 \u0441\u0442\u0430\u043D\u0435\u0442\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0430\u0434\u043C\u0456\u043D\u043E\u043C."))
+            return;
+          const r = await transferGroupOwner(group.id, mo.dataset.makeowner);
+          if (r.ok) {
+            group.owner_uid = mo.dataset.makeowner;
+            showToast("\u2705 \u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E", 2500);
+            render();
+          } else
+            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          return;
+        }
+        if (e.target.closest("[data-leave]")) {
+          if (!confirm("\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438?"))
+            return;
+          const r = await leaveGroup(group.id);
+          if (r.ok) {
+            showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438", 2500);
+            api.close();
+          } else
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0439\u0442\u0438: " + (r.error || ""), 3500, "error");
+        }
+      });
+    });
+  }
+  function openGroupChat(group) {
+    requireAuth("\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0433\u0440\u0443\u043F\u043E\u0432\u0438\u0439 \u0447\u0430\u0442", async () => {
+      const me = currentUserId();
+      const api = buildScreen(`
+      <header class="pm-head pm-head--chat">
+        <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <span class="gr-avatar gr-avatar--head" style="${group.avatar_gradient ? `background:${escapeHtml(group.avatar_gradient)}` : ""}">${group.avatar_emoji ? escapeHtml(group.avatar_emoji) : GR_SVG.users}</span>
+        <div class="pm-head-titles"><div class="pm-head-name">${escapeHtml(group.name)}</div></div>
+        <button class="gr-manage-btn" type="button" data-gr-manage aria-label="\u041A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0433\u0440\u0443\u043F\u043E\u044E">${GR_SVG.gear}</button>
+      </header>
+      <div class="pm-stream" id="gr-stream"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+      <form class="pm-form" id="gr-form">
+        <input class="pm-input" id="gr-msg" type="text" placeholder="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0443 \u0433\u0440\u0443\u043F\u0443\u2026" aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" autocomplete="off">
+        <button class="pm-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
+      </form>
+    `, "pm-screen--chat");
+      const streamEl = api.screen.querySelector("#gr-stream");
+      const form = api.screen.querySelector("#gr-form");
+      const input = api.screen.querySelector("#gr-msg");
+      let messages = [];
+      const ids = /* @__PURE__ */ new Set();
+      let names = /* @__PURE__ */ new Map();
+      const bubble = (m) => {
+        const mine = m.sender_uid === me;
+        const who = mine ? "" : `<span class="gr-sender">${escapeHtml(names.get(m.sender_uid) || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>`;
+        const txt = m.deleted_at ? "\u{1F5D1} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E" : m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E";
+        return `<div class="pm-group ${mine ? "pm-group--mine" : "pm-group--other"}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${escapeHtml(txt)}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
+      };
+      const render = () => {
+        streamEl.innerHTML = messages.length ? messages.map(bubble).join("") : `<div class="pm-empty pm-empty--chat"><span class="pm-empty-ic">\u{1F44B}</span>\u041F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443 \u0432 \u0433\u0440\u0443\u043F\u0456.</div>`;
+        streamEl.scrollTop = streamEl.scrollHeight;
+      };
+      const addMsg = (m) => {
+        if (m && !ids.has(m.id)) {
+          ids.add(m.id);
+          messages.push(m);
+        }
+      };
+      const firstName = (n) => String(n || "").trim().split(/\s+/)[0] || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      const members = await fetchGroupMembers(group.id);
+      names = new Map(members.map((m) => [m.uid, firstName(m.name)]));
+      (await fetchGroupMessages(group.id)).forEach(addMsg);
+      if (api._closed)
+        return;
+      render();
+      api.screen.querySelector("[data-gr-manage]")?.addEventListener("click", () => openGroupManage(group));
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = input.value.trim();
+        if (!text)
+          return;
+        input.value = "";
+        const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text });
+        if (r.ok) {
+          addMsg(r.message);
+          render();
+        } else {
+          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438: " + (r.error || ""), 3e3, "error");
+          input.value = text;
+        }
+      });
+      const unsub = subscribeGroupMessages(group.id, ({ type, row }) => {
+        if (type === "INSERT" && row) {
+          addMsg(row);
+          render();
+        } else if (type === "UPDATE" && row) {
+          const i = messages.findIndex((x) => x.id === row.id);
+          if (i >= 0) {
+            messages[i] = row;
+            render();
+          }
+        }
+      });
+      api._cleanup.push(unsub);
+    });
+  }
+  function initMessages() {
+    consumePendingInvite();
+    onAuthChange(() => {
+      consumePendingInvite();
+    });
+  }
+
   // src/app.js
   var currentTab = "community";
   window.switchTab = function(tab) {
@@ -9352,6 +9358,7 @@ END:VEVENT`
     initAuth();
     initAccountUI();
     initMessages();
+    initBoardChat();
     initModalSwipe();
     initWeather();
     initCommunity();

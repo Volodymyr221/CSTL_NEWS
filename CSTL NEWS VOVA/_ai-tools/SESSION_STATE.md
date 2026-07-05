@@ -3,7 +3,13 @@
 ## 📝 2026-07-05 (сесія Вови) — Дошка, технічні задачі (гілка `vova/board-tech`)
 - ✅ **Д-8** — перейменовано атрибут `data-msg-soon` → `data-open-chat` у `board.js` (4 входження; атрибут відкриває приватний чат, стара назва хибна).
 - ✅ **Д-2 (НА ПРОДІ)** — серверний антиспам-тригер `trg_comments_antispam` на `comments`. Варіант B (прагматичний backstop, рішення Вови): дублює клієнтський фільтр як бар'єр на рівні БД. Спам + ядро профанності (межа слова `\m/\M` — «Херсон»/«ебоніт» не ловляться) + рейт-ліміт 5/15с + блок дубля. Застосовано через Supabase MCP (`apply_migration`), перевірено наживо (лайка блок, норм-текст проходить, тест відкочено). SQL у репо: `scripts/supabase_comments_antispam.sql`.
-- ⏳ **Д-5** (рефактор `board.js` 1883р) — наступна, ще не почато.
+- ✅ **Д-5 (розширена архітектурна версія, рішення Вови 05.07)** — приватний чат 1-на-1 (покупець↔продавець) ПОВЕРНУТО в архітектуру Дошки. Нова структура (3 шари):
+  1. `src/core/chat-core.js` (~300р) — СПІЛЬНА механіка обох типів чатів: екран-стек+edge-back, клавіатура iOS (visualViewport), жести бульбашок (свайп-reply/long-press), avatar/clockTime/dayLabel/threadListTime, ACT_ICONS. Делікатні iOS-фікси в ОДНОМУ місці.
+  2. `src/tabs/board-chat.js` (~1126р) — ЧАТ ДОШКИ: openChat (розмова 1-на-1), openThreadsList («Повідомлення»), openMyAds, startChatFromPost, бейдж непрочитаних (`refreshUnreadBadge`+`_readThreads`), `registerChatPushDevice`, `initBoardChat()`. Перенесено з messages-ui **байт-у-байт** (звірено git-порівнянням, 10/10 блоків ідентичні — жоден iOS-фікс не змінено).
+  3. `src/core/messages-ui.js` (1732→351р) — лишились ТІЛЬКИ Групи (V2 Чати): openGroupsList/GroupChat/GroupManage, інвайти, `initMessages()` (тільки consumePendingInvite).
+  - Споживачі оновлені: `app.js` (initBoardChat + openThreadsList з board-chat), `board.js`, `account-ui.js`. Поведінка для користувача НЕ змінена (чиста реорганізація).
+  - CACHE_NAME → `cstl-20260705-0715`. node --check ×6 OK, build exit 0.
+  - ⏳ **Чекає ТЕСТ Вови на iPhone**: чат з оголошення (клавіатура! свайп-reply, edge-back), «Повідомлення» (свайп-архів), «Мої оголошення», групи (створити/відкрити), бейджі непрочитаних.
 - Гілка `vova/board-tech` — Д-8 у коді (чекає /finish для прода), Д-2 вже на проді (тригер БД). CACHE_NAME + bundle зберу перед /finish.
 
 ## 📝 2026-07-04 (сесія Вови) — А-2: аудит + фікс 4 типів автобусних push (Edge Function v11 НА ПРОДІ)

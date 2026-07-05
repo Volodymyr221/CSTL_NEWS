@@ -138,6 +138,22 @@ export function dayLabel(ts) {
   return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }
 
+// Розумний час для списку розмов/груп: сьогодні → HH:MM, вчора → «Вчора»,
+// цей рік → «D місяця», інакше → DD.MM.YY.
+export function threadListTime(ts) {
+  const d = new Date(ts);
+  if (isNaN(d.getTime())) return '';
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+  const dayMs = 86400000;
+  if (d.getTime() >= startOfToday) {
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  }
+  if (d.getTime() >= startOfToday - dayMs) return 'Вчора';
+  if (d.getFullYear() === now.getFullYear()) return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getFullYear()).slice(-2)}`;
+}
+
 // ── Клавіатура iOS: підлаштування висоти екрану під visualViewport ────────
 export function setupKeyboardResize(screen) {
   const vv = window.visualViewport;
