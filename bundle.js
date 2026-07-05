@@ -2683,10 +2683,17 @@
           clearTimeout(refreshTimer);
         refreshTimer = setTimeout(refresh, 250);
       }, "pm-threads-list");
+      const onPushRefresh = () => {
+        if (refreshTimer)
+          clearTimeout(refreshTimer);
+        refreshTimer = setTimeout(refresh, 120);
+      };
+      window.addEventListener("cstl-chat-refresh", onPushRefresh);
       api._cleanup.push(() => {
         if (refreshTimer)
           clearTimeout(refreshTimer);
         unsub();
+        window.removeEventListener("cstl-chat-refresh", onPushRefresh);
       });
     });
   }
@@ -3091,6 +3098,14 @@
   var _threadsUnsub = null;
   function initBoardChat() {
     refreshUnreadBadge();
+    if ("serviceWorker" in navigator && navigator.serviceWorker) {
+      navigator.serviceWorker.addEventListener("message", (e) => {
+        if (e.data && e.data.__cstl === "push") {
+          refreshUnreadBadge();
+          window.dispatchEvent(new CustomEvent("cstl-chat-refresh"));
+        }
+      });
+    }
     onAuthChange(() => {
       refreshUnreadBadge();
       registerChatPushDevice();

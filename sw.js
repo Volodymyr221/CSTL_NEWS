@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260705-1143';
+const CACHE_NAME = 'cstl-20260705-1356';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -153,6 +153,9 @@ self.addEventListener('push', e => {
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(list => {
+        // Повідомити ВІДКРИТИЙ додаток про push → оновити список розмов/бейдж наживо.
+        // Realtime-підписка буває пропускає нові треди між акаунтами; push — надійний.
+        list.forEach(c => { try { c.postMessage({ __cstl: 'push', pushType: data.type || null }); } catch (_) {} });
         // App is in foreground — skip system notification, in-app banner handles it
         if (list.some(c => c.visibilityState === 'visible')) return;
         return self.registration.showNotification(data.title || 'CSTL LIFE', {

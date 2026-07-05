@@ -723,7 +723,15 @@ export function openThreadsList() {
       if (refreshTimer) clearTimeout(refreshTimer);
       refreshTimer = setTimeout(refresh, 250);
     }, 'pm-threads-list');
-    api._cleanup.push(() => { if (refreshTimer) clearTimeout(refreshTimer); unsub(); });
+    // Push-сигнал (від SW через initBoardChat) — надійніший за realtime. Теж оновлює
+    // список наживо: нове повідомлення/розмова підтягується без ручного оновлення.
+    const onPushRefresh = () => { if (refreshTimer) clearTimeout(refreshTimer); refreshTimer = setTimeout(refresh, 120); };
+    window.addEventListener('cstl-chat-refresh', onPushRefresh);
+    api._cleanup.push(() => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      unsub();
+      window.removeEventListener('cstl-chat-refresh', onPushRefresh);
+    });
   });
 }
 
@@ -1108,6 +1116,17 @@ async function registerChatPushDevice() {
 let _threadsUnsub = null;
 export function initBoardChat() {
   refreshUnreadBadge();
+  // SW повідомляє про вхідний push (надійніше за realtime, який буває пропускає
+  // нові треди між акаунтами): оновлюємо бейдж + сигналимо відкритому списку розмов
+  // оновитись наживо (подія 'cstl-chat-refresh').
+  if ('serviceWorker' in navigator && navigator.serviceWorker) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.__cstl === 'push') {
+        refreshUnreadBadge();
+        window.dispatchEvent(new CustomEvent('cstl-chat-refresh'));
+      }
+    });
+  }
   onAuthChange(() => {
     refreshUnreadBadge();
     registerChatPushDevice();
