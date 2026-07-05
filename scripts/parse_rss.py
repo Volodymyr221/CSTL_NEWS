@@ -47,32 +47,24 @@ SOURCES = [
     {
         "url": "https://kivertsi.rayon.in.ua/tags/olika",
         "name": "Район.Ківерці",
-        "geo": "Олика",
+        "geo": "Громада",
         "type": "html",   # тег-сторінка без RSS — HTML-парсер
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/news/",
         "name": "Олицька громада",
-        "geo": "Олика",
+        "geo": "Громада",
         "type": "gromada",
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/ogoloshennya-11-12-45-18-02-2021/",
         "name": "Олицька громада",
-        "geo": "Олика",
+        "geo": "Громада",
         "type": "gromada",
     },
-    {
-        # Розумний парсер (Крок 3b): Google News агрегує згадки про Олику з УСЬОГО
-        # інтернету одним RSS-запитом. Фільтр релевантності — is_olyka_relevant.
-        "url": ("https://news.google.com/rss/search?q="
-                + urllib.parse.quote(
-                    '"Олика" OR "Олицька громада" OR "Олицький замок" OR "Радзивілли Олика"')
-                + "&hl=uk&gl=UA&ceid=UA:uk"),
-        "name": "Google News",
-        "geo": "Олика",
-        "type": "gnews",
-    },
+    # Google News ВИМКНЕНО 05.07.2026 — його замінює AI-агент (scripts/ai_news_agent.py,
+    # місія «Громада»): справжні URL + повний текст, без крихкого розкодування Google.
+    # Код gnews лишається в парсері (мертвий шлях), щоб не ламати логіку; джерело прибрано.
 ]
 
 # Cloudflare Worker (посередник між GitHub Actions і сайтом громади)
@@ -332,7 +324,7 @@ def section_of(geo: str) -> str:
         return "Україна та Світ"
     if geo == "Волинь":
         return "Волинь"
-    if geo == "Олика":
+    if geo in ("Олика", "Громада"):   # «Олика» — стара назва, «Громада» — нова (05.07)
         return "Громада"
     return geo or "інше"
 
@@ -480,7 +472,7 @@ def drip_story(existing_articles: list, next_id: int):
         "excerpt": story.get("excerpt", ""),
         "content": story.get("content", ""),
         "category": story.get("category", "Історія"),
-        "geo": "Олика",
+        "geo": "Громада",
         "image": story.get("image"),
         "source": story.get("source", "CSTL LIFE"),
         "sourceUrl": story.get("sourceUrl"),
@@ -495,7 +487,7 @@ def drip_story(existing_articles: list, next_id: int):
 def detect_geo(text: str, default_geo: str) -> str:
     low = text.lower()
     if any(kw in low for kw in OLYKA_KEYWORDS):
-        return "Олика"
+        return "Громада"          # згадка про Олику/села → розділ «Громада» (перейм. 05.07)
     return default_geo
 
 

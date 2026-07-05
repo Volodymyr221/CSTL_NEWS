@@ -47,7 +47,11 @@ def load_config() -> dict:
 def load_existing() -> list:
     if pr.DATA_PATH.exists():
         try:
-            return json.loads(pr.DATA_PATH.read_text(encoding="utf-8"))
+            arts = json.loads(pr.DATA_PATH.read_text(encoding="utf-8"))
+            for a in arts:                       # міграція старої назви розділу
+                if a.get("geo") == "Олика":
+                    a["geo"] = "Громада"
+            return arts
         except Exception as e:
             print(f"⚠ читання articles.json: {e}")
     return []
