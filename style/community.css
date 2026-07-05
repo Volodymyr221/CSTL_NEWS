@@ -1569,6 +1569,8 @@
   font-size: 20px;
   box-shadow: 0 6px 18px rgba(0,0,0,0.16), inset 0 1px 2px rgba(255,255,255,0.65);
 }
+/* Векторні іконки пунктів FAB — однаковий розмір незалежно від атрибутів SVG */
+.board-fab-ic svg { width: 22px; height: 22px; }
 /* Бейдж непрочитаних чатів біля «ПОВІДОМЛЕННЯ» */
 .board-fab-badge {
   min-width: 18px; height: 18px; padding: 0 4px;

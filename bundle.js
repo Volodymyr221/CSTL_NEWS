@@ -3118,6 +3118,8 @@
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var BOARD_CATEGORIES2 = [
     { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726", match: null },
     { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
@@ -4144,19 +4146,19 @@ ${post.text}
       <div class="board-fab-menu" id="board-fab-menu">
         <button class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">\u270F\uFE0F</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
         <button class="board-fab-item" data-fab="messages" type="button">
           <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">${MSG_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
-          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">\u{1F4CB}</span>
-        </button>
         <button class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
-          <span class="board-fab-ic">\u{1F516}</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
