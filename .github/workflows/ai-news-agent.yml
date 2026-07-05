@@ -1,20 +1,20 @@
-name: AI News Agent — розумний пошук новин
+name: AI News Agent — підготовка новин у чергу
 
-# AI-агент (Anthropic Sonnet + web_search) замість Google News.
-# Блок A: поки лише місія «Громада». Запуск кожні 3 години або вручну.
+# AI-агент (Anthropic Sonnet + web_search) шукає новини З ЗАПАСОМ і кладе їх у
+# ЧЕРГУ (data/news_queue.json). Публікує їх окремий workflow (news-publisher)
+# крапельно. Так дорогий AI працює рідко (раз на 6 год), а стрічка «жива» весь час.
 on:
   schedule:
-    - cron: '15 */3 * * *'   # кожні 3 години (о :15, щоб не збігатись з rss-parser :00/:30)
+    - cron: '15 */6 * * *'   # кожні 6 годин (о :15)
   workflow_dispatch:
     inputs:
       mission:
-        description: 'Місія (порожньо = за замовч. Громада)'
+        description: 'Місія (порожньо = Громада)'
         required: false
         default: 'Громада'
 
 permissions:
   contents: write
-  actions: write
 
 concurrency:
   group: "ai-news-agent"
@@ -23,7 +23,6 @@ concurrency:
 jobs:
   ai-news:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4.2.2
@@ -33,35 +32,22 @@ jobs:
         with:
           python-version: '3.12'
 
-      # ai_news_agent імпортує parse_rss → потрібні ті самі бібліотеки
       - name: Install dependencies
         run: pip install feedparser beautifulsoup4 lxml
 
-      - name: Run AI news agent
+      - name: Run AI news agent (fill queue)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
         run: python scripts/ai_news_agent.py --mission "${{ github.event.inputs.mission || 'Громада' }}"
 
-      - name: Health check
-        run: python scripts/health_check.py
-
-      - name: Commit data files if changed
-        id: commit
+      - name: Commit queue if changed
         run: |
           git config user.name  "CSTL AI Agent"
           git config user.email "ai-agent@cstl-news"
-          git add data/articles.json "CSTL NEWS VOVA/_ai-tools/HEALTH.md"
+          git add data/news_queue.json
           if git diff --staged --quiet; then
-            echo "Нових матеріалів немає — деплой не потрібен"
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            echo "Черга без змін."
           else
-            git commit -m "ai(news): оновлення новин $(date -u +'%d.%m %H:%M UTC')"
+            git commit -m "ai(queue): підготовлено новини $(date -u +'%d.%m %H:%M UTC')"
             git push origin main
-            echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
-
-      - name: Trigger deploy
-        if: steps.commit.outputs.changed == 'true'
-        run: gh workflow run deploy.yml --ref main
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

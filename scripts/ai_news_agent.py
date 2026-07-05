@@ -29,13 +29,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import parse_rss as pr  # noqa: E402
 
 CONFIG_PATH = Path(__file__).resolve().parent / "hromada_config.json"
+QUEUE_PATH = Path("data/news_queue.json")   # чергa підготовлених статей (крапельна публікація)
 MODEL = "claude-sonnet-5"            # рішення Роми: Sonnet (якісна курація)
 WEB_SEARCH_TOOL = "web_search_20250305"
-MAX_SEARCHES_PER_MISSION = 8        # обмеження веб-пошуків на місію (контроль вартості)
+MAX_SEARCHES_PER_MISSION = 6        # обмеження веб-пошуків на місію (контроль вартості; економно під малий бюджет)
 API_URL = "https://api.anthropic.com/v1/messages"
 
-# Скільки НОВИХ статей просимо в агента за місію (баланс притоку)
-TARGET_PER_MISSION = {"Громада": 8, "Волинь": 6, "Україна та світ": 8}
+# Скільки статей просимо в агента за місію — З ЗАПАСОМ (публікуються крапельно).
+TARGET_PER_MISSION = {"Громада": 12, "Волинь": 8, "Україна та світ": 10}
+
+QUEUE_MAX_SIZE = 30            # не тримаємо в черзі більше — щоб не застоювалась
+QUEUE_MAX_AGE_DAYS = 3        # статті старші за N днів у черзі відкидаємо (несвіжі)
 
 
 # ── Конфіг + наявна стрічка ──────────────────────────────────────────────────
@@ -55,6 +59,19 @@ def load_existing() -> list:
         except Exception as e:
             print(f"⚠ читання articles.json: {e}")
     return []
+
+
+def load_queue() -> list:
+    if QUEUE_PATH.exists():
+        try:
+            return json.loads(QUEUE_PATH.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"⚠ читання news_queue.json: {e}")
+    return []
+
+
+def save_queue(queue: list):
+    QUEUE_PATH.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def recent_titles_for(existing: list, geos: list, limit: int = 40) -> list:
@@ -221,16 +238,24 @@ def _parse_date(s) -> int:
     return int(time.time() * 1000)
 
 
-def merge_and_write(new_articles: list, existing: list):
-    """Дедуп (url + заголовок за розділом) → денні ліміти → баланс → запис."""
-    seen_urls = {a["sourceUrl"] for a in existing if a.get("sourceUrl")}
+def enqueue(new_articles: list, existing: list):
+    """Кладе знахідки у ЧЕРГУ (data/news_queue.json), не в стрічку.
+
+    Агент готує ЗАПАС; публікатор (publish_queue.py) потім викладає крапельно.
+    Дедуп проти вже опублікованих (articles.json) І проти вже наявних у черзі.
+    Повний текст дотягуємо тут (у черзі статті вже готові до публікації).
+    Чистимо старе (>QUEUE_MAX_AGE_DAYS) і тримаємо не більше QUEUE_MAX_SIZE найсвіжіших.
+    """
+    queue = load_queue()
+
+    # Що вже бачили — і в стрічці, і в черзі (щоб не дублювати)
+    seen_urls = {a.get("sourceUrl") for a in existing + queue if a.get("sourceUrl")}
     seen_by_section: dict = {}
-    for a in existing:
+    for a in existing + queue:
         if a.get("title"):
             pr.remember_title(pr.title_tokens(a["title"]), pr.section_of(a.get("geo", "")), seen_by_section)
-    next_id = max((a["id"] for a in existing if isinstance(a.get("id"), int)), default=0) + 1
 
-    kept = []
+    added = 0
     for a in new_articles:
         if a["sourceUrl"] in seen_urls:
             continue
@@ -238,24 +263,7 @@ def merge_and_write(new_articles: list, existing: list):
         tokens = pr.title_tokens(a["title"])
         if pr.is_dup_title(tokens, section, seen_by_section):
             continue
-        a["id"] = next_id
-        a["added_ts"] = int(time.time() * 1000)
-        next_id += 1
-        kept.append(a)
-        seen_urls.add(a["sourceUrl"])
-        pr.remember_title(tokens, section, seen_by_section)
-
-    kept, evict_ids = pr.apply_daily_limits(kept, existing)
-    if evict_ids:
-        existing = [a for a in existing if a.get("id") not in evict_ids]
-
-    if not kept:
-        print("Нових статей немає.")
-        return
-
-    # Повний текст: дотягуємо зі СПРАВЖНЬОГО url кожної відібраної статті.
-    # Якщо не вдалось — лишаємо анонс (summary) як контент.
-    for a in kept:
+        # повний текст зі справжнього url (якщо не вдалось — лишаємо анонс)
         try:
             full = pr.fetch_full_article(a["sourceUrl"])
         except Exception:
@@ -263,12 +271,20 @@ def merge_and_write(new_articles: list, existing: list):
         if full and len(full) > len(a.get("content") or ""):
             a["content"] = full
         a.pop("summary", None)
-    all_articles = kept + existing
-    all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
-    all_articles = pr.balance_ua_world(all_articles)
-    all_articles = all_articles[:pr.MAX_ARTICLES]
-    pr.DATA_PATH.write_text(json.dumps(all_articles, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"✓ articles.json: {len(all_articles)} статей (+{len(kept)} нових)")
+        a["queued_ts"] = int(time.time() * 1000)   # коли потрапило в чергу
+        queue.append(a)
+        seen_urls.add(a["sourceUrl"])
+        pr.remember_title(tokens, section, seen_by_section)
+        added += 1
+
+    # Прибираємо застарілі (за датою публікації) і тримаємо ліміт найсвіжіших
+    cutoff = int(time.time() * 1000) - QUEUE_MAX_AGE_DAYS * 86400_000
+    queue = [q for q in queue if q.get("ts", 0) >= cutoff]
+    queue.sort(key=lambda q: q.get("ts", 0), reverse=True)
+    queue = queue[:QUEUE_MAX_SIZE]
+
+    save_queue(queue)
+    print(f"✓ черга: +{added} нових, усього в черзі {len(queue)} (чекають публікації)")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -281,6 +297,8 @@ def main():
 
     cfg = load_config()
     existing = load_existing()
+    # для дедупу агент має бачити і опубліковане, і те що вже чекає в черзі
+    seen_pool = existing + load_queue()
     missions = [args.mission] if args.mission else list(cfg["missions"].keys())
 
     found = []
@@ -288,7 +306,7 @@ def main():
         if name not in cfg["missions"]:
             print(f"⚠ невідома місія: {name}")
             continue
-        prompt = build_prompt(name, cfg, existing)
+        prompt = build_prompt(name, cfg, seen_pool)
         if args.dry_run:
             print(f"\n===== ПРОМПТ [{name}] =====\n{prompt}\n")
             continue
@@ -303,7 +321,7 @@ def main():
     if args.dry_run:
         return
     if found:
-        merge_and_write(found, existing)
+        enqueue(found, existing)     # у чергу, не в стрічку (публікатор викладе крапельно)
     else:
         print("Агент нічого не повернув.")
 
