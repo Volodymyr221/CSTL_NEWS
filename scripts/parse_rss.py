@@ -47,32 +47,24 @@ SOURCES = [
     {
         "url": "https://kivertsi.rayon.in.ua/tags/olika",
         "name": "Район.Ківерці",
-        "geo": "Олика",
+        "geo": "Громада",
         "type": "html",   # тег-сторінка без RSS — HTML-парсер
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/news/",
         "name": "Олицька громада",
-        "geo": "Олика",
+        "geo": "Громада",
         "type": "gromada",
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/ogoloshennya-11-12-45-18-02-2021/",
         "name": "Олицька громада",
-        "geo": "Олика",
+        "geo": "Громада",
         "type": "gromada",
     },
-    {
-        # Розумний парсер (Крок 3b): Google News агрегує згадки про Олику з УСЬОГО
-        # інтернету одним RSS-запитом. Фільтр релевантності — is_olyka_relevant.
-        "url": ("https://news.google.com/rss/search?q="
-                + urllib.parse.quote(
-                    '"Олика" OR "Олицька громада" OR "Олицький замок" OR "Радзивілли Олика"')
-                + "&hl=uk&gl=UA&ceid=UA:uk"),
-        "name": "Google News",
-        "geo": "Олика",
-        "type": "gnews",
-    },
+    # Google News ВИМКНЕНО 05.07.2026 — його замінює AI-агент (scripts/ai_news_agent.py,
+    # місія «Громада»): справжні URL + повний текст, без крихкого розкодування Google.
+    # Код gnews лишається в парсері (мертвий шлях), щоб не ламати логіку; джерело прибрано.
 ]
 
 # Cloudflare Worker (посередник між GitHub Actions і сайтом громади)
@@ -84,25 +76,36 @@ GROMADA_BASE  = "https://olytska-gromada.gov.ua"
 # джерело. Зловмисне джерело могло б підсунути file:///etc/passwd або
 # http://169.254.169.254/ (метадані хмари) → парсер завантажив би це на runner.
 # Тому дозволяємо завантажувати повний текст ТІЛЬКИ з доменів відомих видань.
-ALLOWED_FETCH_DOMAINS = (
-    "volynpost.com",
-    "konkurent.ua",
-    "pravda.com.ua",
-    "rayon.in.ua",
-    "olytska-gromada.gov.ua",
-    "cstl-proxy.volodymyrshevchuk19.workers.dev",
-    # Відомі видання що пишуть про Олику (для повного тексту gnews-статей, 01.07)
-    "vsn.ua",
-    "volynnews.com",
-    "volyn24.com",
-    "volyn.com.ua",
-    "suspilne.media",
-)
+def _host_is_public(host: str) -> bool:
+    """True якщо УСІ IP, у які резолвиться host, — публічні (не внутрішні).
+
+    Анти-SSRF за IP (замінив білий список доменів 05.07): дозволяємо будь-яке
+    публічне видання, але блокуємо звернення на внутрішні адреси (localhost,
+    10.*, 192.168.*, 169.254.* хмарні метадані тощо) — саме вони є реальною
+    загрозою SSRF. Резолвимо ім'я і перевіряємо кожну отриману адресу.
+    """
+    import ipaddress
+    import socket
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        ip_str = info[4][0]
+        try:
+            addr = ipaddress.ip_address(ip_str)
+        except ValueError:
+            return False
+        if (addr.is_private or addr.is_loopback or addr.is_link_local
+                or addr.is_reserved or addr.is_multicast or addr.is_unspecified):
+            return False
+    return True
 
 
 def is_allowed_url(url: str) -> bool:
-    """True лише для http(s) на whitelist-домені і без приватних IP-літералів."""
-    import ipaddress
+    """True для будь-якого ПУБЛІЧНОГО http(s) URL; блокує внутрішні адреси (анти-SSRF)."""
     try:
         p = urllib.parse.urlparse(url)
     except Exception:
@@ -112,17 +115,19 @@ def is_allowed_url(url: str) -> bool:
     host = (p.hostname or "").lower()
     if not host:
         return False
-    # домен має збігатися або бути піддоменом дозволеного
-    if not any(host == d or host.endswith("." + d) for d in ALLOWED_FETCH_DOMAINS):
-        return False
-    # якщо host — це IP-літерал, відкидаємо приватні/локальні діапазони
-    try:
-        ip = ipaddress.ip_address(host)
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-            return False
-    except ValueError:
-        pass  # не IP, а доменне імʼя — whitelist вище вже спрацював
-    return True
+    return _host_is_public(host)
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Блокує редирект на приватну адресу (SSRF через 3xx-перенаправлення)."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not is_allowed_url(newurl):
+            return None       # не йдемо за редиректом на внутрішній ресурс
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+# Опенер із перевіркою редиректів — для завантаження повного тексту статей.
+SAFE_OPENER = urllib.request.build_opener(_SafeRedirectHandler)
 
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
 
@@ -319,7 +324,7 @@ def section_of(geo: str) -> str:
         return "Україна та Світ"
     if geo == "Волинь":
         return "Волинь"
-    if geo == "Олика":
+    if geo in ("Олика", "Громада"):   # «Олика» — стара назва, «Громада» — нова (05.07)
         return "Громада"
     return geo or "інше"
 
@@ -386,27 +391,50 @@ def _added_date(a: dict):
         return None
 
 
-def apply_daily_limits(new_articles: list, existing_articles: list) -> list:
-    """Лишає не більше DAILY_LIMIT_PER_SECTION нових статей на розділ за сьогодні.
+def apply_daily_limits(new_articles: list, existing_articles: list):
+    """Тримає не більше DAILY_LIMIT_PER_SECTION НАЙСВІЖІШИХ статей на розділ за добу.
 
-    Рахує за полем added_ts (коли ДОДАНО, не коли опубліковано) — тож обмежує саме
-    денний ПРИТІК, а не дату публікації. Громада/Олика — без ліміту. Свіжіші
-    (за ts публікації) лишаються першими. Рішення Роби 01.07.
+    «Найсвіжіші перемагають» (рішення Роми 05.07 — фікс замерзлої стрічки):
+    ліміт більше не «перші N і стоп», а «N найсвіжіших за сьогодні». Коли розділ
+    уже повний, свіжіша (за ts публікації) стаття ВИТІСНЯЄ найстарішу СЬОГОДНІШНЮ —
+    так стрічка завжди показує свіже, але денний притік лишається обмеженим (каші
+    нема). Статті попередніх днів не чіпаємо (вони згасають самі через MAX_ARTICLES).
+
+    Рахунок «сьогоднішніх» — за added_ts (коли ДОДАЛИ). Громада/Олика — без ліміту.
+    Повертає (kept_new, evict_ids): нові що лишаємо + id сьогоднішніх що витіснили.
     """
     today = datetime.date.today()
-    count: dict = {}
+    # Сьогоднішні наявні по розділах, найстаріші (за ts публікації) спереду — для витіснення.
+    todays: dict = {}
     for a in existing_articles:
         if _added_date(a) == today:
             s = section_of(a.get("geo", ""))
-            count[s] = count.get(s, 0) + 1
-    kept = []
+            todays.setdefault(s, []).append(a)
+    for s in todays:
+        todays[s].sort(key=lambda a: a.get("ts", 0))   # найстаріша першою
+
+    kept, evict_ids = [], set()
     for a in sorted(new_articles, key=lambda a: a.get("ts", 0), reverse=True):
         s = section_of(a.get("geo", ""))
-        lim = DAILY_LIMIT_PER_SECTION.get(s)   # None = без ліміту (Громада/Олика)
-        if lim is None or count.get(s, 0) < lim:
+        lim = DAILY_LIMIT_PER_SECTION.get(s)           # None = без ліміту (Громада/Олика)
+        if lim is None:
             kept.append(a)
-            count[s] = count.get(s, 0) + 1
-    return kept
+            continue
+        cur = todays.setdefault(s, [])
+        if len(cur) < lim:                             # є вільне місце сьогодні
+            kept.append(a)
+            cur.append(a)
+            cur.sort(key=lambda x: x.get("ts", 0))
+        else:                                          # повно — витісняємо найстарішу, якщо ця свіжіша
+            oldest = cur[0]
+            if a.get("ts", 0) > oldest.get("ts", 0):
+                evict_ids.add(oldest.get("id"))
+                cur.pop(0)
+                kept.append(a)
+                cur.append(a)
+                cur.sort(key=lambda x: x.get("ts", 0))
+            # інакше — стаття старіша за все сьогоднішнє, пропускаємо
+    return kept, evict_ids
 
 
 def drip_story(existing_articles: list, next_id: int):
@@ -444,7 +472,7 @@ def drip_story(existing_articles: list, next_id: int):
         "excerpt": story.get("excerpt", ""),
         "content": story.get("content", ""),
         "category": story.get("category", "Історія"),
-        "geo": "Олика",
+        "geo": "Громада",
         "image": story.get("image"),
         "source": story.get("source", "CSTL LIFE"),
         "sourceUrl": story.get("sourceUrl"),
@@ -459,7 +487,7 @@ def drip_story(existing_articles: list, next_id: int):
 def detect_geo(text: str, default_geo: str) -> str:
     low = text.lower()
     if any(kw in low for kw in OLYKA_KEYWORDS):
-        return "Олика"
+        return "Громада"          # згадка про Олику/села → розділ «Громада» (перейм. 05.07)
     return default_geo
 
 
@@ -685,7 +713,7 @@ def fetch_full_article(url: str) -> str | None:
     Викликається коли RSS дає лише анонс (<600 символів).
     Повертає текст або None якщо не вдалося.
     """
-    # Анти-SSRF: завантажуємо повний текст лише з доменів відомих видань.
+    # Анти-SSRF: тягнемо лише з публічних адрес (внутрішні заблоковано).
     if not is_allowed_url(url):
         return None
     try:
@@ -696,7 +724,8 @@ def fetch_full_article(url: str) -> str | None:
             "Referer": "https://www.google.com/",
             "DNT": "1",
         })
-        with urllib.request.urlopen(req, timeout=12) as r:
+        # SAFE_OPENER перевіряє редиректи (щоб 3xx не відвів на приватну адресу).
+        with SAFE_OPENER.open(req, timeout=12) as r:
             raw = r.read()
     except Exception:
         return None
@@ -714,7 +743,8 @@ def fetch_full_article(url: str) -> str | None:
                                "aside", "form", "iframe", "noscript"]):
         tag.decompose()
     for tag in soup.find_all(True):
-        cls = " ".join(tag.get("class") or [])
+        # guard: у bs4 4.15 деякі вузли мають attrs=None → tag.get падає
+        cls = " ".join((getattr(tag, "attrs", None) or {}).get("class") or [])
         if _NOISE_RE.search(cls):
             tag.decompose()
 
@@ -1227,8 +1257,11 @@ def main():
             print(f"✗ {source['name']}: {e}")
             traceback.print_exc()
 
-    # Денні ліміти на розділ — не більше 5-6 нових/день (Олика без ліміту)
-    new_articles = apply_daily_limits(new_articles, existing_articles)
+    # Денні ліміти на розділ — N найсвіжіших/добу; свіжіші витісняють старіші сьогоднішні
+    new_articles, evict_ids = apply_daily_limits(new_articles, existing_articles)
+    if evict_ids:
+        existing_articles = [a for a in existing_articles if a.get("id") not in evict_ids]
+        print(f"↻ витіснено застарілих сьогоднішніх: {len(evict_ids)} (замінено свіжішими)")
 
     # Крапельна історична «історія Олики» (одна на день) — щоб стрічка жила в тишу
     _story, next_art_id = drip_story(existing_articles, next_art_id)
