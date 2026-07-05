@@ -1476,6 +1476,15 @@
   border: 2px solid #fff; box-sizing: content-box;
   display: none;
 }
+/* Лічильник непрочитаних у пункті «Повідомлення» FAB-меню (число ставить refreshUnreadBadge) */
+.board-fab-msgs-badge {
+  display: none;
+  margin-left: 6px;
+  min-width: 16px; height: 16px; padding: 0 4px;
+  border-radius: 8px; background: var(--red, #722F37); color: #fff;
+  font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+  box-sizing: content-box;
+}
 
 /* ── FAB-підменю (speed-dial): тап по кнопці розкриває дії ── */
 /* Затемнення фону при відкритому меню (нижче кнопки й пунктів) */

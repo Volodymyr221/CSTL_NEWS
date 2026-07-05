@@ -7,7 +7,7 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { startChatFromPost, openMyAds } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, refreshUnreadBadge } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
@@ -1173,6 +1173,10 @@ function renderAll() {
           <span class="board-fab-label">Подати оголошення</span>
           <span class="board-fab-ic">✏️</span>
         </button>
+        <button class="board-fab-item" data-fab="messages" type="button">
+          <span class="board-fab-label">Повідомлення<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
+          <span class="board-fab-ic">${MSG_ICON_SVG}</span>
+        </button>
         <button class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">Мої оголошення</span>
           <span class="board-fab-ic">📋</span>
@@ -1186,6 +1190,7 @@ function renderAll() {
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
       </button>
     </div>
   `;
@@ -1213,6 +1218,7 @@ function renderAll() {
   };
   fabBtn?.addEventListener('click', toggleFab);
   fabBack?.addEventListener('click', closeFab);
+  refreshUnreadBadge();   // заповнити бейдж непрочитаних на свіжому FAB (після рендеру Дошки)
   fab?.querySelectorAll('.board-fab-item').forEach(item => {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
@@ -1226,6 +1232,7 @@ function renderAll() {
         if (discOpen) { closeDiscussions(); window.switchTab('board'); }
         setBoardActiveType('saved');
       }); return; }
+      if (act === 'messages') { openThreadsList(); return; }   // requireAuth усередині
       if (act === 'mine') openMyAds();        // requireAuth усередині openMyAds
     });
   });
