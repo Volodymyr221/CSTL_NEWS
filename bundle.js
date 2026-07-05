@@ -6882,6 +6882,276 @@ ${post.text}
     }, 6e4);
   }
 
+  // src/tabs/news.js
+  var allArticles = [];
+  var activeGeo = "\u0412\u0441\u0456";
+  var UA_WORLD = "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442";
+  var GEO_FILTERS = ["\u0412\u0441\u0456", "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", UA_WORLD];
+  var CATEGORY_COLORS = {
+    "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
+    // темно-сірий (новинний)
+    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
+    // navy
+    "\u0412\u0456\u0439\u043D\u0430": "#722F37",
+    // бордо
+    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F",
+    // зелений (гроші)
+    "\u0411\u0456\u0437\u043D\u0435\u0441": "#2E5E1F",
+    // зелений
+    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
+    // синій
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#B45309",
+    // теракот
+    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "#455a64",
+    // сіро-синій
+    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#C2185B",
+    // медичний
+    "\u041E\u0441\u0432\u0456\u0442\u0430": "#6a1b9a",
+    // фіолетовий
+    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "#2e7d32",
+    // природний зелений
+    "\u0406\u0441\u0442\u043E\u0440\u0456\u044F": "#6d4c41"
+    // сепія-коричневий (історичні «історії Олики»)
+  };
+  var GEO_COLORS = {
+    "\u0413\u0440\u043E\u043C\u0430\u0434\u0430": "#722F37",
+    // бордо — наш бренд (Олика + села громади)
+    "\u041E\u043B\u0438\u043A\u0430": "#722F37",
+    // стара назва — лишаємо для сумісності
+    "\u0412\u043E\u043B\u0438\u043D\u044C": "#9e7508",
+    // золотий
+    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
+    // синій
+    "\u0421\u0432\u0456\u0442": "#546e7a",
+    // нейтрально-сірий
+    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
+    // синій — злитий розділ (на випадок майбутнього geo)
+  };
+  function catColor(c) {
+    return CATEGORY_COLORS[c] || "#546e7a";
+  }
+  function geoColor(g) {
+    return GEO_COLORS[g] || "#546e7a";
+  }
+  function showNewsSegment(seg) {
+    const isEvents = seg === "events";
+    const paneNews = document.getElementById("news-seg-news");
+    const paneEv = document.getElementById("news-seg-events");
+    if (paneNews)
+      paneNews.style.display = isEvents ? "none" : "block";
+    if (paneEv)
+      paneEv.style.display = isEvents ? "block" : "none";
+    document.querySelectorAll(".news-seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.newsSeg === seg));
+  }
+  window.cstlShowNewsSegment = showNewsSegment;
+  async function initNews() {
+    try {
+      const res = await fetch("./data/articles.json");
+      allArticles = await res.json();
+    } catch (e) {
+      allArticles = [];
+    }
+    renderGeoFilters();
+    renderNews();
+    attachNewsListeners();
+  }
+  function attachNewsListeners() {
+    document.querySelectorAll(".news-seg-btn").forEach((btn) => {
+      btn.addEventListener("click", () => showNewsSegment(btn.dataset.newsSeg));
+    });
+    const filters = document.getElementById("geo-filters");
+    if (filters) {
+      filters.addEventListener("click", (e) => {
+        const chip = e.target.closest(".chip[data-geo]");
+        if (!chip)
+          return;
+        setGeoFilter(chip.dataset.geo);
+      });
+    }
+    const list = document.getElementById("news-list");
+    if (list) {
+      list.addEventListener("click", (e) => {
+        const card = e.target.closest("[data-article-id]");
+        if (!card)
+          return;
+        const id = Number(card.dataset.articleId);
+        if (Number.isFinite(id))
+          openArticle(id);
+      });
+      list.addEventListener("error", handleImgError, true);
+    }
+    const modal = document.getElementById("article-modal");
+    if (modal) {
+      modal.addEventListener("click", (e) => {
+        const btn = e.target.closest("[data-share-article]");
+        if (!btn)
+          return;
+        sharePost({
+          title: btn.dataset.shareTitle,
+          text: btn.dataset.shareText,
+          url: btn.dataset.shareUrl
+        });
+      });
+      modal.addEventListener("error", handleImgError, true);
+    }
+  }
+  function handleImgError(e) {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG")
+      return;
+    const ph = document.createElement("div");
+    ph.className = img.className + " img-fallback";
+    ph.textContent = "\u{1F3F0}";
+    img.replaceWith(ph);
+  }
+  function renderGeoFilters() {
+    const el = document.getElementById("geo-filters");
+    if (!el)
+      return;
+    el.innerHTML = GEO_FILTERS.map((g) => `
+    <button class="chip ${g === activeGeo ? "active" : ""}" data-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
+  `).join("");
+  }
+  function getFiltered() {
+    return allArticles.filter((a) => {
+      if (activeGeo === "\u0412\u0441\u0456")
+        return true;
+      if (activeGeo === UA_WORLD)
+        return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
+      if (activeGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
+        return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
+      return a.geo === activeGeo;
+    }).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  }
+  function renderNews() {
+    const el = document.getElementById("news-list");
+    if (!el)
+      return;
+    el.innerHTML = newsCardsHtml(getFiltered());
+  }
+  function newsCardsHtml(articles) {
+    if (!articles || articles.length === 0) {
+      return '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+    }
+    return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
+  }
+  async function ensureNewsLoaded() {
+    if (!allArticles.length) {
+      try {
+        const res = await fetch("./data/articles.json");
+        allArticles = await res.json();
+      } catch (e) {
+        allArticles = [];
+      }
+    }
+    return allArticles;
+  }
+  function badgesHtml(a) {
+    return `
+    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
+    ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+  `;
+  }
+  function renderFeatured(a) {
+    const hasImage = !!a.image;
+    return `
+    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      <div class="news-card-featured-overlay">
+        <div class="news-card-meta">${badgesHtml(a)}</div>
+        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
+        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
+        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
+  }
+  function renderRow(a) {
+    return `
+    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" data-article-id="${a.id}">
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">${badgesHtml(a)}</div>
+        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
+        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
+        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
+  }
+  function setGeoFilter(geo) {
+    activeGeo = geo;
+    renderGeoFilters();
+    renderNews();
+  }
+  function decodeEntities(str) {
+    const ta = document.createElement("textarea");
+    ta.innerHTML = str || "";
+    return ta.value;
+  }
+  function renderArticleBody(content) {
+    const text = decodeEntities(content || "");
+    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+    if (!paragraphs.length)
+      return "";
+    return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
+  }
+  function openArticle(id) {
+    const article = allArticles.find((a) => a.id === id);
+    if (!article)
+      return;
+    const modal = document.getElementById("article-modal");
+    const modalContent = document.getElementById("article-modal-content");
+    const modalMetaTags = document.getElementById("modalMetaTags");
+    if (!modal || !modalContent)
+      return;
+    const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
+    const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
+    const bodyHtml = renderArticleBody(rawText);
+    if (modalMetaTags) {
+      modalMetaTags.innerHTML = `
+      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
+      <span class="modal-meta-sep">\u2022</span>
+      <span class="news-card-category">${escapeHtml(article.category)}</span>
+      ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    `;
+    }
+    modalContent.innerHTML = `
+    <div class="article-modal-header">
+      <h1 class="article-title">${escapeHtml(article.title)}</h1>
+      <div class="article-byline">
+        ${sourceHtml}
+        <span>${formatTime(article.ts)}</span>
+      </div>
+    </div>
+    ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
+    <div class="article-body">${bodyHtml}</div>
+    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
+      <div class="article-short-note">
+        \u0414\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS \u2014 \u043F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u0432\u0438\u0434\u0430\u043D\u043D\u044F.
+        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u2192</a>
+      </div>
+    ` : ""}
+    <div class="article-source-row">
+      <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
+      <div class="article-source-actions">
+        <button class="share-btn share-btn--inline" type="button"
+                data-share-article
+                data-share-title="${escapeHtml(article.title)}"
+                data-share-text="${escapeHtml(article.excerpt || "")}"
+                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
+          \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
+        </button>
+        ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
+      </div>
+    </div>
+  `;
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("modal-open");
+  }
+
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
   var cmBusEntries = [];
@@ -7423,6 +7693,51 @@ ${post.text}
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
   }
+  var CM_NEWS_FILTERS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
+  var cmNewsGeo = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
+  function cmNewsMatch(a) {
+    if (cmNewsGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
+      return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
+    if (cmNewsGeo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
+      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
+    return a.geo === cmNewsGeo;
+  }
+  function paintCmNews(el, arts) {
+    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    el.innerHTML = `
+    <div class="cm-news-filters">
+      ${CM_NEWS_FILTERS.map((g) => `
+        <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
+      `).join("")}
+    </div>
+    <div class="cm-news-feed">${newsCardsHtml(filtered)}</div>
+  `;
+  }
+  async function renderCommunityNews() {
+    const el = document.getElementById("cm-news-content");
+    if (!el)
+      return;
+    const arts = await ensureNewsLoaded();
+    paintCmNews(el, arts);
+    const section = document.querySelector(".cm-block--news");
+    if (!section || section.dataset.wired)
+      return;
+    section.dataset.wired = "1";
+    section.addEventListener("click", (e) => {
+      const chip = e.target.closest("[data-cm-geo]");
+      if (chip) {
+        cmNewsGeo = chip.dataset.cmGeo;
+        paintCmNews(el, arts);
+        return;
+      }
+      const card = e.target.closest("[data-article-id]");
+      if (card) {
+        const id = Number(card.dataset.articleId);
+        if (Number.isFinite(id))
+          openArticle(id);
+      }
+    });
+  }
 
   // src/tabs/community.js
   var HERO_IMAGES = [
@@ -7573,6 +7888,13 @@ ${post.text}
       </header>
       <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
+
+    <section class="cm-block cm-block--news">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041D\u043E\u0432\u0438\u043D\u0438</h3>
+      </header>
+      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
   `;
   }
   function initCommunity() {
@@ -7584,6 +7906,7 @@ ${post.text}
     renderBoardBlock();
     renderEventBlock();
     renderContactsBlock();
+    renderCommunityNews();
   }
   function attachSwitchTabDelegation() {
     const root = document.getElementById("cm-content");
@@ -7597,264 +7920,6 @@ ${post.text}
       if (tab && typeof window.switchTab === "function")
         window.switchTab(tab);
     });
-  }
-
-  // src/tabs/news.js
-  var allArticles = [];
-  var activeGeo = "\u0412\u0441\u0456";
-  var UA_WORLD = "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442";
-  var GEO_FILTERS = ["\u0412\u0441\u0456", "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", UA_WORLD];
-  var CATEGORY_COLORS = {
-    "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
-    // темно-сірий (новинний)
-    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
-    // navy
-    "\u0412\u0456\u0439\u043D\u0430": "#722F37",
-    // бордо
-    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F",
-    // зелений (гроші)
-    "\u0411\u0456\u0437\u043D\u0435\u0441": "#2E5E1F",
-    // зелений
-    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    // синій
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#B45309",
-    // теракот
-    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "#455a64",
-    // сіро-синій
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#C2185B",
-    // медичний
-    "\u041E\u0441\u0432\u0456\u0442\u0430": "#6a1b9a",
-    // фіолетовий
-    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "#2e7d32",
-    // природний зелений
-    "\u0406\u0441\u0442\u043E\u0440\u0456\u044F": "#6d4c41"
-    // сепія-коричневий (історичні «історії Олики»)
-  };
-  var GEO_COLORS = {
-    "\u0413\u0440\u043E\u043C\u0430\u0434\u0430": "#722F37",
-    // бордо — наш бренд (Олика + села громади)
-    "\u041E\u043B\u0438\u043A\u0430": "#722F37",
-    // стара назва — лишаємо для сумісності
-    "\u0412\u043E\u043B\u0438\u043D\u044C": "#9e7508",
-    // золотий
-    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
-    // синій
-    "\u0421\u0432\u0456\u0442": "#546e7a",
-    // нейтрально-сірий
-    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
-    // синій — злитий розділ (на випадок майбутнього geo)
-  };
-  function catColor(c) {
-    return CATEGORY_COLORS[c] || "#546e7a";
-  }
-  function geoColor(g) {
-    return GEO_COLORS[g] || "#546e7a";
-  }
-  function showNewsSegment(seg) {
-    const isEvents = seg === "events";
-    const paneNews = document.getElementById("news-seg-news");
-    const paneEv = document.getElementById("news-seg-events");
-    if (paneNews)
-      paneNews.style.display = isEvents ? "none" : "block";
-    if (paneEv)
-      paneEv.style.display = isEvents ? "block" : "none";
-    document.querySelectorAll(".news-seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.newsSeg === seg));
-  }
-  window.cstlShowNewsSegment = showNewsSegment;
-  async function initNews() {
-    try {
-      const res = await fetch("./data/articles.json");
-      allArticles = await res.json();
-    } catch (e) {
-      allArticles = [];
-    }
-    renderGeoFilters();
-    renderNews();
-    attachNewsListeners();
-  }
-  function attachNewsListeners() {
-    document.querySelectorAll(".news-seg-btn").forEach((btn) => {
-      btn.addEventListener("click", () => showNewsSegment(btn.dataset.newsSeg));
-    });
-    const filters = document.getElementById("geo-filters");
-    if (filters) {
-      filters.addEventListener("click", (e) => {
-        const chip = e.target.closest(".chip[data-geo]");
-        if (!chip)
-          return;
-        setGeoFilter(chip.dataset.geo);
-      });
-    }
-    const list = document.getElementById("news-list");
-    if (list) {
-      list.addEventListener("click", (e) => {
-        const card = e.target.closest("[data-article-id]");
-        if (!card)
-          return;
-        const id = Number(card.dataset.articleId);
-        if (Number.isFinite(id))
-          openArticle(id);
-      });
-      list.addEventListener("error", handleImgError, true);
-    }
-    const modal = document.getElementById("article-modal");
-    if (modal) {
-      modal.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-share-article]");
-        if (!btn)
-          return;
-        sharePost({
-          title: btn.dataset.shareTitle,
-          text: btn.dataset.shareText,
-          url: btn.dataset.shareUrl
-        });
-      });
-      modal.addEventListener("error", handleImgError, true);
-    }
-  }
-  function handleImgError(e) {
-    const img = e.target;
-    if (!img || img.tagName !== "IMG")
-      return;
-    const ph = document.createElement("div");
-    ph.className = img.className + " img-fallback";
-    ph.textContent = "\u{1F3F0}";
-    img.replaceWith(ph);
-  }
-  function renderGeoFilters() {
-    const el = document.getElementById("geo-filters");
-    if (!el)
-      return;
-    el.innerHTML = GEO_FILTERS.map((g) => `
-    <button class="chip ${g === activeGeo ? "active" : ""}" data-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-  `).join("");
-  }
-  function getFiltered() {
-    return allArticles.filter((a) => {
-      if (activeGeo === "\u0412\u0441\u0456")
-        return true;
-      if (activeGeo === UA_WORLD)
-        return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
-      if (activeGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
-        return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
-      return a.geo === activeGeo;
-    }).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  }
-  function renderNews() {
-    const el = document.getElementById("news-list");
-    if (!el)
-      return;
-    const articles = getFiltered();
-    if (articles.length === 0) {
-      el.innerHTML = '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
-      return;
-    }
-    el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
-  }
-  function badgesHtml(a) {
-    return `
-    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
-    ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-  `;
-  }
-  function renderFeatured(a) {
-    const hasImage = !!a.image;
-    return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
-      <div class="news-card-featured-overlay">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
-        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function renderRow(a) {
-    return `
-    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" data-article-id="${a.id}">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
-      <div class="news-card-row-body">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
-        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function setGeoFilter(geo) {
-    activeGeo = geo;
-    renderGeoFilters();
-    renderNews();
-  }
-  function decodeEntities(str) {
-    const ta = document.createElement("textarea");
-    ta.innerHTML = str || "";
-    return ta.value;
-  }
-  function renderArticleBody(content) {
-    const text = decodeEntities(content || "");
-    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-    if (!paragraphs.length)
-      return "";
-    return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
-  }
-  function openArticle(id) {
-    const article = allArticles.find((a) => a.id === id);
-    if (!article)
-      return;
-    const modal = document.getElementById("article-modal");
-    const modalContent = document.getElementById("article-modal-content");
-    const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
-    const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
-    const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
-    const bodyHtml = renderArticleBody(rawText);
-    if (modalMetaTags) {
-      modalMetaTags.innerHTML = `
-      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
-      <span class="modal-meta-sep">\u2022</span>
-      <span class="news-card-category">${escapeHtml(article.category)}</span>
-      ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-    `;
-    }
-    modalContent.innerHTML = `
-    <div class="article-modal-header">
-      <h1 class="article-title">${escapeHtml(article.title)}</h1>
-      <div class="article-byline">
-        ${sourceHtml}
-        <span>${formatTime(article.ts)}</span>
-      </div>
-    </div>
-    ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
-    <div class="article-body">${bodyHtml}</div>
-    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
-      <div class="article-short-note">
-        \u0414\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS \u2014 \u043F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u0432\u0438\u0434\u0430\u043D\u043D\u044F.
-        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u2192</a>
-      </div>
-    ` : ""}
-    <div class="article-source-row">
-      <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
-      <div class="article-source-actions">
-        <button class="share-btn share-btn--inline" type="button"
-                data-share-article
-                data-share-title="${escapeHtml(article.title)}"
-                data-share-text="${escapeHtml(article.excerpt || "")}"
-                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
-          \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
-        </button>
-        ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
-      </div>
-    </div>
-  `;
-    modal.classList.add("open");
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("modal-open");
   }
 
   // src/tabs/events.js
