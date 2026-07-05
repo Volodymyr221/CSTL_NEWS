@@ -1,0 +1,67 @@
+name: AI News Agent — розумний пошук новин
+
+# AI-агент (Anthropic Sonnet + web_search) замість Google News.
+# Блок A: поки лише місія «Громада». Запуск кожні 3 години або вручну.
+on:
+  schedule:
+    - cron: '15 */3 * * *'   # кожні 3 години (о :15, щоб не збігатись з rss-parser :00/:30)
+  workflow_dispatch:
+    inputs:
+      mission:
+        description: 'Місія (порожньо = за замовч. Громада)'
+        required: false
+        default: 'Громада'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: "ai-news-agent"
+  cancel-in-progress: true
+
+jobs:
+  ai-news:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+
+      # ai_news_agent імпортує parse_rss → потрібні ті самі бібліотеки
+      - name: Install dependencies
+        run: pip install feedparser beautifulsoup4 lxml
+
+      - name: Run AI news agent
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scripts/ai_news_agent.py --mission "${{ github.event.inputs.mission || 'Громада' }}"
+
+      - name: Health check
+        run: python scripts/health_check.py
+
+      - name: Commit data files if changed
+        id: commit
+        run: |
+          git config user.name  "CSTL AI Agent"
+          git config user.email "ai-agent@cstl-news"
+          git add data/articles.json "CSTL NEWS VOVA/_ai-tools/HEALTH.md"
+          if git diff --staged --quiet; then
+            echo "Нових матеріалів немає — деплой не потрібен"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "ai(news): оновлення новин $(date -u +'%d.%m %H:%M UTC')"
+            git push origin main
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger deploy
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
