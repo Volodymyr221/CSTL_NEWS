@@ -15,6 +15,7 @@ import {
   renderBoardBlock,
   renderEventBlock,
   renderContactsBlock,
+  renderCommunityNews,
 } from './community-blocks.js';
 
 // ── Hero ротатор: 3 фото Олики, fade-transition 0.8s, інтервал 6s ────────────
@@ -163,6 +164,13 @@ function renderSkeleton() {
       </header>
       <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">Завантаження…</div>
     </section>
+
+    <section class="cm-block cm-block--news">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">Новини</h3>
+      </header>
+      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
+    </section>
   `;
 }
 
@@ -179,6 +187,7 @@ export function initCommunity() {
   renderBoardBlock();
   renderEventBlock();
   renderContactsBlock();
+  renderCommunityNews();
 }
 
 // B-21 fix: event delegation замість inline onclick="switchTab(...)" (XSS hardening).

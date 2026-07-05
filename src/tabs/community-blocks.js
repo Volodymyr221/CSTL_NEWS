@@ -18,6 +18,7 @@ import {
 } from '../core/bus-schedule.js';
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
+import { ensureNewsLoaded, newsCardsHtml, openArticle } from './news.js';
 
 let cmBusIndex = 0;
 let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
@@ -749,4 +750,54 @@ export async function renderContactsBlock() {
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Контакти недоступні</div>';
   }
+}
+
+// ── Блок НОВИНИ у вкладці «Громада» (05.07) ──────────────────────────────────
+// Стрічка новин переїхала сюди окремим блоком: 3 кнопки-фільтри + прокрутка
+// карток ВСЕРЕДИНІ блока. Картки й модалку перевикористовуємо з news.js.
+const CM_NEWS_FILTERS = ['Громада', 'Волинь', 'Україна та Світ'];
+let cmNewsGeo = 'Громада';
+
+function cmNewsMatch(a) {
+  if (cmNewsGeo === 'Громада')          return a.geo === 'Громада' || a.geo === 'Олика';
+  if (cmNewsGeo === 'Україна та Світ')  return a.geo === 'Україна' || a.geo === 'Світ';
+  return a.geo === cmNewsGeo;
+}
+
+function paintCmNews(el, arts) {
+  const filtered = arts.filter(cmNewsMatch)
+    .slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+  el.innerHTML = `
+    <div class="cm-news-filters">
+      ${CM_NEWS_FILTERS.map(g => `
+        <button class="cm-news-chip ${g === cmNewsGeo ? 'active' : ''}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
+      `).join('')}
+    </div>
+    <div class="cm-news-feed">${newsCardsHtml(filtered)}</div>
+  `;
+}
+
+export async function renderCommunityNews() {
+  const el = document.getElementById('cm-news-content');
+  if (!el) return;
+  const arts = await ensureNewsLoaded();
+  paintCmNews(el, arts);
+
+  // Делеговані слухачі — вішаємо ОДИН раз на секцію блока
+  const section = document.querySelector('.cm-block--news');
+  if (!section || section.dataset.wired) return;
+  section.dataset.wired = '1';
+  section.addEventListener('click', e => {
+    const chip = e.target.closest('[data-cm-geo]');
+    if (chip) {
+      cmNewsGeo = chip.dataset.cmGeo;
+      paintCmNews(el, arts);
+      return;
+    }
+    const card = e.target.closest('[data-article-id]');
+    if (card) {
+      const id = Number(card.dataset.articleId);
+      if (Number.isFinite(id)) openArticle(id);
+    }
+  });
 }
