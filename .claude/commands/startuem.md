@@ -14,11 +14,11 @@
 
 1. **Визнач людину** за поштою сесії (контекст, блок `userEmail`): `roma.haranin.ru1@gmail.com` → **Рома**; інша → **Вова**.
 2. **Підпиши коміти:** `git config user.name "<Рома/Вова>"` + `git config user.email "<пошта>"`.
-3. **Гілка під людину:** `roma/<тема>` або `vova/<тема>` (потік: іменована гілка → `/finish` → `main`). Авто-гілку `claude/startup-...` лишай до першого «Роби».
-4. **Перевір конфлікти:** `git fetch origin` + `git log --oneline --all -15` + кінець `SESSION_STATE.md`/`BACKLOG.md`. Якщо рішення іншої людини суперечать — скажи про це у першій відповіді.
+3. **Гілка під людину — ОДРАЗУ безпечна:** пересядь на сесійну гілку `roma/session-<дата>` або `vova/session-<дата>` (напр. `git checkout -B vova/session-2026-07-05 origin/main`). Далі під конкретну задачу можна зробити `roma/<тема>`/`vova/<тема>`. Потік: іменована гілка → `/finish` → `main`. Авто-гілку `claude/startup-...` НЕ лишай робочою — «поекспериментував» більше не має бути на авто-прод-гілці.
+4. **Перевір конфлікти:** `git fetch origin` + `git log --oneline --all -15` + `BOARD.md` (хто над чим зараз) + свій `SESSION_STATE_<ІМʼЯ>.md`. Якщо рішення іншої людини суперечать — скажи про це у першій відповіді.
 5. **Взаємне автостеження (для ОБОХ власників):** запусти Monitor `SELF='<твій regex>' bash .claude/owner-watch.sh` (persistent) — повідомляє про активність ІНШОГО власника. SELF: Рома=`Рома|roma\.haranin\.ru1@gmail\.com`, Вова=`Вова|Vova|VShevchukkk|Volodymyr221`. Деталі — `NEW_SESSION_PROMPT.md` Крок 0 п.5.
 
-> ⚠️ **Знай про auto-merge:** пуш у будь-яку гілку `claude/**` автоматично мерджиться в `main` + деплой (`.github/workflows/auto-merge.yml`, `-X theirs`). Хочеш контрольований потік через `/finish` — працюй на `roma/...`/`vova/...` (вони НЕ автомерджаться).
+> ✅ **Auto-merge ВИМКНЕНО (05.07.2026).** Раніше пуш у `claude/**` тихо мерджився в `main` через `-X theirs` (затирав чужу роботу). Тепер шлях у `main` — **тільки через PR + `/finish`**. Пуш у `claude/*` більше нічого не деплоїть. Архів: `.github/_archive/auto-merge.yml.disabled`. Працюй на `roma/...`/`vova/...`.
 
 ---
 
@@ -45,11 +45,12 @@ CSTL NEWS VOVA/_ai-tools/NEW_SESSION_PROMPT.md
 
 1. `CSTL NEWS VOVA/HOT_RULES.md` — 8 болючих правил що порушуються найчастіше (читай ПЕРШИМ)
 2. `CSTL NEWS VOVA/START_HERE.md`
-3. `CSTL NEWS VOVA/_ai-tools/SESSION_STATE.md`
-4. `CSTL NEWS VOVA/_ai-tools/BACKLOG.md`
-5. `CSTL NEWS VOVA/CSTL_BUGS.md`
-6. `CSTL NEWS VOVA/CLAUDE.md`
-7. `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
+3. `CSTL NEWS VOVA/_ai-tools/BOARD.md` — дошка координації: хто над чим ЗАРАЗ + питання одне одному (читай ОБИДВІ секції)
+4. `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_<ІМʼЯ>.md` — свій стан (Роми або Вови). Стан іншого — за потреби глянь його файл.
+5. `CSTL NEWS VOVA/_ai-tools/AUDIT_2026-07.md` — майстер-список задач по зонах
+6. `CSTL NEWS VOVA/CSTL_BUGS.md`
+7. `CSTL NEWS VOVA/CLAUDE.md`
+8. `CSTL NEWS VOVA/ВОВА_ПРОФІЛЬ.md`
 
 Додатково — подивись git-історію:
 ```
@@ -65,16 +66,18 @@ git branch --show-current
 
 Формат описано у `NEW_SESSION_PROMPT.md`. Коротко:
 
-> **Прочитав.** Привіт, [Рома/Вова]. CSTL NEWS, гілка [назва], [стан з SESSION_STATE].
+> **Прочитав.** Привіт, [Рома/Вова]. CSTL NEWS, гілка [назва], [твій стан з SESSION_STATE_<ІМʼЯ>].
 >
-> **Топ-3 пріоритетні задачі з BACKLOG.md:**
+> **Топ-3 пріоритетні задачі твоєї зони (AUDIT_2026-07.md):**
 > 1. [задача]
 > 2. [задача]
 > 3. [задача]
 >
 > **Критичні баги** (🔴 з CSTL_BUGS.md): [перелік або "нема"]
 >
-> **Конфлікти з іншим власником** (з Кроку 0): [що суперечить, або "нема"]
+> **Що робить інший власник зараз** (BOARD.md → 🟢 Активність + 🔨 В роботі): [коротко]
+>
+> **Питання/конфлікти** (BOARD.md → ❓ + Крок 0): [що чекає відповіді або суперечить, або "нема"]
 >
 > **Що робимо сьогодні?**
 
