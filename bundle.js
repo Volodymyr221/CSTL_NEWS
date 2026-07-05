@@ -7029,10 +7029,12 @@ ${post.text}
       return;
     el.innerHTML = newsCardsHtml(getFiltered());
   }
-  function newsCardsHtml(articles) {
+  function newsCardsHtml(articles, opts = {}) {
     if (!articles || articles.length === 0) {
       return '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     }
+    if (opts.compact)
+      return articles.map(renderRow).join("");
     return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
   }
   async function ensureNewsLoaded() {
@@ -7710,7 +7712,7 @@ ${post.text}
         <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
       `).join("")}
     </div>
-    <div class="cm-news-feed">${newsCardsHtml(filtered)}</div>
+    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
   `;
   }
   async function renderCommunityNews() {
@@ -7882,18 +7884,18 @@ ${post.text}
       <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
-    <section class="cm-block cm-block--contacts">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
-      </header>
-      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </section>
-
     <section class="cm-block cm-block--news">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041D\u043E\u0432\u0438\u043D\u0438</h3>
       </header>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+    </section>
+
+    <section class="cm-block cm-block--contacts">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
+      </header>
+      <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
   `;
   }

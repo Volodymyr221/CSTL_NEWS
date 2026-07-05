@@ -155,10 +155,12 @@ export function renderNews() {
 
 // HTML стрічки: перша картка — featured, решта — рядки. Порожньо → плейсхолдер.
 // Експортовано для перевикористання у блоці новин вкладки «Громада» (05.07).
-export function newsCardsHtml(articles) {
+// opts.compact = true → усі картки рядками (без великої featured) для блока Громади.
+export function newsCardsHtml(articles, opts = {}) {
   if (!articles || articles.length === 0) {
     return '<div class="empty-state">Новин за цим фільтром поки немає</div>';
   }
+  if (opts.compact) return articles.map(renderRow).join('');
   return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
 }
 

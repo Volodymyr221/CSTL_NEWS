@@ -773,7 +773,7 @@ function paintCmNews(el, arts) {
         <button class="cm-news-chip ${g === cmNewsGeo ? 'active' : ''}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
       `).join('')}
     </div>
-    <div class="cm-news-feed">${newsCardsHtml(filtered)}</div>
+    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
   `;
 }
 

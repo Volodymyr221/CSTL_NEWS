@@ -3097,7 +3097,7 @@ body.cm-zoom-open .disc-screen { overflow: hidden; }
 /* Стрічка карток — прокрутка ВСЕРЕДИНІ блока, незалежно від сторінки.
    overscroll-behavior:contain — щоб дотягнувши до краю не тягнути сторінку Громади. */
 .cm-news-feed {
-  max-height: 70vh;
+  max-height: 420px;          /* компактно, як інші блоки; далі — прокрутка всередині */
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
@@ -3106,4 +3106,7 @@ body.cm-zoom-open .disc-screen { overflow: hidden; }
   gap: 10px;
   padding: 2px 4px 4px;
 }
-/* картки (.news-card-*) стилюються з news.css — тут лише розмір-контейнер */
+/* КРИТИЧНО: без flex-shrink:0 flex-колонка з max-height СТИСКАЄ картки по висоті
+   (заголовки зникали, скрол не працював). Тепер картки тримають повну висоту. */
+.cm-news-feed > * { flex-shrink: 0; }
+/* картки (.news-card-*) стилюються з news.css */
