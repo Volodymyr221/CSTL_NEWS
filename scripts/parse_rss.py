@@ -84,25 +84,36 @@ GROMADA_BASE  = "https://olytska-gromada.gov.ua"
 # джерело. Зловмисне джерело могло б підсунути file:///etc/passwd або
 # http://169.254.169.254/ (метадані хмари) → парсер завантажив би це на runner.
 # Тому дозволяємо завантажувати повний текст ТІЛЬКИ з доменів відомих видань.
-ALLOWED_FETCH_DOMAINS = (
-    "volynpost.com",
-    "konkurent.ua",
-    "pravda.com.ua",
-    "rayon.in.ua",
-    "olytska-gromada.gov.ua",
-    "cstl-proxy.volodymyrshevchuk19.workers.dev",
-    # Відомі видання що пишуть про Олику (для повного тексту gnews-статей, 01.07)
-    "vsn.ua",
-    "volynnews.com",
-    "volyn24.com",
-    "volyn.com.ua",
-    "suspilne.media",
-)
+def _host_is_public(host: str) -> bool:
+    """True якщо УСІ IP, у які резолвиться host, — публічні (не внутрішні).
+
+    Анти-SSRF за IP (замінив білий список доменів 05.07): дозволяємо будь-яке
+    публічне видання, але блокуємо звернення на внутрішні адреси (localhost,
+    10.*, 192.168.*, 169.254.* хмарні метадані тощо) — саме вони є реальною
+    загрозою SSRF. Резолвимо ім'я і перевіряємо кожну отриману адресу.
+    """
+    import ipaddress
+    import socket
+    try:
+        infos = socket.getaddrinfo(host, None)
+    except Exception:
+        return False
+    if not infos:
+        return False
+    for info in infos:
+        ip_str = info[4][0]
+        try:
+            addr = ipaddress.ip_address(ip_str)
+        except ValueError:
+            return False
+        if (addr.is_private or addr.is_loopback or addr.is_link_local
+                or addr.is_reserved or addr.is_multicast or addr.is_unspecified):
+            return False
+    return True
 
 
 def is_allowed_url(url: str) -> bool:
-    """True лише для http(s) на whitelist-домені і без приватних IP-літералів."""
-    import ipaddress
+    """True для будь-якого ПУБЛІЧНОГО http(s) URL; блокує внутрішні адреси (анти-SSRF)."""
     try:
         p = urllib.parse.urlparse(url)
     except Exception:
@@ -112,17 +123,19 @@ def is_allowed_url(url: str) -> bool:
     host = (p.hostname or "").lower()
     if not host:
         return False
-    # домен має збігатися або бути піддоменом дозволеного
-    if not any(host == d or host.endswith("." + d) for d in ALLOWED_FETCH_DOMAINS):
-        return False
-    # якщо host — це IP-літерал, відкидаємо приватні/локальні діапазони
-    try:
-        ip = ipaddress.ip_address(host)
-        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved:
-            return False
-    except ValueError:
-        pass  # не IP, а доменне імʼя — whitelist вище вже спрацював
-    return True
+    return _host_is_public(host)
+
+
+class _SafeRedirectHandler(urllib.request.HTTPRedirectHandler):
+    """Блокує редирект на приватну адресу (SSRF через 3xx-перенаправлення)."""
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if not is_allowed_url(newurl):
+            return None       # не йдемо за редиректом на внутрішній ресурс
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+
+# Опенер із перевіркою редиректів — для завантаження повного тексту статей.
+SAFE_OPENER = urllib.request.build_opener(_SafeRedirectHandler)
 
 OLYKA_KEYWORDS = ["олика", "олицьк", "олицька"]
 
@@ -708,7 +721,7 @@ def fetch_full_article(url: str) -> str | None:
     Викликається коли RSS дає лише анонс (<600 символів).
     Повертає текст або None якщо не вдалося.
     """
-    # Анти-SSRF: завантажуємо повний текст лише з доменів відомих видань.
+    # Анти-SSRF: тягнемо лише з публічних адрес (внутрішні заблоковано).
     if not is_allowed_url(url):
         return None
     try:
@@ -719,7 +732,8 @@ def fetch_full_article(url: str) -> str | None:
             "Referer": "https://www.google.com/",
             "DNT": "1",
         })
-        with urllib.request.urlopen(req, timeout=12) as r:
+        # SAFE_OPENER перевіряє редиректи (щоб 3xx не відвів на приватну адресу).
+        with SAFE_OPENER.open(req, timeout=12) as r:
             raw = r.read()
     except Exception:
         return None
@@ -737,7 +751,8 @@ def fetch_full_article(url: str) -> str | None:
                                "aside", "form", "iframe", "noscript"]):
         tag.decompose()
     for tag in soup.find_all(True):
-        cls = " ".join(tag.get("class") or [])
+        # guard: у bs4 4.15 деякі вузли мають attrs=None → tag.get падає
+        cls = " ".join((getattr(tag, "attrs", None) or {}).get("class") or [])
         if _NOISE_RE.search(cls):
             tag.decompose()
 

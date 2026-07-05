@@ -248,6 +248,17 @@ def merge_and_write(new_articles: list, existing: list):
     if not kept:
         print("Нових статей немає.")
         return
+
+    # Повний текст: дотягуємо зі СПРАВЖНЬОГО url кожної відібраної статті.
+    # Якщо не вдалось — лишаємо анонс (summary) як контент.
+    for a in kept:
+        try:
+            full = pr.fetch_full_article(a["sourceUrl"])
+        except Exception:
+            full = None
+        if full and len(full) > len(a.get("content") or ""):
+            a["content"] = full
+        a.pop("summary", None)
     all_articles = kept + existing
     all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
     all_articles = pr.balance_ua_world(all_articles)
