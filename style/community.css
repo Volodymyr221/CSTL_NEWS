@@ -3109,4 +3109,13 @@ body.cm-zoom-open .disc-screen { overflow: hidden; }
 /* КРИТИЧНО: без flex-shrink:0 flex-колонка з max-height СТИСКАЄ картки по висоті
    (заголовки зникали, скрол не працював). Тепер картки тримають повну висоту. */
 .cm-news-feed > * { flex-shrink: 0; }
-/* картки (.news-card-*) стилюються з news.css */
+
+/* Контраст: картки білі з тонкою рамкою — щоб не зливались із кремовим фоном блока. */
+.cm-news-feed .news-card-row {
+  background: #fff;
+  border: 1px solid var(--border);
+}
+/* три кнопки-фільтри «липкі» — трохи прозорий фон, щоб частково перекривати картки при скролі */
+.cm-news-filters {
+  background: linear-gradient(var(--bg-card) 70%, transparent);
+}

@@ -159,9 +159,6 @@ function renderSkeleton() {
     </section>
 
     <section class="cm-block cm-block--news">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Новини</h3>
-      </header>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
     </section>
 

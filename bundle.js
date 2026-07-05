@@ -7885,9 +7885,6 @@ ${post.text}
     </section>
 
     <section class="cm-block cm-block--news">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041D\u043E\u0432\u0438\u043D\u0438</h3>
-      </header>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 

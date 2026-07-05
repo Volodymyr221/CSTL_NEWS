@@ -773,6 +773,34 @@ def fetch_full_article(url: str) -> str | None:
     return None
 
 
+def fetch_og_image(url: str) -> str | None:
+    """Витягує головне фото статті (og:image / twitter:image) зі сторінки видавця.
+
+    Системне рішення (крок 1): реальне фото з тієї сторінки, звідки й текст.
+    Повертає абсолютний публічний URL зображення або None. Анти-SSRF як усюди.
+    """
+    if not is_allowed_url(url):
+        return None
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": BROWSER_UA})
+        with SAFE_OPENER.open(req, timeout=12) as r:
+            raw = r.read(200_000)          # досить перших ~200КБ — og-теги у <head>
+    except Exception:
+        return None
+    try:
+        from bs4 import BeautifulSoup
+    except ImportError:
+        return None
+    soup = BeautifulSoup(raw, "html.parser")
+    for prop in ("og:image", "og:image:url", "twitter:image", "twitter:image:src"):
+        tag = soup.find("meta", attrs={"property": prop}) or soup.find("meta", attrs={"name": prop})
+        if tag and tag.get("content"):
+            img = urllib.parse.urljoin(url, tag["content"].strip())
+            if img.startswith(("http://", "https://")):
+                return img
+    return None
+
+
 def _parse_date_uk(text: str) -> int | None:
     """Парсить українську дату з тексту → Unix timestamp (мс). Повертає None якщо не знайдено."""
     # ISO: 2026-04-18T10:30:00 або 2026-04-18
