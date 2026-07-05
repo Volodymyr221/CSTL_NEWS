@@ -9,7 +9,7 @@ import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile,
 } from './auth.js';
-import { openThreadsList, openMyAds } from './messages-ui.js';
+import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { escapeHtml, showToast } from './utils.js';
 
 let _modal = null;            // поточна відкрита модалка (або null)

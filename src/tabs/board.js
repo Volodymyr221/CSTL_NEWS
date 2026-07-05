@@ -7,7 +7,8 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-import { startChatFromPost, openMyAds, setupBubbleGestures, ACT_ICONS } from '../core/messages-ui.js';
+import { startChatFromPost, openMyAds } from './board-chat.js';
+import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
@@ -242,7 +243,7 @@ function renderContact(contact) {
       <div class="cm-board-contact cm-board-contact--phone">
         <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
         <div class="cm-board-contact-btns">
-          <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+          <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
           <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
         </div>
       </div>
@@ -814,7 +815,7 @@ function renderBoardCard(p) {
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
           <div class="cm-board-contact-btns">
-            <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+            <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
             <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
           </div>
         </div>
@@ -873,7 +874,7 @@ function renderAdModal(p) {
               <span class="cm-board-time">${formatTime(postTime(p))}</span>
             </div>
             <div class="cm-board-modal-meta-btns">
-              <button class="cm-board-msg-btn" data-msg-soon aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+              <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
               <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
             </div>
           </div>`;
@@ -1613,7 +1614,7 @@ function attachBoardDelegation() {
     }
 
     // Кнопка «Повідомлення» 💬 — приватний чат з автором оголошення
-    const msgBtn = e.target.closest('[data-msg-soon]');
+    const msgBtn = e.target.closest('[data-open-chat]');
     if (msgBtn) {
       e.stopPropagation();
       const holder = msgBtn.closest('[data-post-id]');
