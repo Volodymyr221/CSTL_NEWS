@@ -2,8 +2,8 @@
 
 Аргумент: назва або опис бага. Наприклад: `/fix картки не відображаються` або `/fix B-01`
 
-## Крок 1 — Читай SESSION_STATE і CSTL_BUGS
-Відкрий `CSTL NEWS VOVA/_ai-tools/SESSION_STATE.md` і `CSTL NEWS VOVA/CSTL_BUGS.md`.
+## Крок 1 — Читай свій стан і CSTL_BUGS
+Відкрий свій `CSTL NEWS VOVA/_ai-tools/SESSION_STATE_<ІМʼЯ>.md` (Роми або Вови) і `CSTL NEWS VOVA/CSTL_BUGS.md`.
 Знайди опис бага. Прочитай що там написано.
 Не повторювати те що вже не працювало.
 
