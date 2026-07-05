@@ -386,27 +386,50 @@ def _added_date(a: dict):
         return None
 
 
-def apply_daily_limits(new_articles: list, existing_articles: list) -> list:
-    """Лишає не більше DAILY_LIMIT_PER_SECTION нових статей на розділ за сьогодні.
+def apply_daily_limits(new_articles: list, existing_articles: list):
+    """Тримає не більше DAILY_LIMIT_PER_SECTION НАЙСВІЖІШИХ статей на розділ за добу.
 
-    Рахує за полем added_ts (коли ДОДАНО, не коли опубліковано) — тож обмежує саме
-    денний ПРИТІК, а не дату публікації. Громада/Олика — без ліміту. Свіжіші
-    (за ts публікації) лишаються першими. Рішення Роби 01.07.
+    «Найсвіжіші перемагають» (рішення Роми 05.07 — фікс замерзлої стрічки):
+    ліміт більше не «перші N і стоп», а «N найсвіжіших за сьогодні». Коли розділ
+    уже повний, свіжіша (за ts публікації) стаття ВИТІСНЯЄ найстарішу СЬОГОДНІШНЮ —
+    так стрічка завжди показує свіже, але денний притік лишається обмеженим (каші
+    нема). Статті попередніх днів не чіпаємо (вони згасають самі через MAX_ARTICLES).
+
+    Рахунок «сьогоднішніх» — за added_ts (коли ДОДАЛИ). Громада/Олика — без ліміту.
+    Повертає (kept_new, evict_ids): нові що лишаємо + id сьогоднішніх що витіснили.
     """
     today = datetime.date.today()
-    count: dict = {}
+    # Сьогоднішні наявні по розділах, найстаріші (за ts публікації) спереду — для витіснення.
+    todays: dict = {}
     for a in existing_articles:
         if _added_date(a) == today:
             s = section_of(a.get("geo", ""))
-            count[s] = count.get(s, 0) + 1
-    kept = []
+            todays.setdefault(s, []).append(a)
+    for s in todays:
+        todays[s].sort(key=lambda a: a.get("ts", 0))   # найстаріша першою
+
+    kept, evict_ids = [], set()
     for a in sorted(new_articles, key=lambda a: a.get("ts", 0), reverse=True):
         s = section_of(a.get("geo", ""))
-        lim = DAILY_LIMIT_PER_SECTION.get(s)   # None = без ліміту (Громада/Олика)
-        if lim is None or count.get(s, 0) < lim:
+        lim = DAILY_LIMIT_PER_SECTION.get(s)           # None = без ліміту (Громада/Олика)
+        if lim is None:
             kept.append(a)
-            count[s] = count.get(s, 0) + 1
-    return kept
+            continue
+        cur = todays.setdefault(s, [])
+        if len(cur) < lim:                             # є вільне місце сьогодні
+            kept.append(a)
+            cur.append(a)
+            cur.sort(key=lambda x: x.get("ts", 0))
+        else:                                          # повно — витісняємо найстарішу, якщо ця свіжіша
+            oldest = cur[0]
+            if a.get("ts", 0) > oldest.get("ts", 0):
+                evict_ids.add(oldest.get("id"))
+                cur.pop(0)
+                kept.append(a)
+                cur.append(a)
+                cur.sort(key=lambda x: x.get("ts", 0))
+            # інакше — стаття старіша за все сьогоднішнє, пропускаємо
+    return kept, evict_ids
 
 
 def drip_story(existing_articles: list, next_id: int):
@@ -1227,8 +1250,11 @@ def main():
             print(f"✗ {source['name']}: {e}")
             traceback.print_exc()
 
-    # Денні ліміти на розділ — не більше 5-6 нових/день (Олика без ліміту)
-    new_articles = apply_daily_limits(new_articles, existing_articles)
+    # Денні ліміти на розділ — N найсвіжіших/добу; свіжіші витісняють старіші сьогоднішні
+    new_articles, evict_ids = apply_daily_limits(new_articles, existing_articles)
+    if evict_ids:
+        existing_articles = [a for a in existing_articles if a.get("id") not in evict_ids]
+        print(f"↻ витіснено застарілих сьогоднішніх: {len(evict_ids)} (замінено свіжішими)")
 
     # Крапельна історична «історія Олики» (одна на день) — щоб стрічка жила в тишу
     _story, next_art_id = drip_story(existing_articles, next_art_id)
