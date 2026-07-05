@@ -50,6 +50,15 @@
             "command": "node /home/user/CSTL_NEWS/.claude/hooks/pre-edit-read-check.js"
           }
         ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/user/CSTL_NEWS/.claude/hooks/byyou-push-lock.js"
+          }
+        ]
       }
     ],
     "PostToolUse": [
@@ -63,6 +72,16 @@
           {
             "type": "command",
             "command": "bash /home/user/CSTL_NEWS/.claude/hooks/cache-name-reminder.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash /home/user/CSTL_NEWS/.claude/hooks/byyou-context-guard.sh"
           }
         ]
       }
