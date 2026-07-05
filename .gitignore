@@ -17,3 +17,7 @@ Thumbs.db
 .env
 .env.local
 graphify-out/
+
+# /byyou — рантайм-маркери (не комітимо)
+.claude/.byyou-release
+.claude/hooks/.byyou-handoff-warned
