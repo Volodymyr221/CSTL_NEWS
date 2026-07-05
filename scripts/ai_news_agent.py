@@ -147,29 +147,47 @@ def call_agent(prompt: str) -> str:
     if not api_key:
         print("✗ немає ANTHROPIC_API_KEY — пропускаю виклик")
         return ""
-    payload = {
-        "model": MODEL,
-        "max_tokens": 4096,
-        "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search",
-                   "max_uses": MAX_SEARCHES_PER_MISSION}],
-        "messages": [{"role": "user", "content": prompt}],
+    import urllib.error
+    headers = {
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
     }
-    req = urllib.request.Request(
-        API_URL, data=json.dumps(payload).encode("utf-8"),
-        headers={
-            "x-api-key": api_key,
-            "anthropic-version": "2023-06-01",
-            "content-type": "application/json",
-        })
-    try:
-        with urllib.request.urlopen(req, timeout=180) as r:
-            resp = json.loads(r.read().decode("utf-8"))
-    except Exception as e:
-        print(f"✗ виклик API: {e}")
-        return ""
-    # Збираємо всі text-блоки фінальної відповіді
-    parts = [b.get("text", "") for b in resp.get("content", []) if b.get("type") == "text"]
-    return "\n".join(parts).strip()
+    # web_search може повертати stop_reason=pause_turn (довга пошукова сесія) —
+    # тоді треба дослати відповідь назад і продовжити, доки не end_turn.
+    messages = [{"role": "user", "content": prompt}]
+    resp = None
+    for _ in range(6):
+        payload = {
+            "model": MODEL,
+            "max_tokens": 4096,
+            "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search",
+                       "max_uses": MAX_SEARCHES_PER_MISSION}],
+            "messages": messages,
+        }
+        req = urllib.request.Request(API_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=180) as r:
+                resp = json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")[:500]
+            print(f"✗ виклик API: HTTP {e.code} — {body}")
+            return ""
+        except Exception as e:
+            print(f"✗ виклик API: {e}")
+            return ""
+        stop = resp.get("stop_reason")
+        if stop == "pause_turn":
+            messages.append({"role": "assistant", "content": resp.get("content", [])})
+            continue
+        break
+
+    parts = [b.get("text", "") for b in (resp or {}).get("content", []) if b.get("type") == "text"]
+    text = "\n".join(parts).strip()
+    # діагностика (щоб бачити чому 0 знайдено)
+    print(f"  [debug] stop_reason={resp.get('stop_reason') if resp else None} "
+          f"text_len={len(text)} snippet={text[:160]!r}")
+    return text
 
 
 def extract_json_array(text: str):
