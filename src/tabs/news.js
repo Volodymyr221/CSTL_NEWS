@@ -150,15 +150,29 @@ function getFiltered() {
 export function renderNews() {
   const el = document.getElementById('news-list');
   if (!el) return;
+  el.innerHTML = newsCardsHtml(getFiltered());
+}
 
-  const articles = getFiltered();
-
-  if (articles.length === 0) {
-    el.innerHTML = '<div class="empty-state">Новин за цим фільтром поки немає</div>';
-    return;
+// HTML стрічки: перша картка — featured, решта — рядки. Порожньо → плейсхолдер.
+// Експортовано для перевикористання у блоці новин вкладки «Громада» (05.07).
+export function newsCardsHtml(articles) {
+  if (!articles || articles.length === 0) {
+    return '<div class="empty-state">Новин за цим фільтром поки немає</div>';
   }
+  return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
+}
 
-  el.innerHTML = articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
+// Завантажує статті раз і віддає масив (для блоку Громади, щоб openArticle їх бачив).
+export async function ensureNewsLoaded() {
+  if (!allArticles.length) {
+    try {
+      const res = await fetch('./data/articles.json');
+      allArticles = await res.json();
+    } catch (e) {
+      allArticles = [];
+    }
+  }
+  return allArticles;
 }
 
 // HTML для двох кольорових бейджів (geo + category) — використовується у обох картках
@@ -220,7 +234,7 @@ function renderArticleBody(content) {
   return paragraphs.map(p => `<p class="article-p">${escapeHtml(p)}</p>`).join('');
 }
 
-function openArticle(id) {
+export function openArticle(id) {
   const article = allArticles.find(a => a.id === id);
   if (!article) return;
 
