@@ -288,6 +288,12 @@ def enqueue(new_articles: list, existing: list):
             full = None
         if full and len(full) > len(a.get("content") or ""):
             a["content"] = full
+        # Зображення (крок 1 системного рішення): реальне фото зі сторінки видавця.
+        if not a.get("image"):
+            try:
+                a["image"] = pr.fetch_og_image(a["sourceUrl"])
+            except Exception:
+                pass
         a.pop("summary", None)
         a["queued_ts"] = int(time.time() * 1000)   # коли потрапило в чергу
         queue.append(a)
