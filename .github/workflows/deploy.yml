@@ -13,10 +13,13 @@ permissions:
   pages: write
   id-token: write
 
-# Тільки один деплой одночасно (нові пуші ставляться в чергу, не скасовуючи активний)
+# Тільки один деплой одночасно. cancel-in-progress: true (05.07) — новіший деплой
+# СКАСОВУЄ старіший у черзі, а не стає позаду. Інакше при пачці пушів підряд деплої
+# стакались і GitHub Pages відхиляв застряглі («Deployment failed, try again later»).
+# Тепер публікується лише найсвіжіший — заторів нема (для статичного сайту безпечно).
 concurrency:
   group: "pages"
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   build:
