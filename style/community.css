@@ -3063,7 +3063,9 @@ body.cm-zoom-open .disc-screen { overflow: hidden; }
 }
 
 /* ── Блок НОВИНИ у вкладці «Громада» (05.07) ──────────────────────────────── */
-.cm-block--news .cm-block-body { padding: 0 10px 10px; }
+/* Фон блока — червоний як шапка сторінки (рішення Роми); картки-кремові на ньому контрастують. */
+.cm-block--news { background: var(--red); }
+.cm-block--news .cm-block-body { padding: 8px 10px 10px; }
 
 /* 3 кнопки-фільтри згори блока */
 .cm-news-filters {
@@ -3087,10 +3089,11 @@ body.cm-zoom-open .disc-screen { overflow: hidden; }
   cursor: pointer;
   transition: background 0.15s, color 0.15s;
 }
+/* Активна кнопка — біла з червоним текстом (щоб виділялась на червоному фоні блока). */
 .cm-news-chip.active {
-  background: var(--red);
-  border-color: var(--red);
-  color: #fff;
+  background: #fff;
+  border-color: #fff;
+  color: var(--red);
 }
 .cm-news-chip:active { transform: scale(0.97); }
 
@@ -3109,13 +3112,5 @@ body.cm-zoom-open .disc-screen { overflow: hidden; }
 /* КРИТИЧНО: без flex-shrink:0 flex-колонка з max-height СТИСКАЄ картки по висоті
    (заголовки зникали, скрол не працював). Тепер картки тримають повну висоту. */
 .cm-news-feed > * { flex-shrink: 0; }
-
-/* Контраст: картки білі з тонкою рамкою — щоб не зливались із кремовим фоном блока. */
-.cm-news-feed .news-card-row {
-  background: #fff;
-  border: 1px solid var(--border);
-}
-/* три кнопки-фільтри «липкі» — трохи прозорий фон, щоб частково перекривати картки при скролі */
-.cm-news-filters {
-  background: linear-gradient(var(--bg-card) 70%, transparent);
-}
+/* Картки лишаються рідними (кремовими) — на червоному фоні блока вони й так контрастні.
+   Фон за 3 кнопками — прозорий (без маски); кнопки лише частково перекривають картки при скролі. */
