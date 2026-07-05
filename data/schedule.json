@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "05.07.2026",
-  "updatedTime": "02:35",
+  "updatedTime": "06:49",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -10649,8 +10649,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -11143,8 +11143,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.25",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "10:30",
           "arrival_time": "12:03",
           "duration_min": 93,
@@ -11582,8 +11582,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:10",
           "arrival_time": "15:45",
           "duration_min": 95,
@@ -11674,8 +11674,8 @@
           "carrier": "санрайз_л_т_д",
           "bus": "",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -12428,7 +12428,7 @@
         }
       ],
       "fetchedAt": "05.07.2026",
-      "fetchedTime": "02:35"
+      "fetchedTime": "06:49"
     },
     "2026-07-06": {
       "routes": [
@@ -14218,7 +14218,7 @@
         }
       ],
       "fetchedAt": "05.07.2026",
-      "fetchedTime": "02:35"
+      "fetchedTime": "06:49"
     },
     "2026-07-07": {
       "routes": [
