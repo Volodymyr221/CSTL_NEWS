@@ -33,6 +33,22 @@ export function isSupabaseReady() {
   return supa !== null;
 }
 
+// ── КОМАНДА / КОНСОЛЬ ────────────────────────────────────────────────────
+// Чи поточний користувач — член команди (адмін АБО редактор). SERVER-authoritative:
+// викликає security-definer is_team_member() у БД — гість/чужий отримає false,
+// підмінити з клієнта не можна (таблиці editor_users/admins під RLS).
+// Використовує сайдбар, щоб показати «Кабінет» лише команді.
+export async function isTeamMember() {
+  if (!supa) return false;
+  try {
+    const { data, error } = await supa.rpc('is_team_member');
+    if (error) return false;
+    return data === true;
+  } catch {
+    return false;
+  }
+}
+
 // ── ПОСТИ ────────────────────────────────────────────────────────────────
 
 // Усі опубліковані пости (для Дошки громади 2.0)
