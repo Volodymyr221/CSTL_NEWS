@@ -700,11 +700,54 @@ _GENERIC_SELECTORS = [
     "article",
 ]
 
-# Регулярний вираз для класів «шуму» (реклама, коментарі, навігація тощо)
+# Регулярний вираз для класів «шуму» (реклама, коментарі, навігація, теги,
+# промо, «читайте також», «вибір редактора» тощо) — блоки з такими класами
+# видаляються ДО витягу тексту.
 _NOISE_RE = re.compile(
-    r"(comment|social|share|related|sidebar|ad[s_-]|banner|recommend|widget|subscribe)",
+    r"(comment|social|share|related|sidebar|ad[s_-]|banner|recommend|widget|"
+    r"subscribe|menu|breadcrumb|tags?[_-]|promo|teaser|newsletter|telegram|"
+    r"read-?also|read-?more|editor-?choice|most-?read|popular)",
     re.I,
 )
+
+# Хвостові маркери — усе ПІСЛЯ них це футер/теги/реклама/«читайте також»/
+# промо-заклики/форма «повідомити про помилку». Зрізаємо разом з рештою.
+_TAIL_RE = re.compile(
+    r"(Бажаєте\s+дізна|Приєднуйтеся\s+до\s+наш|Підписуйтеся\s+на|"
+    r"Якщо\s+[Вв]и\s+(?:зауважили|помітили)\s+помилк|Читайте\s+також|"
+    r"Читайте\s+нас\s+[ув]\b|Вибір\s+редактора|Схожі\s+новини|"
+    r"Тег(?:и|і)\s*:|Ctrl\s*\+\s*Enter|Коментар(?:і|ів)\b|Поділит(?:ися|ись)\b)",
+    re.I,
+)
+
+# Провідні «крихти» навігації сайту (часто зліплені в один рядок перед статтею,
+# напр. volynpost: «Правила Реклама Контакти Розділи - +»). Зрізаємо з початку
+# лише коли ≥2 підряд навігаційних токенів (щоб не зачепити реальний текст).
+_LEAD_NAV_RE = re.compile(
+    r"^(?:\s*(?:(?:Правила|Реклама|Контакти|Розділи|Головна|Пошук|Меню|Підписка|"
+    r"Архів|Нагору)\b|[+\-×›❯»|/])[\s·|/]*){2,}",
+    re.I,
+)
+
+
+def clean_article_text(text: str) -> str:
+    """Прибирає обгортку сайту зі скрапленого тексту.
+
+    Баг 06.07: у тіло статті затягувало навігацію на початку
+    («Правила Реклама Контакти Розділи») + теги/футер/«Вибір редактора»/
+    промо-заклик у Telegram/«Ctrl+Enter» у кінці. Зрізаємо хвіст від першого
+    службового маркера і провідні крихти-меню.
+    """
+    if not text:
+        return text
+    m = _TAIL_RE.search(text)
+    if m:
+        text = text[:m.start()]
+    prev = None
+    while prev != text:          # навігація може йти кількома рядками
+        prev = text
+        text = _LEAD_NAV_RE.sub("", text, count=1).lstrip()
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
 def fetch_full_article(url: str) -> str | None:
@@ -754,6 +797,7 @@ def fetch_full_article(url: str) -> str | None:
         if el:
             text = el.get_text(separator="\n", strip=True)
             text = re.sub(r"\n{3,}", "\n\n", text).strip()
+            text = clean_article_text(text)
             if len(text) > 300:
                 return text[:8000]
 
@@ -768,7 +812,9 @@ def fetch_full_article(url: str) -> str | None:
         if len(t) > len(best_text):
             best_text = t
     if len(best_text) > 500:
-        return best_text[:8000]
+        cleaned = clean_article_text(best_text)
+        if len(cleaned) > 300:
+            return cleaned[:8000]
 
     return None
 
