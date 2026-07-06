@@ -22,6 +22,8 @@ jobs:
     steps:
       - name: Checkout repo
         uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0   # повна історія — потрібна для rebase перед пушем
 
       - name: Set up Python
         uses: actions/setup-python@v5.6.0
@@ -49,7 +51,17 @@ jobs:
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "auto(news): оновлення новин та подій $(date -u +'%d.%m %H:%M UTC')"
-            git push origin main
+            # Пуш із ре-базою: main міг піти вперед (мерджі/деплой/інший бот) поки
+            # парсили → інакше non-fast-forward «fetch first». До 5 спроб.
+            pushed=false
+            for i in 1 2 3 4 5; do
+              if git push origin main; then pushed=true; break; fi
+              echo "Пуш $i відхилено (main пішов уперед) — rebase і повтор…"
+              git fetch origin main
+              git rebase origin/main || { echo "Конфлікт rebase — стоп"; exit 1; }
+              sleep 2
+            done
+            [ "$pushed" = true ] || { echo "Пуш не вдався після 5 спроб"; exit 1; }
             echo "changed=true" >> "$GITHUB_OUTPUT"
           fi
 
