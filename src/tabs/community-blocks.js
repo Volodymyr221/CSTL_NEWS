@@ -641,7 +641,7 @@ export async function renderEventBlock() {
     const catStr  = escapeHtml(next.category || '');
 
     el.innerHTML = `
-      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}" data-switch-tab="events">
+      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}" data-switch-tab="shotam">
         <div class="evh-top">
           <span class="tablo-countdown">${escapeHtml(eventCountdown(next, now))}</span>
           ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}

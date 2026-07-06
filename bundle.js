@@ -7607,7 +7607,7 @@ ${post.text}
       const locStr = next.location ? escapeHtml(next.location) : "";
       const catStr = escapeHtml(next.category || "");
       el.innerHTML = `
-      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}" data-switch-tab="events">
+      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}" data-switch-tab="shotam">
         <div class="evh-top">
           <span class="tablo-countdown">${escapeHtml(eventCountdown(next, now))}</span>
           ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
@@ -7879,7 +7879,7 @@ ${post.text}
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-        <button class="cm-block-link" data-switch-tab="events">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
+        <button class="cm-block-link" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
@@ -7937,7 +7937,6 @@ ${post.text}
   var allEvents = [];
   var activeFilter = "\u0412\u0441\u0456";
   var selectedDate = null;
-  var cardObserver = null;
   function ymd(d) {
     const y = d.getFullYear();
     const m = String(d.getMonth() + 1).padStart(2, "0");
@@ -8005,74 +8004,97 @@ ${post.text}
   `).join("");
   }
   function cardHtml(ev) {
-    const bg = catColor2(ev.category);
-    let coverBlock = "";
+    const catC = catColor2(ev.category);
+    let thumb;
     if (ev.image) {
-      coverBlock = `
-      <div class="ev-card-cover">
-        <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
-      </div>`;
-    } else if (ev.cover_emoji) {
+      thumb = `<img class="news-card-row-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+    } else {
       const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      coverBlock = `
-      <div class="ev-card-cover ev-card-cover--art" style="background:${escapeHtml(grad)}">
-        <span class="ev-card-cover-emoji">${ev.cover_emoji}</span>
-      </div>`;
+      thumb = `<div class="news-card-row-img shotam-cover-thumb" style="background:${escapeHtml(grad)}">${ev.cover_emoji || "\u{1F4C5}"}</div>`;
     }
-    const locationBlock = ev.location ? `
-    <span class="ev-meta-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-      ${escapeHtml(ev.location)}
-    </span>` : "";
-    const timeText = ev.time ? `${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}` : escapeHtml(formatFullDate(ev.date));
+    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
     return `
-    <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
-      ${coverBlock}
-      <div class="ev-card-body">
-        <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
-          ${escapeHtml(ev.category)}
+    <article class="news-card-row" data-id="${ev.id}">
+      ${thumb}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">
+          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
         </div>
-        <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
-        <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
-        <div class="ev-card-meta">
-          ${locationBlock}
-          <span class="ev-meta-item">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            ${timeText}
-          </span>
-        </div>
-        <div class="ev-card-expand-hint">
-          <span class="ev-expand-label">\u0414\u0435\u0442\u0430\u043B\u044C\u043D\u0456\u0448\u0435</span>
-          <span class="ev-expand-chevron">\u203A</span>
-        </div>
+        <h2 class="news-card-row-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="news-card-row-excerpt">${escapeHtml(ev.description)}</p>` : ""}
+        <div class="news-card-row-footer">${escapeHtml(when)}${loc}</div>
       </div>
-      <div class="ev-card-detail">
-        <div class="ev-detail-body">
-          <p class="ev-detail-desc">${escapeHtml(ev.description)}</p>
-          <button class="ev-ics-btn" type="button" data-id="${ev.id}">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="12" y1="14" x2="12" y2="18"/>
-              <line x1="10" y1="16" x2="14" y2="16"/>
-            </svg>
-            \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
-          </button>
-          <button class="ev-share-btn share-btn share-btn--inline" type="button" data-share-event data-id="${ev.id}">
-            \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
-          </button>
-          <button class="ev-detail-close" type="button">\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438 \u2191</button>
-        </div>
+    </article>`;
+  }
+  function openShotamModal(id) {
+    const ev = allEvents.find((e) => e.id === id);
+    if (!ev)
+      return;
+    const modal = document.getElementById("article-modal");
+    const modalContent = document.getElementById("article-modal-content");
+    const modalMetaTags = document.getElementById("modalMetaTags");
+    if (!modal || !modalContent)
+      return;
+    const catC = catColor2(ev.category);
+    if (modalMetaTags) {
+      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
+    }
+    let cover;
+    if (ev.image) {
+      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
+    } else {
+      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
+      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
+    }
+    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
+    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
+    modalContent.innerHTML = `
+    <div class="article-modal-header">
+      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
+      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
+    </div>
+    ${cover}
+    <div class="article-body">${bodyHtml}</div>
+    <div class="article-source-row">
+      <div class="article-source-actions">
+        <button class="ev-ics-btn" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+          </svg>
+          \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
+        </button>
+        <button class="share-btn share-btn--inline" type="button" data-shotam-share>\u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C</button>
       </div>
     </div>`;
+    const icsBtn = modalContent.querySelector(".ev-ics-btn");
+    if (icsBtn)
+      icsBtn.addEventListener("click", () => {
+        if (!isLoggedIn()) {
+          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
+          });
+          return;
+        }
+        downloadIcs(ev);
+      });
+    const shareBtn = modalContent.querySelector("[data-shotam-share]");
+    if (shareBtn)
+      shareBtn.addEventListener("click", () => {
+        sharePost({
+          title: ev.title,
+          text: `\u{1F4C5} ${ev.title}
+${when}${ev.location ? " \xB7 " + ev.location : ""}
+
+${ev.description || ""}`
+        });
+      });
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("modal-open");
   }
   function renderFilters() {
     const bar = document.getElementById("events-filters");
@@ -8168,83 +8190,29 @@ ${post.text}
       return;
     }
     el.innerHTML = list.map(cardHtml).join("");
-    if (cardObserver) {
-      cardObserver.disconnect();
-      cardObserver = null;
-    }
-    cardObserver = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => {
-        if (!entry.isIntersecting && entry.target.classList.contains("expanded")) {
-          const card = entry.target;
-          const rect = card.getBoundingClientRect();
-          const detail = card.querySelector(".ev-card-detail");
-          if (rect.bottom <= 0) {
-            const heightBefore = card.offsetHeight;
-            if (detail)
-              detail.style.transition = "none";
-            card.classList.remove("expanded");
-            const heightAfter = card.offsetHeight;
-            window.scrollBy(0, -(heightBefore - heightAfter));
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-              if (detail)
-                detail.style.transition = "";
-            }));
-          } else {
-            card.classList.remove("expanded");
-          }
-        }
-      });
-    }, { threshold: 0 });
-    el.querySelectorAll(".ev-card").forEach((card) => {
-      cardObserver.observe(card);
-      card.addEventListener("click", (e) => {
-        if (e.target.closest(".ev-detail-close")) {
-          card.classList.remove("expanded");
-          card.scrollIntoView({ behavior: "smooth", block: "nearest" });
-          return;
-        }
-        if (e.target.closest(".ev-ics-btn"))
-          return;
-        if (e.target.closest(".ev-share-btn"))
-          return;
-        card.classList.toggle("expanded");
-      });
-    });
-    el.querySelectorAll(".ev-ics-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        if (!isLoggedIn()) {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
-          });
-          return;
-        }
-        const ev = allEvents.find((ev2) => ev2.id === Number(btn.dataset.id));
-        if (ev)
-          downloadIcs(ev);
-      });
-    });
-    el.querySelectorAll(".ev-share-btn").forEach((btn) => {
-      btn.addEventListener("click", (e) => {
-        e.stopPropagation();
-        const ev = allEvents.find((ev2) => ev2.id === Number(btn.dataset.id));
-        if (!ev)
-          return;
-        const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-        const loc = ev.location ? ` \xB7 ${ev.location}` : "";
-        sharePost({
-          title: ev.title,
-          text: `\u{1F4C5} ${ev.title}
-${when}${loc}
-
-${ev.description}`
-        });
+    el.querySelectorAll(".news-card-row").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = Number(card.dataset.id);
+        if (Number.isFinite(id))
+          openShotamModal(id);
       });
     });
   }
+  function handleEvImgError(e) {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG")
+      return;
+    const ph = document.createElement("div");
+    ph.className = img.className + " img-fallback";
+    ph.textContent = "\u{1F3F0}";
+    img.replaceWith(ph);
+  }
   async function initEvents() {
     const el = document.getElementById("events-list");
-    if (el)
+    if (el) {
       renderSkeleton2(el);
+      el.addEventListener("error", handleEvImgError, true);
+    }
     try {
       const [evRes, holRes] = await Promise.all([
         fetch("./data/events.json"),
@@ -9270,15 +9238,8 @@ END:VEVENT`
   // src/app.js
   var currentTab = "community";
   window.switchTab = function(tab) {
-    let seg = null;
-    if (tab === "events") {
-      seg = "events";
-      tab = "news";
-    } else if (tab === "news") {
-      seg = "news";
-    }
-    if (seg && typeof window.cstlShowNewsSegment === "function")
-      window.cstlShowNewsSegment(seg);
+    if (tab === "news" || tab === "events")
+      tab = "shotam";
     if (tab === currentTab)
       return;
     const oldPage = document.getElementById(`page-${currentTab}`);
