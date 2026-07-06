@@ -6,6 +6,24 @@
 
 ---
 
+## 📝 2026-07-06 (ніч-2) — техборг навігації + «Чати»→«Обговорення» (PR #213)
+
+**Потік /byyou на `roma/nav-cleanup` → змерджено в main (squash 50613e7).**
+
+**Техборг — прибрано мертвий код після «Шо в селі»:**
+- `news.js` — прибрано сегмент-перемикач (`showNewsSegment`/`cstlShowNewsSegment`) + осиротілий рендер новин-табу (`renderGeoFilters`/`renderNews`/`setGeoFilter`/`getFiltered`/`GEO_FILTERS`/`activeGeo`/`UA_WORLD`); `initNews` тепер лише `ensureNewsLoaded`+слухач модалки. Лишено все що юзає блок новин Громади+модалка (`newsCardsHtml`/`renderRow`/`renderFeatured`/`badgesHtml`/`openArticle`/`ensureNewsLoaded`/кольори).
+- CSS: `filters.css` — прибрано `.news-seg*`/`--news-seg-h`/`.filters-bar`/`#news-seg-news` (лишено `.chips-row`/`.chip`); `events.css` — мертвий `.ev-card`-кластер ~200 рядків (лишено `.ev-skeleton*`/`.ev-ics-btn`/`.shotam-*`/`.cal-*`); `news.css` — осиротілий `.news-list`.
+
+**«Чати» → «Обговорення»** (нав-макрос, Вова дав «ок»):
+- Слот таб-бару «Чати»→«Обговорення»; тап відкриває overlay Обговорень напряму (`window.cstlOpenDiscussions=openDiscussions` у app.js; кнопка `onclick="cstlOpenDiscussions()"`).
+- Хаб `#page-chats`: «Повідомлення»+«Групи» приховані `display:none` — **код і хендлери лишено** (V2). Заголовок хабу→«Обговорення».
+- Вихід з overlay: `← Назад` (bd-disc-back) або перемикання вкладки (cstl-tab-changed→closeDiscussions). overlay z-index 1010 > таб-бар (пре-існуюче).
+- Приватний чат (Повідомлення) тепер без видимого входу — планово, повернеться у V2 / FAB Дошки (Д-14, зона Вови).
+
+**Смоук Chromium (iPhone-viewport) зелений:** «Шо в селі» 11 карток+модалка, Громада-новини 6, Дошка, тап «Обговорення»→overlay, перемикання закриває. CACHE `cstl-20260706-1425`.
+- ⚠️ Назви «Шо в селі»/«Обговорення» — тимчасові, за Вовою фінал.
+- 🧹 Лишок техборгу (не критично): `news.css` `.news-card` (стара fallback-картка) — глянути окремо.
+
 ## 📝 2026-07-06 (ніч) — стартові скіли доправлено (PR #212)
 
 **Потік /byyou на `roma/startup-skills` → змерджено в main (squash b7e8665). Лише процес-файли, сайт не чіпався.**
