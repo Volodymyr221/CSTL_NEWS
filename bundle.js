@@ -7904,6 +7904,11 @@ ${post.text}
     </section>
 
     <section class="cm-block cm-block--news">
+      <div class="cm-news-board-bar">
+        <span class="cm-news-board-dot"></span>
+        <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u041E\u043B\u0438\u043A\u0438</span>
+        <span class="cm-news-board-live">LIVE</span>
+      </div>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 

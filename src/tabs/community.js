@@ -159,6 +159,11 @@ function renderSkeleton() {
     </section>
 
     <section class="cm-block cm-block--news">
+      <div class="cm-news-board-bar">
+        <span class="cm-news-board-dot"></span>
+        <span class="cm-news-board-label">Табло новин Олики</span>
+        <span class="cm-news-board-live">LIVE</span>
+      </div>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
     </section>
 
