@@ -160,7 +160,7 @@ def call_agent(prompt: str) -> str:
     for _ in range(6):
         payload = {
             "model": MODEL,
-            "max_tokens": 4096,
+            "max_tokens": 8192,   # 4096 замало: модель витрачала бюджет на пошук і не встигала написати JSON (stop_reason=max_tokens, порожньо)
             "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search",
                        "max_uses": MAX_SEARCHES_PER_MISSION}],
             "messages": messages,
