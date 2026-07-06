@@ -4006,7 +4006,6 @@ ${post.text}
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
         </div>
         ${saveBtnHtml(p)}
-        <span class="bd-chat-foot-arrow">\u2192</span>
       </div>
     </article>
   `;
@@ -4046,7 +4045,6 @@ ${post.text}
   }
   function renderHeader() {
     const discHead = activeType === "chat" ? `<div class="bd-disc-head">
-         <button class="bd-disc-back" type="button" data-bd-back aria-label="\u041D\u0430\u0437\u0430\u0434 \u0434\u043E \u0427\u0430\u0442\u0456\u0432">\u2190</button>
          <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
        </div>` : "";
     const showCategories = activeType === "board";
@@ -4247,7 +4245,6 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    el.querySelector("[data-bd-back]")?.addEventListener("click", () => window.switchTab("community"));
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
