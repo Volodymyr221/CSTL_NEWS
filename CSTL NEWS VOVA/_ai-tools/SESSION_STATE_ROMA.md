@@ -6,6 +6,19 @@
 
 ---
 
+## 📝 2026-07-06 (ніч-3) — Обговорення: фікс таб-бару + системний рефактор Потік 1 (PR #214, #215)
+
+**Скарга Вови:** в Обговореннях зникав таб-бар (overlay `.disc-screen` z1010 накривав `.tab-bar` z1000); після 1-ї спроби фіксу — різалось коло «Громада». Вова попросив глибокий аудит + системне рішення.
+
+**Діагноз (агент прокопав board.js):** Обговорення — НЕ модуль, а `board.js` що рендерить `activeType='chat'` у 2-й корінь `#disc-content` в fixed-overlay. Спільний singleton-стан із Дошкою, dual-root через `discOpen`/`getBoardRoot`. **9 крихкостей** (F1 dup-id 280мс, F2 втрата стану Дошки, F3 FAB робить оголошення не тему, F4-F9). Дослідження (web.dev/Chrome): постійна нижня навігація — стандарт, overlay що ховає її — анти-патерн; окремі сторінки кращі. Карта агента + фікси — у BYYOU_PLAN (архів) / цьому записі.
+
+**#214 — проміжний фікс кола:** `.disc-screen` z1010→950 (під таб-баром) — коло не ріжеться, таб-бар клікабельний. Симптом-латка.
+
+**#215 — Потік 1 (de-overlay, СИСТЕМНО):** `#page-discussions` overlay → **справжня `.page` у `.app-main`**; таб-бар → `switchTab('discussions')`. `board.js` `openDiscussions`/`closeDiscussions` втратили overlay-механіку (показ на switchTab), викликаються слухачем `cstl-tab-changed`; `←`→Громада; синхронне очищення `#disc-content` **прибрало 280мс dup-id вікно (F1 на закритті)**. Прибрано `.disc-screen` CSS, `cstlOpenDiscussions`; CTA→`switchTab('discussions')`. Смоук: `#bd-body`/`#board-fab` завжди =1, Дошка ціла, коло ціле, таб-бар видимий. Темний ✕-бар (що бачив Вова) зник — його породжував overlay.
+- ⚠️ **Deploy #215 впав транзиентно** (`actions/deploy-pages`: «try again later» — інфра Pages, не код); ретригернуто docs-пушем.
+
+**🔜 ПОТІК 2 (НОВИЙ /byyou, свіжий чат):** винести `src/tabs/discussions.js` окремим модулем + спільне read-only сховище постів + disc-namespace id (`#disc-*`) → повністю прибрати `discOpen`/`getBoardRoot`/`openDiscussions`/`closeDiscussions` dual-root з `board.js` (F2/F6) + discussions FAB «нова тема» (F3). Карта зчеплення — у BYYOU_PLAN.
+
 ## 📝 2026-07-06 (ніч-2) — техборг навігації + «Чати»→«Обговорення» (PR #213)
 
 **Потік /byyou на `roma/nav-cleanup` → змерджено в main (squash 50613e7).**
