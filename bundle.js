@@ -7725,14 +7725,16 @@ ${post.text}
   }
   function paintCmNews(el, arts) {
     const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    el.innerHTML = `
-    <div class="cm-news-filters">
-      ${CM_NEWS_FILTERS.map((g) => `
-        <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-      `).join("")}
-    </div>
-    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-  `;
+    el.innerHTML = `<div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>`;
+    const controls = document.getElementById("cm-news-controls");
+    if (controls) {
+      controls.innerHTML = `
+      <div class="cm-news-filters">
+        ${CM_NEWS_FILTERS.map((g) => `
+          <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
+        `).join("")}
+      </div>`;
+    }
   }
   async function renderCommunityNews() {
     const el = document.getElementById("cm-news-content");
@@ -7910,6 +7912,7 @@ ${post.text}
         <span class="cm-news-board-live">LIVE</span>
       </div>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
     <section class="cm-block cm-block--contacts">

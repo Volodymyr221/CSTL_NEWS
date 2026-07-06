@@ -165,6 +165,7 @@ function renderSkeleton() {
         <span class="cm-news-board-live">LIVE</span>
       </div>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
+      <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
     <section class="cm-block cm-block--contacts">
