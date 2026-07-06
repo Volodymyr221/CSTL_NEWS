@@ -2150,17 +2150,18 @@
 .disc-screen {
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  left: 0; right: 0;
-  /* Закінчується НАД таб-баром (не накриває його) — навігація лишається видимою
-     й клікабельною в Обговореннях, як на звичайній сторінці. */
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
-  z-index: 1010;
+  left: 0; right: 0; bottom: 0;
+  /* z-index НИЖЧЕ таб-бару (1000) і піднятого кола «Громада» (1001) — overlay
+     поводиться як звичайний контент сторінки: таб-бар з колом «плаває» НАД ним,
+     коло не ріжеться. Модалки чату (1050+) все одно вище таб-бару → накривають. */
+  z-index: 950;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   background: var(--bg-page);
-  padding-bottom: 12px;
+  /* контент не ховається під таб-баром (як .app-main padding) */
+  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 12px);
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.26s ease, transform 0.26s ease;
