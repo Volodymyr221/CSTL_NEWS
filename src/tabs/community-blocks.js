@@ -889,14 +889,18 @@ function cmNewsMatch(a) {
 function paintCmNews(el, arts) {
   const filtered = arts.filter(cmNewsMatch)
     .slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  el.innerHTML = `
-    <div class="cm-news-filters">
-      ${CM_NEWS_FILTERS.map(g => `
-        <button class="cm-news-chip ${g === cmNewsGeo ? 'active' : ''}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-      `).join('')}
-    </div>
-    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-  `;
+  // Екран табло — лише новини (стрічка), від самого верху.
+  el.innerHTML = `<div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>`;
+  // Кнопки-фільтри — у нижню панель, інтегровану в раму табло.
+  const controls = document.getElementById('cm-news-controls');
+  if (controls) {
+    controls.innerHTML = `
+      <div class="cm-news-filters">
+        ${CM_NEWS_FILTERS.map(g => `
+          <button class="cm-news-chip ${g === cmNewsGeo ? 'active' : ''}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
+        `).join('')}
+      </div>`;
+  }
 }
 
 export async function renderCommunityNews() {
