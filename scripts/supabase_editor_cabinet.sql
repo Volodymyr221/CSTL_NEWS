@@ -62,6 +62,17 @@ AS $$
 $$;
 
 
+-- is_team_member(): чи поточний користувач — член команди (адмін АБО редактор).
+-- Server-authoritative сторож для сайдбару: гість/чужий → FALSE (не обдуриш з клієнта).
+CREATE OR REPLACE FUNCTION is_team_member()
+RETURNS BOOLEAN
+LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+  SELECT public.is_admin()
+      OR EXISTS (SELECT 1 FROM editor_users WHERE uid = auth.uid());
+$$;
+
+
 -- ============================================================================
 -- 3. CMS_ARTICLES — чернетки + готове до публікації (СХЕМА git-статті!)
 -- ============================================================================

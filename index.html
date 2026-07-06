@@ -24,6 +24,9 @@
 
   <!-- Шапка сайту -->
   <header class="app-header">
+    <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Меню" aria-expanded="false">
+      <span></span><span></span><span></span>
+    </button>
     <div class="header-logo">CSTL <span>LIFE</span></div>
     <div class="header-right">
       <button class="account-btn" id="account-btn" type="button" aria-label="Увійти">
@@ -43,6 +46,16 @@
       </div>
     </div>
   </header>
+
+  <!-- Бічне меню (сайдбар). Наповнення й логіка — src/core/sidebar.js -->
+  <div class="sidebar-overlay" id="sidebar-overlay" hidden></div>
+  <aside class="sidebar" id="sidebar" aria-hidden="true">
+    <div class="sidebar-head">
+      <div class="sidebar-logo">CSTL <span>LIFE</span></div>
+      <button class="sidebar-close" id="sidebar-close" type="button" aria-label="Закрити">✕</button>
+    </div>
+    <nav class="sidebar-nav" id="sidebar-nav"></nav>
+  </aside>
 
   <!-- Основний контент -->
   <main class="app-main" data-tab="community">
