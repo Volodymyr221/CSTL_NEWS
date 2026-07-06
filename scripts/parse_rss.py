@@ -514,6 +514,18 @@ def detect_category(text: str) -> str:
     return "Суспільство"
 
 
+def sanitize_image_url(u):
+    """Прибирає склеєні URL типу 'https://ahttps://img.../x.jpg' → бере останній http(s).
+    Фіксить баг подвійного домену (напр. картинки Конкурента). Повертає url або None."""
+    if not u or not isinstance(u, str):
+        return None
+    u = u.strip()
+    idx = max(u.rfind("http://"), u.rfind("https://"))
+    if idx > 0:
+        u = u[idx:]
+    return u if u.startswith(("http://", "https://")) else None
+
+
 def extract_image(entry) -> str | None:
     media = getattr(entry, "media_content", None)
     if media and isinstance(media, list):
@@ -522,14 +534,14 @@ def extract_image(entry) -> str | None:
                 continue
             url = m.get("url", "") or ""
             if any(ext in url.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
-                return url
+                return sanitize_image_url(url)
     enclosures = getattr(entry, "enclosures", None)
     if enclosures:
         for enc in enclosures:
             if not isinstance(enc, dict):
                 continue
             if enc.get("type", "").startswith("image"):
-                return enc.get("href") or enc.get("url")
+                return sanitize_image_url(enc.get("href") or enc.get("url"))
     return None
 
 
@@ -841,8 +853,8 @@ def fetch_og_image(url: str) -> str | None:
     for prop in ("og:image", "og:image:url", "twitter:image", "twitter:image:src"):
         tag = soup.find("meta", attrs={"property": prop}) or soup.find("meta", attrs={"name": prop})
         if tag and tag.get("content"):
-            img = urllib.parse.urljoin(url, tag["content"].strip())
-            if img.startswith(("http://", "https://")):
+            img = sanitize_image_url(urllib.parse.urljoin(url, tag["content"].strip()))
+            if img:
                 return img
     return None
 

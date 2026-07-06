@@ -6964,6 +6964,7 @@ ${post.text}
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
     <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
   }
   function renderFeatured(a) {
@@ -7034,6 +7035,10 @@ ${post.text}
       </div>
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
+    ${article.image && (article.imageType === "illustration" || article.imageCredit) ? `
+      <div class="article-img-caption">
+        ${article.imageType === "illustration" ? "<strong>\u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F.</strong> " : ""}${article.imageCredit ? "\u0424\u043E\u0442\u043E: " + escapeHtml(article.imageCredit) : ""}
+      </div>` : ""}
     <div class="article-body">${bodyHtml}</div>
     ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
       <div class="article-short-note">

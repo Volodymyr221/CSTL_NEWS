@@ -92,6 +92,20 @@ def build_prompt(mission_name: str, cfg: dict, existing: list) -> str:
     if mission_name == "Громада":
         h = cfg["hromada"]
         villages = ", ".join(h["villages"])
+        create_block = ""
+        if m.get("create_when_scarce"):
+            create_block = (
+                f"\n\nТВОРЕННЯ КОНТЕНТУ (важливо — громада мала, свіжих новин часто мало):\n"
+                f"Якщо реальних свіжих новин знаходиш мало — СТВОРИ оригінальні матеріали "
+                f"(original=true) на вічнозелені локальні теми: {', '.join(m.get('create_themes', []))}.\n"
+                f"Для оригінального матеріалу:\n"
+                f"  • url можна лишити порожнім;\n"
+                f"  • ОБОВ'ЯЗКОВО заповни content (повний текст 3-6 абзаців) і sources "
+                f"(джерела, на факти яких спираєшся — щоб НЕ вигадувати);\n"
+                f"  • пиши ЛИШЕ перевірені факти (дати, імена, події). Не впевнений — не пиши;\n"
+                f"  • додай image_query — англ. запит для ілюстрації з Wikimedia (напр. 'Olyka Castle');\n"
+                f"  • обери 2-3 оригінальні матеріали за запуск, щоб стрічка жила щодня."
+            )
         body = (
             f"Ти — редактор локального медіа про {h['name']} ({h['district']}, {h['oblast']}).\n"
             f"Адмінцентр — {h['center']} ({h['center_status']}). Села громади: {villages}.\n\n"
@@ -101,7 +115,7 @@ def build_prompt(mission_name: str, cfg: dict, existing: list) -> str:
             f"Теми: {', '.join(m['themes'])}.\n"
             f"Приклади запитів (центр): {'; '.join(m['keywords_center'][:6])}.\n"
             f"Приклади запитів (села): {'; '.join(m['keywords_villages'][:6])}.\n"
-            f"geo у відповіді: завжди \"Громада\"."
+            f"geo у відповіді: завжди \"Громада\".{create_block}"
         )
     elif mission_name == "Волинь":
         body = (
@@ -131,8 +145,10 @@ def build_prompt(mission_name: str, cfg: dict, existing: list) -> str:
         f"{body}{seen_block}\n\n"
         "ПРАВИЛА ВІДПОВІДІ:\n"
         "1. Використай інструмент веб-пошуку кілька разів, щоб знайти реальні свіжі матеріали.\n"
-        "2. url МАЄ бути справжнім посиланням на сторінку статті у видавця (не пошуковик, не агрегатор).\n"
-        "3. Тільки реально релевантне і свіже. Краще менше, але якісно.\n"
+        "2. Для КУРОВАНОЇ новини url МАЄ бути справжнім посиланням на сторінку статті у видавця "
+        "(не пошуковик, не агрегатор). Для ОРИГІНАЛЬНОГО матеріалу (original=true) url можна лишити "
+        "порожнім, але content і sources — обов'язкові.\n"
+        "3. Тільки реально релевантне і свіже (для новин) або перевірене (для оригінальних). Краще менше, але якісно.\n"
         "4. Поверни ЛИШЕ JSON-масив об'єктів (без пояснень до/після). Схема об'єкта:\n"
         f"{schema_str}"
     )
@@ -216,15 +232,51 @@ def extract_json_array(text: str):
 # ── Перетворення знахідок у статті + мердж ────────────────────────────────────
 
 def item_to_article(item: dict) -> dict | None:
-    """Валідовує знахідку агента і будує dict статті (без id/added_ts — їх додає merge)."""
-    url = (item.get("url") or "").strip()
+    """Валідовує знахідку агента і будує dict статті (без id/added_ts — їх додає merge).
+
+    Два шляхи:
+    • КУРОВАНА новина — потрібен справжній url (як було).
+    • ОРИГІНАЛЬНИЙ матеріал (original=true) — url не потрібен, АЛЕ обов'язкові
+      content і непорожній sources (запобіжник проти вигадування — рішення Роми, вар. A).
+    """
     title = pr.strip_html(item.get("title", "")).strip()
     geo = (item.get("geo") or "").strip()
-    if not url or not title or geo not in ("Громада", "Волинь", "Україна", "Світ"):
+    if not title or geo not in ("Громада", "Волинь", "Україна", "Світ"):
         return None
-    if not url.startswith(("http://", "https://")) or "google.com/search" in url:
-        return None
+
     summary = pr.strip_html(item.get("summary", "")).strip()
+    original = bool(item.get("original"))
+    sources = [s for s in (item.get("sources") or []) if isinstance(s, str) and s.strip()]
+
+    if original:
+        # Запобіжник якості: без обґрунтування джерелами і без тексту — відкидаємо.
+        content = pr.strip_html(item.get("content", "")).strip()
+        if not sources or len(content) < 200:
+            return None
+        return {
+            "title": title,
+            "excerpt": (summary or content)[:400],
+            "content": content,
+            "category": item.get("category") or pr.detect_category(title + " " + content),
+            "geo": geo,
+            "image": None,
+            "image_type": "none",              # уточнимо в enqueue (Wikimedia → illustration)
+            "image_credit": None,
+            "image_query": (item.get("image_query") or "").strip() or title,
+            "source": "CSTL LIFE · Олика",
+            "sourceUrl": None,                 # оригінал — без зовнішнього джерела
+            "sources": sources,                # для аудиту/обґрунтування
+            "exclusive": True,
+            "original": True,
+            "kind": "feature",
+            "ts": int(time.time() * 1000),
+            "summary": summary,
+        }
+
+    # Курована новина — потрібен справжній url
+    url = (item.get("url") or "").strip()
+    if not url or not url.startswith(("http://", "https://")) or "google.com/search" in url:
+        return None
     return {
         "title": title,
         "excerpt": summary[:400],
@@ -232,6 +284,8 @@ def item_to_article(item: dict) -> dict | None:
         "category": item.get("category") or pr.detect_category(title + " " + summary),
         "geo": geo,
         "image": None,
+        "image_type": "none",         # уточнимо в enqueue (og:image → source)
+        "image_credit": None,
         "source": _domain(url),
         "sourceUrl": url,
         "exclusive": False,
@@ -256,6 +310,54 @@ def _parse_date(s) -> int:
     return int(time.time() * 1000)
 
 
+def _sanitize_image_url(u):
+    """Прибирає склеєні URL типу 'https://ahttps://img.../x.jpg' → бере останній http(s).
+    Фіксить баг подвійного домену (напр. картинки Конкурента). Повертає url або None."""
+    if not u or not isinstance(u, str):
+        return None
+    u = u.strip()
+    idx = max(u.rfind("http://"), u.rfind("https://"))
+    if idx > 0:
+        u = u[idx:]
+    return u if u.startswith(("http://", "https://")) else None
+
+
+def fetch_wikimedia_image(query: str):
+    """Шукає ВІДКРИТО-ЛІЦЕНЗОВАНЕ фото на Wikimedia Commons за запитом.
+    Повертає (url, credit) або (None, None). Це ІЛЮСТРАЦІЯ (не фото конкретної події)."""
+    import urllib.parse
+    import urllib.request
+    q = (query or "").strip()
+    if not q:
+        return None, None
+    api = (
+        "https://commons.wikimedia.org/w/api.php?action=query&format=json"
+        "&generator=search&gsrnamespace=6&gsrlimit=6"
+        "&gsrsearch=" + urllib.parse.quote(q) +
+        "&prop=imageinfo&iiprop=url|extmetadata&iiurlwidth=1200"
+    )
+    if not pr.is_allowed_url(api):
+        return None, None
+    try:
+        req = urllib.request.Request(api, headers={"User-Agent": pr.BROWSER_UA})
+        with pr.SAFE_OPENER.open(req, timeout=12) as r:
+            data = json.loads(r.read(400_000))
+    except Exception:
+        return None, None
+    pages = (data.get("query") or {}).get("pages") or {}
+    for p in sorted(pages.values(), key=lambda x: x.get("index", 99)):
+        info = (p.get("imageinfo") or [{}])[0]
+        url = info.get("thumburl") or info.get("url")
+        if not url or not url.lower().split("?")[0].endswith((".jpg", ".jpeg", ".png", ".webp")):
+            continue
+        meta = info.get("extmetadata") or {}
+        artist = pr.strip_html((meta.get("Artist") or {}).get("value", "")).strip()
+        lic = pr.strip_html((meta.get("LicenseShortName") or {}).get("value", "")).strip()
+        credit = " · ".join(x for x in (artist, lic) if x) or "Wikimedia Commons"
+        return url, credit[:120]
+    return None, None
+
+
 def enqueue(new_articles: list, existing: list):
     """Кладе знахідки у ЧЕРГУ (data/news_queue.json), не в стрічку.
 
@@ -275,29 +377,49 @@ def enqueue(new_articles: list, existing: list):
 
     added = 0
     for a in new_articles:
-        if a["sourceUrl"] in seen_urls:
+        src = a.get("sourceUrl")
+        if src and src in seen_urls:
             continue
         section = pr.section_of(a["geo"])
         tokens = pr.title_tokens(a["title"])
         if pr.is_dup_title(tokens, section, seen_by_section):
             continue
-        # повний текст зі справжнього url (якщо не вдалось — лишаємо анонс)
-        try:
-            full = pr.fetch_full_article(a["sourceUrl"])
-        except Exception:
-            full = None
-        if full and len(full) > len(a.get("content") or ""):
-            a["content"] = full
-        # Зображення (крок 1 системного рішення): реальне фото зі сторінки видавця.
-        if not a.get("image"):
+
+        if a.get("original"):
+            # Оригінальний матеріал: тексту вже є (з агента), зовнішнього url нема.
+            # Ілюстрація — з Wikimedia (відкрита ліцензія), з чіткою міткою походження.
+            if not a.get("image"):
+                try:
+                    img, credit = fetch_wikimedia_image(a.get("image_query") or a["title"])
+                except Exception:
+                    img, credit = None, None
+                if img:
+                    a["image"] = _sanitize_image_url(img)
+                    a["image_type"] = "illustration"
+                    a["image_credit"] = credit
+                else:
+                    a["image_type"] = "none"
+            a.pop("image_query", None)
+        else:
+            # Курована новина: повний текст + реальне фото зі сторінки видавця.
             try:
-                a["image"] = pr.fetch_og_image(a["sourceUrl"])
+                full = pr.fetch_full_article(src)
             except Exception:
-                pass
+                full = None
+            if full and len(full) > len(a.get("content") or ""):
+                a["content"] = full
+            if not a.get("image"):
+                try:
+                    a["image"] = _sanitize_image_url(pr.fetch_og_image(src))
+                except Exception:
+                    a["image"] = None
+            a["image_type"] = "source" if a.get("image") else "none"
+
         a.pop("summary", None)
         a["queued_ts"] = int(time.time() * 1000)   # коли потрапило в чергу
         queue.append(a)
-        seen_urls.add(a["sourceUrl"])
+        if src:
+            seen_urls.add(src)
         pr.remember_title(tokens, section, seen_by_section)
         added += 1
 
