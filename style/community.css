@@ -2150,14 +2150,17 @@
 .disc-screen {
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
-  left: 0; right: 0; bottom: 0;
+  left: 0; right: 0;
+  /* Закінчується НАД таб-баром (не накриває його) — навігація лишається видимою
+     й клікабельною в Обговореннях, як на звичайній сторінці. */
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   z-index: 1010;
   overflow-y: auto;
   overflow-x: hidden;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior-y: contain;
   background: var(--bg-page);
-  padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: 12px;
   opacity: 0;
   transform: translateY(10px);
   transition: opacity 0.26s ease, transform 0.26s ease;
