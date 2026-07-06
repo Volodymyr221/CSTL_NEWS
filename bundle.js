@@ -7841,13 +7841,32 @@ ${post.text}
   }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
-    if (h >= 5 && h < 11)
-      return { text: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
-    if (h >= 11 && h < 17)
-      return { text: "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
-    if (h >= 17 && h < 22)
-      return { text: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u0429\u043E \u0446\u0456\u043A\u0430\u0432\u043E\u0433\u043E \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
-    return { text: "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430 \u0441\u043F\u0438\u0442\u044C \u2014 \u043E\u0441\u044C \u0434\u043E\u0431\u0456\u0440\u043A\u0430" };
+    let hello, sub;
+    if (h >= 5 && h < 11) {
+      hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A";
+      sub = "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    } else if (h >= 11 && h < 17) {
+      hello = "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C";
+      sub = "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    } else if (h >= 17 && h < 22) {
+      hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440";
+      sub = "\u0429\u043E \u0446\u0456\u043A\u0430\u0432\u043E\u0433\u043E \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    } else {
+      hello = "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456";
+      sub = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430 \u0441\u043F\u0438\u0442\u044C \u2014 \u043E\u0441\u044C \u0434\u043E\u0431\u0456\u0440\u043A\u0430";
+    }
+    let who = "\u0433\u0440\u043E\u043C\u0430\u0434\u043E";
+    if (isLoggedIn()) {
+      const name = (currentUserName() || "").trim().split(/\s+/)[0];
+      if (name && name !== "\u0416\u0438\u0442\u0435\u043B\u044C")
+        who = name;
+    }
+    return { text: `${hello}, ${who}!`, sub };
+  }
+  function updateGreetingName() {
+    const el = document.querySelector(".cm-greeting-text");
+    if (el)
+      el.textContent = getGreeting().text;
   }
   function formatTodayHeader() {
     const d = /* @__PURE__ */ new Date();
@@ -7880,6 +7899,7 @@ ${post.text}
         ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? " active" : ""}"></span>`).join("")}
       </div>
     </section>
+    <div class="cm-hero-spacer"></div>
 
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
@@ -7940,10 +7960,16 @@ ${post.text}
     </section>
   `;
   }
+  var _greetingWired = false;
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
+    if (!_greetingWired) {
+      onAuthChange(updateGreetingName);
+      _greetingWired = true;
+    }
+    updateGreetingName();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();

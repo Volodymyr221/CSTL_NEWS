@@ -641,28 +641,32 @@
 }
 
 /* Greeting — привітання над hero (дата → Добрий ранок → підпис) */
+/* Вітання тепер лежить на обоях — білий текст із тінню для читабельності. */
 .cm-greeting {
-  padding: 4px 4px 14px;
+  padding: 10px 8px 14px;
 }
 .cm-greeting-date {
   font-size: 11px;
-  font-weight: 600;
-  color: var(--ink-mute);
+  font-weight: 700;
+  color: rgba(255,255,255,0.9);
   text-transform: uppercase;
   letter-spacing: 1.2px;
   margin-bottom: 4px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
 }
 .cm-greeting-text {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 28px;
   font-weight: 700;
   line-height: 1.1;
-  color: var(--ink);
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.55);
 }
 .cm-greeting-sub {
   font-size: 13px;
-  color: var(--ink-soft);
+  color: rgba(255,255,255,0.92);
   margin-top: 4px;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
 }
 
 /* Tab-bar — м'якша pill для активного айтема */
@@ -682,15 +686,25 @@
 
 /* ===== COMMUNITY HERO (фото-заставка вкладки Громада) ===== */
 
+/* Обої-фон вкладки Громада: фіксований угорі, на всю ширину. Фото ротуються.
+   Блоки (Дошка й нижче) мають z-index вище і накривають картинку при скролі
+   (parallax — картинка стає фоновою). */
 .cm-hero {
-  position: relative;
-  width: 100%;
-  height: 200px;
+  position: fixed;
+  top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
+  left: 0;
+  right: 0;
+  height: 340px;
   overflow: hidden;
-  border-radius: 14px;
-  margin-bottom: 14px;
+  z-index: 0;                 /* позаду контенту (блоки — z-index:1) */
   background: var(--paper-deep);
 }
+/* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою. */
+.cm-hero-spacer { height: 250px; }
+/* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
+.cm-greeting,
+.cm-block,
+.cm-hero-spacer { position: relative; z-index: 1; }
 /* Ротатор: 3 фото layered поверх одне одного. Активне opacity:1, інші 0. */
 .cm-hero-img {
   position: absolute;
@@ -710,8 +724,9 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 16px 18px;
-  background: linear-gradient(to bottom, transparent 40%, rgba(0,0,0,0.65) 100%);
+  padding: 16px 18px 18px;
+  /* Затемнення зверху (під вітання) і знизу (під «Олика») для читабельності. */
+  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 26%, transparent 52%, rgba(0,0,0,0.62) 100%);
   color: white;
   z-index: 3;
   pointer-events: none;
