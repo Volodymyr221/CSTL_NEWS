@@ -95,14 +95,14 @@
 .cm-weather-main {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 4px 0 10px;
+  gap: 12px;
+  padding: 2px 0 7px;
 }
-.cm-weather-icon { font-size: 56px; line-height: 1; }
+.cm-weather-icon { font-size: 38px; line-height: 1; }
 .cm-weather-temp {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 56px; font-weight: 700; line-height: 0.9;
-  letter-spacing: -2px;
+  font-size: 38px; font-weight: 700; line-height: 0.9;
+  letter-spacing: -1.5px;
   color: var(--sky-text);
 }
 .cm-weather-text { display: flex; flex-direction: column; gap: 2px; }
@@ -123,37 +123,117 @@
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
-  padding-top: 10px;
+  padding-top: 7px;
   border-top: 1px solid rgba(0,0,0,0.10);
 }
 .cm-fc-day {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 2px;
+  gap: 2px;
+  padding: 5px 2px;
   border-radius: 10px;
   background: rgba(255,255,255,0.40);
   color: var(--sky-text);
+  border: 0;
+  cursor: pointer;
+  font: inherit;
+  -webkit-tap-highlight-color: transparent;
+  transition: transform 0.08s ease, background 0.15s ease;
 }
+.cm-fc-day:active { transform: scale(0.94); background: rgba(255,255,255,0.65); }
 .cm-fc-day--today {
   background: rgba(255,255,255,0.85);
   font-weight: 700;
 }
 .cm-fc-wd {
-  font-size: 10.5px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.2px;
   opacity: 0.85;
 }
 .cm-fc-date {
-  font-size: 13px;
+  font-size: 12.5px;
   font-weight: 700;
   line-height: 1;
 }
 .cm-fc-icon {
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1;
+}
+
+/* ── Модалка «Погода по годинах» (клік на день прогнозу) ──
+   iOS-стиль: нижній аркуш (bottom-sheet), два графіки — температура + опади. */
+.wx-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 3200;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.45);
+  opacity: 0;
+  transition: opacity 0.22s ease;
+}
+.wx-modal.wx-open { opacity: 1; }
+.wx-sheet {
+  width: 100%;
+  max-width: 520px;
+  background: linear-gradient(180deg, #2C71BC 0%, #5B93D4 42%, #C5DDFB 100%);
+  color: var(--sky-text);
+  border-radius: 22px 22px 0 0;
+  padding: 10px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.28);
+  transform: translateY(100%);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+  max-height: 86vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.wx-modal.wx-open .wx-sheet { transform: translateY(0); }
+.wx-grabber {
+  width: 40px; height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.6);
+  margin: 2px auto 12px;
+}
+.wx-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.wx-head-icon { font-size: 40px; line-height: 1; }
+.wx-head-info { flex: 1; min-width: 0; }
+.wx-head-day { font-size: 18px; font-weight: 800; }
+.wx-head-desc { font-size: 13px; opacity: 0.9; }
+.wx-head-range { font-size: 15px; font-weight: 700; white-space: nowrap; }
+.wx-chart-block { margin-top: 16px; }
+.wx-chart-title {
+  font-size: 13px; font-weight: 700;
+  opacity: 0.92;
+  margin-bottom: 6px;
+  display: flex; align-items: center; gap: 6px;
+}
+.wx-chart {
+  width: 100%;
+  display: block;
+  overflow: visible;
+}
+.wx-chart-svg-wrap {
+  background: rgba(255, 255, 255, 0.16);
+  border-radius: 14px;
+  padding: 10px 4px 4px;
+}
+.wx-axis {
+  font-size: 9px;
+  fill: rgba(255, 255, 255, 0.75);
+  font-weight: 600;
+}
+.wx-val {
+  font-size: 10px;
+  fill: #FFFFFF;
+  font-weight: 800;
 }
 
 /* ── Блок 2: Світло ── */
@@ -2098,11 +2178,19 @@
   left: 0;
   right: 0;
   z-index: 90;
-  background: var(--paper);
-  padding: 10px 14px 8px;
+  /* «Лівітірує»: не суцільна плита кольору сторінки, а матове скло (frosted glass —
+     напівпрозорий фон з розмиттям). Картки при скролі видно крізь бар (iOS-стиль),
+     а не ховаються під мертвою смугою. Fallback без blur — трохи щільніший фон. */
+  background: rgba(244, 241, 230, 0.62);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  padding: 6px 14px 8px;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
+}
+@supports not ((-webkit-backdrop-filter: blur(1px)) or (backdrop-filter: blur(1px))) {
+  .bd-controls { background: rgba(244, 241, 230, 0.94); }
 }
 /* Шапка режиму «Обговорення» (відкривається з вкладки Чати) */
 .bd-disc-head {
@@ -2124,22 +2212,13 @@
   font-size: 18px; font-weight: 800;
   color: var(--ink);
 }
-.bd-controls::after {
-  content: '';
-  position: absolute;
-  bottom: -6px;
-  left: 0;
-  right: 0;
-  height: 6px;
-  background: linear-gradient(to bottom, #F4F1E6, transparent);
-  pointer-events: none;
-}
+/* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
+   картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
-   Перемикач «Дошка|Обговорення» (~38px) прибрано (Крок 2b) → меню стало нижчим,
-   тож відступи зменшено, щоб картки не висіли низько з широкою смугою корка.
-   Без категорій (chat-overlay має шапку «← Обговорення», saved — лише пошук): ≈ 100.
-   З категоріями (тип board): пошук 40 + чіпи 32 + відступи 18 ≈ 98 + зазор ≈ 110. */
-.bd-body { padding-top: 124px; }
+   Обговорення (chat): шапка ≈22 + пошук 40 + відступи ≈16 ≈ 78 → підтягуємо картку
+   ближче до пошуку (Рома: «занадто далеко»), лишаючи легкий зазор.
+   З категоріями (тип board): пошук 40 + чіпи 32 + відступи ≈ 108. */
+.bd-body { padding-top: 100px; }
 .bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 110px; }
 
 /* Обговорення тепер справжня .page у .app-main (не overlay) — .disc-screen прибрано.
@@ -3042,13 +3121,13 @@
 /* ── Блок НОВИНИ у вкладці «Громада» (05.07) ──────────────────────────────── */
 /* Фон блока — червоний як шапка сторінки (рішення Роми); картки-кремові на ньому контрастують. */
 .cm-block--news { background: var(--red); }
-.cm-block--news .cm-block-body { padding: 8px 10px 10px; }
+.cm-block--news .cm-block-body { padding: 4px 6px 8px; }   /* тісніше — прибрано зайві відступи */
 
 /* 3 кнопки-фільтри згори блока */
 .cm-news-filters {
   display: flex;
   gap: 6px;
-  padding: 4px 4px 10px;
+  padding: 2px 2px 8px;
 }
 .cm-news-chip {
   flex: 1;
@@ -3071,13 +3150,18 @@
 }
 .cm-news-chip:active { transform: scale(0.97); }
 
-/* Стрічка карток — ЖИВА ЛЄНТА: тече в сторінці Громади (без внутрішнього скрол-вікна
-   й маски). Скролиться разом зі сторінкою від верху до низу, без обрізань. Кількість
-   обмежена у paintCmNews (останні 15). */
+/* Стрічка карток — КОМПАКТНИЙ блок із ВНУТРІШНІМ скролом (як інші віджети Громади),
+   БЕЗ зайвих відступів зверху/знизу. Блок не розтягується на всі пости. */
 .cm-news-feed {
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 0 4px;
+  padding: 0 2px;
 }
+/* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */
+.cm-news-feed > * { flex-shrink: 0; }
 /* Картки лишаються рідними (кремовими) — на червоному фоні блока контрастні. */
