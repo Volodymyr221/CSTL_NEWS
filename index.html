@@ -52,15 +52,13 @@
       <div id="cm-content" class="cm-content"></div>
     </div>
 
-    <!-- Вкладка: «Шо в селі» (стрічка подій + свят громади).
-         Раніше слот «Новини»: сегмент новин прибрано (новини живуть окремим
-         блоком у вкладці Громада), лишилась стрічка подій — перевдягнена у
-         news-стиль картки + модалка повного прочитання (рендерить events.js).
-         Внутрішні id #events-* лишено (events.js на них тримається). -->
+    <!-- Вкладка: «Шо в селі» — жива стрічка подій+свят громади (нова концепція).
+         Календар і фільтри-категорії прибрано; зверху шапка (як в Обговореннях);
+         картки з повноширинною обкладинкою + модалка. Рендерить events.js у #events-list. -->
     <div id="page-shotam" class="page" style="display:none">
-      <div class="events-filters-bar">
-        <div id="events-calendar" class="events-calendar"></div>
-        <div id="events-filters" class="chips-row"></div>
+      <div class="shotam-head">
+        <span class="shotam-head-ic">📰</span>
+        <h1 class="shotam-head-title">Шо в селі</h1>
       </div>
       <div id="events-list" class="events-list"></div>
     </div>

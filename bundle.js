@@ -4006,7 +4006,6 @@ ${post.text}
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
         </div>
         ${saveBtnHtml(p)}
-        <span class="bd-chat-foot-arrow">\u2192</span>
       </div>
     </article>
   `;
@@ -4046,7 +4045,6 @@ ${post.text}
   }
   function renderHeader() {
     const discHead = activeType === "chat" ? `<div class="bd-disc-head">
-         <button class="bd-disc-back" type="button" data-bd-back aria-label="\u041D\u0430\u0437\u0430\u0434 \u0434\u043E \u0427\u0430\u0442\u0456\u0432">\u2190</button>
          <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
        </div>` : "";
     const showCategories = activeType === "board";
@@ -4247,7 +4245,6 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    el.querySelector("[data-bd-back]")?.addEventListener("click", () => window.switchTab("community"));
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
@@ -7615,7 +7612,7 @@ ${post.text}
     return a.geo === cmNewsGeo;
   }
   function paintCmNews(el, arts) {
-    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 15);
     el.innerHTML = `
     <div class="cm-news-filters">
       ${CM_NEWS_FILTERS.map((g) => `
@@ -7832,7 +7829,6 @@ ${post.text}
   }
 
   // src/tabs/events.js
-  var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u0421\u0432\u044F\u0442\u0430", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
   var CATEGORY_COLORS2 = {
     "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
     "Kino_Castle": "#722F37",
@@ -7842,17 +7838,7 @@ ${post.text}
     // коричневий — нейтральний для свят (державних і релігійних)
   };
   var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-  var WEEKDAYS_SHORT = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
-  var CALENDAR_DAYS = 21;
   var allEvents = [];
-  var activeFilter = "\u0412\u0441\u0456";
-  var selectedDate = null;
-  function ymd(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${dd}`;
-  }
   function formatFullDate(dateStr) {
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
@@ -7915,25 +7901,25 @@ ${post.text}
   }
   function cardHtml(ev) {
     const catC = catColor2(ev.category);
-    let thumb;
+    let cover;
     if (ev.image) {
-      thumb = `<img class="news-card-row-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
     } else {
       const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      thumb = `<div class="news-card-row-img shotam-cover-thumb" style="background:${escapeHtml(grad)}">${ev.cover_emoji || "\u{1F4C5}"}</div>`;
+      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
     }
     const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
     const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
     return `
-    <article class="news-card-row" data-id="${ev.id}">
-      ${thumb}
-      <div class="news-card-row-body">
+    <article class="shotam-card" data-id="${ev.id}">
+      ${cover}
+      <div class="shotam-card-body">
         <div class="news-card-meta">
           <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
         </div>
-        <h2 class="news-card-row-title">${escapeHtml(ev.title)}</h2>
-        ${ev.description ? `<p class="news-card-row-excerpt">${escapeHtml(ev.description)}</p>` : ""}
-        <div class="news-card-row-footer">${escapeHtml(when)}${loc}</div>
+        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
+        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
       </div>
     </article>`;
   }
@@ -8006,66 +7992,6 @@ ${ev.description || ""}`
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
   }
-  function renderFilters() {
-    const bar = document.getElementById("events-filters");
-    if (!bar)
-      return;
-    bar.innerHTML = CATEGORY_FILTERS.map(
-      (f) => `<button class="chip${f === activeFilter ? " active" : ""}" data-f="${escapeHtml(f)}">${escapeHtml(f)}</button>`
-    ).join("");
-    bar.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeFilter = btn.dataset.f;
-        renderFilters();
-        renderList();
-      });
-    });
-  }
-  function renderCalendar() {
-    const bar = document.getElementById("events-calendar");
-    if (!bar)
-      return;
-    const today = /* @__PURE__ */ new Date();
-    today.setHours(0, 0, 0, 0);
-    const datesWithEvents = /* @__PURE__ */ new Set();
-    allEvents.forEach((e) => {
-      if (e.auto)
-        return;
-      datesWithEvents.add(e.date);
-    });
-    const days = [];
-    for (let i = 0; i < CALENDAR_DAYS; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      days.push(d);
-    }
-    const allBtn = `
-    <button class="cal-pill cal-pill--all${selectedDate === null ? " active" : ""}" data-date="">
-      <span class="cal-pill-label">\u0412\u0441\u0456</span>
-    </button>
-  `;
-    const daysHtml = days.map((d) => {
-      const ymdStr = ymd(d);
-      const isToday = ymdStr === ymd(today);
-      const hasEv = datesWithEvents.has(ymdStr);
-      const isActive = ymdStr === selectedDate;
-      return `
-      <button class="cal-pill${isActive ? " active" : ""}${isToday ? " cal-pill--today" : ""}${hasEv ? " cal-pill--has-events" : ""}" data-date="${ymdStr}">
-        <span class="cal-pill-wd">${WEEKDAYS_SHORT[d.getDay()]}</span>
-        <span class="cal-pill-num">${d.getDate()}</span>
-        <span class="cal-pill-dot"></span>
-      </button>
-    `;
-    }).join("");
-    bar.innerHTML = allBtn + daysHtml;
-    bar.querySelectorAll(".cal-pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedDate = btn.dataset.date || null;
-        renderCalendar();
-        renderList();
-      });
-    });
-  }
   function getFiltered() {
     const now = /* @__PURE__ */ new Date();
     now.setHours(0, 0, 0, 0);
@@ -8073,15 +7999,7 @@ ${ev.description || ""}`
       if (e.auto)
         return false;
       const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
-      if (d < now)
-        return false;
-      if (selectedDate && e.date !== selectedDate)
-        return false;
-      if (activeFilter === "\u0412\u0441\u0456")
-        return true;
-      if (activeFilter === "\u0421\u0432\u044F\u0442\u0430")
-        return e.category === "\u0421\u0432\u044F\u0442\u043E";
-      return e.category === activeFilter;
+      return d >= now;
     }).sort((a, b) => {
       const byDate = new Date(a.date) - new Date(b.date);
       if (byDate !== 0)
@@ -8095,12 +8013,11 @@ ${ev.description || ""}`
       return;
     const list = getFiltered();
     if (!list.length) {
-      const emptyMsg = selectedDate ? `\u041D\u0430 ${selectedDate.split("-").reverse().slice(0, 2).join(".")} \u043F\u043E\u0434\u0456\u0439 \u043D\u0435\u043C\u0430\u0454` : "\u041F\u043E\u0434\u0456\u0439 \u0443 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454";
-      el.innerHTML = `<div class="empty-state">${escapeHtml(emptyMsg)}</div>`;
+      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
       return;
     }
     el.innerHTML = list.map(cardHtml).join("");
-    el.querySelectorAll(".news-card-row").forEach((card) => {
+    el.querySelectorAll(".shotam-card").forEach((card) => {
       card.addEventListener("click", () => {
         const id = Number(card.dataset.id);
         if (Number.isFinite(id))
@@ -8135,8 +8052,6 @@ ${ev.description || ""}`
     } catch {
       allEvents = [];
     }
-    renderFilters();
-    renderCalendar();
     renderList();
   }
 
@@ -8179,7 +8094,7 @@ ${ev.description || ""}`
     if (!schedule)
       return;
     const d = /* @__PURE__ */ new Date();
-    const ymd2 = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
     const events = [];
     let i = 0;
     while (i < 24) {
@@ -8189,8 +8104,8 @@ ${ev.description || ""}`
           i++;
         events.push(
           `BEGIN:VEVENT\r
-DTSTART:${ymd2}T${pad(start)}0000\r
-DTEND:${ymd2}T${pad(i)}0000\r
+DTSTART:${ymd}T${pad(start)}0000\r
+DTEND:${ymd}T${pad(i)}0000\r
 SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
 DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL LIFE \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
 END:VEVENT`
