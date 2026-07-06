@@ -1,9 +1,6 @@
 import { escapeHtml, sharePost } from '../core/utils.js';
 import { isLoggedIn, requireAuth } from '../core/auth.js';
 
-// Категорії для фільтрів (categories for filters)
-const CATEGORY_FILTERS = ['Всі', 'Свята', 'Культура', 'Спорт', 'Благодійність'];
-
 // Кольори бейджів по категорії
 const CATEGORY_COLORS = {
   'Культура':      '#722F37',
@@ -16,24 +13,7 @@ const CATEGORY_COLORS = {
 // Назви місяців у родовому відмінку для повної дати
 const MONTHS_FULL = ['січня','лютого','березня','квітня','травня','червня','липня','серпня','вересня','жовтня','листопада','грудня'];
 
-// Скорочення для днів тижня в календарній стрічці (Tier 5)
-const WEEKDAYS_SHORT = ['Нд', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'];
-
-// Кількість днів у календарній стрічці
-const CALENDAR_DAYS = 21;
-
 let allEvents = [];
-let activeFilter = 'Всі';
-let selectedDate = null;  // YYYY-MM-DD або null (всі дати)
-
-// Локальний формат YYYY-MM-DD з Date (toISOString дає UTC, що зсуває день)
-function ymd(d) {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${dd}`;
-}
-
 
 // Форматує повну дату: "3 травня 2026"
 function formatFullDate(dateStr) {
@@ -110,19 +90,19 @@ function renderSkeleton(el) {
   `).join('');
 }
 
-// HTML картки «Шо в селі» — news-стиль рядка (мініатюра зліва + текст).
-// Обкладинка: фото (звичайні події) АБО emoji+gradient (свята — Wikipedia
-// блокує hotlinking, тому дизайнерський cover з великим emoji, ніяких 404).
+// HTML картки «Шо в селі» — жива стрічка: обкладинка на ВСЮ ШИРИНУ зверху + текст.
+// Обкладинка: фото (звичайні події) АБО emoji+gradient (свята — Wikipedia блокує
+// hotlinking, тому дизайнерський cover з великим emoji, ніяких 404).
 // Клік по картці → openShotamModal (повне прочитання у статейній модалці).
 function cardHtml(ev) {
   const catC = catColor(ev.category);
 
-  let thumb;
+  let cover;
   if (ev.image) {
-    thumb = `<img class="news-card-row-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+    cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
   } else {
     const grad = ev.cover_gradient || 'linear-gradient(135deg, #999 0%, #555 100%)';
-    thumb = `<div class="news-card-row-img shotam-cover-thumb" style="background:${escapeHtml(grad)}">${ev.cover_emoji || '📅'}</div>`;
+    cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || '📅'}</span></div>`;
   }
 
   const when = ev.time
@@ -131,15 +111,15 @@ function cardHtml(ev) {
   const loc = ev.location ? ` · ${escapeHtml(ev.location)}` : '';
 
   return `
-    <article class="news-card-row" data-id="${ev.id}">
-      ${thumb}
-      <div class="news-card-row-body">
+    <article class="shotam-card" data-id="${ev.id}">
+      ${cover}
+      <div class="shotam-card-body">
         <div class="news-card-meta">
           <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
         </div>
-        <h2 class="news-card-row-title">${escapeHtml(ev.title)}</h2>
-        ${ev.description ? `<p class="news-card-row-excerpt">${escapeHtml(ev.description)}</p>` : ''}
-        <div class="news-card-row-footer">${escapeHtml(when)}${loc}</div>
+        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ''}
+        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
       </div>
     </article>`;
 }
@@ -221,94 +201,20 @@ function openShotamModal(id) {
   document.body.classList.add('modal-open');
 }
 
-// Рендер чіпів фільтрів (filter chips)
-function renderFilters() {
-  const bar = document.getElementById('events-filters');
-  if (!bar) return;
-  bar.innerHTML = CATEGORY_FILTERS.map(f =>
-    `<button class="chip${f === activeFilter ? ' active' : ''}" data-f="${escapeHtml(f)}">${escapeHtml(f)}</button>`
-  ).join('');
-  bar.querySelectorAll('.chip').forEach(btn => {
-    btn.addEventListener('click', () => {
-      activeFilter = btn.dataset.f;
-      renderFilters();
-      renderList();
-    });
-  });
-}
-
-// Календарна стрічка — наступні CALENDAR_DAYS днів з точками для днів з подіями
-function renderCalendar() {
-  const bar = document.getElementById('events-calendar');
-  if (!bar) return;
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  // Множина дат з реальними локальними подіями (виключаємо auto:true RSS-новини)
-  const datesWithEvents = new Set();
-  allEvents.forEach(e => {
-    if (e.auto) return;
-    datesWithEvents.add(e.date);
-  });
-
-  // 21 день вперед
-  const days = [];
-  for (let i = 0; i < CALENDAR_DAYS; i++) {
-    const d = new Date(today);
-    d.setDate(today.getDate() + i);
-    days.push(d);
-  }
-
-  const allBtn = `
-    <button class="cal-pill cal-pill--all${selectedDate === null ? ' active' : ''}" data-date="">
-      <span class="cal-pill-label">Всі</span>
-    </button>
-  `;
-
-  const daysHtml = days.map(d => {
-    const ymdStr = ymd(d);
-    const isToday  = ymdStr === ymd(today);
-    const hasEv    = datesWithEvents.has(ymdStr);
-    const isActive = ymdStr === selectedDate;
-    return `
-      <button class="cal-pill${isActive ? ' active' : ''}${isToday ? ' cal-pill--today' : ''}${hasEv ? ' cal-pill--has-events' : ''}" data-date="${ymdStr}">
-        <span class="cal-pill-wd">${WEEKDAYS_SHORT[d.getDay()]}</span>
-        <span class="cal-pill-num">${d.getDate()}</span>
-        <span class="cal-pill-dot"></span>
-      </button>
-    `;
-  }).join('');
-
-  bar.innerHTML = allBtn + daysHtml;
-
-  bar.querySelectorAll('.cal-pill').forEach(btn => {
-    btn.addEventListener('click', () => {
-      selectedDate = btn.dataset.date || null;
-      renderCalendar();
-      renderList();
-    });
-  });
-}
-
-// Спільний фільтр+сорт для hero і списку — щоб обидва завжди синхронні з фільтрами.
+// Жива стрічка «Шо в селі»: майбутні події+свята, найближчі зверху.
+// (Календар і фільтри-категорії прибрано — нова концепція живої стрічки.)
 function getFiltered() {
   const now = new Date();
   now.setHours(0, 0, 0, 0);
 
   return allEvents
     .filter(e => {
-      if (e.auto) return false;  // RSS-новини не сюди — вкладка Події тільки для локальних подій
+      if (e.auto) return false;  // RSS-новини не сюди — лише локальні події+свята
       const d = new Date(e.date + 'T00:00:00');
-      if (d < now) return false;
-      if (selectedDate && e.date !== selectedDate) return false;
-      if (activeFilter === 'Всі') return true;
-      // Чіп «Свята» (мн.) фільтрує по категорії «Свято» (однина)
-      if (activeFilter === 'Свята') return e.category === 'Свято';
-      return e.category === activeFilter;
+      return d >= now;           // майбутні (минулі не показуємо)
     })
     .sort((a, b) => {
-      // B-17 fix: при однаковій даті сортуємо за часом (раніше — у порядку JSON).
+      // Найближче зверху; при однаковій даті — за часом (B-17).
       const byDate = new Date(a.date) - new Date(b.date);
       if (byDate !== 0) return byDate;
       return (a.time || '').localeCompare(b.time || '');
@@ -323,17 +229,14 @@ function renderList() {
   const list = getFiltered();
 
   if (!list.length) {
-    const emptyMsg = selectedDate
-      ? `На ${selectedDate.split('-').reverse().slice(0, 2).join('.')} подій немає`
-      : 'Подій у цій категорії поки немає';
-    el.innerHTML = `<div class="empty-state">${escapeHtml(emptyMsg)}</div>`;
+    el.innerHTML = `<div class="empty-state">Поки нічого нового у селі</div>`;
     return;
   }
 
   el.innerHTML = list.map(cardHtml).join('');
 
   // Клік по картці → повне прочитання у статейній модалці
-  el.querySelectorAll('.news-card-row').forEach(card => {
+  el.querySelectorAll('.shotam-card').forEach(card => {
     card.addEventListener('click', () => {
       const id = Number(card.dataset.id);
       if (Number.isFinite(id)) openShotamModal(id);
@@ -375,7 +278,5 @@ export async function initEvents() {
     allEvents = [];
   }
 
-  renderFilters();
-  renderCalendar();
   renderList();
 }
