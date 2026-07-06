@@ -25,7 +25,6 @@ const CALENDAR_DAYS = 21;
 let allEvents = [];
 let activeFilter = 'Всі';
 let selectedDate = null;  // YYYY-MM-DD або null (всі дати)
-let cardObserver = null; // IntersectionObserver для авто-згортання (auto-collapse)
 
 // Локальний формат YYYY-MM-DD з Date (toISOString дає UTC, що зсуває день)
 function ymd(d) {
@@ -111,86 +110,115 @@ function renderSkeleton(el) {
   `).join('');
 }
 
-// HTML-шаблон картки події з розгортуваним детальним блоком
+// HTML картки «Шо в селі» — news-стиль рядка (мініатюра зліва + текст).
+// Обкладинка: фото (звичайні події) АБО emoji+gradient (свята — Wikipedia
+// блокує hotlinking, тому дизайнерський cover з великим emoji, ніяких 404).
+// Клік по картці → openShotamModal (повне прочитання у статейній модалці).
 function cardHtml(ev) {
-  const bg = catColor(ev.category);
+  const catC = catColor(ev.category);
 
-  // Обкладинка: фото (звичайні події) АБО emoji+gradient (свята).
-  // Wikipedia блокує hotlinking, тому свята мають дизайнерські cover-ри з великим
-  // emoji і тематичним градієнтом — завжди працює, ніяких 404.
-  let coverBlock = '';
+  let thumb;
   if (ev.image) {
-    coverBlock = `
-      <div class="ev-card-cover">
-        <img class="ev-card-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">
-      </div>`;
-  } else if (ev.cover_emoji) {
+    thumb = `<img class="news-card-row-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+  } else {
     const grad = ev.cover_gradient || 'linear-gradient(135deg, #999 0%, #555 100%)';
-    coverBlock = `
-      <div class="ev-card-cover ev-card-cover--art" style="background:${escapeHtml(grad)}">
-        <span class="ev-card-cover-emoji">${ev.cover_emoji}</span>
-      </div>`;
+    thumb = `<div class="news-card-row-img shotam-cover-thumb" style="background:${escapeHtml(grad)}">${ev.cover_emoji || '📅'}</div>`;
   }
 
-  const locationBlock = ev.location ? `
-    <span class="ev-meta-item">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 0 1 18 0z"/>
-        <circle cx="12" cy="10" r="3"/>
-      </svg>
-      ${escapeHtml(ev.location)}
-    </span>` : '';
-
-  // Час: для свят null, для подій — є
-  const timeText = ev.time
-    ? `${escapeHtml(formatFullDate(ev.date))}, ${escapeHtml(ev.time)}`
-    : escapeHtml(formatFullDate(ev.date));
+  const when = ev.time
+    ? `${formatFullDate(ev.date)}, ${ev.time}`
+    : formatFullDate(ev.date);
+  const loc = ev.location ? ` · ${escapeHtml(ev.location)}` : '';
 
   return `
-    <div class="ev-card" data-id="${ev.id}" style="--cat-color:${bg}">
-      ${coverBlock}
-      <div class="ev-card-body">
-        <div class="ev-card-badge ev-card-badge--inline" style="background:${bg}">
-          ${escapeHtml(ev.category)}
+    <article class="news-card-row" data-id="${ev.id}">
+      ${thumb}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">
+          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
         </div>
-        <h3 class="ev-card-title">${escapeHtml(ev.title)}</h3>
-        <p class="ev-card-desc">${escapeHtml(ev.description)}</p>
-        <div class="ev-card-meta">
-          ${locationBlock}
-          <span class="ev-meta-item">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="12" cy="12" r="10"/>
-              <polyline points="12 6 12 12 16 14"/>
-            </svg>
-            ${timeText}
-          </span>
-        </div>
-        <div class="ev-card-expand-hint">
-          <span class="ev-expand-label">Детальніше</span>
-          <span class="ev-expand-chevron">›</span>
-        </div>
+        <h2 class="news-card-row-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="news-card-row-excerpt">${escapeHtml(ev.description)}</p>` : ''}
+        <div class="news-card-row-footer">${escapeHtml(when)}${loc}</div>
       </div>
-      <div class="ev-card-detail">
-        <div class="ev-detail-body">
-          <p class="ev-detail-desc">${escapeHtml(ev.description)}</p>
-          <button class="ev-ics-btn" type="button" data-id="${ev.id}">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="4" width="18" height="18" rx="2"/>
-              <line x1="3" y1="10" x2="21" y2="10"/>
-              <line x1="8" y1="2" x2="8" y2="6"/>
-              <line x1="16" y1="2" x2="16" y2="6"/>
-              <line x1="12" y1="14" x2="12" y2="18"/>
-              <line x1="10" y1="16" x2="14" y2="16"/>
-            </svg>
-            Створити нагадування
-          </button>
-          <button class="ev-share-btn share-btn share-btn--inline" type="button" data-share-event data-id="${ev.id}">
-            📤 Поділитись
-          </button>
-          <button class="ev-detail-close" type="button">Згорнути ↑</button>
-        </div>
+    </article>`;
+}
+
+// Повне прочитання картки «Шо в селі» — переюзуємо статейну модалку
+// (#article-modal: свайп-закриття + хрестик уже готові в app.js/index.html).
+function openShotamModal(id) {
+  const ev = allEvents.find(e => e.id === id);
+  if (!ev) return;
+
+  const modal        = document.getElementById('article-modal');
+  const modalContent = document.getElementById('article-modal-content');
+  const modalMetaTags = document.getElementById('modalMetaTags');
+  if (!modal || !modalContent) return;
+
+  const catC = catColor(ev.category);
+  if (modalMetaTags) {
+    modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
+  }
+
+  // Обкладинка: фото АБО дизайнерський emoji+gradient cover
+  let cover;
+  if (ev.image) {
+    cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
+  } else {
+    const grad = ev.cover_gradient || 'linear-gradient(135deg, #999 0%, #555 100%)';
+    cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || '📅'}</span></div>`;
+  }
+
+  const when = ev.time
+    ? `${formatFullDate(ev.date)}, ${ev.time}`
+    : formatFullDate(ev.date);
+  const loc = ev.location ? ` · ${escapeHtml(ev.location)}` : '';
+
+  const bodyHtml = (ev.description || '')
+    .split(/\n\n+/).map(p => p.trim()).filter(Boolean)
+    .map(p => `<p class="article-p">${escapeHtml(p)}</p>`).join('');
+
+  modalContent.innerHTML = `
+    <div class="article-modal-header">
+      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
+      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
+    </div>
+    ${cover}
+    <div class="article-body">${bodyHtml}</div>
+    <div class="article-source-row">
+      <div class="article-source-actions">
+        <button class="ev-ics-btn" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+          </svg>
+          Створити нагадування
+        </button>
+        <button class="share-btn share-btn--inline" type="button" data-shotam-share>📤 Поділитись</button>
       </div>
     </div>`;
+
+  // Нагадування (.ics) — гейтинг як у Подіях (лише залогінені)
+  const icsBtn = modalContent.querySelector('.ev-ics-btn');
+  if (icsBtn) icsBtn.addEventListener('click', () => {
+    if (!isLoggedIn()) { requireAuth('створити нагадування', () => {}); return; }
+    downloadIcs(ev);
+  });
+
+  // Поділитись — Web Share API + fallback на clipboard (sharePost)
+  const shareBtn = modalContent.querySelector('[data-shotam-share]');
+  if (shareBtn) shareBtn.addEventListener('click', () => {
+    sharePost({
+      title: ev.title,
+      text:  `📅 ${ev.title}\n${when}${ev.location ? ' · ' + ev.location : ''}\n\n${ev.description || ''}`,
+    });
+  });
+
+  modal.classList.add('open');
+  document.body.style.overflow = 'hidden';
+  document.body.classList.add('modal-open');
 }
 
 // Рендер чіпів фільтрів (filter chips)
@@ -304,82 +332,24 @@ function renderList() {
 
   el.innerHTML = list.map(cardHtml).join('');
 
-  // Скидаємо попередній observer перед новим рендером
-  if (cardObserver) { cardObserver.disconnect(); cardObserver = null; }
-
-  // IntersectionObserver — авто-згортає картку коли вона повністю виходить за межі екрану
-  cardObserver = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (!entry.isIntersecting && entry.target.classList.contains('expanded')) {
-        const card   = entry.target;
-        const rect   = card.getBoundingClientRect();
-        const detail = card.querySelector('.ev-card-detail');
-
-        if (rect.bottom <= 0) {
-          // Картка ВИЩЕ екрану — згортаємо миттєво без анімації,
-          // потім компенсуємо скрол щоб видимий контент не зрушився
-          const heightBefore = card.offsetHeight;
-          if (detail) detail.style.transition = 'none';
-          card.classList.remove('expanded');
-          const heightAfter = card.offsetHeight;
-          window.scrollBy(0, -(heightBefore - heightAfter));
-          // Повертаємо анімацію після перемальовки
-          requestAnimationFrame(() => requestAnimationFrame(() => {
-            if (detail) detail.style.transition = '';
-          }));
-        } else {
-          // Картка НИЖЧЕ екрану — звичайне анімоване згортання (нічого не зміщується)
-          card.classList.remove('expanded');
-        }
-      }
-    });
-  }, { threshold: 0 });
-
-  el.querySelectorAll('.ev-card').forEach(card => {
-    cardObserver.observe(card);
-
-    card.addEventListener('click', (e) => {
-      // Клік на "Згорнути"
-      if (e.target.closest('.ev-detail-close')) {
-        card.classList.remove('expanded');
-        card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        return;
-      }
-      // Клік на кнопку нагадування / поділитись — обробляються окремими listener-ами
-      if (e.target.closest('.ev-ics-btn')) return;
-      if (e.target.closest('.ev-share-btn')) return;
-
-      card.classList.toggle('expanded');
+  // Клік по картці → повне прочитання у статейній модалці
+  el.querySelectorAll('.news-card-row').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = Number(card.dataset.id);
+      if (Number.isFinite(id)) openShotamModal(id);
     });
   });
+}
 
-  // Окремий listener для кнопки нагадування — зупиняємо bubble щоб не закрити картку
-  el.querySelectorAll('.ev-ics-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      // Гейтинг (Етап 2): створення нагадування про подію — лише залогінені.
-      if (!isLoggedIn()) { requireAuth('створити нагадування', () => {}); return; }
-      const ev = allEvents.find(ev => ev.id === Number(btn.dataset.id));
-      if (ev) downloadIcs(ev);
-    });
-  });
-
-  // Кнопка 📤 «Поділитись» — Web Share API + fallback на clipboard
-  el.querySelectorAll('.ev-share-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const ev = allEvents.find(ev => ev.id === Number(btn.dataset.id));
-      if (!ev) return;
-      const when = ev.time
-        ? `${formatFullDate(ev.date)}, ${ev.time}`
-        : formatFullDate(ev.date);
-      const loc = ev.location ? ` · ${ev.location}` : '';
-      sharePost({
-        title: ev.title,
-        text:  `📅 ${ev.title}\n${when}${loc}\n\n${ev.description}`,
-      });
-    });
-  });
+// Биті зображення подій → брендовий плейсхолдер (як у Новинах, ПД-10).
+// error НЕ спливає → слухаємо у фазі захоплення. Вішаємо ОДИН раз (в initEvents).
+function handleEvImgError(e) {
+  const img = e.target;
+  if (!img || img.tagName !== 'IMG') return;
+  const ph = document.createElement('div');
+  ph.className = img.className + ' img-fallback';
+  ph.textContent = '🏰';
+  img.replaceWith(ph);
 }
 
 // Точка входу — ініціалізує модуль подій.
@@ -387,7 +357,10 @@ function renderList() {
 // Тримаємо в окремих файлах щоб RSS-парсер не затирав свята.
 export async function initEvents() {
   const el = document.getElementById('events-list');
-  if (el) renderSkeleton(el);
+  if (el) {
+    renderSkeleton(el);
+    el.addEventListener('error', handleEvImgError, true);  // один раз на контейнер
+  }
 
   try {
     const [evRes, holRes] = await Promise.all([
