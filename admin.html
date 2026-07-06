@@ -549,8 +549,12 @@ function renderLogin() {
   mainEl.innerHTML = `
     <div class="login-card">
       <div class="login-icon">🔐</div>
-      <h1 class="login-title">Вхід у адмінку</h1>
-      <p class="login-sub">Увійди поштою і паролем.</p>
+      <h1 class="login-title">Вхід у консоль</h1>
+      <p class="login-sub">Для команди — вхід через Google (один раз).</p>
+      <button class="login-btn" id="login-google" type="button" style="background:#fff;color:#222;border:1px solid #ccc;margin-bottom:14px">
+        <span style="font-weight:700;color:#4285F4">G</span>&nbsp; Увійти через Google
+      </button>
+      <div style="text-align:center;color:#aaa;font-size:12px;margin:6px 0 12px">або поштою й паролем</div>
       <form class="login-form" id="login-form">
         <input class="login-input" id="login-email" type="email" placeholder="ваша@пошта.com" required autocomplete="email">
         <input class="login-input" id="login-password" type="password" placeholder="пароль" required autocomplete="current-password">
@@ -576,6 +580,15 @@ function renderLogin() {
       showToast('Помилка: ' + error.message, 4500);
     }
     // При успіху onAuthStateChange сам перерендерить view (handleSession → renderApp)
+  });
+
+  document.getElementById('login-google').addEventListener('click', async () => {
+    // Той самий Google-акаунт, що й у додатку → консоль реюзає сесію. Низьке тертя.
+    const { error } = await supa.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href },
+    });
+    if (error) showToast('Помилка Google-входу: ' + error.message, 4500);
   });
 
   document.getElementById('forgot-link').addEventListener('click', (e) => {

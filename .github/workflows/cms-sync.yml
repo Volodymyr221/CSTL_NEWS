@@ -1,0 +1,65 @@
+name: CMS Sync — статті кабінету у стрічку
+
+# Бере готові статті кабінету редактора (cms_articles status='ready') із Supabase
+# і викладає у data/articles.json → деплой. Архітектура «Supabase редагує — Git публікує».
+on:
+  schedule:
+    - cron: '5,20,35,50 * * * *'    # кожні ~15 хв
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: "cms-sync"
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0   # повна історія — потрібна для rebase перед пушем
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Sync cms_articles → articles.json
+        env:
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: python scripts/sync_cms.py
+
+      - name: Commit if changed
+        id: commit
+        run: |
+          git config user.name  "CSTL CMS Bot"
+          git config user.email "cms@cstl-news"
+          git add data/articles.json
+          if git diff --staged --quiet; then
+            echo "Нових статей кабінету немає — деплой не потрібен"
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            git commit -m "cms: статті кабінету у стрічку $(date -u +'%d.%m %H:%M UTC')"
+            # Пуш із ре-базою (main міг піти вперед) — уникаємо «fetch first».
+            pushed=false
+            for i in 1 2 3 4 5; do
+              if git push origin main; then pushed=true; break; fi
+              echo "Пуш $i відхилено — rebase і повтор…"
+              git fetch origin main
+              git rebase origin/main || { echo "Конфлікт rebase — стоп"; exit 1; }
+              sleep 2
+            done
+            [ "$pushed" = true ] || { echo "Пуш не вдався після 5 спроб"; exit 1; }
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger deploy
+        if: steps.commit.outputs.changed == 'true'
+        run: gh workflow run deploy.yml --ref main
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
