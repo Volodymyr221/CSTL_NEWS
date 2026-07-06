@@ -6884,9 +6884,6 @@ ${post.text}
 
   // src/tabs/news.js
   var allArticles = [];
-  var activeGeo = "\u0412\u0441\u0456";
-  var UA_WORLD = "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442";
-  var GEO_FILTERS = ["\u0412\u0441\u0456", "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", UA_WORLD];
   var CATEGORY_COLORS = {
     "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
     // темно-сірий (новинний)
@@ -6933,53 +6930,11 @@ ${post.text}
   function geoColor(g) {
     return GEO_COLORS[g] || "#546e7a";
   }
-  function showNewsSegment(seg) {
-    const isEvents = seg === "events";
-    const paneNews = document.getElementById("news-seg-news");
-    const paneEv = document.getElementById("news-seg-events");
-    if (paneNews)
-      paneNews.style.display = isEvents ? "none" : "block";
-    if (paneEv)
-      paneEv.style.display = isEvents ? "block" : "none";
-    document.querySelectorAll(".news-seg-btn").forEach((b) => b.classList.toggle("active", b.dataset.newsSeg === seg));
-  }
-  window.cstlShowNewsSegment = showNewsSegment;
   async function initNews() {
-    try {
-      const res = await fetch("./data/articles.json");
-      allArticles = await res.json();
-    } catch (e) {
-      allArticles = [];
-    }
-    renderGeoFilters();
-    renderNews();
+    await ensureNewsLoaded();
     attachNewsListeners();
   }
   function attachNewsListeners() {
-    document.querySelectorAll(".news-seg-btn").forEach((btn) => {
-      btn.addEventListener("click", () => showNewsSegment(btn.dataset.newsSeg));
-    });
-    const filters = document.getElementById("geo-filters");
-    if (filters) {
-      filters.addEventListener("click", (e) => {
-        const chip = e.target.closest(".chip[data-geo]");
-        if (!chip)
-          return;
-        setGeoFilter(chip.dataset.geo);
-      });
-    }
-    const list = document.getElementById("news-list");
-    if (list) {
-      list.addEventListener("click", (e) => {
-        const card = e.target.closest("[data-article-id]");
-        if (!card)
-          return;
-        const id = Number(card.dataset.articleId);
-        if (Number.isFinite(id))
-          openArticle(id);
-      });
-      list.addEventListener("error", handleImgError, true);
-    }
     const modal = document.getElementById("article-modal");
     if (modal) {
       modal.addEventListener("click", (e) => {
@@ -7003,31 +6958,6 @@ ${post.text}
     ph.className = img.className + " img-fallback";
     ph.textContent = "\u{1F3F0}";
     img.replaceWith(ph);
-  }
-  function renderGeoFilters() {
-    const el = document.getElementById("geo-filters");
-    if (!el)
-      return;
-    el.innerHTML = GEO_FILTERS.map((g) => `
-    <button class="chip ${g === activeGeo ? "active" : ""}" data-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-  `).join("");
-  }
-  function getFiltered() {
-    return allArticles.filter((a) => {
-      if (activeGeo === "\u0412\u0441\u0456")
-        return true;
-      if (activeGeo === UA_WORLD)
-        return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
-      if (activeGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
-        return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
-      return a.geo === activeGeo;
-    }).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-  }
-  function renderNews() {
-    const el = document.getElementById("news-list");
-    if (!el)
-      return;
-    el.innerHTML = newsCardsHtml(getFiltered());
   }
   function newsCardsHtml(articles, opts = {}) {
     if (!articles || articles.length === 0) {
@@ -7081,11 +7011,6 @@ ${post.text}
       </div>
     </article>
   `;
-  }
-  function setGeoFilter(geo) {
-    activeGeo = geo;
-    renderGeoFilters();
-    renderNews();
   }
   function decodeEntities(str) {
     const ta = document.createElement("textarea");
@@ -8156,7 +8081,7 @@ ${ev.description || ""}`
       });
     });
   }
-  function getFiltered2() {
+  function getFiltered() {
     const now = /* @__PURE__ */ new Date();
     now.setHours(0, 0, 0, 0);
     return allEvents.filter((e) => {
@@ -8183,7 +8108,7 @@ ${ev.description || ""}`
     const el = document.getElementById("events-list");
     if (!el)
       return;
-    const list = getFiltered2();
+    const list = getFiltered();
     if (!list.length) {
       const emptyMsg = selectedDate ? `\u041D\u0430 ${selectedDate.split("-").reverse().slice(0, 2).join(".")} \u043F\u043E\u0434\u0456\u0439 \u043D\u0435\u043C\u0430\u0454` : "\u041F\u043E\u0434\u0456\u0439 \u0443 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454";
       el.innerHTML = `<div class="empty-state">${escapeHtml(emptyMsg)}</div>`;
@@ -9237,6 +9162,7 @@ END:VEVENT`
 
   // src/app.js
   var currentTab = "community";
+  window.cstlOpenDiscussions = openDiscussions;
   window.switchTab = function(tab) {
     if (tab === "news" || tab === "events")
       tab = "shotam";

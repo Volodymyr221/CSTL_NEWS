@@ -14,6 +14,11 @@ import { initBoardChat, openThreadsList } from './tabs/board-chat.js';
 // Поточна активна вкладка
 let currentTab = 'community';
 
+// Тап по слоту «Обговорення» у таб-барі відкриває overlay Обговорень напряму
+// (openDiscussions сам робить switchTab('chats')). Повідомлення/Групи приховані
+// до V2 — код лишається, але єдиний видимий вхід у «Чати» = Обговорення.
+window.cstlOpenDiscussions = openDiscussions;
+
 // Переключення між вкладками з плавною анімацією
 window.switchTab = function(tab) {
   // Слот «Новини» став вкладкою «Шо в селі» (стрічка подій + свят). Новини живуть
