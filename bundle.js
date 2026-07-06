@@ -7612,7 +7612,7 @@ ${post.text}
     return a.geo === cmNewsGeo;
   }
   function paintCmNews(el, arts) {
-    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 15);
+    const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
     el.innerHTML = `
     <div class="cm-news-filters">
       ${CM_NEWS_FILTERS.map((g) => `

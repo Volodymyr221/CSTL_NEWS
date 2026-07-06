@@ -3042,13 +3042,13 @@
 /* ── Блок НОВИНИ у вкладці «Громада» (05.07) ──────────────────────────────── */
 /* Фон блока — червоний як шапка сторінки (рішення Роми); картки-кремові на ньому контрастують. */
 .cm-block--news { background: var(--red); }
-.cm-block--news .cm-block-body { padding: 8px 10px 10px; }
+.cm-block--news .cm-block-body { padding: 4px 6px 8px; }   /* тісніше — прибрано зайві відступи */
 
 /* 3 кнопки-фільтри згори блока */
 .cm-news-filters {
   display: flex;
   gap: 6px;
-  padding: 4px 4px 10px;
+  padding: 2px 2px 8px;
 }
 .cm-news-chip {
   flex: 1;
@@ -3071,13 +3071,18 @@
 }
 .cm-news-chip:active { transform: scale(0.97); }
 
-/* Стрічка карток — ЖИВА ЛЄНТА: тече в сторінці Громади (без внутрішнього скрол-вікна
-   й маски). Скролиться разом зі сторінкою від верху до низу, без обрізань. Кількість
-   обмежена у paintCmNews (останні 15). */
+/* Стрічка карток — КОМПАКТНИЙ блок із ВНУТРІШНІМ скролом (як інші віджети Громади),
+   БЕЗ зайвих відступів зверху/знизу. Блок не розтягується на всі пости. */
 .cm-news-feed {
+  max-height: 420px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   gap: 10px;
-  padding: 0 4px;
+  padding: 0 2px;
 }
+/* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */
+.cm-news-feed > * { flex-shrink: 0; }
 /* Картки лишаються рідними (кремовими) — на червоному фоні блока контрастні. */
