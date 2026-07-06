@@ -3,28 +3,31 @@
 **Статус:** active
 <!-- idle=вимкнено · active=потік іде (push-замок УВІМКНЕНО) · paused=пауза (продовжити /byyou) · done=завершено -->
 
-**Ціль:** техборг навігації — прибрати мертвий код після «Шо в селі» (Н-9 частина): сегмент «Новини|Події», осиротілий рендер новин-табу, мертвий CSS.
+**Ціль:** (A) техборг навігації — прибрати мертвий код після «Шо в селі»; (B) вкладка «Чати»→«Обговорення»: лишити ЛИШЕ Обговорення, сховати Повідомлення+Групи (V2), тап одразу відкриває Обговорення, перейменувати слот.
 **Власник:** Рома · **Гілка:** roma/nav-cleanup · **Rollback-tag:** byyou-start-nav-cleanup
-**Зона:** ⚙️ Системне-інфра / Новини. Узгоджено з Ромою («зроби тех борг»).
+**Зона:** Обговорення (Рома) + Системне. ⚠️ B чіпає слот «Чати» (будував Вова) + нав-макрос що по BOARD чекав «ок» Вови — Рома вирішив свідомо (вар.2), фіксую в BOARD для Вови.
 
 ## Кроки
 | # | Крок | Стан | Коміт |
 |---|------|------|-------|
-| 1 | `news.js` — прибрати `showNewsSegment` + `window.cstlShowNewsSegment` + `.news-seg-btn` listener + осиротілі listener-и `#geo-filters`/`#news-list` у `attachNewsListeners` (лишити ТІЛЬКИ `#article-modal` share/img listener) | 🟢 | ☐ |
-| 2 | `news.js` — прибрати осиротілий рендер новин-табу: `renderGeoFilters`, `renderNews`, `setGeoFilter`, `getFiltered`, `GEO_FILTERS`, `activeGeo`; trim `initNews` (без цих викликів). **Лишити:** `newsCardsHtml`/`renderFeatured`/`renderRow`/`badgesHtml`/`ensureNewsLoaded`/`openArticle`/`handleImgError`/`geoColor`/`catColor`/`*_COLORS`/`renderArticleBody` (юзає Громада+модалка) | 🟢 | ☐ |
-| 3 | `filters.css` — прибрати `--news-seg-h`, `.news-seg`, `.news-seg-btn`, `.filters-bar`, `#news-seg-news`. **Лишити** `.chips-row`/`.chip` | 🟢 | ☐ |
-| 4 | `events.css` — прибрати мертвий `.ev-card*` кластер (картка/cover/badge/body/акордеон/`.ev-detail-close`). **Лишити** `.ev-skeleton*`+keyframes, `.ev-ics-btn`, `.shotam-*`, `.events-*`, `.cal-*` | 🟢 | ☐ |
+| 1 | `news.js` — прибрати `showNewsSegment`/`cstlShowNewsSegment`/`.news-seg-btn` + осиротілі listener-и `#geo-filters`/`#news-list` (лишити ТІЛЬКИ `#article-modal`) | 🟢 | ☐ |
+| 2 | `news.js` — прибрати осиротілий рендер новин-табу (`renderGeoFilters`/`renderNews`/`setGeoFilter`/`getFiltered`/`GEO_FILTERS`/`activeGeo`); trim `initNews`. Лишити newsCardsHtml/renderRow/renderFeatured/badgesHtml/ensureNewsLoaded/openArticle/geoColor/*_COLORS | 🟢 | ☐ |
+| 3 | `filters.css` — прибрати `--news-seg-h`/`.news-seg*`/`.filters-bar`/`#news-seg-news` (лишити `.chips-row`/`.chip`) | 🟢 | ☐ |
+| 4 | `events.css` — прибрати мертвий `.ev-card*` кластер (лишити `.ev-skeleton*`+`.ev-ics-btn`+`.shotam-*`) | 🟢 | ☐ |
 | 5 | `news.css` — прибрати осиротілий `.news-list` | 🟢 | ☐ |
-| 6 | CACHE bump + `node build.js` + браузер-смоук (Громада новини + «Шо в селі» стрічка+модалка не зламані) + реліз-нотатки → брама деплою | 🟡 | ☐ |
+| 6 | **B:** `board.js`/`app.js` — виставити `window.cstlOpenDiscussions = openDiscussions` | 🟢 | ☐ |
+| 7 | **B:** `index.html` — таб-бар слот «Чати»→«Обговорення» (лейбл + `onclick` відкриває Обговорення напряму); у `#page-chats` сховати кнопки Повідомлення+Групи (код лишити, V2) | 🟢 | ☐ |
+| 8 | CACHE bump + `node build.js` + браузер-смоук (Громада-новини + «Шо в селі»+модалка + тап «Обговорення»→overlay + Дошка не зламані) + реліз-нотатки → брама деплою | 🟡 | ☐ |
+| — | BOARD: зафіксувати що нав-макрос «Чати→Обговорення» застосовано рішенням Роми (для видимості Вови) | 🟢 | ☐ |
 
 ## Оцінка обсягу
-~6 кроків (src + css), з браузер-смоуком ≈ 20-25% вікна. Розбивати не треба.
+~8 кроків (src+css+html), з браузер-смоуком ≈ 25-30% вікна. Розбивати не треба.
 
 ## Ризик і як ловимо
-Ризик — випадково прибрати живе (Громада-новини/модалка/«Шо в селі» юзають частину news.css/events.css/news.js). Ловимо: `node build.js` (check-imports) + браузер-смоук по Громаді+«Шо в селі»+модалці ПЕРЕД деплоєм.
+Прибрати живе (Громада/модалка/«Шо в селі»/Дошка юзають частину коду) + зламати overlay Обговорень. Ловимо: `node build.js` + браузер-смоук по Громаді+«Шо в селі»+модалці+тапу Обговорень+Дошці ПЕРЕД деплоєм.
 
 ## Де зупинились
-Гілка `roma/nav-cleanup` від main. Кодом ще нічого — чекаю «ок» на брамі старту.
+Гілка `roma/nav-cleanup` від main. Рішення Роми: вар.2 (перейменувати «Чати»→«Обговорення», тап одразу відкриває). Стартую крок 1.
 
 ## Реліз-нотатки
 - ЩО ЗМІНИЛОСЬ:
@@ -32,4 +35,4 @@
 - ЩО ПЕРЕВІРИТИ:
 
 ## Історія
-- ✅ 06.07: «Шо в селі» + фікс сміття (#211) · стартові скіли (#212). Деталі → SESSION_STATE_ROMA.
+- ✅ 06.07: «Шо в селі» + фікс сміття (#211) · стартові скіли (#212).
