@@ -52,35 +52,18 @@
       <div id="cm-content" class="cm-content"></div>
     </div>
 
-    <!-- Вкладка: Новини (містить 2 підрозділи: Новини | Події) -->
-    <div id="page-news" class="page" style="display:none">
-      <!-- Сегмент-перемикач (фіксований під шапкою) -->
-      <div class="news-seg">
-        <button class="news-seg-btn active" type="button" data-news-seg="news">📰 Новини</button>
-        <button class="news-seg-btn" type="button" data-news-seg="events">📅 Події</button>
+    <!-- Вкладка: «Шо в селі» (стрічка подій + свят громади).
+         Раніше слот «Новини»: сегмент новин прибрано (новини живуть окремим
+         блоком у вкладці Громада), лишилась стрічка подій — перевдягнена у
+         news-стиль картки + модалка повного прочитання (рендерить events.js).
+         Внутрішні id #events-* лишено (events.js на них тримається). -->
+    <div id="page-shotam" class="page" style="display:none">
+      <div class="events-filters-bar">
+        <div id="events-calendar" class="events-calendar"></div>
+        <div id="events-filters" class="chips-row"></div>
       </div>
-
-      <!-- Підрозділ: Новини -->
-      <div id="news-seg-news" class="news-seg-pane">
-        <div class="filters-bar">
-          <div id="geo-filters" class="chips-row"></div>
-        </div>
-        <div id="news-list" class="news-list"></div>
-      </div>
-
-      <!-- Підрозділ: Події (перенесено сюди зі старої вкладки «Події») -->
-      <div id="news-seg-events" class="news-seg-pane" style="display:none">
-        <div class="events-filters-bar">
-          <div id="events-calendar" class="events-calendar"></div>
-          <div id="events-filters" class="chips-row"></div>
-        </div>
-        <div id="events-list" class="events-list"></div>
-      </div>
+      <div id="events-list" class="events-list"></div>
     </div>
-
-    <!-- Стара вкладка «Події» — спорожнена; контент переїхав у «Новини».
-         div лишаємо щоб switchTab('events') не падав (перенаправляється у news). -->
-    <div id="page-events" class="page" style="display:none"></div>
 
     <!-- Вкладка: Автобуси -->
     <div id="page-buses" class="page" style="display:none">
@@ -199,12 +182,12 @@
       <span class="tab-label">Світло</span>
     </button>
     -->
-    <button class="tab-item" data-tab="news" onclick="switchTab('news')">
+    <button class="tab-item" data-tab="shotam" onclick="switchTab('shotam')">
       <svg class="tab-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v14a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-7"/>
         <path d="M10 8h8M10 12h6M10 16h4"/>
       </svg>
-      <span class="tab-label">Новини</span>
+      <span class="tab-label">Шо в селі</span>
     </button>
   </nav>
 

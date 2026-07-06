@@ -153,7 +153,7 @@ function renderSkeleton() {
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Найближча подія громади</h3>
-        <button class="cm-block-link" data-switch-tab="events">Афіша →</button>
+        <button class="cm-block-link" data-switch-tab="shotam">Афіша →</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
