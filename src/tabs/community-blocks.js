@@ -8,7 +8,7 @@
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
-import { setBoardActiveType, openDiscussions } from './board.js';
+import { setBoardActiveType } from './board.js';
 import {
   nowMinutes,
   getStopMins as scheduleGetStopMins,
@@ -525,7 +525,7 @@ function renderBoardMiniSlide(el) {
     const content = wrap.querySelector('.cm-board-mini-content');
     if (content) {
       content.addEventListener('click', () => {
-        if (cfg.id === 'chat') { openDiscussions(); return; }
+        if (cfg.id === 'chat') { if (typeof window.switchTab === 'function') window.switchTab('discussions'); return; }
         setBoardActiveType(cfg.id);
         if (typeof window.switchTab === 'function') window.switchTab('board');
       });

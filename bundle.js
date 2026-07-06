@@ -4247,7 +4247,7 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    el.querySelector("[data-bd-back]")?.addEventListener("click", () => closeDiscussions());
+    el.querySelector("[data-bd-back]")?.addEventListener("click", () => window.switchTab("community"));
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
@@ -4781,11 +4781,6 @@ ${post.text}
     return discOpen ? document.getElementById("disc-content") : document.getElementById("board-content");
   }
   function openDiscussions() {
-    const screen = document.getElementById("page-discussions");
-    if (!screen)
-      return;
-    if (typeof window.switchTab === "function")
-      window.switchTab("chats");
     const boardEl = document.getElementById("board-content");
     if (boardEl)
       boardEl.innerHTML = "";
@@ -4793,40 +4788,26 @@ ${post.text}
     activeType = "chat";
     activeCategory = "all";
     searchQuery = "";
-    screen.hidden = false;
-    void screen.offsetWidth;
-    screen.classList.add("visible");
-    document.body.classList.add("disc-open");
     if (allPosts && allPosts.length)
       renderAll();
     else
       renderBoard();
   }
   function closeDiscussions() {
-    const screen = document.getElementById("page-discussions");
     discOpen = false;
     activeType = "board";
     activeCategory = "all";
     searchQuery = "";
-    document.body.classList.remove("disc-open");
-    if (screen) {
-      screen.classList.remove("visible");
-      setTimeout(() => {
-        if (discOpen)
-          return;
-        screen.hidden = true;
-        const c = document.getElementById("disc-content");
-        if (c)
-          c.innerHTML = "";
-      }, 280);
-    }
+    const c = document.getElementById("disc-content");
+    if (c)
+      c.innerHTML = "";
     renderAll();
   }
   function setBoardActiveType(type) {
     if (!type)
       return;
     if (type === "chat") {
-      openDiscussions();
+      window.switchTab("discussions");
       return;
     }
     activeType = type;
@@ -4845,7 +4826,10 @@ ${post.text}
     });
     window.addEventListener("cstl-posts-changed", () => renderBoard());
     window.addEventListener("cstl-tab-changed", () => {
-      if (discOpen)
+      const tab = document.querySelector(".app-main")?.dataset.tab;
+      if (tab === "discussions" && !discOpen)
+        openDiscussions();
+      else if (tab !== "discussions" && discOpen)
         closeDiscussions();
     });
     onAuthChange(() => {
@@ -7428,7 +7412,8 @@ ${post.text}
       if (content) {
         content.addEventListener("click", () => {
           if (cfg.id === "chat") {
-            openDiscussions();
+            if (typeof window.switchTab === "function")
+              window.switchTab("discussions");
             return;
           }
           setBoardActiveType(cfg.id);
@@ -9162,7 +9147,6 @@ END:VEVENT`
 
   // src/app.js
   var currentTab = "community";
-  window.cstlOpenDiscussions = openDiscussions;
   window.switchTab = function(tab) {
     if (tab === "news" || tab === "events")
       tab = "shotam";
@@ -9323,7 +9307,7 @@ END:VEVENT`
       if (k === "messages")
         openThreadsList();
       else if (k === "discussions")
-        openDiscussions();
+        window.switchTab("discussions");
       else if (k === "groups")
         openGroupsList();
     });

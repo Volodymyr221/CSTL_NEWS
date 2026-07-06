@@ -5,7 +5,7 @@ import { initNews } from './tabs/news.js';
 import { initEvents } from './tabs/events.js';
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
-import { initBoard, openDiscussions } from './tabs/board.js';
+import { initBoard } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
@@ -13,11 +13,6 @@ import { initBoardChat, openThreadsList } from './tabs/board-chat.js';
 
 // Поточна активна вкладка
 let currentTab = 'community';
-
-// Тап по слоту «Обговорення» у таб-барі відкриває overlay Обговорень напряму
-// (openDiscussions сам робить switchTab('chats')). Повідомлення/Групи приховані
-// до V2 — код лишається, але єдиний видимий вхід у «Чати» = Обговорення.
-window.cstlOpenDiscussions = openDiscussions;
 
 // Переключення між вкладками з плавною анімацією
 window.switchTab = function(tab) {
@@ -183,7 +178,7 @@ function initChatsHub() {
     if (!btn) return;
     const k = btn.dataset.chats;
     if (k === 'messages')        openThreadsList();
-    else if (k === 'discussions') openDiscussions();   // повноекранний overlay поверх «Чатів»
+    else if (k === 'discussions') window.switchTab('discussions');   // Обговорення = справжня вкладка
     else if (k === 'groups')      openGroupsList();
   });
 }

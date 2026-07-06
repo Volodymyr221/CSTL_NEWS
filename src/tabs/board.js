@@ -1255,8 +1255,8 @@ function renderAll() {
     renderAll(el);
   });
 
-  // «← Назад» з overlay «Обговорення» → закрити overlay (повертаємось на вкладку «Чати»)
-  el.querySelector('[data-bd-back]')?.addEventListener('click', () => closeDiscussions());
+  // «← Назад» з Обговорень → на головну (Громада). switchTab закриє через cstl-tab-changed.
+  el.querySelector('[data-bd-back]')?.addEventListener('click', () => window.switchTab('community'));
 
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {
@@ -1810,47 +1810,32 @@ function getBoardRoot() {
     : document.getElementById('board-content');
 }
 
+// Обговорення тепер СПРАВЖНЯ сторінка (#page-discussions .page) — її показує/ховає
+// window.switchTab('discussions'). Ці дві функції лише РЕНДЕРЯТЬ контент у потрібний
+// корінь; викликаються слухачем cstl-tab-changed при вході/виході на вкладку.
+// (Повне розчеплення стану/id від Дошки — Потік 2.)
 export function openDiscussions() {
-  const screen = document.getElementById('page-discussions');
-  if (!screen) return;
-  // Таб-бар має показувати «Чати»: якщо зайшли не з Чатів (напр. CTA з Громади) —
-  // перемикаємось на Чати ДО відкриття overlay. discOpen ще false → слухач
-  // cstl-tab-changed не закриє overlay.
-  if (typeof window.switchTab === 'function') window.switchTab('chats');
-  // Прибрати контент сторінки Дошки, поки overlay активний (інакше дублі id).
+  // Прибрати контент Дошки, поки активні Обговорення (спільні id #board-* — Потік 2).
   const boardEl = document.getElementById('board-content');
   if (boardEl) boardEl.innerHTML = '';
   discOpen = true;
   activeType = 'chat';
   activeCategory = 'all';
   searchQuery = '';
-  screen.hidden = false;
-  void screen.offsetWidth;            // reflow → transition hidden→visible спрацює
-  screen.classList.add('visible');
-  document.body.classList.add('disc-open');
   // Дані вже в пам'яті (initBoard→renderBoard при старті) — рендеримо миттєво.
   if (allPosts && allPosts.length) renderAll();
   else renderBoard();
 }
 
 export function closeDiscussions() {
-  const screen = document.getElementById('page-discussions');
   discOpen = false;
   activeType = 'board';
   activeCategory = 'all';
   searchQuery = '';
-  document.body.classList.remove('disc-open');
-  if (screen) {
-    screen.classList.remove('visible');
-    setTimeout(() => {
-      if (discOpen) return;            // встигли відкрити знову — не чіпаємо
-      screen.hidden = true;
-      const c = document.getElementById('disc-content');
-      if (c) c.innerHTML = '';
-    }, 280);
-  }
-  // Відновити сторінку Дошки (її контент чистили при відкритті overlay), щоб
-  // вкладка «Дошка» була готова. discOpen=false → renderAll() пише у #board-content.
+  // Очистити #disc-content (спільні id з Дошкою) СИНХРОННО, потім відновити Дошку
+  // в #board-content. Порядок важливий — жодного вікна з дубль-id (лікує F1 на закритті).
+  const c = document.getElementById('disc-content');
+  if (c) c.innerHTML = '';
   renderAll();
 }
 
@@ -1858,7 +1843,7 @@ export function closeDiscussions() {
 // type: 'all' | 'board' | 'chat' | 'greeting' | 'saved'
 export function setBoardActiveType(type) {
   if (!type) return;
-  if (type === 'chat') { openDiscussions(); return; }   // Обговорення → overlay
+  if (type === 'chat') { window.switchTab('discussions'); return; }   // Обговорення → вкладка
   activeType = type;
   activeCategory = 'all';
   searchQuery = '';
@@ -1877,11 +1862,12 @@ export function initBoard() {
   // Зміна статусу власних постів («Мої оголошення»: завершити/повернути/видалити)
   // → одразу перезавантажуємо дошку, щоб зміна була видима без перезапуску застосунку.
   window.addEventListener('cstl-posts-changed', () => renderBoard());
-  // Перемикання будь-якої вкладки → закрити overlay «Обговорення» (він належить
-  // вкладці «Чати»). openDiscussions сам викликає switchTab('chats') ДО discOpen=true,
-  // тож відкриття overlay себе не закриває.
+  // Обговорення — справжня сторінка: рендеримо її контент при ВХОДІ на вкладку
+  // і відновлюємо Дошку при ВИХОДІ (board.js поки рендерить обидві; розділ — Потік 2).
   window.addEventListener('cstl-tab-changed', () => {
-    if (discOpen) closeDiscussions();
+    const tab = document.querySelector('.app-main')?.dataset.tab;
+    if (tab === 'discussions' && !discOpen) openDiscussions();
+    else if (tab !== 'discussions' && discOpen) closeDiscussions();
   });
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
