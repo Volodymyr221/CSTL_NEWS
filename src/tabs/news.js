@@ -1,13 +1,6 @@
 import { formatTime, escapeHtml, sharePost } from '../core/utils.js';
 
 let allArticles = [];
-let activeGeo = 'Всі';
-
-// ТЗ парсерів (рішення Роми+Вови 01.07): «Україна» + «Світ» злиті в один розділ
-// «Україна та Світ». Дані лишаються з geo Україна/Світ окремо (без міграції) —
-// чіп-фільтр показує обидва разом (див. getFiltered).
-const UA_WORLD = 'Україна та Світ';
-const GEO_FILTERS = ['Всі', 'Громада', 'Волинь', UA_WORLD];
 
 // Кольори категорій — pill-бейдж на картці новини (Tier 6 — 17.05.2026)
 const CATEGORY_COLORS = {
@@ -38,62 +31,16 @@ const GEO_COLORS = {
 function catColor(c) { return CATEGORY_COLORS[c] || '#546e7a'; }
 function geoColor(g) { return GEO_COLORS[g]      || '#546e7a'; }
 
-// Перемикач підрозділів вкладки Новини: 'news' | 'events'.
-// Події переїхали сюди зі старої вкладки «Події» — рендеряться у власні id
-// (#events-*), тут лише показуємо/ховаємо відповідний підрозділ.
-export function showNewsSegment(seg) {
-  const isEvents = seg === 'events';
-  const paneNews = document.getElementById('news-seg-news');
-  const paneEv   = document.getElementById('news-seg-events');
-  if (paneNews) paneNews.style.display = isEvents ? 'none' : 'block';
-  if (paneEv)   paneEv.style.display   = isEvents ? 'block' : 'none';
-  document.querySelectorAll('.news-seg-btn').forEach(b =>
-    b.classList.toggle('active', b.dataset.newsSeg === seg));
-}
-// Доступ ззовні (напр. switchTab('events') перенаправляє сюди)
-window.cstlShowNewsSegment = showNewsSegment;
-
+// Точка входу. Стрічка новин тепер живе блоком у вкладці Громада
+// (renderCommunityNews), тому тут лише завантажуємо статті і вішаємо
+// слухач модалки статті (модалку відкриває блок Громади через openArticle).
 export async function initNews() {
-  try {
-    const res = await fetch('./data/articles.json');
-    allArticles = await res.json();
-  } catch(e) {
-    allArticles = [];
-  }
-  renderGeoFilters();
-  renderNews();
+  await ensureNewsLoaded();
   attachNewsListeners();
 }
 
-// B-15 fix: event delegation замість inline onclick (XSS hardening).
-// Один listener на батьківському контейнері ловить клік на дочірніх .chip / .news-card-*.
+// Слухач модалки статті (share + плейсхолдер битих фото).
 function attachNewsListeners() {
-  // Сегмент-перемикач Новини | Події
-  document.querySelectorAll('.news-seg-btn').forEach(btn => {
-    btn.addEventListener('click', () => showNewsSegment(btn.dataset.newsSeg));
-  });
-
-  const filters = document.getElementById('geo-filters');
-  if (filters) {
-    filters.addEventListener('click', e => {
-      const chip = e.target.closest('.chip[data-geo]');
-      if (!chip) return;
-      setGeoFilter(chip.dataset.geo);
-    });
-  }
-
-  const list = document.getElementById('news-list');
-  if (list) {
-    list.addEventListener('click', e => {
-      const card = e.target.closest('[data-article-id]');
-      if (!card) return;
-      const id = Number(card.dataset.articleId);
-      if (Number.isFinite(id)) openArticle(id);
-    });
-    // Биті зображення → плейсхолдер (error не спливає → capture=true)
-    list.addEventListener('error', handleImgError, true);
-  }
-
   // Кнопка 📤 «Поділитись» у модалці статті — Web Share API + fallback на clipboard.
   // Стратегія віральності з docs/COMMUNITY_BOARD_VISION.md.
   const modal = document.getElementById('article-modal');
@@ -122,35 +69,6 @@ function handleImgError(e) {
   ph.className = img.className + ' img-fallback';
   ph.textContent = '🏰';
   img.replaceWith(ph);
-}
-
-function renderGeoFilters() {
-  const el = document.getElementById('geo-filters');
-  if (!el) return;
-  el.innerHTML = GEO_FILTERS.map(g => `
-    <button class="chip ${g === activeGeo ? 'active' : ''}" data-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-  `).join('');
-}
-
-function getFiltered() {
-  // B-12 fix: сортуємо за ts (новіші зверху), щоб featured завжди була найсвіжіша.
-  return allArticles
-    .filter(a => {
-      if (activeGeo === 'Всі') return true;
-      // Злитий розділ: «Україна та Світ» показує обидва geo разом
-      if (activeGeo === UA_WORLD) return a.geo === 'Україна' || a.geo === 'Світ';
-      // «Громада» показує і нову назву, і стару «Олика» (сумісність під час переходу)
-      if (activeGeo === 'Громада') return a.geo === 'Громада' || a.geo === 'Олика';
-      return a.geo === activeGeo;
-    })
-    .slice()
-    .sort((a, b) => (b.ts || 0) - (a.ts || 0));
-}
-
-export function renderNews() {
-  const el = document.getElementById('news-list');
-  if (!el) return;
-  el.innerHTML = newsCardsHtml(getFiltered());
 }
 
 // HTML стрічки: перша картка — featured, решта — рядки. Порожньо → плейсхолдер.
@@ -213,12 +131,6 @@ function renderRow(a) {
       </div>
     </article>
   `;
-}
-
-function setGeoFilter(geo) {
-  activeGeo = geo;
-  renderGeoFilters();
-  renderNews();
 }
 
 // Декодує HTML entities (&laquo; → «) без ризику XSS через textarea
