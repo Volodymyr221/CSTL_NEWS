@@ -91,12 +91,22 @@ export async function getProfile() {
   if (data && data.name) _profileName = data.name;   // кеш для currentUserName()
   return data;
 }
-export async function saveProfile({ name, birth_date }) {
+// Приймає будь-які поля анкети. Стійкий до відсутніх колонок: якщо міграція
+// розширених полів ще не застосована — зберігає хоча б ім'я+дату (fallback).
+const PROFILE_FIELDS = ['name', 'birth_date', 'surname', 'phone', 'settlement', 'street', 'bio', 'avatar_url'];
+export async function saveProfile(fields = {}) {
   const supa = getSupabase();
   if (!supa || !_user) return { ok: false, error: 'не залогінено' };
-  const row = { uid: _user.id, name: name || null, email: _user.email || null, birth_date: birth_date || null };
-  const { error } = await supa.from('profiles').upsert(row, { onConflict: 'uid' });
+  const row = { uid: _user.id, email: _user.email || null };
+  for (const k of PROFILE_FIELDS) if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
+  let { error } = await supa.from('profiles').upsert(row, { onConflict: 'uid' });
+  if (error && /column|schema/i.test(error.message)) {
+    // Розширені колонки ще не додані — зберігаємо базове, щоб ім'я не губилось.
+    const core = { uid: _user.id, email: _user.email || null,
+                   name: row.name ?? null, birth_date: row.birth_date ?? null };
+    ({ error } = await supa.from('profiles').upsert(core, { onConflict: 'uid' }));
+  }
   if (error) return { ok: false, error: error.message };
-  if (name) _profileName = name;   // кеш для currentUserName()
+  if (row.name) _profileName = row.name;   // кеш для currentUserName()
   return { ok: true };
 }
