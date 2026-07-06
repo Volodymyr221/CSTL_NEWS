@@ -8,6 +8,7 @@
 //   → Світло → Автобус → Подія громади → Контакти.
 
 import { escapeHtml, attachSwipe } from '../core/utils.js';
+import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   renderWeatherBlock,
   renderPowerBlock,
@@ -75,10 +76,24 @@ function startHeroRotator() {
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h >= 5  && h < 11) return { text: 'Добрий ранок, громадо!', sub: 'Ось що головне у нас сьогодні' };
-  if (h >= 11 && h < 17) return { text: 'Добридень, громадо!',    sub: 'Ось що головне у нас сьогодні' };
-  if (h >= 17 && h < 22) return { text: 'Добрий вечір, громадо!', sub: 'Що цікавого було сьогодні' };
-  return { text: 'Доброї ночі, громадо!', sub: 'Громада спить — ось добірка' };
+  let hello, sub;
+  if (h >= 5  && h < 11)      { hello = 'Добрий ранок'; sub = 'Ось що головне у нас сьогодні'; }
+  else if (h >= 11 && h < 17) { hello = 'Добридень';    sub = 'Ось що головне у нас сьогодні'; }
+  else if (h >= 17 && h < 22) { hello = 'Добрий вечір'; sub = 'Що цікавого було сьогодні'; }
+  else                        { hello = 'Доброї ночі';  sub = 'Громада спить — ось добірка'; }
+  // Персоналізація: якщо юзер вписав ім'я в особистому кабінеті — вітаємо по імені.
+  let who = 'громадо';
+  if (isLoggedIn()) {
+    const name = (currentUserName() || '').trim().split(/\s+/)[0];
+    if (name && name !== 'Житель') who = name;
+  }
+  return { text: `${hello}, ${who}!`, sub };
+}
+
+// Оновити вітання наживо, коли профіль/ім'я підвантажились (onAuthChange).
+function updateGreetingName() {
+  const el = document.querySelector('.cm-greeting-text');
+  if (el) el.textContent = getGreeting().text;
 }
 
 function formatTodayHeader() {
@@ -116,6 +131,7 @@ function renderSkeleton() {
         ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? ' active' : ''}"></span>`).join('')}
       </div>
     </section>
+    <div class="cm-hero-spacer"></div>
 
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
@@ -179,10 +195,14 @@ function renderSkeleton() {
 
 // ── Точка входу ──────────────────────────────────────────────────────────────
 
+let _greetingWired = false;
 export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   startHeroRotator();
+  // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
+  if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
+  updateGreetingName();
   // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
   renderWeatherBlock();
   // renderPowerBlock(); — Світло приховано (16.05.2026, не актуально)
