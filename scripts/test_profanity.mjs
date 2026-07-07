@@ -17,6 +17,8 @@ const BLOCK = [
   // трансліт
   'pishov nahyi', 'blyat', 'pidor', 'pidoras', 'mudak', 'huylo', 'dolboeb',
   'nahui idi', 'pohuy',
+  // форми 'еб' (стем звужено до довших — ці мають далі ловитись)
+  'ебало завали', 'ебан якийсь', 'ебать як довго', 'ебуть і не морщаться', 'ебнутий на всю',
 ];
 
 // НЕ має блокувати (false) — легальні слова
@@ -33,6 +35,8 @@ const PASS = [
   'this hit the target', 'rapid order please', 'grass field', 'pass the ball',
   'analysis report', 'bassoon music', 'hello world', 'great job everyone',
   'assessment done', 'passport ready',
+  // e+b слова: гомогліфи (e→е, b→б) робили «ебоок/ебау…» → хибне блокування стемом 'еб'
+  'ebook reader', 'ebay auction', 'ebola virus', 'ebony wood', 'read an ebook',
 ];
 
 let fails = 0;
