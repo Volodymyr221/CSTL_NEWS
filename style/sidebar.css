@@ -108,6 +108,9 @@
   transition: background 0.15s ease;
 }
 .sidebar-item:active { background: rgba(114, 47, 55, 0.10); }
+/* Атрибут hidden мусить перемагати display:flex — інакше «Кабінет» (team-only, схований
+   через btn.hidden поки isTeamMember()=false) видно всім користувачам. */
+.sidebar-item[hidden] { display: none; }
 .sidebar-item-icon { font-size: 19px; width: 24px; text-align: center; flex-shrink: 0; }
 /* «Кабінет» — акцентний (командний вхід) */
 .sidebar-item[data-nav="cabinet"] {

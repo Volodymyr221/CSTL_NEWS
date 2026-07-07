@@ -694,11 +694,24 @@
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
-  height: 340px;
+  height: 430px;             /* більша картинка (фінальний полиш обоїв 07.07) */
   overflow: hidden;
   z-index: 0;                 /* позаду контенту (блоки — z-index:1) */
   background: var(--paper-deep);
+  transition: filter 0.3s ease;
 }
+/* Низ картинки м'яко переходить у бежевий (колір сторінки) — без різкого краю. */
+.cm-hero::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 90px;
+  background: linear-gradient(to bottom, transparent, var(--paper));
+  z-index: 3;
+  pointer-events: none;
+}
+/* Легкий блюр фону при скролі (контент «наїжджає» — картинка стає фоновою). */
+.cm-hero.cm-blur { filter: blur(4px); }
 /* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою. */
 .cm-hero-spacer { height: 250px; }
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
@@ -724,9 +737,10 @@
   display: flex;
   flex-direction: column;
   justify-content: flex-end;
-  padding: 16px 18px 18px;
-  /* Затемнення зверху (під вітання) і знизу (під «Олика») для читабельності. */
-  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 26%, transparent 52%, rgba(0,0,0,0.62) 100%);
+  /* «Олика»+підпис піднято над бежевим низом (щоб не тонули у бежевому переході). */
+  padding: 16px 18px 104px;
+  /* Затемнення зверху (під вітання) і смуга під «Олика»; низ прозорий — там бежевий перехід. */
+  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 24%, transparent 50%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.12) 82%, transparent 90%);
   color: white;
   z-index: 3;
   pointer-events: none;
@@ -748,7 +762,7 @@
 /* Точки-індикатори праворуч знизу */
 .cm-hero-dots {
   position: absolute;
-  bottom: 12px;
+  bottom: 106px;
   right: 16px;
   display: flex;
   gap: 6px;
