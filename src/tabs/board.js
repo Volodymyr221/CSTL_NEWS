@@ -16,6 +16,7 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeReactions, subscribeComments,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
+  submitPost, submitDiscussion,
 } from '../core/supabase.js';
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
@@ -450,9 +451,100 @@ let _chatDividerTs = 0;          // час останнього перегляд
 let _chatUnseen = 0;             // лічильник нових поки користувач не біля низу
 function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
+// ── ОБГОВОРЕННЯ: створення + кімнати «Мої» / «Збережені» (окремий FAB) ─────────
+
+// Легкий bottom-sheet для дій Обговорень. Повну стандартизацію модалок винесено
+// в окремий потік — тут мінімальний власний шелл.
+function openDiscSheet(opts) {
+  const backdrop = document.createElement('div');
+  backdrop.className = 'board-backdrop disc-sheet-backdrop';
+  const sheet = document.createElement('div');
+  sheet.className = 'disc-sheet';
+  sheet.innerHTML = `
+    <div class="disc-sheet-handle"></div>
+    <header class="disc-sheet-head">
+      <div class="disc-sheet-title">${escapeHtml(opts.title)}</div>
+      <button class="disc-sheet-close" type="button" aria-label="Закрити">✕</button>
+    </header>
+    <div class="disc-sheet-body">${opts.bodyHtml}</div>`;
+  const close = () => { sheet.remove(); backdrop.remove(); document.body.classList.remove('modal-open'); };
+  backdrop.addEventListener('click', close);
+  sheet.querySelector('.disc-sheet-close')?.addEventListener('click', close);
+  document.body.appendChild(backdrop);
+  document.body.appendChild(sheet);
+  document.body.classList.add('modal-open');
+  if (opts.onMount) opts.onMount(sheet, close);
+  return close;
+}
+
+// Список обговорень (Мої / Збережені) — реюз renderChatCard; тап відкриває чат
+// через наявну делегацію document-рівня ([data-chat-open]).
+function openDiscussionList(title, posts) {
+  const body = posts.length
+    ? posts.map(renderChatCard).join('')
+    : '<div class="disc-sheet-empty">Поки порожньо</div>';
+  openDiscSheet({ title, bodyHtml: `<div class="disc-sheet-list">${body}</div>` });
+}
+
+function openMyDiscussions() {
+  const uid = currentUserId();
+  const mine = allPosts.filter(p => p.type === 'chat' && p.owner_uid && p.owner_uid === uid);
+  openDiscussionList('Мої обговорення', mine);
+}
+
+function openSavedDiscussions() {
+  const saved = getSavedIds();
+  const list = allPosts.filter(p => p.type === 'chat' && saved.has(p.id));
+  openDiscussionList('Збережені обговорення', list);
+}
+
+// Модалка створення обговорення → submitPost(type:'chat') → на модерацію (як оголошення).
+function openDiscussionCompose() {
+  const form = `
+    <form class="disc-compose" id="disc-compose-form">
+      <label class="disc-compose-label" for="disc-compose-topic">Тема обговорення</label>
+      <textarea id="disc-compose-topic" class="disc-compose-input" rows="3"
+                placeholder="Про що поговоримо? Напр.: Чи потрібен новий майданчик у центрі?" maxlength="300"></textarea>
+      <button type="submit" class="disc-compose-submit">Створити</button>
+      <p class="disc-compose-note">Зʼявиться одразу. Матюки/образи блокуються автоматично.</p>
+    </form>`;
+  openDiscSheet({
+    title: 'Створити обговорення',
+    bodyHtml: form,
+    onMount: (sheet, close) => {
+      const ta = sheet.querySelector('#disc-compose-topic');
+      ta?.focus();
+      sheet.querySelector('#disc-compose-form')?.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const text = (ta?.value || '').trim();
+        if (!text) { showToast('Напишіть тему обговорення', 2500); ta?.focus(); return; }
+        if (containsProfanity(text)) { showToast('🚫 Тема містить заборонені слова', 4000, 'error'); return; }
+        const btn = sheet.querySelector('.disc-compose-submit');
+        if (btn) { btn.disabled = true; btn.textContent = 'Надсилаємо…'; }
+        const payload = {
+          text,
+          author: currentUserName() || 'Житель',
+          owner_uid: currentUserId() || null,
+          tags: [],
+        };
+        if (isSupabaseReady()) {
+          const res = await submitDiscussion(payload);   // одразу published (без модерації)
+          if (!res.ok) {
+            if (btn) { btn.disabled = false; btn.textContent = 'Створити'; }
+            showToast('Помилка: ' + (res.error || 'не вдалось'), 4000, 'error');
+            return;
+          }
+        }
+        close();
+        showToast('Обговорення створено!', 3000);
+        renderBoard();   // перезавантажити стрічку — нове обговорення одразу видно
+      });
+    },
+  });
+}
+
 function openChatModal(post) {
   if (_chatModalEl) return;
-  const tagsLine = (post.tags || []).join(' ');
   // Стан модалки — ВАЖЛИВО виставити до chatMessagesHtml (воно читає _chatDividerTs)
   _chatOpenPostId = post.id;
   _chatDividerTs = getChatSeen(post.id);
@@ -471,7 +563,6 @@ function openChatModal(post) {
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
         <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${replyWord(replyCount)}</div>
-        ${tagsLine ? `<div class="bd-chat-modal-sub">${escapeHtml(tagsLine)}</div>` : ''}
       </div>
       <button class="bd-chat-modal-close" type="button" aria-label="Закрити">✕</button>
     </header>
@@ -490,11 +581,13 @@ function openChatModal(post) {
       </div>
       <button class="pm-composebar-x" type="button" id="bd-compose-x" aria-label="Скасувати">✕</button>
     </div>
+    ${isLoggedIn() ? `
     <form class="bd-chat-modal-form" data-comment-form="${post.id}">
       <input class="bd-chat-modal-input" type="text" placeholder="Написати повідомлення…"
              aria-label="Повідомлення" data-comment-input="${post.id}">
       <button class="bd-chat-modal-send" type="submit" aria-label="Надіслати">↑</button>
-    </form>
+    </form>` : `
+    <button class="bd-chat-login-cta" type="button" id="bd-chat-login">Увійдіть, щоб писати</button>`}
   `;
 
   document.body.appendChild(backdrop);
@@ -511,6 +604,9 @@ function openChatModal(post) {
   backdrop.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-back')?.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
+  // Гість бачить лише кнопку входу замість поля (читати можна, писати — після входу).
+  modal.querySelector('#bd-chat-login')?.addEventListener('click',
+    () => requireAuth('писати в обговоренні', () => {}));
   document.addEventListener('keydown', onChatEsc);
 
   // Скрол стрічки → коли користувач сам долистав до низу, ховаємо пігулку «нові»
@@ -949,31 +1045,27 @@ function renderOfficialCard(a) {
 
 // CHAT: картка-прев'ю теми обговорення. Тап по картці → повноекранна модалка-чат.
 function renderChatCard(p) {
-  const tagsHtml = (p.tags || []).length
-    ? `<div class="bd-chat-tags">${p.tags.map(t => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(' ')}</div>`
-    : '';
   const comments = getComments(p.id);
   const count = comments.length;
-  const last = count ? comments[count - 1] : null;
+  const recent = comments.slice(-2);   // два останніх повідомлення у прев'ю картки
   // Унікальні учасники чату — за іменами авторів повідомлень (анонімні «Житель» зіллються)
   const participants = new Set(comments.map(c => c.author || 'Житель')).size;
-  const lastHtml = last
-    ? `<div class="bd-chat-last">
-         <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(last.author || 'Житель')}:</span> ${escapeHtml(last.text)}</span>
-         <span class="bd-chat-last-time">${formatTime(postTime(last))}</span>
-       </div>`
+  const lastHtml = recent.length
+    ? `<div class="bd-chat-last">${recent.map(m => `
+         <div class="bd-chat-last-row">
+           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || 'Житель')}:</span> ${escapeHtml(m.text)}</span>
+           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
+         </div>`).join('')}</div>`
     : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
-        <span class="bd-chat-topic-icon">💭</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      ${tagsHtml}
       <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">👥 ${participants} ${partWord(participants)}</span>
+        <span class="bd-chat-count">👥 ${participants}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
@@ -987,6 +1079,66 @@ function renderChatCard(p) {
 function renderCard(post) {
   if (post.type === 'chat') return renderChatCard(post);
   return renderBoardCard(post);
+}
+
+// FAB — ДВІ незалежні кнопки: Дошка (оголошення) і Обговорення (свій набір дій).
+// Спільна лише speed-dial-механіка (id board-fab/board-trigger + клас .open),
+// щоб toggleFab/closeFab працювали. Розмітка/меню/іконка — різні за вкладкою.
+function renderFab() {
+  if (discOpen) {
+    // Обговорення: червоний круг з білим плюсом + своє меню.
+    return `
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="disc-create" type="button">
+          <span class="board-fab-label">Створити обговорення</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="disc-mine" type="button">
+          <span class="board-fab-label">Мої обговорення</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="disc-saved" type="button">
+          <span class="board-fab-label">Збережені</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed disc-fab-plus" id="board-trigger" type="button" aria-label="Обговорення" aria-expanded="false">
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      </button>
+    </div>`;
+  }
+  // Дошка (без змін — оголошення/мої/повідомлення/збережені).
+  return `
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">Подати оголошення</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">Мої оголошення</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="messages" type="button">
+          <span class="board-fab-label">Повідомлення<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
+          <span class="board-fab-ic">${MSG_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="saved" type="button">
+          <span class="board-fab-label">Збережені</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="cm-board-trigger-text">Подати оголошення</span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
+      </button>
+    </div>`;
 }
 
 // ── Фільтрація і пошук ───────────────────────────────────────────────────────
@@ -1168,33 +1320,7 @@ function renderAll() {
     `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
-    <div class="board-fab" id="board-fab">
-      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="post" type="button">
-          <span class="board-fab-label">Подати оголошення</span>
-          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
-        </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
-          <span class="board-fab-label">Мої оголошення</span>
-          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
-        </button>
-        <button class="board-fab-item" data-fab="messages" type="button">
-          <span class="board-fab-label">Повідомлення<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
-          <span class="board-fab-ic">${MSG_ICON_SVG}</span>
-        </button>
-        <button class="board-fab-item" data-fab="saved" type="button">
-          <span class="board-fab-label">Збережені</span>
-          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
-        </button>
-      </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-        <span class="cm-board-trigger-text">Подати оголошення</span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
-      </button>
-    </div>
+    ${renderFab()}
   `;
 
   el.style.backgroundImage = '';
@@ -1225,6 +1351,11 @@ function renderAll() {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
       closeFab();
+      // ── Дії ОБГОВОРЕНЬ (окремий FAB, лише коли discOpen) ──
+      if (act === 'disc-create') { requireAuth('створити обговорення', openDiscussionCompose); return; }
+      if (act === 'disc-mine')   { requireAuth('мої обговорення', openMyDiscussions); return; }
+      if (act === 'disc-saved')  { requireAuth('збережені обговорення', openSavedDiscussions); return; }
+      // ── Дії ДОШКИ ──
       // Усі три дії — лише для залогінених (Етап 2). Гостю requireAuth()
       // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).
       if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
