@@ -160,12 +160,17 @@ export function showToast(msg, duration = 3000, type = '') {
 // Мапа латинських гомогліфів → кирилиця (щоб «xyй» теж ловилось)
 const FILTER_HOMOGLYPHS = { a:'а', e:'е', o:'о', c:'с', x:'х', p:'р', y:'у', k:'к', i:'і', b:'б', m:'м', h:'н', t:'т' };
 
-// Нормалізація для перевірки: lowercase + гомогліфи + схлопування повторів літер
+// Leet (цифри/символи → латинські літери): обходи «сук4», «b1yat», «п1зда», «x0й».
+// '1' неоднозначна (i або l) — обробляється окремо двома варіантами в латинському проході.
+const FILTER_LEET = { '0':'o', '3':'e', '4':'a', '5':'s', '6':'g', '7':'t', '8':'b', '9':'g', '@':'a', '$':'s', '!':'i', '|':'l', '+':'t' };
+function deleet(s) { return String(s).replace(/[03456789@$!|+]/g, ch => FILTER_LEET[ch] || ch); }
+
+// Нормалізація для КИРИЛІЧНОГО проходу: lowercase + leet + '1'→i + гомогліфи + схлоп повторів.
 function normalizeForFilter(text) {
-  return String(text || '')
-    .toLowerCase()
+  return deleet(String(text || '').toLowerCase())
+    .replace(/1/g, 'i')                             // у кир-проході 1→i (далі гомогліф i→і)
     .replace(/[a-z]/g, ch => FILTER_HOMOGLYPHS[ch] || ch)
-    .replace(/(.)\1{2,}/g, '$1');   // «хуууй» → «хуй»
+    .replace(/(.)\1{2,}/g, '$1');                   // «хуууй» → «хуй»
 }
 
 // Сильні стеми — блокуємо слово якщо воно ПОЧИНАЄТЬСЯ з них.
@@ -195,32 +200,46 @@ const PROFANITY_EXACT = new Set([
   'даун', 'бовдур', 'скот',
 ]);
 // Ультра-безпечні стеми для «squashed» проходу (рознесене «х у й») — майже не трапляються всередині легальних слів
-const PROFANITY_SQUASH = ['хуй', 'хуйл', 'пизд', 'пізд', 'єбал', 'їбал', 'йоб'];
-// Трансліт латиницею — окремий прохід БЕЗ гомогліф-заміни (інакше форми ламаються).
-// Довші форми, щоб не чіпати англ. слова (без 'suk'→suck, 'manda'→mandate).
+const PROFANITY_SQUASH = ['хуй', 'хуйл', 'пизд', 'пізд', 'єбал', 'їбал', 'йоб', 'бляд', 'блят', 'мудак', 'підор', 'пидор'];
+// Трансліт латиницею + англ. — окремий прохід (leet + два варіанти '1').
+// Стеми ДОВШІ, щоб не чіпати легальні англ. слова (не 'suk'/'ass'/'dick'/'cunt' prefix).
 const PROFANITY_LATIN = [
-  'huy', 'hui', 'huil', 'huyl', 'huylo', 'huilo', 'huesos',
-  'pizd', 'pizda', 'yeban', 'ebal', 'ebat', 'blya', 'blyad', 'blyat',
-  'suka', 'suchka', 'pidor', 'pidar', 'pidoras', 'mudak',
-  'zalupa', 'gandon', 'gondon', 'dolboeb', 'mraz', 'xyu',
+  // рос/укр трансліт
+  'huy', 'hui', 'huil', 'huyl', 'huylo', 'huilo', 'huesos', 'xyu',
+  'pizd', 'pizda', 'yeban', 'ebal', 'ebat', 'zaeb', 'doeb', 'vyeb',
+  'blya', 'blyad', 'blyat', 'suka', 'suchka', 'suchara',
+  'pidor', 'pidar', 'pidoras', 'mudak', 'mudil', 'zalupa', 'gandon', 'gondon',
+  'dolboeb', 'dolbaeb', 'mraz', 'nahui', 'nahuy', 'nahyi', 'nahren',
+  'pohui', 'pohuy', 'yoban', 'yobn', 'govno', 'gavno', 'durak',
+  // англ.
+  'fuck', 'fuk', 'fuq', 'shit', 'bullshit', 'bitch', 'biatch', 'asshole',
+  'motherfuck', 'faggot', 'nigger', 'nigga', 'whore', 'wanker', 'bollock',
+  'dickhead', 'jackass', 'dumbass', 'retard', 'bastard', 'douche',
 ];
+// Для «squashed» латинського проходу (рознесене «b l y a t»): ЛИШЕ довгі транслітформи,
+// безпечні як підрядок. БЕЗ англ./коротких (інакше «this hit»→«thishit»→shit; «rapid order»→pidor).
+const PROFANITY_LATIN_SQUASH = ['blyat', 'pizda', 'nahui', 'pidoras', 'zalupa', 'dolboeb'];
 
 // true якщо текст містить матюк/образу
 export function containsProfanity(text) {
   const norm = normalizeForFilter(text);
-  // 1) по словах (кирилиця + гомогліфи)
+  // 1) по словах (кирилиця + гомогліфи + leet)
   const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
   for (const w of words) {
     if (PROFANITY_EXACT.has(w)) return true;
     if (PROFANITY_STEMS.some(s => w.startsWith(s))) return true;
   }
-  // 2) «squashed» — прибрати все крім літер, шукати ультра-безпечні стеми
+  // 2) «squashed» кирилиця — прибрати все крім літер, шукати ультра-безпечні стеми
   const squashed = norm.replace(/[^а-яіїєґa-z]/g, '');
   if (PROFANITY_SQUASH.some(s => squashed.includes(s))) return true;
-  // 3) трансліт латиницею (без гомогліф-заміни)
-  const latin = String(text || '').toLowerCase().replace(/(.)\1{2,}/g, '$1');
-  for (const w of latin.split(/[^a-z]+/).filter(Boolean)) {
-    if (PROFANITY_LATIN.some(s => w.startsWith(s))) return true;
+  // 3) трансліт латиницею + leet. '1' неоднозначна → пробуємо i та l (blyat vs b1tch).
+  const latinBase = deleet(String(text || '').toLowerCase().replace(/(.)\1{2,}/g, '$1'));
+  for (const one of ['i', 'l']) {
+    const v = latinBase.replace(/1/g, one);
+    for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
+      if (PROFANITY_LATIN.some(s => w.startsWith(s))) return true;
+    }
+    if (PROFANITY_LATIN_SQUASH.some(s => v.replace(/[^a-z]/g, '').includes(s))) return true;
   }
   return false;
 }
