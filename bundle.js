@@ -7974,10 +7974,32 @@ ${post.text}
   `;
   }
   var _greetingWired = false;
+  var _heroBlurWired = false;
+  function wireHeroBlur() {
+    if (_heroBlurWired)
+      return;
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    _heroBlurWired = true;
+    let ticking = false;
+    main.addEventListener("scroll", () => {
+      if (ticking)
+        return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const hero = document.querySelector(".cm-hero");
+        if (hero)
+          hero.classList.toggle("cm-blur", main.scrollTop > 24);
+        ticking = false;
+      });
+    }, { passive: true });
+  }
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
+    wireHeroBlur();
     if (!_greetingWired) {
       onAuthChange(updateGreetingName);
       _greetingWired = true;
