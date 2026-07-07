@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1783455527344,
+      "mission": "Громада (повтор)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10,
+      "output_tokens": 5820,
+      "cache_read": 116861,
+      "cache_write": 56842,
+      "web_searches": 6,
+      "found": 0,
+      "cost_usd": 0.3955,
+      "note": ""
+    },
+    {
+      "ts": 1783455419489,
+      "mission": "Громада",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0,
+      "note": "агент нічого не повернув"
+    },
+    {
       "ts": 1783455012225,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -80,16 +106,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 1.6379,
-    "runs": 6,
-    "web_searches": 24
+    "cost_usd": 2.0334,
+    "runs": 8,
+    "web_searches": 30
   },
   "months": {
     "2026-07": {
-      "cost_usd": 1.6379,
-      "runs": 6,
-      "web_searches": 24
+      "cost_usd": 2.0334,
+      "runs": 8,
+      "web_searches": 30
     }
   },
-  "updated_ts": 1783455012225
+  "updated_ts": 1783455527344
 }
