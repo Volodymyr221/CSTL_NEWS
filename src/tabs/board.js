@@ -455,7 +455,7 @@ function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
 // Легкий bottom-sheet для дій Обговорень. Повну стандартизацію модалок винесено
 // в окремий потік — тут мінімальний власний шелл.
-function openDiscSheet({ title, bodyHtml, onMount }) {
+function openDiscSheet(opts) {
   const backdrop = document.createElement('div');
   backdrop.className = 'board-backdrop disc-sheet-backdrop';
   const sheet = document.createElement('div');
@@ -463,17 +463,17 @@ function openDiscSheet({ title, bodyHtml, onMount }) {
   sheet.innerHTML = `
     <div class="disc-sheet-handle"></div>
     <header class="disc-sheet-head">
-      <div class="disc-sheet-title">${escapeHtml(title)}</div>
+      <div class="disc-sheet-title">${escapeHtml(opts.title)}</div>
       <button class="disc-sheet-close" type="button" aria-label="Закрити">✕</button>
     </header>
-    <div class="disc-sheet-body">${bodyHtml}</div>`;
+    <div class="disc-sheet-body">${opts.bodyHtml}</div>`;
   const close = () => { sheet.remove(); backdrop.remove(); document.body.classList.remove('modal-open'); };
   backdrop.addEventListener('click', close);
   sheet.querySelector('.disc-sheet-close')?.addEventListener('click', close);
   document.body.appendChild(backdrop);
   document.body.appendChild(sheet);
   document.body.classList.add('modal-open');
-  if (onMount) onMount(sheet, close);
+  if (opts.onMount) opts.onMount(sheet, close);
   return close;
 }
 
