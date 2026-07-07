@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1783449546389,
+      "mission": "Громада",
+      "model": "claude-sonnet-5",
+      "input_tokens": 6,
+      "output_tokens": 8983,
+      "cache_read": 45962,
+      "cache_write": 54168,
+      "web_searches": 6,
+      "found": 0,
+      "cost_usd": 0.4117,
+      "note": "агент нічого не повернув"
+    },
+    {
       "ts": 1783437410279,
       "mission": "Громада",
       "model": "claude-sonnet-5",
@@ -15,16 +28,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 0.411,
-    "runs": 1,
-    "web_searches": 6
+    "cost_usd": 0.8227,
+    "runs": 2,
+    "web_searches": 12
   },
   "months": {
     "2026-07": {
-      "cost_usd": 0.411,
-      "runs": 1,
-      "web_searches": 6
+      "cost_usd": 0.8227,
+      "runs": 2,
+      "web_searches": 12
     }
   },
-  "updated_ts": 1783437410279
+  "updated_ts": 1783449546389
 }
