@@ -30,6 +30,9 @@ import parse_rss as pr  # noqa: E402
 
 CONFIG_PATH = Path(__file__).resolve().parent / "hromada_config.json"
 QUEUE_PATH = Path("data/news_queue.json")   # чергa підготовлених статей (крапельна публікація)
+MEMORY_PATH = Path("data/hromada_memory.json")  # памʼять: про що вже писали + які джерела (щоб не повторювати)
+MEMORY_CAP = 400                             # скільки записів тримати (не роздувати файл)
+MEMORY_DIGEST = 150                          # скільки останніх заголовків показувати агенту в промпті
 MODEL = "claude-sonnet-5"            # рішення Роми: Sonnet (якісна курація)
 WEB_SEARCH_TOOL = "web_search_20250305"
 MAX_SEARCHES_PER_MISSION = 6        # обмеження веб-пошуків на місію (контроль вартості; економно під малий бюджет)
@@ -83,6 +86,53 @@ def load_queue() -> list:
 
 def save_queue(queue: list):
     QUEUE_PATH.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ── Памʼять постів/джерел (щоб не писати одне й те саме) ──────────────────────
+# МʼЯКА: агент бачить її як «вже писали — бери нові кути», а не жорсткий блок.
+# Семантичний дедуп (editor/core/dedup) — запобіжник лише на ЯВНІ повтори.
+
+def load_memory() -> dict:
+    if MEMORY_PATH.exists():
+        try:
+            return json.loads(MEMORY_PATH.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"⚠ читання hromada_memory.json: {e}")
+    return {"posts": [], "updated_ts": 0}
+
+
+def _mem_key(title: str) -> str:
+    """Стабільний ключ історії — відсортовані значущі слова заголовка (реюз токенів парсера)."""
+    return " ".join(sorted(pr.title_tokens(title or "")))
+
+
+def record_memory(article: dict):
+    """Дописує у памʼять один опублікований/зачернечений матеріал Громади (+ джерела)."""
+    mem = load_memory()
+    key = _mem_key(article.get("title", ""))
+    if not key:
+        return
+    if any(p.get("key") == key for p in mem.get("posts", [])):
+        return  # уже в памʼяті
+    srcs = list(article.get("sources") or [])
+    if article.get("sourceUrl"):
+        srcs.append(article["sourceUrl"])
+    mem.setdefault("posts", []).insert(0, {
+        "ts": int(time.time() * 1000),
+        "title": article.get("title", ""),
+        "category": article.get("category", ""),
+        "sources": srcs[:6],
+        "key": key,
+    })
+    mem["posts"] = mem["posts"][:MEMORY_CAP]
+    mem["updated_ts"] = int(time.time() * 1000)
+    MEMORY_PATH.write_text(json.dumps(mem, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def memory_digest(limit: int = MEMORY_DIGEST) -> list:
+    """Список заголовків із памʼяті для промпту (щоб агент не повторював історії)."""
+    mem = load_memory()
+    return [f"- {p.get('title','')}" for p in mem.get("posts", [])[:limit] if p.get("title")]
 
 
 # ── Лічильник витрат ──────────────────────────────────────────────────────────
@@ -202,9 +252,17 @@ def build_prompt(mission_name: str, cfg: dict, existing: list) -> str:
     seen = recent_titles_for(existing, existing_geos)
     seen_block = ("\n\nВЖЕ У СТРІЧЦІ (НЕ дублюй за змістом):\n" + "\n".join(seen)) if seen else ""
 
+    # Памʼять — персистентний лог написаного (довший за вікно стрічки). МʼЯКО: «бери нові кути».
+    mem_block = ""
+    if mission_name == "Громада":
+        md = memory_digest()
+        if md:
+            mem_block = ("\n\nПРО ЩО ВЖЕ ПИСАЛИ (памʼять — НЕ повторюй ці історії й ідеї, "
+                         "обирай НОВІ теми/кути з палітри):\n" + "\n".join(md))
+
     schema_str = json.dumps(schema, ensure_ascii=False, indent=2)
     return (
-        f"{body}{seen_block}\n\n"
+        f"{body}{seen_block}{mem_block}\n\n"
         "ПРАВИЛА ВІДПОВІДІ:\n"
         "1. Використай інструмент веб-пошуку кілька разів, щоб знайти реальні свіжі матеріали.\n"
         "2. Для КУРОВАНОЇ новини url МАЄ бути справжнім посиланням на сторінку статті у видавця "
