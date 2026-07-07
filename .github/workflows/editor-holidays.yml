@@ -1,0 +1,63 @@
+name: AI Editor — Свята (чернетки)
+
+# AI-редактор (пакет editor/) за 7 днів до свята готує статтю+фото і кладе
+# ЧЕРНЕТКУ в кабінет Алли (cms_articles status=draft). Не авто-публікація —
+# Алла переглядає й публікує. Без SUPABASE_SERVICE_ROLE_KEY sink просто пропускає.
+on:
+  schedule:
+    - cron: '30 6 * * *'      # щодня 06:30 UTC
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Вікно днів до свята (порожньо = 7 із місії)'
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "ai-editor-holidays"
+  cancel-in-progress: true
+
+jobs:
+  editor:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4.2.2
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5.6.0
+        with:
+          python-version: '3.12'
+
+      - name: Run editor (holidays → drafts)
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_URL: ${{ vars.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          ARGS=""
+          if [ -n "${{ github.event.inputs.days }}" ]; then ARGS="--days ${{ github.event.inputs.days }}"; fi
+          python -m editor.run --mission holidays $ARGS
+
+      - name: Commit spend if changed
+        run: |
+          git config user.name  "CSTL AI Editor"
+          git config user.email "ai-editor@cstl-news"
+          git add data/ai_spend.json
+          if git diff --staged --quiet; then
+            echo "Витрати без змін."
+          else
+            git commit -m "ai(editor): свята-чернетки $(date -u +'%d.%m %H:%M UTC')"
+            pushed=false
+            for i in 1 2 3 4 5; do
+              if git push origin main; then pushed=true; break; fi
+              git fetch origin main
+              git rebase origin/main || { echo "Конфлікт rebase — стоп"; exit 1; }
+              sleep 2
+            done
+            [ "$pushed" = true ] || { echo "Пуш не вдався"; exit 1; }
+          fi
