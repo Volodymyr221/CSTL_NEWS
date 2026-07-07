@@ -995,11 +995,17 @@ function renderArticleForm(el) {
     type: document.getElementById('af-type').value,
   });
   document.getElementById('af-cancel').addEventListener('click', () => { articleDraft = null; renderApp(); });
-  // Розклад: показати/сховати вибір дати-часу
-  document.querySelectorAll('input[name="af-when"]').forEach(r => r.addEventListener('change', () => {
-    const on = document.querySelector('input[name="af-when"]:checked').value === 'schedule';
+  // Розклад: показати/сховати вибір дати-часу + зробити кнопку зрозумілою.
+  // Коли обрано автопостинг — кнопка «Опублікувати» стає «Запланувати» (публікації
+  // одразу не буде, стаття піде в чергу на вказаний час).
+  const syncWhenUI = () => {
+    const on = document.querySelector('input[name="af-when"]:checked')?.value === 'schedule';
     document.getElementById('af-when-dt').style.display = on ? '' : 'none';
-  }));
+    const pubBtn = document.getElementById('af-savepub');
+    if (pubBtn) pubBtn.textContent = on ? '📅 Запланувати автопостинг' : '🚀 Зберегти й опублікувати';
+  };
+  document.querySelectorAll('input[name="af-when"]').forEach(r => r.addEventListener('change', syncWhenUI));
+  syncWhenUI();
   // Фото → Supabase Storage
   document.getElementById('af-photo').addEventListener('change', async e => {
     const file = e.target.files[0]; if (!file) return;
@@ -1012,10 +1018,13 @@ function renderArticleForm(el) {
   const doSave = async (publish) => {
     const a = read();
     if (!a.title || !a.content) { alert('Заголовок і текст обов\'язкові.'); return; }
-    // Розклад автопостингу
-    const mode = document.querySelector('input[name="af-when"]:checked')?.value;
+    // Розклад автопостингу. ВАЖЛИВО: якщо обрано «Автопостинг на дату/час» —
+    // розклад МАЄ ПРІОРИТЕТ над «опублікувати зараз». Раніше кнопка «Зберегти й
+    // опублікувати» мовчки ігнорувала розклад і публікувала одразу (status=ready) —
+    // тому заплановані статті виглядали як опубліковані. Тепер розклад завжди виграє.
+    const scheduling = document.querySelector('input[name="af-when"]:checked')?.value === 'schedule';
     const dtVal = document.getElementById('af-when-dt').value;
-    if (mode === 'schedule' && !publish) {
+    if (scheduling) {
       if (!dtVal) { alert('Оберіть дату й час автопостингу.'); return; }
       a.status = 'scheduled';
       a.publish_at = new Date(dtVal).toISOString();   // локальний час → UTC
@@ -1025,7 +1034,8 @@ function renderArticleForm(el) {
     }
     const savedId = await saveArticle(a);
     if (!savedId) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
-    if (publish) await publishArticle(savedId);   // публікуємо САМЕ збережений рядок (за id)
+    // Публікуємо одразу ЛИШЕ якщо НЕ заплановано (інакше чекаємо часу автопостингу).
+    if (publish && !scheduling) await publishArticle(savedId);
     articles = await fetchArticles();
     articleDraft = null; renderApp();
   };
