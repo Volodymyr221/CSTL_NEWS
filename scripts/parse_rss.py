@@ -19,7 +19,14 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
-import feedparser
+# feedparser потрібен ЛИШЕ для самого парсингу RSS (нижче, у fetch_feed).
+# Інші скрипти (sync_cms.py — публікатор кабінету) імпортують звідси лише чисті
+# helper'и (дедуп/ліміти) і НЕ парсять RSS — тож не змушуємо їх ставити feedparser.
+# Без стійкого імпорту публікатор падав: ModuleNotFoundError → нічого не синкалось.
+try:
+    import feedparser
+except ImportError:
+    feedparser = None
 
 # ── Конфігурація джерел ────────────────────────────────────────────────────────
 
@@ -1152,6 +1159,8 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     except Exception as e:
         raise ValueError(f"Помилка завантаження: {e}")
 
+    if feedparser is None:
+        raise ValueError("feedparser не встановлено (потрібен для парсингу RSS: pip install feedparser)")
     try:
         feed = feedparser.parse(raw, response_headers=response_headers)
     except Exception as e:
