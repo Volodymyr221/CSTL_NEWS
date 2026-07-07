@@ -9,6 +9,7 @@ import { initBoard } from './tabs/board.js';
 import { initAuth } from './core/auth.js';
 import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
+import { initConsent } from './core/consent.js';
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
 import { initBoardChat, openThreadsList } from './tabs/board-chat.js';
 
@@ -199,6 +200,7 @@ function init() {
   initAuth();   // Фаза Б: відновити сесію входу (гість → no-op). Гейтинг ще вимкнено.
   initAccountUI();   // Фаза Б: іконка 👤 в шапці + екрани входу/Кабінету
   initSidebar();     // Бічне меню (бургер зліва) + «Кабінет» лише для команди
+  initConsent();     // Банер згоди з Політикою/Правилами (перший вхід)
   initMessages();    // Групи (V2 Чати): доведення відкладеного вступу за посиланням
   initBoardChat();   // Приватний чат Дошки: бейдж непрочитаних + push-пристрій + realtime
   initModalSwipe();

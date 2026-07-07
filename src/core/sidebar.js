@@ -5,6 +5,7 @@
 
 import { isTeamMember } from './supabase.js';
 import { onAuthChange } from './auth.js';
+import { LEGAL_DOC_HTML } from './legal.js';
 
 // Пункти меню. kind: 'tab' → switchTab; 'action' → своя дія; 'info' → модалка.
 const NAV = [
@@ -33,12 +34,8 @@ const INFO = {
   },
   policy: {
     title: 'Політика і приватність',
-    body: 'CSTL LIFE поважає вашу приватність.<br><br>' +
-          '• Ми не продаємо ваші дані.<br>' +
-          '• Персональні дані (профіль, повідомлення) зберігаються лише для роботи додатку.<br>' +
-          '• Геолокація використовується тільки для погоди й найближчих зупинок, на вашому пристрої.<br>' +
-          '• Вміст, який ви публікуєте на Дошці, бачать інші жителі громади.<br><br>' +
-          'Питання — через «Підтримка».',
+    doc: true,                 // повний правовий документ → вищий scrollable-лист
+    body: LEGAL_DOC_HTML,
   },
 };
 
@@ -125,7 +122,7 @@ function openInfoModal(key) {
   const ov = document.createElement('div');
   ov.className = 'sidebar-info-modal';
   ov.innerHTML = `
-    <div class="sidebar-info-sheet" role="dialog" aria-label="${data.title}">
+    <div class="sidebar-info-sheet${data.doc ? ' sidebar-info-sheet--doc' : ''}" role="dialog" aria-label="${data.title}">
       <div class="sidebar-info-head">
         <h2>${data.title}</h2>
         <button class="sidebar-info-close" type="button" aria-label="Закрити">✕</button>
@@ -159,4 +156,6 @@ export function initSidebar() {
   // Оновлюємо видимість «Кабінет» при вход/вихід.
   onAuthChange(() => refreshCabinet());
   refreshCabinet();
+  // Банер згоди / інші місця можуть відкрити правовий документ подією.
+  document.addEventListener('cstl-open-legal', () => openInfoModal('policy'));
 }
