@@ -184,7 +184,7 @@ function renderSkeleton() {
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
-    <section class="cm-block cm-block--contacts">
+    <section id="cm-contacts" class="cm-block cm-block--contacts">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Корисні контакти</h3>
       </header>

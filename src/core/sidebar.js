@@ -18,7 +18,7 @@ const NAV = [
   { id: 'board',       label: 'Дошка',        icon: '📌', kind: 'tab', tab: 'board' },
   { id: 'discussions', label: 'Обговорення',  icon: '💬', kind: 'tab', tab: 'discussions' },
   { id: 'buses',       label: 'Автобуси',     icon: '🚌', kind: 'tab', tab: 'buses' },
-  { id: 'contacts',    label: 'Контакти',     icon: '📞', kind: 'tab', tab: 'community' },
+  { id: 'contacts',    label: 'Корисні контакти', icon: '📞', kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
   { divider: true },
   { id: 'support', label: 'Підтримка',            icon: '❔', kind: 'info' },
   { id: 'policy',  label: 'Політика і приватність', icon: '🔒', kind: 'info' },
