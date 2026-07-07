@@ -1,6 +1,84 @@
 {
   "runs": [
     {
+      "ts": 1783466861594,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10991,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0332,
+      "note": ""
+    },
+    {
+      "ts": 1783466859227,
+      "mission": "Громада №3",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 7313,
+      "cache_read": 75598,
+      "cache_write": 57021,
+      "web_searches": 6,
+      "found": 3,
+      "cost_usd": 0.4062,
+      "note": ""
+    },
+    {
+      "ts": 1783466745311,
+      "mission": "Громада №2 (повтор)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10,
+      "output_tokens": 10222,
+      "cache_read": 125031,
+      "cache_write": 62622,
+      "web_searches": 6,
+      "found": 3,
+      "cost_usd": 0.4857,
+      "note": ""
+    },
+    {
+      "ts": 1783466588665,
+      "mission": "Громада №2",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0,
+      "note": "агент нічого не повернув"
+    },
+    {
+      "ts": 1783466407546,
+      "mission": "Громада №1 (повтор)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10,
+      "output_tokens": 7260,
+      "cache_read": 120858,
+      "cache_write": 56597,
+      "web_searches": 6,
+      "found": 3,
+      "cost_usd": 0.4174,
+      "note": ""
+    },
+    {
+      "ts": 1783466290462,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 0,
+      "output_tokens": 0,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0,
+      "note": "агент нічого не повернув"
+    },
+    {
       "ts": 1783455527344,
       "mission": "Громада (повтор)",
       "model": "claude-sonnet-5",
@@ -106,16 +184,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 2.0334,
-    "runs": 8,
-    "web_searches": 30
+    "cost_usd": 3.3759,
+    "runs": 14,
+    "web_searches": 48
   },
   "months": {
     "2026-07": {
-      "cost_usd": 2.0334,
-      "runs": 8,
-      "web_searches": 30
+      "cost_usd": 3.3759,
+      "runs": 14,
+      "web_searches": 48
     }
   },
-  "updated_ts": 1783455527344
+  "updated_ts": 1783466861594
 }
