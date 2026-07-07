@@ -646,14 +646,8 @@ def main():
 
     cfg = load_config()
     existing = load_existing()
-    queue = load_queue()
-    # для дедупу агент має бачити і опубліковане, і те що вже чекає в черзі
-    seen_pool = existing + queue
-    # ГАРД: черга вже повна → не палити дорогий API (і веб-пошуки) даремно.
-    # Публікатор крапає з черги окремо; наповнювати переповнену немає сенсу.
-    if not args.dry_run and len(queue) >= QUEUE_MAX_SIZE:
-        print(f"✓ черга повна ({len(queue)}/{QUEUE_MAX_SIZE}) — пропускаю виклик API (економія)")
-        return
+    # для дедупу в промпті агент бачить опубліковане (памʼять інжектиться окремо в build_prompt)
+    seen_pool = existing
     # active_missions — які місії реально ганяємо (Волинь/Україна-Світ вимкнено: їх дає RSS).
     # --mission перекриває. Fallback (нема ключа в конфізі) — усі, як було.
     missions = [args.mission] if args.mission else (cfg.get("active_missions") or list(cfg["missions"].keys()))
