@@ -53,12 +53,13 @@ API_URL = "https://api.anthropic.com/v1/messages"
 # Скільки оригінальних матеріалів просимо в агента за прогін Громади.
 TARGET_PER_MISSION = {"Громада": 10, "Волинь": 8, "Україна та світ": 10}
 MAX_DRAFTS_TOTAL = 10     # тримати ~10 готових чернеток у кабінеті НАПЕРЕД (Алла публікує → агент домалує)
+BATCH_MAX = 4             # статей за ОДИН виклик: 10 разом модель не тягне (з 10 виходило 3) — пишемо пакетами
 SUPA_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supabase.co").rstrip("/")
 
 # ── ЗАПОБІЖНИК ВИТРАТ (circuit breaker — аварійний вимикач) ───────────────────
 # Захист від зациклення/пропалу токенів: агент рахує $ на льоту й спиняється,
 # щойно прогін або місяць перетнув стелю. Стелі можна перекрити через env.
-MAX_RUN_COST_USD = float(os.environ.get("AI_MAX_RUN_USD", "0.60"))     # стеля на ОДИН прогін (усі місії + повтори)
+MAX_RUN_COST_USD = float(os.environ.get("AI_MAX_RUN_USD", "1.20"))     # стеля на ОДИН прогін: вистачає на ~3 пакети (повне наповнення до 10); типовий долив = 1 пакет ≈ $0.3
 MAX_MONTH_COST_USD = float(os.environ.get("AI_MAX_MONTH_USD", "15.0")) # стеля на МІСЯЦЬ (сума всіх прогонів; захист крону)
 
 # ── Лічильник витрат AI (Фаза 0 оптимізації) ──────────────────────────────────
@@ -733,42 +734,54 @@ def main():
         if name not in cfg["missions"]:
             print(f"⚠ невідома місія: {name}")
             continue
-        # Блокер: перед КОЖНОЮ місією перевіряємо стелю прогону — не даємо палити далі.
-        if not args.dry_run and run_cost >= MAX_RUN_COST_USD:
-            print(f"⛔ стеля прогону ${MAX_RUN_COST_USD} досягнута (вже ${round(run_cost,4)}) — решту місій пропущено")
-            break
-        prompt = build_prompt(name, cfg, seen_pool, target=slots)
         if args.dry_run:
-            print(f"\n===== ПРОМПТ [{name}] =====\n{prompt}\n")
+            prompt = build_prompt(name, cfg, seen_pool, target=min(BATCH_MAX, slots))
+            print(f"\n===== ПРОМПТ [{name}] (пакет ≤{BATCH_MAX}) =====\n{prompt}\n")
             continue
-        print(f"→ місія {name}: пошук…")
-        raw, usage = call_agent(prompt)
-        items = extract_json_array(raw)
-        arts = [x for x in (item_to_article(i) for i in items) if x]
-        print(f"  {name}: знайдено {len(items)}, валідних {len(arts)}")
-        run_cost += record_spend(name, usage, len(arts), note=("" if raw else "агент нічого не повернув")) or 0
 
-        # САМО-РЕМОНТ: якщо 0 валідних — переписуємо запит інакше (менше + коротше +
-        # суворий JSON) і пробуємо ще раз. Часта причина 0 — обрізаний великий JSON.
-        # РІВНО ОДНА спроба + гейт стелею прогону — щоб не зациклитись і не спалити токени.
-        if not arts and run_cost < MAX_RUN_COST_USD:
-            print(f"  ↻ 0 валідних — переписую запит (менше статей, коротше, суворий JSON) і повторюю (1 раз)…")
-            retry_prompt = build_prompt(name, cfg, seen_pool, target=3) + (
-                "\n\n⚠️ ПОВТОР: попередня відповідь була невалідна/обрізана. Тепер:\n"
-                "• поверни РІВНО валідний JSON-масив (починається '[' і закінчується ']');\n"
-                "• МАКСИМУМ 3 статті; кожна КОРОТКА (лід + 2-3 стислі абзаци);\n"
-                "• без пояснень до/після масиву; не обривай на півслові."
-            )
-            raw, usage = call_agent(retry_prompt)
+        # ПАКЕТИ: 10 статей одним викликом модель не тягне (з 10 виходило 3) —
+        # просимо по ≤BATCH_MAX за виклик, поки не набрали slots. Захисти від
+        # зациклення/пропалу: стеля прогону $ + ліміт пакетів + стоп на порожньому пакеті.
+        batch_no = 0
+        while len(found) < slots and batch_no < 4:
+            if run_cost >= MAX_RUN_COST_USD:
+                print(f"⛔ стеля прогону ${MAX_RUN_COST_USD} досягнута (вже ${round(run_cost,4)}) — пакети зупинено (блокер)")
+                break
+            batch_no += 1
+            target = min(BATCH_MAX, slots - len(found))
+            # У промпт дедупу віддаємо і щойно написане цього прогону (existing + found) —
+            # щоб пакет 2 не повторив теми пакета 1.
+            prompt = build_prompt(name, cfg, seen_pool + found, target=target)
+            print(f"→ місія {name}, пакет {batch_no}: пишу {target}…")
+            raw, usage = call_agent(prompt)
             items = extract_json_array(raw)
             arts = [x for x in (item_to_article(i) for i in items) if x]
-            print(f"  {name} (повтор): знайдено {len(items)}, валідних {len(arts)}")
-            run_cost += record_spend(name + " (повтор)", usage, len(arts), note=("" if raw else "повтор порожній")) or 0
-        elif not arts:
-            print(f"  ⛔ 0 валідних, але стеля прогону ${MAX_RUN_COST_USD} досягнута — повтор пропущено (блокер)")
+            print(f"  {name} №{batch_no}: знайдено {len(items)}, валідних {len(arts)}")
+            run_cost += record_spend(f"{name} №{batch_no}", usage, len(arts), note=("" if raw else "агент нічого не повернув")) or 0
 
-        found.extend(arts)
-        time.sleep(1)
+            # САМО-РЕМОНТ: 0 валідних → РІВНО ОДИН повтор з переписаним запитом
+            # (менше + коротше + суворий JSON), під гейтом стелі.
+            if not arts and run_cost < MAX_RUN_COST_USD:
+                print(f"  ↻ 0 валідних — переписую запит (менше, коротше, суворий JSON) і повторюю (1 раз)…")
+                retry_prompt = build_prompt(name, cfg, seen_pool + found, target=min(3, target)) + (
+                    "\n\n⚠️ ПОВТОР: попередня відповідь була невалідна/обрізана. Тепер:\n"
+                    f"• поверни РІВНО валідний JSON-масив (починається '[' і закінчується ']');\n"
+                    f"• МАКСИМУМ {min(3, target)} статті; кожна КОРОТКА (лід + 2-3 стислі абзаци);\n"
+                    "• без пояснень до/після масиву; не обривай на півслові."
+                )
+                raw, usage = call_agent(retry_prompt)
+                items = extract_json_array(raw)
+                arts = [x for x in (item_to_article(i) for i in items) if x]
+                print(f"  {name} №{batch_no} (повтор): знайдено {len(items)}, валідних {len(arts)}")
+                run_cost += record_spend(f"{name} №{batch_no} (повтор)", usage, len(arts), note=("" if raw else "повтор порожній")) or 0
+
+            if not arts:
+                # І основний виклик, і повтор порожні → тем більше нема або відповіді биті.
+                # Далі не палимо — наступний прогін крону доллє.
+                print(f"  ✋ пакет {batch_no} порожній — зупиняю пакети цього прогону")
+                break
+            found.extend(arts)
+            time.sleep(1)
 
     if not args.dry_run:
         print(f"💰 разом за прогін: ${round(run_cost, 4)} (стеля ${MAX_RUN_COST_USD})")
