@@ -167,8 +167,12 @@
     toast._hideTimer = setTimeout(() => toast.classList.remove("visible"), duration);
   }
   var FILTER_HOMOGLYPHS = { a: "\u0430", e: "\u0435", o: "\u043E", c: "\u0441", x: "\u0445", p: "\u0440", y: "\u0443", k: "\u043A", i: "\u0456", b: "\u0431", m: "\u043C", h: "\u043D", t: "\u0442" };
+  var FILTER_LEET = { "0": "o", "3": "e", "4": "a", "5": "s", "6": "g", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s", "!": "i", "|": "l", "+": "t" };
+  function deleet(s) {
+    return String(s).replace(/[03456789@$!|+]/g, (ch) => FILTER_LEET[ch] || ch);
+  }
   function normalizeForFilter(text) {
-    return String(text || "").toLowerCase().replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
+    return deleet(String(text || "").toLowerCase()).replace(/1/g, "i").replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
   }
   var PROFANITY_STEMS = [
     // нецензурні (укр + рос)
@@ -277,8 +281,9 @@
     "\u0431\u043E\u0432\u0434\u0443\u0440",
     "\u0441\u043A\u043E\u0442"
   ]);
-  var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0457\u0431\u0430\u043B", "\u0439\u043E\u0431"];
+  var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0457\u0431\u0430\u043B", "\u0439\u043E\u0431", "\u0431\u043B\u044F\u0434", "\u0431\u043B\u044F\u0442", "\u043C\u0443\u0434\u0430\u043A", "\u043F\u0456\u0434\u043E\u0440", "\u043F\u0438\u0434\u043E\u0440"];
   var PROFANITY_LATIN = [
+    // рос/укр трансліт
     "huy",
     "hui",
     "huil",
@@ -286,27 +291,67 @@
     "huylo",
     "huilo",
     "huesos",
+    "xyu",
     "pizd",
     "pizda",
     "yeban",
     "ebal",
     "ebat",
+    "zaeb",
+    "doeb",
+    "vyeb",
     "blya",
     "blyad",
     "blyat",
     "suka",
     "suchka",
+    "suchara",
     "pidor",
     "pidar",
     "pidoras",
     "mudak",
+    "mudil",
     "zalupa",
     "gandon",
     "gondon",
     "dolboeb",
+    "dolbaeb",
     "mraz",
-    "xyu"
+    "nahui",
+    "nahuy",
+    "nahyi",
+    "nahren",
+    "pohui",
+    "pohuy",
+    "yoban",
+    "yobn",
+    "govno",
+    "gavno",
+    "durak",
+    // англ.
+    "fuck",
+    "fuk",
+    "fuq",
+    "shit",
+    "bullshit",
+    "bitch",
+    "biatch",
+    "asshole",
+    "motherfuck",
+    "faggot",
+    "nigger",
+    "nigga",
+    "whore",
+    "wanker",
+    "bollock",
+    "dickhead",
+    "jackass",
+    "dumbass",
+    "retard",
+    "bastard",
+    "douche"
   ];
+  var PROFANITY_LATIN_SQUASH = ["blyat", "pizda", "nahui", "pidoras", "zalupa", "dolboeb"];
   function containsProfanity(text) {
     const norm = normalizeForFilter(text);
     const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
@@ -319,9 +364,14 @@
     const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
     if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
       return true;
-    const latin = String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1");
-    for (const w of latin.split(/[^a-z]+/).filter(Boolean)) {
-      if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
+    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1"));
+    for (const one of ["i", "l"]) {
+      const v = latinBase.replace(/1/g, one);
+      for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
+        if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
+          return true;
+      }
+      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s)))
         return true;
     }
     return false;
@@ -3282,14 +3332,6 @@
     m[String(postId)] = ts;
     lsSet(LS_CHAT_SEEN, m);
   }
-  function replyWord(n) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C";
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
-      return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456";
-    return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439";
-  }
   function newMsgLabel(n) {
     const m10 = n % 10, m100 = n % 100;
     if (m10 === 1 && m100 !== 11)
@@ -3497,7 +3539,7 @@
     const el = document.getElementById("bd-chat-reply-count");
     if (el) {
       const n = getComments(postId).length;
-      el.textContent = `\u{1F4AC} ${n} ${replyWord(n)}`;
+      el.textContent = `\u{1F4AC} ${n} ${msgWord(n)}`;
     }
   }
   var _chatModalEl = null;
@@ -3623,9 +3665,8 @@
       <button class="bd-chat-modal-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">\u{1F4AC} ${replyCount} ${replyWord(replyCount)}</div>
+        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">\u{1F4AC} ${replyCount} ${msgWord(replyCount)}</div>
       </div>
-      <button class="bd-chat-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
     </header>
     <div class="bd-chat-modal-body" id="bd-chat-modal-body">
       ${chatMessagesHtml(post)}
@@ -3661,7 +3702,6 @@
     setTimeout(scrollChatToNewOrBottom, 80);
     backdrop.addEventListener("click", closeChatModal);
     modal.querySelector(".bd-chat-modal-back")?.addEventListener("click", closeChatModal);
-    modal.querySelector(".bd-chat-modal-close")?.addEventListener("click", closeChatModal);
     modal.querySelector("#bd-chat-login")?.addEventListener(
       "click",
       () => requireAuth("\u043F\u0438\u0441\u0430\u0442\u0438 \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u0456", () => {
