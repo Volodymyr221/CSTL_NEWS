@@ -2775,6 +2775,87 @@
 /* Кнопка «зберегти» в підвалі картки — трохи компактніша */
 .bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
 
+/* ── FAB Обговорень: червоний круг з білим плюсом (окремий від Дошки) ────── */
+.cm-board-trigger.disc-fab-plus {
+  width: 56px;
+  height: 56px;
+  min-width: 56px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--red);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(226,55,68,0.42);
+}
+.cm-board-trigger.disc-fab-plus .cm-board-trigger-text { display: none; }
+.cm-board-trigger.disc-fab-plus .cm-board-trigger-icon,
+.cm-board-trigger.disc-fab-plus .cm-board-trigger-close { color: #fff; }
+.cm-board-trigger.disc-fab-plus .cm-board-trigger-icon svg,
+.cm-board-trigger.disc-fab-plus .cm-board-trigger-close svg { width: 26px; height: 26px; }
+
+/* ── Кімнати/модалка Обговорень (bottom-sheet) ──────────────────────────── */
+.disc-sheet-backdrop { z-index: 1050; }
+.disc-sheet {
+  position: fixed;
+  left: 0; right: 0; bottom: 0;
+  z-index: 1051;
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--white, #fff);
+  border-radius: 18px 18px 0 0;
+  box-shadow: 0 -8px 30px rgba(0,0,0,0.22);
+  animation: disc-sheet-up 0.22s ease;
+}
+@keyframes disc-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
+.disc-sheet-handle {
+  width: 38px; height: 4px; border-radius: 2px;
+  background: rgba(0,0,0,0.15);
+  margin: 8px auto 4px;
+}
+.disc-sheet-head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 16px 10px;
+  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
+}
+.disc-sheet-title { font-size: 17px; font-weight: 800; color: var(--black, #1C1C1E); }
+.disc-sheet-close {
+  border: none; background: none; font-size: 20px; line-height: 1;
+  color: var(--gray); cursor: pointer; padding: 4px 6px;
+}
+.disc-sheet-body { overflow-y: auto; padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
+.disc-sheet-list { display: flex; flex-direction: column; gap: 12px; }
+.disc-sheet-empty { text-align: center; color: var(--gray); padding: 40px 0; font-size: 14px; }
+
+/* Форма створення обговорення */
+.disc-compose { display: flex; flex-direction: column; gap: 10px; }
+.disc-compose-label { font-size: 13px; font-weight: 700; color: var(--black, #1C1C1E); }
+.disc-compose-input {
+  width: 100%;
+  border: 1px solid var(--border, rgba(0,0,0,0.14));
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.disc-compose-input:focus { outline: none; border-color: var(--red); }
+.disc-compose-submit {
+  border: none;
+  background: var(--red);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  padding: 13px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.disc-compose-submit:disabled { opacity: 0.6; }
+.disc-compose-note { font-size: 12px; color: var(--gray); text-align: center; margin: 2px 0 0; }
+
 /* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
 .bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
 
