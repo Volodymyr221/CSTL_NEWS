@@ -1,7 +1,8 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** active
+**Статус:** done
 <!-- idle=вимкнено · active=потік іде (push-замок УВІМКНЕНО) · paused=пауза · done=завершено -->
+<!-- ✅ 07.07 ЗАДЕПЛОЄНО: потік audit-fixes (5 🟡-знахідок аудиту): фільтр ebook/ebay, гість-чат після входу, doSave чесний, CabinetSink source_url, SQL-drift. -->
 
 **Ціль:** 🟡-знахідки повного аудиту 07.07 — 5 точкових фіксів: профаніті-хиба 'еб' (ebook/ebay), dead-end гостя в чаті обговорення, doSave не перевіряє публікацію, CabinetSink губить source_url, SQL-drift схеми кабінету.
 **Власник:** Рома · **Гілка:** roma/audit-fixes · **Rollback-tag:** byyou-start-audit
