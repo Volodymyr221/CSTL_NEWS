@@ -545,7 +545,9 @@ def main():
     if not args.dry_run and len(queue) >= QUEUE_MAX_SIZE:
         print(f"✓ черга повна ({len(queue)}/{QUEUE_MAX_SIZE}) — пропускаю виклик API (економія)")
         return
-    missions = [args.mission] if args.mission else list(cfg["missions"].keys())
+    # active_missions — які місії реально ганяємо (Волинь/Україна-Світ вимкнено: їх дає RSS).
+    # --mission перекриває. Fallback (нема ключа в конфізі) — усі, як було.
+    missions = [args.mission] if args.mission else (cfg.get("active_missions") or list(cfg["missions"].keys()))
 
     found = []
     for name in missions:
