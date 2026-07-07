@@ -452,7 +452,6 @@ function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
 function openChatModal(post) {
   if (_chatModalEl) return;
-  const tagsLine = (post.tags || []).join(' ');
   // Стан модалки — ВАЖЛИВО виставити до chatMessagesHtml (воно читає _chatDividerTs)
   _chatOpenPostId = post.id;
   _chatDividerTs = getChatSeen(post.id);
@@ -471,7 +470,6 @@ function openChatModal(post) {
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
         <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${replyWord(replyCount)}</div>
-        ${tagsLine ? `<div class="bd-chat-modal-sub">${escapeHtml(tagsLine)}</div>` : ''}
       </div>
       <button class="bd-chat-modal-close" type="button" aria-label="Закрити">✕</button>
     </header>
@@ -949,31 +947,27 @@ function renderOfficialCard(a) {
 
 // CHAT: картка-прев'ю теми обговорення. Тап по картці → повноекранна модалка-чат.
 function renderChatCard(p) {
-  const tagsHtml = (p.tags || []).length
-    ? `<div class="bd-chat-tags">${p.tags.map(t => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(' ')}</div>`
-    : '';
   const comments = getComments(p.id);
   const count = comments.length;
-  const last = count ? comments[count - 1] : null;
+  const recent = comments.slice(-2);   // два останніх повідомлення у прев'ю картки
   // Унікальні учасники чату — за іменами авторів повідомлень (анонімні «Житель» зіллються)
   const participants = new Set(comments.map(c => c.author || 'Житель')).size;
-  const lastHtml = last
-    ? `<div class="bd-chat-last">
-         <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(last.author || 'Житель')}:</span> ${escapeHtml(last.text)}</span>
-         <span class="bd-chat-last-time">${formatTime(postTime(last))}</span>
-       </div>`
+  const lastHtml = recent.length
+    ? `<div class="bd-chat-last">${recent.map(m => `
+         <div class="bd-chat-last-row">
+           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || 'Житель')}:</span> ${escapeHtml(m.text)}</span>
+           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
+         </div>`).join('')}</div>`
     : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
-        <span class="bd-chat-topic-icon">💭</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      ${tagsHtml}
       <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">👥 ${participants} ${partWord(participants)}</span>
+        <span class="bd-chat-count">👥 ${participants}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>

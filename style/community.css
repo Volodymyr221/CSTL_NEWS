@@ -2717,14 +2717,20 @@
 .bd-chat-last {
   margin-top: 8px;
   display: flex;
-  align-items: center;
-  gap: 8px;
+  flex-direction: column;   /* два останніх повідомлення — окремими рядками */
+  align-items: stretch;
+  gap: 5px;
   background: rgba(0,0,0,0.03);
   border-radius: 10px;
   padding: 7px 12px;
   font-size: 13px;
   line-height: 1.4;
   color: #555;
+}
+.bd-chat-last-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 .bd-chat-last-msg {
   flex: 1;
@@ -2745,8 +2751,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 16px;          /* штрих-пунктирна лінія зміщена нижче (більший відступ над підвалом) */
+  padding-top: 10px;
   border-top: 1px dashed rgba(0,0,0,0.10);
   font-size: 12px;
   color: var(--gray);
