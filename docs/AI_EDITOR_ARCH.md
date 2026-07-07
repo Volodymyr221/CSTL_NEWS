@@ -33,7 +33,7 @@ Source → Reader → Filter → Writer → Image → Sink
 | **Source** | звідки брати теми/матеріали | `sources/base.Source` | `calendar` (свята за 7 днів) | web_search, rss, telegram, facebook, vopas |
 | **Reader** | дотягнути+очистити повний текст | `readers/base.Reader` | (свята — не треба; тонка обгортка) | `article` (реюз parse_rss fetch+clean) |
 | **Filter** | відсів: дедуп, якість, SSRF | `filters/base.Filter` | `dedup`, `quality` (реюз) | семантичний дедуп (embeddings) |
-| **Writer** | AI пише статтю + англ. image_query | `writers/base.Writer` | `ai_writer` (Anthropic) | стилі/тони, багатомовність |
+| **Writer** | AI пише статтю + image_query (укр.) | `writers/base.Writer` | `ai_writer` (Anthropic) | стилі/тони, багатомовність |
 | **Image** | підібрати фото | `images/base.ImageProvider` | `wikimedia`, `og` (реюз) | `flux` (генерація) |
 | **Sink** | куди покласти чернетку | `sinks/base.Sink` | `cabinet` (Supabase draft), `queue` (файл-fallback) | telegram-draft, e-mail |
 

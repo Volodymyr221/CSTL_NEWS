@@ -13,7 +13,7 @@ class Draft:
     kind: str = "news"             # news | holiday | event
     status: str = "draft"
     image: str = None
-    image_query: str = ""          # англ. запит для пошуку фото
+    image_query: str = ""          # запит для пошуку фото (українською)
     image_credit: str = None
     image_type: str = "none"       # source | illustration | none
     source_urls: list = field(default_factory=list)
