@@ -46,11 +46,11 @@ jobs:
         run: |
           git config user.name  "CSTL AI Agent"
           git config user.email "ai-agent@cstl-news"
-          git add data/news_queue.json
+          git add data/news_queue.json data/ai_spend.json
           if git diff --staged --quiet; then
             echo "Черга без змін."
           else
-            git commit -m "ai(queue): підготовлено новини $(date -u +'%d.%m %H:%M UTC')"
+            git commit -m "ai(queue): черга+витрати $(date -u +'%d.%m %H:%M UTC')"
             # Пуш із ре-базою: main міг піти вперед поки готували чергу → уникаємо «fetch first».
             pushed=false
             for i in 1 2 3 4 5; do
