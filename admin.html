@@ -1035,7 +1035,12 @@ function renderArticleForm(el) {
     const savedId = await saveArticle(a);
     if (!savedId) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
     // Публікуємо одразу ЛИШЕ якщо НЕ заплановано (інакше чекаємо часу автопостингу).
-    if (publish && !scheduling) await publishArticle(savedId);
+    // Результат перевіряємо: RLS може відмовити (нема дозволу publish) — тоді стаття
+    // лишилась чернеткою, і мовчати про це не можна.
+    if (publish && !scheduling) {
+      const ok = await publishArticle(savedId);
+      if (!ok) alert('Збережено як чернетку, але ОПУБЛІКУВАТИ не вдалося (нема дозволу на публікацію?).');
+    }
     articles = await fetchArticles();
     articleDraft = null; renderApp();
   };
