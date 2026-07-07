@@ -31,6 +31,7 @@ class CabinetSink(Sink):
             "image_type": draft.image_type, "image_credit": draft.image_credit,
             "source": "CSTL LIFE", "exclusive": True,
             "status": "draft", "type": draft.kind,
+            "event_date": draft.date or None,   # дата свята — для «Шо в селі»
         }
         headers = {"apikey": KEY, "Authorization": "Bearer " + KEY,
                    "content-type": "application/json", "Prefer": "return=minimal"}

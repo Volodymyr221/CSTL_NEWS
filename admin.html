@@ -517,18 +517,23 @@ async function fetchArticles() {
 }
 async function saveArticle(a) {
   const row = {
-    type: 'news',
     title: a.title, excerpt: a.excerpt, content: a.content,
     category: a.category || null, geo: a.geo || null,
     image: a.image || null, image_type: a.image_type || (a.image ? 'source' : 'none'),
     image_credit: a.image_credit || null,
     author_uid: currentUser.id, updated_at: new Date().toISOString(),
   };
+  // Розклад автопостингу (Блок 2): якщо передано — зберігаємо статус і час.
+  if (a.status) row.status = a.status;
+  if (a.publish_at !== undefined) row.publish_at = a.publish_at;  // ISO-рядок або null
+  if (a.event_date !== undefined) row.event_date = a.event_date;  // дата свята/події (Шо в селі)
   if (a.id) {
+    // type при редагуванні НЕ чіпаємо — зберігаємо наявний (свято/подія/новина).
     const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
     return !error;
   }
-  row.status = 'draft';
+  row.type = a.type || 'news';
+  row.status = row.status || 'draft';
   const { error } = await supa.from('cms_articles').insert(row);
   return !error;
 }
@@ -791,10 +796,12 @@ const ART_CATEGORIES = ['Суспільство', 'Культура', 'Спор�
 const ART_GEOS = ['Громада', 'Волинь', 'Україна', 'Світ'];
 const ART_STATUS = {
   draft:     { label: 'Чернетка',    color: '#8a7' },
+  scheduled: { label: 'Заплановано', color: '#7a5cc0' },
   ready:     { label: 'На публікації', color: '#e08a2b' },
   published: { label: 'Опубліковано', color: '#2e9e5b' },
   archived:  { label: 'В архіві',    color: '#999' },
 };
+const ART_TYPE_UK = { news: '📰 Новина', holiday: '🎉 Свято', event: '📅 Подія' };
 
 function renderArticles(el) {
   if (articleDraft) return renderArticleForm(el);
@@ -809,10 +816,12 @@ function renderArticles(el) {
         return `
         <article class="card">
           <div class="card-meta">
-            <span class="badge" style="background:${st.color}">${st.label}</span>
+            <span class="badge" style="background:${st.color};color:#fff">${st.label}</span>
+            ${a.type && a.type !== 'news' && ART_TYPE_UK[a.type] ? `<span class="badge badge--type">${ART_TYPE_UK[a.type]}</span>` : ''}
+            ${a.status === 'scheduled' && a.publish_at ? `<span class="badge" style="background:#7a5cc0;color:#fff">📅 ${escapeHtml(formatDate(a.publish_at))}</span>` : ''}
             ${a.geo ? `<span class="badge badge--cat">${escapeHtml(a.geo)}</span>` : ''}
             ${a.category ? `<span class="badge badge--loc">${escapeHtml(a.category)}</span>` : ''}
-            ${a.image_type === 'illustration' ? '<span class="badge" style="background:#555">🖼 Ілюстрація</span>' : ''}
+            ${a.image_type === 'illustration' ? '<span class="badge" style="background:#555;color:#fff">🖼 Ілюстрація</span>' : ''}
             <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(a.updated_at))}</span>
           </div>
           <div style="font-weight:700;margin-bottom:4px">${escapeHtml(a.title || '(без заголовка)')}</div>
@@ -853,6 +862,10 @@ function renderArticles(el) {
 function renderArticleForm(el) {
   const d = articleDraft;
   const canPub = isAdmin || editorPerms.canPublish;
+  const isSched = d.status === 'scheduled';
+  const schedDT = d.publish_at
+    ? (() => { const t = new Date(d.publish_at); return new Date(t.getTime() - t.getTimezoneOffset() * 60000).toISOString().slice(0, 16); })()
+    : '';
   el.innerHTML = `
     <div class="art-form">
       <label class="art-lbl">Заголовок
@@ -872,10 +885,20 @@ function renderArticleForm(el) {
           <select class="art-inp" id="af-cat"><option value="">—</option>${ART_CATEGORIES.map(c => `<option ${d.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
         </label>
       </div>
+      <label class="art-lbl">Дата свята/події (для «Шо в селі», необовʼязково для новин)
+        <input class="art-inp" id="af-eventdate" type="date" value="${escapeHtml(d.event_date || '')}">
+      </label>
       <label class="art-lbl">Фото (обкладинка)
         <input class="art-inp" id="af-photo" type="file" accept="image/*">
       </label>
       <div id="af-preview">${d.image ? `<img src="${escapeHtml(d.image)}" style="max-width:100%;border-radius:10px;margin-top:6px">` : ''}</div>
+      <label class="art-lbl">Публікація
+        <div class="art-when">
+          <label class="art-when-opt"><input type="radio" name="af-when" value="draft" ${isSched ? '' : 'checked'}> Лишити чернеткою</label>
+          <label class="art-when-opt"><input type="radio" name="af-when" value="schedule" ${isSched ? 'checked' : ''}> 📅 Автопостинг на дату/час</label>
+        </div>
+        <input class="art-inp" id="af-when-dt" type="datetime-local" value="${schedDT}" style="${isSched ? '' : 'display:none'};margin-top:6px">
+      </label>
       <div class="art-actions">
         <button class="btn" id="af-cancel">Скасувати</button>
         <button class="btn btn--approve" id="af-save">💾 Зберегти чернетку</button>
@@ -890,8 +913,14 @@ function renderArticleForm(el) {
     content: document.getElementById('af-content').value.trim(),
     geo: document.getElementById('af-geo').value,
     category: document.getElementById('af-cat').value,
+    event_date: document.getElementById('af-eventdate').value || null,
   });
   document.getElementById('af-cancel').addEventListener('click', () => { articleDraft = null; renderApp(); });
+  // Розклад: показати/сховати вибір дати-часу
+  document.querySelectorAll('input[name="af-when"]').forEach(r => r.addEventListener('change', () => {
+    const on = document.querySelector('input[name="af-when"]:checked').value === 'schedule';
+    document.getElementById('af-when-dt').style.display = on ? '' : 'none';
+  }));
   // Фото → Supabase Storage
   document.getElementById('af-photo').addEventListener('change', async e => {
     const file = e.target.files[0]; if (!file) return;
@@ -904,6 +933,17 @@ function renderArticleForm(el) {
   const doSave = async (publish) => {
     const a = read();
     if (!a.title || !a.content) { alert('Заголовок і текст обов\'язкові.'); return; }
+    // Розклад автопостингу
+    const mode = document.querySelector('input[name="af-when"]:checked')?.value;
+    const dtVal = document.getElementById('af-when-dt').value;
+    if (mode === 'schedule' && !publish) {
+      if (!dtVal) { alert('Оберіть дату й час автопостингу.'); return; }
+      a.status = 'scheduled';
+      a.publish_at = new Date(dtVal).toISOString();   // локальний час → UTC
+    } else if (!publish) {
+      a.status = 'draft';
+      a.publish_at = null;   // зняти розклад при збереженні чернеткою
+    }
     const ok = await saveArticle(a);
     if (!ok) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
     articles = await fetchArticles();
