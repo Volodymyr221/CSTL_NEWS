@@ -1995,5 +1995,13 @@ export function initBoard() {
       if (activeType === 'saved') activeType = 'board';   // персональний таб зник
     }
     renderBoard();
+    // Відкрита модалка чату рендерить низ (форма/кнопка входу) один раз при відкритті.
+    // Гість натиснув «Увійдіть, щоб писати» → увійшов → перезбираємо модалку,
+    // щоб зʼявилось поле вводу (інакше кнопка-глухий кут лишалась назавжди).
+    if (_chatOpenPostId != null) {
+      const post = allPosts.find(p => p.id === _chatOpenPostId);
+      closeChatModal();
+      if (post) openChatModal(post);
+    }
   });
 }
