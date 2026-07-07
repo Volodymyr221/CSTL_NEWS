@@ -16,7 +16,7 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeReactions, subscribeComments,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
-  submitPost,
+  submitPost, submitDiscussion,
 } from '../core/supabase.js';
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
@@ -506,7 +506,7 @@ function openDiscussionCompose() {
       <textarea id="disc-compose-topic" class="disc-compose-input" rows="3"
                 placeholder="Про що поговоримо? Напр.: Чи потрібен новий майданчик у центрі?" maxlength="300"></textarea>
       <button type="submit" class="disc-compose-submit">Створити</button>
-      <p class="disc-compose-note">Обговорення зʼявиться після перевірки модератором.</p>
+      <p class="disc-compose-note">Зʼявиться одразу. Матюки/образи блокуються автоматично.</p>
     </form>`;
   openDiscSheet({
     title: 'Створити обговорення',
@@ -522,13 +522,13 @@ function openDiscussionCompose() {
         const btn = sheet.querySelector('.disc-compose-submit');
         if (btn) { btn.disabled = true; btn.textContent = 'Надсилаємо…'; }
         const payload = {
-          type: 'chat', text,
+          text,
           author: currentUserName() || 'Житель',
           owner_uid: currentUserId() || null,
-          status: 'pending', tags: [],
+          tags: [],
         };
         if (isSupabaseReady()) {
-          const res = await submitPost(payload);
+          const res = await submitDiscussion(payload);   // одразу published (без модерації)
           if (!res.ok) {
             if (btn) { btn.disabled = false; btn.textContent = 'Створити'; }
             showToast('Помилка: ' + (res.error || 'не вдалось'), 4000, 'error');
@@ -536,7 +536,8 @@ function openDiscussionCompose() {
           }
         }
         close();
-        showToast('Дякуємо! Обговорення надіслано модератору.', 4000);
+        showToast('Обговорення створено!', 3000);
+        renderBoard();   // перезавантажити стрічку — нове обговорення одразу видно
       });
     },
   });
@@ -580,11 +581,13 @@ function openChatModal(post) {
       </div>
       <button class="pm-composebar-x" type="button" id="bd-compose-x" aria-label="Скасувати">✕</button>
     </div>
+    ${isLoggedIn() ? `
     <form class="bd-chat-modal-form" data-comment-form="${post.id}">
       <input class="bd-chat-modal-input" type="text" placeholder="Написати повідомлення…"
              aria-label="Повідомлення" data-comment-input="${post.id}">
       <button class="bd-chat-modal-send" type="submit" aria-label="Надіслати">↑</button>
-    </form>
+    </form>` : `
+    <button class="bd-chat-login-cta" type="button" id="bd-chat-login">Увійдіть, щоб писати</button>`}
   `;
 
   document.body.appendChild(backdrop);
@@ -601,6 +604,9 @@ function openChatModal(post) {
   backdrop.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-back')?.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
+  // Гість бачить лише кнопку входу замість поля (читати можна, писати — після входу).
+  modal.querySelector('#bd-chat-login')?.addEventListener('click',
+    () => requireAuth('писати в обговоренні', () => {}));
   document.addEventListener('keydown', onChatEsc);
 
   // Скрол стрічки → коли користувач сам долистав до низу, ховаємо пігулку «нові»

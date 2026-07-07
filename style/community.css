@@ -2856,6 +2856,21 @@
 .disc-compose-submit:disabled { opacity: 0.6; }
 .disc-compose-note { font-size: 12px; color: var(--gray); text-align: center; margin: 2px 0 0; }
 
+/* Гість у чаті обговорення — замість поля вводу кнопка входу (читати можна, писати — ні) */
+.bd-chat-login-cta {
+  display: block;
+  width: calc(100% - 24px);
+  margin: 8px 12px calc(10px + env(safe-area-inset-bottom));
+  padding: 13px;
+  border: none;
+  border-radius: 12px;
+  background: var(--red);
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
 /* ── Повноекранна модалка-чат (панель між шапкою і таб-баром) ───────────── */
 .bd-chat-backdrop { z-index: 1050; }   /* вище таб-бару (1000) — затемнює і меню */
 

@@ -95,6 +95,23 @@ export async function submitPost(payload) {
   return { ok: true };
 }
 
+// ОБГОВОРЕННЯ (type='chat') — БЕЗ людської модерації: публікуємо одразу.
+// Пропускає RLS-політика «залогінений може створити обговорення» (лише
+// authenticated + owner_uid = auth.uid()). Матюки блокуються на клієнті.
+// Потребує scripts/supabase_discussions_open.sql (запускає Вова один раз).
+export async function submitDiscussion(payload) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const nowIso = new Date().toISOString();
+  const row = { ...payload, type: 'chat', status: 'published',
+                published_at: nowIso, bumped_at: nowIso };
+  const { error } = await supa.from('posts').insert(row);
+  if (error) {
+    console.warn('[supabase] submitDiscussion error:', error);
+    return { ok: false, error: error.message };
+  }
+  return { ok: true };
+}
+
 // ── ОФІЦІЙНІ ОГОЛОШЕННЯ ─────────────────────────────────────────────────
 
 export async function fetchPublishedAnnouncements() {
