@@ -28,8 +28,24 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import parse_rss as pr  # noqa: E402
 
+# Пакет editor: семантичний дедуп + кабінет-sink (реюз). Фейл-софт — якщо чомусь
+# недоступний, агент працює далі (без семантики й з файловим fallback).
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))  # корінь репо
+try:
+    from editor.core.dedup import cluster_duplicates  # noqa: E402
+    from editor.core.models import Draft              # noqa: E402
+    from editor.sinks.cabinet import CabinetSink      # noqa: E402
+    _EDITOR_OK = True
+except Exception as _e:                               # pragma: no cover
+    print(f"⚠ editor-пакет недоступний ({_e}) — семантика/кабінет через fallback")
+    _EDITOR_OK = False
+
 CONFIG_PATH = Path(__file__).resolve().parent / "hromada_config.json"
 QUEUE_PATH = Path("data/news_queue.json")   # чергa підготовлених статей (крапельна публікація)
+MEMORY_PATH = Path("data/hromada_memory.json")  # памʼять: про що вже писали + які джерела (щоб не повторювати)
+EDITOR_DRAFTS_PATH = Path("data/editor_drafts.json")  # fallback без ключа: чернетки тримаються, НЕ авто-публікуються
+MEMORY_CAP = 400                             # скільки записів тримати (не роздувати файл)
+MEMORY_DIGEST = 150                          # скільки останніх заголовків показувати агенту в промпті
 MODEL = "claude-sonnet-5"            # рішення Роми: Sonnet (якісна курація)
 WEB_SEARCH_TOOL = "web_search_20250305"
 MAX_SEARCHES_PER_MISSION = 6        # обмеження веб-пошуків на місію (контроль вартості; економно під малий бюджет)
@@ -83,6 +99,53 @@ def load_queue() -> list:
 
 def save_queue(queue: list):
     QUEUE_PATH.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+# ── Памʼять постів/джерел (щоб не писати одне й те саме) ──────────────────────
+# МʼЯКА: агент бачить її як «вже писали — бери нові кути», а не жорсткий блок.
+# Семантичний дедуп (editor/core/dedup) — запобіжник лише на ЯВНІ повтори.
+
+def load_memory() -> dict:
+    if MEMORY_PATH.exists():
+        try:
+            return json.loads(MEMORY_PATH.read_text(encoding="utf-8"))
+        except Exception as e:
+            print(f"⚠ читання hromada_memory.json: {e}")
+    return {"posts": [], "updated_ts": 0}
+
+
+def _mem_key(title: str) -> str:
+    """Стабільний ключ історії — відсортовані значущі слова заголовка (реюз токенів парсера)."""
+    return " ".join(sorted(pr.title_tokens(title or "")))
+
+
+def record_memory(article: dict):
+    """Дописує у памʼять один опублікований/зачернечений матеріал Громади (+ джерела)."""
+    mem = load_memory()
+    key = _mem_key(article.get("title", ""))
+    if not key:
+        return
+    if any(p.get("key") == key for p in mem.get("posts", [])):
+        return  # уже в памʼяті
+    srcs = list(article.get("sources") or [])
+    if article.get("sourceUrl"):
+        srcs.append(article["sourceUrl"])
+    mem.setdefault("posts", []).insert(0, {
+        "ts": int(time.time() * 1000),
+        "title": article.get("title", ""),
+        "category": article.get("category", ""),
+        "sources": srcs[:6],
+        "key": key,
+    })
+    mem["posts"] = mem["posts"][:MEMORY_CAP]
+    mem["updated_ts"] = int(time.time() * 1000)
+    MEMORY_PATH.write_text(json.dumps(mem, ensure_ascii=False, indent=2), encoding="utf-8")
+
+
+def memory_digest(limit: int = MEMORY_DIGEST) -> list:
+    """Список заголовків із памʼяті для промпту (щоб агент не повторював історії)."""
+    mem = load_memory()
+    return [f"- {p.get('title','')}" for p in mem.get("posts", [])[:limit] if p.get("title")]
 
 
 # ── Лічильник витрат ──────────────────────────────────────────────────────────
@@ -202,9 +265,17 @@ def build_prompt(mission_name: str, cfg: dict, existing: list) -> str:
     seen = recent_titles_for(existing, existing_geos)
     seen_block = ("\n\nВЖЕ У СТРІЧЦІ (НЕ дублюй за змістом):\n" + "\n".join(seen)) if seen else ""
 
+    # Памʼять — персистентний лог написаного (довший за вікно стрічки). МʼЯКО: «бери нові кути».
+    mem_block = ""
+    if mission_name == "Громада":
+        md = memory_digest()
+        if md:
+            mem_block = ("\n\nПРО ЩО ВЖЕ ПИСАЛИ (памʼять — НЕ повторюй ці історії й ідеї, "
+                         "обирай НОВІ теми/кути з палітри):\n" + "\n".join(md))
+
     schema_str = json.dumps(schema, ensure_ascii=False, indent=2)
     return (
-        f"{body}{seen_block}\n\n"
+        f"{body}{seen_block}{mem_block}\n\n"
         "ПРАВИЛА ВІДПОВІДІ:\n"
         "1. Використай інструмент веб-пошуку кілька разів, щоб знайти реальні свіжі матеріали.\n"
         "2. Для КУРОВАНОЇ новини url МАЄ бути справжнім посиланням на сторінку статті у видавця "
@@ -452,79 +523,117 @@ def fetch_wikimedia_image(query: str):
     return None, None
 
 
+def _enrich(a: dict):
+    """Збагачує статтю фото/повним текстом: оригінал → Wikimedia-ілюстрація;
+    курована → реальне фото зі сторінки видавця + повний текст."""
+    if a.get("original"):
+        if not a.get("image"):
+            try:
+                img, credit = fetch_wikimedia_image(a.get("image_query") or a["title"])
+            except Exception:
+                img, credit = None, None
+            if img:
+                a["image"] = _sanitize_image_url(img)
+                a["image_type"] = "illustration"
+                a["image_credit"] = credit
+            else:
+                a["image_type"] = "none"
+    else:
+        src = a.get("sourceUrl")
+        try:
+            full = pr.fetch_full_article(src)
+        except Exception:
+            full = None
+        if full and len(full) > len(a.get("content") or ""):
+            a["content"] = full
+        if not a.get("image"):
+            try:
+                a["image"] = _sanitize_image_url(pr.fetch_og_image(src))
+            except Exception:
+                a["image"] = None
+        a["image_type"] = "source" if a.get("image") else "none"
+
+
+def _sink_draft(a: dict):
+    """Пише статтю як ЧЕРНЕТКУ: кабінет (Supabase cms_articles) якщо є ключ,
+    інакше — у файл editor_drafts.json (тримається, НЕ авто-публікується)."""
+    if _EDITOR_OK and os.environ.get("SUPABASE_SERVICE_ROLE_KEY"):
+        d = Draft(
+            title=a.get("title", ""), lead=a.get("excerpt", ""), content=a.get("content", ""),
+            category=a.get("category") or "Громада", geo="Громада", date="", kind="news",
+            status="draft", image=a.get("image"), image_type=a.get("image_type", "none"),
+            image_credit=a.get("image_credit"),
+            source_urls=list(a.get("sources") or ([a["sourceUrl"]] if a.get("sourceUrl") else [])),
+        )
+        CabinetSink().save(d)
+    else:
+        arr = []
+        if EDITOR_DRAFTS_PATH.exists():
+            try:
+                arr = json.loads(EDITOR_DRAFTS_PATH.read_text(encoding="utf-8"))
+            except Exception:
+                arr = []
+        row = {k: a.get(k) for k in ("title", "excerpt", "content", "category", "image",
+                                     "image_type", "image_credit", "source", "sourceUrl",
+                                     "sources", "original")}
+        row.update({"geo": "Громада", "type": "news", "status": "draft",
+                    "created_ts": int(time.time() * 1000)})
+        arr.insert(0, row)
+        EDITOR_DRAFTS_PATH.write_text(json.dumps(arr, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"  ✎ чернетка у файл (нема ключа кабінету): {a.get('title')}")
+
+
 def enqueue(new_articles: list, existing: list):
-    """Кладе знахідки у ЧЕРГУ (data/news_queue.json), не в стрічку.
+    """Готує знахідки Громади як ЧЕРНЕТКИ для кабінету Алли (ревʼю), НЕ авто-в-стрічку.
 
-    Агент готує ЗАПАС; публікатор (publish_queue.py) потім викладає крапельно.
-    Дедуп проти вже опублікованих (articles.json) І проти вже наявних у черзі.
-    Повний текст дотягуємо тут (у черзі статті вже готові до публікації).
-    Чистимо старе (>QUEUE_MAX_AGE_DAYS) і тримаємо не більше QUEUE_MAX_SIZE найсвіжіших.
+    Дедуп: спершу за словами (url+Jaccard) проти стрічки+памʼяті, потім семантичний
+    (AI-кластер — та сама історія іншими словами; мʼякий, фейл-софт). Далі збагачення,
+    запис у памʼять і чернетка → кабінет (ключ) / файл (fallback).
+    Волинь/Україну/Світ дає RSS-парсер — сюди йде лише Громада.
     """
-    queue = load_queue()
+    mem_posts = load_memory().get("posts", [])
+    pool = existing + mem_posts          # проти чого дедупимо: стрічка + історія постів
 
-    # Що вже бачили — і в стрічці, і в черзі (щоб не дублювати)
-    seen_urls = {a.get("sourceUrl") for a in existing + queue if a.get("sourceUrl")}
+    seen_urls = {a.get("sourceUrl") for a in pool if a.get("sourceUrl")}
     seen_by_section: dict = {}
-    for a in existing + queue:
+    for a in pool:
         if a.get("title"):
-            pr.remember_title(pr.title_tokens(a["title"]), pr.section_of(a.get("geo", "")), seen_by_section)
+            pr.remember_title(pr.title_tokens(a["title"]),
+                              pr.section_of(a.get("geo", "Громада")), seen_by_section)
 
-    added = 0
+    # 1) дешевий дедуп за словами → кандидати
+    candidates = []
     for a in new_articles:
         src = a.get("sourceUrl")
         if src and src in seen_urls:
             continue
-        section = pr.section_of(a["geo"])
-        tokens = pr.title_tokens(a["title"])
+        section = pr.section_of(a.get("geo", "Громада"))
+        tokens = pr.title_tokens(a.get("title", ""))
         if pr.is_dup_title(tokens, section, seen_by_section):
             continue
-
-        if a.get("original"):
-            # Оригінальний матеріал: тексту вже є (з агента), зовнішнього url нема.
-            # Ілюстрація — з Wikimedia (відкрита ліцензія), з чіткою міткою походження.
-            if not a.get("image"):
-                try:
-                    img, credit = fetch_wikimedia_image(a.get("image_query") or a["title"])
-                except Exception:
-                    img, credit = None, None
-                if img:
-                    a["image"] = _sanitize_image_url(img)
-                    a["image_type"] = "illustration"
-                    a["image_credit"] = credit
-                else:
-                    a["image_type"] = "none"
-            a.pop("image_query", None)
-        else:
-            # Курована новина: повний текст + реальне фото зі сторінки видавця.
-            try:
-                full = pr.fetch_full_article(src)
-            except Exception:
-                full = None
-            if full and len(full) > len(a.get("content") or ""):
-                a["content"] = full
-            if not a.get("image"):
-                try:
-                    a["image"] = _sanitize_image_url(pr.fetch_og_image(src))
-                except Exception:
-                    a["image"] = None
-            a["image_type"] = "source" if a.get("image") else "none"
-
-        a.pop("summary", None)
-        a["queued_ts"] = int(time.time() * 1000)   # коли потрапило в чергу
-        queue.append(a)
+        candidates.append(a)
         if src:
             seen_urls.add(src)
         pr.remember_title(tokens, section, seen_by_section)
-        added += 1
 
-    # Прибираємо застарілі (за датою публікації) і тримаємо ліміт найсвіжіших
-    cutoff = int(time.time() * 1000) - QUEUE_MAX_AGE_DAYS * 86400_000
-    queue = [q for q in queue if q.get("ts", 0) >= cutoff]
-    queue.sort(key=lambda q: q.get("ts", 0), reverse=True)
-    queue = queue[:QUEUE_MAX_SIZE]
+    # 2) семантичний дедуп (мʼякий, фейл-софт). Вимикач: env SEMANTIC_DEDUP=0.
+    if _EDITOR_OK and candidates and os.environ.get("SEMANTIC_DEDUP", "1") != "0":
+        try:
+            candidates = cluster_duplicates(candidates, pool, label="Громада")
+        except Exception as e:
+            print(f"⚠ семантичний дедуп пропущено ({e}) — беру всіх кандидатів")
 
-    save_queue(queue)
-    print(f"✓ черга: +{added} нових, усього в черзі {len(queue)} (чекають публікації)")
+    # 3) збагачення + чернетка + памʼять
+    drafted = 0
+    for a in candidates:
+        _enrich(a)
+        a.pop("summary", None)
+        a.pop("image_query", None)
+        _sink_draft(a)
+        record_memory(a)
+        drafted += 1
+
+    print(f"✓ чернеток Громади: {drafted} (у кабінет/файл — на ревʼю Аллі)")
 
 
 # ── main ─────────────────────────────────────────────────────────────────────
@@ -537,15 +646,11 @@ def main():
 
     cfg = load_config()
     existing = load_existing()
-    queue = load_queue()
-    # для дедупу агент має бачити і опубліковане, і те що вже чекає в черзі
-    seen_pool = existing + queue
-    # ГАРД: черга вже повна → не палити дорогий API (і веб-пошуки) даремно.
-    # Публікатор крапає з черги окремо; наповнювати переповнену немає сенсу.
-    if not args.dry_run and len(queue) >= QUEUE_MAX_SIZE:
-        print(f"✓ черга повна ({len(queue)}/{QUEUE_MAX_SIZE}) — пропускаю виклик API (економія)")
-        return
-    missions = [args.mission] if args.mission else list(cfg["missions"].keys())
+    # для дедупу в промпті агент бачить опубліковане (памʼять інжектиться окремо в build_prompt)
+    seen_pool = existing
+    # active_missions — які місії реально ганяємо (Волинь/Україна-Світ вимкнено: їх дає RSS).
+    # --mission перекриває. Fallback (нема ключа в конфізі) — усі, як було.
+    missions = [args.mission] if args.mission else (cfg.get("active_missions") or list(cfg["missions"].keys()))
 
     found = []
     for name in missions:
@@ -568,7 +673,7 @@ def main():
     if args.dry_run:
         return
     if found:
-        enqueue(found, existing)     # у чергу, не в стрічку (публікатор викладе крапельно)
+        enqueue(found, existing)     # → чернетки в кабінет Алли (ревʼю), не авто-в-стрічку
     else:
         print("Агент нічого не повернув.")
 
