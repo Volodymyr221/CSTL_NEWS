@@ -55,6 +55,18 @@ def mark_published(row_id, git_id):
     _req("PATCH", REST + "?id=eq.%s" % row_id, body)
 
 
+def promote_scheduled():
+    """Автопостинг: заплановані статті, яким настав час (publish_at<=now),
+    переводимо scheduled→ready. Далі їх публікує звичайний потік синку."""
+    now = time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
+    url = REST + "?status=eq.scheduled&publish_at=lte." + now
+    try:
+        _req("PATCH", url, {"status": "ready"})
+        print(f"⏰ автопостинг: заплановані з часом <= {now} → ready")
+    except Exception as e:
+        print(f"⚠ promote_scheduled: {e}")
+
+
 def cms_to_article(row, next_id):
     """Нормалізує рядок cms_articles у git-схему статті."""
     ts = row.get("ts") or int(time.time() * 1000)
@@ -81,6 +93,7 @@ def main():
     if not SERVICE_KEY:
         print("✗ немає SUPABASE_SERVICE_ROLE_KEY — пропускаю синк")
         return
+    promote_scheduled()   # автопостинг: scheduled з насталим часом → ready
     try:
         ready = fetch_ready()
     except Exception as e:
