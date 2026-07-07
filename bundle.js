@@ -3306,14 +3306,6 @@
       return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
-  function partWord(n) {
-    const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A";
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
-      return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0438";
-    return "\u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432";
-  }
   function getSavedIds() {
     return savedIds;
   }
@@ -3500,10 +3492,106 @@
     if (e.key === "Escape")
       closeChatModal();
   }
+  function openDiscSheet(opts) {
+    const backdrop = document.createElement("div");
+    backdrop.className = "board-backdrop disc-sheet-backdrop";
+    const sheet = document.createElement("div");
+    sheet.className = "disc-sheet";
+    sheet.innerHTML = `
+    <div class="disc-sheet-handle"></div>
+    <header class="disc-sheet-head">
+      <div class="disc-sheet-title">${escapeHtml(opts.title)}</div>
+      <button class="disc-sheet-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+    </header>
+    <div class="disc-sheet-body">${opts.bodyHtml}</div>`;
+    const close = () => {
+      sheet.remove();
+      backdrop.remove();
+      document.body.classList.remove("modal-open");
+    };
+    backdrop.addEventListener("click", close);
+    sheet.querySelector(".disc-sheet-close")?.addEventListener("click", close);
+    document.body.appendChild(backdrop);
+    document.body.appendChild(sheet);
+    document.body.classList.add("modal-open");
+    if (opts.onMount)
+      opts.onMount(sheet, close);
+    return close;
+  }
+  function openDiscussionList(title, posts) {
+    const body = posts.length ? posts.map(renderChatCard).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
+    openDiscSheet({ title, bodyHtml: `<div class="disc-sheet-list">${body}</div>` });
+  }
+  function openMyDiscussions() {
+    const uid = currentUserId();
+    const mine = allPosts.filter((p) => p.type === "chat" && p.owner_uid && p.owner_uid === uid);
+    openDiscussionList("\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", mine);
+  }
+  function openSavedDiscussions() {
+    const saved = getSavedIds();
+    const list = allPosts.filter((p) => p.type === "chat" && saved.has(p.id));
+    openDiscussionList("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", list);
+  }
+  function openDiscussionCompose() {
+    const form = `
+    <form class="disc-compose" id="disc-compose-form">
+      <label class="disc-compose-label" for="disc-compose-topic">\u0422\u0435\u043C\u0430 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</label>
+      <textarea id="disc-compose-topic" class="disc-compose-input" rows="3"
+                placeholder="\u041F\u0440\u043E \u0449\u043E \u043F\u043E\u0433\u043E\u0432\u043E\u0440\u0438\u043C\u043E? \u041D\u0430\u043F\u0440.: \u0427\u0438 \u043F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u043D\u043E\u0432\u0438\u0439 \u043C\u0430\u0439\u0434\u0430\u043D\u0447\u0438\u043A \u0443 \u0446\u0435\u043D\u0442\u0440\u0456?" maxlength="300"></textarea>
+      <button type="submit" class="disc-compose-submit">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438</button>
+      <p class="disc-compose-note">\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u043E\u043C.</p>
+    </form>`;
+    openDiscSheet({
+      title: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F",
+      bodyHtml: form,
+      onMount: (sheet, close) => {
+        const ta = sheet.querySelector("#disc-compose-topic");
+        ta?.focus();
+        sheet.querySelector("#disc-compose-form")?.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const text = (ta?.value || "").trim();
+          if (!text) {
+            showToast("\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u0442\u0435\u043C\u0443 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", 2500);
+            ta?.focus();
+            return;
+          }
+          if (containsProfanity(text)) {
+            showToast("\u{1F6AB} \u0422\u0435\u043C\u0430 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 4e3, "error");
+            return;
+          }
+          const btn = sheet.querySelector(".disc-compose-submit");
+          if (btn) {
+            btn.disabled = true;
+            btn.textContent = "\u041D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u043C\u043E\u2026";
+          }
+          const payload = {
+            type: "chat",
+            text,
+            author: currentUserName() || "\u0416\u0438\u0442\u0435\u043B\u044C",
+            owner_uid: currentUserId() || null,
+            status: "pending",
+            tags: []
+          };
+          if (isSupabaseReady()) {
+            const res = await submitPost(payload);
+            if (!res.ok) {
+              if (btn) {
+                btn.disabled = false;
+                btn.textContent = "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438";
+              }
+              showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (res.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C"), 4e3, "error");
+              return;
+            }
+          }
+          close();
+          showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
+        });
+      }
+    });
+  }
   function openChatModal(post) {
     if (_chatModalEl)
       return;
-    const tagsLine = (post.tags || []).join(" ");
     _chatOpenPostId = post.id;
     _chatDividerTs = getChatSeen(post.id);
     _chatUnseen = 0;
@@ -3519,7 +3607,6 @@
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
         <div class="bd-chat-modal-meta" id="bd-chat-reply-count">\u{1F4AC} ${replyCount} ${replyWord(replyCount)}</div>
-        ${tagsLine ? `<div class="bd-chat-modal-sub">${escapeHtml(tagsLine)}</div>` : ""}
       </div>
       <button class="bd-chat-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
     </header>
@@ -4006,26 +4093,24 @@ ${post.text}
     });
   }
   function renderChatCard(p) {
-    const tagsHtml = (p.tags || []).length ? `<div class="bd-chat-tags">${p.tags.map((t) => `<span class="bd-chat-tag">${escapeHtml(t)}</span>`).join(" ")}</div>` : "";
     const comments = getComments(p.id);
     const count = comments.length;
-    const last = count ? comments[count - 1] : null;
+    const recent = comments.slice(-2);
     const participants = new Set(comments.map((c) => c.author || "\u0416\u0438\u0442\u0435\u043B\u044C")).size;
-    const lastHtml = last ? `<div class="bd-chat-last">
-         <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(last.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(last.text)}</span>
-         <span class="bd-chat-last-time">${formatTime(postTime(last))}</span>
-       </div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
+    const lastHtml = recent.length ? `<div class="bd-chat-last">${recent.map((m) => `
+         <div class="bd-chat-last-row">
+           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(m.text)}</span>
+           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
+         </div>`).join("")}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
     return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
-        <span class="bd-chat-topic-icon">\u{1F4AD}</span>
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      ${tagsHtml}
       <div class="bd-chat-msgcount">\u{1F4AC} ${count} ${msgWord(count)}</div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">\u{1F465} ${participants} ${partWord(participants)}</span>
+        <span class="bd-chat-count">\u{1F465} ${participants}</span>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
@@ -4039,6 +4124,60 @@ ${post.text}
     if (post.type === "chat")
       return renderChatCard(post);
     return renderBoardCard(post);
+  }
+  function renderFab() {
+    if (discOpen) {
+      return `
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="disc-create" type="button">
+          <span class="board-fab-label">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="disc-mine" type="button">
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="disc-saved" type="button">
+          <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed disc-fab-plus" id="board-trigger" type="button" aria-label="\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F" aria-expanded="false">
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+      </button>
+    </div>`;
+    }
+    return `
+    <div class="board-fab" id="board-fab">
+      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
+      <div class="board-fab-menu" id="board-fab-menu">
+        <button class="board-fab-item" data-fab="post" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="mine" type="button">
+          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="messages" type="button">
+          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
+          <span class="board-fab-ic">${MSG_ICON_SVG}</span>
+        </button>
+        <button class="board-fab-item" data-fab="saved" type="button">
+          <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+        </button>
+      </div>
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
+        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
+        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+        <span class="board-trigger-badge" id="board-trigger-badge"></span>
+      </button>
+    </div>`;
   }
   function getFilteredPosts() {
     const q = searchQuery.trim().toLowerCase();
@@ -4179,33 +4318,7 @@ ${post.text}
     `}
     ${renderHeader()}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
-    <div class="board-fab" id="board-fab">
-      <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="post" type="button">
-          <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
-        </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
-          <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
-        </button>
-        <button class="board-fab-item" data-fab="messages" type="button">
-          <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
-          <span class="board-fab-ic">${MSG_ICON_SVG}</span>
-        </button>
-        <button class="board-fab-item" data-fab="saved" type="button">
-          <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
-          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
-        </button>
-      </div>
-      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
-        <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
-        <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-        <span class="board-trigger-badge" id="board-trigger-badge"></span>
-      </button>
-    </div>
+    ${renderFab()}
   `;
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
@@ -4235,6 +4348,18 @@ ${post.text}
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
         closeFab();
+        if (act === "disc-create") {
+          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openDiscussionCompose);
+          return;
+        }
+        if (act === "disc-mine") {
+          requireAuth("\u043C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openMyDiscussions);
+          return;
+        }
+        if (act === "disc-saved") {
+          requireAuth("\u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", openSavedDiscussions);
+          return;
+        }
         if (act === "post") {
           requireAuth("\u043F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", openBoardModal);
           return;
