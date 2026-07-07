@@ -170,3 +170,16 @@
   color: var(--ink, #2b2b2b);
 }
 .sidebar-info-body a { color: var(--red, #722F37); font-weight: 600; }
+
+/* Кнопка «Написати в підтримку» (mailto) в інфо-модалці */
+.info-mail-btn {
+  display: inline-block;
+  background: var(--red, #722F37);
+  color: #fff !important;
+  padding: 11px 18px;
+  border-radius: 10px;
+  font-weight: 700;
+  text-decoration: none;
+}
+.info-mail-btn:active { opacity: 0.85; }
+.info-mail-plain { color: var(--gray, #6b6b6b); font-size: 13px; }

@@ -12,6 +12,7 @@ const NAV = [
   { id: 'account',  label: 'Особистий кабінет',   icon: '👤', kind: 'account' },
   { divider: true },
   { id: 'community',   label: 'Громада',      icon: '🏘️', kind: 'tab', tab: 'community' },
+  { id: 'news',        label: 'Новини',       icon: '🗞️', kind: 'tab', tab: 'community', scrollTo: '#cm-news-board' },
   { id: 'shotam',      label: 'Шо в селі',    icon: '📰', kind: 'tab', tab: 'shotam' },
   { id: 'board',       label: 'Дошка',        icon: '📌', kind: 'tab', tab: 'board' },
   { id: 'discussions', label: 'Обговорення',  icon: '💬', kind: 'tab', tab: 'discussions' },
@@ -25,9 +26,10 @@ const NAV = [
 const INFO = {
   support: {
     title: 'Підтримка',
-    body: 'Питання, ідеї чи проблема? Напишіть нам — ми відповідаємо особисто.<br><br>' +
-          '✉️ <a href="mailto:olykacastle@gmail.com">olykacastle@gmail.com</a><br>' +
-          'Або через розділ «Дошка» → створити оголошення.',
+    body: 'Питання, ідеї чи проблема? Напишіть нам на пошту — відповідаємо особисто.<br><br>' +
+          '<a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=Підтримка%20CSTL%20LIFE">' +
+          '✉️ Написати в підтримку</a><br><br>' +
+          '<span class="info-mail-plain">olykacastle@gmail.com</span>',
   },
   policy: {
     title: 'Політика і приватність',
@@ -101,6 +103,12 @@ function handleNav(id) {
   closeSidebar();
   if (item.kind === 'tab') {
     window.switchTab?.(item.tab);
+    if (item.scrollTo) {
+      // дати вкладці відрендеритись, тоді плавно доскролити до блоку (напр. Табло новин)
+      setTimeout(() => {
+        document.querySelector(item.scrollTo)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }, 300);
+    }
   } else if (item.kind === 'account') {
     document.getElementById('account-btn')?.click();
   } else if (item.kind === 'cabinet') {

@@ -8144,7 +8144,7 @@ ${post.text}
       <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
-    <section class="cm-block cm-block--news">
+    <section id="cm-news-board" class="cm-block cm-block--news">
       <div class="cm-news-board-bar">
         <span class="cm-news-board-dot"></span>
         <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
@@ -9197,6 +9197,7 @@ END:VEVENT`
     { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: "\u{1F464}", kind: "account" },
     { divider: true },
     { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: "\u{1F3D8}\uFE0F", kind: "tab", tab: "community" },
+    { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: "\u{1F5DE}\uFE0F", kind: "tab", tab: "community", scrollTo: "#cm-news-board" },
     { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: "\u{1F4F0}", kind: "tab", tab: "shotam" },
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: "\u{1F4CC}", kind: "tab", tab: "board" },
     { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: "\u{1F4AC}", kind: "tab", tab: "discussions" },
@@ -9209,7 +9210,7 @@ END:VEVENT`
   var INFO = {
     support: {
       title: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430",
-      body: '\u041F\u0438\u0442\u0430\u043D\u043D\u044F, \u0456\u0434\u0435\u0457 \u0447\u0438 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430? \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u0430\u043C \u2014 \u043C\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u043C\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E.<br><br>\u2709\uFE0F <a href="mailto:olykacastle@gmail.com">olykacastle@gmail.com</a><br>\u0410\u0431\u043E \u0447\u0435\u0440\u0435\u0437 \u0440\u043E\u0437\u0434\u0456\u043B \xAB\u0414\u043E\u0448\u043A\u0430\xBB \u2192 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.'
+      body: '\u041F\u0438\u0442\u0430\u043D\u043D\u044F, \u0456\u0434\u0435\u0457 \u0447\u0438 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430? \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u0430\u043C \u043D\u0430 \u043F\u043E\u0448\u0442\u0443 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u043C\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E.<br><br><a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430%20CSTL%20LIFE">\u2709\uFE0F \u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0443</a><br><br><span class="info-mail-plain">olykacastle@gmail.com</span>'
     },
     policy: {
       title: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C",
@@ -9279,6 +9280,11 @@ END:VEVENT`
     closeSidebar();
     if (item.kind === "tab") {
       window.switchTab?.(item.tab);
+      if (item.scrollTo) {
+        setTimeout(() => {
+          document.querySelector(item.scrollTo)?.scrollIntoView({ behavior: "smooth", block: "start" });
+        }, 300);
+      }
     } else if (item.kind === "account") {
       document.getElementById("account-btn")?.click();
     } else if (item.kind === "cabinet") {
