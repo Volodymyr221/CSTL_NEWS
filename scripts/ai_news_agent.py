@@ -41,7 +41,6 @@ except Exception as _e:                               # pragma: no cover
     _EDITOR_OK = False
 
 CONFIG_PATH = Path(__file__).resolve().parent / "hromada_config.json"
-QUEUE_PATH = Path("data/news_queue.json")   # чергa підготовлених статей (крапельна публікація)
 MEMORY_PATH = Path("data/hromada_memory.json")  # памʼять: про що вже писали + які джерела (щоб не повторювати)
 EDITOR_DRAFTS_PATH = Path("data/editor_drafts.json")  # fallback без ключа: чернетки тримаються, НЕ авто-публікуються
 MEMORY_CAP = 400                             # скільки записів тримати (не роздувати файл)
@@ -51,11 +50,8 @@ WEB_SEARCH_TOOL = "web_search_20250305"
 MAX_SEARCHES_PER_MISSION = 6        # обмеження веб-пошуків на місію (контроль вартості; економно під малий бюджет)
 API_URL = "https://api.anthropic.com/v1/messages"
 
-# Скільки статей просимо в агента за місію — З ЗАПАСОМ (публікуються крапельно).
+# Скільки оригінальних матеріалів просимо в агента за прогін Громади.
 TARGET_PER_MISSION = {"Громада": 12, "Волинь": 8, "Україна та світ": 10}
-
-QUEUE_MAX_SIZE = 30            # не тримаємо в черзі більше — щоб не застоювалась
-QUEUE_MAX_AGE_DAYS = 3        # статті старші за N днів у черзі відкидаємо (несвіжі)
 
 # ── Лічильник витрат AI (Фаза 0 оптимізації) ──────────────────────────────────
 # Прилад: скільки $ їсть автопостинг. Пише data/ai_spend.json (читає адмінка).
@@ -86,19 +82,6 @@ def load_existing() -> list:
         except Exception as e:
             print(f"⚠ читання articles.json: {e}")
     return []
-
-
-def load_queue() -> list:
-    if QUEUE_PATH.exists():
-        try:
-            return json.loads(QUEUE_PATH.read_text(encoding="utf-8"))
-        except Exception as e:
-            print(f"⚠ читання news_queue.json: {e}")
-    return []
-
-
-def save_queue(queue: list):
-    QUEUE_PATH.write_text(json.dumps(queue, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 # ── Памʼять постів/джерел (щоб не писати одне й те саме) ──────────────────────
