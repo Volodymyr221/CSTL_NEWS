@@ -157,7 +157,10 @@
       "category": "Свято",
       "kind": "державне",
       "cover_emoji": "👑",
-      "cover_gradient": "linear-gradient(135deg, #0057B7 0%, #1565c0 50%, #FFD700 100%)"
+      "cover_gradient": "linear-gradient(135deg, #0057B7 0%, #1565c0 50%, #FFD700 100%)",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a9/80-391-9014_Kyiv_Sofia_2_RB_24.jpg/1280px-80-391-9014_Kyiv_Sofia_2_RB_24.jpg",
+      "image_credit": "Rbrechko · CC BY-SA 4.0",
+      "image_type": "illustration"
     },
     {
       "id": 9016,
@@ -167,7 +170,10 @@
       "category": "Свято",
       "kind": "державне",
       "cover_emoji": "✝️",
-      "cover_gradient": "linear-gradient(135deg, #4a148c 0%, #0057B7 100%)"
+      "cover_gradient": "linear-gradient(135deg, #4a148c 0%, #0057B7 100%)",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Christianization_of_Kievan_Rus%27.jpg",
+      "image_credit": "Vitold Muratov · CC BY-SA 4.0",
+      "image_type": "illustration"
     },
     {
       "id": 9017,
@@ -177,7 +183,10 @@
       "category": "Свято",
       "kind": "релігійне",
       "cover_emoji": "🍎",
-      "cover_gradient": "linear-gradient(135deg, #ffe0b2 0%, #ff8a65 50%, #c62828 100%)"
+      "cover_gradient": "linear-gradient(135deg, #ffe0b2 0%, #ff8a65 50%, #c62828 100%)",
+      "image": "https://upload.wikimedia.org/wikipedia/commons/thumb/9/99/Apples_in_basket_2018_G2.jpg/1280px-Apples_in_basket_2018_G2.jpg",
+      "image_credit": "George Chernilevsky · Public domain",
+      "image_type": "illustration"
     },
     {
       "id": 9018,
