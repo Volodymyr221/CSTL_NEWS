@@ -304,6 +304,21 @@
     }
     .loading { text-align: center; padding: 30px; color: #888; }
 
+    /* ── Статті (кабінет редактора) ───────────────────────────────── */
+    .art-head { margin-bottom: 14px; }
+    .art-form { display: flex; flex-direction: column; gap: 12px; }
+    .art-lbl { display: flex; flex-direction: column; gap: 5px; font-size: 13px; font-weight: 600; color: #444; }
+    .art-inp {
+      font: inherit; font-size: 15px; font-weight: 400;
+      padding: 10px 12px; border: 1px solid #ccc; border-radius: 10px;
+      background: #fff; color: #222; width: 100%; box-sizing: border-box;
+    }
+    .art-inp:focus { outline: none; border-color: #2E5E1F; }
+    textarea.art-inp { resize: vertical; line-height: 1.5; }
+    .art-row { display: flex; gap: 12px; }
+    .art-row .art-lbl { flex: 1; }
+    .art-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 6px; }
+
     /* ── NOT CONFIGURED ───────────────────────────────────────────── */
     .not-configured {
       background: #FFF3CD;
@@ -423,12 +438,15 @@ const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 // ── Поточний стан ───────────────────────────────────────────────────────
 let currentUser = null;       // user object з Supabase Auth
 let isAdmin = false;          // прапорець після перевірки у admins
-let activeTab = 'pending';    // pending | announcements | admins
+let editorPerms = { isEditor: false, canCreate: false, canPublish: false, canEvents: false };
+let activeTab = 'pending';    // pending | announcements | admins | articles | settings
 let pendingPosts   = [];
 let publishedPosts = [];
 let announcements  = [];
 let admins         = [];
 let comments       = [];
+let articles       = [];      // чернетки/готове до публікації (cms_articles)
+let articleDraft   = null;    // null = список; об'єкт = форма створення/редагування
 
 // ── ENTRY: перевіряємо сесію, або рендеримо login ──────────────────────
 async function init() {
@@ -451,16 +469,79 @@ async function handleSession(session) {
   // Перевіряємо чи ця пошта є у whitelist admins
   const { data, error } = await supa.from('admins').select('email').eq('email', currentUser.email);
   isAdmin = !error && data && data.length > 0;
+  // Редакторські дозволи (окремо від admins — грануляція для Алли)
+  editorPerms = await fetchMyEditorPerms();
 
   emailEl.textContent = currentUser.email;
   userEl.style.display = 'flex';
 
-  if (!isAdmin) {
+  // Доступ = адмін АБО редактор. Інакше — «Немає доступу» (справжній гейт — RLS).
+  if (!isAdmin && !editorPerms.isEditor) {
     renderNoAccess();
     return;
   }
+  // Редактор без адмінських прав → стартова вкладка «Статті»
+  if (!isAdmin && !['articles', 'settings'].includes(activeTab)) activeTab = 'articles';
   await loadAll();
   renderApp();
+}
+
+// Редакторські дозволи поточного користувача (RLS дозволяє читати власний рядок).
+async function fetchMyEditorPerms() {
+  const empty = { isEditor: false, canCreate: false, canPublish: false, canEvents: false };
+  if (!currentUser) return empty;
+  try {
+    const { data, error } = await supa.from('editor_users')
+      .select('can_create,can_publish,can_events').eq('uid', currentUser.id).maybeSingle();
+    if (error || !data) return empty;
+    return { isEditor: true, canCreate: !!data.can_create, canPublish: !!data.can_publish, canEvents: !!data.can_events };
+  } catch { return empty; }
+}
+
+// ── Статті (cms_articles) — читання/запис. Справжній захист — RLS у БД. ──
+async function fetchArticles() {
+  const { data, error } = await supa.from('cms_articles')
+    .select('*').order('updated_at', { ascending: false }).limit(100);
+  return error ? [] : (data || []);
+}
+async function saveArticle(a) {
+  const row = {
+    type: 'news',
+    title: a.title, excerpt: a.excerpt, content: a.content,
+    category: a.category || null, geo: a.geo || null,
+    image: a.image || null, image_type: a.image_type || (a.image ? 'source' : 'none'),
+    image_credit: a.image_credit || null,
+    author_uid: currentUser.id, updated_at: new Date().toISOString(),
+  };
+  if (a.id) {
+    const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
+    return !error;
+  }
+  row.status = 'draft';
+  const { error } = await supa.from('cms_articles').insert(row);
+  return !error;
+}
+async function publishArticle(id) {
+  // draft/готове → ready (CI-синк викладе в стрічку). Гейт can_publish — і в UI, і в RLS.
+  const { error } = await supa.from('cms_articles')
+    .update({ status: 'ready', ts: Date.now(), updated_at: new Date().toISOString() }).eq('id', id);
+  return !error;
+}
+async function unpublishArticle(id) {
+  const { error } = await supa.from('cms_articles').update({ status: 'draft' }).eq('id', id);
+  return !error;
+}
+async function deleteArticle(id) {
+  const { error } = await supa.from('cms_articles').delete().eq('id', id);
+  return !error;
+}
+async function uploadArticlePhoto(file) {
+  const safe = (file.name || 'photo').replace(/[^\w.\-]/g, '_');
+  const path = `articles/${currentUser.id}/${Date.now()}_${safe}`;
+  const { error } = await supa.storage.from('community-photos').upload(path, file, { upsert: false });
+  if (error) return null;
+  const { data } = supa.storage.from('community-photos').getPublicUrl(path);
+  return data?.publicUrl || null;
 }
 
 // ── LOGIN VIEW ─────────────────────────────────────────────────────────
@@ -468,8 +549,12 @@ function renderLogin() {
   mainEl.innerHTML = `
     <div class="login-card">
       <div class="login-icon">🔐</div>
-      <h1 class="login-title">Вхід у адмінку</h1>
-      <p class="login-sub">Увійди поштою і паролем.</p>
+      <h1 class="login-title">Вхід у консоль</h1>
+      <p class="login-sub">Для команди — вхід через Google (один раз).</p>
+      <button class="login-btn" id="login-google" type="button" style="background:#fff;color:#222;border:1px solid #ccc;margin-bottom:14px">
+        <span style="font-weight:700;color:#4285F4">G</span>&nbsp; Увійти через Google
+      </button>
+      <div style="text-align:center;color:#aaa;font-size:12px;margin:6px 0 12px">або поштою й паролем</div>
       <form class="login-form" id="login-form">
         <input class="login-input" id="login-email" type="email" placeholder="ваша@пошта.com" required autocomplete="email">
         <input class="login-input" id="login-password" type="password" placeholder="пароль" required autocomplete="current-password">
@@ -495,6 +580,15 @@ function renderLogin() {
       showToast('Помилка: ' + error.message, 4500);
     }
     // При успіху onAuthStateChange сам перерендерить view (handleSession → renderApp)
+  });
+
+  document.getElementById('login-google').addEventListener('click', async () => {
+    // Той самий Google-акаунт, що й у додатку → консоль реюзає сесію. Низьке тертя.
+    const { error } = await supa.auth.signInWithOAuth({
+      provider: 'google',
+      options: { redirectTo: window.location.href },
+    });
+    if (error) showToast('Помилка Google-входу: ' + error.message, 4500);
   });
 
   document.getElementById('forgot-link').addEventListener('click', (e) => {
@@ -577,46 +671,46 @@ VALUES ('${escapeHtml(currentUser.email)}', 'Імʼя');</code>
 
 // ── ДАНІ: завантажити все паралельно ──────────────────────────────────
 async function loadAll() {
-  const [pending, published, ann, ad, com] = await Promise.all([
-    supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
-    supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
-    supa.from('announcements').select('*').order('created_at', { ascending: false }),
-    supa.from('admins').select('*').order('created_at', { ascending: true }),
-    supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
-  ]);
-  pendingPosts   = pending.data   || [];
-  publishedPosts = published.data || [];
-  announcements  = ann.data       || [];
-  admins         = ad.data        || [];
-  comments       = com.data       || [];
+  // Дошкові дані — лише адмінам (у редактора RLS їх однаково не віддасть).
+  if (isAdmin) {
+    const [pending, published, ann, ad, com] = await Promise.all([
+      supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
+      supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
+      supa.from('announcements').select('*').order('created_at', { ascending: false }),
+      supa.from('admins').select('*').order('created_at', { ascending: true }),
+      supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
+    ]);
+    pendingPosts   = pending.data   || [];
+    publishedPosts = published.data || [];
+    announcements  = ann.data       || [];
+    admins         = ad.data        || [];
+    comments       = com.data       || [];
+  }
+  // Статті — адмінам і редакторам із дозволом створення.
+  if (isAdmin || editorPerms.canCreate) {
+    articles = await fetchArticles();
+  }
 }
 
 // ── APP VIEW: таби ────────────────────────────────────────────────────
 function renderApp() {
+  const canArticles = isAdmin || editorPerms.canCreate;
+  const tab = (id, label, count) =>
+    `<button class="tab ${activeTab === id ? 'active' : ''}" data-tab="${id}">${label}${count ? ` <span class="tab-count">${count}</span>` : ''}</button>`;
+  // Розділи за дозволами: Дошка — лише адмінам; Статті — адмінам+редакторам.
+  const boardTabs = isAdmin ? (
+    tab('pending', '📋 Модерація', pendingPosts.length) +
+    tab('announcements', '🏛️ Оголошення') +
+    tab('published', '✓ Опубліковані', publishedPosts.length) +
+    tab('comments', '💬 Коментарі', comments.length) +
+    tab('admins', '👥 Адміни', admins.length)
+  ) : '';
+  const articleTab = canArticles ? tab('articles', '📝 Статті', articles.length) : '';
   mainEl.innerHTML = `
     <div class="tabs">
-      <button class="tab ${activeTab === 'pending' ? 'active' : ''}" data-tab="pending">
-        📋 Модерація
-        ${pendingPosts.length ? `<span class="tab-count">${pendingPosts.length}</span>` : ''}
-      </button>
-      <button class="tab ${activeTab === 'announcements' ? 'active' : ''}" data-tab="announcements">
-        🏛️ Оголошення
-      </button>
-      <button class="tab ${activeTab === 'published' ? 'active' : ''}" data-tab="published">
-        ✓ Опубліковані
-        <span class="tab-count">${publishedPosts.length}</span>
-      </button>
-      <button class="tab ${activeTab === 'comments' ? 'active' : ''}" data-tab="comments">
-        💬 Коментарі
-        <span class="tab-count">${comments.length}</span>
-      </button>
-      <button class="tab ${activeTab === 'admins' ? 'active' : ''}" data-tab="admins">
-        👥 Адміни
-        <span class="tab-count">${admins.length}</span>
-      </button>
-      <button class="tab ${activeTab === 'settings' ? 'active' : ''}" data-tab="settings">
-        ⚙️ Налаштування
-      </button>
+      ${articleTab}
+      ${boardTabs}
+      ${tab('settings', '⚙️ Налаштування')}
     </div>
     <div id="tab-content"></div>
   `;
@@ -632,12 +726,145 @@ function renderApp() {
 function renderTabContent() {
   const el = document.getElementById('tab-content');
   if (!el) return;
+  if (activeTab === 'articles')       return renderArticles(el);
   if (activeTab === 'pending')        return renderPending(el);
   if (activeTab === 'published')      return renderPublished(el);
   if (activeTab === 'comments')       return renderCommentsModeration(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'settings')       return renderSettings(el);
+}
+
+// ── TAB: Статті (кабінет редактора) ───────────────────────────────────
+const ART_CATEGORIES = ['Суспільство', 'Культура', 'Спорт', 'Освіта', 'Історія', 'Люди', 'Бізнес'];
+const ART_GEOS = ['Громада', 'Волинь', 'Україна', 'Світ'];
+const ART_STATUS = {
+  draft:     { label: 'Чернетка',    color: '#8a7' },
+  ready:     { label: 'На публікації', color: '#e08a2b' },
+  published: { label: 'Опубліковано', color: '#2e9e5b' },
+  archived:  { label: 'В архіві',    color: '#999' },
+};
+
+function renderArticles(el) {
+  if (articleDraft) return renderArticleForm(el);
+  const canPub = isAdmin || editorPerms.canPublish;
+  el.innerHTML = `
+    <div class="art-head">
+      <button class="btn btn--approve" id="art-new">+ Створити статтю</button>
+    </div>
+    ${!articles.length ? '<div class="empty">Поки немає статей. Натисніть «Створити статтю».</div>' :
+      articles.map(a => {
+        const st = ART_STATUS[a.status] || ART_STATUS.draft;
+        return `
+        <article class="card">
+          <div class="card-meta">
+            <span class="badge" style="background:${st.color}">${st.label}</span>
+            ${a.geo ? `<span class="badge badge--cat">${escapeHtml(a.geo)}</span>` : ''}
+            ${a.category ? `<span class="badge badge--loc">${escapeHtml(a.category)}</span>` : ''}
+            ${a.image_type === 'illustration' ? '<span class="badge" style="background:#555">🖼 Ілюстрація</span>' : ''}
+            <span style="font-size:12px;color:#999;margin-left:auto">${escapeHtml(formatDate(a.updated_at))}</span>
+          </div>
+          <div style="font-weight:700;margin-bottom:4px">${escapeHtml(a.title || '(без заголовка)')}</div>
+          ${a.excerpt ? `<p class="card-text">${escapeHtml(a.excerpt)}</p>` : ''}
+          <div class="card-actions">
+            <button class="btn" data-art-edit="${a.id}">✏️ Редагувати</button>
+            ${a.status === 'draft' && canPub ? `<button class="btn btn--approve" data-art-pub="${a.id}">🚀 Опублікувати</button>` : ''}
+            ${a.status === 'ready' ? `<button class="btn" data-art-unpub="${a.id}">↩︎ У чернетки</button>` : ''}
+            <button class="btn btn--reject" data-art-del="${a.id}">🗑 Видалити</button>
+          </div>
+        </article>`;
+      }).join('')}
+  `;
+  document.getElementById('art-new')?.addEventListener('click', () => {
+    articleDraft = { title: '', excerpt: '', content: '', category: '', geo: 'Громада', image: null, image_type: 'none', image_credit: null };
+    renderApp();
+  });
+  el.querySelectorAll('[data-art-edit]').forEach(b => b.addEventListener('click', () => {
+    articleDraft = { ...articles.find(a => String(a.id) === b.dataset.artEdit) };
+    renderApp();
+  }));
+  el.querySelectorAll('[data-art-pub]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Опублікувати статтю? Вона з\'явиться у стрічці після синхронізації.')) return;
+    b.disabled = true;
+    const ok = await publishArticle(b.dataset.artPub);
+    if (!ok) { alert('Не вдалося опублікувати (перевірте дозвіл).'); b.disabled = false; return; }
+    articles = await fetchArticles(); renderApp();
+  }));
+  el.querySelectorAll('[data-art-unpub]').forEach(b => b.addEventListener('click', async () => {
+    await unpublishArticle(b.dataset.artUnpub); articles = await fetchArticles(); renderApp();
+  }));
+  el.querySelectorAll('[data-art-del]').forEach(b => b.addEventListener('click', async () => {
+    if (!confirm('Видалити статтю?')) return;
+    await deleteArticle(b.dataset.artDel); articles = await fetchArticles(); renderApp();
+  }));
+}
+
+function renderArticleForm(el) {
+  const d = articleDraft;
+  const canPub = isAdmin || editorPerms.canPublish;
+  el.innerHTML = `
+    <div class="art-form">
+      <label class="art-lbl">Заголовок
+        <input class="art-inp" id="af-title" value="${escapeHtml(d.title || '')}" placeholder="Заголовок статті">
+      </label>
+      <label class="art-lbl">Короткий опис (лід)
+        <textarea class="art-inp" id="af-excerpt" rows="2" placeholder="1-2 речення для картки">${escapeHtml(d.excerpt || '')}</textarea>
+      </label>
+      <label class="art-lbl">Повний текст
+        <textarea class="art-inp" id="af-content" rows="9" placeholder="Текст статті...">${escapeHtml(d.content || '')}</textarea>
+      </label>
+      <div class="art-row">
+        <label class="art-lbl">Регіон
+          <select class="art-inp" id="af-geo">${ART_GEOS.map(g => `<option ${d.geo === g ? 'selected' : ''}>${g}</option>`).join('')}</select>
+        </label>
+        <label class="art-lbl">Категорія
+          <select class="art-inp" id="af-cat"><option value="">—</option>${ART_CATEGORIES.map(c => `<option ${d.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
+        </label>
+      </div>
+      <label class="art-lbl">Фото (обкладинка)
+        <input class="art-inp" id="af-photo" type="file" accept="image/*">
+      </label>
+      <div id="af-preview">${d.image ? `<img src="${escapeHtml(d.image)}" style="max-width:100%;border-radius:10px;margin-top:6px">` : ''}</div>
+      <div class="art-actions">
+        <button class="btn" id="af-cancel">Скасувати</button>
+        <button class="btn btn--approve" id="af-save">💾 Зберегти чернетку</button>
+        ${canPub ? `<button class="btn" id="af-savepub" style="background:#e08a2b;color:#fff">🚀 Зберегти й опублікувати</button>` : ''}
+      </div>
+    </div>
+  `;
+  const read = () => ({
+    ...d,
+    title: document.getElementById('af-title').value.trim(),
+    excerpt: document.getElementById('af-excerpt').value.trim(),
+    content: document.getElementById('af-content').value.trim(),
+    geo: document.getElementById('af-geo').value,
+    category: document.getElementById('af-cat').value,
+  });
+  document.getElementById('af-cancel').addEventListener('click', () => { articleDraft = null; renderApp(); });
+  // Фото → Supabase Storage
+  document.getElementById('af-photo').addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const prev = document.getElementById('af-preview');
+    prev.innerHTML = 'Завантаження…';
+    const url = await uploadArticlePhoto(file);
+    if (url) { d.image = url; d.image_type = 'source'; prev.innerHTML = `<img src="${url}" style="max-width:100%;border-radius:10px;margin-top:6px">`; }
+    else { prev.innerHTML = '<span style="color:#c33">Не вдалося завантажити фото</span>'; }
+  });
+  const doSave = async (publish) => {
+    const a = read();
+    if (!a.title || !a.content) { alert('Заголовок і текст обов\'язкові.'); return; }
+    const ok = await saveArticle(a);
+    if (!ok) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
+    articles = await fetchArticles();
+    if (publish) {
+      const fresh = articles.find(x => x.title === a.title);
+      if (fresh) await publishArticle(fresh.id);
+      articles = await fetchArticles();
+    }
+    articleDraft = null; renderApp();
+  };
+  document.getElementById('af-save').addEventListener('click', () => doSave(false));
+  document.getElementById('af-savepub')?.addEventListener('click', () => doSave(true));
 }
 
 // ── TAB 1: модерація постів ───────────────────────────────────────────

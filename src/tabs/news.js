@@ -101,6 +101,7 @@ function badgesHtml(a) {
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
     <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">⭐ Ексклюзив</span>' : ''}
+    ${a.imageType === 'illustration' ? '<span class="news-badge news-badge--illus">🖼 Ілюстрація</span>' : ''}
   `;
 }
 
@@ -185,6 +186,10 @@ export function openArticle(id) {
       </div>
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ''}
+    ${article.image && (article.imageType === 'illustration' || article.imageCredit) ? `
+      <div class="article-img-caption">
+        ${article.imageType === 'illustration' ? '<strong>Ілюстрація.</strong> ' : ''}${article.imageCredit ? 'Фото: ' + escapeHtml(article.imageCredit) : ''}
+      </div>` : ''}
     <div class="article-body">${bodyHtml}</div>
     ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
       <div class="article-short-note">

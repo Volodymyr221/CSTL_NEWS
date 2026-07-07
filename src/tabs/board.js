@@ -979,7 +979,6 @@ function renderChatCard(p) {
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
         </div>
         ${saveBtnHtml(p)}
-        <span class="bd-chat-foot-arrow">→</span>
       </div>
     </article>
   `;
@@ -1028,9 +1027,9 @@ function renderHeader() {
   // Перемикач Дошка|Обговорення прибрано (Етап 1 крок 2b): Дошка = чистий маркетплейс.
   // «Обговорення» відкриваються з вкладки «Чати» (режим activeType='chat') і мають
   // власну шапку з кнопкою «← назад» (веде у вкладку Чати). «Збережені» — з FAB-підменю.
+  // Обговорення — головна сторінка вкладки, тому кнопки «← назад» НЕМА (нікуди виходити).
   const discHead = activeType === 'chat'
     ? `<div class="bd-disc-head">
-         <button class="bd-disc-back" type="button" data-bd-back aria-label="Назад до Чатів">←</button>
          <span class="bd-disc-title">📢 Обговорення</span>
        </div>`
     : '';
@@ -1255,8 +1254,7 @@ function renderAll() {
     renderAll(el);
   });
 
-  // «← Назад» з Обговорень → на головну (Громада). switchTab закриє через cstl-tab-changed.
-  el.querySelector('[data-bd-back]')?.addEventListener('click', () => window.switchTab('community'));
+
 
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {

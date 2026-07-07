@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260706-1516';
+const CACHE_NAME = 'cstl-20260707-0859';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -20,6 +20,7 @@ const STATIC_ASSETS = [
   './style/community.css',
   './style/account.css',
   './style/messages.css',
+  './style/sidebar.css',
   './bundle.js',
   './logo.png',
   './icons/castle-icon.png',   // лого центральної кнопки ГРОМАДА — precache, щоб не зникало після bump CACHE

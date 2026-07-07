@@ -409,6 +409,18 @@
   function isSupabaseReady() {
     return supa !== null;
   }
+  async function isTeamMember() {
+    if (!supa)
+      return false;
+    try {
+      const { data, error } = await supa.rpc("is_team_member");
+      if (error)
+        return false;
+      return data === true;
+    } catch {
+      return false;
+    }
+  }
   async function fetchPublishedPosts() {
     if (!supa)
       return null;
@@ -1150,16 +1162,29 @@
       _profileName = data.name;
     return data;
   }
-  async function saveProfile({ name, birth_date }) {
+  var PROFILE_FIELDS = ["name", "birth_date", "surname", "phone", "settlement", "street", "bio", "avatar_url"];
+  async function saveProfile(fields = {}) {
     const supa2 = getSupabase();
     if (!supa2 || !_user)
       return { ok: false, error: "\u043D\u0435 \u0437\u0430\u043B\u043E\u0433\u0456\u043D\u0435\u043D\u043E" };
-    const row = { uid: _user.id, name: name || null, email: _user.email || null, birth_date: birth_date || null };
-    const { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
+    const row = { uid: _user.id, email: _user.email || null };
+    for (const k of PROFILE_FIELDS)
+      if (k in fields)
+        row[k] = fields[k] === "" ? null : fields[k];
+    let { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
+    if (error && /column|schema/i.test(error.message)) {
+      const core = {
+        uid: _user.id,
+        email: _user.email || null,
+        name: row.name ?? null,
+        birth_date: row.birth_date ?? null
+      };
+      ({ error } = await supa2.from("profiles").upsert(core, { onConflict: "uid" }));
+    }
     if (error)
       return { ok: false, error: error.message };
-    if (name)
-      _profileName = name;
+    if (row.name)
+      _profileName = row.name;
     return { ok: true };
   }
 
@@ -4006,7 +4031,6 @@ ${post.text}
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
         </div>
         ${saveBtnHtml(p)}
-        <span class="bd-chat-foot-arrow">\u2192</span>
       </div>
     </article>
   `;
@@ -4046,7 +4070,6 @@ ${post.text}
   }
   function renderHeader() {
     const discHead = activeType === "chat" ? `<div class="bd-disc-head">
-         <button class="bd-disc-back" type="button" data-bd-back aria-label="\u041D\u0430\u0437\u0430\u0434 \u0434\u043E \u0427\u0430\u0442\u0456\u0432">\u2190</button>
          <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
        </div>` : "";
     const showCategories = activeType === "board";
@@ -4247,7 +4270,6 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    el.querySelector("[data-bd-back]")?.addEventListener("click", () => window.switchTab("community"));
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
@@ -6967,6 +6989,7 @@ ${post.text}
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
     <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
   }
   function renderFeatured(a) {
@@ -7037,6 +7060,10 @@ ${post.text}
       </div>
     </div>
     ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
+    ${article.image && (article.imageType === "illustration" || article.imageCredit) ? `
+      <div class="article-img-caption">
+        ${article.imageType === "illustration" ? "<strong>\u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F.</strong> " : ""}${article.imageCredit ? "\u0424\u043E\u0442\u043E: " + escapeHtml(article.imageCredit) : ""}
+      </div>` : ""}
     <div class="article-body">${bodyHtml}</div>
     ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
       <div class="article-short-note">
@@ -7113,6 +7140,8 @@ ${post.text}
     return { icon: "\u{1F321}\uFE0F", text: "\u2014" };
   }
   var WEEKDAYS_UA = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
+  var WEEKDAYS_UA_FULL = ["\u041D\u0435\u0434\u0456\u043B\u044F", "\u041F\u043E\u043D\u0435\u0434\u0456\u043B\u043E\u043A", "\u0412\u0456\u0432\u0442\u043E\u0440\u043E\u043A", "\u0421\u0435\u0440\u0435\u0434\u0430", "\u0427\u0435\u0442\u0432\u0435\u0440", "\u041F'\u044F\u0442\u043D\u0438\u0446\u044F", "\u0421\u0443\u0431\u043E\u0442\u0430"];
+  var _wxData = null;
   function setWeatherTitle(cityName) {
     const headerEl = document.querySelector(".cm-block--weather .cm-block-title");
     if (headerEl && cityName)
@@ -7126,11 +7155,12 @@ ${post.text}
       const { lat, lon, city: knownCity } = await getCoords();
       const [weatherRes, cityName] = await Promise.all([
         fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code,apparent_temperature&hourly=temperature_2m,precipitation_probability,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min&forecast_days=7&timezone=auto`
         ),
         knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
       ]);
       const data = await weatherRes.json();
+      _wxData = { ...data, city: cityName };
       const cur = data.current;
       const day = data.daily;
       const info = weatherCodeInfo(cur.weather_code);
@@ -7142,11 +7172,11 @@ ${post.text}
         const wd = i === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA[d.getDay()];
         const dayInfo = weatherCodeInfo(day.weather_code[i]);
         return `
-        <div class="cm-fc-day${i === 0 ? " cm-fc-day--today" : ""}">
+        <button type="button" class="cm-fc-day${i === 0 ? " cm-fc-day--today" : ""}" data-wx-day="${i}">
           <span class="cm-fc-wd">${escapeHtml(wd)}</span>
           <span class="cm-fc-date">${d.getDate()}</span>
           <span class="cm-fc-icon">${dayInfo.icon}</span>
-        </div>
+        </button>
       `;
       }).join("");
       el.innerHTML = `
@@ -7160,9 +7190,118 @@ ${post.text}
       </div>
       <div class="cm-weather-forecast">${forecastHtml}</div>
     `;
+      el.querySelectorAll("[data-wx-day]").forEach((btn) => {
+        btn.addEventListener("click", () => openWeatherDayModal(+btn.dataset.wxDay));
+      });
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
+  }
+  function wxLineChart(points, { unit = "\xB0", color = "#FFFFFF", pad: padTop = 16 } = {}) {
+    const W = 320, H = 96, padL = 6, padR = 6, padB = 18;
+    const vals = points.map((p) => p.v);
+    let min = Math.min(...vals), max = Math.max(...vals);
+    if (min === max) {
+      min -= 1;
+      max += 1;
+    }
+    const range = max - min;
+    const innerW = W - padL - padR;
+    const innerH = H - padTop - padB;
+    const x = (i) => padL + innerW * i / (points.length - 1);
+    const y = (v) => padTop + innerH - (v - min) / range * innerH;
+    const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
+    const area = `${line} L${x(points.length - 1).toFixed(1)},${(padTop + innerH).toFixed(1)} L${x(0).toFixed(1)},${(padTop + innerH).toFixed(1)} Z`;
+    const maxI = vals.indexOf(max), minI = vals.indexOf(min);
+    const labels = points.map((p, i) => {
+      let out = "";
+      if (i % 3 === 0)
+        out += `<text x="${x(i).toFixed(1)}" y="${H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>`;
+      if (i === maxI || i === minI)
+        out += `<text x="${x(i).toFixed(1)}" y="${(y(p.v) - 5).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}${unit}</text>`;
+      return out;
+    }).join("");
+    return `
+    <svg class="wx-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">
+      <defs><linearGradient id="wxfill" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
+        <stop offset="1" stop-color="${color}" stop-opacity="0"/>
+      </linearGradient></defs>
+      <path d="${area}" fill="url(#wxfill)"/>
+      <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
+      ${labels}
+    </svg>`;
+  }
+  function wxBarChart(points) {
+    const W = 320, H = 96, padL = 6, padR = 6, padTop = 16, padB = 18;
+    const innerW = W - padL - padR;
+    const innerH = H - padTop - padB;
+    const bw = innerW / points.length * 0.62;
+    const bars = points.map((p, i) => {
+      const cx = padL + innerW * (i + 0.5) / points.length;
+      const h = Math.max(1, Math.min(100, p.v) / 100 * innerH);
+      const yTop = padTop + innerH - h;
+      const label = i % 3 === 0 ? `<text x="${cx.toFixed(1)}" y="${H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : "";
+      const pct = p.v >= 20 && i % 3 === 0 ? `<text x="${cx.toFixed(1)}" y="${(yTop - 4).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}%</text>` : "";
+      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="#FFFFFF" fill-opacity="${(0.35 + 0.6 * Math.min(100, p.v) / 100).toFixed(2)}"/>${pct}${label}`;
+    }).join("");
+    return `<svg class="wx-chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img">${bars}</svg>`;
+  }
+  function closeWeatherModal(overlay) {
+    overlay.classList.remove("wx-open");
+    setTimeout(() => overlay.remove(), 280);
+  }
+  function openWeatherDayModal(dayIndex) {
+    if (!_wxData || !_wxData.hourly)
+      return;
+    const daily = _wxData.daily;
+    const hourly = _wxData.hourly;
+    const dateStr = daily.time[dayIndex];
+    if (!dateStr)
+      return;
+    const idxs = [];
+    hourly.time.forEach((t, i) => {
+      if (t.startsWith(dateStr))
+        idxs.push(i);
+    });
+    if (!idxs.length)
+      return;
+    const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
+    const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
+    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+    const dayName = dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
+    const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
+    const info = weatherCodeInfo(daily.weather_code[dayIndex]);
+    const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
+    const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
+    const overlay = document.createElement("div");
+    overlay.className = "wx-modal";
+    overlay.innerHTML = `
+    <div class="wx-sheet" role="dialog" aria-label="\u041F\u043E\u0433\u043E\u0434\u0430 \u043F\u043E \u0433\u043E\u0434\u0438\u043D\u0430\u0445">
+      <div class="wx-grabber"></div>
+      <div class="wx-head">
+        <div class="wx-head-icon">${info.icon}</div>
+        <div class="wx-head-info">
+          <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
+          <div class="wx-head-desc">${escapeHtml(info.text)}</div>
+        </div>
+        <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
+      </div>
+      <div class="wx-chart-block">
+        <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
+        <div class="wx-chart-svg-wrap">${wxLineChart(tempPts, { unit: "\xB0" })}</div>
+      </div>
+      <div class="wx-chart-block">
+        <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
+        <div class="wx-chart-svg-wrap">${wxBarChart(precipPts)}</div>
+      </div>
+    </div>`;
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay)
+        closeWeatherModal(overlay);
+    });
+    document.body.appendChild(overlay);
+    requestAnimationFrame(() => overlay.classList.add("wx-open"));
   }
   async function renderBusBlock() {
     const el = document.getElementById("cm-bus-content");
@@ -7616,14 +7755,16 @@ ${post.text}
   }
   function paintCmNews(el, arts) {
     const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    el.innerHTML = `
-    <div class="cm-news-filters">
-      ${CM_NEWS_FILTERS.map((g) => `
-        <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
-      `).join("")}
-    </div>
-    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-  `;
+    el.innerHTML = `<div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>`;
+    const controls = document.getElementById("cm-news-controls");
+    if (controls) {
+      controls.innerHTML = `
+      <div class="cm-news-filters">
+        ${CM_NEWS_FILTERS.map((g) => `
+          <button class="cm-news-chip ${g === cmNewsGeo ? "active" : ""}" data-cm-geo="${escapeHtml(g)}">${escapeHtml(g)}</button>
+        `).join("")}
+      </div>`;
+    }
   }
   async function renderCommunityNews() {
     const el = document.getElementById("cm-news-content");
@@ -7713,13 +7854,32 @@ ${post.text}
   }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
-    if (h >= 5 && h < 11)
-      return { text: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
-    if (h >= 11 && h < 17)
-      return { text: "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
-    if (h >= 17 && h < 22)
-      return { text: "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u0429\u043E \u0446\u0456\u043A\u0430\u0432\u043E\u0433\u043E \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456" };
-    return { text: "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456, \u0433\u0440\u043E\u043C\u0430\u0434\u043E!", sub: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430 \u0441\u043F\u0438\u0442\u044C \u2014 \u043E\u0441\u044C \u0434\u043E\u0431\u0456\u0440\u043A\u0430" };
+    let hello, sub;
+    if (h >= 5 && h < 11) {
+      hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A";
+      sub = "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    } else if (h >= 11 && h < 17) {
+      hello = "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C";
+      sub = "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    } else if (h >= 17 && h < 22) {
+      hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440";
+      sub = "\u0429\u043E \u0446\u0456\u043A\u0430\u0432\u043E\u0433\u043E \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    } else {
+      hello = "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456";
+      sub = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430 \u0441\u043F\u0438\u0442\u044C \u2014 \u043E\u0441\u044C \u0434\u043E\u0431\u0456\u0440\u043A\u0430";
+    }
+    let who = "\u0433\u0440\u043E\u043C\u0430\u0434\u043E";
+    if (isLoggedIn()) {
+      const name = (currentUserName() || "").trim().split(/\s+/)[0];
+      if (name && name !== "\u0416\u0438\u0442\u0435\u043B\u044C")
+        who = name;
+    }
+    return { text: `${hello}, ${who}!`, sub };
+  }
+  function updateGreetingName() {
+    const el = document.querySelector(".cm-greeting-text");
+    if (el)
+      el.textContent = getGreeting().text;
   }
   function formatTodayHeader() {
     const d = /* @__PURE__ */ new Date();
@@ -7752,6 +7912,7 @@ ${post.text}
         ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? " active" : ""}"></span>`).join("")}
       </div>
     </section>
+    <div class="cm-hero-spacer"></div>
 
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
@@ -7795,7 +7956,13 @@ ${post.text}
     </section>
 
     <section class="cm-block cm-block--news">
+      <div class="cm-news-board-bar">
+        <span class="cm-news-board-dot"></span>
+        <span class="cm-news-board-label">\u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D</span>
+        <span class="cm-news-board-live">LIVE</span>
+      </div>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
     <section class="cm-block cm-block--contacts">
@@ -7806,10 +7973,39 @@ ${post.text}
     </section>
   `;
   }
+  var _greetingWired = false;
+  var _heroBlurWired = false;
+  function wireHeroBlur() {
+    if (_heroBlurWired)
+      return;
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    _heroBlurWired = true;
+    let ticking = false;
+    main.addEventListener("scroll", () => {
+      if (ticking)
+        return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const hero = document.querySelector(".cm-hero");
+        if (hero)
+          hero.classList.toggle("cm-blur", main.scrollTop > 24);
+        ticking = false;
+      });
+    }, { passive: true });
+  }
   function initCommunity() {
     renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
+    attachHeroScrollBlur();
+    wireHeroBlur();
+    if (!_greetingWired) {
+      onAuthChange(updateGreetingName);
+      _greetingWired = true;
+    }
+    updateGreetingName();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();
@@ -7830,9 +8026,34 @@ ${post.text}
         window.switchTab(tab);
     });
   }
+  function attachHeroScrollBlur() {
+    const scroller = document.querySelector(".app-main");
+    if (!scroller)
+      return;
+    const apply = () => {
+      const hero = document.querySelector("#cm-content .cm-hero");
+      if (!hero)
+        return;
+      const blur = Math.min(6, scroller.scrollTop / 45);
+      hero.style.setProperty("--hero-blur", blur.toFixed(2) + "px");
+    };
+    if (!scroller.dataset.heroBlurBound) {
+      scroller.dataset.heroBlurBound = "1";
+      let ticking = false;
+      scroller.addEventListener("scroll", () => {
+        if (ticking)
+          return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          ticking = false;
+          apply();
+        });
+      }, { passive: true });
+    }
+    apply();
+  }
 
   // src/tabs/events.js
-  var CATEGORY_FILTERS = ["\u0412\u0441\u0456", "\u0421\u0432\u044F\u0442\u0430", "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430", "\u0421\u043F\u043E\u0440\u0442", "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C"];
   var CATEGORY_COLORS2 = {
     "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
     "Kino_Castle": "#722F37",
@@ -7842,17 +8063,7 @@ ${post.text}
     // коричневий — нейтральний для свят (державних і релігійних)
   };
   var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-  var WEEKDAYS_SHORT = ["\u041D\u0434", "\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431"];
-  var CALENDAR_DAYS = 21;
   var allEvents = [];
-  var activeFilter = "\u0412\u0441\u0456";
-  var selectedDate = null;
-  function ymd(d) {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const dd = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${dd}`;
-  }
   function formatFullDate(dateStr) {
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
@@ -7915,25 +8126,25 @@ ${post.text}
   }
   function cardHtml(ev) {
     const catC = catColor2(ev.category);
-    let thumb;
+    let cover;
     if (ev.image) {
-      thumb = `<img class="news-card-row-img" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
     } else {
       const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      thumb = `<div class="news-card-row-img shotam-cover-thumb" style="background:${escapeHtml(grad)}">${ev.cover_emoji || "\u{1F4C5}"}</div>`;
+      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
     }
     const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
     const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
     return `
-    <article class="news-card-row" data-id="${ev.id}">
-      ${thumb}
-      <div class="news-card-row-body">
+    <article class="shotam-card" data-id="${ev.id}">
+      ${cover}
+      <div class="shotam-card-body">
         <div class="news-card-meta">
           <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
         </div>
-        <h2 class="news-card-row-title">${escapeHtml(ev.title)}</h2>
-        ${ev.description ? `<p class="news-card-row-excerpt">${escapeHtml(ev.description)}</p>` : ""}
-        <div class="news-card-row-footer">${escapeHtml(when)}${loc}</div>
+        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
+        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
       </div>
     </article>`;
   }
@@ -8006,66 +8217,6 @@ ${ev.description || ""}`
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
   }
-  function renderFilters() {
-    const bar = document.getElementById("events-filters");
-    if (!bar)
-      return;
-    bar.innerHTML = CATEGORY_FILTERS.map(
-      (f) => `<button class="chip${f === activeFilter ? " active" : ""}" data-f="${escapeHtml(f)}">${escapeHtml(f)}</button>`
-    ).join("");
-    bar.querySelectorAll(".chip").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        activeFilter = btn.dataset.f;
-        renderFilters();
-        renderList();
-      });
-    });
-  }
-  function renderCalendar() {
-    const bar = document.getElementById("events-calendar");
-    if (!bar)
-      return;
-    const today = /* @__PURE__ */ new Date();
-    today.setHours(0, 0, 0, 0);
-    const datesWithEvents = /* @__PURE__ */ new Set();
-    allEvents.forEach((e) => {
-      if (e.auto)
-        return;
-      datesWithEvents.add(e.date);
-    });
-    const days = [];
-    for (let i = 0; i < CALENDAR_DAYS; i++) {
-      const d = new Date(today);
-      d.setDate(today.getDate() + i);
-      days.push(d);
-    }
-    const allBtn = `
-    <button class="cal-pill cal-pill--all${selectedDate === null ? " active" : ""}" data-date="">
-      <span class="cal-pill-label">\u0412\u0441\u0456</span>
-    </button>
-  `;
-    const daysHtml = days.map((d) => {
-      const ymdStr = ymd(d);
-      const isToday = ymdStr === ymd(today);
-      const hasEv = datesWithEvents.has(ymdStr);
-      const isActive = ymdStr === selectedDate;
-      return `
-      <button class="cal-pill${isActive ? " active" : ""}${isToday ? " cal-pill--today" : ""}${hasEv ? " cal-pill--has-events" : ""}" data-date="${ymdStr}">
-        <span class="cal-pill-wd">${WEEKDAYS_SHORT[d.getDay()]}</span>
-        <span class="cal-pill-num">${d.getDate()}</span>
-        <span class="cal-pill-dot"></span>
-      </button>
-    `;
-    }).join("");
-    bar.innerHTML = allBtn + daysHtml;
-    bar.querySelectorAll(".cal-pill").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        selectedDate = btn.dataset.date || null;
-        renderCalendar();
-        renderList();
-      });
-    });
-  }
   function getFiltered() {
     const now = /* @__PURE__ */ new Date();
     now.setHours(0, 0, 0, 0);
@@ -8073,15 +8224,7 @@ ${ev.description || ""}`
       if (e.auto)
         return false;
       const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
-      if (d < now)
-        return false;
-      if (selectedDate && e.date !== selectedDate)
-        return false;
-      if (activeFilter === "\u0412\u0441\u0456")
-        return true;
-      if (activeFilter === "\u0421\u0432\u044F\u0442\u0430")
-        return e.category === "\u0421\u0432\u044F\u0442\u043E";
-      return e.category === activeFilter;
+      return d >= now;
     }).sort((a, b) => {
       const byDate = new Date(a.date) - new Date(b.date);
       if (byDate !== 0)
@@ -8095,12 +8238,11 @@ ${ev.description || ""}`
       return;
     const list = getFiltered();
     if (!list.length) {
-      const emptyMsg = selectedDate ? `\u041D\u0430 ${selectedDate.split("-").reverse().slice(0, 2).join(".")} \u043F\u043E\u0434\u0456\u0439 \u043D\u0435\u043C\u0430\u0454` : "\u041F\u043E\u0434\u0456\u0439 \u0443 \u0446\u0456\u0439 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0457 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454";
-      el.innerHTML = `<div class="empty-state">${escapeHtml(emptyMsg)}</div>`;
+      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
       return;
     }
     el.innerHTML = list.map(cardHtml).join("");
-    el.querySelectorAll(".news-card-row").forEach((card) => {
+    el.querySelectorAll(".shotam-card").forEach((card) => {
       card.addEventListener("click", () => {
         const id = Number(card.dataset.id);
         if (Number.isFinite(id))
@@ -8135,8 +8277,6 @@ ${ev.description || ""}`
     } catch {
       allEvents = [];
     }
-    renderFilters();
-    renderCalendar();
     renderList();
   }
 
@@ -8179,7 +8319,7 @@ ${ev.description || ""}`
     if (!schedule)
       return;
     const d = /* @__PURE__ */ new Date();
-    const ymd2 = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
+    const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
     const events = [];
     let i = 0;
     while (i < 24) {
@@ -8189,8 +8329,8 @@ ${ev.description || ""}`
           i++;
         events.push(
           `BEGIN:VEVENT\r
-DTSTART:${ymd2}T${pad(start)}0000\r
-DTEND:${ymd2}T${pad(i)}0000\r
+DTSTART:${ymd}T${pad(start)}0000\r
+DTEND:${ymd}T${pad(i)}0000\r
 SUMMARY:\u26A1 \u0412\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u2014 ${escapeHtml(street.name)}\r
 DESCRIPTION:${escapeHtml(queue.name)} \xB7 CSTL LIFE \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u041E\u0422\u0413\r
 END:VEVENT`
@@ -8683,42 +8823,180 @@ END:VEVENT`
     wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
     wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
   }
+  var SETTLEMENTS = [
+    "\u041E\u043B\u0438\u043A\u0430",
+    "\u0413\u043E\u0440\u044F\u043D\u0456\u0432\u043A\u0430",
+    "\u0414\u0435\u0440\u043D\u043E",
+    "\u0414\u0456\u0434\u0438\u0447\u0456",
+    "\u0416\u043E\u0440\u043D\u0438\u0449\u0435",
+    "\u0417\u0430\u043B\u0456\u0441\u043E\u0447\u0435",
+    "\u041A\u043E\u0442\u0456\u0432",
+    "\u041B\u0438\u0447\u0430\u043D\u0438",
+    "\u041C\u0435\u0442\u0435\u043B\u044C\u043D\u0435",
+    "\u041C\u043E\u0449\u0430\u043D\u0438\u0446\u044F",
+    "\u041D\u043E\u0441\u043E\u0432\u0438\u0447\u0456",
+    "\u041E\u0434\u0435\u0440\u0430\u0434\u0438",
+    "\u041F\u043E\u043A\u0430\u0449\u0456\u0432",
+    "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
+    "\u0421\u0442\u0430\u0432\u043E\u043A",
+    "\u0425\u0440\u043E\u043C'\u044F\u043A\u0456\u0432",
+    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D",
+    "\u0406\u043D\u0448\u0435"
+  ];
+  var NOTIF_KEYS = [
+    { k: "buses", ic: "\u{1F68C}", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
+    { k: "power", ic: "\u{1F4A1}", label: "\u0421\u0432\u0456\u0442\u043B\u043E", def: true },
+    { k: "news", ic: "\u{1F4F0}", label: "\u041D\u043E\u0432\u0438\u043D\u0438", def: false },
+    { k: "board", ic: "\u{1F4CC}", label: "\u0414\u043E\u0448\u043A\u0430", def: true }
+  ];
+  function loadNotifPrefs(uid) {
+    try {
+      const raw = JSON.parse(localStorage.getItem("notif_prefs:" + uid) || "{}");
+      const out = {};
+      NOTIF_KEYS.forEach((n) => {
+        out[n.k] = n.k in raw ? !!raw[n.k] : n.def;
+      });
+      return out;
+    } catch {
+      const o = {};
+      NOTIF_KEYS.forEach((n) => o[n.k] = n.def);
+      return o;
+    }
+  }
+  function saveNotifPrefs(uid, prefs) {
+    try {
+      localStorage.setItem("notif_prefs:" + uid, JSON.stringify(prefs));
+    } catch {
+    }
+  }
+  function closeCabinet() {
+    const c = document.getElementById("acc-cab");
+    if (!c)
+      return;
+    c.classList.remove("open");
+    document.body.classList.remove("modal-open");
+    setTimeout(() => c.remove(), 240);
+  }
   async function openAccount() {
     const u = currentUser();
     if (!u)
       return;
-    const profile = await getProfile();
-    const name = profile && profile.name || u.user_metadata && u.user_metadata.full_name || "\u0416\u0438\u0442\u0435\u043B\u044C";
+    const p = await getProfile() || {};
     const email = u.email || "";
-    const bdate = profile && profile.birth_date;
-    const bdateRow = bdate ? `<div class="acc-row acc-row--static">\u{1F382} ${escapeHtml(bdate)}</div>` : `<button class="acc-row" id="acc-add-bdate" type="button">\u2795 \u0414\u043E\u0434\u0430\u0442\u0438 \u0434\u0430\u0442\u0443 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</button>`;
-    const wrap = openModal(`
-    <div class="acc-emoji">\u{1F464}</div>
-    <h2 class="acc-title">${escapeHtml(name)}</h2>
-    <p class="acc-sub">${escapeHtml(email)}</p>
-    <div class="acc-rows">
-      ${bdateRow}
-      <button class="acc-row" id="acc-msgs" type="button">\u{1F4AC} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</button>
-      <button class="acc-row" id="acc-myads" type="button">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</button>
+    const gName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
+    const val = {
+      name: p.name || gName || "",
+      surname: p.surname || "",
+      birth_date: p.birth_date || "",
+      phone: p.phone || "",
+      settlement: p.settlement || "",
+      street: p.street || "",
+      bio: p.bio || ""
+    };
+    const fullName = [val.name, val.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
+    const place = val.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
+    const prefs = loadNotifPrefs(u.id);
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const cab = document.createElement("div");
+    cab.id = "acc-cab";
+    cab.className = "acc-cab";
+    cab.innerHTML = `
+    <div class="acc-cab-top">
+      <button class="acc-cab-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <b>\u041C\u0456\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442</b>
     </div>
-    <button class="acc-logout" type="button" id="acc-logout">\u0412\u0438\u0439\u0442\u0438</button>`);
-    const addBd = wrap.querySelector("#acc-add-bdate");
-    if (addBd)
-      addBd.addEventListener("click", () => {
-        closeModal();
-        openProfile();
-      });
-    wrap.querySelector("#acc-msgs")?.addEventListener("click", () => {
-      closeModal();
-      openThreadsList();
+    <div class="acc-cab-scroll">
+      <div class="acc-cab-hero">
+        <div class="acc-cab-av">\u{1F464}</div>
+        <div class="acc-cab-hi">
+          <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
+          <div class="acc-cab-email">${escapeHtml(email)}</div>
+          <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
+        </div>
+      </div>
+
+      <div class="acc-cab-sec">
+        <h3>\u041C\u043E\u0457 \u0434\u0430\u043D\u0456</h3>
+        <label class="acc-f"><span>\u0406\u043C'\u044F</span><input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F"></label>
+        <label class="acc-f"><span>\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435</span><input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435"></label>
+        <label class="acc-f"><span>\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</span><input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}"></label>
+        <label class="acc-f"><span>\u0422\u0435\u043B\u0435\u0444\u043E\u043D (\u0434\u043B\u044F \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C)</span><input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380\u2026"></label>
+        <label class="acc-f"><span>\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442</span>
+          <select id="cf-settlement">
+            <option value="">\u2014 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u2014</option>
+            ${SETTLEMENTS.map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select>
+        </label>
+        <label class="acc-f"><span>\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430"></label>
+        <label class="acc-f"><span>\u041F\u0440\u043E \u0441\u0435\u0431\u0435</span><textarea id="cf-bio" rows="2" placeholder="\u041A\u0456\u043B\u044C\u043A\u0430 \u0441\u043B\u0456\u0432\u2026">${escapeHtml(val.bio)}</textarea></label>
+      </div>
+      <button class="acc-cab-save" type="button" id="cf-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443</button>
+
+      <div class="acc-cab-sec acc-cab-sec--rows">
+        <h3>\u041C\u043E\u0454</h3>
+        <button class="acc-cab-row" data-go="myads" type="button"><span>\u{1F4E2}</span> \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F <i>\u203A</i></button>
+        <button class="acc-cab-row" data-go="saved" type="button"><span>\u{1F516}</span> \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 <i>\u203A</i></button>
+        <button class="acc-cab-row" data-go="msgs" type="button"><span>\u{1F4AC}</span> \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F <i>\u203A</i></button>
+      </div>
+
+      <div class="acc-cab-sec acc-cab-sec--rows">
+        <h3>\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F</h3>
+        ${NOTIF_KEYS.map((n) => `
+          <div class="acc-cab-row acc-cab-row--tog">
+            <span>${n.ic}</span> ${n.label}
+            <button class="acc-tog${prefs[n.k] ? "" : " off"}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
+          </div>`).join("")}
+      </div>
+
+      <button class="acc-cab-logout" type="button" id="cf-logout">\u0412\u0438\u0439\u0442\u0438</button>
+    </div>`;
+    document.body.appendChild(cab);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => cab.classList.add("open"));
+    cab.querySelector(".acc-cab-back").addEventListener("click", closeCabinet);
+    cab.querySelector("#cf-save").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u043C\u043E\u2026";
+      const fields = {
+        name: cab.querySelector("#cf-name").value.trim(),
+        surname: cab.querySelector("#cf-surname").value.trim(),
+        birth_date: cab.querySelector("#cf-bdate").value || null,
+        phone: cab.querySelector("#cf-phone").value.trim(),
+        settlement: cab.querySelector("#cf-settlement").value,
+        street: cab.querySelector("#cf-street").value.trim(),
+        bio: cab.querySelector("#cf-bio").value.trim()
+      };
+      const res = await saveProfile(fields);
+      btn.disabled = false;
+      btn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443";
+      if (!res.ok) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
+        return;
+      }
+      cab.querySelector("#acc-hero-name").textContent = [fields.name, fields.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      cab.querySelector("#acc-hero-place").textContent = fields.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
+      showToast("\u0410\u043D\u043A\u0435\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
     });
-    wrap.querySelector("#acc-myads")?.addEventListener("click", () => {
-      closeModal();
-      openMyAds();
-    });
-    wrap.querySelector("#acc-logout").addEventListener("click", async () => {
+    cab.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
+      const go = b.dataset.go;
+      closeCabinet();
+      if (go === "myads")
+        openMyAds();
+      else if (go === "msgs")
+        openThreadsList();
+      else
+        showToast("\xAB\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456\xBB \u2014 \u043D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C", 2500);
+    }));
+    cab.querySelectorAll("[data-notif]").forEach((t) => t.addEventListener("click", () => {
+      const k = t.dataset.notif;
+      prefs[k] = !prefs[k];
+      t.classList.toggle("off", !prefs[k]);
+      saveNotifPrefs(u.id, prefs);
+    }));
+    cab.querySelector("#cf-logout").addEventListener("click", async () => {
       await signOut();
-      closeModal();
+      closeCabinet();
       showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438", 2200);
     });
   }
@@ -8749,6 +9027,156 @@ END:VEVENT`
       if (!profile)
         openProfile();
     });
+  }
+
+  // src/core/sidebar.js
+  var NAV = [
+    { id: "cabinet", label: "\u041A\u0430\u0431\u0456\u043D\u0435\u0442", icon: "\u{1F6E0}\uFE0F", kind: "cabinet", team: true },
+    { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: "\u{1F464}", kind: "account" },
+    { divider: true },
+    { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: "\u{1F3D8}\uFE0F", kind: "tab", tab: "community" },
+    { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: "\u{1F4F0}", kind: "tab", tab: "shotam" },
+    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: "\u{1F4CC}", kind: "tab", tab: "board" },
+    { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: "\u{1F4AC}", kind: "tab", tab: "discussions" },
+    { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: "\u{1F68C}", kind: "tab", tab: "buses" },
+    { id: "contacts", label: "\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: "\u{1F4DE}", kind: "tab", tab: "community" },
+    { divider: true },
+    { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: "\u2754", kind: "info" },
+    { id: "policy", label: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C", icon: "\u{1F512}", kind: "info" }
+  ];
+  var INFO = {
+    support: {
+      title: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430",
+      body: '\u041F\u0438\u0442\u0430\u043D\u043D\u044F, \u0456\u0434\u0435\u0457 \u0447\u0438 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430? \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u0430\u043C \u2014 \u043C\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u043C\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E.<br><br>\u2709\uFE0F <a href="mailto:olykacastle@gmail.com">olykacastle@gmail.com</a><br>\u0410\u0431\u043E \u0447\u0435\u0440\u0435\u0437 \u0440\u043E\u0437\u0434\u0456\u043B \xAB\u0414\u043E\u0448\u043A\u0430\xBB \u2192 \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F.'
+    },
+    policy: {
+      title: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C",
+      body: "CSTL LIFE \u043F\u043E\u0432\u0430\u0436\u0430\u0454 \u0432\u0430\u0448\u0443 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C.<br><br>\u2022 \u041C\u0438 \u043D\u0435 \u043F\u0440\u043E\u0434\u0430\u0454\u043C\u043E \u0432\u0430\u0448\u0456 \u0434\u0430\u043D\u0456.<br>\u2022 \u041F\u0435\u0440\u0441\u043E\u043D\u0430\u043B\u044C\u043D\u0456 \u0434\u0430\u043D\u0456 (\u043F\u0440\u043E\u0444\u0456\u043B\u044C, \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F) \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u0440\u043E\u0431\u043E\u0442\u0438 \u0434\u043E\u0434\u0430\u0442\u043A\u0443.<br>\u2022 \u0413\u0435\u043E\u043B\u043E\u043A\u0430\u0446\u0456\u044F \u0432\u0438\u043A\u043E\u0440\u0438\u0441\u0442\u043E\u0432\u0443\u0454\u0442\u044C\u0441\u044F \u0442\u0456\u043B\u044C\u043A\u0438 \u0434\u043B\u044F \u043F\u043E\u0433\u043E\u0434\u0438 \u0439 \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u0445 \u0437\u0443\u043F\u0438\u043D\u043E\u043A, \u043D\u0430 \u0432\u0430\u0448\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457.<br>\u2022 \u0412\u043C\u0456\u0441\u0442, \u044F\u043A\u0438\u0439 \u0432\u0438 \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0454\u0442\u0435 \u043D\u0430 \u0414\u043E\u0448\u0446\u0456, \u0431\u0430\u0447\u0430\u0442\u044C \u0456\u043D\u0448\u0456 \u0436\u0438\u0442\u0435\u043B\u0456 \u0433\u0440\u043E\u043C\u0430\u0434\u0438.<br><br>\u041F\u0438\u0442\u0430\u043D\u043D\u044F \u2014 \u0447\u0435\u0440\u0435\u0437 \xAB\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430\xBB."
+    }
+  };
+  var _open = false;
+  function els() {
+    return {
+      sidebar: document.getElementById("sidebar"),
+      overlay: document.getElementById("sidebar-overlay"),
+      toggle: document.getElementById("sidebar-toggle"),
+      close: document.getElementById("sidebar-close"),
+      nav: document.getElementById("sidebar-nav")
+    };
+  }
+  function openSidebar() {
+    const { sidebar, overlay, toggle } = els();
+    if (!sidebar)
+      return;
+    overlay.hidden = false;
+    requestAnimationFrame(() => {
+      sidebar.classList.add("sidebar--open");
+      overlay.classList.add("sidebar-overlay--show");
+    });
+    sidebar.setAttribute("aria-hidden", "false");
+    toggle?.setAttribute("aria-expanded", "true");
+    _open = true;
+    refreshCabinet();
+  }
+  function closeSidebar() {
+    const { sidebar, overlay, toggle } = els();
+    if (!sidebar)
+      return;
+    sidebar.classList.remove("sidebar--open");
+    overlay.classList.remove("sidebar-overlay--show");
+    sidebar.setAttribute("aria-hidden", "true");
+    toggle?.setAttribute("aria-expanded", "false");
+    _open = false;
+    setTimeout(() => {
+      if (!_open)
+        overlay.hidden = true;
+    }, 260);
+  }
+  function itemHtml(item) {
+    if (item.divider)
+      return '<div class="sidebar-divider"></div>';
+    const hidden = item.team ? " hidden" : "";
+    return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}>
+    <span class="sidebar-item-icon">${item.icon}</span>
+    <span class="sidebar-item-label">${item.label}</span>
+  </button>`;
+  }
+  function renderNav() {
+    const { nav } = els();
+    if (!nav)
+      return;
+    nav.innerHTML = NAV.map(itemHtml).join("");
+    nav.querySelectorAll("[data-nav]").forEach((btn) => {
+      btn.addEventListener("click", () => handleNav(btn.dataset.nav));
+    });
+  }
+  function handleNav(id) {
+    const item = NAV.find((n) => n.id === id);
+    if (!item)
+      return;
+    closeSidebar();
+    if (item.kind === "tab") {
+      window.switchTab?.(item.tab);
+    } else if (item.kind === "account") {
+      document.getElementById("account-btn")?.click();
+    } else if (item.kind === "cabinet") {
+      window.location.href = "./admin.html";
+    } else if (item.kind === "info") {
+      openInfoModal(id);
+    }
+  }
+  function openInfoModal(key) {
+    const data = INFO[key];
+    if (!data)
+      return;
+    const ov = document.createElement("div");
+    ov.className = "sidebar-info-modal";
+    ov.innerHTML = `
+    <div class="sidebar-info-sheet" role="dialog" aria-label="${data.title}">
+      <div class="sidebar-info-head">
+        <h2>${data.title}</h2>
+        <button class="sidebar-info-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      </div>
+      <div class="sidebar-info-body">${data.body}</div>
+    </div>`;
+    const shut = () => {
+      ov.classList.remove("sidebar-info-modal--show");
+      setTimeout(() => ov.remove(), 240);
+    };
+    ov.addEventListener("click", (e) => {
+      if (e.target === ov)
+        shut();
+    });
+    ov.querySelector(".sidebar-info-close").addEventListener("click", shut);
+    document.body.appendChild(ov);
+    requestAnimationFrame(() => ov.classList.add("sidebar-info-modal--show"));
+  }
+  async function refreshCabinet() {
+    const btn = document.querySelector('[data-nav="cabinet"]');
+    if (!btn)
+      return;
+    let team = false;
+    try {
+      team = await isTeamMember();
+    } catch {
+      team = false;
+    }
+    btn.hidden = !team;
+  }
+  function initSidebar() {
+    const { toggle, close, overlay } = els();
+    if (!toggle)
+      return;
+    renderNav();
+    toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
+    close?.addEventListener("click", closeSidebar);
+    overlay?.addEventListener("click", closeSidebar);
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape" && _open)
+        closeSidebar();
+    });
+    onAuthChange(() => refreshCabinet());
+    refreshCabinet();
   }
 
   // src/core/messages-ui.js
@@ -9323,6 +9751,7 @@ END:VEVENT`
     bootApp();
     initAuth();
     initAccountUI();
+    initSidebar();
     initMessages();
     initBoardChat();
     initModalSwipe();

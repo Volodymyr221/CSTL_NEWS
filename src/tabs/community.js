@@ -8,6 +8,7 @@
 //   → Світло → Автобус → Подія громади → Контакти.
 
 import { escapeHtml, attachSwipe } from '../core/utils.js';
+import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   renderWeatherBlock,
   renderPowerBlock,
@@ -75,10 +76,24 @@ function startHeroRotator() {
 
 function getGreeting() {
   const h = new Date().getHours();
-  if (h >= 5  && h < 11) return { text: 'Добрий ранок, громадо!', sub: 'Ось що головне у нас сьогодні' };
-  if (h >= 11 && h < 17) return { text: 'Добридень, громадо!',    sub: 'Ось що головне у нас сьогодні' };
-  if (h >= 17 && h < 22) return { text: 'Добрий вечір, громадо!', sub: 'Що цікавого було сьогодні' };
-  return { text: 'Доброї ночі, громадо!', sub: 'Громада спить — ось добірка' };
+  let hello, sub;
+  if (h >= 5  && h < 11)      { hello = 'Добрий ранок'; sub = 'Ось що головне у нас сьогодні'; }
+  else if (h >= 11 && h < 17) { hello = 'Добридень';    sub = 'Ось що головне у нас сьогодні'; }
+  else if (h >= 17 && h < 22) { hello = 'Добрий вечір'; sub = 'Що цікавого було сьогодні'; }
+  else                        { hello = 'Доброї ночі';  sub = 'Громада спить — ось добірка'; }
+  // Персоналізація: якщо юзер вписав ім'я в особистому кабінеті — вітаємо по імені.
+  let who = 'громадо';
+  if (isLoggedIn()) {
+    const name = (currentUserName() || '').trim().split(/\s+/)[0];
+    if (name && name !== 'Житель') who = name;
+  }
+  return { text: `${hello}, ${who}!`, sub };
+}
+
+// Оновити вітання наживо, коли профіль/ім'я підвантажились (onAuthChange).
+function updateGreetingName() {
+  const el = document.querySelector('.cm-greeting-text');
+  if (el) el.textContent = getGreeting().text;
 }
 
 function formatTodayHeader() {
@@ -116,6 +131,7 @@ function renderSkeleton() {
         ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? ' active' : ''}"></span>`).join('')}
       </div>
     </section>
+    <div class="cm-hero-spacer"></div>
 
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
@@ -159,7 +175,13 @@ function renderSkeleton() {
     </section>
 
     <section class="cm-block cm-block--news">
+      <div class="cm-news-board-bar">
+        <span class="cm-news-board-dot"></span>
+        <span class="cm-news-board-label">Табло новин</span>
+        <span class="cm-news-board-live">LIVE</span>
+      </div>
       <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
+      <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
     <section class="cm-block cm-block--contacts">
@@ -173,10 +195,35 @@ function renderSkeleton() {
 
 // ── Точка входу ──────────────────────────────────────────────────────────────
 
+let _greetingWired = false;
+let _heroBlurWired = false;
+// Легкий блюр обоїв при скролі: коли контент «наїжджає» — фон розмивається.
+function wireHeroBlur() {
+  if (_heroBlurWired) return;
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+  _heroBlurWired = true;
+  let ticking = false;
+  main.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      const hero = document.querySelector('.cm-hero');
+      if (hero) hero.classList.toggle('cm-blur', main.scrollTop > 24);
+      ticking = false;
+    });
+  }, { passive: true });
+}
+
 export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   startHeroRotator();
+  attachHeroScrollBlur();
+  wireHeroBlur();
+  // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
+  if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
+  updateGreetingName();
   // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
   renderWeatherBlock();
   // renderPowerBlock(); — Світло приховано (16.05.2026, не актуально)
@@ -198,4 +245,29 @@ function attachSwitchTabDelegation() {
     const tab = target.dataset.switchTab;
     if (tab && typeof window.switchTab === 'function') window.switchTab(tab);
   });
+}
+
+// Блюр фону-героя при скролі: чим далі скролиш Громаду, тим сильніше розмивається
+// фото (макс 6px) — блоки «наїжджають» на розмиту картинку. Слухач на .app-main
+// (справжній скролер; #cm-content має overflow:hidden). rAF-throttle; слухач
+// вішається раз (dataset-guard), бо .app-main живе між переходами вкладок. (07.07)
+function attachHeroScrollBlur() {
+  const scroller = document.querySelector('.app-main');
+  if (!scroller) return;
+  const apply = () => {
+    const hero = document.querySelector('#cm-content .cm-hero');
+    if (!hero) return;
+    const blur = Math.min(6, scroller.scrollTop / 45);
+    hero.style.setProperty('--hero-blur', blur.toFixed(2) + 'px');
+  };
+  if (!scroller.dataset.heroBlurBound) {
+    scroller.dataset.heroBlurBound = '1';
+    let ticking = false;
+    scroller.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { ticking = false; apply(); });
+    }, { passive: true });
+  }
+  apply();
 }

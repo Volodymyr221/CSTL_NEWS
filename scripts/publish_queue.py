@@ -63,17 +63,18 @@ def main():
         if len(published) >= args.count:
             leftover.append(a)
             continue
-        url = a.get("sourceUrl")
+        url = a.get("sourceUrl")   # для оригінальних матеріалів = None
         section = pr.section_of(a.get("geo", ""))
         tokens = pr.title_tokens(a.get("title", ""))
-        if url in seen_urls or pr.is_dup_title(tokens, section, seen_by_section):
+        if (url and url in seen_urls) or pr.is_dup_title(tokens, section, seen_by_section):
             continue  # вже у стрічці — просто прибираємо з черги (не в leftover)
         a.pop("queued_ts", None)
         a["id"] = next_id
         a["added_ts"] = int(time.time() * 1000)
         next_id += 1
         published.append(a)
-        seen_urls.add(url)
+        if url:
+            seen_urls.add(url)   # None (оригінал) не додаємо — інакше наступний оригінал = «дубль»
         pr.remember_title(tokens, section, seen_by_section)
 
     if not published:
