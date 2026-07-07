@@ -146,13 +146,6 @@ function setChatSeen(postId, ts) {
   lsSet(LS_CHAT_SEEN, m);
 }
 
-// Відмінювання «відповідь» за числом (для підрядка хедера чату)
-function replyWord(n) {
-  const m10 = n % 10, m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'відповідь';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'відповіді';
-  return 'відповідей';
-}
 // Повна підпис для пігулки «нові повідомлення» (середній рід)
 function newMsgLabel(n) {
   const m10 = n % 10, m100 = n % 100;
@@ -436,7 +429,7 @@ function updateChatHeaderCount(postId) {
   const el = document.getElementById('bd-chat-reply-count');
   if (el) {
     const n = getComments(postId).length;
-    el.textContent = `💬 ${n} ${replyWord(n)}`;
+    el.textContent = `💬 ${n} ${msgWord(n)}`;
   }
 }
 
@@ -562,9 +555,8 @@ function openChatModal(post) {
       <button class="bd-chat-modal-back" type="button" aria-label="Назад">←</button>
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${replyWord(replyCount)}</div>
+        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${msgWord(replyCount)}</div>
       </div>
-      <button class="bd-chat-modal-close" type="button" aria-label="Закрити">✕</button>
     </header>
     <div class="bd-chat-modal-body" id="bd-chat-modal-body">
       ${chatMessagesHtml(post)}
@@ -603,7 +595,6 @@ function openChatModal(post) {
 
   backdrop.addEventListener('click', closeChatModal);
   modal.querySelector('.bd-chat-modal-back')?.addEventListener('click', closeChatModal);
-  modal.querySelector('.bd-chat-modal-close')?.addEventListener('click', closeChatModal);
   // Гість бачить лише кнопку входу замість поля (читати можна, писати — після входу).
   modal.querySelector('#bd-chat-login')?.addEventListener('click',
     () => requireAuth('писати в обговоренні', () => {}));
