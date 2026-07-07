@@ -177,6 +177,7 @@ export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   startHeroRotator();
+  attachHeroScrollBlur();
   // Запускаємо всі блоки паралельно — кожен оновить свою секцію коли готовий.
   renderWeatherBlock();
   // renderPowerBlock(); — Світло приховано (16.05.2026, не актуально)
@@ -198,4 +199,29 @@ function attachSwitchTabDelegation() {
     const tab = target.dataset.switchTab;
     if (tab && typeof window.switchTab === 'function') window.switchTab(tab);
   });
+}
+
+// Блюр фону-героя при скролі: чим далі скролиш Громаду, тим сильніше розмивається
+// фото (макс 6px) — блоки «наїжджають» на розмиту картинку. Слухач на .app-main
+// (справжній скролер; #cm-content має overflow:hidden). rAF-throttle; слухач
+// вішається раз (dataset-guard), бо .app-main живе між переходами вкладок. (07.07)
+function attachHeroScrollBlur() {
+  const scroller = document.querySelector('.app-main');
+  if (!scroller) return;
+  const apply = () => {
+    const hero = document.querySelector('#cm-content .cm-hero');
+    if (!hero) return;
+    const blur = Math.min(6, scroller.scrollTop / 45);
+    hero.style.setProperty('--hero-blur', blur.toFixed(2) + 'px');
+  };
+  if (!scroller.dataset.heroBlurBound) {
+    scroller.dataset.heroBlurBound = '1';
+    let ticking = false;
+    scroller.addEventListener('scroll', () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => { ticking = false; apply(); });
+    }, { passive: true });
+  }
+  apply();
 }

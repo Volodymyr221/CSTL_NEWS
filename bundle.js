@@ -7810,6 +7810,7 @@ ${post.text}
     renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
+    attachHeroScrollBlur();
     renderWeatherBlock();
     renderBusBlock();
     renderBoardBlock();
@@ -7829,6 +7830,32 @@ ${post.text}
       if (tab && typeof window.switchTab === "function")
         window.switchTab(tab);
     });
+  }
+  function attachHeroScrollBlur() {
+    const scroller = document.querySelector(".app-main");
+    if (!scroller)
+      return;
+    const apply = () => {
+      const hero = document.querySelector("#cm-content .cm-hero");
+      if (!hero)
+        return;
+      const blur = Math.min(6, scroller.scrollTop / 45);
+      hero.style.setProperty("--hero-blur", blur.toFixed(2) + "px");
+    };
+    if (!scroller.dataset.heroBlurBound) {
+      scroller.dataset.heroBlurBound = "1";
+      let ticking = false;
+      scroller.addEventListener("scroll", () => {
+        if (ticking)
+          return;
+        ticking = true;
+        requestAnimationFrame(() => {
+          ticking = false;
+          apply();
+        });
+      }, { passive: true });
+    }
+    apply();
   }
 
   // src/tabs/events.js
