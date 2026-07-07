@@ -319,7 +319,10 @@ def call_agent(prompt: str):
     messages = [{"role": "user", "content": [
         {"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}]}]
     resp = None
-    for _ in range(6):
+    # Ліміт ітерацій pause_turn МАЄ бути помітно більший за MAX_SEARCHES_PER_MISSION:
+    # інакше модель витрачає всі кроки на веб-пошук і не встигає написати фінальний
+    # JSON (баг: 6==6 давало found=0). Запас на пошук + написання відповіді.
+    for _ in range(MAX_SEARCHES_PER_MISSION + 8):
         payload = {
             "model": MODEL,
             "max_tokens": 8192,   # 4096 замало: модель витрачала бюджет на пошук і не встигала написати JSON (stop_reason=max_tokens, порожньо)
