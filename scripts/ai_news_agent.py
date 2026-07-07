@@ -52,8 +52,14 @@ API_URL = "https://api.anthropic.com/v1/messages"
 
 # Скільки оригінальних матеріалів просимо в агента за прогін Громади.
 TARGET_PER_MISSION = {"Громада": 10, "Волинь": 8, "Україна та світ": 10}
-MAX_DRAFTS_TOTAL = 10     # тримати ~10 готових чернеток у кабінеті НАПЕРЕД (Алла публікує → агент домалює)
+MAX_DRAFTS_TOTAL = 10     # тримати ~10 готових чернеток у кабінеті НАПЕРЕД (Алла публікує → агент домалує)
 SUPA_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supabase.co").rstrip("/")
+
+# ── ЗАПОБІЖНИК ВИТРАТ (circuit breaker — аварійний вимикач) ───────────────────
+# Захист від зациклення/пропалу токенів: агент рахує $ на льоту й спиняється,
+# щойно прогін або місяць перетнув стелю. Стелі можна перекрити через env.
+MAX_RUN_COST_USD = float(os.environ.get("AI_MAX_RUN_USD", "0.60"))     # стеля на ОДИН прогін (усі місії + повтори)
+MAX_MONTH_COST_USD = float(os.environ.get("AI_MAX_MONTH_USD", "15.0")) # стеля на МІСЯЦЬ (сума всіх прогонів; захист крону)
 
 # ── Лічильник витрат AI (Фаза 0 оптимізації) ──────────────────────────────────
 # Прилад: скільки $ їсть автопостинг. Пише data/ai_spend.json (читає адмінка).
@@ -182,6 +188,16 @@ def record_spend(mission: str, usage: dict, found: int, note: str = ""):
     save_spend(data)
     print(f"  💸 витрата ${cost} (вхід {usage['input_tokens']} · вихід {usage['output_tokens']} · "
           f"кеш-читання {usage['cache_read_input_tokens']} · пошуків {usage['web_search_requests']})")
+    return cost
+
+
+def month_spend_usd() -> float:
+    """Скільки вже витрачено цього місяця (UTC) за журналом — для місячного запобіжника."""
+    month = time.strftime("%Y-%m", time.gmtime())
+    try:
+        return float(load_spend().get("months", {}).get(month, {}).get("cost_usd", 0) or 0)
+    except Exception:
+        return 0.0
 
 
 def recent_titles_for(existing: list, geos: list, limit: int = 40) -> list:
@@ -327,7 +343,7 @@ def call_agent(prompt: str):
     for _ in range(MAX_SEARCHES_PER_MISSION + 8):
         payload = {
             "model": MODEL,
-            "max_tokens": 8192,   # 4096 замало: модель витрачала бюджет на пошук і не встигала написати JSON (stop_reason=max_tokens, порожньо)
+            "max_tokens": 16000,  # 8192 замало на ~10 статей: JSON обрізало (stop_reason=max_tokens, found=0). Запас на повний масив.
             "tools": [{"type": WEB_SEARCH_TOOL, "name": "web_search",
                        "max_uses": MAX_SEARCHES_PER_MISSION}],
             "messages": messages,
@@ -359,11 +375,38 @@ def call_agent(prompt: str):
     return text, usage
 
 
+def _salvage_objects(t: str) -> list:
+    """Рятівний парсер: витягує ПОВНІ {...}-об'єкти з (можливо обрізаного) тексту.
+    Дає відновити статті навіть коли масив обрізало на max_tokens (немає ']')."""
+    out, depth, start, in_str, esc = [], 0, None, False, False
+    for i, ch in enumerate(t):
+        if in_str:
+            if esc: esc = False
+            elif ch == "\\": esc = True
+            elif ch == '"': in_str = False
+            continue
+        if ch == '"': in_str = True
+        elif ch == "{":
+            if depth == 0: start = i
+            depth += 1
+        elif ch == "}" and depth > 0:
+            depth -= 1
+            if depth == 0 and start is not None:
+                try:
+                    obj = json.loads(t[start:i + 1])
+                    if isinstance(obj, dict):
+                        out.append(obj)
+                except Exception:
+                    pass
+                start = None
+    return out
+
+
 def extract_json_array(text: str):
-    """Витягує перший JSON-масив із тексту відповіді. Повертає list або []."""
+    """Витягує список статей із відповіді. Спершу цілий JSON-масив; якщо не вийшло
+    (обрізаний/побитий) — рятівний парсер збирає всі повні об'єкти. Повертає list."""
     if not text:
         return []
-    # прибираємо можливі ```json ... ``` огортки
     t = text.strip()
     if "```" in t:
         import re
@@ -372,14 +415,17 @@ def extract_json_array(text: str):
             t = m.group(1)
     start = t.find("[")
     end = t.rfind("]")
-    if start == -1 or end == -1 or end < start:
-        return []
-    try:
-        data = json.loads(t[start:end + 1])
-        return data if isinstance(data, list) else []
-    except Exception as e:
-        print(f"✗ парсинг JSON відповіді: {e}")
-        return []
+    if start != -1 and end != -1 and end > start:
+        try:
+            data = json.loads(t[start:end + 1])
+            if isinstance(data, list):
+                return data
+        except Exception:
+            pass
+    objs = _salvage_objects(t[start:] if start != -1 else t)
+    if objs:
+        print(f"↻ рятівний парсер: відновлено {len(objs)} статей з обрізаного/побитого JSON")
+    return objs
 
 
 # ── Перетворення знахідок у статті + мердж ────────────────────────────────────
@@ -578,14 +624,15 @@ def count_cabinet_drafts() -> int:
     if key:
         import urllib.request
         req = urllib.request.Request(
-            SUPA_URL + "/rest/v1/cms_articles?select=id&status=eq.draft",
+            SUPA_URL + "/rest/v1/cms_articles?select=id&status=eq.draft&type=eq.news",
             headers={"apikey": key, "Authorization": "Bearer " + key})
         try:
             with urllib.request.urlopen(req, timeout=20) as r:
                 return len(json.loads(r.read().decode("utf-8")))
         except Exception as e:
-            print(f"⚠ не порахував чернетки в кабінеті ({e}) — вважаю 0")
-            return 0
+            # Помилка рахунку → вважаємо кабінет ПОВНИМ (пропустимо прогін), щоб не переповнити й не палити API.
+            print(f"⚠ не порахував чернетки в кабінеті ({e}) — пропускаю прогін (безпечно)")
+            return MAX_DRAFTS_TOTAL
     if EDITOR_DRAFTS_PATH.exists():
         try:
             return len(json.loads(EDITOR_DRAFTS_PATH.read_text(encoding="utf-8")))
@@ -673,11 +720,23 @@ def main():
     # --mission перекриває. Fallback (нема ключа в конфізі) — усі, як було.
     missions = [args.mission] if args.mission else (cfg.get("active_missions") or list(cfg["missions"].keys()))
 
+    # ЗАПОБІЖНИК (місячний): якщо цього місяця вже витрачено ≥ стелі — не запускаємось.
+    if not args.dry_run:
+        spent_month = month_spend_usd()
+        if spent_month >= MAX_MONTH_COST_USD:
+            print(f"⛔ місячна стеля ${MAX_MONTH_COST_USD} досягнута (вже ${spent_month}) — прогін пропущено (блокер витрат)")
+            return
+
     found = []
+    run_cost = 0.0   # ЗАПОБІЖНИК (на прогін): сума витрат усіх викликів цього запуску
     for name in missions:
         if name not in cfg["missions"]:
             print(f"⚠ невідома місія: {name}")
             continue
+        # Блокер: перед КОЖНОЮ місією перевіряємо стелю прогону — не даємо палити далі.
+        if not args.dry_run and run_cost >= MAX_RUN_COST_USD:
+            print(f"⛔ стеля прогону ${MAX_RUN_COST_USD} досягнута (вже ${round(run_cost,4)}) — решту місій пропущено")
+            break
         prompt = build_prompt(name, cfg, seen_pool, target=slots)
         if args.dry_run:
             print(f"\n===== ПРОМПТ [{name}] =====\n{prompt}\n")
@@ -687,9 +746,32 @@ def main():
         items = extract_json_array(raw)
         arts = [x for x in (item_to_article(i) for i in items) if x]
         print(f"  {name}: знайдено {len(items)}, валідних {len(arts)}")
-        record_spend(name, usage, len(arts), note=("" if raw else "агент нічого не повернув"))
+        run_cost += record_spend(name, usage, len(arts), note=("" if raw else "агент нічого не повернув")) or 0
+
+        # САМО-РЕМОНТ: якщо 0 валідних — переписуємо запит інакше (менше + коротше +
+        # суворий JSON) і пробуємо ще раз. Часта причина 0 — обрізаний великий JSON.
+        # РІВНО ОДНА спроба + гейт стелею прогону — щоб не зациклитись і не спалити токени.
+        if not arts and run_cost < MAX_RUN_COST_USD:
+            print(f"  ↻ 0 валідних — переписую запит (менше статей, коротше, суворий JSON) і повторюю (1 раз)…")
+            retry_prompt = build_prompt(name, cfg, seen_pool, target=3) + (
+                "\n\n⚠️ ПОВТОР: попередня відповідь була невалідна/обрізана. Тепер:\n"
+                "• поверни РІВНО валідний JSON-масив (починається '[' і закінчується ']');\n"
+                "• МАКСИМУМ 3 статті; кожна КОРОТКА (лід + 2-3 стислі абзаци);\n"
+                "• без пояснень до/після масиву; не обривай на півслові."
+            )
+            raw, usage = call_agent(retry_prompt)
+            items = extract_json_array(raw)
+            arts = [x for x in (item_to_article(i) for i in items) if x]
+            print(f"  {name} (повтор): знайдено {len(items)}, валідних {len(arts)}")
+            run_cost += record_spend(name + " (повтор)", usage, len(arts), note=("" if raw else "повтор порожній")) or 0
+        elif not arts:
+            print(f"  ⛔ 0 валідних, але стеля прогону ${MAX_RUN_COST_USD} досягнута — повтор пропущено (блокер)")
+
         found.extend(arts)
         time.sleep(1)
+
+    if not args.dry_run:
+        print(f"💰 разом за прогін: ${round(run_cost, 4)} (стеля ${MAX_RUN_COST_USD})")
 
     if args.dry_run:
         return
