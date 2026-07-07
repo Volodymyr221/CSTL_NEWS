@@ -9,6 +9,11 @@
 ALTER TABLE public.cms_articles
   ADD COLUMN IF NOT EXISTS publish_at timestamptz;
 
+-- 1b) Дата події/свята (YYYY-MM-DD) — для «Шо в селі» (type=holiday/event).
+--     Це ДАТА самої події у стрічці, НЕ час автопостингу (publish_at).
+ALTER TABLE public.cms_articles
+  ADD COLUMN IF NOT EXISTS event_date text;
+
 -- 2) Індекс для швидкого пошуку «що вже пора публікувати».
 --    Публікатор шукає: status='scheduled' AND publish_at <= now().
 CREATE INDEX IF NOT EXISTS idx_cms_articles_scheduled

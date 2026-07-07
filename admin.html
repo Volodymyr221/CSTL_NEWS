@@ -526,6 +526,7 @@ async function saveArticle(a) {
   // Розклад автопостингу (Блок 2): якщо передано — зберігаємо статус і час.
   if (a.status) row.status = a.status;
   if (a.publish_at !== undefined) row.publish_at = a.publish_at;  // ISO-рядок або null
+  if (a.event_date !== undefined) row.event_date = a.event_date;  // дата свята/події (Шо в селі)
   if (a.id) {
     // type при редагуванні НЕ чіпаємо — зберігаємо наявний (свято/подія/новина).
     const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
@@ -884,6 +885,9 @@ function renderArticleForm(el) {
           <select class="art-inp" id="af-cat"><option value="">—</option>${ART_CATEGORIES.map(c => `<option ${d.category === c ? 'selected' : ''}>${c}</option>`).join('')}</select>
         </label>
       </div>
+      <label class="art-lbl">Дата свята/події (для «Шо в селі», необовʼязково для новин)
+        <input class="art-inp" id="af-eventdate" type="date" value="${escapeHtml(d.event_date || '')}">
+      </label>
       <label class="art-lbl">Фото (обкладинка)
         <input class="art-inp" id="af-photo" type="file" accept="image/*">
       </label>
@@ -909,6 +913,7 @@ function renderArticleForm(el) {
     content: document.getElementById('af-content').value.trim(),
     geo: document.getElementById('af-geo').value,
     category: document.getElementById('af-cat').value,
+    event_date: document.getElementById('af-eventdate').value || null,
   });
   document.getElementById('af-cancel').addEventListener('click', () => { articleDraft = null; renderApp(); });
   // Розклад: показати/сховати вибір дати-часу

@@ -22,6 +22,7 @@ import parse_rss as pr  # noqa: E402
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supabase.co").rstrip("/")
 SERVICE_KEY = os.environ.get("SUPABASE_SERVICE_ROLE_KEY", "")
 REST = SUPABASE_URL + "/rest/v1/cms_articles"
+EVENTS_PATH = Path("data/events.json")   # «Шо в селі» — свята/події
 
 
 def _req(method, url, body=None):
@@ -67,6 +68,62 @@ def promote_scheduled():
         print(f"⚠ promote_scheduled: {e}")
 
 
+def fetch_shotam_ready():
+    """Готові свята/події (type=holiday/event) для «Шо в селі»."""
+    url = REST + "?status=eq.ready&type=in.(holiday,event)&select=*&order=event_date.asc"
+    headers = {"apikey": SERVICE_KEY, "Authorization": "Bearer " + SERVICE_KEY}
+    req = urllib.request.Request(url, headers=headers, method="GET")
+    with urllib.request.urlopen(req, timeout=20) as r:
+        return json.loads(r.read() or "[]")
+
+
+def cms_to_event(row, next_id):
+    """Нормалізує рядок cms_articles у схему data/events.json."""
+    return {
+        "id": next_id,
+        "title": row.get("title", ""),
+        "description": row.get("content") or row.get("excerpt") or "",
+        "date": row.get("event_date") or time.strftime("%Y-%m-%d", time.gmtime()),
+        "time": row.get("event_time") or None,
+        "location": row.get("location") or "Олика",
+        "category": row.get("category") or "Свято",
+        "image": row.get("image"),
+    }
+
+
+def publish_shotam():
+    """Публікує готові свята/події у data/events.json («Шо в селі»). Дедуп за заголовком."""
+    try:
+        ready = fetch_shotam_ready()
+    except Exception as e:
+        print(f"⚠ читання свят/подій: {e}")
+        return
+    if not ready:
+        return
+    events = json.loads(EVENTS_PATH.read_text(encoding="utf-8")) if EVENTS_PATH.exists() else []
+    next_id = max((e["id"] for e in events if isinstance(e.get("id"), int)), default=0) + 1
+    seen = {(e.get("title") or "").strip().lower() for e in events}
+    added = 0
+    for row in ready:
+        title = (row.get("title") or "").strip()
+        if not title:
+            continue
+        if title.lower() in seen:
+            mark_published(row["id"], None)   # уже у стрічці
+            continue
+        events.append(cms_to_event(row, next_id))
+        seen.add(title.lower())
+        try:
+            mark_published(row["id"], next_id)
+            added += 1
+        except Exception as e:
+            print(f"⚠ mark_published свято id={row['id']}: {e}")
+        next_id += 1
+    if added:
+        EVENTS_PATH.write_text(json.dumps(events, ensure_ascii=False, indent=2), encoding="utf-8")
+        print(f"✓ синк: +{added} свят/подій у «Шо в селі» (усього {len(events)})")
+
+
 def cms_to_article(row, next_id):
     """Нормалізує рядок cms_articles у git-схему статті."""
     ts = row.get("ts") or int(time.time() * 1000)
@@ -94,6 +151,7 @@ def main():
         print("✗ немає SUPABASE_SERVICE_ROLE_KEY — пропускаю синк")
         return
     promote_scheduled()   # автопостинг: scheduled з насталим часом → ready
+    publish_shotam()      # свята/події (type=holiday/event) → data/events.json
     try:
         ready = fetch_ready()
     except Exception as e:

@@ -39,9 +39,9 @@ jobs:
         run: |
           git config user.name  "CSTL CMS Bot"
           git config user.email "cms@cstl-news"
-          git add data/articles.json
+          git add data/articles.json data/events.json
           if git diff --staged --quiet; then
-            echo "Нових статей кабінету немає — деплой не потрібен"
+            echo "Нових статей/подій кабінету немає — деплой не потрібен"
             echo "changed=false" >> "$GITHUB_OUTPUT"
           else
             git commit -m "cms: статті кабінету у стрічку $(date -u +'%d.%m %H:%M UTC')"
