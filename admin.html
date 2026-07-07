@@ -396,6 +396,16 @@
       .tab { flex: 0 0 auto; white-space: nowrap; font-size: 12.5px; padding: 9px 13px; }
       .tab-count { min-width: 18px; height: 18px; font-size: 10.5px; }
     }
+    /* ── Кабінет: пошук/фільтри/прев'ю статей ── */
+    .art-filters { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; scrollbar-width: none; }
+    .art-filters::-webkit-scrollbar { display: none; }
+    .art-chip {
+      flex: 0 0 auto; border: 1px solid #d9d2bf; background: #fff; color: #666;
+      border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 600;
+      cursor: pointer; font-family: inherit; white-space: nowrap;
+    }
+    .art-chip.active { background: #722F37; color: #fff; border-color: #722F37; }
+    .art-preview { border-top: 1px dashed #e0dccb; margin: 8px 0; padding-top: 8px; }
   </style>
 </head>
 <body>
@@ -551,14 +561,15 @@ async function saveArticle(a) {
   if (a.publish_at !== undefined) row.publish_at = a.publish_at;  // ISO-рядок або null
   if (a.event_date !== undefined) row.event_date = a.event_date;  // дата свята/події (Шо в селі)
   if (a.id) {
-    // type при редагуванні НЕ чіпаємо — зберігаємо наявний (свято/подія/новина).
+    if (a.type) row.type = a.type;   // тип можна змінити й при редагуванні
     const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
-    return !error;
+    return error ? null : a.id;
   }
   row.type = a.type || 'news';
   row.status = row.status || 'draft';
-  const { error } = await supa.from('cms_articles').insert(row);
-  return !error;
+  // .select('id') — повертаємо id вставленого рядка, щоб публікувати САМЕ його (не за заголовком).
+  const { data, error } = await supa.from('cms_articles').insert(row).select('id').single();
+  return error ? null : (data && data.id);
 }
 async function publishArticle(id) {
   // draft/готове → ready (CI-синк викладе в стрічку). Гейт can_publish — і в UI, і в RLS.
@@ -826,20 +837,38 @@ const ART_STATUS = {
 };
 const ART_TYPE_UK = { news: '📰 Новина', holiday: '🎉 Свято', event: '📅 Подія' };
 
+let artQuery = '';
+let artFilter = 'all';   // all | draft | scheduled | ready | published
+
 function renderArticles(el) {
   if (articleDraft) return renderArticleForm(el);
   const canPub = isAdmin || editorPerms.canPublish;
+  const draftN = articles.filter(a => (a.status || 'draft') === 'draft').length;
+  const FILTERS = [['all', 'Усі'], ['draft', 'Чернетки' + (draftN ? ' ' + draftN : '')],
+                   ['scheduled', 'Заплановано'], ['ready', 'На публікації'], ['published', 'Опубліковано']];
   el.innerHTML = `
     <div class="art-head">
       <button class="btn btn--approve" id="art-new">+ Створити статтю</button>
     </div>
-    ${!articles.length ? '<div class="empty">Поки немає статей. Натисніть «Створити статтю».</div>' :
-      articles.map(a => {
-        const st = ART_STATUS[a.status] || ART_STATUS.draft;
-        return `
+    <input class="art-inp" id="art-search" placeholder="🔍 Пошук за заголовком…" value="${escapeHtml(artQuery)}" style="margin-bottom:8px">
+    <div class="art-filters">${FILTERS.map(([v, l]) => `<button class="art-chip${artFilter === v ? ' active' : ''}" data-af="${v}">${l}</button>`).join('')}</div>
+    <div id="art-list"></div>
+  `;
+  const listEl = el.querySelector('#art-list');
+
+  const paint = () => {
+    let list = articles;
+    if (artFilter !== 'all') list = list.filter(a => (a.status || 'draft') === artFilter);
+    const q = artQuery.trim().toLowerCase();
+    if (q) list = list.filter(a => (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q));
+    listEl.innerHTML = !list.length ? '<div class="empty">Нічого не знайдено.</div>' : list.map(a => {
+      const st = ART_STATUS[a.status] || ART_STATUS.draft;
+      const isAI = a.source && String(a.source).includes('CSTL');
+      return `
         <article class="card">
           <div class="card-meta">
             <span class="badge" style="background:${st.color};color:#fff">${st.label}</span>
+            ${isAI ? '<span class="badge" style="background:#4b3bd6;color:#fff">🤖 AI</span>' : ''}
             ${a.type && a.type !== 'news' && ART_TYPE_UK[a.type] ? `<span class="badge badge--type">${ART_TYPE_UK[a.type]}</span>` : ''}
             ${a.status === 'scheduled' && a.publish_at ? `<span class="badge" style="background:#7a5cc0;color:#fff">📅 ${escapeHtml(formatDate(a.publish_at))}</span>` : ''}
             ${a.geo ? `<span class="badge badge--cat">${escapeHtml(a.geo)}</span>` : ''}
@@ -849,37 +878,60 @@ function renderArticles(el) {
           </div>
           <div style="font-weight:700;margin-bottom:4px">${escapeHtml(a.title || '(без заголовка)')}</div>
           ${a.excerpt ? `<p class="card-text">${escapeHtml(a.excerpt)}</p>` : ''}
+          <div class="art-preview" id="art-prev-${a.id}" hidden></div>
           <div class="card-actions">
+            <button class="btn" data-art-prev="${a.id}">👁 Прев'ю</button>
             <button class="btn" data-art-edit="${a.id}">✏️ Редагувати</button>
             ${a.status === 'draft' && canPub ? `<button class="btn btn--approve" data-art-pub="${a.id}">🚀 Опублікувати</button>` : ''}
             ${a.status === 'ready' ? `<button class="btn" data-art-unpub="${a.id}">↩︎ У чернетки</button>` : ''}
             <button class="btn btn--reject" data-art-del="${a.id}">🗑 Видалити</button>
           </div>
         </article>`;
-      }).join('')}
-  `;
+    }).join('');
+    bind();
+  };
+
+  const bind = () => {
+    listEl.querySelectorAll('[data-art-prev]').forEach(b => b.addEventListener('click', () => {
+      const box = document.getElementById('art-prev-' + b.dataset.artPrev);
+      const a = articles.find(x => String(x.id) === b.dataset.artPrev);
+      if (!box || !a) return;
+      if (box.hidden) {
+        box.innerHTML = (a.image ? `<img src="${escapeHtml(a.image)}" style="max-width:100%;border-radius:8px;margin:6px 0">` : '') +
+          `<div class="card-text" style="white-space:pre-wrap">${escapeHtml(a.content || '(порожньо)')}</div>`;
+        box.hidden = false;
+      } else box.hidden = true;
+    }));
+    listEl.querySelectorAll('[data-art-edit]').forEach(b => b.addEventListener('click', () => {
+      articleDraft = { ...articles.find(a => String(a.id) === b.dataset.artEdit) }; renderApp();
+    }));
+    listEl.querySelectorAll('[data-art-pub]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Опублікувати статтю? Вона з\'явиться у стрічці після синхронізації.')) return;
+      b.disabled = true;
+      const ok = await publishArticle(b.dataset.artPub);
+      if (!ok) { alert('Не вдалося опублікувати (перевірте дозвіл).'); b.disabled = false; return; }
+      articles = await fetchArticles(); renderApp();
+    }));
+    listEl.querySelectorAll('[data-art-unpub]').forEach(b => b.addEventListener('click', async () => {
+      await unpublishArticle(b.dataset.artUnpub); articles = await fetchArticles(); renderApp();
+    }));
+    listEl.querySelectorAll('[data-art-del]').forEach(b => b.addEventListener('click', async () => {
+      if (!confirm('Видалити статтю?')) return;
+      await deleteArticle(b.dataset.artDel); articles = await fetchArticles(); renderApp();
+    }));
+  };
+
   document.getElementById('art-new')?.addEventListener('click', () => {
-    articleDraft = { title: '', excerpt: '', content: '', category: '', geo: 'Громада', image: null, image_type: 'none', image_credit: null };
+    articleDraft = { title: '', excerpt: '', content: '', category: '', geo: 'Громада', type: 'news', image: null, image_type: 'none', image_credit: null };
     renderApp();
   });
-  el.querySelectorAll('[data-art-edit]').forEach(b => b.addEventListener('click', () => {
-    articleDraft = { ...articles.find(a => String(a.id) === b.dataset.artEdit) };
-    renderApp();
+  el.querySelector('#art-search').addEventListener('input', e => { artQuery = e.target.value; paint(); });
+  el.querySelectorAll('[data-af]').forEach(b => b.addEventListener('click', () => {
+    artFilter = b.dataset.af;
+    el.querySelectorAll('[data-af]').forEach(x => x.classList.toggle('active', x === b));
+    paint();
   }));
-  el.querySelectorAll('[data-art-pub]').forEach(b => b.addEventListener('click', async () => {
-    if (!confirm('Опублікувати статтю? Вона з\'явиться у стрічці після синхронізації.')) return;
-    b.disabled = true;
-    const ok = await publishArticle(b.dataset.artPub);
-    if (!ok) { alert('Не вдалося опублікувати (перевірте дозвіл).'); b.disabled = false; return; }
-    articles = await fetchArticles(); renderApp();
-  }));
-  el.querySelectorAll('[data-art-unpub]').forEach(b => b.addEventListener('click', async () => {
-    await unpublishArticle(b.dataset.artUnpub); articles = await fetchArticles(); renderApp();
-  }));
-  el.querySelectorAll('[data-art-del]').forEach(b => b.addEventListener('click', async () => {
-    if (!confirm('Видалити статтю?')) return;
-    await deleteArticle(b.dataset.artDel); articles = await fetchArticles(); renderApp();
-  }));
+  paint();
 }
 
 function renderArticleForm(el) {
@@ -891,6 +943,9 @@ function renderArticleForm(el) {
     : '';
   el.innerHTML = `
     <div class="art-form">
+      <label class="art-lbl">Тип матеріалу
+        <select class="art-inp" id="af-type">${Object.entries(ART_TYPE_UK).map(([v, l]) => `<option value="${v}" ${(d.type || 'news') === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      </label>
       <label class="art-lbl">Заголовок
         <input class="art-inp" id="af-title" value="${escapeHtml(d.title || '')}" placeholder="Заголовок статті">
       </label>
@@ -937,6 +992,7 @@ function renderArticleForm(el) {
     geo: document.getElementById('af-geo').value,
     category: document.getElementById('af-cat').value,
     event_date: document.getElementById('af-eventdate').value || null,
+    type: document.getElementById('af-type').value,
   });
   document.getElementById('af-cancel').addEventListener('click', () => { articleDraft = null; renderApp(); });
   // Розклад: показати/сховати вибір дати-часу
@@ -967,14 +1023,10 @@ function renderArticleForm(el) {
       a.status = 'draft';
       a.publish_at = null;   // зняти розклад при збереженні чернеткою
     }
-    const ok = await saveArticle(a);
-    if (!ok) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
+    const savedId = await saveArticle(a);
+    if (!savedId) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
+    if (publish) await publishArticle(savedId);   // публікуємо САМЕ збережений рядок (за id)
     articles = await fetchArticles();
-    if (publish) {
-      const fresh = articles.find(x => x.title === a.title);
-      if (fresh) await publishArticle(fresh.id);
-      articles = await fetchArticles();
-    }
     articleDraft = null; renderApp();
   };
   document.getElementById('af-save').addEventListener('click', () => doSave(false));
