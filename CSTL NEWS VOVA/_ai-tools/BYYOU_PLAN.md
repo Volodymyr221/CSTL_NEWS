@@ -1,48 +1,41 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** done
+**Статус:** active
 <!-- idle=вимкнено · active=потік іде (push-замок УВІМКНЕНО) · paused=пауза · done=завершено -->
-<!-- ✅ 07.07 ЗАДЕПЛОЄНО: PR #238 (47713a83). Пакет editor/ + місія «Свята». Наступне: Блок 2 (кабінет-редагування+автопостинг). Чекає Вову: SUPABASE_SERVICE_ROLE_KEY+URL+SQL для живого запису в кабінет. -->
 
-**Ціль:** БЛОК 1 AI-редактора — пакет `editor/` (ядро+плагіни+док) + місія «Свята» як пілот. Чернетка→кабінет Алли.
-**Власник:** Рома · **Гілка:** roma/ai-editor-core · **Rollback-tag:** byyou-start-ai-editor
-**Архітектура:** схвалена Ромою. AI→draft(cms_articles)→Алла схвалює→sync публікує. Плагіни за інтерфейсами, ядро незмінне.
+**Ціль:** БЛОК 2 AI-редактора — кабінет: редагування чернеток (усіх типів) + АВТОПОСТИНГ на дату/час.
+**Власник:** Рома · **Гілка:** roma/editor-cabinet · **Rollback-tag:** byyou-start-cabinet
+
+## Знахідки коду (реальні)
+- `admin.html saveArticle` форсить `type:'news'` → редагування свята зламало б тип (фікс: зберігати type).
+- `sync_cms.fetch_ready` бере лише `type=eq.news` → свята/події не публікуються. Розкладу (publish_at) нема.
+- Кабінет: статуси draft→ready→published; `fetchArticles` бере всі типи (свята видно), але форма — лише news.
 
 ## Принципи
-- НЕ переписувати `parse_rss.py` (живий) — обгортати за інтерфейсами. Старий новинний бот працює далі.
-- `sinks/cabinet` потребує `SUPABASE_SERVICE_ROLE_KEY` (Вова ще не вставив) → `sinks/queue` (файл) як fallback, перемикання через config/env.
-- Фото — Wikimedia (протестовано); публікація свята за 7 днів як ЧЕРНЕТКА (не авто).
-- НЕ чіпає сайт (src/index/style/sw) → CACHE_NAME не потрібен.
+- Реюз sync_cms (додати розклад+маршрутизацію, не переписувати). Живий тест кабінету — за ключем Вови+логіном → будую готово, вмикається на його діях.
+- admin.html не в sw.js → CACHE_NAME не потрібен.
 
-## План (12 кроків)
+## План (11 кроків)
 | # | Крок | Стан |
 |---|------|------|
-| 1 | `docs/AI_EDITOR_ARCH.md` — повна архітектура (системний артефакт, дизайн перед кодом) | 🔴 арх |
-| 2 | `editor/core/models.py` (Draft) + `__init__.py` пакетів | 🟢 |
-| 3 | `editor/core/registry.py` (реєстр плагінів) + `config.py` (місії) | 🟢 |
-| 4 | `editor/core/spend.py` — лічильник (порт з ai_news_agent) | 🟢 |
-| 5 | `editor/core/pipeline.py` — оркестратор Source→Read→Filter→Write→Image→Sink | 🟢 |
-| 6 | `editor/sources/` base + `calendar.py` (свята за 7 днів з holidays.json) | 🟢 |
-| 7 | `editor/images/` base + `wikimedia.py` + `og.py` (реюз) | 🟢 |
-| 8 | `editor/writers/ai_writer.py` — AI пише статтю свята + точний англ. image_query | 🟢 |
-| 9 | `editor/sinks/` base + `queue.py` (fallback) + `cabinet.py` (Supabase draft) | 🔴 сховище |
-| 10 | `editor/missions/holidays.yml` + `editor/run.py` (CLI) + readers/filters тонкі обгортки | 🟢 |
-| 11 | `.github/workflows/editor-holidays.yml` (cron щодня, dry за замовч.) | 🟢 |
-| 12 | Тест-блок: dry-run пілот 3 свята (queue-sink, без ключів) + py_compile + /audit + реліз-нотатки | 🟡 |
+| 1 | SQL `scripts/supabase_editor_scheduling.sql` — колонка `publish_at timestamptz` + індекс (Вова запустить) | 🔴 схема |
+| 2 | admin.html `saveArticle` — зберігати наявний `type` при редагуванні (фікс бага свят) | 🟢 |
+| 3 | admin.html форма: контрол розкладу «Опублікувати зараз / Запланувати» + `datetime-local` → status+publish_at | 🟢 |
+| 4 | admin.html `ART_STATUS` + `scheduleArticle(id, whenISO)` → status=`scheduled`, publish_at | 🟢 |
+| 5 | admin.html список: бейдж типу (свято/подія/новина) + показ дати автопостингу + дія «Запланувати» | 🟢 |
+| 6 | 🔴 РІШЕННЯ маршрутизації: куди публікувати свята/події (events.json?) — спитати Рому | 🔴 арх |
+| 7 | `sync_cms.py`: `promote_scheduled()` — scheduled→ready коли publish_at<=now | 🟢 |
+| 8 | `sync_cms.py`: маршрутизація за типом — news→articles.json (є), holiday/event→events.json | 🟢 |
+| 9 | workflow: cms-sync частіше (розклад) АБО новий scheduled-publisher.yml | 🟢 |
+| 10 | Тести: due-логіка локально (мок), admin.html JS node --check, py_compile | 🟡 |
+| 11 | Реліз-нотатки | 🟢 |
 
 ## Оцінка
-~12 кроків, багато дрібних py-файлів. Обсяг великий (новий пакет). Якщо контекст дійде 75% — сторож поставить paused, продовжимо свіжим чатом.
+~11 кроків. admin.html (велике) + sync_cms. Живий кабінет-тест — за Вовою. Контекст сесії вже чималий — якщо 75%, сторож поставить paused, продовжимо свіжим чатом.
 
 ## Де зупинились
-✅ Усі 12 кроків виконано. 3 коміти: `df20b1b8` арх-док, `d3919bae` пакет+workflow, `fce1691e` укр-запит. Тести зелені (py_compile, конвеєр наскрізь на 4 святах, image-плагін, queue-sink+дедуп). **Чекаю «деплой».**
+✅ Кроки 1-5 (SQL міграція `publish_at` + кабінет UI: контрол автопостингу, фікс type, бейджі) — `e8380c6c`. ✅ Крок 7 (`promote_scheduled` → автопостинг Новин-Громада) — закоммічено. JS-синтаксис/py_compile зелені.
+🔴 **ЗАБЛОКОВАНО на кроці 6** — чекаю рішення Роми: куди публікувати свята/події (A: `data/events.json` / B: `data/shotam.json`). Після відповіді: крок 8 (маршрутизація holiday/event у публікаторі) + крок 9 (частота cms-sync.yml) + тести + реліз-нотатки.
 
-## Реліз-нотатки — Блок 1 AI-редактора
-**ЩО ЗМІНИЛОСЬ:**
-- Новий пакет `editor/` — платформа-редактор (ядро pipeline + плагіни за інтерфейсами) + `docs/AI_EDITOR_ARCH.md`.
-- Місія «Свята»: за 7 днів до свята AI пише статтю+підбирає фото (Wikimedia, укр. запит) → ЧЕРНЕТКА в кабінет Алли (`cms_articles` draft) або файл-fallback без ключа.
-- Workflow `editor-holidays.yml` (cron щодня). Лічильник витрат — у той самий `data/ai_spend.json`.
-- Старий новинний бот НЕ чіпано. Сайт (src/index/style/sw) НЕ чіпано → CACHE_NAME не потрібен.
-
-**ЩО МОЖЕ ЗЛАМАТИСЬ:** нічого видимого на сайті (це бекенд-пакет). Бойовий запис у кабінет — лише коли Вова дасть `SUPABASE_SERVICE_ROLE_KEY`; доти sink чемно пропускає.
-
-**ЩО ПЕРЕВІРИТИ:** (сайт не міняється) — після ключа Вови + ручного запуску `editor-holidays.yml` → у кабінеті зʼявиться чернетка свята з фото; у лічильнику витрат — новий рядок.
+## Реліз-нотатки
+(заповнити у кроці 11)
