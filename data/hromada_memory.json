@@ -1,0 +1,36 @@
+{
+  "posts": [
+    {
+      "ts": 1783455017273,
+      "title": "Метельне: дерев'яна Покровська церква і сліди старої Покощівської волості",
+      "category": "Історія краю",
+      "sources": [
+        "https://uk.wikipedia.org/wiki/Метельне",
+        "https://postcode.in.ua/ua/codes/city/2q7"
+      ],
+      "key": "волості деревяна метельне покощівської покровська сліди старої церква"
+    },
+    {
+      "ts": 1783455016414,
+      "title": "Село Дерно: від XV століття до Олицької громади",
+      "category": "Історія краю",
+      "sources": [
+        "https://uk.wikipedia.org/wiki/Дерно",
+        "https://ukrgenealogy.com.ua/viewtopic.php?t=6895",
+        "http://imsu-volyn.com/mista-i-sela-volynskoi-oblasti/kivercivskyj-rajon/derno.html",
+        "https://ukrainaincognita.com/mista/derno"
+      ],
+      "key": "громади дерно олицької село століття"
+    },
+    {
+      "ts": 1783455015015,
+      "title": "Олицька громада отримала генератор від партнерів із Тайваню",
+      "category": "Інфраструктура",
+      "sources": [
+        "https://kivertsi.rayon.in.ua/news/1055316-olicka-gromada-otrimala-generator-vid-partneriv-iz-taivaniu"
+      ],
+      "key": "генератор громада олицька отримала партнерів тайваню"
+    }
+  ],
+  "updated_ts": 1783455017273
+}
