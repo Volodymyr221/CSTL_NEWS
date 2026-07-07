@@ -1,6 +1,30 @@
 {
-  "runs": [],
-  "totals": { "cost_usd": 0, "runs": 0, "web_searches": 0 },
-  "months": {},
-  "updated_ts": 0
+  "runs": [
+    {
+      "ts": 1783437410279,
+      "mission": "Громада",
+      "model": "claude-sonnet-5",
+      "input_tokens": 8,
+      "output_tokens": 8771,
+      "cache_read": 64225,
+      "cache_write": 53378,
+      "web_searches": 6,
+      "found": 0,
+      "cost_usd": 0.411,
+      "note": ""
+    }
+  ],
+  "totals": {
+    "cost_usd": 0.411,
+    "runs": 1,
+    "web_searches": 6
+  },
+  "months": {
+    "2026-07": {
+      "cost_usd": 0.411,
+      "runs": 1,
+      "web_searches": 6
+    }
+  },
+  "updated_ts": 1783437410279
 }
