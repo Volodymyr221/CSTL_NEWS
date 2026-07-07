@@ -174,7 +174,7 @@ function renderSkeleton() {
       <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
 
-    <section class="cm-block cm-block--news">
+    <section id="cm-news-board" class="cm-block cm-block--news">
       <div class="cm-news-board-bar">
         <span class="cm-news-board-dot"></span>
         <span class="cm-news-board-label">Табло новин</span>
