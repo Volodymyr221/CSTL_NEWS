@@ -8154,7 +8154,7 @@ ${post.text}
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
-    <section class="cm-block cm-block--contacts">
+    <section id="cm-contacts" class="cm-block cm-block--contacts">
       <header class="cm-block-header">
         <h3 class="cm-block-title">\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438</h3>
       </header>
@@ -9311,7 +9311,7 @@ END:VEVENT`
     { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: "\u{1F4CC}", kind: "tab", tab: "board" },
     { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: "\u{1F4AC}", kind: "tab", tab: "discussions" },
     { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: "\u{1F68C}", kind: "tab", tab: "buses" },
-    { id: "contacts", label: "\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: "\u{1F4DE}", kind: "tab", tab: "community" },
+    { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: "\u{1F4DE}", kind: "tab", tab: "community", scrollTo: "#cm-contacts" },
     { divider: true },
     { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: "\u2754", kind: "info" },
     { id: "policy", label: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C", icon: "\u{1F512}", kind: "info" }

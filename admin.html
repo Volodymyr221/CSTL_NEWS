@@ -373,6 +373,29 @@
       opacity: 1;
       transform: translateX(-50%) translateY(0);
     }
+
+    /* ── АДАПТИВ (телефон) — прибирає горизонтальний вихід за екран і зум-аут ── */
+    html { background: #F4F1E6; }
+    body { overflow-x: hidden; }
+    /* Таби — горизонтальна смужка, що прокручується всередині екрана (не ширша за нього) */
+    .tabs {
+      flex-wrap: nowrap;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .tabs::-webkit-scrollbar { display: none; }
+    @media (max-width: 640px) {
+      .main { padding: 14px 12px; }
+      .header { padding: 10px 12px; }
+      .header-logo { font-size: 16px; }
+      .header-tag { display: none; }
+      .header-email { max-width: 96px; }
+      .btn-logout, .btn-minimize { padding: 6px 10px; font-size: 11.5px; }
+      /* таби — своя ширина + не тиснуться; свайп по горизонталі */
+      .tab { flex: 0 0 auto; white-space: nowrap; font-size: 12.5px; padding: 9px 13px; }
+      .tab-count { min-width: 18px; height: 18px; font-size: 10.5px; }
+    }
   </style>
 </head>
 <body>
