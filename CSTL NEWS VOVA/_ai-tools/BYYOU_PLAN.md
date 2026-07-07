@@ -1,7 +1,8 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** active
+**Статус:** done
 <!-- idle=вимкнено · active=потік іде (push-замок УВІМКНЕНО) · paused=пауза · done=завершено -->
+<!-- ✅ 07.07 ЗАДЕПЛОЄНО: PR #240 (7f70d31b). Кабінет: редагування+автопостинг на дату/час. Чекає Вову: SUPABASE_SERVICE_ROLE_KEY + SQL supabase_editor_scheduling.sql для живого автопостингу. -->
 
 **Ціль:** БЛОК 2 AI-редактора — кабінет: редагування чернеток (усіх типів) + АВТОПОСТИНГ на дату/час.
 **Власник:** Рома · **Гілка:** roma/editor-cabinet · **Rollback-tag:** byyou-start-cabinet
