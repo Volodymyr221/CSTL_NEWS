@@ -1,8 +1,9 @@
-name: AI News Agent — підготовка новин у чергу
+name: AI News Agent — чернетки Громади в кабінет
 
-# AI-агент (Anthropic Sonnet + web_search) шукає новини З ЗАПАСОМ і кладе їх у
-# ЧЕРГУ (data/news_queue.json). Публікує їх окремий workflow (news-publisher)
-# крапельно. Так дорогий AI працює рідко (раз на 6 год), а стрічка «жива» весь час.
+# AI-агент (Anthropic Sonnet + web_search) пише оригінальні матеріали Громади і
+# кладе їх ЧЕРНЕТКАМИ в кабінет (Supabase cms_articles) — Алла ревʼю/публікує.
+# Волинь/Україну/Світ дає RSS-парсер окремо. Пише памʼять (щоб не повторюватись).
+# Без ключа Supabase — чернетки тримаються у файлі data/editor_drafts.json.
 on:
   schedule:
     - cron: '15 */6 * * *'   # кожні 6 годин (о :15)
@@ -37,20 +38,23 @@ jobs:
       - name: Install dependencies
         run: pip install feedparser beautifulsoup4 lxml
 
-      - name: Run AI news agent (fill queue)
+      - name: Run AI news agent (drafts → cabinet)
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python scripts/ai_news_agent.py --mission "${{ github.event.inputs.mission || 'Громада' }}"
 
-      - name: Commit queue if changed
+      - name: Commit memory/drafts if changed
         run: |
           git config user.name  "CSTL AI Agent"
           git config user.email "ai-agent@cstl-news"
-          git add data/news_queue.json data/ai_spend.json
+          for f in data/hromada_memory.json data/editor_drafts.json data/ai_spend.json; do
+            [ -f "$f" ] && git add "$f"
+          done
           if git diff --staged --quiet; then
-            echo "Черга без змін."
+            echo "Без змін."
           else
-            git commit -m "ai(queue): черга+витрати $(date -u +'%d.%m %H:%M UTC')"
+            git commit -m "ai(news): памʼять+чернетки+витрати $(date -u +'%d.%m %H:%M UTC')"
             # Пуш із ре-базою: main міг піти вперед поки готували чергу → уникаємо «fetch first».
             pushed=false
             for i in 1 2 3 4 5; do
