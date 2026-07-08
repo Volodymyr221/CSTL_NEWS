@@ -7540,6 +7540,9 @@ ${post.text}
   var _boardMiniTypeIdx = 0;
   var _boardMiniData = { userPosts: [] };
   var _boardMiniDir = 1;
+  var _evItems = [];
+  var _evIdx = 0;
+  var _evTimer = null;
   function weatherCodeInfo(code) {
     if (code === 0)
       return { icon: "\u2600\uFE0F", text: "\u042F\u0441\u043D\u043E" };
@@ -8057,43 +8060,126 @@ ${post.text}
     const el = document.getElementById("cm-event-content");
     if (!el)
       return;
+    if (_evTimer) {
+      clearInterval(_evTimer);
+      _evTimer = null;
+    }
     try {
-      const res = await fetch("./data/events.json");
-      const events = await res.json();
       const today = /* @__PURE__ */ new Date();
       today.setHours(0, 0, 0, 0);
-      const next = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date))[0];
-      if (!next) {
+      let items = [];
+      try {
+        const res = await fetch("./data/events.json");
+        const events = await res.json();
+        items = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((e) => ({ kind: "event", date: e.date, time: e.time, title: e.title, category: e.category, location: e.location }));
+      } catch {
+      }
+      if (!items.length) {
+        try {
+          const hres = await fetch("./data/holidays.json");
+          const hall = await hres.json();
+          const harr = Array.isArray(hall) ? hall : hall.holidays || [];
+          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
+        } catch {
+        }
+      }
+      if (!items.length) {
         el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439 \u0443 \u0433\u0440\u043E\u043C\u0430\u0434\u0456</div>';
         return;
       }
-      const now = /* @__PURE__ */ new Date();
-      const eventDay = /* @__PURE__ */ new Date(next.date + "T00:00:00");
-      const todayDay = new Date(now);
-      todayDay.setHours(0, 0, 0, 0);
-      const dayDiff = Math.round((eventDay - todayDay) / 864e5);
-      const isUrgent = dayDiff <= 1;
-      const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
-      const timeStr = next.time ? escapeHtml(next.time) : "";
-      const locStr = next.location ? escapeHtml(next.location) : "";
-      const catStr = escapeHtml(next.category || "");
-      el.innerHTML = `
+      _evItems = items;
+      _evIdx = 0;
+      renderEvCarousel(el);
+    } catch {
+      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    }
+  }
+  function evSlideHtml(it, now) {
+    const eventDay = /* @__PURE__ */ new Date(it.date + "T00:00:00");
+    const todayDay = new Date(now);
+    todayDay.setHours(0, 0, 0, 0);
+    const dayDiff = Math.round((eventDay - todayDay) / 864e5);
+    const isUrgent = dayDiff <= 1;
+    const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
+    const catStr = escapeHtml(it.category || "");
+    const countdown = escapeHtml(eventCountdown(it, now));
+    if (it.kind === "holiday") {
+      const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : "";
+      return `
+      <div class="cm-ev-slide">
+        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? " tablo-hero--urgent" : ""}"${grad} data-switch-tab="shotam">
+          <div class="evh-top">
+            <span class="tablo-countdown">${countdown}</span>
+            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
+          </div>
+          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || "\u{1F389}")}</div>
+          <div class="evh-title">${escapeHtml(it.title)}</div>
+          <div class="evh-meta tablo-soft">${dateStr}</div>
+        </article>
+      </div>
+    `;
+    }
+    const timeStr = it.time ? escapeHtml(it.time) : "";
+    const locStr = it.location ? escapeHtml(it.location) : "";
+    return `
+    <div class="cm-ev-slide">
       <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}" data-switch-tab="shotam">
         <div class="evh-top">
-          <span class="tablo-countdown">${escapeHtml(eventCountdown(next, now))}</span>
+          <span class="tablo-countdown">${countdown}</span>
           ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
         </div>
         <div class="evh-time tablo-time-mono">
           <span class="evh-date tablo-time-accent">${dateStr}</span>
           ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ""}
         </div>
-        <div class="evh-title">${escapeHtml(next.title)}</div>
+        <div class="evh-title">${escapeHtml(it.title)}</div>
         ${locStr ? `<div class="evh-meta tablo-soft">\u{1F4CD} ${locStr}</div>` : ""}
       </article>
-    `;
-    } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0434\u0456\u0457 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
+    </div>
+  `;
+  }
+  function renderEvCarousel(el) {
+    const now = /* @__PURE__ */ new Date();
+    const slides = _evItems.map((it) => evSlideHtml(it, now)).join("");
+    const dots = _evItems.length > 1 ? `<div class="cm-ev-dots">${_evItems.map((_, i) => `<span class="cm-ev-dot${i === _evIdx ? " active" : ""}" data-ev-idx="${i}"></span>`).join("")}</div>` : "";
+    el.innerHTML = `
+    <div class="cm-ev-carousel" id="cm-ev-carousel">
+      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
+      ${dots}
+    </div>
+  `;
+    el.querySelectorAll(".cm-ev-dot").forEach((dot) => {
+      dot.addEventListener("click", (e) => {
+        e.stopPropagation();
+        _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
+        updateEvPosition(el);
+        startEvRotator(el);
+      });
+    });
+    startEvRotator(el);
+  }
+  function updateEvPosition(el) {
+    const track = el.querySelector(".cm-ev-track");
+    if (track)
+      track.style.transform = `translateX(-${_evIdx * 100}%)`;
+    el.querySelectorAll(".cm-ev-dot").forEach((d, i) => d.classList.toggle("active", i === _evIdx));
+  }
+  function startEvRotator(el) {
+    if (_evTimer) {
+      clearInterval(_evTimer);
+      _evTimer = null;
     }
+    if (_evItems.length < 2)
+      return;
+    _evTimer = setInterval(() => {
+      if (!document.getElementById("cm-ev-carousel")) {
+        clearInterval(_evTimer);
+        _evTimer = null;
+        return;
+      }
+      _evIdx = (_evIdx + 1) % _evItems.length;
+      updateEvPosition(el);
+    }, 6e3);
   }
   var CONTACT_ICONS = {
     ambulance: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 10h4M12 8v4"/><path d="M2 17h20v-3a2 2 0 0 0-2-2h-3l-3-4H7a4 4 0 0 0-4 4v5h-1"/><circle cx="7" cy="17" r="2"/><circle cx="17" cy="17" r="2"/></svg>',
@@ -8364,7 +8450,7 @@ ${post.text}
 
     <section class="cm-block cm-block--event">
       <header class="cm-block-header">
-        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
+        <h3 class="cm-block-title">\u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0456 \u043F\u043E\u0434\u0456\u0457 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
         <button class="cm-block-link" data-switch-tab="shotam">\u0410\u0444\u0456\u0448\u0430 \u2192</button>
       </header>
       <div id="cm-event-content" class="cm-block-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>

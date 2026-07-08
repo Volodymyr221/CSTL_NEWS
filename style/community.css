@@ -594,6 +594,24 @@
 .cm-block--event .evh-clock { font-size: 19px; }
 .cm-block--event .evh-title { font-size: 15px; }
 
+/* Карусель подій (Г-2/Б2): трек зі слайдів (одна видима), авто-ротація ~6с + крапки.
+   Порожньо → fallback на найближчі свята (Г-16). */
+.cm-ev-carousel { position: relative; overflow: hidden; }
+.cm-ev-track { display: flex; align-items: stretch; transition: transform 0.5s ease; }
+.cm-ev-slide { flex: 0 0 100%; min-width: 100%; box-sizing: border-box; }
+.cm-ev-slide .evh-card { height: 100%; box-sizing: border-box; }
+.cm-ev-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.cm-ev-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+.cm-ev-dot.active { background: #722F37; transform: scale(1.25); }
+/* Свято-картка (fallback): велика емодзі-обкладинка на кольоровому градієнті свята */
+.cm-ev-holiday { align-items: flex-start; }
+.cm-ev-holiday-emoji { font-size: 40px; line-height: 1; margin: 4px 0 2px; }
+
 /* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
 

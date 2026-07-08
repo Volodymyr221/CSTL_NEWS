@@ -52,6 +52,11 @@ let _boardMiniTypeIdx = 0;   // індекс активного типу
 let _boardMiniData    = { userPosts: [] };   // кеш даних щоб не запитувати при свайпі
 let _boardMiniDir     = 1;   // 1 = свайп вліво (наступний), -1 = свайп вправо (попередній)
 
+// Карусель подій громади (Г-2/Б2): авто-ротація 3-5 карток; порожньо → найближчі свята (Г-16 fallback)
+let _evItems = [];
+let _evIdx   = 0;
+let _evTimer = null;
+
 const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
 
@@ -737,48 +742,144 @@ export async function renderEventBlock() {
   const el = document.getElementById('cm-event-content');
   if (!el) return;
 
-  try {
-    const res    = await fetch('./data/events.json');
-    const events = await res.json();
-    const today  = new Date(); today.setHours(0, 0, 0, 0);
-    const next = events
-      .filter(e => !e.auto)  // виключаємо RSS-новини (auto:true) — як у вкладці Подій
-      .filter(e => new Date(e.date + 'T00:00:00') >= today)
-      .sort((a, b) => new Date(a.date) - new Date(b.date))[0];
+  // Зупиняємо попередню ротацію (перерендер/повернення на вкладку) — без витоку інтервалів
+  if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
 
-    if (!next) {
+  try {
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+
+    // 1) Майбутні події громади (не-auto), відсортовані за датою, до 5
+    let items = [];
+    try {
+      const res    = await fetch('./data/events.json');
+      const events  = await res.json();
+      items = events
+        .filter(e => !e.auto)  // RSS-новини (auto:true) виключаємо — як у вкладці Подій
+        .filter(e => new Date(e.date + 'T00:00:00') >= today)
+        .sort((a, b) => new Date(a.date) - new Date(b.date))
+        .slice(0, 5)
+        .map(e => ({ kind: 'event', date: e.date, time: e.time, title: e.title, category: e.category, location: e.location }));
+    } catch {}
+
+    // 2) Fallback (Г-16): якщо майбутніх подій нема — найближчі свята з holidays.json
+    if (!items.length) {
+      try {
+        const hres = await fetch('./data/holidays.json');
+        const hall = await hres.json();
+        const harr = Array.isArray(hall) ? hall : (hall.holidays || []);
+        items = harr
+          .filter(h => new Date(h.date + 'T00:00:00') >= today)
+          .sort((a, b) => new Date(a.date) - new Date(b.date))
+          .slice(0, 5)
+          .map(h => ({ kind: 'holiday', date: h.date, title: h.title, category: h.category || 'Свято', emoji: h.cover_emoji, gradient: h.cover_gradient }));
+      } catch {}
+    }
+
+    if (!items.length) {
       el.innerHTML = '<div class="cm-block-empty">Поки немає запланованих подій у громаді</div>';
       return;
     }
 
-    const now      = new Date();
-    const eventDay = new Date(next.date + 'T00:00:00');
-    const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
-    const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
-    const isUrgent = dayDiff <= 1;
+    _evItems = items;
+    _evIdx   = 0;
+    renderEvCarousel(el);
+  } catch {
+    el.innerHTML = '<div class="cm-block-empty">Події недоступні</div>';
+  }
+}
 
-    const dateStr = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
-    const timeStr = next.time ? escapeHtml(next.time) : '';
-    const locStr  = next.location ? escapeHtml(next.location) : '';
-    const catStr  = escapeHtml(next.category || '');
+// Одна картка каруселі — подія (табло-стиль) або свято (cover_emoji + градієнт).
+function evSlideHtml(it, now) {
+  const eventDay = new Date(it.date + 'T00:00:00');
+  const todayDay = new Date(now); todayDay.setHours(0, 0, 0, 0);
+  const dayDiff  = Math.round((eventDay - todayDay) / 86400000);
+  const isUrgent = dayDiff <= 1;
+  const dateStr   = `${pad(eventDay.getDate())}.${pad(eventDay.getMonth() + 1)}`;
+  const catStr    = escapeHtml(it.category || '');
+  const countdown = escapeHtml(eventCountdown(it, now));
 
-    el.innerHTML = `
+  if (it.kind === 'holiday') {
+    const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : '';
+    return `
+      <div class="cm-ev-slide">
+        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? ' tablo-hero--urgent' : ''}"${grad} data-switch-tab="shotam">
+          <div class="evh-top">
+            <span class="tablo-countdown">${countdown}</span>
+            ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
+          </div>
+          <div class="cm-ev-holiday-emoji">${escapeHtml(it.emoji || '🎉')}</div>
+          <div class="evh-title">${escapeHtml(it.title)}</div>
+          <div class="evh-meta tablo-soft">${dateStr}</div>
+        </article>
+      </div>
+    `;
+  }
+
+  const timeStr = it.time ? escapeHtml(it.time) : '';
+  const locStr  = it.location ? escapeHtml(it.location) : '';
+  return `
+    <div class="cm-ev-slide">
       <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}" data-switch-tab="shotam">
         <div class="evh-top">
-          <span class="tablo-countdown">${escapeHtml(eventCountdown(next, now))}</span>
+          <span class="tablo-countdown">${countdown}</span>
           ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
         </div>
         <div class="evh-time tablo-time-mono">
           <span class="evh-date tablo-time-accent">${dateStr}</span>
           ${timeStr ? `<span class="evh-clock tablo-mid">${timeStr}</span>` : ''}
         </div>
-        <div class="evh-title">${escapeHtml(next.title)}</div>
+        <div class="evh-title">${escapeHtml(it.title)}</div>
         ${locStr ? `<div class="evh-meta tablo-soft">📍 ${locStr}</div>` : ''}
       </article>
-    `;
-  } catch {
-    el.innerHTML = '<div class="cm-block-empty">Події недоступні</div>';
-  }
+    </div>
+  `;
+}
+
+// Рендер каруселі: трек зі слайдів + крапки. Одна картка видима, авто-ротація ~6с.
+function renderEvCarousel(el) {
+  const now    = new Date();
+  const slides = _evItems.map(it => evSlideHtml(it, now)).join('');
+  const dots   = _evItems.length > 1
+    ? `<div class="cm-ev-dots">${_evItems.map((_, i) =>
+        `<span class="cm-ev-dot${i === _evIdx ? ' active' : ''}" data-ev-idx="${i}"></span>`).join('')}</div>`
+    : '';
+
+  el.innerHTML = `
+    <div class="cm-ev-carousel" id="cm-ev-carousel">
+      <div class="cm-ev-track" style="transform:translateX(-${_evIdx * 100}%)">${slides}</div>
+      ${dots}
+    </div>
+  `;
+
+  // Крапки — ручний перехід (зупиняє й перезапускає авто-ротацію)
+  el.querySelectorAll('.cm-ev-dot').forEach(dot => {
+    dot.addEventListener('click', e => {
+      e.stopPropagation();
+      _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
+      updateEvPosition(el);
+      startEvRotator(el);   // рестарт таймера від нового індексу
+    });
+  });
+
+  startEvRotator(el);
+}
+
+// Зсув треку + активна крапка
+function updateEvPosition(el) {
+  const track = el.querySelector('.cm-ev-track');
+  if (track) track.style.transform = `translateX(-${_evIdx * 100}%)`;
+  el.querySelectorAll('.cm-ev-dot').forEach((d, i) => d.classList.toggle('active', i === _evIdx));
+}
+
+// Авто-ротація 6с (реюз патерну hero-ротатора). Стоп коли каруселі нема в DOM.
+function startEvRotator(el) {
+  if (_evTimer) { clearInterval(_evTimer); _evTimer = null; }
+  if (_evItems.length < 2) return;
+  _evTimer = setInterval(() => {
+    if (!document.getElementById('cm-ev-carousel')) { clearInterval(_evTimer); _evTimer = null; return; }
+    _evIdx = (_evIdx + 1) % _evItems.length;
+    updateEvPosition(el);
+  }, 6000);
 }
 
 // ── Блок 7: Контакти ─────────────────────────────────────────────────────────
