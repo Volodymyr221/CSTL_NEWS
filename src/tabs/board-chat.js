@@ -626,6 +626,20 @@ export function openThreadsList() {
       }).join('');
     };
 
+    // F5: архівована розмова з новим НЕПРОЧИТАНИМ — авто-розархівувати. Інакше
+    // глобальний бейдж рахує це непрочитане (незалежно від архіву), а список
+    // ховає архівні з «Усі»/«Непрочитані» → «є непрочитане, але його ніде нема».
+    // Нове вхідне повертає розмову в загальний список (як у месенджерах).
+    const autoUnarchiveUnread = async () => {
+      const toFix = threads.filter(t => (unread.get(t.id) > 0) && stOf(t.id).archived);
+      for (const t of toFix) {
+        const prev = states.get(t.id) || {};
+        states.set(t.id, { ...prev, archived: false });
+        setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
+      }
+    };
+
+    await autoUnarchiveUnread();
     renderThreads();
 
     searchEl.addEventListener('input', () => { query = searchEl.value; renderThreads(); });
@@ -716,6 +730,7 @@ export function openThreadsList() {
       const [t, u, s] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me), fetchThreadStates(me)]);
       if (api._closed) return;
       threads = t; unread = u; states = s;
+      await autoUnarchiveUnread();   // F5: нове вхідне повертає архівовану розмову у список
       applyEmptyState();
       renderThreads();
     };
