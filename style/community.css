@@ -2317,61 +2317,67 @@
   justify-content: center;
 }
 
-/* Шапка Дошки (Д-11): заголовок + лічильник зліва, фільтр локації пігулкою справа */
+/* Шапка Дошки (Д-11): заголовок по центру; під ним рядок «лічильник | локація» */
 .bd-titlebar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
   margin-bottom: 10px;
 }
-.bd-titlebar-left { min-width: 0; }   /* дозволяє стиснутись, щоб пігулка помістилась */
 .bd-title {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 800;
   color: var(--black);
   line-height: 1.15;
   margin: 0;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  text-align: center;
 }
-.bd-count { font-size: 12px; color: var(--gray); margin-top: 2px; }
-
-/* Фільтр за локацією (Д-12) — компактна пігулка справа від заголовка */
-.bd-loc-filter {
-  position: relative;
+.bd-subrow {
   display: flex;
   align-items: center;
-  flex-shrink: 0;
-  max-width: 52%;
-  background: var(--card-cream);
-  border: 1.5px solid rgba(0,0,0,0.22);
-  border-radius: 12px;
-  padding: 0 8px;
-  height: 34px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10);
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
 }
-.bd-loc-icon { font-size: 13px; margin-right: 4px; opacity: 0.6; }
+/* Лічильник — чіткіший (темніший + напівжирний) */
+.bd-count {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--ink-soft, #5a5a5a);
+}
+
+/* Фільтр за локацією (Д-12) — тонко, без пігулки: іконка + назва (ВЕЛИКИМИ) + каретка */
+.bd-loc-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 55%;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+.bd-loc-icon { font-size: 12px; margin-right: 3px; opacity: 0.6; }
 .bd-loc-select {
   max-width: 100%;
   background: transparent;
   border: none;
   outline: none;
-  font-size: 16px;   /* iOS zoom-fix */
+  font-size: 12.5px;
   font-family: inherit;
-  font-weight: 600;
-  color: var(--black);
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;   /* назви НП великими буквами (Д — за побажанням) */
+  color: var(--ink-soft, #5a5a5a);
   -webkit-appearance: none;
   appearance: none;
-  padding-right: 14px;
+  padding-right: 12px;
   text-overflow: ellipsis;
+  cursor: pointer;
 }
 .bd-loc-filter::after {
   content: '▾';
   position: absolute;
-  right: 8px;
-  font-size: 11px;
+  right: 0;
+  font-size: 10px;
   color: var(--gray);
   pointer-events: none;
 }

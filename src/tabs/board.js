@@ -1220,21 +1220,22 @@ function renderHeader() {
     </div>
   ` : '';
 
-  // Д-11 + Д-12: шапка Дошки — заголовок + лічильник (зліва) і фільтр локації
-  // пігулкою (справа). Лічильник рахує поточний відфільтрований список.
+  // Д-11 + Д-12: шапка Дошки — заголовок по центру; під ним рядок:
+  // лічильник (зліва) + тонкий фільтр локації (справа). Лічильник рахує
+  // поточний відфільтрований список.
   const count = showCategories ? getFilteredPosts().length : 0;
   const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
-      <div class="bd-titlebar-left">
-        <h2 class="bd-title">Дошка оголошень</h2>
-        <div class="bd-count" id="bd-count">${count} ${pluralAds(count)}</div>
-      </div>
-      <div class="bd-loc-filter">
-        <span class="bd-loc-icon" aria-hidden="true">📍</span>
-        <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
-          <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
-          ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
-        </select>
+      <h2 class="bd-title">Дошка оголошень</h2>
+      <div class="bd-subrow">
+        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
+        <div class="bd-loc-filter">
+          <span class="bd-loc-icon" aria-hidden="true">📍</span>
+          <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
+            <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
+            ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+          </select>
+        </div>
       </div>
     </div>
   ` : '';
