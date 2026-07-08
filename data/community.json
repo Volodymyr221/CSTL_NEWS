@@ -84,6 +84,22 @@
       "category": "gov",
       "icon": "gromada",
       "group": "local"
+    },
+    {
+      "id": "cnap",
+      "name": "ЦНАП (адмінпослуги)",
+      "phone": "099 205 69 12",
+      "category": "admin",
+      "icon": "gromada",
+      "group": "local"
+    },
+    {
+      "id": "emergency112",
+      "name": "Єдиний екстрений",
+      "phone": "112",
+      "category": "emergency",
+      "icon": "police",
+      "group": "emergency"
     }
   ]
 }
