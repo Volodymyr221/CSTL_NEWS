@@ -1,6 +1,32 @@
 {
   "runs": [
     {
+      "ts": 1783525077861,
+      "mission": "Громада:dedup",
+      "model": "claude-sonnet-5",
+      "input_tokens": 10779,
+      "output_tokens": 12,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 0,
+      "cost_usd": 0.0325,
+      "note": ""
+    },
+    {
+      "ts": 1783525075313,
+      "mission": "Громада №1",
+      "model": "claude-sonnet-5",
+      "input_tokens": 4,
+      "output_tokens": 8920,
+      "cache_read": 8083,
+      "cache_write": 38873,
+      "web_searches": 4,
+      "found": 7,
+      "cost_usd": 0.322,
+      "note": ""
+    },
+    {
       "ts": 1783501678807,
       "mission": "holiday:🇺🇦 День Української Державно",
       "model": "claude-sonnet-5",
@@ -197,16 +223,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 3.389,
-    "runs": 15,
-    "web_searches": 48
+    "cost_usd": 3.7435,
+    "runs": 17,
+    "web_searches": 52
   },
   "months": {
     "2026-07": {
-      "cost_usd": 3.389,
-      "runs": 15,
-      "web_searches": 48
+      "cost_usd": 3.7435,
+      "runs": 17,
+      "web_searches": 52
     }
   },
-  "updated_ts": 1783501678807
+  "updated_ts": 1783525077861
 }
