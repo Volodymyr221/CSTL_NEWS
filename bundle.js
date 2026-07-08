@@ -8138,13 +8138,27 @@ ${post.text}
     const greeting = getGreeting();
     const todayStr = formatTodayHeader();
     el.innerHTML = `
-    <section class="cm-greeting">
-      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-    </section>
+    <!-- \u0421\u0442\u0438\u043A-\u0437\u043E\u043D\u0430 \u0432\u0456\u0442\u0430\u043D\u043D\u044F: \u0432\u0438\u0441\u043E\u0442\u0430 = \u0432\u0456\u0442\u0430\u043D\u043D\u044F + \u0437\u0430\u043F\u0430\u0441 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB (padding-bottom).
+         .cm-greeting \u0432\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u2014 position:sticky, \u0442\u043E\u043C\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440 \u0442\u0440\u0438\u043C\u0430\u0454 \u0439\u043E\u0433\u043E
+         \u043D\u0430 \u041A\u041E\u041C\u041F\u041E\u0417\u0418\u0422\u041E\u0420\u0406 (\u0431\u0435\u0437 JS-\u0441\u043A\u0440\u043E\u043B\u0443) \u2192 \u043D\u0443\u043B\u044C \u0434\u044C\u043E\u0440\u0433\u0430\u043D\u043D\u044F \u043D\u0430 iOS. \u041A\u043E\u043B\u0438 \u0437\u043E\u043D\u0430
+         \u0434\u043E\u0437\u043D\u0438\u043A\u0430\u0454 (\u043F\u0440\u043E\u0441\u043A\u0440\u043E\u043B\u0438\u043B\u0438 padding-bottom) \u2014 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0442\u044C\u0441\u044F \u0439 \u0457\u0434\u0435 \u0432\u0433\u043E\u0440\u0443. -->
+    <div class="cm-greeting-stick">
+      <section class="cm-greeting">
+        <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+        <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      </section>
+      <!-- \u0420\u043E\u0437\u043F\u0456\u0440\u043A\u0430 \u0437\u0430\u043F\u0430\u0441\u0443 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB: \u0420\u0415\u0410\u041B\u042C\u041D\u0418\u0419 \u0431\u043B\u043E\u043A (\u043D\u0435 padding!) \u2014 \u0456\u043D\u0430\u043A\u0448\u0435
+           sticky \u0443 Chromium \u043D\u0435 \u0442\u0440\u0438\u043C\u0430\u0454 (padding \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440\u0430 \u043D\u0435 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F \u0443 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D
+           \u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F). \u0407\u0457 \u0432\u0438\u0441\u043E\u0442\u0430 = \u0441\u043A\u0456\u043B\u044C\u043A\u0438 px \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0456\u0433\u043D\u043E\u0440\u0443\u0454 \u0441\u043A\u0440\u043E\u043B. -->
+      <div class="cm-greeting-stickpad" aria-hidden="true"></div>
+    </div>
 
     <section class="cm-hero">
       ${heroImgsHtml()}
+      <!-- \u0421\u043C\u0443\u0433\u0430 \u0431\u043B\u044E\u0440\u0443: \u043F\u0440\u0438\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0430 \u0434\u043E \u041D\u0418\u0417\u0423 \u0433\u0435\u0440\u043E\u044F, \u0440\u043E\u0441\u0442\u0435 \u0432\u0433\u043E\u0440\u0443 \u0440\u0430\u0437\u043E\u043C \u0456\u0437 \u0432\u0435\u0440\u0445\u043E\u043C
+           \u0432\u0435\u0440\u0445\u043D\u044C\u043E\u0457 \u043A\u0430\u0440\u0442\u043A\u0438 \u043F\u0440\u0438 \u0441\u043A\u0440\u043E\u043B\u0456 (community.js). \u041D\u0438\u0437 \u043C\u0443\u0442\u043D\u0456\u0454, \u0432\u0435\u0440\u0445 \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F
+           \u0447\u0456\u0442\u043A\u0438\u0439 \u2014 \u0431\u043B\u044E\u0440 \xAB\u0441\u043B\u0456\u0434\u043A\u0443\u0454\xBB \u0437\u0430 \u043A\u0430\u0440\u0442\u043A\u043E\u044E (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07). -->
+      <div class="cm-hero-blurband" aria-hidden="true"></div>
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
         <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
@@ -8216,8 +8230,6 @@ ${post.text}
   }
   var _greetingWired = false;
   var _heroBlurWired = false;
-  var HERO_BLUR_MAX = 5;
-  var HERO_GREET_STICK = 150;
   function wireHeroBlur() {
     if (_heroBlurWired)
       return;
@@ -8226,28 +8238,40 @@ ${post.text}
       return;
     _heroBlurWired = true;
     let ticking = false;
-    main.addEventListener("scroll", () => {
+    let hero, band, block;
+    const cache = () => {
+      hero = document.querySelector(".cm-hero");
+      band = hero && hero.querySelector(".cm-hero-blurband");
+      block = document.getElementById("cm-news-board");
+    };
+    const onScroll = () => {
       if (ticking)
         return;
       ticking = true;
       requestAnimationFrame(() => {
-        const st = main.scrollTop;
-        const hero = document.querySelector(".cm-hero");
-        const block = document.getElementById("cm-news-board");
-        if (hero && block) {
-          const heroBottom = hero.getBoundingClientRect().bottom;
-          const blockTop = block.getBoundingClientRect().top;
-          const span = hero.getBoundingClientRect().height * 0.7 || 300;
-          const progress = Math.max(0, Math.min(1, (heroBottom - blockTop) / span));
-          const amt = progress * HERO_BLUR_MAX;
-          hero.style.filter = amt > 0.15 ? `blur(${amt.toFixed(1)}px)` : "";
-        }
-        const greeting = document.querySelector(".cm-greeting");
-        if (greeting)
-          greeting.style.transform = `translateY(${Math.min(st, HERO_GREET_STICK)}px)`;
         ticking = false;
+        if (!hero || !band || !block)
+          cache();
+        if (!hero || !band || !block)
+          return;
+        const heroTop = hero.getBoundingClientRect().top;
+        const heroH = hero.offsetHeight;
+        const C = block.getBoundingClientRect().top - heroTop;
+        const C0 = heroH - 80;
+        const travel = Math.max(0, C0 - C);
+        let h = Math.min(travel * 0.6, Math.max(0, C));
+        let top = C - h;
+        if (top < 0) {
+          top = 0;
+          h = Math.max(0, C);
+        }
+        band.style.top = top + "px";
+        band.style.height = h + "px";
+        band.style.opacity = h > 2 ? "1" : "0";
       });
-    }, { passive: true });
+    };
+    cache();
+    main.addEventListener("scroll", onScroll, { passive: true });
   }
   function initCommunity() {
     renderSkeleton();
