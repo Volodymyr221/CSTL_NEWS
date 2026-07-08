@@ -352,69 +352,8 @@
   gap: 14px;
 }
 
-/* ── HERO: Швидка 103 — велика пульсуюча картка ──
-   Приглушено-червоний (16.05.2026): все ще впізнаваний як emergency-колір
-   але без агресивної яскравості. Гармонує з бордовим брендом. */
-.cm-contact-hero {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 11px 14px;   /* компактніше (блок-доповнення, рішення Роми 08.07) */
-  background: linear-gradient(135deg, #A8334A 0%, #722F37 100%);
-  border-radius: 14px;
-  text-decoration: none;
-  color: white;
-  box-shadow: 0 3px 10px rgba(114, 47, 55, 0.26);
-  position: relative;
-  overflow: hidden;
-  -webkit-tap-highlight-color: transparent;
-  transition: transform 0.1s;
-}
-.cm-contact-hero:active { transform: scale(0.98); }
-
-/* Пульсація — м'який ореол навколо картки */
-@keyframes cm-pulse-border {
-  0%, 100% { box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30), 0 0 0 0 rgba(168, 51, 74, 0.50); }
-  50%      { box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30), 0 0 0 10px rgba(168, 51, 74, 0); }
-}
-
-.cm-contact-hero-icon {
-  display: inline-flex;
-  width: 34px;
-  height: 34px;
-  color: white;
-  flex-shrink: 0;
-}
-.cm-contact-hero-icon svg { width: 100%; height: 100%; stroke-width: 2.2; }
-
-.cm-contact-hero-text {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  flex: 1;
-  min-width: 0;
-}
-.cm-contact-hero-name {
-  font-size: 15px;
-  font-weight: 800;
-  line-height: 1.15;
-  letter-spacing: 0.2px;
-}
-.cm-contact-hero-hint {
-  font-size: 11px;
-  font-weight: 600;
-  opacity: 0.85;
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-}
-.cm-contact-hero-phone {
-  font-size: 24px;
-  font-weight: 800;
-  font-family: Georgia, serif;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: -1px;
-  flex-shrink: 0;
-}
+/* (Велику hero-картку «Швидка 103» прибрано 08.07 — Г-10: екстрені стали
+   компактними плитками внизу, без окремої великої картки.) */
 
 /* ── ГРУПА (заголовок + контейнер) ── */
 .cm-contact-group {
@@ -431,46 +370,50 @@
   padding-left: 2px;
 }
 
-/* ── EMERGENCY: 2×2 сітка плиток ── */
-.cm-contact-grid-2x2 {
+/* ── ЕКСТРЕНІ: компактна сітка 3-в-ряд (Г-10, Рома 08.07) — маленькі плитки внизу ── */
+.cm-contact-grid-3 {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
 }
-.cm-contact-tile {
+.cm-contact-chip {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
-  gap: 3px;
-  padding: 9px 10px;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 2px;
+  padding: 8px 4px;
+  min-width: 0;
   background: #FFF4E6;
   border: 1px solid rgba(245, 158, 11, 0.22);
-  border-left: 3px solid #E67E22;
   border-radius: 10px;
   text-decoration: none;
   color: var(--ink);
+  text-align: center;
   -webkit-tap-highlight-color: transparent;
   transition: background 0.15s;
 }
-.cm-contact-tile:active { background: #FFE9CC; }
-.cm-contact-tile-icon {
+.cm-contact-chip:active { background: #FFE9CC; }
+.cm-contact-chip-icon {
   display: inline-flex;
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   color: #E67E22;
 }
-.cm-contact-tile-icon svg { width: 100%; height: 100%; }
-.cm-contact-tile-name {
-  font-size: 12.5px;
+.cm-contact-chip-icon svg { width: 100%; height: 100%; }
+.cm-contact-chip-name {
+  font-size: 10.5px;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.15;
   color: var(--ink);
+  word-break: break-word;
+  hyphens: auto;
 }
-.cm-contact-tile-phone {
-  font-size: 13px;
+.cm-contact-chip-phone {
+  font-size: 12px;
   color: var(--ink-soft);
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 700;
 }
 
 /* ── LOCAL: список карток-рядків на всю ширину ── */

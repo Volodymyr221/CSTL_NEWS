@@ -8203,34 +8203,9 @@ ${post.text}
         el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0456\u0432 \u043D\u0435\u043C\u0430\u0454</div>';
         return;
       }
-      const hero = list.find((c) => c.group === "hero" || c.priority === "critical");
-      const emergency = list.filter((c) => c.group === "emergency");
-      const local = list.filter((c) => c.group === "local");
       const telOf = (p) => p.replace(/[^\d+]/g, "");
-      const heroHtml = hero ? `
-      <a class="cm-contact-hero" href="tel:${escapeHtml(telOf(hero.phone))}">
-        <span class="cm-contact-hero-icon">${CONTACT_ICONS[hero.icon] || CONTACT_ICONS.default}</span>
-        <span class="cm-contact-hero-text">
-          <span class="cm-contact-hero-name">${escapeHtml(hero.name)}</span>
-          <span class="cm-contact-hero-hint">\u0422\u0430\u043F \u0434\u043B\u044F \u0432\u0438\u043A\u043B\u0438\u043A\u0443</span>
-        </span>
-        <span class="cm-contact-hero-phone">${escapeHtml(hero.phone)}</span>
-      </a>
-    ` : "";
-      const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">\u0410\u0432\u0430\u0440\u0456\u0439\u043D\u0456</div>
-        <div class="cm-contact-grid-2x2">
-          ${emergency.map((c) => `
-            <a class="cm-contact-tile" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-tile-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-tile-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-tile-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join("")}
-        </div>
-      </div>
-    ` : "";
+      const local = list.filter((c) => c.group === "local");
+      const emergency = list.filter((c) => c.group === "emergency" || c.group === "hero" || c.priority === "critical");
       const localHtml = local.length ? `
       <div class="cm-contact-group cm-contact-group--local">
         <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
@@ -8247,7 +8222,21 @@ ${post.text}
         </div>
       </div>
     ` : "";
-      el.innerHTML = heroHtml + emergencyHtml + localHtml;
+      const emergencyHtml = emergency.length ? `
+      <div class="cm-contact-group cm-contact-group--emergency">
+        <div class="cm-contact-group-title">\u0415\u043A\u0441\u0442\u0440\u0435\u043D\u0456</div>
+        <div class="cm-contact-grid-3">
+          ${emergency.map((c) => `
+            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
+              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
+            </a>
+          `).join("")}
+        </div>
+      </div>
+    ` : "";
+      el.innerHTML = localHtml + emergencyHtml;
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456</div>';
     }
