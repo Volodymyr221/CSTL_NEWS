@@ -15,6 +15,10 @@ function codeToIcon(code) {
 }
 
 export async function initWeather() {
+  // 08.07: погоду з ШАПКИ прибрано (рішення Роми) — елементів #weather-* більше
+  // нема в index.html, тож guard нижче робить функцію no-op (нічого не робить).
+  // Блок «Погода в Олиці» на Громаді — інший код (community-blocks), працює далі.
+  // Виклик з app.js лишаємо: порядок імпортів app.js не чіпаємо без обговорення.
   const iconEl = document.getElementById('weather-icon');
   const tempEl = document.getElementById('weather-temp');
   if (!iconEl || !tempEl) return;

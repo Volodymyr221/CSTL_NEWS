@@ -24,26 +24,26 @@
 
   <!-- Шапка сайту -->
   <header class="app-header">
-    <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Меню" aria-expanded="false">
-      <span></span><span></span><span></span>
-    </button>
-    <div class="header-logo">CSTL <span>LIFE</span></div>
-    <div class="header-right">
-      <button class="account-btn" id="account-btn" type="button" aria-label="Увійти">
-        <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+    <!-- Ліва група: бургер + лого впритул (рішення Роми 08.07). Погоду з шапки
+         прибрано (лишилась блоком на Громаді); лічильник версії — по центру шапки. -->
+    <div class="header-left">
+      <button class="sidebar-toggle" id="sidebar-toggle" type="button" aria-label="Меню" aria-expanded="false">
+        <span></span><span></span><span></span>
       </button>
+      <div class="header-logo">CSTL <span>LIFE</span></div>
+    </div>
+    <div class="deploy-stamp">v1 · 01.01 00:00</div>
+    <div class="header-right">
       <button class="saved-routes-btn" id="saved-routes-btn" type="button" hidden aria-label="Збережені рейси">
         <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
         <span class="saved-routes-count" id="saved-routes-count"></span>
       </button>
-      <div class="header-meta">
-        <div class="weather-widget" id="weather-widget">
-          <span class="weather-icon" id="weather-icon"></span>
-          <span class="weather-city" id="weather-city"></span>
-          <span class="weather-temp" id="weather-temp"></span>
-        </div>
-        <div class="deploy-stamp">v1 · 01.01 00:00</div>
-      </div>
+      <button class="saved-hub-btn" id="saved-hub-btn" type="button" aria-label="Збережені">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+      </button>
+      <button class="account-btn" id="account-btn" type="button" aria-label="Увійти">
+        <svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </button>
     </div>
   </header>
 
