@@ -68,6 +68,26 @@ def promote_scheduled():
         print(f"⚠ promote_scheduled: {e}")
 
 
+def heal_phantom_drafts():
+    """Само-лікування «фантомних чернеток»: рядок зі status='draft', але з git_id —
+    стаття ВЖЕ викладена у стрічку (git), а потім щось повернуло статус у чернетки
+    (старий баг: редагування опублікованої деградувало статус; закрито у PR #258,
+    але такі рядки лишились). Стрічка статтю тримає далі, тож чесний статус —
+    published: закриваємо, щоб не займав слот AI-агента і не плутав редактора.
+    Легальні чернетки (git_id IS NULL — ще не публікувались) не чіпаємо."""
+    url = REST + "?status=eq.draft&git_id=not.is.null&select=id,title"
+    headers = {"apikey": SERVICE_KEY, "Authorization": "Bearer " + SERVICE_KEY}
+    try:
+        req = urllib.request.Request(url, headers=headers)
+        with urllib.request.urlopen(req, timeout=20) as r:
+            rows = json.loads(r.read() or "[]")
+        for row in rows:
+            _req("PATCH", REST + "?id=eq.%s" % row["id"], {"status": "published"})
+            print(f"🩹 фантомну чернетку закрито як published: id={row['id']} «{(row.get('title') or '')[:60]}»")
+    except Exception as e:
+        print(f"⚠ heal_phantom_drafts: {e}")
+
+
 def fetch_shotam_ready():
     """Готові свята/події (type=holiday/event) для «Шо в селі»."""
     url = REST + "?status=eq.ready&type=in.(holiday,event)&select=*&order=event_date.asc"
@@ -150,8 +170,9 @@ def main():
     if not SERVICE_KEY:
         print("✗ немає SUPABASE_SERVICE_ROLE_KEY — пропускаю синк")
         return
-    promote_scheduled()   # автопостинг: scheduled з насталим часом → ready
-    publish_shotam()      # свята/події (type=holiday/event) → data/events.json
+    promote_scheduled()     # автопостинг: scheduled з насталим часом → ready
+    heal_phantom_drafts()   # фантомні чернетки (draft, але вже в стрічці) → published
+    publish_shotam()        # свята/події (type=holiday/event) → data/events.json
     try:
         ready = fetch_ready()
     except Exception as e:
