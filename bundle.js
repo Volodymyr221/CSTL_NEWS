@@ -675,7 +675,7 @@
   async function fetchMyPosts(uid) {
     if (!supa || !uid)
       return [];
-    const { data, error } = await supa.from("posts").select("*").eq("owner_uid", uid).order("created_at", { ascending: false });
+    const { data, error } = await supa.from("posts").select("*").eq("owner_uid", uid).neq("type", "chat").order("created_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyPosts:", error.message);
       return [];
@@ -4288,7 +4288,7 @@ ${post.text}
     const savedIds2 = activeType === "saved" ? getSavedIds() : null;
     return allPosts.filter((p) => {
       if (activeType === "saved") {
-        if (!savedIds2.has(p.id))
+        if (!savedIds2.has(p.id) || p.type === "chat")
           return false;
       } else if (p.type !== activeType) {
         return false;

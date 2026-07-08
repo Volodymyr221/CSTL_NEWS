@@ -1141,7 +1141,9 @@ function getFilteredPosts() {
   return allPosts.filter(p => {
     // Фільтр по типу
     if (activeType === 'saved') {
-      if (!savedIds.has(p.id)) return false;
+      // Таб «Збережені» ДОШКИ = лише оголошення: збережені ОБГОВОРЕННЯ мають
+      // свою кімнату на вкладці Обговорення (розділення — рішення Роми 08.07).
+      if (!savedIds.has(p.id) || p.type === 'chat') return false;
     } else if (p.type !== activeType) {
       return false;
     }

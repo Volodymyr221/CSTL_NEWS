@@ -290,8 +290,12 @@ export async function uploadPhotoToStorage(blob) {
 // Мої оголошення (для «Мої оголошення» у Кабінеті) — усі статуси, нові зверху.
 export async function fetchMyPosts(uid) {
   if (!supa || !uid) return [];
+  // ЛИШЕ оголошення (не type='chat'): обговорення мають свій екран «Мої обговорення»
+  // на вкладці Обговорення. Без фільтра обговорення просочувались у «Мої оголошення»
+  // (баг, знайдений Ромою 08.07). neq — щоб старі пости без type не зникли.
   const { data, error } = await supa.from('posts')
-    .select('*').eq('owner_uid', uid).order('created_at', { ascending: false });
+    .select('*').eq('owner_uid', uid).neq('type', 'chat')
+    .order('created_at', { ascending: false });
   if (error) { console.warn('[supabase] fetchMyPosts:', error.message); return []; }
   return data || [];
 }
