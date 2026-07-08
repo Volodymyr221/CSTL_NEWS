@@ -384,6 +384,24 @@
     }
     return false;
   }
+  function sunTimes(date = /* @__PURE__ */ new Date(), lat = 50.717, lon = 25.81) {
+    const rad = Math.PI / 180;
+    const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 864e5);
+    const decl = -23.44 * rad * Math.cos(2 * Math.PI / 365 * (doy + 10));
+    const cosH = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(decl)) / (Math.cos(lat * rad) * Math.cos(decl));
+    if (cosH < -1 || cosH > 1)
+      return null;
+    const H = Math.acos(cosH) / rad;
+    const B = 2 * Math.PI * (doy - 81) / 364;
+    const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    const noonMin = 720 - 4 * lon - eot;
+    const mk = (m) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      d.setUTCMinutes(Math.round(m));
+      return d;
+    };
+    return { sunrise: mk(noonMin - 4 * H), sunset: mk(noonMin + 4 * H) };
+  }
   function looksLikeSpam(text) {
     const t = String(text || "").trim();
     if (t.length === 1)
@@ -7996,30 +8014,40 @@ ${post.text}
   }
 
   // src/tabs/community.js
-  var HERO_IMAGES = [
-    "./photos/olyka-1.jpg",
-    "./photos/olyka-2.jpg",
-    "./photos/olyka-3.jpg"
-  ];
+  var HERO_DAY = [1, 2, 3, 4].map((i) => `./photos/olyka.day-${i}.jpg`);
+  var HERO_EVENING = [1, 2, 3, 4].map((i) => `./photos/olyka.evening-${i}.jpg`);
   var _heroInterval = null;
   var _heroIndex = 0;
+  var _heroIsDay = null;
+  function isDaytime(now = /* @__PURE__ */ new Date()) {
+    const t = sunTimes(now);
+    if (!t)
+      return true;
+    return now >= t.sunrise && now < t.sunset;
+  }
+  function heroSet() {
+    return isDaytime() ? HERO_DAY : HERO_EVENING;
+  }
+  function heroImgsHtml() {
+    return heroSet().map((url, i) => `
+    <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(url)}" alt="${i === 0 ? "\u041E\u043B\u0438\u043A\u0430" : ""}" loading="${i === 0 ? "eager" : "lazy"}">
+  `).join("");
+  }
   function showHeroSlide(idx) {
     const wrap = document.querySelector(".cm-hero");
     if (!wrap)
       return;
-    _heroIndex = (idx + HERO_IMAGES.length) % HERO_IMAGES.length;
+    const n = heroSet().length;
+    _heroIndex = (idx + n) % n;
     wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
       img.classList.toggle("active", i === _heroIndex);
     });
-    wrap.querySelectorAll(".cm-hero-dot").forEach((d, i) => {
-      d.classList.toggle("active", i === _heroIndex);
-    });
   }
-  function restartHeroAutoRotate() {
+  function startHeroRotator() {
     if (_heroInterval)
       clearInterval(_heroInterval);
-    if (HERO_IMAGES.length < 2)
-      return;
+    _heroIndex = 0;
+    _heroIsDay = isDaytime();
     _heroInterval = setInterval(() => {
       const wrap = document.querySelector(".cm-hero");
       if (!wrap) {
@@ -8027,33 +8055,16 @@ ${post.text}
         _heroInterval = null;
         return;
       }
+      const day = isDaytime();
+      if (day !== _heroIsDay) {
+        _heroIsDay = day;
+        _heroIndex = 0;
+        wrap.querySelectorAll(".cm-hero-img").forEach((img) => img.remove());
+        wrap.insertAdjacentHTML("afterbegin", heroImgsHtml());
+        return;
+      }
       showHeroSlide(_heroIndex + 1);
     }, 6e3);
-  }
-  function startHeroRotator() {
-    _heroIndex = 0;
-    restartHeroAutoRotate();
-    const wrap = document.querySelector(".cm-hero");
-    if (wrap) {
-      attachSwipe(
-        wrap,
-        () => {
-          showHeroSlide(_heroIndex + 1);
-          restartHeroAutoRotate();
-        },
-        () => {
-          showHeroSlide(_heroIndex - 1);
-          restartHeroAutoRotate();
-        }
-      );
-      wrap.querySelectorAll(".cm-hero-dot").forEach((d, i) => {
-        d.style.cursor = "pointer";
-        d.addEventListener("click", () => {
-          showHeroSlide(i);
-          restartHeroAutoRotate();
-        });
-      });
-    }
   }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
@@ -8104,15 +8115,10 @@ ${post.text}
     </section>
 
     <section class="cm-hero">
-      ${HERO_IMAGES.map((url, i) => `
-        <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(url)}" alt="${i === 0 ? "\u041E\u043B\u0438\u043A\u0430" : ""}" loading="${i === 0 ? "eager" : "lazy"}">
-      `).join("")}
+      ${heroImgsHtml()}
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
         <p class="cm-hero-sub">\u041D\u0430\u0448\u0435 \u043C\u0456\u0441\u0442\u0435\u0447\u043A\u043E \u043D\u0430 \u0412\u043E\u043B\u0438\u043D\u0456</p>
-      </div>
-      <div class="cm-hero-dots">
-        ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? " active" : ""}"></span>`).join("")}
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
