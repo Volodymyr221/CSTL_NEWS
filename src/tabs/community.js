@@ -148,11 +148,39 @@ function renderSkeleton() {
     </section>
     <div class="cm-hero-spacer"></div>
 
+    <!-- Порядок блоків (рішення Роми 08.07):
+         Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
+
+    <section id="cm-news-board" class="cm-block cm-block--news">
+      <div class="cm-news-board-bar">
+        <span class="cm-news-board-dot"></span>
+        <span class="cm-news-board-label">Табло новин</span>
+        <span class="cm-news-board-live">LIVE</span>
+      </div>
+      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
+      <div id="cm-news-controls" class="cm-news-controls"></div>
+    </section>
+
     <section class="cm-block cm-block--board">
       <header class="cm-block-header">
         <h3 class="cm-block-title">Дошка громади</h3>
       </header>
       <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
+    </section>
+
+    <section class="cm-block cm-block--event">
+      <header class="cm-block-header">
+        <h3 class="cm-block-title">Найближча подія громади</h3>
+        <button class="cm-block-link" data-switch-tab="shotam">Афіша →</button>
+      </header>
+      <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
+    </section>
+
+    <section class="cm-block cm-block--bus">
+      <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
+      <footer class="cm-block-footer">
+        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ →</button>
+      </footer>
     </section>
 
     <section class="cm-block cm-block--weather">
@@ -173,31 +201,6 @@ function renderSkeleton() {
       <div id="cm-power-content" class="cm-block-body cm-loading">Завантаження…</div>
     </section>
     -->
-
-    <section class="cm-block cm-block--bus">
-      <div id="cm-bus-content" class="cm-block-body cm-loading">Завантаження…</div>
-      <footer class="cm-block-footer">
-        <button class="cm-block-title cm-block-title--bus-link" data-switch-tab="buses">РОЗКЛАД АВТОБУСНИХ МАРШРУТІВ →</button>
-      </footer>
-    </section>
-
-    <section class="cm-block cm-block--event">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Найближча подія громади</h3>
-        <button class="cm-block-link" data-switch-tab="shotam">Афіша →</button>
-      </header>
-      <div id="cm-event-content" class="cm-block-body cm-loading">Завантаження…</div>
-    </section>
-
-    <section id="cm-news-board" class="cm-block cm-block--news">
-      <div class="cm-news-board-bar">
-        <span class="cm-news-board-dot"></span>
-        <span class="cm-news-board-label">Табло новин</span>
-        <span class="cm-news-board-live">LIVE</span>
-      </div>
-      <div id="cm-news-content" class="cm-block-body cm-news-body cm-loading">Завантаження…</div>
-      <div id="cm-news-controls" class="cm-news-controls"></div>
-    </section>
 
     <section id="cm-contacts" class="cm-block cm-block--contacts">
       <header class="cm-block-header">
