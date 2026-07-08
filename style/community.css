@@ -594,6 +594,24 @@
 .cm-block--event .evh-clock { font-size: 19px; }
 .cm-block--event .evh-title { font-size: 15px; }
 
+/* Карусель подій (Г-2/Б2): трек зі слайдів (одна видима), авто-ротація ~6с + крапки.
+   Порожньо → fallback на найближчі свята (Г-16). */
+.cm-ev-carousel { position: relative; overflow: hidden; }
+.cm-ev-track { display: flex; align-items: stretch; transition: transform 0.5s ease; }
+.cm-ev-slide { flex: 0 0 100%; min-width: 100%; box-sizing: border-box; }
+.cm-ev-slide .evh-card { height: 100%; box-sizing: border-box; }
+.cm-ev-dots { display: flex; justify-content: center; gap: 6px; margin-top: 8px; }
+.cm-ev-dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(0, 0, 0, 0.18);
+  transition: background 0.2s, transform 0.2s;
+  cursor: pointer;
+}
+.cm-ev-dot.active { background: #722F37; transform: scale(1.25); }
+/* Свято-картка (fallback): велика емодзі-обкладинка на кольоровому градієнті свята */
+.cm-ev-holiday { align-items: flex-start; }
+.cm-ev-holiday-emoji { font-size: 40px; line-height: 1; margin: 4px 0 2px; }
+
 /* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
 
@@ -3385,9 +3403,9 @@
   /* Насичений багряний як табло автобусів: глянець + багряний градієнт у темне +
      ВІНЬЄТКА (затемнення по контуру) — рішення Роми 08.07. */
   background:
-    radial-gradient(120% 85% at 50% 42%, rgba(0,0,0,0) 52%, rgba(0,0,0,0.5) 100%),        /* віньєтка по контуру */
+    radial-gradient(120% 88% at 50% 42%, rgba(0,0,0,0) 48%, rgba(0,0,0,0.55) 100%),        /* віньєтка по контуру (підсилена) */
     radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%), /* глянець згори */
-    linear-gradient(158deg, #a8283a 0%, #7c1622 44%, #3d0a12 100%);                        /* багряний → глибоке темне */
+    linear-gradient(162deg, #7B303C 0%, #722F37 44%, #481C24 100%);                        /* винно-багряний як борд Автобусів → затемнений низ (не чорнота) */
   border: 1px solid rgba(0, 0, 0, 0.55);
   border-radius: 22px;
   box-shadow:
@@ -3452,23 +3470,9 @@
 /* Тонкі смужки-розпливи ТІЛЬКИ на краях зони екрана: розчиняють самий край, звідки
    картка «зʼявляється» (верх) і «зникає» (низ) при скролі. Лежать НАД картками,
    колір ≈ градієнт табло у цій точці, тонкі — не псують самі картки (рішення Роми). */
-.cm-block--news .cm-block-body::before,
-.cm-block--news .cm-block-body::after {
-  content: '';
-  position: absolute;
-  left: 4px; right: 4px;
-  height: 26px;
-  z-index: 5;
-  pointer-events: none;
-}
-.cm-block--news .cm-block-body::before {
-  top: 0;
-  background: linear-gradient(to bottom, #7c1622 0%, rgba(124, 22, 34, 0) 100%);
-}
-.cm-block--news .cm-block-body::after {
-  bottom: 0;
-  background: linear-gradient(to top, #46101a 0%, rgba(70, 16, 26, 0) 100%);
-}
+/* Смужки-розтушування на краях стрічки ПРИБРАНО (рішення Роми 08.07) — вони
+   вицвітали текст карток зверху/знизу. Картки мають чіткий край; кроп стрічки
+   роблять шапка табло (зверху) і панель кнопок (знизу). */
 /* Нижня панель — СЕНСОРНІ кнопки (таб-бар), відділена від зони карток тонкою
    горизонтальною смужкою (рішення Роми 08.07). */
 .cm-news-controls {
