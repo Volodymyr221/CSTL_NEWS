@@ -10,6 +10,7 @@ import {
   signInWithGoogle, signOut, getProfile, saveProfile,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
+import { openSavedHub } from './saved-hub.js';
 import { escapeHtml, showToast } from './utils.js';
 
 let _modal = null;            // поточна відкрита модалка (або null)
@@ -235,7 +236,7 @@ async function openAccount() {
     closeCabinet();
     if (go === 'myads') openMyAds();
     else if (go === 'msgs') openThreadsList();
-    else showToast('«Збережені» — незабаром', 2500);
+    else if (go === 'saved') openSavedHub();   // хаб збережених (замість «незабаром»)
   }));
   // Тумблери сповіщень (localStorage — працює одразу)
   cab.querySelectorAll('[data-notif]').forEach(t => t.addEventListener('click', () => {

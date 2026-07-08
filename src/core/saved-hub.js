@@ -66,7 +66,7 @@ async function loadInto(bodyEl) {
   }
 }
 
-function openHub() {
+export function openSavedHub() {
   if (_sheet) return;
   _backdrop = document.createElement('div');
   _backdrop.className = 'board-backdrop shub-backdrop';
@@ -116,5 +116,5 @@ function openHub() {
 }
 
 export function initSavedHub() {
-  document.getElementById('saved-hub-btn')?.addEventListener('click', openHub);
+  document.getElementById('saved-hub-btn')?.addEventListener('click', openSavedHub);
 }

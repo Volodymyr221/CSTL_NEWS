@@ -358,18 +358,17 @@
 .cm-contact-hero {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 18px;
+  gap: 12px;
+  padding: 11px 14px;   /* компактніше (блок-доповнення, рішення Роми 08.07) */
   background: linear-gradient(135deg, #A8334A 0%, #722F37 100%);
-  border-radius: 18px;
+  border-radius: 14px;
   text-decoration: none;
   color: white;
-  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30), 0 1px 3px rgba(0,0,0,0.12);
+  box-shadow: 0 3px 10px rgba(114, 47, 55, 0.26);
   position: relative;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s;
-  animation: cm-pulse-border 2s ease-in-out infinite;
 }
 .cm-contact-hero:active { transform: scale(0.98); }
 
@@ -381,8 +380,8 @@
 
 .cm-contact-hero-icon {
   display: inline-flex;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   color: white;
   flex-shrink: 0;
 }
@@ -396,7 +395,7 @@
   min-width: 0;
 }
 .cm-contact-hero-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: 0.2px;
@@ -409,7 +408,7 @@
   letter-spacing: 0.6px;
 }
 .cm-contact-hero-phone {
-  font-size: 36px;
+  font-size: 24px;
   font-weight: 800;
   font-family: Georgia, serif;
   font-variant-numeric: tabular-nums;
@@ -421,7 +420,7 @@
 .cm-contact-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .cm-contact-group-title {
   font-size: 11px;
@@ -442,8 +441,8 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 12px;
+  gap: 3px;
+  padding: 9px 10px;
   background: #FFF4E6;
   border: 1px solid rgba(245, 158, 11, 0.22);
   border-left: 3px solid #E67E22;
@@ -483,8 +482,8 @@
 .cm-contact-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 9px 12px;
   background: #EAF6EC;
   border: 1px solid rgba(46, 125, 50, 0.18);
   border-left: 3px solid #2E7D32;
