@@ -5052,6 +5052,17 @@ ${post.text}
     searchQuery = "";
     renderAll();
   }
+  async function openChatById(postId) {
+    if (!allPosts.length) {
+      try {
+        await renderBoard();
+      } catch (_) {
+      }
+    }
+    const post = allPosts.find((p) => p.id === postId);
+    if (post)
+      openChatModal(post);
+  }
   function initBoard() {
     attachBoardDelegation();
     attachRealtime();
@@ -9904,6 +9915,111 @@ END:VEVENT`
     });
   }
 
+  // src/core/saved-hub.js
+  var _sheet = null;
+  var _backdrop = null;
+  function closeHub() {
+    if (!_sheet)
+      return;
+    const s = _sheet, b = _backdrop;
+    _sheet = null;
+    _backdrop = null;
+    s.classList.remove("visible");
+    b?.classList.remove("visible");
+    document.body.classList.remove("modal-open");
+    setTimeout(() => {
+      s.remove();
+      b?.remove();
+    }, 240);
+  }
+  function cardHtml2(p) {
+    const when = new Date(p.created_at || p.ts || Date.now()).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+    return `
+    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${escapeHtml(p.type || "board")}">
+      <span class="shub-card-text">${escapeHtml(p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
+      <span class="shub-card-meta">${escapeHtml(when)}</span>
+    </button>`;
+  }
+  function sectionHtml(title, icon, items) {
+    if (!items.length)
+      return "";
+    return `
+    <div class="shub-section">
+      <div class="shub-section-title">${icon} ${title} <span class="shub-count">${items.length}</span></div>
+      ${items.map(cardHtml2).join("")}
+    </div>`;
+  }
+  async function loadInto(bodyEl) {
+    try {
+      const ids = [...await fetchSavedPostIds(currentUserId())];
+      if (!ids.length) {
+        bodyEl.innerHTML = `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
+        <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0447\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
+        return;
+      }
+      const supa2 = getSupabase();
+      const { data, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
+      if (error)
+        throw error;
+      const posts = data || [];
+      const chats = posts.filter((p) => p.type === "chat");
+      const boards = posts.filter((p) => p.type !== "chat");
+      const html = sectionHtml("\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", "\u{1F4AC}", chats) + sectionHtml("\u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F", "\u{1F4CC}", boards);
+      bodyEl.innerHTML = html || `<div class="shub-empty">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 \u0432\u0436\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 (\u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0456 \u0430\u0432\u0442\u043E\u0440\u0430\u043C\u0438).</div>`;
+    } catch (e) {
+      console.warn("[saved-hub]", e);
+      bodyEl.innerHTML = `<div class="shub-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.</div>`;
+    }
+  }
+  function openHub() {
+    if (_sheet)
+      return;
+    _backdrop = document.createElement("div");
+    _backdrop.className = "board-backdrop shub-backdrop";
+    _sheet = document.createElement("div");
+    _sheet.className = "shub-sheet";
+    _sheet.innerHTML = `
+    <div class="shub-handle"></div>
+    <div class="shub-title">\u{1F516} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
+    <div class="shub-body" id="shub-body">
+      ${isLoggedIn() ? '<div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>' : `<div class="shub-empty">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0432\u0438\u0434\u043D\u043E \u043B\u0438\u0448\u0435 \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0430\u043A\u0430\u0443\u043D\u0442\u0456.<br>
+             <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`}
+    </div>`;
+    document.body.appendChild(_backdrop);
+    document.body.appendChild(_sheet);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => {
+      _backdrop.classList.add("visible");
+      _sheet.classList.add("visible");
+    });
+    _backdrop.addEventListener("click", closeHub);
+    _sheet.querySelector("#shub-login")?.addEventListener("click", () => {
+      closeHub();
+      requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
+      });
+    });
+    _sheet.addEventListener("click", (e) => {
+      const card = e.target.closest("[data-shub-open]");
+      if (!card)
+        return;
+      const id = Number(card.dataset.shubOpen);
+      const type = card.dataset.shubType;
+      closeHub();
+      if (type === "chat") {
+        window.switchTab && window.switchTab("discussions");
+        openChatById(id);
+      } else {
+        window.switchTab && window.switchTab("board");
+        setBoardActiveType("saved");
+      }
+    });
+    if (isLoggedIn())
+      loadInto(_sheet.querySelector("#shub-body"));
+  }
+  function initSavedHub() {
+    document.getElementById("saved-hub-btn")?.addEventListener("click", openHub);
+  }
+
   // src/app.js
   var currentTab = "community";
   window.switchTab = function(tab) {
@@ -10093,6 +10209,7 @@ END:VEVENT`
     initEvents();
     initBuses();
     initSavedRoutesHeader();
+    initSavedHub();
     initPower();
     document.addEventListener("visibilitychange", () => {
       if (document.visibilityState === "visible")

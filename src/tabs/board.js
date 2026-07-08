@@ -1969,6 +1969,14 @@ export function setBoardActiveType(type) {
   renderAll();
 }
 
+// Відкрити чат обговорення за id поста — для хаба «Збережені» в шапці.
+// Якщо дошка ще не рендерилась (allPosts порожній) — спершу тягнемо дані.
+export async function openChatById(postId) {
+  if (!allPosts.length) { try { await renderBoard(); } catch (_) { /* fail-soft */ } }
+  const post = allPosts.find(p => p.id === postId);
+  if (post) openChatModal(post);
+}
+
 export function initBoard() {
   attachBoardDelegation();
   attachRealtime();

@@ -12,6 +12,7 @@ import { initSidebar } from './core/sidebar.js';
 import { initConsent } from './core/consent.js';
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
 import { initBoardChat, openThreadsList } from './tabs/board-chat.js';
+import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -210,6 +211,7 @@ function init() {
   initEvents();
   initBuses();
   initSavedRoutesHeader();   // іконка «Збережені рейси» в хедері (лише на Автобусах)
+  initSavedHub();            // хаб «Збережені» (іконка 🔖 в шапці)
   initPower();
 
   // При запуску / поверненні застосунку на передній план — завжди Громада
