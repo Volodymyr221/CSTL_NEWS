@@ -4418,6 +4418,7 @@ ${post.text}
     <div class="bd-titlebar">
       <h2 class="bd-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
       <div class="bd-subrow">
+        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
           <span class="bd-loc-icon" aria-hidden="true">\u{1F4CD}</span>
           <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
@@ -4425,7 +4426,6 @@ ${post.text}
             ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
           </select>
         </div>
-        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
       </div>
     </div>
   ` : "";
