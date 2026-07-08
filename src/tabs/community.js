@@ -215,9 +215,12 @@ function renderSkeleton() {
 
 let _greetingWired = false;
 let _heroBlurWired = false;
-// Легкий блюр обоїв при скролі: коли контент «наїжджає» — фон розмивається.
-// Клас .cm-blur на .cm-hero; слухач на .app-main (справжній скролер), rAF-throttle,
-// вішається раз (.app-main живе між переходами вкладок).
+// Блюр обоїв ПРОГРЕСИВНИЙ (рішення Роми 08.07): не вмикається одразу — наростає
+// разом із підняттям верхнього блока (Табло новин) над фото. Блюр привʼязаний до
+// того, СКІЛЬКИ блок закрив герой: доки блок ще внизу — фото чітке; що вище блок
+// піднявся — то сильніший блюр. Слухач на .app-main (справжній скролер), rAF.
+const HERO_BLUR_MAX = 5;      // px на повному перекритті
+const HERO_GREET_STICK = 150; // px «залипання» вітання перед тим як воно поїде вгору
 function wireHeroBlur() {
   if (_heroBlurWired) return;
   const main = document.querySelector('.app-main');
@@ -228,8 +231,23 @@ function wireHeroBlur() {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
+      const st = main.scrollTop;
       const hero = document.querySelector('.cm-hero');
-      if (hero) hero.classList.toggle('cm-blur', main.scrollTop > 24);
+      const block = document.getElementById('cm-news-board');   // верхній блок-картка
+      if (hero && block) {
+        // Прогрес = наскільки верх блока піднявся над низом героя (0…1).
+        const heroBottom = hero.getBoundingClientRect().bottom;
+        const blockTop = block.getBoundingClientRect().top;
+        const span = hero.getBoundingClientRect().height * 0.7 || 300;
+        const progress = Math.max(0, Math.min(1, (heroBottom - blockTop) / span));
+        const amt = progress * HERO_BLUR_MAX;
+        hero.style.filter = amt > 0.15 ? `blur(${amt.toFixed(1)}px)` : '';
+      }
+      // Вітання «залипає» на початку свайпу (рішення Роми 08.07): перші HERO_GREET_STICK
+      // пікселів скролу воно стоїть на місці (компенсуємо translateY), і лише потім
+      // відпускається й їде вгору разом зі сторінкою — «затримка» перед зникненням.
+      const greeting = document.querySelector('.cm-greeting');
+      if (greeting) greeting.style.transform = `translateY(${Math.min(st, HERO_GREET_STICK)}px)`;
       ticking = false;
     });
   }, { passive: true });

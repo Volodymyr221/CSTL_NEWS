@@ -8216,6 +8216,8 @@ ${post.text}
   }
   var _greetingWired = false;
   var _heroBlurWired = false;
+  var HERO_BLUR_MAX = 5;
+  var HERO_GREET_STICK = 150;
   function wireHeroBlur() {
     if (_heroBlurWired)
       return;
@@ -8229,9 +8231,20 @@ ${post.text}
         return;
       ticking = true;
       requestAnimationFrame(() => {
+        const st = main.scrollTop;
         const hero = document.querySelector(".cm-hero");
-        if (hero)
-          hero.classList.toggle("cm-blur", main.scrollTop > 24);
+        const block = document.getElementById("cm-news-board");
+        if (hero && block) {
+          const heroBottom = hero.getBoundingClientRect().bottom;
+          const blockTop = block.getBoundingClientRect().top;
+          const span = hero.getBoundingClientRect().height * 0.7 || 300;
+          const progress = Math.max(0, Math.min(1, (heroBottom - blockTop) / span));
+          const amt = progress * HERO_BLUR_MAX;
+          hero.style.filter = amt > 0.15 ? `blur(${amt.toFixed(1)}px)` : "";
+        }
+        const greeting = document.querySelector(".cm-greeting");
+        if (greeting)
+          greeting.style.transform = `translateY(${Math.min(st, HERO_GREET_STICK)}px)`;
         ticking = false;
       });
     }, { passive: true });
