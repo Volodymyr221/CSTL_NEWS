@@ -3342,6 +3342,7 @@
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var BOARD_CATEGORIES2 = [
@@ -4420,7 +4421,7 @@ ${post.text}
       <div class="bd-subrow">
         <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
-          <span class="bd-loc-icon" aria-hidden="true">\u{1F4CD}</span>
+          <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
           <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
             <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
             ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}

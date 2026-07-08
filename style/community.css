@@ -2361,7 +2361,14 @@
   box-shadow: none;
   padding: 0;
 }
-.bd-loc-icon { font-size: 12px; margin-right: 3px; opacity: 0.6; }
+/* Пін локації — векторна іконка (SVG у розмітці), акцентний колір додатку */
+.bd-loc-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  margin-right: 4px;
+  color: var(--red, #722F37);
+}
 .bd-loc-select {
   max-width: 100%;
   background: transparent;
@@ -2375,16 +2382,20 @@
   color: var(--ink-soft, #5a5a5a);
   -webkit-appearance: none;
   appearance: none;
-  padding-right: 12px;
+  padding-right: 18px;   /* місце під чітку каретку */
   text-overflow: ellipsis;
   cursor: pointer;
 }
+/* Каретка «розгорнути список» — векторний шеврон, добре видно (акцентний колір) */
 .bd-loc-filter::after {
-  content: '▾';
+  content: '';
   position: absolute;
   right: 0;
-  font-size: 10px;
-  color: var(--gray);
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23722F37' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat center / contain;
   pointer-events: none;
 }
 
