@@ -9,7 +9,7 @@
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
-import { SETTLEMENTS, COMMUNITY_ALL } from '../core/settlements.js';
+import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
 // купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
@@ -189,7 +189,7 @@ export function openBoardModal() {
       <div class="bm-section">
         <label class="bm-label" for="bm-location">Локація</label>
         <select class="cm-board-input cm-board-input--small" id="bm-location">
-          <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL)}</option>
+          <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
           ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${state.location === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
         </select>
       </div>
