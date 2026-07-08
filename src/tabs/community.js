@@ -22,25 +22,40 @@ import {
 // ── Hero: 4 денних + 4 вечірніх фото Олики, fade 0.55s, інтервал 6s ──────────
 // Набір обирається за сходом/заходом сонця (sunTimes — авто-розрахунок щодня).
 // Ручного гортання НЕМАЄ (рішення Роми 08.07): без свайпу і крапок — лише авто.
-const HERO_DAY     = [1, 2, 3, 4].map(i => `./photos/olyka.day-${i}.jpg`);
-const HERO_EVENING = [1, 2, 3, 4].map(i => `./photos/olyka.evening-${i}.jpg`);
+// Кожне фото несе ПІДПИС — показується під «Олика» замість статичного слогана
+// (рішення Роми 08.07: підпис = що зображено). Зараз усі 8 кадрів — костел
+// (Вова лишив лише його); нові фото — просто додати {src, caption}.
+const KOSTEL = 'Колегіальний костел Святої Трійці';
+const HERO_DAY     = [1, 2, 3, 4].map(i => ({ src: `./photos/olyka.day-${i}.jpg`,     caption: KOSTEL }));
+const HERO_EVENING = [1, 2, 3, 4].map(i => ({ src: `./photos/olyka.evening-${i}.jpg`, caption: KOSTEL }));
 
 let _heroInterval = null;
 let _heroIndex = 0;
 let _heroIsDay = null;   // поточний режим — щоб зловити схід/захід прямо на тіку
 
+// Вечірній набір вмикається за 2 ГОДИНИ ДО заходу сонця (рішення Роми 08.07):
+// золота година + сутінки виглядають як «вечір», не як день.
+const EVENING_LEAD_MS = 2 * 60 * 60 * 1000;
+
 function isDaytime(now = new Date()) {
   const t = sunTimes(now);
   if (!t) return true;                       // fail-soft: без розрахунку — день
-  return now >= t.sunrise && now < t.sunset;
+  return now >= t.sunrise && now.getTime() < t.sunset.getTime() - EVENING_LEAD_MS;
 }
 
 function heroSet() { return isDaytime() ? HERO_DAY : HERO_EVENING; }
 
 function heroImgsHtml() {
-  return heroSet().map((url, i) => `
-    <img class="cm-hero-img${i === 0 ? ' active' : ''}" src="${escapeHtml(url)}" alt="${i === 0 ? 'Олика' : ''}" loading="${i === 0 ? 'eager' : 'lazy'}">
+  return heroSet().map((it, i) => `
+    <img class="cm-hero-img${i === 0 ? ' active' : ''}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? 'eager' : 'lazy'}">
   `).join('');
+}
+
+// Підпис під «Олика» = що на АКТИВНОМУ фото (міняється разом зі слайдом)
+function syncHeroCaption() {
+  const sub = document.querySelector('.cm-hero-sub');
+  const it = heroSet()[_heroIndex];
+  if (sub && it) sub.textContent = it.caption;
 }
 
 function showHeroSlide(idx) {
@@ -51,6 +66,7 @@ function showHeroSlide(idx) {
   wrap.querySelectorAll('.cm-hero-img').forEach((img, i) => {
     img.classList.toggle('active', i === _heroIndex);
   });
+  syncHeroCaption();
 }
 
 // Тік кожні 6с: наступний слайд. Якщо тим часом сонце зійшло/зайшло —
@@ -69,6 +85,7 @@ function startHeroRotator() {
       // <img> — перші діти .cm-hero, overlay/градієнт лишаються на місці
       wrap.querySelectorAll('.cm-hero-img').forEach(img => img.remove());
       wrap.insertAdjacentHTML('afterbegin', heroImgsHtml());
+      syncHeroCaption();
       return;
     }
     showHeroSlide(_heroIndex + 1);
@@ -78,19 +95,20 @@ function startHeroRotator() {
 // ── Greeting + Дата (заголовок вкладки) ──────────────────────────────────────
 
 function getGreeting() {
+  // Підзаголовок («Ось що головне…») видалено 08.07 (рішення Роми) — лише дата+вітання.
   const h = new Date().getHours();
-  let hello, sub;
-  if (h >= 5  && h < 11)      { hello = 'Добрий ранок'; sub = 'Ось що головне у нас сьогодні'; }
-  else if (h >= 11 && h < 17) { hello = 'Добридень';    sub = 'Ось що головне у нас сьогодні'; }
-  else if (h >= 17 && h < 22) { hello = 'Добрий вечір'; sub = 'Що цікавого було сьогодні'; }
-  else                        { hello = 'Доброї ночі';  sub = 'Громада спить — ось добірка'; }
+  let hello;
+  if (h >= 5  && h < 11)      hello = 'Добрий ранок';
+  else if (h >= 11 && h < 17) hello = 'Добридень';
+  else if (h >= 17 && h < 22) hello = 'Добрий вечір';
+  else                        hello = 'Доброї ночі';
   // Персоналізація: якщо юзер вписав ім'я в особистому кабінеті — вітаємо по імені.
   let who = 'громадо';
   if (isLoggedIn()) {
     const name = (currentUserName() || '').trim().split(/\s+/)[0];
     if (name && name !== 'Житель') who = name;
   }
-  return { text: `${hello}, ${who}!`, sub };
+  return { text: `${hello}, ${who}!` };
 }
 
 // Оновити вітання наживо, коли профіль/ім'я підвантажились (onAuthChange).
@@ -119,14 +137,13 @@ function renderSkeleton() {
     <section class="cm-greeting">
       <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
       <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
     </section>
 
     <section class="cm-hero">
       ${heroImgsHtml()}
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
-        <p class="cm-hero-sub">Наше містечко на Волині</p>
+        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
       </div>
     </section>
     <div class="cm-hero-spacer"></div>

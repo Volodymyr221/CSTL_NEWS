@@ -147,6 +147,14 @@ html, body {
   background: var(--red);
   z-index: 101;
 }
+/* Ліва група: бургер + лого впритул (08.07). Погода-віджет із шапки видалений —
+   погода лишилась блоком «Погода в Олиці» на Громаді. */
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-shrink: 0;
+}
 .header-logo {
   font-size: 20px;
   font-weight: 900;
@@ -155,20 +163,17 @@ html, body {
   letter-spacing: 1px;
 }
 .header-logo span { color: var(--red); }
-.weather-widget {
-  display: flex;
+/* Кнопка «Збережені» в шапці (хаб збережених карток) — стиль як account-btn */
+.saved-hub-btn {
+  display: inline-flex;
   align-items: center;
-  gap: 4px;
-  flex-shrink: 0;
-}
-.weather-icon { font-size: 20px; line-height: 1; }
-.weather-city { font-size: 12px; font-weight: 500; color: var(--gray); }
-.weather-temp {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--black);
-  letter-spacing: -0.3px;
-  min-width: 26px;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 2px;
+  color: var(--red, #722F37);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
 
 /* ===== MAIN ===== */
@@ -229,7 +234,7 @@ body.cm-zoom-open .app-main { overflow: hidden; }
 /* ===== EMPTY STATE ===== */
 .empty-state { text-align: center; padding: 48px 24px; color: var(--gray); font-size: 15px; }
 
-/* ===== HEADER RIGHT — колонка: погода + версія знизу ===== */
+/* ===== HEADER RIGHT — іконки: [рейси(автобуси)] [збережені] [акаунт] ===== */
 .header-right {
   display: flex;
   flex-direction: row;
@@ -237,16 +242,15 @@ body.cm-zoom-open .app-main { overflow: hidden; }
   gap: 8px;
   flex-shrink: 0;
 }
-/* Погода + версія — окрема колонка праворуч від іконки збережених */
-.header-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 1px;
-}
 
-/* ===== DEPLOY STAMP (лічильник версії і часу деплою у шапці) ===== */
+/* ===== DEPLOY STAMP (лічильник версії) — ПО ЦЕНТРУ шапки (08.07) =====
+   Абсолют відносно .app-header (він fixed): рівно центр по обох осях.
+   Іконки з боків його не штовхають; кліки проходять крізь (pointer-events:none). */
 .deploy-stamp {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
   font-size: 9px;
   color: rgba(102, 102, 102, 0.55);
   letter-spacing: 0.3px;
@@ -254,6 +258,7 @@ body.cm-zoom-open .app-main { overflow: hidden; }
   pointer-events: none;
   z-index: 99;
   user-select: none;
+  white-space: nowrap;
 }
 
 /* ===== SHARE BUTTON (📤 Web Share API, віральність 17.05.2026) =====

@@ -37,6 +37,17 @@ function emitAuthChange() {
   _listeners.forEach(cb => { try { cb(_user); } catch (_) {} });
 }
 
+// Прогрів профілю: тягне ім'я з таблиці profiles ОДРАЗУ при старті/вході,
+// а не лише при відкритті кабінету. Без цього вітання «Добридень, Романе»
+// не працювало до першого відкриття кабінету (баг, знайдений Ромою 08.07).
+async function warmProfile() {
+  if (!_user || _profileName) return;
+  try {
+    await getProfile();                    // заповнює кеш _profileName
+    if (_profileName) emitAuthChange();    // → updateGreetingName() у Громаді
+  } catch (_) { /* fail-soft: лишиться імʼя з Google/дефолт */ }
+}
+
 // Ініціалізація при старті: відновити збережену сесію + слухати зміни.
 // Безпечно за відсутності сесії (гість) — _user лишається null.
 export async function initAuth() {
@@ -46,10 +57,12 @@ export async function initAuth() {
     const { data } = await supa.auth.getSession();
     _user = data && data.session ? data.session.user : null;
     emitAuthChange();
+    warmProfile();
   } catch (e) { console.warn('[auth] getSession:', e && e.message); }
   supa.auth.onAuthStateChange((_event, session) => {
     _user = session ? session.user : null;
     emitAuthChange();
+    warmProfile();
   });
 }
 
@@ -99,14 +112,18 @@ export async function saveProfile(fields = {}) {
   if (!supa || !_user) return { ok: false, error: 'не залогінено' };
   const row = { uid: _user.id, email: _user.email || null };
   for (const k of PROFILE_FIELDS) if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
+  let partial = false;
   let { error } = await supa.from('profiles').upsert(row, { onConflict: 'uid' });
   if (error && /column|schema/i.test(error.message)) {
-    // Розширені колонки ще не додані — зберігаємо базове, щоб ім'я не губилось.
+    // Розширені колонки ще не додані (міграція profiles_extended не застосована) —
+    // зберігаємо базове, щоб ім'я не губилось, і ЧЕСНО повертаємо partial:
+    // раніше тут мовчки губилися село/прізвище/телефон із тостом «збережено».
+    partial = true;
     const core = { uid: _user.id, email: _user.email || null,
                    name: row.name ?? null, birth_date: row.birth_date ?? null };
     ({ error } = await supa.from('profiles').upsert(core, { onConflict: 'uid' }));
   }
   if (error) return { ok: false, error: error.message };
   if (row.name) _profileName = row.name;   // кеш для currentUserName()
-  return { ok: true };
+  return { ok: true, partial };
 }

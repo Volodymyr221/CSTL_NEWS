@@ -646,7 +646,7 @@
   padding: 10px 8px 14px;
 }
 .cm-greeting-date {
-  font-size: 11px;
+  font-size: 13px;   /* +17% (було 11px) — рішення Роми 08.07 */
   font-weight: 700;
   color: rgba(255,255,255,0.9);
   text-transform: uppercase;
@@ -662,12 +662,7 @@
   color: #fff;
   text-shadow: 0 2px 8px rgba(0,0,0,0.55);
 }
-.cm-greeting-sub {
-  font-size: 13px;
-  color: rgba(255,255,255,0.92);
-  margin-top: 4px;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-}
+/* .cm-greeting-sub видалено 08.07 — підзаголовок привітання прибрано (рішення Роми) */
 
 /* Tab-bar — м'якша pill для активного айтема */
 .tab-bar .tab-item.active .tab-label {
