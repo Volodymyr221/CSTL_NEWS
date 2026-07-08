@@ -2317,9 +2317,11 @@
   justify-content: center;
 }
 
-/* Шапка Дошки (Д-11): заголовок по центру; під ним рядок «лічильник | локація» */
+/* Шапка Дошки (Д-11): заголовок по центру; під ним рядок «лічильник | локація».
+   Групу трохи опущено вниз (ближче до пошуку) — за фідбеком Вови. */
 .bd-titlebar {
-  margin-bottom: 10px;
+  margin-top: 8px;
+  margin-bottom: 6px;
 }
 .bd-title {
   font-size: 18px;
@@ -2328,6 +2330,8 @@
   line-height: 1.15;
   margin: 0;
   text-align: center;
+  text-transform: uppercase;   /* «ДОШКА ОГОЛОШЕНЬ» */
+  letter-spacing: 0.5px;
 }
 .bd-subrow {
   display: flex;
@@ -2336,10 +2340,12 @@
   gap: 10px;
   margin-top: 4px;
 }
-/* Лічильник — чіткіший (темніший + напівжирний) */
+/* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
 .bd-count {
-  font-size: 12.5px;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;   /* «7 ОГОЛОШЕНЬ» */
   color: var(--ink-soft, #5a5a5a);
 }
 
