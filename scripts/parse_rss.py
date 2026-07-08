@@ -766,6 +766,34 @@ def clean_article_text(text: str) -> str:
     while prev != text:          # навігація може йти кількома рядками
         prev = text
         text = _LEAD_NAV_RE.sub("", text, count=1).lstrip()
+    # Провідний часовий штамп-сміття на початку тіла: «Сьогодні, 15:09»,
+    # «Вчора, 9:20», «08.07.2026, 14:00», голий «15:09» (Волинь Post та ін.).
+    text = re.sub(
+        r"^\s*(?:Сьогодні|Вчора|Позавчора|\d{1,2}[.:]\d{2}(?:[.:]\d{2,4})?)"
+        r"[,\s]*\d{0,2}[:.]?\d{0,2}\s*", "", text, count=1).lstrip()
+    return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+def _blocks_to_text(el) -> str:
+    """Текст контейнера статті з ПРАВИЛЬНИМИ абзацами (\\n\\n між блоками).
+
+    Раніше брали el.get_text(separator='\\n') — усі абзаци склеювались одним \\n,
+    а фронт розбиває на <p> лише по \\n\\n → стаття виглядала «цеглиною» без
+    абзаців (баг, знайдений Ромою 08.07). Тепер збираємо блокові елементи
+    (p/h2-h4/li/blockquote) окремо і зʼєднуємо порожнім рядком.
+    """
+    blocks = el.find_all(["p", "h2", "h3", "h4", "li", "blockquote"])
+    parts = []
+    for b in blocks:
+        # li без вкладених p — самостійний рядок; p всередині li не дублюємо
+        if b.name == "li" and b.find(["p"]):
+            continue
+        t = b.get_text(separator=" ", strip=True)
+        if t:
+            parts.append(t)
+    text = "\n\n".join(parts)
+    if len(text) < 300:      # блоків нема (текст у голих div) — запасний варіант
+        text = el.get_text(separator="\n\n", strip=True)
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
@@ -814,8 +842,7 @@ def fetch_full_article(url: str) -> str | None:
     for sel in selectors:
         el = soup.select_one(sel)
         if el:
-            text = el.get_text(separator="\n", strip=True)
-            text = re.sub(r"\n{3,}", "\n\n", text).strip()
+            text = _blocks_to_text(el)          # абзаци через \n\n (не «цеглина»)
             text = clean_article_text(text)
             if len(text) > 300:
                 return text[:8000]
@@ -826,8 +853,7 @@ def fetch_full_article(url: str) -> str | None:
         # Пропускаємо вкладені блоки (беремо тільки верхні контейнери)
         if tag.find_parent(["div", "section", "article"]):
             continue
-        t = tag.get_text(separator="\n", strip=True)
-        t = re.sub(r"\n{3,}", "\n\n", t).strip()
+        t = _blocks_to_text(tag)                 # теж абзаци через \n\n
         if len(t) > len(best_text):
             best_text = t
     if len(best_text) > 500:
