@@ -11,6 +11,7 @@ import {
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { openSavedHub } from './saved-hub.js';
+import { SETTLEMENTS } from './settlements.js';
 import { escapeHtml, showToast } from './utils.js';
 
 let _modal = null;            // поточна відкрита модалка (або null)
@@ -93,12 +94,6 @@ function openProfile() {
   wrap.querySelector('#acc-later').addEventListener('click', () => finish(false));
 }
 
-// Населені пункти громади (для анкети). «Інше» — для тих, хто не з громади.
-const SETTLEMENTS = [
-  'Олика', 'Горянівка', 'Дерно', 'Дідичі', 'Жорнище', 'Залісоче', 'Котів',
-  'Личани', 'Метельне', 'Мощаниця', 'Носовичі', 'Одеради', 'Покащів',
-  'Путилівка', 'Ставок', 'Хром\'яків', 'Чемерин', 'Інше',
-];
 const NOTIF_KEYS = [
   { k: 'buses', ic: '🚌', label: 'Автобуси',  def: true },
   { k: 'power', ic: '💡', label: 'Світло',    def: true },
@@ -145,6 +140,10 @@ async function openAccount() {
   const place = val.settlement || 'Учасник спільноти';
   const prefs = loadNotifPrefs(u.id);
   const today = new Date().toISOString().slice(0, 10);
+  // Репутація Дошки (Захід 2): 5 схвалених оголошень → автопублікація надалі.
+  const trustHtml = p.trusted
+    ? `<div class="acc-cab-trust acc-cab-trust--on">✅ Довірений автор — оголошення публікуються одразу</div>`
+    : `<div class="acc-cab-trust">⭐ ${p.approved_count || 0}/5 схвалень до автопублікації</div>`;
 
   const cab = document.createElement('div');
   cab.id = 'acc-cab';
@@ -161,6 +160,7 @@ async function openAccount() {
           <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
           <div class="acc-cab-email">${escapeHtml(email)}</div>
           <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
+          ${trustHtml}
         </div>
       </div>
 

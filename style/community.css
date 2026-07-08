@@ -934,6 +934,18 @@
   align-self: flex-start;
 }
 
+/* Локація оголошення (Д-10) — рядок під заголовком у картці/модалці/прев'ю */
+.cm-board-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft, #6b6b6b);
+  margin-bottom: 6px;
+  align-self: flex-start;
+}
+
 .cm-board-title {
   font-size: 15px;
   font-weight: 700;
@@ -1119,6 +1131,11 @@
   text-transform: none;
   letter-spacing: 0;
   margin-left: 4px;
+}
+/* Позначка обов'язкового поля (Д-16) */
+.bm-label-req {
+  color: var(--red, #722F37);
+  margin-left: 2px;
 }
 /* Ім'я з акаунта — нередаговане (анонімність прибрано) */
 .bm-author-fixed {
@@ -2298,6 +2315,107 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Шапка Дошки (Д-11): заголовок по центру; під ним рядок «лічильник | локація».
+   Групу трохи опущено вниз (ближче до пошуку) — за фідбеком Вови. */
+.bd-titlebar {
+  margin-top: 8px;
+  margin-bottom: 4px;
+}
+.bd-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--red, #722F37);   /* фірмовий бордовий відтінок — заголовок виділяється */
+  line-height: 1.15;
+  margin: 0;
+  text-align: center;
+  text-transform: uppercase;   /* «ДОШКА ОГОЛОШЕНЬ» */
+  letter-spacing: 1.4px;        /* трохи ширший інтервал між літерами */
+  text-shadow: 0 1px 3px rgba(114, 47, 55, 0.22);   /* м'яка тінь для насиченості */
+}
+.bd-subrow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;   /* рядок лічильник+локація опущено нижче (назва лишається) */
+}
+/* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
+.bd-count {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;   /* «7 ОГОЛОШЕНЬ» */
+  color: var(--ink-soft, #5a5a5a);
+}
+
+/* Фільтр за локацією (Д-12) — тонко, без пігулки: іконка + назва (ВЕЛИКИМИ) + каретка */
+.bd-loc-filter {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+  max-width: 55%;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+}
+/* Пін локації — векторна іконка (SVG у розмітці), акцентний колір додатку */
+.bd-loc-icon {
+  display: inline-flex;
+  align-items: center;
+  line-height: 0;
+  margin-right: 4px;
+  color: var(--red, #722F37);
+}
+.bd-loc-select {
+  max-width: 100%;
+  box-sizing: border-box;   /* width включає padding → каретка на стабільній відстані */
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 12.5px;
+  font-family: inherit;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;   /* назви НП великими буквами (Д — за побажанням) */
+  color: var(--ink-soft, #5a5a5a);
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 18px;   /* місце під чітку каретку */
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+/* Каретка «розгорнути список» — векторний шеврон, добре видно (акцентний колір) */
+.bd-loc-filter::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  width: 13px;
+  height: 13px;
+  transform: translateY(-50%);
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23722F37' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat center / contain;
+  pointer-events: none;
+}
+
+/* Авто-ховання при скролі вниз (byyou): назва «Дошка оголошень» + категорії
+   згортаються, subrow (лічильник+локація) і пошук лишаються закріпленими. */
+.bd-title,
+.bd-cat-wrap {
+  transition: max-height 0.28s ease, opacity 0.2s ease, margin 0.28s ease;
+  max-height: 80px;   /* із запасом над реальною висотою, щоб не різати вміст */
+  overflow: hidden;
+}
+.bd-controls--collapsed .bd-title,
+.bd-controls--collapsed .bd-cat-wrap {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  pointer-events: none;
 }
 
 /* Таби типів постів */

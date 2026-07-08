@@ -18,6 +18,38 @@ import {
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
+import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
+
+// Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
+// порожня/null або дорівнює COMMUNITY_ALL. Конкретний НП — лише свій фільтр.
+function isCommunityWide(loc) {
+  return !loc || loc === COMMUNITY_ALL;
+}
+
+// Підгонка ширини dropdown локації під ПОТОЧНУ назву (не під найдовшу опцію),
+// щоб каретка ▾ завжди стояла на однаковій відстані від тексту (фікс Вови).
+function sizeLocSelect(sel) {
+  if (!sel) return;
+  const opt = sel.options[sel.selectedIndex];
+  const txt = (opt ? opt.text : '') || '';
+  const cs = getComputedStyle(sel);
+  const canvas = sizeLocSelect._c || (sizeLocSelect._c = document.createElement('canvas'));
+  const ctx = canvas.getContext('2d');
+  ctx.font = `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
+  const shown = cs.textTransform === 'uppercase' ? txt.toUpperCase() : txt;
+  let w = ctx.measureText(shown).width;
+  w += (parseFloat(cs.letterSpacing) || 0) * shown.length;   // + літер-спейсинг
+  w += parseFloat(cs.paddingRight) || 0;                    // + місце під каретку
+  sel.style.width = Math.ceil(w) + 2 + 'px';
+}
+
+// Українська відміна слова «оголошення» для лічильника (Д-11).
+function pluralAds(n) {
+  const d = n % 10, dd = n % 100;
+  if (d === 1 && dd !== 11) return 'оголошення';
+  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'оголошення';
+  return 'оголошень';
+}
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
@@ -28,6 +60,8 @@ const BOOKMARK_FILLED_SVG  = '<svg width="18" height="18" viewBox="0 0 24 24" fi
 const SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+// Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
+const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 // Векторні іконки для пунктів FAB-меню (у стилі MSG_ICON — лінійні, currentColor)
 const EDIT_ICON_SVG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
@@ -64,6 +98,7 @@ let allPosts       = [];   // [{id, type, ...}]
 let allAnnouncements = []; // офіційні з announcements
 let activeType     = 'board';
 let activeCategory = 'all';
+let activeLocation = COMMUNITY_ALL;   // Д-12: фільтр за НП; дефолт «вся громада» = усі
 let searchQuery    = '';
 
 // Реакції і коментарі — централізовано у Map<postId, ...>. Завантажується з
@@ -895,6 +930,7 @@ function renderBoardCard(p) {
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone ? `
       <div class="cm-board-footer">
@@ -947,6 +983,7 @@ function renderAdModal(p) {
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1153,6 +1190,11 @@ function getFilteredPosts() {
       const cat = BOARD_CATEGORIES.find(c => c.id === activeCategory);
       if (!cat || !cat.match || !cat.match.includes(p.category)) return false;
     }
+    // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
+    // + загальногромадські (COMMUNITY_ALL/порожні/старі) — вони релевантні скрізь.
+    if (activeType === 'board' && activeLocation !== COMMUNITY_ALL) {
+      if (p.location !== activeLocation && !isCommunityWide(p.location)) return false;
+    }
     // Пошук — text + tags + author + title
     if (q) {
       const hay = [
@@ -1197,9 +1239,30 @@ function renderHeader() {
     </div>
   ` : '';
 
+  // Д-11 + Д-12: шапка Дошки — заголовок по центру; під ним рядок:
+  // лічильник (зліва) + тонкий фільтр локації (справа). Лічильник рахує
+  // поточний відфільтрований список.
+  const count = showCategories ? getFilteredPosts().length : 0;
+  const titlebarHtml = showCategories ? `
+    <div class="bd-titlebar">
+      <h2 class="bd-title">Дошка оголошень</h2>
+      <div class="bd-subrow">
+        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
+        <div class="bd-loc-filter">
+          <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
+          <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
+            <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
+            ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    </div>
+  ` : '';
+
   return `
     <div class="bd-controls">
       ${discHead}
+      ${titlebarHtml}
       <div class="bd-search">
         <span class="bd-search-icon">🔍</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
@@ -1209,6 +1272,15 @@ function renderHeader() {
       ${categoriesHtml}
     </div>
   `;
+}
+
+// Оновити лічильник оголошень у шапці без повного ре-рендеру (Д-11).
+// Викликається після фільтрів (пошук/локація), коли header не перебудовується.
+function updateAdCount() {
+  const el = document.getElementById('bd-count');
+  if (!el || activeType !== 'board') return;
+  const n = getFilteredPosts().length;
+  el.textContent = `${n} ${pluralAds(n)}`;
 }
 
 function renderBody() {
@@ -1379,6 +1451,17 @@ function renderAll() {
   });
 
 
+  // Фільтр за локацією (Д-12) — dropdown, тільки для board
+  const locSel = document.getElementById('bd-loc-select');
+  if (locSel) {
+    sizeLocSelect(locSel);   // підігнати ширину під поточну назву (щоб каретка не відлітала)
+    locSel.addEventListener('change', e => {
+      activeLocation = e.target.value;
+      sizeLocSelect(locSel);
+      renderBodyOnly(el);
+    });
+  }
+
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1409,6 +1492,7 @@ function renderBodyOnly() {
   const body = document.getElementById('bd-body');
   if (!body) return renderAll();
   body.innerHTML = renderBody();
+  updateAdCount();   // Д-11: лічильник у шапці синхронний з відфільтрованим списком
   // Перепідключаємо handlers для cm-board-call всередині нового HTML
   body.querySelectorAll('.cm-board-call').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
@@ -1979,6 +2063,41 @@ export async function openChatById(postId) {
   if (post) openChatModal(post);
 }
 
+// Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
+// rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
+// прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
+let _headerCollapseWired = false;
+function setupHeaderCollapse() {
+  if (_headerCollapseWired) return;
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+  _headerCollapseWired = true;
+  const THRESHOLD = 90;   // «через деякий час» — до цього шапка завжди повна
+  const DELTA = 6;        // анти-джитер: реагуємо лише на помітний рух
+  let lastY = main.scrollTop;
+  let ticking = false;
+  const apply = () => {
+    ticking = false;
+    if (main.dataset.tab !== 'board') return;   // тільки вкладка Дошка
+    const controls = getBoardRoot()?.querySelector('.bd-controls');
+    if (!controls) return;
+    const y = main.scrollTop;
+    if (y <= THRESHOLD) {
+      controls.classList.remove('bd-controls--collapsed');   // біля верху — повна
+      lastY = y;
+    } else if (y > lastY + DELTA) {
+      controls.classList.add('bd-controls--collapsed');      // вниз — ховаємо
+      lastY = y;
+    } else if (y < lastY - DELTA) {
+      controls.classList.remove('bd-controls--collapsed');   // вгору — показуємо
+      lastY = y;
+    }
+  };
+  main.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+  }, { passive: true });
+}
+
 export function initBoard() {
   attachBoardDelegation();
   attachRealtime();
@@ -1997,7 +2116,15 @@ export function initBoard() {
     const tab = document.querySelector('.app-main')?.dataset.tab;
     if (tab === 'discussions' && !discOpen) openDiscussions();
     else if (tab !== 'discussions' && discOpen) closeDiscussions();
+    // Д-12: фільтр локації скидається на «Уся громада» при кожному вході на Дошку.
+    if (tab === 'board' && activeLocation !== COMMUNITY_ALL) {
+      activeLocation = COMMUNITY_ALL;
+      renderAll();
+    }
   });
+  // Авто-ховання шапки при скролі Дошки (гортаєш вниз — ховаються назва+категорії;
+  // вгору — з'являються). Лічильник/локація + пошук лишаються закріпленими.
+  setupHeaderCollapse();
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
     if (!isLoggedIn()) {

@@ -29,6 +29,7 @@ import {
   editMessage, deleteMessage, uploadPhotoToStorage,
   bumpPost, closePost, deleteMyPost, restorePost,
 } from '../core/supabase.js';
+import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from '../core/utils.js';
 import {
@@ -80,6 +81,7 @@ export async function openChat(thread, post) {
         : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
       <span class="pm-ctx-body">
         <span class="pm-ctx-title">${escapeHtml(title)}</span>
+        ${(p.location && p.location !== COMMUNITY_ALL) ? `<span class="pm-ctx-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
         ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
         <span class="pm-ctx-link">Переглянути оголошення →</span>
       </span>
@@ -626,6 +628,20 @@ export function openThreadsList() {
       }).join('');
     };
 
+    // F5: архівована розмова з новим НЕПРОЧИТАНИМ — авто-розархівувати. Інакше
+    // глобальний бейдж рахує це непрочитане (незалежно від архіву), а список
+    // ховає архівні з «Усі»/«Непрочитані» → «є непрочитане, але його ніде нема».
+    // Нове вхідне повертає розмову в загальний список (як у месенджерах).
+    const autoUnarchiveUnread = async () => {
+      const toFix = threads.filter(t => (unread.get(t.id) > 0) && stOf(t.id).archived);
+      for (const t of toFix) {
+        const prev = states.get(t.id) || {};
+        states.set(t.id, { ...prev, archived: false });
+        setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
+      }
+    };
+
+    await autoUnarchiveUnread();
     renderThreads();
 
     searchEl.addEventListener('input', () => { query = searchEl.value; renderThreads(); });
@@ -716,6 +732,7 @@ export function openThreadsList() {
       const [t, u, s] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me), fetchThreadStates(me)]);
       if (api._closed) return;
       threads = t; unread = u; states = s;
+      await autoUnarchiveUnread();   // F5: нове вхідне повертає архівовану розмову у список
       applyEmptyState();
       renderThreads();
     };

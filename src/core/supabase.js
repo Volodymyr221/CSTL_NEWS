@@ -81,18 +81,23 @@ export async function fetchPostById(id) {
   return data;
 }
 
-// Створити новий пост (з submit-форми). Завжди status='pending' → модератор.
-// Повертає { ok: true } або { ok: false, error: 'текст' }.
+// Створити новий пост (з submit-форми) через RPC submit_board_post.
+// Сервер сам вирішує статус: довірений автор (5+ схвалених) → 'published'
+// одразу, решта → 'pending' на модерацію. Плюс серверний рейт-ліміт
+// (обмеження частоти — 3 пости/хв). payload.status/owner_uid ігноруються,
+// форсуються сервером (scripts/supabase_reputation.sql).
+// Повертає { ok:true, status:'pending'|'published' } або { ok:false, error }.
 export async function submitPost(payload) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  // Гарантуємо що статус pending незалежно від payload (захист від клієнтських помилок)
-  const row = { ...payload, status: 'pending' };
-  const { error } = await supa.from('posts').insert(row);
+  const { data, error } = await supa.rpc('submit_board_post', { payload });
   if (error) {
     console.warn('[supabase] submitPost error:', error);
     return { ok: false, error: error.message };
   }
-  return { ok: true };
+  if (data && data.ok === false) {
+    return { ok: false, error: data.error || 'не вдалось надіслати' };
+  }
+  return { ok: true, status: (data && data.status) || 'pending' };
 }
 
 // ОБГОВОРЕННЯ (type='chat') — БЕЗ людської модерації: публікуємо одразу.
@@ -482,7 +487,7 @@ export function subscribeGroupMessages(groupId, onChange) {
 export async function fetchMyThreads(uid) {
   if (!supa || !uid) return [];
   const { data, error } = await supa.from('threads')
-    .select('*, post:posts(id, title, text, category, photos, author, contact, published_at, created_at)')
+    .select('*, post:posts(id, title, text, category, photos, author, contact, location, published_at, created_at)')
     .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`)
     .order('last_message_at', { ascending: false });
   if (error) { console.warn('[supabase] fetchMyThreads:', error.message); return []; }

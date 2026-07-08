@@ -8,6 +8,77 @@
 
 ---
 
+## 📝 2026-07-08 — /byyou: авто-ховання шапки Дошки при скролі (ЗАДЕПЛОЄНО PR #278)
+- Скрол вниз (після ~90px) → ховаються заголовок «Дошка оголошень» + рядок категорій; лічильник+локація і пошук закріплені; скрол вгору → повертаються.
+- `board.js` `setupHeaderCollapse()` — слухач на `.app-main` (rAF-throttle, поріг 90px, анти-джитер 6px, tab-guard board); `community.css` `.bd-controls--collapsed` → `max-height/opacity` на `.bd-title`+`.bd-cat-wrap`. CACHE `cstl-20260708-1959`.
+- QA Playwright: вниз ховає / вгору показує / біля верху повна / 0 помилок. Скрін згорнутого підтвердив. SQL не потрібен.
+- /byyou завершено (done). Rollback-tag `byyou-start-boardscroll`.
+
+## 📝 2026-07-08 — Полиш шапки Дошки (за фідбеком Вови, гілка `vova/board-header-polish`)
+- Заголовок «Дошка оголошень» → **по центру**; під ним рядок: лічильник **зліва** (чіткіший — темніший+напівжирний), локація **справа тонко БЕЗ пігулки** (іконка+назва+каретка).
+- Назви НП у фільтрі — **ВЕЛИКИМИ БУКВАМИ** (`text-transform:uppercase`, значення в БД без змін), менший шрифт 12.5px. Перевірено скрін (Playwright): «ОЛИЦЬКА ГРОМАДА ▾» справа. CACHE `cstl-20260708-1937`.
+
+## 📝 2026-07-08 — Д-11 + редизайн шапки Дошки + перейменування локації (гілка `vova/board-header`)
+
+- **Скарга Вови:** фільтр локації окремою повноширинною смугою виглядав важко; напис «Вся Олицька громада»/«Уся громада» задовгий.
+- **Рішення (макет A, узгоджено):** заголовок «Дошка оголошень» + лічильник під ним (зліва), фільтр локації **пігулкою справа** у рядку заголовка.
+- ✅ **Перейменування:** `COMMUNITY_ALL_LABEL = 'Олицька громада'` у settlements.js — напис у формі й фільтрі. **Значення в БД `COMMUNITY_ALL` НЕ змінено** (сумісність зі збереженими постами; юзеру не показується).
+- ✅ **Д-11:** `bd-titlebar` (заголовок + `bd-count` лічильник) — лічильник рахує **поточний відфільтрований** список (`pluralAds()` для відміни), оновлюється у `updateAdCount()` при пошуку/локації + повний ре-рендер при категорії/новому пості.
+- ✅ **Д-12 редизайн:** фільтр перенесено у titlebar як компакт-пігулка (`.bd-loc-filter` max-width 52%, каретка ▾), логіка фільтра незмінна.
+- ✅ Перевірено браузером (Playwright скрін): заголовок в 1 рядок, лічильник «7 оголошень», пігулка «📍 Олицька громада ▾», бейджі 📍 на картках; 0 JS-помилок. CACHE `cstl-20260708-1927`. **SQL не потрібен** (чистий клієнт/CSS).
+
+## 📝 2026-07-08 — Д-10 + Д-12: локація оголошення (гілка `vova/board-location`)
+
+- **Аудит:** колонка `posts.location` вже в БД; `SETTLEMENTS` (18 НП) жив у account-ui.js неекспортований; RPC `submit_board_post` НЕ писав location; картка/модалка/чат не показували; `fetchMyThreads` join не тягнув location.
+- **Рішення Вови:** фільтр — dropdown; дефолт форми — завжди «Вся громада»; при фільтрі за НП показувати також загальногромадські+старі (null).
+- ✅ **Спільний модуль** `src/core/settlements.js` (`SETTLEMENTS` + `COMMUNITY_ALL`) — реюз у account-ui.js (профіль, розблоковує Г-9) і Дошці.
+- ✅ **Д-10** (`community-modal.js`): пікер локації (select, дефолт COMMUNITY_ALL) + payload `location` + рядок «📍 НП» у прев'ю. Показ локації: картка `renderBoardCard` + зум `renderAdModal` (`board.js`) + шапка чату `.pm-ctx` (`board-chat.js`) — тільки для конкретного НП (COMMUNITY_ALL/null не захаращує). `fetchMyThreads` select +location.
+- ✅ **Д-12** (`board.js`): стан `activeLocation` (дефолт COMMUNITY_ALL), dropdown у шапці, клауза у `getFilteredPosts` (НП + загальногромадські видимі), **скидання на «Уся громада» при кожному вході на вкладку** (`cstl-tab-changed`). Хелпер `isCommunityWide()`.
+- ✅ **Сервер** (`scripts/supabase_reputation.sql`): RPC insert +`location` (`payload->>'location'`).
+- ✅ `node --check` усіх + `node build.js` exit 0 (24 файли) + Playwright смоук (0 JS-помилок). CACHE `cstl-20260708-1905`.
+- ⏳ **RPC SQL накатати вручну** (конектор «requires approval») — клієнт пише location у payload, але без оновленого RPC воно не збережеться → **до накату локація нових оголошень НЕ зберігається в БД** (показ/фільтр існуючих працює). Дати Вові SQL-блок.
+- 🔜 Розблоковано Г-9 (спільний список НП у профілі).
+
+## 📝 2026-07-08 — Д-16: заголовок оголошення обов'язковим (гілка `vova/board-title-required`)
+
+- **Аудит потоку title:** модалка → payload → RPC `submit_board_post` → картка Дошки (`board.js:897/949` умовний h3, CSS `.cm-board-title` є) → «Мої оголошення» (fallback `title||text.slice(60)`) → віджет Громади (`community-blocks.js:673` показує text, НЕ title — це Г-13). Знахідки: заголовок обходив і валідацію, і профанність-гейт; нема maxlength.
+- **Рішення Вови:** клієнт+сервер; maxlength=80+required; профанність на заголовок НЕ додаємо.
+- ✅ **Код** (`community-modal.js`): поле — `required`+`maxlength="80"`, label `*` замість «(необов'язково)»; submit валідує порожній заголовок (тост+фокус) перед текстом; `buildPayload` шле `title` без `|| null`; preview завжди показує h3 (плейсхолдер «Заголовок оголошення»). `style/community.css`: `.bm-label-req` (червона зірочка).
+- ✅ **Сервер** (`scripts/supabase_reputation.sql`): RPC `submit_board_post` тепер відхиляє порожній `title` (`Потрібен заголовок`) + `left(v_title,80)`. Зворотна сумісність: старі пости з `title=null` рендеряться без h3 (умовні рендери лишено).
+- ✅ CACHE `cstl-20260708-1734` + `node build.js` exit 0.
+- ⏳ **RPC SQL НЕ застосований до БД** (конектор «requires approval») — Вова накатає вручну; клієнтська валідація вже деплоїться і працює незалежно (backstop-неузгодженості нема: старий RPC приймає title, новий клієнт завжди шле).
+- 🔜 Розблоковує **Г-13** (заголовок у віджеті Громади).
+
+## 📝 2026-07-08 — Д-15: аудит приватного чату + фікси (ЗАДЕПЛОЄНО)
+
+### Знахідки аудиту (звіт)
+- **S1 🔴 CONFIRMED** — учасник треда міг РЕДАГУВАТИ/ВИДАЛЯТИ ЧУЖІ повідомлення. RLS `messages` мала лише UPDATE-політику "msg recipient marks read" (пускає обох на будь-яку колонку); `supabase_chat_actions.sql` це прямо визнавав («лише своє — в UI, серверне — follow-up»). Д-15 = той follow-up.
+- **S2 🟡** — `thread_user_state` існувала в БД, але SQL її створення НЕ був закомічений (борг СИ-5).
+- **F5 🟡 CONFIRMED** — архівована розмова з новим непрочитаним: глоб.бейдж рахує, а список ховає архівні → «є непрочитане, але ніде нема».
+- **F1–F4 = P-2/P-5/P-8/P-9 (зона Push/Рома)** — підтверджено, ПЕРЕДАВ Ромі через BOARD (не чіпав): F1🔴 фото-пуш падає (`send-chat-push:73` `msg.text.length` при `text=null` → 500); F2 чат сам не просить дозвіл пуша; F3 нема in-app банера; F4 тап по пушу не відкриває конкретну розмову.
+- ✅ Перевірено ОК: SELECT-RLS threads/messages (лише двоє), getOrCreateThread INSERT-RLS, авторизація send-chat-push, cleared_at повторна поява.
+
+### Зроблено (рішення Вови: тільки зона Дошки S1+S2+F5; S1 — тригер)
+- ✅ **S1** — `scripts/supabase_chat_edit_guard.sql`: BEFORE UPDATE тригер `messages_guard_own_edit` — зміну вмісту (text/photo_url/edited_at/deleted_at) пускає лише автору; read_at — обом; service_role без обмежень. **SQL накатав Вова вручну (SQL Editor).**
+- ✅ **S2** — `scripts/supabase_thread_user_state.sql`: схема + RLS «own thread state» (uid=auth.uid()). **Накатав Вова.**
+- ✅ **F5** — `board-chat.js`: `autoUnarchiveUnread()` — архівована розмова з непрочитаним авто-виринає у «Всі».
+- ✅ `node build.js` exit 0 + `node --check` ок. `/finish` гілки `vova/chat-audit` (PR → merge в main).
+- ⚠️ Живий тест S1 через конектор — НЕ вдалось (Supabase MCP «requires approval» всю сесію). Логіка тригера перевірена статично; Вова підтвердив успішний Run обох SQL.
+
+---
+
+## 📝 2026-07-08 — Д-1: Репутація + автопублікація Дошки (гілка `vova/board-reputation`)
+
+- ✅ **БД (Supabase, прод, project `uabyfecseqnemvcqhdem`)** — застосовано через MCP `apply_migration`:
+  - `profiles` +`approved_count`/+`trusted`; тригер `trg_reputation_on_publish` (адмін схвалив pending→published у `admin.html` → +1, на 5-му → `trusted=true`); тригер `trg_revoke_trust_on_reject` (адмін відхилив → скидання в 0/false); RPC `submit_board_post` (SECURITY DEFINER: довірений → одразу `published`, решта → `pending`, рейт-ліміт 3/хв).
+  - ⚠️ **Знайдена й закрита діра безпеки, якої не було у старому дизайні 02.07:** RLS `profiles` дозволяв юзеру напряму `update({trusted:true})` собі самому (обходить весь сенс фічі). Виправлено: `revoke update on profiles from authenticated,anon` + `grant update (uid,name,email,birth_date)` — точковий `revoke update (col)` НЕ спрацював (табличний grant все одно покриває колонку), допоміг лише повний revoke+явний allowlist. Перевірено SQL-тестом наживо (update trusted напряму → `permission denied`; звичайний upsert профілю — проходить).
+  - Живий тест на проді (тестові пости, потім видалені): 5× pending→published → `trusted=true`; reject → скидання в 0/false; RPC від довіреного → `status:'published'` одразу. Усе підтверджено.
+- ✅ **Код:** `src/core/supabase.js` (`submitPost` → RPC замість raw insert), `src/tabs/community-modal.js` (payload без мертвих `status`/`owner_uid`; тост+`cstl-posts-changed` подія якщо автопублікація), `src/core/account-ui.js` (бейдж довіри в hero «Мого кабінету» — новий, старого `acc-row` вже нема, Рома переписала на `acc-cab`), `style/account.css` (`.acc-cab-trust`). `admin.html` НЕ чіпав — тригери підхоплюють його існуючий `approvePost`/`rejectPost` без змін.
+- ✅ `node --check` + `node build.js` (exit 0, esbuild довелось `npm install` — не було в оточенні) + Playwright смоук (без JS-помилок від моїх змін; live Supabase round-trip у цій пісочниці не перевірити — CDN `supabase-js` блокує проксі оточення, це обмеження середовища, не код).
+- 🔜 **Гілку `vova/board-reputation` перестворено НАБІЛО з поточного `main`** (стара версія була на 54+ комітів позаду — код+SQL звідти перенесено вручну, старий `openModal`/`acc-row` де раніше сидів бейдж довіри вже не існує). ЗАДЕПЛОЄНО PR #267.
+
+---
+
 ## 🎯 ХЕНДОВЕР У НОВИЙ ЧАТ — 2026-07-05 (кінець сесії Вови)
 
 > Читай це першим. Усе нижче ЗАДЕПЛОЄНО на прод (остання версія ~v2301). Незавершених робочих гілок нема — усе змерджено в `main`.
