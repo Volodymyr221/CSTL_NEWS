@@ -578,7 +578,10 @@ async function publishArticle(id) {
   return !error;
 }
 async function unpublishArticle(id) {
-  const { error } = await supa.from('cms_articles').update({ status: 'draft' }).eq('id', id);
+  // updated_at теж оновлюємо — інакше зняття з публікації невидиме на картці
+  // (дата лишалась стара, і було незрозуміло коли/чому статус змінився).
+  const { error } = await supa.from('cms_articles')
+    .update({ status: 'draft', updated_at: new Date().toISOString() }).eq('id', id);
   return !error;
 }
 async function deleteArticle(id) {
@@ -970,17 +973,22 @@ function renderArticleForm(el) {
         <input class="art-inp" id="af-photo" type="file" accept="image/*">
       </label>
       <div id="af-preview">${d.image ? `<img src="${escapeHtml(d.image)}" style="max-width:100%;border-radius:10px;margin-top:6px">` : ''}</div>
+      ${d.status === 'published' ? `
+      <div style="background:#e8f5ec;border:1px solid #bfe3c9;border-radius:10px;padding:10px 12px;font-size:14px;color:#2e6b40">
+        ✅ Стаття ОПУБЛІКОВАНА — вона вже у стрічці сайту. Збереження оновить лише копію
+        в кабінеті (на сайт зміни не потраплять) і НЕ зніме статтю з публікації.
+      </div>` : `
       <label class="art-lbl">Публікація
         <div class="art-when">
           <label class="art-when-opt"><input type="radio" name="af-when" value="draft" ${isSched ? '' : 'checked'}> Лишити чернеткою</label>
           <label class="art-when-opt"><input type="radio" name="af-when" value="schedule" ${isSched ? 'checked' : ''}> 📅 Автопостинг на дату/час</label>
         </div>
         <input class="art-inp" id="af-when-dt" type="datetime-local" value="${schedDT}" style="${isSched ? '' : 'display:none'};margin-top:6px">
-      </label>
+      </label>`}
       <div class="art-actions">
         <button class="btn" id="af-cancel">Скасувати</button>
-        <button class="btn btn--approve" id="af-save">💾 Зберегти чернетку</button>
-        ${canPub ? `<button class="btn" id="af-savepub" style="background:#e08a2b;color:#fff">🚀 Зберегти й опублікувати</button>` : ''}
+        <button class="btn btn--approve" id="af-save">💾 ${d.status === 'published' ? 'Зберегти зміни' : 'Зберегти чернетку'}</button>
+        ${canPub && d.status !== 'published' ? `<button class="btn" id="af-savepub" style="background:#e08a2b;color:#fff">🚀 Зберегти й опублікувати</button>` : ''}
       </div>
     </div>
   `;
@@ -1000,7 +1008,8 @@ function renderArticleForm(el) {
   // одразу не буде, стаття піде в чергу на вказаний час).
   const syncWhenUI = () => {
     const on = document.querySelector('input[name="af-when"]:checked')?.value === 'schedule';
-    document.getElementById('af-when-dt').style.display = on ? '' : 'none';
+    const dt = document.getElementById('af-when-dt');   // відсутній для опублікованої
+    if (dt) dt.style.display = on ? '' : 'none';
     const pubBtn = document.getElementById('af-savepub');
     if (pubBtn) pubBtn.textContent = on ? '📅 Запланувати автопостинг' : '🚀 Зберегти й опублікувати';
   };
@@ -1018,19 +1027,26 @@ function renderArticleForm(el) {
   const doSave = async (publish) => {
     const a = read();
     if (!a.title || !a.content) { alert('Заголовок і текст обов\'язкові.'); return; }
+    // ОПУБЛІКОВАНУ статтю збереження НЕ деградує: статус лишається 'published'.
+    // Раніше «Зберегти чернетку» мовчки знімав статус у базі, а стрічка (git)
+    // статтю тримала далі → розсинхрон «на сайті є, в кабінеті чернетка».
     // Розклад автопостингу. ВАЖЛИВО: якщо обрано «Автопостинг на дату/час» —
     // розклад МАЄ ПРІОРИТЕТ над «опублікувати зараз». Раніше кнопка «Зберегти й
     // опублікувати» мовчки ігнорувала розклад і публікувала одразу (status=ready) —
     // тому заплановані статті виглядали як опубліковані. Тепер розклад завжди виграє.
     const scheduling = document.querySelector('input[name="af-when"]:checked')?.value === 'schedule';
-    const dtVal = document.getElementById('af-when-dt').value;
-    if (scheduling) {
-      if (!dtVal) { alert('Оберіть дату й час автопостингу.'); return; }
-      a.status = 'scheduled';
-      a.publish_at = new Date(dtVal).toISOString();   // локальний час → UTC
-    } else if (!publish) {
-      a.status = 'draft';
-      a.publish_at = null;   // зняти розклад при збереженні чернеткою
+    if (d.status === 'published') {
+      a.status = 'published';
+    } else {
+      const dtVal = document.getElementById('af-when-dt')?.value;
+      if (scheduling) {
+        if (!dtVal) { alert('Оберіть дату й час автопостингу.'); return; }
+        a.status = 'scheduled';
+        a.publish_at = new Date(dtVal).toISOString();   // локальний час → UTC
+      } else if (!publish) {
+        a.status = 'draft';
+        a.publish_at = null;   // зняти розклад при збереженні чернеткою
+      }
     }
     const savedId = await saveArticle(a);
     if (!savedId) { alert('Не вдалося зберегти (перевірте дозвіл).'); return; }
