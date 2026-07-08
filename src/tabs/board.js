@@ -18,12 +18,20 @@ import {
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
-import { SETTLEMENTS, COMMUNITY_ALL } from '../core/settlements.js';
+import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 
 // Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
 // порожня/null або дорівнює COMMUNITY_ALL. Конкретний НП — лише свій фільтр.
 function isCommunityWide(loc) {
   return !loc || loc === COMMUNITY_ALL;
+}
+
+// Українська відміна слова «оголошення» для лічильника (Д-11).
+function pluralAds(n) {
+  const d = n % 10, dd = n % 100;
+  if (d === 1 && dd !== 11) return 'оголошення';
+  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'оголошення';
+  return 'оголошень';
 }
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
@@ -1212,30 +1220,47 @@ function renderHeader() {
     </div>
   ` : '';
 
-  // Д-12: фільтр за населеним пунктом (dropdown; лише для Дошки).
-  const locationHtml = showCategories ? `
-    <div class="bd-loc-filter">
-      <span class="bd-loc-icon" aria-hidden="true">📍</span>
-      <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
-        <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>Уся громада</option>
-        ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
-      </select>
+  // Д-11 + Д-12: шапка Дошки — заголовок + лічильник (зліва) і фільтр локації
+  // пігулкою (справа). Лічильник рахує поточний відфільтрований список.
+  const count = showCategories ? getFilteredPosts().length : 0;
+  const titlebarHtml = showCategories ? `
+    <div class="bd-titlebar">
+      <div class="bd-titlebar-left">
+        <h2 class="bd-title">Дошка оголошень</h2>
+        <div class="bd-count" id="bd-count">${count} ${pluralAds(count)}</div>
+      </div>
+      <div class="bd-loc-filter">
+        <span class="bd-loc-icon" aria-hidden="true">📍</span>
+        <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
+          <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
+          ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>
     </div>
   ` : '';
 
   return `
     <div class="bd-controls">
       ${discHead}
+      ${titlebarHtml}
       <div class="bd-search">
         <span class="bd-search-icon">🔍</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
                placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
         ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
       </div>
-      ${locationHtml}
       ${categoriesHtml}
     </div>
   `;
+}
+
+// Оновити лічильник оголошень у шапці без повного ре-рендеру (Д-11).
+// Викликається після фільтрів (пошук/локація), коли header не перебудовується.
+function updateAdCount() {
+  const el = document.getElementById('bd-count');
+  if (!el || activeType !== 'board') return;
+  const n = getFilteredPosts().length;
+  el.textContent = `${n} ${pluralAds(n)}`;
 }
 
 function renderBody() {
@@ -1442,6 +1467,7 @@ function renderBodyOnly() {
   const body = document.getElementById('bd-body');
   if (!body) return renderAll();
   body.innerHTML = renderBody();
+  updateAdCount();   // Д-11: лічильник у шапці синхронний з відфільтрованим списком
   // Перепідключаємо handlers для cm-board-call всередині нового HTML
   body.querySelectorAll('.cm-board-call').forEach(btn => {
     btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });

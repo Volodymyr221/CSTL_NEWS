@@ -1320,6 +1320,7 @@
     "\u0406\u043D\u0448\u0435"
   ];
   var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
+  var COMMUNITY_ALL_LABEL = "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
 
   // src/tabs/community-modal.js
   var BOARD_CATEGORIES = [
@@ -1499,7 +1500,7 @@
       <div class="bm-section">
         <label class="bm-label" for="bm-location">\u041B\u043E\u043A\u0430\u0446\u0456\u044F</label>
         <select class="cm-board-input cm-board-input--small" id="bm-location">
-          <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL)}</option>
+          <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
           ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${state.location === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
         </select>
       </div>
@@ -3328,6 +3329,14 @@
   function isCommunityWide(loc) {
     return !loc || loc === COMMUNITY_ALL;
   }
+  function pluralAds(n) {
+    const d = n % 10, dd = n % 100;
+    if (d === 1 && dd !== 11)
+      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14))
+      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
+  }
   var PHONE_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
@@ -4404,28 +4413,42 @@ ${post.text}
       </div>
     </div>
   ` : "";
-    const locationHtml = showCategories ? `
-    <div class="bd-loc-filter">
-      <span class="bd-loc-icon" aria-hidden="true">\u{1F4CD}</span>
-      <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
-        <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? " selected" : ""}>\u0423\u0441\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0430</option>
-        ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
-      </select>
+    const count = showCategories ? getFilteredPosts().length : 0;
+    const titlebarHtml = showCategories ? `
+    <div class="bd-titlebar">
+      <div class="bd-titlebar-left">
+        <h2 class="bd-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
+        <div class="bd-count" id="bd-count">${count} ${pluralAds(count)}</div>
+      </div>
+      <div class="bd-loc-filter">
+        <span class="bd-loc-icon" aria-hidden="true">\u{1F4CD}</span>
+        <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
+          <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
+          ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
+        </select>
+      </div>
     </div>
   ` : "";
     return `
     <div class="bd-controls">
       ${discHead}
+      ${titlebarHtml}
       <div class="bd-search">
         <span class="bd-search-icon">\u{1F50D}</span>
         <input class="bd-search-input" id="bd-search-input" type="search"
                placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
         ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
       </div>
-      ${locationHtml}
       ${categoriesHtml}
     </div>
   `;
+  }
+  function updateAdCount() {
+    const el = document.getElementById("bd-count");
+    if (!el || activeType !== "board")
+      return;
+    const n = getFilteredPosts().length;
+    el.textContent = `${n} ${pluralAds(n)}`;
   }
   function renderBody() {
     const filtered = getFilteredPosts();
@@ -4612,6 +4635,7 @@ ${post.text}
     if (!body)
       return renderAll();
     body.innerHTML = renderBody();
+    updateAdCount();
     body.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
