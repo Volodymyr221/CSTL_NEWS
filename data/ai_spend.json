@@ -1,6 +1,19 @@
 {
   "runs": [
     {
+      "ts": 1783501678807,
+      "mission": "holiday:🇺🇦 День Української Державно",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 792,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0131,
+      "note": ""
+    },
+    {
       "ts": 1783466861594,
       "mission": "Громада:dedup",
       "model": "claude-sonnet-5",
@@ -184,16 +197,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 3.3759,
-    "runs": 14,
+    "cost_usd": 3.389,
+    "runs": 15,
     "web_searches": 48
   },
   "months": {
     "2026-07": {
-      "cost_usd": 3.3759,
-      "runs": 14,
+      "cost_usd": 3.389,
+      "runs": 15,
       "web_searches": 48
     }
   },
-  "updated_ts": 1783466861594
+  "updated_ts": 1783501678807
 }
