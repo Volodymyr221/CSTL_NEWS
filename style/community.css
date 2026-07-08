@@ -688,7 +688,7 @@
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
-  height: 480px;             /* вітальний банер: більше фото костелу (Рома 08.07) */
+  height: 560px;             /* вітальний банер: показуємо БІЛЬШЕ костелу (Рома 08.07) */
   overflow: hidden;
   z-index: 0;                 /* позаду контенту (блоки — z-index:1) */
   background: var(--paper-deep);
@@ -707,7 +707,7 @@
 /* Легкий блюр фону при скролі (контент «наїжджає» — картинка стає фоновою). */
 .cm-hero.cm-blur { filter: blur(4px); }
 /* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою. */
-.cm-hero-spacer { height: 380px; }  /* картки нижче — не налазять на фото (Рома 08.07) */
+.cm-hero-spacer { height: 460px; }  /* картки нижче вищого банера (Рома 08.07) */
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
 .cm-greeting,
 .cm-block,
@@ -719,6 +719,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 38%;   /* показати більше костелу — верх+низ (Рома 08.07) */
   display: block;
   opacity: 0;
   transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
