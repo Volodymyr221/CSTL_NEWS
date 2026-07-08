@@ -2371,6 +2371,7 @@
 }
 .bd-loc-select {
   max-width: 100%;
+  box-sizing: border-box;   /* width включає padding → каретка на стабільній відстані */
   background: transparent;
   border: none;
   outline: none;
