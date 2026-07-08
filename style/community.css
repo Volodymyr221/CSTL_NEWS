@@ -2326,12 +2326,13 @@
 .bd-title {
   font-size: 18px;
   font-weight: 800;
-  color: var(--black);
+  color: var(--red, #722F37);   /* фірмовий бордовий відтінок — заголовок виділяється */
   line-height: 1.15;
   margin: 0;
   text-align: center;
   text-transform: uppercase;   /* «ДОШКА ОГОЛОШЕНЬ» */
-  letter-spacing: 0.5px;
+  letter-spacing: 1.4px;        /* трохи ширший інтервал між літерами */
+  text-shadow: 0 1px 3px rgba(114, 47, 55, 0.22);   /* м'яка тінь для насиченості */
 }
 .bd-subrow {
   display: flex;
