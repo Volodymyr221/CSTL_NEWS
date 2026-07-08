@@ -877,7 +877,7 @@
   async function fetchMyThreads(uid) {
     if (!supa || !uid)
       return [];
-    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos, author, contact, published_at, created_at)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
+    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos, author, contact, location, published_at, created_at)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyThreads:", error.message);
       return [];
@@ -1298,6 +1298,29 @@
     return { ok: true, partial };
   }
 
+  // src/core/settlements.js
+  var SETTLEMENTS = [
+    "\u041E\u043B\u0438\u043A\u0430",
+    "\u0413\u043E\u0440\u044F\u043D\u0456\u0432\u043A\u0430",
+    "\u0414\u0435\u0440\u043D\u043E",
+    "\u0414\u0456\u0434\u0438\u0447\u0456",
+    "\u0416\u043E\u0440\u043D\u0438\u0449\u0435",
+    "\u0417\u0430\u043B\u0456\u0441\u043E\u0447\u0435",
+    "\u041A\u043E\u0442\u0456\u0432",
+    "\u041B\u0438\u0447\u0430\u043D\u0438",
+    "\u041C\u0435\u0442\u0435\u043B\u044C\u043D\u0435",
+    "\u041C\u043E\u0449\u0430\u043D\u0438\u0446\u044F",
+    "\u041D\u043E\u0441\u043E\u0432\u0438\u0447\u0456",
+    "\u041E\u0434\u0435\u0440\u0430\u0434\u0438",
+    "\u041F\u043E\u043A\u0430\u0449\u0456\u0432",
+    "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
+    "\u0421\u0442\u0430\u0432\u043E\u043A",
+    "\u0425\u0440\u043E\u043C'\u044F\u043A\u0456\u0432",
+    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D",
+    "\u0406\u043D\u0448\u0435"
+  ];
+  var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
+
   // src/tabs/community-modal.js
   var BOARD_CATEGORIES = [
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
@@ -1362,7 +1385,9 @@
       author: accountAuthorName(),
       category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
       contact: "",
-      title: ""
+      title: "",
+      location: COMMUNITY_ALL
+      // Д-10: дефолт — вся громада
     };
     const wrap = document.createElement("div");
     wrap.id = "cm-board-modal";
@@ -1472,6 +1497,14 @@
       </div>
 
       <div class="bm-section">
+        <label class="bm-label" for="bm-location">\u041B\u043E\u043A\u0430\u0446\u0456\u044F</label>
+        <select class="cm-board-input cm-board-input--small" id="bm-location">
+          <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL)}</option>
+          ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${state.location === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
+        </select>
+      </div>
+
+      <div class="bm-section">
         <label class="bm-label" for="bm-text">\u041E\u043F\u0438\u0441</label>
         <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="\u0429\u043E \u0445\u043E\u0447\u0435\u0442\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u0438\u0442\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0456?" required>${escapeHtml(state.text)}</textarea>
       </div>
@@ -1501,6 +1534,10 @@
       });
       dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
         state.title = e.target.value;
+        renderPreview();
+      });
+      dynamicEl.querySelector("#bm-location")?.addEventListener("change", (e) => {
+        state.location = e.target.value;
         renderPreview();
       });
       dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
@@ -1616,6 +1653,7 @@
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
         <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
+        ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>
@@ -1704,6 +1742,8 @@
       contact: state.contact.trim() || null,
       title: state.title.trim(),
       // обов'язковий (Д-16); сервер теж перевіряє
+      location: state.location || COMMUNITY_ALL,
+      // Д-10
       tags: []
     };
   }
@@ -2100,6 +2140,7 @@
       ${thumb ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>` : `<span class="pm-ctx-thumb pm-ctx-thumb--none">\u{1F3F7}\uFE0F</span>`}
       <span class="pm-ctx-body">
         <span class="pm-ctx-title">${escapeHtml(title)}</span>
+        ${p.location && p.location !== COMMUNITY_ALL ? `<span class="pm-ctx-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
         ${adAuthor || adContact ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ""}${adAuthor ? `${adContact ? " \u2014 " : ""}${escapeHtml(adAuthor)}` : ""}</span>` : ""}
         <span class="pm-ctx-link">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2192</span>
       </span>
@@ -3284,6 +3325,9 @@
   }
 
   // src/tabs/board.js
+  function isCommunityWide(loc) {
+    return !loc || loc === COMMUNITY_ALL;
+  }
   var PHONE_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
@@ -3313,6 +3357,7 @@
   var allAnnouncements = [];
   var activeType = "board";
   var activeCategory = "all";
+  var activeLocation = COMMUNITY_ALL;
   var searchQuery = "";
   var reactionsByPost = /* @__PURE__ */ new Map();
   var commentsByPost = /* @__PURE__ */ new Map();
@@ -4104,6 +4149,7 @@ ${post.text}
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
+      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4148,6 +4194,7 @@ ${post.text}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
+        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -4321,6 +4368,10 @@ ${post.text}
         if (!cat || !cat.match || !cat.match.includes(p.category))
           return false;
       }
+      if (activeType === "board" && activeLocation !== COMMUNITY_ALL) {
+        if (p.location !== activeLocation && !isCommunityWide(p.location))
+          return false;
+      }
       if (q) {
         const hay = [
           p.text,
@@ -4353,6 +4404,15 @@ ${post.text}
       </div>
     </div>
   ` : "";
+    const locationHtml = showCategories ? `
+    <div class="bd-loc-filter">
+      <span class="bd-loc-icon" aria-hidden="true">\u{1F4CD}</span>
+      <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
+        <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? " selected" : ""}>\u0423\u0441\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0430</option>
+        ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
+      </select>
+    </div>
+  ` : "";
     return `
     <div class="bd-controls">
       ${discHead}
@@ -4362,6 +4422,7 @@ ${post.text}
                placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
         ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
       </div>
+      ${locationHtml}
       ${categoriesHtml}
     </div>
   `;
@@ -4521,6 +4582,10 @@ ${post.text}
     document.getElementById("bd-search-clear")?.addEventListener("click", () => {
       searchQuery = "";
       renderAll(el);
+    });
+    document.getElementById("bd-loc-select")?.addEventListener("change", (e) => {
+      activeLocation = e.target.value;
+      renderBodyOnly(el);
     });
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -5116,6 +5181,10 @@ ${post.text}
         openDiscussions();
       else if (tab !== "discussions" && discOpen)
         closeDiscussions();
+      if (tab === "board" && activeLocation !== COMMUNITY_ALL) {
+        activeLocation = COMMUNITY_ALL;
+        renderAll();
+      }
     });
     onAuthChange(() => {
       if (!isLoggedIn()) {
@@ -9196,26 +9265,6 @@ END:VEVENT`
     wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
     wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
   }
-  var SETTLEMENTS = [
-    "\u041E\u043B\u0438\u043A\u0430",
-    "\u0413\u043E\u0440\u044F\u043D\u0456\u0432\u043A\u0430",
-    "\u0414\u0435\u0440\u043D\u043E",
-    "\u0414\u0456\u0434\u0438\u0447\u0456",
-    "\u0416\u043E\u0440\u043D\u0438\u0449\u0435",
-    "\u0417\u0430\u043B\u0456\u0441\u043E\u0447\u0435",
-    "\u041A\u043E\u0442\u0456\u0432",
-    "\u041B\u0438\u0447\u0430\u043D\u0438",
-    "\u041C\u0435\u0442\u0435\u043B\u044C\u043D\u0435",
-    "\u041C\u043E\u0449\u0430\u043D\u0438\u0446\u044F",
-    "\u041D\u043E\u0441\u043E\u0432\u0438\u0447\u0456",
-    "\u041E\u0434\u0435\u0440\u0430\u0434\u0438",
-    "\u041F\u043E\u043A\u0430\u0449\u0456\u0432",
-    "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
-    "\u0421\u0442\u0430\u0432\u043E\u043A",
-    "\u0425\u0440\u043E\u043C'\u044F\u043A\u0456\u0432",
-    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D",
-    "\u0406\u043D\u0448\u0435"
-  ];
   var NOTIF_KEYS = [
     { k: "buses", ic: "\u{1F68C}", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
     { k: "power", ic: "\u{1F4A1}", label: "\u0421\u0432\u0456\u0442\u043B\u043E", def: true },

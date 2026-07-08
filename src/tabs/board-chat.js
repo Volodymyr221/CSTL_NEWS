@@ -29,6 +29,7 @@ import {
   editMessage, deleteMessage, uploadPhotoToStorage,
   bumpPost, closePost, deleteMyPost, restorePost,
 } from '../core/supabase.js';
+import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity } from '../core/utils.js';
 import {
@@ -80,6 +81,7 @@ export async function openChat(thread, post) {
         : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
       <span class="pm-ctx-body">
         <span class="pm-ctx-title">${escapeHtml(title)}</span>
+        ${(p.location && p.location !== COMMUNITY_ALL) ? `<span class="pm-ctx-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
         ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
         <span class="pm-ctx-link">Переглянути оголошення →</span>
       </span>

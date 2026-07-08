@@ -8,6 +8,18 @@
 
 ---
 
+## 📝 2026-07-08 — Д-10 + Д-12: локація оголошення (гілка `vova/board-location`)
+
+- **Аудит:** колонка `posts.location` вже в БД; `SETTLEMENTS` (18 НП) жив у account-ui.js неекспортований; RPC `submit_board_post` НЕ писав location; картка/модалка/чат не показували; `fetchMyThreads` join не тягнув location.
+- **Рішення Вови:** фільтр — dropdown; дефолт форми — завжди «Вся громада»; при фільтрі за НП показувати також загальногромадські+старі (null).
+- ✅ **Спільний модуль** `src/core/settlements.js` (`SETTLEMENTS` + `COMMUNITY_ALL`) — реюз у account-ui.js (профіль, розблоковує Г-9) і Дошці.
+- ✅ **Д-10** (`community-modal.js`): пікер локації (select, дефолт COMMUNITY_ALL) + payload `location` + рядок «📍 НП» у прев'ю. Показ локації: картка `renderBoardCard` + зум `renderAdModal` (`board.js`) + шапка чату `.pm-ctx` (`board-chat.js`) — тільки для конкретного НП (COMMUNITY_ALL/null не захаращує). `fetchMyThreads` select +location.
+- ✅ **Д-12** (`board.js`): стан `activeLocation` (дефолт COMMUNITY_ALL), dropdown у шапці, клауза у `getFilteredPosts` (НП + загальногромадські видимі), **скидання на «Уся громада» при кожному вході на вкладку** (`cstl-tab-changed`). Хелпер `isCommunityWide()`.
+- ✅ **Сервер** (`scripts/supabase_reputation.sql`): RPC insert +`location` (`payload->>'location'`).
+- ✅ `node --check` усіх + `node build.js` exit 0 (24 файли) + Playwright смоук (0 JS-помилок). CACHE `cstl-20260708-1905`.
+- ⏳ **RPC SQL накатати вручну** (конектор «requires approval») — клієнт пише location у payload, але без оновленого RPC воно не збережеться → **до накату локація нових оголошень НЕ зберігається в БД** (показ/фільтр існуючих працює). Дати Вові SQL-блок.
+- 🔜 Розблоковано Г-9 (спільний список НП у профілі).
+
 ## 📝 2026-07-08 — Д-16: заголовок оголошення обов'язковим (гілка `vova/board-title-required`)
 
 - **Аудит потоку title:** модалка → payload → RPC `submit_board_post` → картка Дошки (`board.js:897/949` умовний h3, CSS `.cm-board-title` є) → «Мої оголошення» (fallback `title||text.slice(60)`) → віджет Громади (`community-blocks.js:673` показує text, НЕ title — це Г-13). Знахідки: заголовок обходив і валідацію, і профанність-гейт; нема maxlength.

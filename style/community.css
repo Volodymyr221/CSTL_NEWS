@@ -934,6 +934,18 @@
   align-self: flex-start;
 }
 
+/* Локація оголошення (Д-10) — рядок під заголовком у картці/модалці/прев'ю */
+.cm-board-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--ink-soft, #6b6b6b);
+  margin-bottom: 6px;
+  align-self: flex-start;
+}
+
 .cm-board-title {
   font-size: 15px;
   font-weight: 700;
@@ -2303,6 +2315,33 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
+}
+
+/* Фільтр за локацією (Д-12) — компактна випадайка у шапці */
+.bd-loc-filter {
+  position: relative;
+  display: flex;
+  align-items: center;
+  background: var(--card-cream);
+  border: 1.5px solid rgba(0,0,0,0.22);
+  border-radius: 14px;
+  padding: 0 10px;
+  height: 38px;
+  margin-top: 8px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
+}
+.bd-loc-icon { font-size: 14px; margin-right: 6px; opacity: 0.6; }
+.bd-loc-select {
+  flex: 1;
+  background: transparent;
+  border: none;
+  outline: none;
+  font-size: 16px;   /* iOS zoom-fix */
+  font-family: inherit;
+  color: var(--black);
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 16px;
 }
 
 /* Таби типів постів */

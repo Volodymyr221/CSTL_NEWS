@@ -18,6 +18,13 @@ import {
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
+import { SETTLEMENTS, COMMUNITY_ALL } from '../core/settlements.js';
+
+// Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
+// порожня/null або дорівнює COMMUNITY_ALL. Конкретний НП — лише свій фільтр.
+function isCommunityWide(loc) {
+  return !loc || loc === COMMUNITY_ALL;
+}
 
 // ── Конфігурація ─────────────────────────────────────────────────────────────
 
@@ -64,6 +71,7 @@ let allPosts       = [];   // [{id, type, ...}]
 let allAnnouncements = []; // офіційні з announcements
 let activeType     = 'board';
 let activeCategory = 'all';
+let activeLocation = COMMUNITY_ALL;   // Д-12: фільтр за НП; дефолт «вся громада» = усі
 let searchQuery    = '';
 
 // Реакції і коментарі — централізовано у Map<postId, ...>. Завантажується з
@@ -895,6 +903,7 @@ function renderBoardCard(p) {
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone ? `
       <div class="cm-board-footer">
@@ -947,6 +956,7 @@ function renderAdModal(p) {
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
+        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1153,6 +1163,11 @@ function getFilteredPosts() {
       const cat = BOARD_CATEGORIES.find(c => c.id === activeCategory);
       if (!cat || !cat.match || !cat.match.includes(p.category)) return false;
     }
+    // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
+    // + загальногромадські (COMMUNITY_ALL/порожні/старі) — вони релевантні скрізь.
+    if (activeType === 'board' && activeLocation !== COMMUNITY_ALL) {
+      if (p.location !== activeLocation && !isCommunityWide(p.location)) return false;
+    }
     // Пошук — text + tags + author + title
     if (q) {
       const hay = [
@@ -1197,6 +1212,17 @@ function renderHeader() {
     </div>
   ` : '';
 
+  // Д-12: фільтр за населеним пунктом (dropdown; лише для Дошки).
+  const locationHtml = showCategories ? `
+    <div class="bd-loc-filter">
+      <span class="bd-loc-icon" aria-hidden="true">📍</span>
+      <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
+        <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>Уся громада</option>
+        ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+      </select>
+    </div>
+  ` : '';
+
   return `
     <div class="bd-controls">
       ${discHead}
@@ -1206,6 +1232,7 @@ function renderHeader() {
                placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
         ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
       </div>
+      ${locationHtml}
       ${categoriesHtml}
     </div>
   `;
@@ -1378,6 +1405,12 @@ function renderAll() {
     renderAll(el);
   });
 
+
+  // Фільтр за локацією (Д-12) — dropdown, тільки для board
+  document.getElementById('bd-loc-select')?.addEventListener('change', e => {
+    activeLocation = e.target.value;
+    renderBodyOnly(el);
+  });
 
   // Категорії-чіпи (тільки для board)
   el.querySelectorAll('[data-bd-cat]').forEach(btn => {
@@ -1997,6 +2030,11 @@ export function initBoard() {
     const tab = document.querySelector('.app-main')?.dataset.tab;
     if (tab === 'discussions' && !discOpen) openDiscussions();
     else if (tab !== 'discussions' && discOpen) closeDiscussions();
+    // Д-12: фільтр локації скидається на «Уся громада» при кожному вході на Дошку.
+    if (tab === 'board' && activeLocation !== COMMUNITY_ALL) {
+      activeLocation = COMMUNITY_ALL;
+      renderAll();
+    }
   });
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {

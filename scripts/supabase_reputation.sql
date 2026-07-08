@@ -121,7 +121,7 @@ begin
   v_status := case when v_trusted then 'published' else 'pending' end;
 
   insert into public.posts
-    (type, text, author, photos, category, color, contact, title, tags,
+    (type, text, author, photos, category, color, contact, title, location, tags,
      status, owner_uid, published_at, bumped_at, ts)
   values (
     coalesce(payload->>'type', 'board'),
@@ -132,6 +132,7 @@ begin
     coalesce(payload->>'color', 'yellow'),
     payload->>'contact',
     left(v_title, 80),   -- Д-16: обрізаємо до 80 (узгоджено з клієнтським maxlength)
+    payload->>'location',   -- Д-10: населений пункт (або «Вся Олицька громада»)
     coalesce((select array_agg(value) from jsonb_array_elements_text(payload->'tags')), '{}'),
     v_status,
     v_uid,
