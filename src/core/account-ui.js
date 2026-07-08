@@ -221,7 +221,13 @@ async function openAccount() {
     // Оновлюємо шапку кабінету наживо
     cab.querySelector('#acc-hero-name').textContent = [fields.name, fields.surname].filter(Boolean).join(' ') || 'Житель';
     cab.querySelector('#acc-hero-place').textContent = fields.settlement || 'Учасник спільноти';
-    showToast('Анкету збережено', 2500);
+    // ЧЕСНИЙ статус: partial = база ще без розширених колонок (село/прізвище/
+    // телефон НЕ збереглись) — не брешемо «збережено», кажемо що саме сталося.
+    if (res.partial) {
+      showToast('Збережено імʼя і дату. Село/телефон поки не зберігаються — базу оновлять найближчим часом', 5000, 'error');
+    } else {
+      showToast('✅ Анкету збережено', 2500);
+    }
   });
   // Розділи «Моє»
   cab.querySelectorAll('[data-go]').forEach(b => b.addEventListener('click', () => {
