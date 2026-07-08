@@ -1198,6 +1198,16 @@
       }
     });
   }
+  async function warmProfile() {
+    if (!_user || _profileName)
+      return;
+    try {
+      await getProfile();
+      if (_profileName)
+        emitAuthChange();
+    } catch (_) {
+    }
+  }
   async function initAuth() {
     const supa2 = getSupabase();
     if (!supa2)
@@ -1206,12 +1216,14 @@
       const { data } = await supa2.auth.getSession();
       _user = data && data.session ? data.session.user : null;
       emitAuthChange();
+      warmProfile();
     } catch (e) {
       console.warn("[auth] getSession:", e && e.message);
     }
     supa2.auth.onAuthStateChange((_event, session) => {
       _user = session ? session.user : null;
       emitAuthChange();
+      warmProfile();
     });
   }
   async function signInWithGoogle() {
@@ -1265,8 +1277,10 @@
     for (const k of PROFILE_FIELDS)
       if (k in fields)
         row[k] = fields[k] === "" ? null : fields[k];
+    let partial = false;
     let { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
     if (error && /column|schema/i.test(error.message)) {
+      partial = true;
       const core = {
         uid: _user.id,
         email: _user.email || null,
@@ -1279,7 +1293,7 @@
       return { ok: false, error: error.message };
     if (row.name)
       _profileName = row.name;
-    return { ok: true };
+    return { ok: true, partial };
   }
 
   // src/tabs/community-modal.js
@@ -8025,24 +8039,32 @@ ${post.text}
   }
 
   // src/tabs/community.js
-  var HERO_DAY = [1, 2, 3, 4].map((i) => `./photos/olyka.day-${i}.jpg`);
-  var HERO_EVENING = [1, 2, 3, 4].map((i) => `./photos/olyka.evening-${i}.jpg`);
+  var KOSTEL = "\u041A\u043E\u043B\u0435\u0433\u0456\u0430\u043B\u044C\u043D\u0438\u0439 \u043A\u043E\u0441\u0442\u0435\u043B \u0421\u0432\u044F\u0442\u043E\u0457 \u0422\u0440\u0456\u0439\u0446\u0456";
+  var HERO_DAY = [1, 2, 3, 4].map((i) => ({ src: `./photos/olyka.day-${i}.jpg`, caption: KOSTEL }));
+  var HERO_EVENING = [1, 2, 3, 4].map((i) => ({ src: `./photos/olyka.evening-${i}.jpg`, caption: KOSTEL }));
   var _heroInterval = null;
   var _heroIndex = 0;
   var _heroIsDay = null;
+  var EVENING_LEAD_MS = 2 * 60 * 60 * 1e3;
   function isDaytime(now = /* @__PURE__ */ new Date()) {
     const t = sunTimes(now);
     if (!t)
       return true;
-    return now >= t.sunrise && now < t.sunset;
+    return now >= t.sunrise && now.getTime() < t.sunset.getTime() - EVENING_LEAD_MS;
   }
   function heroSet() {
     return isDaytime() ? HERO_DAY : HERO_EVENING;
   }
   function heroImgsHtml() {
-    return heroSet().map((url, i) => `
-    <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(url)}" alt="${i === 0 ? "\u041E\u043B\u0438\u043A\u0430" : ""}" loading="${i === 0 ? "eager" : "lazy"}">
+    return heroSet().map((it, i) => `
+    <img class="cm-hero-img${i === 0 ? " active" : ""}" src="${escapeHtml(it.src)}" alt="${escapeHtml(it.caption)}" loading="${i === 0 ? "eager" : "lazy"}">
   `).join("");
+  }
+  function syncHeroCaption() {
+    const sub = document.querySelector(".cm-hero-sub");
+    const it = heroSet()[_heroIndex];
+    if (sub && it)
+      sub.textContent = it.caption;
   }
   function showHeroSlide(idx) {
     const wrap = document.querySelector(".cm-hero");
@@ -8053,6 +8075,7 @@ ${post.text}
     wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
       img.classList.toggle("active", i === _heroIndex);
     });
+    syncHeroCaption();
   }
   function startHeroRotator() {
     if (_heroInterval)
@@ -8072,6 +8095,7 @@ ${post.text}
         _heroIndex = 0;
         wrap.querySelectorAll(".cm-hero-img").forEach((img) => img.remove());
         wrap.insertAdjacentHTML("afterbegin", heroImgsHtml());
+        syncHeroCaption();
         return;
       }
       showHeroSlide(_heroIndex + 1);
@@ -8079,27 +8103,22 @@ ${post.text}
   }
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
-    let hello, sub;
-    if (h >= 5 && h < 11) {
+    let hello;
+    if (h >= 5 && h < 11)
       hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A";
-      sub = "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    } else if (h >= 11 && h < 17) {
+    else if (h >= 11 && h < 17)
       hello = "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C";
-      sub = "\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    } else if (h >= 17 && h < 22) {
+    else if (h >= 17 && h < 22)
       hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440";
-      sub = "\u0429\u043E \u0446\u0456\u043A\u0430\u0432\u043E\u0433\u043E \u0431\u0443\u043B\u043E \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    } else {
+    else
       hello = "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456";
-      sub = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430 \u0441\u043F\u0438\u0442\u044C \u2014 \u043E\u0441\u044C \u0434\u043E\u0431\u0456\u0440\u043A\u0430";
-    }
     let who = "\u0433\u0440\u043E\u043C\u0430\u0434\u043E";
     if (isLoggedIn()) {
       const name = (currentUserName() || "").trim().split(/\s+/)[0];
       if (name && name !== "\u0416\u0438\u0442\u0435\u043B\u044C")
         who = name;
     }
-    return { text: `${hello}, ${who}!`, sub };
+    return { text: `${hello}, ${who}!` };
   }
   function updateGreetingName() {
     const el = document.querySelector(".cm-greeting-text");
@@ -8122,14 +8141,13 @@ ${post.text}
     <section class="cm-greeting">
       <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
       <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
     </section>
 
     <section class="cm-hero">
       ${heroImgsHtml()}
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
-        <p class="cm-hero-sub">\u041D\u0430\u0448\u0435 \u043C\u0456\u0441\u0442\u0435\u0447\u043A\u043E \u043D\u0430 \u0412\u043E\u043B\u0438\u043D\u0456</p>
+        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
@@ -9169,7 +9187,11 @@ END:VEVENT`
       }
       cab.querySelector("#acc-hero-name").textContent = [fields.name, fields.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
       cab.querySelector("#acc-hero-place").textContent = fields.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
-      showToast("\u0410\u043D\u043A\u0435\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
+      if (res.partial) {
+        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0456\u043C\u02BC\u044F \u0456 \u0434\u0430\u0442\u0443. \u0421\u0435\u043B\u043E/\u0442\u0435\u043B\u0435\u0444\u043E\u043D \u043F\u043E\u043A\u0438 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u2014 \u0431\u0430\u0437\u0443 \u043E\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u043C \u0447\u0430\u0441\u043E\u043C", 5e3, "error");
+      } else {
+        showToast("\u2705 \u0410\u043D\u043A\u0435\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
+      }
     });
     cab.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
       const go = b.dataset.go;
