@@ -209,6 +209,78 @@ def recent_titles_for(existing: list, geos: list, limit: int = 40) -> list:
             for a in items[:limit]]
 
 
+# ── Прямі джерела Громади (офіційний сайт — без веб-пошуку, безкоштовно) ──────
+# Свіжі заголовки з olytska-gromada.gov.ua інжектяться в промпт як готові
+# теми/фактура: менше сліпих пошуків, більше реальної локальщини.
+DIRECT_SOURCES = {"Громада": ["https://olytska-gromada.gov.ua/news/"]}
+DIRECT_FRESH_DAYS = 14      # беремо лише новини за останні 2 тижні
+_UA = "Mozilla/5.0 (compatible; CSTL-NEWS/1.0; +https://volodymyr221.github.io/CSTL_NEWS/)"
+_direct_cache = {}          # кеш на прогін: 3-4 пакети → 1 HTTP-запит
+
+
+def fetch_direct_sources(mission_name: str) -> list:
+    """Свіжі {title,url,ts} з офіційних сайтів громади.
+    На платформі gromada.org.ua ID новини = unix-час публікації → фільтр свіжості
+    без парсингу дат. Fail-soft: помилка → порожньо, агент працює як раніше."""
+    if mission_name in _direct_cache:
+        return _direct_cache[mission_name]
+    import re
+    import html as _h
+    import urllib.request
+    out = []
+    for base in DIRECT_SOURCES.get(mission_name, []):
+        try:
+            req = urllib.request.Request(base, headers={"User-Agent": _UA})
+            page = urllib.request.urlopen(req, timeout=20).read().decode("utf-8", "replace")
+            seen = set()
+            for url, nid, raw in re.findall(
+                    r'href="(https?://[^"]+/news/(\d+)/?)"[^>]*>(.*?)</a>', page, re.S):
+                title = re.sub(r"\s+", " ", _h.unescape(re.sub(r"<[^>]+>", " ", raw))).strip()
+                if url in seen or len(title) < 16:
+                    continue
+                seen.add(url)
+                if time.time() - int(nid) > DIRECT_FRESH_DAYS * 86400:
+                    continue
+                out.append({"title": title, "url": url, "ts": int(nid)})
+        except Exception as e:
+            print(f"⚠ пряме джерело {base}: {e} (пропускаю — не критично)")
+    out.sort(key=lambda x: -x["ts"])
+    _direct_cache[mission_name] = out[:8]
+    return _direct_cache[mission_name]
+
+
+# ── Валідація джерел (анти-галюцинація: вигадані URL не проходять) ────────────
+_url_alive_cache = {}
+
+
+def url_alive(url: str) -> bool:
+    """False ЛИШЕ на явних 404/410 (сторінки не існує — ознака вигаданого лінка).
+    403/405/таймаут/мережеве — True: не караємо статтю за захист сайту чи CI-мережу."""
+    if url in _url_alive_cache:
+        return _url_alive_cache[url]
+    import urllib.request
+    import urllib.error
+    ok = True
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": _UA}, method="HEAD")
+        urllib.request.urlopen(req, timeout=10)
+    except urllib.error.HTTPError as e:
+        if e.code in (404, 410):
+            ok = False
+        elif e.code == 405:   # HEAD заборонено — одна спроба GET
+            try:
+                req = urllib.request.Request(url, headers={"User-Agent": _UA})
+                urllib.request.urlopen(req, timeout=10)
+            except urllib.error.HTTPError as e2:
+                ok = e2.code not in (404, 410)
+            except Exception:
+                ok = True
+    except Exception:
+        ok = True
+    _url_alive_cache[url] = ok
+    return ok
+
+
 # ── Побудова промпту місії ───────────────────────────────────────────────────
 
 def build_prompt(mission_name: str, cfg: dict, existing: list, target: int = None) -> str:
@@ -275,9 +347,19 @@ def build_prompt(mission_name: str, cfg: dict, existing: list, target: int = Non
             mem_block = ("\n\nПРО ЩО ВЖЕ ПИСАЛИ (памʼять — НЕ повторюй ці історії й ідеї, "
                          "обирай НОВІ теми/кути з палітри):\n" + "\n".join(md))
 
+    # Прямі джерела — свіжина з офіційного сайту громади (безкоштовна фактура).
+    direct_block = ""
+    fresh = fetch_direct_sources(mission_name)
+    if fresh:
+        direct_block = (
+            "\n\nСВІЖЕ З ОФІЦІЙНИХ ДЖЕРЕЛ ГРОМАДИ (готові теми й фактура; це справжні url — "
+            "для курованої новини бери ЦЕЙ url, для оригінальної додай його в sources):\n"
+            + "\n".join(f"- {i['title']} ({time.strftime('%d.%m', time.gmtime(i['ts']))}) → {i['url']}"
+                        for i in fresh))
+
     schema_str = json.dumps(schema, ensure_ascii=False, indent=2)
     return (
-        f"{body}{seen_block}{mem_block}\n\n"
+        f"{body}{direct_block}{seen_block}{mem_block}\n\n"
         "ПРАВИЛА ВІДПОВІДІ:\n"
         "1. Використай інструмент веб-пошуку кілька разів, щоб знайти реальні свіжі матеріали.\n"
         "2. Для КУРОВАНОЇ новини url МАЄ бути справжнім посиланням на сторінку статті у видавця "
@@ -453,6 +535,13 @@ def item_to_article(item: dict) -> dict | None:
         content = pr.strip_html(item.get("content", "")).strip()
         if not sources or len(content) < 200:
             return None
+        # Анти-галюцинація: мертві посилання (404 — ознака вигаданого) викидаємо;
+        # стаття, в якої не лишилось живих джерел, не проходить. Перевіряємо ≤4.
+        alive = [s for s in sources[:4] if url_alive(s)] + sources[4:]
+        if not alive:
+            print(f"  ✂ всі джерела мертві (вигадані?) — відкидаю: {title[:60]}")
+            return None
+        sources = alive
         return {
             "title": title,
             "excerpt": (summary or content)[:400],
@@ -476,6 +565,10 @@ def item_to_article(item: dict) -> dict | None:
     # Курована новина — потрібен справжній url
     url = (item.get("url") or "").strip()
     if not url or not url.startswith(("http://", "https://")) or "google.com/search" in url:
+        return None
+    # Анти-галюцинація: посилання на неіснуючу сторінку (404) = вигадана новина.
+    if not url_alive(url):
+        print(f"  ✂ url мертвий (404) — відкидаю куровану: {title[:60]}")
         return None
     return {
         "title": title,
