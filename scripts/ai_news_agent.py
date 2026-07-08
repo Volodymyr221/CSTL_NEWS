@@ -433,7 +433,9 @@ def call_agent(prompt: str):
         }
         req = urllib.request.Request(API_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
         try:
-            with urllib.request.urlopen(req, timeout=180) as r:
+            # 180с не вистачало: пакет із 3-4 статей + 6 веб-пошуків генерується довго —
+            # у бою (прогін #15) двічі "read timed out", рятував лише повтор. 420с із запасом.
+            with urllib.request.urlopen(req, timeout=420) as r:
                 resp = json.loads(r.read().decode("utf-8"))
         except urllib.error.HTTPError as e:
             body = e.read().decode("utf-8", "replace")[:500]
