@@ -78,19 +78,20 @@ function startHeroRotator() {
 // ── Greeting + Дата (заголовок вкладки) ──────────────────────────────────────
 
 function getGreeting() {
+  // Підзаголовок («Ось що головне…») видалено 08.07 (рішення Роми) — лише дата+вітання.
   const h = new Date().getHours();
-  let hello, sub;
-  if (h >= 5  && h < 11)      { hello = 'Добрий ранок'; sub = 'Ось що головне у нас сьогодні'; }
-  else if (h >= 11 && h < 17) { hello = 'Добридень';    sub = 'Ось що головне у нас сьогодні'; }
-  else if (h >= 17 && h < 22) { hello = 'Добрий вечір'; sub = 'Що цікавого було сьогодні'; }
-  else                        { hello = 'Доброї ночі';  sub = 'Громада спить — ось добірка'; }
+  let hello;
+  if (h >= 5  && h < 11)      hello = 'Добрий ранок';
+  else if (h >= 11 && h < 17) hello = 'Добридень';
+  else if (h >= 17 && h < 22) hello = 'Добрий вечір';
+  else                        hello = 'Доброї ночі';
   // Персоналізація: якщо юзер вписав ім'я в особистому кабінеті — вітаємо по імені.
   let who = 'громадо';
   if (isLoggedIn()) {
     const name = (currentUserName() || '').trim().split(/\s+/)[0];
     if (name && name !== 'Житель') who = name;
   }
-  return { text: `${hello}, ${who}!`, sub };
+  return { text: `${hello}, ${who}!` };
 }
 
 // Оновити вітання наживо, коли профіль/ім'я підвантажились (onAuthChange).
@@ -119,7 +120,6 @@ function renderSkeleton() {
     <section class="cm-greeting">
       <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
       <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-      <div class="cm-greeting-sub">${escapeHtml(greeting.sub)}</div>
     </section>
 
     <section class="cm-hero">
