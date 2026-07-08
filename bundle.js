@@ -510,13 +510,15 @@
   async function submitPost(payload) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const row = { ...payload, status: "pending" };
-    const { error } = await supa.from("posts").insert(row);
+    const { data, error } = await supa.rpc("submit_board_post", { payload });
     if (error) {
       console.warn("[supabase] submitPost error:", error);
       return { ok: false, error: error.message };
     }
-    return { ok: true };
+    if (data && data.ok === false) {
+      return { ok: false, error: data.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438" };
+    }
+    return { ok: true, status: data && data.status || "pending" };
   }
   async function submitDiscussion(payload) {
     if (!supa)
@@ -1661,6 +1663,7 @@
         submitBtn.textContent = "\u041D\u0430\u0434\u0441\u0438\u043B\u0430\u0454\u043C\u043E\u2026";
       }
       const payload = buildPayload(state);
+      let published = false;
       if (isSupabaseReady()) {
         const result = await submitPost(payload);
         if (!result.ok) {
@@ -1671,11 +1674,17 @@
           showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (result.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438"), 4500);
           return;
         }
+        published = result.status === "published";
       } else {
         console.info("[submit] Supabase \u043D\u0435 \u0433\u043E\u0442\u043E\u0432\u0438\u0439 \u2014 payload \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u043B\u0438\u0448\u0435 \u043B\u043E\u043A\u0430\u043B\u044C\u043D\u043E:", payload);
       }
       close();
-      showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
+      if (published) {
+        window.dispatchEvent(new Event("cstl-posts-changed"));
+        showToast("\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u043E\u0432\u0430\u043D\u043E \u2713 \u0412\u0438 \u0434\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440.", 4e3);
+      } else {
+        showToast("\u0414\u044F\u043A\u0443\u0454\u043C\u043E! \u0417\u0430\u043F\u0438\u0442 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443.", 4e3);
+      }
     });
   }
   function buildPayload(state) {
@@ -1685,8 +1694,6 @@
       text: state.text.trim(),
       author: state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C",
       photos: state.photos.filter(Boolean),
-      status: "pending",
-      owner_uid: currentUserId() || null,
       category: state.category,
       color: cat.color,
       contact: state.contact.trim() || null,
@@ -9247,6 +9254,7 @@ END:VEVENT`
     const place = val.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
     const prefs = loadNotifPrefs(u.id);
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const trustHtml = p.trusted ? `<div class="acc-cab-trust acc-cab-trust--on">\u2705 \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440 \u2014 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443</div>` : `<div class="acc-cab-trust">\u2B50 ${p.approved_count || 0}/5 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u044C \u0434\u043E \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457</div>`;
     const cab = document.createElement("div");
     cab.id = "acc-cab";
     cab.className = "acc-cab";
@@ -9262,6 +9270,7 @@ END:VEVENT`
           <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
           <div class="acc-cab-email">${escapeHtml(email)}</div>
           <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
+          ${trustHtml}
         </div>
       </div>
 

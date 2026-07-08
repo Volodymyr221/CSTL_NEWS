@@ -145,6 +145,10 @@ async function openAccount() {
   const place = val.settlement || 'Учасник спільноти';
   const prefs = loadNotifPrefs(u.id);
   const today = new Date().toISOString().slice(0, 10);
+  // Репутація Дошки (Захід 2): 5 схвалених оголошень → автопублікація надалі.
+  const trustHtml = p.trusted
+    ? `<div class="acc-cab-trust acc-cab-trust--on">✅ Довірений автор — оголошення публікуються одразу</div>`
+    : `<div class="acc-cab-trust">⭐ ${p.approved_count || 0}/5 схвалень до автопублікації</div>`;
 
   const cab = document.createElement('div');
   cab.id = 'acc-cab';
@@ -161,6 +165,7 @@ async function openAccount() {
           <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
           <div class="acc-cab-email">${escapeHtml(email)}</div>
           <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
+          ${trustHtml}
         </div>
       </div>
 
