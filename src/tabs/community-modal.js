@@ -180,8 +180,8 @@ export function openBoardModal() {
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-title">Заголовок <span class="bm-label-hint">(необов'язково)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="Напр. Продам мотоцикл" value="${escapeHtml(state.title)}">
+        <label class="bm-label" for="bm-title">Заголовок <span class="bm-label-req">*</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="Напр. Продам мотоцикл" value="${escapeHtml(state.title)}">
       </div>
 
       <div class="bm-section">
@@ -342,7 +342,7 @@ export function openBoardModal() {
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
-        ${state.title.trim() ? `<h3 class="cm-board-title">${escapeHtml(state.title.trim())}</h3>` : ''}
+        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
@@ -373,6 +373,11 @@ export function openBoardModal() {
   // ── Submit ──
   wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!state.title.trim()) {
+      showToast('Додайте заголовок оголошення', 2500);
+      wrap.querySelector('#bm-title')?.focus();
+      return;
+    }
     if (!state.text.trim()) {
       showToast('Будь ласка, заповніть текст', 2500);
       wrap.querySelector('#bm-text')?.focus();
@@ -437,7 +442,7 @@ function buildPayload(state) {
     category:  state.category,
     color:     cat.color,
     contact:   state.contact.trim() || null,
-    title:     state.title.trim() || null,
+    title:     state.title.trim(),   // обов'язковий (Д-16); сервер теж перевіряє
     tags:      [],
   };
 }

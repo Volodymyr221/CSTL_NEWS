@@ -1467,8 +1467,8 @@
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-title">\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" placeholder="\u041D\u0430\u043F\u0440. \u041F\u0440\u043E\u0434\u0430\u043C \u043C\u043E\u0442\u043E\u0446\u0438\u043A\u043B" value="${escapeHtml(state.title)}">
+        <label class="bm-label" for="bm-title">\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A <span class="bm-label-req">*</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="\u041D\u0430\u043F\u0440. \u041F\u0440\u043E\u0434\u0430\u043C \u043C\u043E\u0442\u043E\u0446\u0438\u043A\u043B" value="${escapeHtml(state.title)}">
       </div>
 
       <div class="bm-section">
@@ -1615,7 +1615,7 @@
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
         <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
-        ${state.title.trim() ? `<h3 class="cm-board-title">${escapeHtml(state.title.trim())}</h3>` : ""}
+        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>
@@ -1643,6 +1643,11 @@
     }
     wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!state.title.trim()) {
+        showToast("\u0414\u043E\u0434\u0430\u0439\u0442\u0435 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 2500);
+        wrap.querySelector("#bm-title")?.focus();
+        return;
+      }
       if (!state.text.trim()) {
         showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
         wrap.querySelector("#bm-text")?.focus();
@@ -1697,7 +1702,8 @@
       category: state.category,
       color: cat.color,
       contact: state.contact.trim() || null,
-      title: state.title.trim() || null,
+      title: state.title.trim(),
+      // обов'язковий (Д-16); сервер теж перевіряє
       tags: []
     };
   }
