@@ -8257,14 +8257,8 @@ ${post.text}
         const heroTop = hero.getBoundingClientRect().top;
         const heroH = hero.offsetHeight;
         const C = block.getBoundingClientRect().top - heroTop;
-        const C0 = heroH - 80;
-        const travel = Math.max(0, C0 - C);
-        let h = Math.min(travel * 0.6, Math.max(0, C));
-        let top = C - h;
-        if (top < 0) {
-          top = 0;
-          h = Math.max(0, C);
-        }
+        const top = Math.max(0, Math.min(heroH, C));
+        const h = heroH - top;
         band.style.top = top + "px";
         band.style.height = h + "px";
         band.style.opacity = h > 2 ? "1" : "0";

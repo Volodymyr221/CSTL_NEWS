@@ -703,22 +703,24 @@
   /* Блюр керується інлайн зі скролу (прогресивний, community.js) — без CSS-transition,
      інакше він лагав би за пальцем при пофреймовому оновленні. */
 }
-/* Смуга блюру: НИЗ приклеєний до верху верхньої картки, росте ВГОРУ разом із нею
-   (top+height задає скрол у community.js). backdrop-filter розмиває картинку ПІД
-   собою; мʼякий верхній край (mask) — щоб межа блюр/чітко не була різкою: фрост
-   плавно згасає догори у чітке фото. Рішення Роми 08.07. */
+/* Фрост-підкладка ПІД карткою: площина на всю ширину, ВЕРХ приклеєний до верху
+   верхньої картки, тягнеться вниз до низу героя (top+height задає скрол у
+   community.js). z-index:2 — над картинками (z1/z2), але ПІД оверлеєм «Олика» (z3)
+   і ПІД карткою Табло (герой z0 < картка z1). backdrop-filter розмиває фото під
+   собою; мʼякий ВЕРХНІЙ край (mask) — фрост плавно наростає донизу від краю картки.
+   Рішення Роми 08.07. */
 .cm-hero-blurband {
   position: absolute;
   left: 0; right: 0;
   top: 0;
   height: 0;
   opacity: 0;
-  z-index: 4;                 /* над картинками (z-index:2), під бежевим низом (::after z-index:3 — але той унизу) */
+  z-index: 2;
   pointer-events: none;
-  -webkit-backdrop-filter: blur(8px);
-          backdrop-filter: blur(8px);
-  -webkit-mask-image: linear-gradient(to top, #000 68%, transparent 100%);
-          mask-image: linear-gradient(to top, #000 68%, transparent 100%);
+  -webkit-backdrop-filter: blur(9px);
+          backdrop-filter: blur(9px);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 14%, #000 100%);
 }
 /* Низ картинки м'яко переходить у бежевий (колір сторінки) — без різкого краю. */
 .cm-hero::after {
