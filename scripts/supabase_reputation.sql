@@ -93,9 +93,14 @@ declare
   v_recent  integer := 0;
   v_status  text;
   v_text    text    := nullif(btrim(coalesce(payload->>'text','')), '');
+  v_title   text    := nullif(btrim(coalesce(payload->>'title','')), '');
 begin
   if v_text is null then
     return jsonb_build_object('ok', false, 'error', 'Порожній текст');
+  end if;
+  -- Д-16: заголовок обов'язковий (клієнт валідує теж; тут — авторитетно на сервері).
+  if v_title is null then
+    return jsonb_build_object('ok', false, 'error', 'Потрібен заголовок');
   end if;
 
   -- Рейт-ліміт: не більше 3 постів за останню хвилину на автора.
@@ -126,7 +131,7 @@ begin
     payload->>'category',
     coalesce(payload->>'color', 'yellow'),
     payload->>'contact',
-    payload->>'title',
+    left(v_title, 80),   -- Д-16: обрізаємо до 80 (узгоджено з клієнтським maxlength)
     coalesce((select array_agg(value) from jsonb_array_elements_text(payload->'tags')), '{}'),
     v_status,
     v_uid,

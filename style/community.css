@@ -1120,6 +1120,11 @@
   letter-spacing: 0;
   margin-left: 4px;
 }
+/* Позначка обов'язкового поля (Д-16) */
+.bm-label-req {
+  color: var(--red, #722F37);
+  margin-left: 2px;
+}
 /* Ім'я з акаунта — нередаговане (анонімність прибрано) */
 .bm-author-fixed {
   display: inline-flex;
