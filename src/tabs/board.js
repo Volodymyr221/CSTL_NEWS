@@ -2039,6 +2039,41 @@ export async function openChatById(postId) {
   if (post) openChatModal(post);
 }
 
+// Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
+// rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
+// прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
+let _headerCollapseWired = false;
+function setupHeaderCollapse() {
+  if (_headerCollapseWired) return;
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+  _headerCollapseWired = true;
+  const THRESHOLD = 90;   // «через деякий час» — до цього шапка завжди повна
+  const DELTA = 6;        // анти-джитер: реагуємо лише на помітний рух
+  let lastY = main.scrollTop;
+  let ticking = false;
+  const apply = () => {
+    ticking = false;
+    if (main.dataset.tab !== 'board') return;   // тільки вкладка Дошка
+    const controls = getBoardRoot()?.querySelector('.bd-controls');
+    if (!controls) return;
+    const y = main.scrollTop;
+    if (y <= THRESHOLD) {
+      controls.classList.remove('bd-controls--collapsed');   // біля верху — повна
+      lastY = y;
+    } else if (y > lastY + DELTA) {
+      controls.classList.add('bd-controls--collapsed');      // вниз — ховаємо
+      lastY = y;
+    } else if (y < lastY - DELTA) {
+      controls.classList.remove('bd-controls--collapsed');   // вгору — показуємо
+      lastY = y;
+    }
+  };
+  main.addEventListener('scroll', () => {
+    if (!ticking) { ticking = true; requestAnimationFrame(apply); }
+  }, { passive: true });
+}
+
 export function initBoard() {
   attachBoardDelegation();
   attachRealtime();
@@ -2063,6 +2098,9 @@ export function initBoard() {
       renderAll();
     }
   });
+  // Авто-ховання шапки при скролі Дошки (гортаєш вниз — ховаються назва+категорії;
+  // вгору — з'являються). Лічильник/локація + пошук лишаються закріпленими.
+  setupHeaderCollapse();
   // Вхід/вихід → перезавантажити дошку: закладки, підсвітку «моє», таб «Збережені».
   onAuthChange(() => {
     if (!isLoggedIn()) {

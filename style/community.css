@@ -2382,6 +2382,23 @@
   pointer-events: none;
 }
 
+/* Авто-ховання при скролі вниз (byyou): назва «Дошка оголошень» + категорії
+   згортаються, subrow (лічильник+локація) і пошук лишаються закріпленими. */
+.bd-title,
+.bd-cat-wrap {
+  transition: max-height 0.28s ease, opacity 0.2s ease, margin 0.28s ease;
+  max-height: 80px;   /* із запасом над реальною висотою, щоб не різати вміст */
+  overflow: hidden;
+}
+.bd-controls--collapsed .bd-title,
+.bd-controls--collapsed .bd-cat-wrap {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  pointer-events: none;
+}
+
 /* Таби типів постів */
 .bd-tabs {
   display: flex;

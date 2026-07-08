@@ -5189,6 +5189,44 @@ ${post.text}
     if (post)
       openChatModal(post);
   }
+  var _headerCollapseWired = false;
+  function setupHeaderCollapse() {
+    if (_headerCollapseWired)
+      return;
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    _headerCollapseWired = true;
+    const THRESHOLD = 90;
+    const DELTA = 6;
+    let lastY = main.scrollTop;
+    let ticking = false;
+    const apply = () => {
+      ticking = false;
+      if (main.dataset.tab !== "board")
+        return;
+      const controls = getBoardRoot()?.querySelector(".bd-controls");
+      if (!controls)
+        return;
+      const y = main.scrollTop;
+      if (y <= THRESHOLD) {
+        controls.classList.remove("bd-controls--collapsed");
+        lastY = y;
+      } else if (y > lastY + DELTA) {
+        controls.classList.add("bd-controls--collapsed");
+        lastY = y;
+      } else if (y < lastY - DELTA) {
+        controls.classList.remove("bd-controls--collapsed");
+        lastY = y;
+      }
+    };
+    main.addEventListener("scroll", () => {
+      if (!ticking) {
+        ticking = true;
+        requestAnimationFrame(apply);
+      }
+    }, { passive: true });
+  }
   function initBoard() {
     attachBoardDelegation();
     attachRealtime();
@@ -5210,6 +5248,7 @@ ${post.text}
         renderAll();
       }
     });
+    setupHeaderCollapse();
     onAuthChange(() => {
       if (!isLoggedIn()) {
         savedIds = /* @__PURE__ */ new Set();
