@@ -2344,13 +2344,13 @@
 .bd-title {
   font-size: 18px;
   font-weight: 800;
-  color: var(--red, #722F37);   /* фірмовий бордовий відтінок — заголовок виділяється */
+  color: #2E1216;   /* темний, майже чорний бордовий — насичений, виділяється */
   line-height: 1.15;
   margin: 0;
   text-align: center;
   text-transform: uppercase;   /* «ДОШКА ОГОЛОШЕНЬ» */
   letter-spacing: 1.4px;        /* трохи ширший інтервал між літерами */
-  text-shadow: 0 1px 3px rgba(114, 47, 55, 0.22);   /* м'яка тінь для насиченості */
+  text-shadow: 0 1px 4px rgba(30, 8, 11, 0.35);   /* трохи сильніша м'яка тінь */
 }
 .bd-subrow {
   display: flex;
