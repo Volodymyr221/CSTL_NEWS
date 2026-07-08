@@ -128,7 +128,8 @@ html, body {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 16px;
+  /* Ліве поле менше — бургер ближче до краю (рішення Роми 08.07). Праве лишаємо 16px. */
+  padding: 0 16px 0 10px;
   z-index: 100;
   overflow: hidden;
   box-shadow:
@@ -152,7 +153,7 @@ html, body {
 .header-left {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 4px;   /* лого ближче до бургера (рішення Роми 08.07; було 10px) */
   flex-shrink: 0;
 }
 .header-logo {

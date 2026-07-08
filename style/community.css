@@ -358,18 +358,17 @@
 .cm-contact-hero {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 18px 18px;
+  gap: 12px;
+  padding: 11px 14px;   /* компактніше (блок-доповнення, рішення Роми 08.07) */
   background: linear-gradient(135deg, #A8334A 0%, #722F37 100%);
-  border-radius: 18px;
+  border-radius: 14px;
   text-decoration: none;
   color: white;
-  box-shadow: 0 4px 14px rgba(114, 47, 55, 0.30), 0 1px 3px rgba(0,0,0,0.12);
+  box-shadow: 0 3px 10px rgba(114, 47, 55, 0.26);
   position: relative;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
   transition: transform 0.1s;
-  animation: cm-pulse-border 2s ease-in-out infinite;
 }
 .cm-contact-hero:active { transform: scale(0.98); }
 
@@ -381,8 +380,8 @@
 
 .cm-contact-hero-icon {
   display: inline-flex;
-  width: 44px;
-  height: 44px;
+  width: 34px;
+  height: 34px;
   color: white;
   flex-shrink: 0;
 }
@@ -396,7 +395,7 @@
   min-width: 0;
 }
 .cm-contact-hero-name {
-  font-size: 18px;
+  font-size: 15px;
   font-weight: 800;
   line-height: 1.15;
   letter-spacing: 0.2px;
@@ -409,7 +408,7 @@
   letter-spacing: 0.6px;
 }
 .cm-contact-hero-phone {
-  font-size: 36px;
+  font-size: 24px;
   font-weight: 800;
   font-family: Georgia, serif;
   font-variant-numeric: tabular-nums;
@@ -421,7 +420,7 @@
 .cm-contact-group {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 .cm-contact-group-title {
   font-size: 11px;
@@ -442,8 +441,8 @@
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 4px;
-  padding: 12px;
+  gap: 3px;
+  padding: 9px 10px;
   background: #FFF4E6;
   border: 1px solid rgba(245, 158, 11, 0.22);
   border-left: 3px solid #E67E22;
@@ -483,8 +482,8 @@
 .cm-contact-row {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 12px 14px;
+  gap: 10px;
+  padding: 9px 12px;
   background: #EAF6EC;
   border: 1px solid rgba(46, 125, 50, 0.18);
   border-left: 3px solid #2E7D32;
@@ -689,7 +688,7 @@
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
-  height: 430px;             /* більша картинка (фінальний полиш обоїв 07.07) */
+  height: 560px;             /* вітальний банер: показуємо БІЛЬШЕ костелу (Рома 08.07) */
   overflow: hidden;
   z-index: 0;                 /* позаду контенту (блоки — z-index:1) */
   background: var(--paper-deep);
@@ -708,7 +707,7 @@
 /* Легкий блюр фону при скролі (контент «наїжджає» — картинка стає фоновою). */
 .cm-hero.cm-blur { filter: blur(4px); }
 /* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою. */
-.cm-hero-spacer { height: 250px; }
+.cm-hero-spacer { height: 460px; }  /* картки нижче вищого банера (Рома 08.07) */
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
 .cm-greeting,
 .cm-block,
@@ -720,6 +719,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 38%;   /* показати більше костелу — верх+низ (Рома 08.07) */
   display: block;
   opacity: 0;
   transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
@@ -733,7 +733,7 @@
   flex-direction: column;
   justify-content: flex-end;
   /* «Олика»+підпис піднято над бежевим низом (щоб не тонули у бежевому переході). */
-  padding: 16px 18px 104px;
+  padding: 14px 16px 70px;   /* верхній текст у кут, «Олика» нижче над картками (Рома 08.07) */
   /* Затемнення зверху (під вітання) і смуга під «Олика»; низ прозорий — там бежевий перехід. */
   background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 24%, transparent 50%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.12) 82%, transparent 90%);
   color: white;
