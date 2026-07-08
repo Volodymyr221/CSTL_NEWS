@@ -1484,6 +1484,9 @@ function renderAll() {
   // Zoom-перегляд тільки для board-стікерів
   initBoardNoteExpand(el);
 
+  // Відступ тіла = реальна висота шапки (щоб картки не залазили під неї). Через rAF —
+  // щоб вимір відбувся після того як браузер порахував layout свіжої розмітки.
+  requestAnimationFrame(syncBoardBodyOffset);
 }
 
 function renderBodyOnly() {
@@ -2063,6 +2066,24 @@ export async function openChatById(postId) {
   if (post) openChatModal(post);
 }
 
+// Відступ тіла Дошки = реальна висота «прибитої» шапки (.bd-controls), щоб картки
+// не залазили під неї. Раніше це було магічне число в CSS (padding-top), яке «пливло»
+// щоразу як у шапку щось додавали (Д-11 його зламав, додавши заголовок). Тепер міряємо
+// висоту в рантаймі → self-correcting: хоч би що додали в шапку, картки сядуть рівно під нею.
+const BOARD_BODY_GAP = 12;   // зазор між нижнім краєм шапки і верхом коркової панелі
+function syncBoardBodyOffset() {
+  const root = getBoardRoot();
+  if (!root || activeType !== 'board') return;   // тільки board (у нього шапка з заголовком+чіпами)
+  const controls = root.querySelector('.bd-controls');
+  const body = root.querySelector('.bd-body');
+  if (!controls || !body) return;
+  // Міряємо лише коли шапка РОЗГОРНУТА — у згорнутому стані (скрол вниз) висота
+  // занижена, і картки б підстрибнули. У згорнутому лишаємо вже виставлений відступ.
+  if (controls.classList.contains('bd-controls--collapsed')) return;
+  const h = controls.offsetHeight;
+  if (h > 0) body.style.paddingTop = (h + BOARD_BODY_GAP) + 'px';   // h=0 → вкладка схована, лишаємо CSS-запас
+}
+
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
 // прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
@@ -2096,6 +2117,8 @@ function setupHeaderCollapse() {
   main.addEventListener('scroll', () => {
     if (!ticking) { ticking = true; requestAnimationFrame(apply); }
   }, { passive: true });
+  // Зміна розміру екрана (поворот, зміна вікна) → перерахувати відступ тіла під шапку.
+  window.addEventListener('resize', () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
 }
 
 export function initBoard() {
@@ -2121,6 +2144,10 @@ export function initBoard() {
       activeLocation = COMMUNITY_ALL;
       renderAll();
     }
+    // Відступ під шапку: при ВХОДІ на Дошку вкладка щойно стала видимою, тому
+    // тепер .bd-controls має реальну висоту (на старті вона була схована → offsetHeight=0
+    // → вимір не спрацьовував). Міряємо тут. rAF — дочекатись layout після показу.
+    if (tab === 'board') requestAnimationFrame(syncBoardBodyOffset);
   });
   // Авто-ховання шапки при скролі Дошки (гортаєш вниз — ховаються назва+категорії;
   // вгору — з'являються). Лічильник/локація + пошук лишаються закріпленими.

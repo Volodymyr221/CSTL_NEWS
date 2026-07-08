@@ -4647,6 +4647,7 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
+    requestAnimationFrame(syncBoardBodyOffset);
   }
   function renderBodyOnly() {
     const el = getBoardRoot();
@@ -5210,6 +5211,21 @@ ${post.text}
     if (post)
       openChatModal(post);
   }
+  var BOARD_BODY_GAP = 12;
+  function syncBoardBodyOffset() {
+    const root = getBoardRoot();
+    if (!root || activeType !== "board")
+      return;
+    const controls = root.querySelector(".bd-controls");
+    const body = root.querySelector(".bd-body");
+    if (!controls || !body)
+      return;
+    if (controls.classList.contains("bd-controls--collapsed"))
+      return;
+    const h = controls.offsetHeight;
+    if (h > 0)
+      body.style.paddingTop = h + BOARD_BODY_GAP + "px";
+  }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
     if (_headerCollapseWired)
@@ -5247,6 +5263,7 @@ ${post.text}
         requestAnimationFrame(apply);
       }
     }, { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
   }
   function initBoard() {
     attachBoardDelegation();
@@ -5268,6 +5285,8 @@ ${post.text}
         activeLocation = COMMUNITY_ALL;
         renderAll();
       }
+      if (tab === "board")
+        requestAnimationFrame(syncBoardBodyOffset);
     });
     setupHeaderCollapse();
     onAuthChange(() => {
