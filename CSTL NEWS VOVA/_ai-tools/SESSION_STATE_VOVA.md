@@ -8,6 +8,24 @@
 
 ---
 
+## 📝 2026-07-08 — Д-15: аудит приватного чату + фікси (ЗАДЕПЛОЄНО)
+
+### Знахідки аудиту (звіт)
+- **S1 🔴 CONFIRMED** — учасник треда міг РЕДАГУВАТИ/ВИДАЛЯТИ ЧУЖІ повідомлення. RLS `messages` мала лише UPDATE-політику "msg recipient marks read" (пускає обох на будь-яку колонку); `supabase_chat_actions.sql` це прямо визнавав («лише своє — в UI, серверне — follow-up»). Д-15 = той follow-up.
+- **S2 🟡** — `thread_user_state` існувала в БД, але SQL її створення НЕ був закомічений (борг СИ-5).
+- **F5 🟡 CONFIRMED** — архівована розмова з новим непрочитаним: глоб.бейдж рахує, а список ховає архівні → «є непрочитане, але ніде нема».
+- **F1–F4 = P-2/P-5/P-8/P-9 (зона Push/Рома)** — підтверджено, ПЕРЕДАВ Ромі через BOARD (не чіпав): F1🔴 фото-пуш падає (`send-chat-push:73` `msg.text.length` при `text=null` → 500); F2 чат сам не просить дозвіл пуша; F3 нема in-app банера; F4 тап по пушу не відкриває конкретну розмову.
+- ✅ Перевірено ОК: SELECT-RLS threads/messages (лише двоє), getOrCreateThread INSERT-RLS, авторизація send-chat-push, cleared_at повторна поява.
+
+### Зроблено (рішення Вови: тільки зона Дошки S1+S2+F5; S1 — тригер)
+- ✅ **S1** — `scripts/supabase_chat_edit_guard.sql`: BEFORE UPDATE тригер `messages_guard_own_edit` — зміну вмісту (text/photo_url/edited_at/deleted_at) пускає лише автору; read_at — обом; service_role без обмежень. **SQL накатав Вова вручну (SQL Editor).**
+- ✅ **S2** — `scripts/supabase_thread_user_state.sql`: схема + RLS «own thread state» (uid=auth.uid()). **Накатав Вова.**
+- ✅ **F5** — `board-chat.js`: `autoUnarchiveUnread()` — архівована розмова з непрочитаним авто-виринає у «Всі».
+- ✅ `node build.js` exit 0 + `node --check` ок. `/finish` гілки `vova/chat-audit` (PR → merge в main).
+- ⚠️ Живий тест S1 через конектор — НЕ вдалось (Supabase MCP «requires approval» всю сесію). Логіка тригера перевірена статично; Вова підтвердив успішний Run обох SQL.
+
+---
+
 ## 📝 2026-07-08 — Д-1: Репутація + автопублікація Дошки (гілка `vova/board-reputation`)
 
 - ✅ **БД (Supabase, прод, project `uabyfecseqnemvcqhdem`)** — застосовано через MCP `apply_migration`:
@@ -16,7 +34,7 @@
   - Живий тест на проді (тестові пости, потім видалені): 5× pending→published → `trusted=true`; reject → скидання в 0/false; RPC від довіреного → `status:'published'` одразу. Усе підтверджено.
 - ✅ **Код:** `src/core/supabase.js` (`submitPost` → RPC замість raw insert), `src/tabs/community-modal.js` (payload без мертвих `status`/`owner_uid`; тост+`cstl-posts-changed` подія якщо автопублікація), `src/core/account-ui.js` (бейдж довіри в hero «Мого кабінету» — новий, старого `acc-row` вже нема, Рома переписала на `acc-cab`), `style/account.css` (`.acc-cab-trust`). `admin.html` НЕ чіпав — тригери підхоплюють його існуючий `approvePost`/`rejectPost` без змін.
 - ✅ `node --check` + `node build.js` (exit 0, esbuild довелось `npm install` — не було в оточенні) + Playwright смоук (без JS-помилок від моїх змін; live Supabase round-trip у цій пісочниці не перевірити — CDN `supabase-js` блокує проксі оточення, це обмеження середовища, не код).
-- 🔜 **Гілку `vova/board-reputation` перестворено НАБІЛО з поточного `main`** (стара версія була на 54+ комітів позаду — код+SQL звідти перенесено вручну, старий `openModal`/`acc-row` де раніше сидів бейдж довіри вже не існує). Ще НЕ запушено/не `/finish` — чекаю твого підтвердження після цього резюме.
+- 🔜 **Гілку `vova/board-reputation` перестворено НАБІЛО з поточного `main`** (стара версія була на 54+ комітів позаду — код+SQL звідти перенесено вручну, старий `openModal`/`acc-row` де раніше сидів бейдж довіри вже не існує). ЗАДЕПЛОЄНО PR #267.
 
 ---
 

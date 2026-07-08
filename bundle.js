@@ -2684,6 +2684,15 @@
           </div>`;
         }).join("");
       };
+      const autoUnarchiveUnread = async () => {
+        const toFix = threads.filter((t) => unread.get(t.id) > 0 && stOf(t.id).archived);
+        for (const t of toFix) {
+          const prev = states.get(t.id) || {};
+          states.set(t.id, { ...prev, archived: false });
+          setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
+        }
+      };
+      await autoUnarchiveUnread();
       renderThreads();
       searchEl.addEventListener("input", () => {
         query = searchEl.value;
@@ -2815,6 +2824,7 @@
         threads = t;
         unread = u;
         states = s;
+        await autoUnarchiveUnread();
         applyEmptyState();
         renderThreads();
       };
