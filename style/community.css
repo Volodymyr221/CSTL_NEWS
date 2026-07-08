@@ -2321,7 +2321,7 @@
    Групу трохи опущено вниз (ближче до пошуку) — за фідбеком Вови. */
 .bd-titlebar {
   margin-top: 8px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 .bd-title {
   font-size: 18px;
@@ -2338,7 +2338,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  margin-top: 4px;
+  margin-top: 12px;   /* рядок лічильник+локація опущено нижче (назва лишається) */
 }
 /* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
 .bd-count {
