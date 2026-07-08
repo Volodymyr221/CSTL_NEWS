@@ -3329,6 +3329,21 @@
   function isCommunityWide(loc) {
     return !loc || loc === COMMUNITY_ALL;
   }
+  function sizeLocSelect(sel) {
+    if (!sel)
+      return;
+    const opt = sel.options[sel.selectedIndex];
+    const txt = (opt ? opt.text : "") || "";
+    const cs = getComputedStyle(sel);
+    const canvas = sizeLocSelect._c || (sizeLocSelect._c = document.createElement("canvas"));
+    const ctx = canvas.getContext("2d");
+    ctx.font = `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
+    const shown = cs.textTransform === "uppercase" ? txt.toUpperCase() : txt;
+    let w = ctx.measureText(shown).width;
+    w += (parseFloat(cs.letterSpacing) || 0) * shown.length;
+    w += parseFloat(cs.paddingRight) || 0;
+    sel.style.width = Math.ceil(w) + 2 + "px";
+  }
   function pluralAds(n) {
     const d = n % 10, dd = n % 100;
     if (d === 1 && dd !== 11)
@@ -4607,10 +4622,15 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    document.getElementById("bd-loc-select")?.addEventListener("change", (e) => {
-      activeLocation = e.target.value;
-      renderBodyOnly(el);
-    });
+    const locSel = document.getElementById("bd-loc-select");
+    if (locSel) {
+      sizeLocSelect(locSel);
+      locSel.addEventListener("change", (e) => {
+        activeLocation = e.target.value;
+        sizeLocSelect(locSel);
+        renderBodyOnly(el);
+      });
+    }
     el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
       btn.addEventListener("click", () => {
         const cat = btn.dataset.bdCat;
