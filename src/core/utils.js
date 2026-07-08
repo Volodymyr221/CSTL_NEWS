@@ -248,6 +248,30 @@ export function containsProfanity(text) {
   return false;
 }
 
+// ── Схід/захід сонця (формула NOAA, спрощена) ────────────────────────────────
+// Рахує сама щодня — жодних ручних оновлень «раз на 3 місяці». Точність ±3 хв,
+// цього досить для перемикання фото день/вечір. Працює офлайн (чиста математика).
+// За замовчуванням — координати Олики (50.717 пн.ш., 25.810 сх.д.).
+export function sunTimes(date = new Date(), lat = 50.717, lon = 25.810) {
+  const rad = Math.PI / 180;
+  const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 86400000); // день року
+  const decl = -23.44 * rad * Math.cos(2 * Math.PI / 365 * (doy + 10));           // деклінація Сонця
+  // 90.833° — зеніт з урахуванням рефракції атмосфери і радіуса диска сонця
+  const cosH = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(decl))
+             / (Math.cos(lat * rad) * Math.cos(decl));
+  if (cosH < -1 || cosH > 1) return null;   // полярний день/ніч — не про Олику
+  const H = Math.acos(cosH) / rad;          // пів-дуга світлового дня, у градусах
+  const B = 2 * Math.PI * (doy - 81) / 364; // рівняння часу (хвилини)
+  const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+  const noonMin = 720 - 4 * lon - eot;      // сонячний полудень, хвилини UTC
+  const mk = m => {
+    const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+    d.setUTCMinutes(Math.round(m));
+    return d;
+  };
+  return { sunrise: mk(noonMin - 4 * H), sunset: mk(noonMin + 4 * H) };
+}
+
 // true якщо текст схожий на спам/беззмістовний набір (консервативно — щоб не блокувати «Ок»/«Так»)
 export function looksLikeSpam(text) {
   const t = String(text || '').trim();
