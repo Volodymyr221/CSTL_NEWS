@@ -7,7 +7,7 @@
 //   Hero фото → Greeting (дата + Добрий ранок/вечір) → Дошка → Погода
 //   → Світло → Автобус → Подія громади → Контакти.
 
-import { escapeHtml, attachSwipe } from '../core/utils.js';
+import { escapeHtml, sunTimes } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   renderWeatherBlock,
@@ -19,57 +19,60 @@ import {
   renderCommunityNews,
 } from './community-blocks.js';
 
-// ── Hero ротатор: 3 фото Олики, fade-transition 0.8s, інтервал 6s ────────────
-const HERO_IMAGES = [
-  './photos/olyka-1.jpg',
-  './photos/olyka-2.jpg',
-  './photos/olyka-3.jpg',
-];
+// ── Hero: 4 денних + 4 вечірніх фото Олики, fade 0.55s, інтервал 6s ──────────
+// Набір обирається за сходом/заходом сонця (sunTimes — авто-розрахунок щодня).
+// Ручного гортання НЕМАЄ (рішення Роми 08.07): без свайпу і крапок — лише авто.
+const HERO_DAY     = [1, 2, 3, 4].map(i => `./photos/olyka.day-${i}.jpg`);
+const HERO_EVENING = [1, 2, 3, 4].map(i => `./photos/olyka.evening-${i}.jpg`);
 
 let _heroInterval = null;
 let _heroIndex = 0;
+let _heroIsDay = null;   // поточний режим — щоб зловити схід/захід прямо на тіку
+
+function isDaytime(now = new Date()) {
+  const t = sunTimes(now);
+  if (!t) return true;                       // fail-soft: без розрахунку — день
+  return now >= t.sunrise && now < t.sunset;
+}
+
+function heroSet() { return isDaytime() ? HERO_DAY : HERO_EVENING; }
+
+function heroImgsHtml() {
+  return heroSet().map((url, i) => `
+    <img class="cm-hero-img${i === 0 ? ' active' : ''}" src="${escapeHtml(url)}" alt="${i === 0 ? 'Олика' : ''}" loading="${i === 0 ? 'eager' : 'lazy'}">
+  `).join('');
+}
 
 function showHeroSlide(idx) {
   const wrap = document.querySelector('.cm-hero');
   if (!wrap) return;
-  _heroIndex = (idx + HERO_IMAGES.length) % HERO_IMAGES.length;
+  const n = heroSet().length;
+  _heroIndex = (idx + n) % n;
   wrap.querySelectorAll('.cm-hero-img').forEach((img, i) => {
     img.classList.toggle('active', i === _heroIndex);
   });
-  wrap.querySelectorAll('.cm-hero-dot').forEach((d, i) => {
-    d.classList.toggle('active', i === _heroIndex);
-  });
 }
 
-function restartHeroAutoRotate() {
+// Тік кожні 6с: наступний слайд. Якщо тим часом сонце зійшло/зайшло —
+// перезбираємо картинки на інший набір прямо на льоту, без перезавантаження.
+function startHeroRotator() {
   if (_heroInterval) clearInterval(_heroInterval);
-  if (HERO_IMAGES.length < 2) return;
+  _heroIndex = 0;
+  _heroIsDay = isDaytime();
   _heroInterval = setInterval(() => {
     const wrap = document.querySelector('.cm-hero');
     if (!wrap) { clearInterval(_heroInterval); _heroInterval = null; return; }
+    const day = isDaytime();
+    if (day !== _heroIsDay) {
+      _heroIsDay = day;
+      _heroIndex = 0;
+      // <img> — перші діти .cm-hero, overlay/градієнт лишаються на місці
+      wrap.querySelectorAll('.cm-hero-img').forEach(img => img.remove());
+      wrap.insertAdjacentHTML('afterbegin', heroImgsHtml());
+      return;
+    }
     showHeroSlide(_heroIndex + 1);
   }, 6000);
-}
-
-function startHeroRotator() {
-  _heroIndex = 0;
-  restartHeroAutoRotate();
-  // Свайп — ручна зміна фото. Скидає авто-таймер щоб одразу не перескочило.
-  const wrap = document.querySelector('.cm-hero');
-  if (wrap) {
-    attachSwipe(wrap,
-      () => { showHeroSlide(_heroIndex + 1); restartHeroAutoRotate(); },
-      () => { showHeroSlide(_heroIndex - 1); restartHeroAutoRotate(); }
-    );
-    // Клік на dot — переходить на той слайд
-    wrap.querySelectorAll('.cm-hero-dot').forEach((d, i) => {
-      d.style.cursor = 'pointer';
-      d.addEventListener('click', () => {
-        showHeroSlide(i);
-        restartHeroAutoRotate();
-      });
-    });
-  }
 }
 
 // ── Greeting + Дата (заголовок вкладки) ──────────────────────────────────────
@@ -120,15 +123,10 @@ function renderSkeleton() {
     </section>
 
     <section class="cm-hero">
-      ${HERO_IMAGES.map((url, i) => `
-        <img class="cm-hero-img${i === 0 ? ' active' : ''}" src="${escapeHtml(url)}" alt="${i === 0 ? 'Олика' : ''}" loading="${i === 0 ? 'eager' : 'lazy'}">
-      `).join('')}
+      ${heroImgsHtml()}
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
         <p class="cm-hero-sub">Наше містечко на Волині</p>
-      </div>
-      <div class="cm-hero-dots">
-        ${HERO_IMAGES.map((_, i) => `<span class="cm-hero-dot${i === 0 ? ' active' : ''}"></span>`).join('')}
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
