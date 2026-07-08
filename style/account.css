@@ -225,6 +225,16 @@
 .acc-cab-name { font-size: 21px; font-weight: 800; }
 .acc-cab-email { font-size: 13px; opacity: 0.85; }
 .acc-cab-place { font-size: 12px; opacity: 0.72; margin-top: 3px; }
+.acc-cab-trust {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  background: rgba(255,255,255,0.15);
+}
+.acc-cab-trust--on { background: rgba(76,175,80,0.35); }
 
 .acc-cab-sec {
   margin: 14px 12px;

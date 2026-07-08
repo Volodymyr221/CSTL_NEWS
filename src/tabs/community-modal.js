@@ -8,7 +8,7 @@
 
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
-import { currentUserId, isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
+import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
 // купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
@@ -396,6 +396,7 @@ export function openBoardModal() {
 
     const payload = buildPayload(state);
 
+    let published = false;   // довірений автор (5+ схвалених) → пост опубліковано одразу
     if (isSupabaseReady()) {
       const result = await submitPost(payload);
       if (!result.ok) {
@@ -406,16 +407,25 @@ export function openBoardModal() {
         showToast('Помилка: ' + (result.error || 'не вдалось надіслати'), 4500);
         return;
       }
+      published = result.status === 'published';
     } else {
       console.info('[submit] Supabase не готовий — payload збережено лише локально:', payload);
     }
 
     close();
-    showToast('Дякуємо! Запит надіслано модератору.', 4000);
+    if (published) {
+      // Дошка вже слухає цю подію (board.js) — оновиться і покаже пост одразу.
+      window.dispatchEvent(new Event('cstl-posts-changed'));
+      showToast('Опубліковано ✓ Ви довірений автор.', 4000);
+    } else {
+      showToast('Дякуємо! Запит надіслано модератору.', 4000);
+    }
   });
 }
 
-// Готує payload у форматі таблиці Supabase `posts` (тільки type='board')
+// Готує payload у форматі таблиці Supabase `posts` (тільки type='board').
+// status/owner_uid НЕ передаються — RPC submit_board_post (супутній
+// scripts/supabase_reputation.sql) форсує їх сам на сервері.
 function buildPayload(state) {
   const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
     || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
@@ -424,8 +434,6 @@ function buildPayload(state) {
     text:      state.text.trim(),
     author:    state.author.trim() || 'Житель',
     photos:    state.photos.filter(Boolean),
-    status:    'pending',
-    owner_uid: currentUserId() || null,
     category:  state.category,
     color:     cat.color,
     contact:   state.contact.trim() || null,

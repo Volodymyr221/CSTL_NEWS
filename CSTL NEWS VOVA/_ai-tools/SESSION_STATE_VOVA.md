@@ -8,6 +8,18 @@
 
 ---
 
+## 📝 2026-07-08 — Д-1: Репутація + автопублікація Дошки (гілка `vova/board-reputation`)
+
+- ✅ **БД (Supabase, прод, project `uabyfecseqnemvcqhdem`)** — застосовано через MCP `apply_migration`:
+  - `profiles` +`approved_count`/+`trusted`; тригер `trg_reputation_on_publish` (адмін схвалив pending→published у `admin.html` → +1, на 5-му → `trusted=true`); тригер `trg_revoke_trust_on_reject` (адмін відхилив → скидання в 0/false); RPC `submit_board_post` (SECURITY DEFINER: довірений → одразу `published`, решта → `pending`, рейт-ліміт 3/хв).
+  - ⚠️ **Знайдена й закрита діра безпеки, якої не було у старому дизайні 02.07:** RLS `profiles` дозволяв юзеру напряму `update({trusted:true})` собі самому (обходить весь сенс фічі). Виправлено: `revoke update on profiles from authenticated,anon` + `grant update (uid,name,email,birth_date)` — точковий `revoke update (col)` НЕ спрацював (табличний grant все одно покриває колонку), допоміг лише повний revoke+явний allowlist. Перевірено SQL-тестом наживо (update trusted напряму → `permission denied`; звичайний upsert профілю — проходить).
+  - Живий тест на проді (тестові пости, потім видалені): 5× pending→published → `trusted=true`; reject → скидання в 0/false; RPC від довіреного → `status:'published'` одразу. Усе підтверджено.
+- ✅ **Код:** `src/core/supabase.js` (`submitPost` → RPC замість raw insert), `src/tabs/community-modal.js` (payload без мертвих `status`/`owner_uid`; тост+`cstl-posts-changed` подія якщо автопублікація), `src/core/account-ui.js` (бейдж довіри в hero «Мого кабінету» — новий, старого `acc-row` вже нема, Рома переписала на `acc-cab`), `style/account.css` (`.acc-cab-trust`). `admin.html` НЕ чіпав — тригери підхоплюють його існуючий `approvePost`/`rejectPost` без змін.
+- ✅ `node --check` + `node build.js` (exit 0, esbuild довелось `npm install` — не було в оточенні) + Playwright смоук (без JS-помилок від моїх змін; live Supabase round-trip у цій пісочниці не перевірити — CDN `supabase-js` блокує проксі оточення, це обмеження середовища, не код).
+- 🔜 **Гілку `vova/board-reputation` перестворено НАБІЛО з поточного `main`** (стара версія була на 54+ комітів позаду — код+SQL звідти перенесено вручну, старий `openModal`/`acc-row` де раніше сидів бейдж довіри вже не існує). Ще НЕ запушено/не `/finish` — чекаю твого підтвердження після цього резюме.
+
+---
+
 ## 🎯 ХЕНДОВЕР У НОВИЙ ЧАТ — 2026-07-05 (кінець сесії Вови)
 
 > Читай це першим. Усе нижче ЗАДЕПЛОЄНО на прод (остання версія ~v2301). Незавершених робочих гілок нема — усе змерджено в `main`.
