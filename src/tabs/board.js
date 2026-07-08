@@ -1228,7 +1228,6 @@ function renderHeader() {
     <div class="bd-titlebar">
       <h2 class="bd-title">Дошка оголошень</h2>
       <div class="bd-subrow">
-        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
           <span class="bd-loc-icon" aria-hidden="true">📍</span>
           <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
@@ -1236,6 +1235,7 @@ function renderHeader() {
             ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
           </select>
         </div>
+        <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
       </div>
     </div>
   ` : '';
