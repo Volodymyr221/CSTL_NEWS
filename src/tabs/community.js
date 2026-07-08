@@ -134,13 +134,27 @@ function renderSkeleton() {
   const todayStr = formatTodayHeader();
 
   el.innerHTML = `
-    <section class="cm-greeting">
-      <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-      <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
-    </section>
+    <!-- Стик-зона вітання: висота = вітання + запас «залипання» (padding-bottom).
+         .cm-greeting всередині — position:sticky, тому браузер тримає його
+         на КОМПОЗИТОРІ (без JS-скролу) → нуль дьоргання на iOS. Коли зона
+         дозникає (проскролили padding-bottom) — вітання відпускається й їде вгору. -->
+    <div class="cm-greeting-stick">
+      <section class="cm-greeting">
+        <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+        <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+      </section>
+      <!-- Розпірка запасу «залипання»: РЕАЛЬНИЙ блок (не padding!) — інакше
+           sticky у Chromium не тримає (padding контейнера не рахується у діапазон
+           залипання). Її висота = скільки px вітання ігнорує скрол. -->
+      <div class="cm-greeting-stickpad" aria-hidden="true"></div>
+    </div>
 
     <section class="cm-hero">
       ${heroImgsHtml()}
+      <!-- Смуга блюру: прикріплена до НИЗУ героя, росте вгору разом із верхом
+           верхньої картки при скролі (community.js). Низ мутніє, верх лишається
+           чіткий — блюр «слідкує» за карткою (рішення Роми 08.07). -->
+      <div class="cm-hero-blurband" aria-hidden="true"></div>
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
         <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
@@ -215,42 +229,51 @@ function renderSkeleton() {
 
 let _greetingWired = false;
 let _heroBlurWired = false;
-// Блюр обоїв ПРОГРЕСИВНИЙ (рішення Роми 08.07): не вмикається одразу — наростає
-// разом із підняттям верхнього блока (Табло новин) над фото. Блюр привʼязаний до
-// того, СКІЛЬКИ блок закрив герой: доки блок ще внизу — фото чітке; що вище блок
-// піднявся — то сильніший блюр. Слухач на .app-main (справжній скролер), rAF.
-const HERO_BLUR_MAX = 5;      // px на повному перекритті
-const HERO_GREET_STICK = 150; // px «залипання» вітання перед тим як воно поїде вгору
+// Блюр обоїв «СЛІДКУЄ ЗА КАРТКОЮ» (рішення Роми 08.07): смуга розмиття своїм НИЗОМ
+// приклеєна до ВЕРХНЬОГО краю верхньої картки (Табло новин) і росте ВГОРУ, поки
+// картка піднімається. Тобто фрост-хвиля їде вгору РАЗОМ із карткою й поступово
+// закриває картинку від низу до верху; сам верх (вітання) лишається чіткий доки
+// картка не підніметься глибоко. Слухач на .app-main (справжній скролер), rAF.
+// Вітання більше НЕ рухаємо з JS — «залипання» тримає CSS position:sticky
+// (.cm-greeting-stick), тому воно на композиторі й не дьоргається на iOS.
 function wireHeroBlur() {
   if (_heroBlurWired) return;
   const main = document.querySelector('.app-main');
   if (!main) return;
   _heroBlurWired = true;
   let ticking = false;
-  main.addEventListener('scroll', () => {
+  // Кеш елементів (щоб не шукати щоразу — стабільніше й швидше).
+  let hero, band, block;
+  const cache = () => {
+    hero = document.querySelector('.cm-hero');
+    band = hero && hero.querySelector('.cm-hero-blurband');
+    block = document.getElementById('cm-news-board');
+  };
+  const onScroll = () => {
     if (ticking) return;
     ticking = true;
     requestAnimationFrame(() => {
-      const st = main.scrollTop;
-      const hero = document.querySelector('.cm-hero');
-      const block = document.getElementById('cm-news-board');   // верхній блок-картка
-      if (hero && block) {
-        // Прогрес = наскільки верх блока піднявся над низом героя (0…1).
-        const heroBottom = hero.getBoundingClientRect().bottom;
-        const blockTop = block.getBoundingClientRect().top;
-        const span = hero.getBoundingClientRect().height * 0.7 || 300;
-        const progress = Math.max(0, Math.min(1, (heroBottom - blockTop) / span));
-        const amt = progress * HERO_BLUR_MAX;
-        hero.style.filter = amt > 0.15 ? `blur(${amt.toFixed(1)}px)` : '';
-      }
-      // Вітання «залипає» на початку свайпу (рішення Роми 08.07): перші HERO_GREET_STICK
-      // пікселів скролу воно стоїть на місці (компенсуємо translateY), і лише потім
-      // відпускається й їде вгору разом зі сторінкою — «затримка» перед зникненням.
-      const greeting = document.querySelector('.cm-greeting');
-      if (greeting) greeting.style.transform = `translateY(${Math.min(st, HERO_GREET_STICK)}px)`;
       ticking = false;
+      if (!hero || !band || !block) cache();
+      if (!hero || !band || !block) return;
+      // Усе в локальних координатах героя (він fixed): C — де зараз верх картки.
+      const heroTop = hero.getBoundingClientRect().top;
+      const heroH   = hero.offsetHeight;
+      const C = block.getBoundingClientRect().top - heroTop;   // верх картки в системі героя
+      const C0 = heroH - 80;                                   // стартова позиція верху картки (~низ героя)
+      const travel = Math.max(0, C0 - C);                      // на скільки картка вже піднялась
+      // Смуга росте вгору від верху картки на 0.6× пройденого шляху; верх лишається
+      // чіткий (обмежуємо, щоб не полізло вище героя і не розмило все одразу).
+      let h = Math.min(travel * 0.6, Math.max(0, C));
+      let top = C - h;
+      if (top < 0) { top = 0; h = Math.max(0, C); }
+      band.style.top = top + 'px';
+      band.style.height = h + 'px';
+      band.style.opacity = h > 2 ? '1' : '0';
     });
-  }, { passive: true });
+  };
+  cache();
+  main.addEventListener('scroll', onScroll, { passive: true });
 }
 
 export function initCommunity() {
