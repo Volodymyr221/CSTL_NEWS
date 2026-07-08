@@ -9,6 +9,7 @@
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
+import { SETTLEMENTS, COMMUNITY_ALL } from '../core/settlements.js';
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
 // купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
@@ -80,6 +81,7 @@ export function openBoardModal() {
     category: 'оголошення',
     contact: '',
     title: '',
+    location: COMMUNITY_ALL,   // Д-10: дефолт — вся громада
   };
 
   const wrap = document.createElement('div');
@@ -185,6 +187,14 @@ export function openBoardModal() {
       </div>
 
       <div class="bm-section">
+        <label class="bm-label" for="bm-location">Локація</label>
+        <select class="cm-board-input cm-board-input--small" id="bm-location">
+          <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL)}</option>
+          ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${state.location === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>
+
+      <div class="bm-section">
         <label class="bm-label" for="bm-text">Опис</label>
         <textarea class="cm-board-input" id="bm-text" rows="4" placeholder="Що хочете повідомити громаді?" required>${escapeHtml(state.text)}</textarea>
       </div>
@@ -217,6 +227,11 @@ export function openBoardModal() {
     // Заголовок
     dynamicEl.querySelector('#bm-title')?.addEventListener('input', e => {
       state.title = e.target.value;
+      renderPreview();
+    });
+    // Локація
+    dynamicEl.querySelector('#bm-location')?.addEventListener('change', e => {
+      state.location = e.target.value;
       renderPreview();
     });
     // Опис
@@ -343,6 +358,7 @@ export function openBoardModal() {
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
+        ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
@@ -443,6 +459,7 @@ function buildPayload(state) {
     color:     cat.color,
     contact:   state.contact.trim() || null,
     title:     state.title.trim(),   // обов'язковий (Д-16); сервер теж перевіряє
+    location:  state.location || COMMUNITY_ALL,   // Д-10
     tags:      [],
   };
 }

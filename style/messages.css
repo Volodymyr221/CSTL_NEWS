@@ -461,6 +461,11 @@
   font-size: 12.5px; color: var(--ink-soft, #5F5448); margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+/* Локація оголошення у шапці-контексті чату (Д-10) */
+.pm-ctx-loc {
+  display: block; font-size: 12px; color: var(--ink-soft, #5F5448); margin-top: 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
 .pm-ctx-phone { color: inherit; }   /* номер — того ж кольору, що й ім'я */
 .pm-ctx-link { font-size: 12.5px; font-weight: 700; color: var(--red, #722F37); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.02em; }
 
