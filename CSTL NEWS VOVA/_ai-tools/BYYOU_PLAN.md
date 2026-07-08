@@ -1,6 +1,5 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-<<<<<<< HEAD
 **Статус:** active
 <!-- idle=вимкнено · active=потік іде (push-замок УВІМКНЕНО) · paused=пауза · done=завершено -->
 
