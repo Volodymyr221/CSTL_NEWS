@@ -3234,16 +3234,19 @@
      глянець + легкий силует замку (::before). Без «екрана-рамки» — картки
      левітують прямо над градієнтом. */
   position: relative;
+  /* Насичений багряний як табло автобусів: глянець + багряний градієнт у темне +
+     ВІНЬЄТКА (затемнення по контуру) — рішення Роми 08.07. */
   background:
-    radial-gradient(120% 80% at 25% 8%, rgba(255,255,255,0.14) 0%, rgba(255,255,255,0) 45%),
-    linear-gradient(150deg, #9a2130 0%, #7a1826 46%, #4d0f18 100%);
-  border: 1px solid rgba(0, 0, 0, 0.5);
+    radial-gradient(120% 85% at 50% 42%, rgba(0,0,0,0) 52%, rgba(0,0,0,0.5) 100%),        /* віньєтка по контуру */
+    radial-gradient(120% 80% at 25% 6%, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0) 42%), /* глянець згори */
+    linear-gradient(158deg, #a8283a 0%, #7c1622 44%, #3d0a12 100%);                        /* багряний → глибоке темне */
+  border: 1px solid rgba(0, 0, 0, 0.55);
   border-radius: 22px;
   box-shadow:
-    0 12px 30px rgba(0, 0, 0, 0.32),
-    0 3px 8px rgba(0, 0, 0, 0.24),
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.45);
+    0 12px 30px rgba(0, 0, 0, 0.34),
+    0 3px 8px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.5);
   overflow: hidden;
 }
 /* Легкий силует замку в кутку — як фоновий акцент табло автобусів. */
@@ -3298,6 +3301,26 @@
   margin: 0 4px;
   padding: 2px 4px;
 }
+/* Тонкі смужки-розпливи ТІЛЬКИ на краях зони екрана: розчиняють самий край, звідки
+   картка «зʼявляється» (верх) і «зникає» (низ) при скролі. Лежать НАД картками,
+   колір ≈ градієнт табло у цій точці, тонкі — не псують самі картки (рішення Роми). */
+.cm-block--news .cm-block-body::before,
+.cm-block--news .cm-block-body::after {
+  content: '';
+  position: absolute;
+  left: 4px; right: 4px;
+  height: 26px;
+  z-index: 5;
+  pointer-events: none;
+}
+.cm-block--news .cm-block-body::before {
+  top: 0;
+  background: linear-gradient(to bottom, #7c1622 0%, rgba(124, 22, 34, 0) 100%);
+}
+.cm-block--news .cm-block-body::after {
+  bottom: 0;
+  background: linear-gradient(to top, #46101a 0%, rgba(70, 16, 26, 0) 100%);
+}
 /* Нижня панель — СЕНСОРНІ кнопки (таб-бар), відділена від зони карток тонкою
    горизонтальною смужкою (рішення Роми 08.07). */
 .cm-news-controls {
@@ -3308,34 +3331,43 @@
   border-top: 1px solid rgba(255, 255, 255, 0.16);
 }
 
-/* 3 сенсорні кнопки в ряд, розділені тонкими вертикальними лініями. */
+/* 3 СЕНСОРНІ кнопки на поверхні — максимальний мінімалізм (рішення Роми 08.07):
+   лише текст, жодних плиток/фонів. Активна ПІДСВІЧУЄТЬСЯ (світиться), не «фізична». */
 .cm-news-filters {
   display: flex;
-  padding: 8px 0 0;
+  padding: 9px 0 1px;
 }
 .cm-news-chip {
+  position: relative;
   flex: 1;
-  padding: 12px 4px;
+  padding: 10px 4px;
   border: none;
   background: transparent;
-  color: #e9c9cf;
-  font-size: 15px;               /* більший — для зручності старших (рішення Роми) */
+  color: rgba(255, 236, 240, 0.5);   /* неактивна — приглушена */
+  font-size: 15px;
   font-weight: 700;
+  letter-spacing: 0.2px;
   white-space: nowrap;
   cursor: pointer;
-  border-radius: 12px;
   -webkit-tap-highlight-color: transparent;
-  transition: background 0.15s, color 0.15s, transform 0.1s;
+  transition: color 0.2s, text-shadow 0.2s;
 }
-/* Вертикальні роздільники між кнопками (крім першої). */
-.cm-news-chip + .cm-news-chip { box-shadow: -1px 0 0 rgba(255, 255, 255, 0.14); }
-/* Активна кнопка — ПРОСТО підсвічена плитка (без риски-індикатора; рішення Роми). */
+/* Чистий тонкий роздільник — коротка вертикальна лінія по центру між кнопками
+   (псевдоелемент, НЕ box-shadow — не накладається). */
+.cm-news-chip + .cm-news-chip::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 1px; height: 16px;
+  background: rgba(255, 255, 255, 0.16);
+}
+/* Активна — СВІТИТЬСЯ: яскраво-білий текст + мʼяке сяйво (не плитка, не рамка). */
 .cm-news-chip.active {
-  background: rgba(255, 255, 255, 0.15);
   color: #fff;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+  text-shadow: 0 0 10px rgba(255, 235, 240, 0.65), 0 0 2px rgba(255, 255, 255, 0.5);
 }
-.cm-news-chip:active { transform: scale(0.97); }
+.cm-news-chip:active { color: #fff; }
 
 /* Стрічка карток — КОМПАКТНИЙ блок із ВНУТРІШНІМ скролом (як інші віджети Громади),
    БЕЗ зайвих відступів зверху/знизу. Блок не розтягується на всі пости. */
@@ -3347,13 +3379,11 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
-  padding: 20px 6px;
+  /* Стелю карток піднято на 20px (padding-top 20→0, рішення Роми). Маску з карток
+     ПРИБРАНО (робила «ужасні» червоні краї на самих картках). Замість неї — тонкі
+     смужки-розпливи на КРАЯХ зони екрана (::before/::after у .cm-block-body). */
+  padding: 0 6px 8px;
   scrollbar-width: none;
-  /* «Зʼявляються нізвідки, зникають в нікуди»: маска градієнтом робить верхній
-     і нижній краї прозорими → картки ТАНУТЬ, доходячи до країв зони (не різаний
-     квадрат). Це і є ефект левітації над таблом при скролі. */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%);
-          mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 86%, transparent 100%);
 }
 .cm-news-feed::-webkit-scrollbar { display: none; }
 /* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */
