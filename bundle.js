@@ -4174,7 +4174,7 @@ ${post.text}
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
+      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4219,7 +4219,7 @@ ${post.text}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
+        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>

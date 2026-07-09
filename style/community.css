@@ -962,6 +962,15 @@
   color: var(--ink-soft, #6b6b6b);
   margin-bottom: 6px;
   align-self: flex-start;
+  text-transform: uppercase;   /* Д-20: назва НП великими буквами (як у фільтрі) */
+  letter-spacing: 0.2px;
+}
+/* Д-20: пін НП — векторний (той самий силует що біля фільтра), акцентний колір */
+.cm-board-loc svg {
+  width: 12px;
+  height: 12px;
+  color: var(--red, #722F37);   /* SVG stroke=currentColor → підхоплює цей колір */
+  flex-shrink: 0;
 }
 
 .cm-board-title {
