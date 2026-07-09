@@ -3,27 +3,29 @@
 **Статус:** active
 <!-- idle=вимкнено · active=потік іде (push-замок УВІМКНЕНО) · paused=пауза · done=завершено -->
 
-**Ціль:** Push-блок Дошки (зона Роми, Вова передав з аудиту Д-15). 4 баги: P-2 (фото-пуш падає), P-5 (чат не просить дозвіл), P-8 (нема in-app банера чату), P-9 (тап не відкриває конкретну розмову).
-**Власник:** Рома · **Гілка:** `claude/new-session-3k5u9n` (не міняти) · **Rollback-tag:** `byyou-start-push`
+**Ціль:** БАТЧ 1 плану 09.07 — AI-агент: зупинити витрати ($5 з'їдено) + якість (п.5,6,7). Системний фікс. Python → git→Actions (НЕ site, CACHE не чіпаємо).
+**Власник:** Рома · **Гілка:** `claude/new-session-3k5u9n` · **Rollback-tag:** `byyou-start-agent`
+**Майстер-план 18 задач:** `PLAN_2026-07-09_batch.md` (це батч 1/8).
 
-> Попередній потік (Табло+карусель+контакти) — ВИКОНАНО й задеплоєно (PR #285, #293), архів `BYYOU_ARCHIVE_2026-07-09_tablo-carousel-contacts.md`.
-> ⚠️ **ДЕПЛОЙ-ОБМЕЖЕННЯ:** P-2 живе в Edge Function `send-chat-push` — авто-деплою Edge Functions НЕМА (деплой ручний `supabase functions deploy`, Supabase MCP не авторизований). Тому **P-2 = код готую+комічу, жива публікація окремою авторизованою сесією** (як Б5). P-5/P-8/P-9 — фронт (site), деплою цю сесію нормально.
+> **Корінь (розвідка):** `call_agent` (ai_news_agent.py:437) `urlopen(timeout=420)` = socket read-timeout → великий пакет (4 статті+6 пошуків) не встигає → виняток (440-446) → usage=0 → `if not arts` (859) робить ПЛАТНИЙ повтор, а Anthropic рахує перерваний виклик. Це причина: подвійна плата + «$0-лічильник» + стеля $15 не спрацювала на ~$5.
 
 ## Кроки
 | # | Крок | Файл | Стан |
 |---|------|------|------|
-| 1 | P-2: Edge Function — `select` додати `photo_url`; `body = msg.text \|\| '📷 Фото'` (null-guard); payload `url` → `./#thread-<id>` (для P-9) | `supabase/functions/send-chat-push/index.ts` | 🟢 (деплой Supabase — окремо) |
-| 2 | P-9: sw.js push-handler кладе `thread_id` у `notification.data`; notificationclick фокусує клієнт + postMessage `{__cstl:'open-thread', thread_id}` (працює з ЖИВИМ payload, який уже несе thread_id) | `sw.js` | 🟢 |
-| 3 | P-9: застосунок слухає `open-thread` → відкриває конкретну розмову (реюз існуючого відкриття треда) | `src/core/messages-ui.js` (+app.js слухач) | 🟢 |
-| 4 | P-8: in-app банер для чату коли додаток видимий (sw постить `__cstl:'push', pushType:'chat'`) — показати тост/банер + оновити бейдж | `src/core/messages-ui.js` / глобальний слухач | 🟢 |
-| 5 | P-5: контекстний запит дозволу пуша в чаті (`registerChatPushDevice` — при відкритті розмови/після 1-го повідомлення викликати `Notification.requestPermission` по жесту, потім підписати) | `src/core/messages-ui.js` | 🟢 |
-| 6 | node --check усіх .js + build (bundle) | — | 🟢 |
-| 7 | Браузер-смоук (чат-екрани, банер, дозвіл) + /audit | — | 🟢 |
-| 8 | CACHE bump + реліз-нотатки → показати Ромі | `sw.js` | 🟡 |
-| 9 | БРАМА ДЕПЛОЮ: «деплой» → PR→squash→лічильник (фронт). P-2 Edge — інструкція Вові на `supabase functions deploy` | — | 🔴 |
+| 1 | Retry-класифікація: мережа/таймаут → backoff-повтор ТОГО САМОГО запиту (idempotent, max 2); `build_prompt`-переписування ЛИШЕ коли текст прийшов але 0 валідних. Це вбиває платний подвійний виклик | `scripts/ai_news_agent.py:841-879` | 🟢 |
+| 2 | BATCH_MAX 4→2 (менша відповідь, менший ризик таймауту) | `ai_news_agent.py:56` | 🟢 |
+| 3 | Стрімінг SSE (`"stream":true`) у call_agent — connection живе, немає 420с single-read; usage з message_start/message_delta; pause_turn-цикл зберегти; **fallback на non-stream якщо парс SSE впаде** | `ai_news_agent.py:399-460` | 🟢 |
+| 4 | Облік вартості при обірваному виклику (не $0): оцінка max_tokens×ціна як «підозра на списання» щоб breaker бачив ризик; `.get()` уніфікація | `ai_news_agent.py:158-192,440-446` | 🟢 |
+| 5 | Стелі: MAX_MONTH_COST_USD 15→4; breaker рахує таймаут-оцінку | `ai_news_agent.py:62-63,819-843` | 🟢 |
+| 6 | Кап чернеток на ВСЮ чергу draft (не лише type=news) | `ai_news_agent.py:716-737` | 🟢 |
+| 7 | Свято-sink дедуп: `CabinetSink` GET ?title&event_date перед POST (як QueueSink) — ідемпотентність проти щоденного крону × 7-денне вікно | `editor/sinks/cabinet.py:21-49` | 🟢 |
+| 8 | Фото: прибрати зашитий приклад «Софійський собор» (ai_writer.py:48-49); pipeline ПОВАЖАЄ holidays.json `image` (не перезатирає image.find коли є) | `editor/writers/ai_writer.py`, `editor/core/pipeline.py:41`, `editor/images/wikimedia.py` | 🟢 |
+| 9 | py_compile усіх змінених .py + перевірка гілок логіки (dry, без живого API) | — | 🟢 |
+| 10 | Реліз-нотатки + БРАМА ДЕПЛОЮ («деплой» → PR→merge; жива валідація = наступний крон, спостерігати spend) | — | 🟡 |
+| 11 | 🔴 Supabase (Вові/окрема сесія): UNIQUE(title,event_date,type) SQL + чистка 16 наявних чернеток — SQL-файл+чеклист, НЕ виконую | — | 🔴 |
 
 ## Де зупинились
-Старт потоку. План складено, чекаю «ок» на брамі старту. Ще нічого не кодовано.
+Старт Батчу 1. План складено, чекаю «ок» на брамі старту.
 
 ## Реліз-нотатки
 (заповнити перед деплоєм)
