@@ -1331,6 +1331,10 @@
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "amber" },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "amber" }
   ];
+  function catColor(category) {
+    const c = BOARD_CATEGORIES.find((x) => x.id === category);
+    return c ? c.color : "white";
+  }
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
   }
@@ -1640,7 +1644,7 @@
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[0];
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
       const contactHtml = contactTrim ? `
@@ -1731,7 +1735,7 @@
     });
   }
   function buildPayload(state) {
-    const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+    const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[0];
     return {
       type: "board",
       text: state.text.trim(),
@@ -4193,7 +4197,7 @@ ${post.text}
     <article class="cm-board-note bd-card bd-card--board${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(p.color || "white")}">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       ${renderLoc(p.location)}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -4238,7 +4242,7 @@ ${post.text}
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(p.color || "white")}">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
         ${renderLoc(p.location)}
       </div>
@@ -7416,7 +7420,7 @@ ${post.text}
     "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
     // синій — злитий розділ (на випадок майбутнього geo)
   };
-  function catColor(c) {
+  function catColor2(c) {
     return CATEGORY_COLORS[c] || "#546e7a";
   }
   function geoColor(g) {
@@ -7473,7 +7477,7 @@ ${post.text}
   function badgesHtml(a) {
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(a.category)}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
@@ -8060,7 +8064,7 @@ ${post.text}
       <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(item.color || "white")}">${emoji} ${escapeHtml(item.category || "")}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || "")}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;
@@ -8628,7 +8632,7 @@ ${post.text}
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
-  function catColor2(category) {
+  function catColor3(category) {
     return CATEGORY_COLORS2[category] || "#722F37";
   }
   function buildIcsContent(ev) {
@@ -8685,7 +8689,7 @@ ${post.text}
   `).join("");
   }
   function cardHtml(ev) {
-    const catC = catColor2(ev.category);
+    const catC = catColor3(ev.category);
     let cover;
     if (ev.image) {
       cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
@@ -8717,7 +8721,7 @@ ${post.text}
     const modalMetaTags = document.getElementById("modalMetaTags");
     if (!modal || !modalContent)
       return;
-    const catC = catColor2(ev.category);
+    const catC = catColor3(ev.category);
     if (modalMetaTags) {
       modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
     }

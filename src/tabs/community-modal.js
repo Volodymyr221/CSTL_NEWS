@@ -25,6 +25,14 @@ const BOARD_CATEGORIES = [
   { id: 'загубилось', emoji: '😟', color: 'amber'  },
 ];
 
+// Семантичний колір тега рахуємо З КАТЕГОРІЇ при рендері (не зі збереженого
+// p.color) — щоб колір застосувався до ВСІХ оголошень, і старих теж. Невідома
+// категорія (старі 'оголошення'/null) → 'white' (нейтральний сірий).
+export function catColor(category) {
+  const c = BOARD_CATEGORIES.find(x => x.id === category);
+  return c ? c.color : 'white';
+}
+
 // Чи виглядає рядок як телефон
 function isPhone(s) {
   return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || '').trim());
@@ -347,7 +355,7 @@ export function openBoardModal() {
 
   function renderPreview() {
     const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
-      || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
+      || BOARD_CATEGORIES[0];
     const firstPhoto = state.photos.find(p => p);
     const contactTrim = state.contact.trim();
     const contactHtml = contactTrim ? `
@@ -451,7 +459,7 @@ export function openBoardModal() {
 // scripts/supabase_reputation.sql) форсує їх сам на сервері.
 function buildPayload(state) {
   const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
-    || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
+    || BOARD_CATEGORIES[0];
   return {
     type:      'board',
     text:      state.text.trim(),

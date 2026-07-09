@@ -9,6 +9,7 @@
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType } from './board.js';
+import { catColor } from './community-modal.js';
 import {
   nowMinutes,
   getStopMins as scheduleGetStopMins,
@@ -674,7 +675,7 @@ function renderMiniCard(item, type) {
       <article class="cm-board-note cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(item.color || 'white')}">${emoji} ${escapeHtml(item.category || '')}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || '')}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;
