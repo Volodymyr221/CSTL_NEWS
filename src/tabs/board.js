@@ -62,6 +62,17 @@ const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 // Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+// Стрілка вгору (векторна) — мітка «піднято» біля дати.
+const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
+// Дата на картці/модалці: якщо оголошення підняли — показуємо СВІЖИЙ час підняття
+// з міткою «🔼 піднято …» (щоб верхня позиція узгоджувалась із показаною датою —
+// раніше сортування йшло за bumped_at, а дата показувала стару ts → «26 червня вгорі»).
+function renderPostTime(p) {
+  if (p && p.bumped_at) {
+    return `<span class="cm-board-bumped">${BUMP_ICON_SVG}піднято ${formatTime(p.bumped_at)}</span>`;
+  }
+  return formatTime(postTime(p));
+}
 // Векторні іконки для пунктів FAB-меню (у стилі MSG_ICON — лінійні, currentColor)
 const EDIT_ICON_SVG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
@@ -935,7 +946,7 @@ function renderBoardCard(p) {
       ${!isPhone ? `
       <div class="cm-board-footer">
         <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+        <span class="cm-board-time">${renderPostTime(p)}</span>
       </div>` : ''}
       ${isPhone ? `
         <div class="cm-board-contact cm-board-contact--phone">
@@ -947,7 +958,7 @@ function renderBoardCard(p) {
         </div>
         <div class="cm-board-author-row">
           <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       ` : (contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : '')}
       ${boardActionsHtml(p)}
@@ -998,7 +1009,7 @@ function renderAdModal(p) {
           <div class="cm-board-modal-meta">
             <div class="cm-board-modal-meta-text">
               <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> — ${escapeHtml(p.author || 'анонімно')}</span></span>
-              <span class="cm-board-time">${formatTime(postTime(p))}</span>
+              <span class="cm-board-time">${renderPostTime(p)}</span>
             </div>
             <div class="cm-board-modal-meta-btns">
               <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
@@ -1008,7 +1019,7 @@ function renderAdModal(p) {
         return `
           <div class="cm-board-footer">
             <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+            <span class="cm-board-time">${renderPostTime(p)}</span>
           </div>
           ${contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ''}`;
       })()}
@@ -1302,14 +1313,29 @@ function renderBody() {
   const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
 
   if (activeType === 'board') {
-    const leftCards  = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
-    const rightCards = sorted.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
+    // Один корк-борд (2 колонки-масонрі) зі списку карток.
+    const corkboard = (list) => {
+      const left  = list.filter((_, i) => i % 2 === 0).map(renderBoardCard).join('');
+      const right = list.filter((_, i) => i % 2 === 1).map(renderBoardCard).join('');
+      return `<div class="cm-board-corkboard board-corkboard--full"><div class="cm-board-col">${left}</div><div class="cm-board-col">${right}</div></div>`;
+    };
+    // Фільтр по конкретному НП (Д-12+) → ДВІ групи: спершу оголошення цього НП,
+    // нижче — загальногромадські («Олицька громада»). Дефолт «Уся громада» — один список.
+    if (activeLocation !== COMMUNITY_ALL) {
+      const npGroup   = sorted.filter(p => p.location === activeLocation);
+      const wideGroup = sorted.filter(p => isCommunityWide(p.location));
+      const section = (title, list) => list.length
+        ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}`
+        : '';
+      return `
+        <div class="board-backdrop" id="board-backdrop"></div>
+        ${section(`Оголошення ${activeLocation}`, npGroup)}
+        ${section(`Оголошення «${COMMUNITY_ALL_LABEL}»`, wideGroup)}
+      `;
+    }
     return `
       <div class="board-backdrop" id="board-backdrop"></div>
-      <div class="cm-board-corkboard board-corkboard--full">
-        <div class="cm-board-col">${leftCards}</div>
-        <div class="cm-board-col">${rightCards}</div>
-      </div>
+      ${corkboard(sorted)}
     `;
   }
 
