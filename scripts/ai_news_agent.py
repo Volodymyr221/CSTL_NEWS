@@ -445,7 +445,7 @@ def call_agent(prompt: str):
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         print("✗ немає ANTHROPIC_API_KEY — пропускаю виклик")
-        return "", usage
+        return "", usage, True   # 3-кортеж (каллер розпаковує ok); не мережевий збій → без SUSPECT-charge
     headers = {
         "x-api-key": api_key,
         "anthropic-version": "2023-06-01",
