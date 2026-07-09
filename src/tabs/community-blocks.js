@@ -916,42 +916,15 @@ export async function renderContactsBlock() {
       return;
     }
 
-    // Розділяємо контакти по групах: hero (Швидка) / emergency (4 аварійні) / local (амбулаторія, сільрада)
-    const hero      = list.find(c => c.group === 'hero' || c.priority === 'critical');
-    const emergency = list.filter(c => c.group === 'emergency');
-    const local     = list.filter(c => c.group === 'local');
-
     const telOf = p => p.replace(/[^\d+]/g, '');
 
-    // ── HERO: Швидка 103 — велика пульсуюча картка ────────────────────────────
-    const heroHtml = hero ? `
-      <a class="cm-contact-hero" href="tel:${escapeHtml(telOf(hero.phone))}">
-        <span class="cm-contact-hero-icon">${CONTACT_ICONS[hero.icon] || CONTACT_ICONS.default}</span>
-        <span class="cm-contact-hero-text">
-          <span class="cm-contact-hero-name">${escapeHtml(hero.name)}</span>
-          <span class="cm-contact-hero-hint">Тап для виклику</span>
-        </span>
-        <span class="cm-contact-hero-phone">${escapeHtml(hero.phone)}</span>
-      </a>
-    ` : '';
+    // Г-10 (Рома 08.07): МІСЦЕВІ вгорі (головна цінність громади), ЕКСТРЕНІ внизу
+    // компактно (101/102/103 усі знають). Блок нижчий. «Швидка 103» (group hero)
+    // тепер звичайна плитка серед екстрених — без великої картки.
+    const local     = list.filter(c => c.group === 'local');
+    const emergency = list.filter(c => c.group === 'emergency' || c.group === 'hero' || c.priority === 'critical');
 
-    // ── EMERGENCY: 2×2 сітка компактних плиток ─────────────────────────────────
-    const emergencyHtml = emergency.length ? `
-      <div class="cm-contact-group cm-contact-group--emergency">
-        <div class="cm-contact-group-title">Аварійні</div>
-        <div class="cm-contact-grid-2x2">
-          ${emergency.map(c => `
-            <a class="cm-contact-tile" href="tel:${escapeHtml(telOf(c.phone))}">
-              <span class="cm-contact-tile-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
-              <span class="cm-contact-tile-name">${escapeHtml(c.name)}</span>
-              <span class="cm-contact-tile-phone">${escapeHtml(c.phone)}</span>
-            </a>
-          `).join('')}
-        </div>
-      </div>
-    ` : '';
-
-    // ── LOCAL: список карток на всю ширину ─────────────────────────────────────
+    // ── МІСЦЕВІ (вгорі) — компактні рядки на всю ширину ────────────────────────
     const localHtml = local.length ? `
       <div class="cm-contact-group cm-contact-group--local">
         <div class="cm-contact-group-title">Місцеві</div>
@@ -969,7 +942,23 @@ export async function renderContactsBlock() {
       </div>
     ` : '';
 
-    el.innerHTML = heroHtml + emergencyHtml + localHtml;
+    // ── ЕКСТРЕНІ (внизу) — компактна сітка маленьких плиток (3 в ряд) ──────────
+    const emergencyHtml = emergency.length ? `
+      <div class="cm-contact-group cm-contact-group--emergency">
+        <div class="cm-contact-group-title">Екстрені</div>
+        <div class="cm-contact-grid-3">
+          ${emergency.map(c => `
+            <a class="cm-contact-chip" href="tel:${escapeHtml(telOf(c.phone))}">
+              <span class="cm-contact-chip-icon">${CONTACT_ICONS[c.icon] || CONTACT_ICONS.default}</span>
+              <span class="cm-contact-chip-name">${escapeHtml(c.name)}</span>
+              <span class="cm-contact-chip-phone">${escapeHtml(c.phone)}</span>
+            </a>
+          `).join('')}
+        </div>
+      </div>
+    ` : '';
+
+    el.innerHTML = localHtml + emergencyHtml;
   } catch {
     el.innerHTML = '<div class="cm-block-empty">Контакти недоступні</div>';
   }
