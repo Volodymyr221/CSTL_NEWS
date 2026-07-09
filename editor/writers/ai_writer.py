@@ -35,6 +35,8 @@ class AIWriter(Writer):
             return Draft(title=title, lead=desc[:200], content=desc,
                          category=item.get("category") or "Свято", geo="Громада",
                          date=date, kind="holiday", status="draft",
+                         image=item.get("image"),   # поважаємо куроване фото з holidays.json
+                         image_type=("illustration" if item.get("image") else "none"),
                          image_query=item.get("image_query") or title,
                          meta={"no_ai": True, "days_until": item.get("days_until")})
 
@@ -45,8 +47,9 @@ class AIWriter(Writer):
             "Поверни ЛИШЕ JSON-обʼєкт (без пояснень до/після):\n"
             '{"lead":"1-2 речення анонсу","content":"3-5 коротких абзаців",'
             '"category":"Свято або Культура/Історія/Релігія","image_query":'
-            '"ТОЧНИЙ короткий запит УКРАЇНСЬКОЮ для фото з Wikimedia — конкретний обʼєкт/символ '
-            'свята чи місця (напр. Софійський собор Київ), НЕ загальні/неоднозначні слова"}'
+            '"ТОЧНИЙ короткий запит УКРАЇНСЬКОЮ для фото з Wikimedia — конкретний символ/об’єкт '
+            'САМЕ ЦЬОГО свята, ГЕО- і СЕЗОННО-нейтральний (без зими/снігу якщо свято тепле), '
+            'НЕ загальні/неоднозначні слова, НЕ повторюй той самий об’єкт для різних свят"}'
         )
         payload = {
             "model": MODEL, "max_tokens": 2048,
@@ -85,5 +88,7 @@ class AIWriter(Writer):
             content=obj.get("content") or desc,
             category=obj.get("category") or item.get("category") or "Свято",
             geo="Громада", date=date, kind="holiday", status="draft",
+            image=item.get("image"),   # куроване фото holidays.json має пріоритет над wikimedia
+            image_type=("illustration" if item.get("image") else "none"),
             image_query=(obj.get("image_query") or title),
             meta={"days_until": item.get("days_until")})

@@ -38,10 +38,14 @@ class Pipeline:
                     break
             if not ok:
                 continue
-            found = image.find(draft)
-            if found:
-                draft.image, draft.image_credit = found[0], found[1]
-                draft.image_type = "illustration"
+            # Шукаємо фото ЛИШЕ якщо writer не дав своє (куроване holidays.json image
+            # має пріоритет — інакше wikimedia затирав його випадковим/несезонним, напр.
+            # зимова Софія на «День Державності» 15.07). 08.07.
+            if not getattr(draft, "image", None):
+                found = image.find(draft)
+                if found:
+                    draft.image, draft.image_credit = found[0], found[1]
+                    draft.image_type = "illustration"
             drafts.append(draft)
 
         if not dry_run:
