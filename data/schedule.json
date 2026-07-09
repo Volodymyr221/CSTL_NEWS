@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "09.07.2026",
-  "updatedTime": "11:41",
+  "updatedTime": "15:09",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -6034,7 +6034,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:25",
           "arrival_time": "14:10",
           "duration_min": 105,
@@ -6076,7 +6076,7 @@
           "bus": "Баз  А  079.17",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:40",
           "arrival_time": "14:10",
           "duration_min": 90,
@@ -6210,7 +6210,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:30",
           "arrival_time": "14:42",
           "duration_min": 72,
@@ -6297,7 +6297,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:00",
           "arrival_time": "15:35",
           "duration_min": 95,
@@ -6431,7 +6431,7 @@
           "bus": "",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -6473,7 +6473,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:55",
           "arrival_time": "16:35",
           "duration_min": 100,
@@ -7184,7 +7184,7 @@
         }
       ],
       "fetchedAt": "09.07.2026",
-      "fetchedTime": "11:41"
+      "fetchedTime": "15:09"
     },
     "2026-07-10": {
       "routes": [
@@ -7683,98 +7683,6 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=10.07.2026&time=00+%3A+00"
         },
         {
-          "id": "vopas_1954546",
-          "vopas_id": "1954546",
-          "name": "Луцьк- Личани",
-          "carrier": "під_яцишин_м_м",
-          "bus": "БАЗ А 079.25",
-          "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
-          "departure_time": "10:30",
-          "arrival_time": "12:03",
-          "duration_min": 93,
-          "auto_generated": false,
-          "stops": [
-            {
-              "name": "Луцьк",
-              "km": 0.0,
-              "price_from_start": null
-            },
-            {
-              "name": "Струмівка",
-              "km": 7.5,
-              "price_from_start": 110.0
-            },
-            {
-              "name": "Гаразджа",
-              "km": 10.0,
-              "price_from_start": 110.0
-            },
-            {
-              "name": "Піддубці",
-              "km": 13.5,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Звірів",
-              "km": 18.0,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Арматнів",
-              "km": 22.0,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Пальче",
-              "km": 24.5,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Хорлупи",
-              "km": 29.3,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Покащів",
-              "km": 31.8,
-              "price_from_start": 145.2
-            },
-            {
-              "name": "Одеради АЗ",
-              "km": 36.1,
-              "price_from_start": 145.2
-            },
-            {
-              "name": "Хромяків",
-              "km": 38.1,
-              "price_from_start": 152.9
-            },
-            {
-              "name": "Дідичі",
-              "km": 40.6,
-              "price_from_start": 159.5
-            },
-            {
-              "name": "Олика",
-              "km": 43.1,
-              "price_from_start": 173.8
-            },
-            {
-              "name": "Мительно",
-              "km": 47.1,
-              "price_from_start": 181.5
-            },
-            {
-              "name": "Личани",
-              "km": 50.8,
-              "price_from_start": 188.1
-            }
-          ],
-          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=10.07.2026&time=00+%3A+00"
-        },
-        {
           "id": "vopas_1954609",
           "vopas_id": "1954609",
           "name": "Луцьк Рівне",
@@ -8120,98 +8028,6 @@
             }
           ],
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=10.07.2026&time=00+%3A+00"
-        },
-        {
-          "id": "vopas_1954547",
-          "vopas_id": "1954547",
-          "name": "Луцьк- Личани",
-          "carrier": "під_яцишин_м_м",
-          "bus": "БАЗ А 079.24",
-          "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
-          "departure_time": "14:10",
-          "arrival_time": "15:45",
-          "duration_min": 95,
-          "auto_generated": false,
-          "stops": [
-            {
-              "name": "Луцьк",
-              "km": 0.0,
-              "price_from_start": null
-            },
-            {
-              "name": "Струмівка",
-              "km": 7.5,
-              "price_from_start": 110.0
-            },
-            {
-              "name": "Гаразджа",
-              "km": 10.0,
-              "price_from_start": 110.0
-            },
-            {
-              "name": "Піддубці",
-              "km": 13.5,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Звірів",
-              "km": 18.0,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Арматнів",
-              "km": 22.0,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Пальче",
-              "km": 24.5,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Хорлупи",
-              "km": 29.3,
-              "price_from_start": 132.0
-            },
-            {
-              "name": "Покащів",
-              "km": 31.8,
-              "price_from_start": 145.2
-            },
-            {
-              "name": "Одеради АЗ",
-              "km": 36.1,
-              "price_from_start": 145.2
-            },
-            {
-              "name": "Хромяків",
-              "km": 38.1,
-              "price_from_start": 152.9
-            },
-            {
-              "name": "Дідичі",
-              "km": 40.6,
-              "price_from_start": 159.5
-            },
-            {
-              "name": "Олика",
-              "km": 43.1,
-              "price_from_start": 173.8
-            },
-            {
-              "name": "Мительно",
-              "km": 47.1,
-              "price_from_start": 181.5
-            },
-            {
-              "name": "Личани",
-              "km": 50.8,
-              "price_from_start": 188.1
-            }
-          ],
-          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=10.07.2026&time=00+%3A+00"
         },
         {
           "id": "vopas_1954613",
@@ -8974,7 +8790,7 @@
         }
       ],
       "fetchedAt": "09.07.2026",
-      "fetchedTime": "11:41"
+      "fetchedTime": "15:09"
     },
     "2026-07-11": {
       "routes": [
