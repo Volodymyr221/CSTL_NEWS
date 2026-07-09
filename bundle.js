@@ -4503,8 +4503,8 @@ ${post.text}
         const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
         return `
         <div class="board-backdrop" id="board-backdrop"></div>
-        ${section(`\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F ${activeLocation}`, npGroup)}
-        ${section(`\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \xAB${COMMUNITY_ALL_LABEL}\xBB`, wideGroup)}
+        ${section(activeLocation, npGroup)}
+        ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
       }
       return `

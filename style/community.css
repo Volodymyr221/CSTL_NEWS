@@ -759,6 +759,10 @@
 .bd-group-title {
   position: relative;   /* інакше ховається під .board-bg (fixed, z-index:0) — як картки */
   z-index: 1;
+  display: flex;             /* назва по центру + тонкі лінії обабіч (Вова) */
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
   margin: 6px 16px 2px;
   font-size: 12.5px;
   font-weight: 800;
@@ -767,6 +771,15 @@
   color: #5C2128;   /* бордовий, у тон заголовка Дошки */
   text-shadow: 0 1px 3px rgba(255, 248, 235, 0.5);   /* легкий світлий ореол для читабельності на корку */
 }
+/* Тонкі лінії ліворуч/праворуч від назви — йдуть від країв назви й затухають до країв. */
+.bd-group-title::before,
+.bd-group-title::after {
+  content: '';
+  flex: 1 1 auto;
+  height: 1px;
+}
+.bd-group-title::before { background: linear-gradient(to left,  rgba(92, 33, 40, 0.5), rgba(92, 33, 40, 0)); }
+.bd-group-title::after  { background: linear-gradient(to right, rgba(92, 33, 40, 0.5), rgba(92, 33, 40, 0)); }
 .cm-board-corkboard {
   position: relative;
   background:
