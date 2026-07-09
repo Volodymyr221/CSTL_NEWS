@@ -671,10 +671,10 @@ function renderMiniCard(item, type) {
       ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
       : '';
     return `
-      <article class="cm-board-note cm-board-note--${escapeHtml(item.color || 'yellow')} cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
+      <article class="cm-board-note cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat">${emoji} ${escapeHtml(item.category || '')}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(item.color || 'white')}">${emoji} ${escapeHtml(item.category || '')}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;

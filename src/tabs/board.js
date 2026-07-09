@@ -957,10 +957,10 @@ function renderBoardCard(p) {
     ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
     : '';
   return `
-    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || 'yellow')}${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+    <article class="cm-board-note bd-card bd-card--board${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(p.color || 'white')}">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       ${renderLoc(p.location)}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1013,7 +1013,7 @@ function renderAdModal(p) {
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(p.color || 'white')}">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
         ${renderLoc(p.location)}
       </div>
