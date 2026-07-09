@@ -3358,6 +3358,12 @@
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  function renderLoc(loc) {
+    if (!loc)
+      return "";
+    const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+    return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+  }
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
     if (!p || !p.bumped_at)
@@ -4191,7 +4197,7 @@ ${post.text}
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
+      ${renderLoc(p.location)}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4236,7 +4242,7 @@ ${post.text}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
+        ${renderLoc(p.location)}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
