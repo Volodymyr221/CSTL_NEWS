@@ -1656,8 +1656,8 @@
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
         <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
-        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
+        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>
@@ -4198,8 +4198,8 @@ ${post.text}
       <span class="cm-board-pin"></span>
       ${photoHtml}
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       ${renderLoc(p.location)}
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4243,8 +4243,8 @@ ${post.text}
       ${photoHtml}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
-        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
         ${renderLoc(p.location)}
+        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
