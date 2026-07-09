@@ -960,8 +960,8 @@ function renderBoardCard(p) {
       <span class="cm-board-pin"></span>
       ${photoHtml}
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       ${renderLoc(p.location)}
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone ? `
       <div class="cm-board-footer">
@@ -1013,8 +1013,8 @@ function renderAdModal(p) {
       ${photoHtml}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
-        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
         ${renderLoc(p.location)}
+        ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>

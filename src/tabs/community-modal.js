@@ -367,8 +367,8 @@ export function openBoardModal() {
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
-        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
+        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
