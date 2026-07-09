@@ -754,6 +754,16 @@
 .cm-board-body { padding: 0; }
 
 /* Коркова дошка — фон з градієнту + текстура крапок (імітує корок) */
+/* Підзаголовок групи при фільтрі НП (Оголошення {НП} / Оголошення «Олицька громада»).
+   Сидить між fixed-шапкою і корк-бордом; корк-борд дає власний верхній відступ. */
+.bd-group-title {
+  margin: 6px 16px 2px;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: #5C2128;   /* бордовий, у тон заголовка Дошки */
+}
 .cm-board-corkboard {
   position: relative;
   background:
@@ -945,6 +955,16 @@
 }
 .cm-board-author { font-weight: 600; }
 .cm-board-time { font-size: 10px; }
+/* Мітка «піднято» біля дати: вектор-стрілка вгору + акцентний колір (видно що
+   оголошення підняли — узгоджено з верхньою позицією в сортуванні). */
+.cm-board-bumped {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--red, #722F37);
+  font-weight: 700;
+}
+.cm-board-bumped svg { flex-shrink: 0; }
 
 .cm-board-contact {
   font-size: 13px;
