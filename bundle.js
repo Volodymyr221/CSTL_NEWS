@@ -3358,6 +3358,13 @@
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
+  function renderPostTime(p) {
+    if (p && p.bumped_at) {
+      return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
+    }
+    return formatTime(postTime(p));
+  }
   var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var BOARD_CATEGORIES2 = [
@@ -4179,7 +4186,7 @@ ${post.text}
       ${!isPhone2 ? `
       <div class="cm-board-footer">
         <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-        <span class="cm-board-time">${formatTime(postTime(p))}</span>
+        <span class="cm-board-time">${renderPostTime(p)}</span>
       </div>` : ""}
       ${isPhone2 ? `
         <div class="cm-board-contact cm-board-contact--phone">
@@ -4191,7 +4198,7 @@ ${post.text}
         </div>
         <div class="cm-board-author-row">
           <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="cm-board-time">${formatTime(postTime(p))}</span>
+          <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       ` : contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}
       ${boardActionsHtml(p)}
@@ -4235,7 +4242,7 @@ ${post.text}
           <div class="cm-board-modal-meta">
             <div class="cm-board-modal-meta-text">
               <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> \u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>
-              <span class="cm-board-time">${formatTime(postTime(p))}</span>
+              <span class="cm-board-time">${renderPostTime(p)}</span>
             </div>
             <div class="cm-board-modal-meta-btns">
               <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
@@ -4245,7 +4252,7 @@ ${post.text}
       return `
           <div class="cm-board-footer">
             <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="cm-board-time">${formatTime(postTime(p))}</span>
+            <span class="cm-board-time">${renderPostTime(p)}</span>
           </div>
           ${contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}`;
     })()}
@@ -4475,14 +4482,24 @@ ${post.text}
     const rankTs = (x) => x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
     const sorted = [...filtered].sort((a, b) => rankTs(b) - rankTs(a));
     if (activeType === "board") {
-      const leftCards = sorted.filter((_, i) => i % 2 === 0).map(renderBoardCard).join("");
-      const rightCards = sorted.filter((_, i) => i % 2 === 1).map(renderBoardCard).join("");
+      const corkboard = (list) => {
+        const left = list.filter((_, i) => i % 2 === 0).map(renderBoardCard).join("");
+        const right = list.filter((_, i) => i % 2 === 1).map(renderBoardCard).join("");
+        return `<div class="cm-board-corkboard board-corkboard--full"><div class="cm-board-col">${left}</div><div class="cm-board-col">${right}</div></div>`;
+      };
+      if (activeLocation !== COMMUNITY_ALL) {
+        const npGroup = sorted.filter((p) => p.location === activeLocation);
+        const wideGroup = sorted.filter((p) => isCommunityWide(p.location));
+        const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
+        return `
+        <div class="board-backdrop" id="board-backdrop"></div>
+        ${section(`\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F ${activeLocation}`, npGroup)}
+        ${section(`\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \xAB${COMMUNITY_ALL_LABEL}\xBB`, wideGroup)}
+      `;
+      }
       return `
       <div class="board-backdrop" id="board-backdrop"></div>
-      <div class="cm-board-corkboard board-corkboard--full">
-        <div class="cm-board-col">${leftCards}</div>
-        <div class="cm-board-col">${rightCards}</div>
-      </div>
+      ${corkboard(sorted)}
     `;
     }
     return `
