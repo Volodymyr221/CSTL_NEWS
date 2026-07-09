@@ -2344,6 +2344,7 @@
 .bd-titlebar {
   margin-top: 8px;
   margin-bottom: 4px;
+  transition: margin 0.3s ease;   /* плавно підтягується вгору при згортанні */
 }
 .bd-title {
   font-size: 18px;
@@ -2366,6 +2367,7 @@
   justify-content: space-between;
   gap: 10px;
   margin-top: 12px;   /* рядок лічильник+локація опущено нижче (назва лишається) */
+  transition: margin 0.3s ease;   /* плавно підтягується вгору при згортанні */
 }
 /* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
 .bd-count {
@@ -2431,8 +2433,10 @@
    згортаються, subrow (лічильник+локація) і пошук лишаються закріпленими. */
 .bd-title,
 .bd-cat-wrap {
-  transition: max-height 0.28s ease, opacity 0.2s ease, margin 0.28s ease;
-  max-height: 80px;   /* із запасом над реальною висотою, щоб не різати вміст */
+  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
+  /* Тісно над реальною висотою (заголовок ~24px, чіпи ~30px). Раніше було 80px —
+     завеликий запас → перша половина анімації «стояла», потім стрибок. 48px = плавно. */
+  max-height: 48px;
   overflow: hidden;
 }
 .bd-controls--collapsed .bd-title,
@@ -2443,6 +2447,10 @@
   margin-bottom: 0;
   pointer-events: none;
 }
+/* Згорнута шапка: заголовок зник → підтягуємо рядок «лічильник+локація» вгору
+   до шапки застосунку (Вова: між шапкою і рядком була завелика порожнеча). */
+.bd-controls--collapsed .bd-titlebar { margin-top: 0; margin-bottom: 0; }
+.bd-controls--collapsed .bd-subrow { margin-top: 0; }
 
 /* Таби типів постів */
 .bd-tabs {

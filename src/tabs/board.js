@@ -2093,25 +2093,35 @@ function setupHeaderCollapse() {
   const main = document.querySelector('.app-main');
   if (!main) return;
   _headerCollapseWired = true;
-  const THRESHOLD = 90;   // «через деякий час» — до цього шапка завжди повна
-  const DELTA = 6;        // анти-джитер: реагуємо лише на помітний рух
+  // Скільки треба проскролити У НАПРЯМКУ щоб перемкнути шапку (накопичувально —
+  // рахуємо пройдений шлях від зміни напрямку, а не миттєвий рух). Більше = пізніше
+  // реагує, плавніше. При зміні напрямку протилежний лічильник скидається (гістерезис —
+  // немає смикання на межі). Числа підбираються за відчуттям на телефоні.
+  const TOP_ZONE   = 90;   // біля самого верху шапка завжди повна (не чіпаємо)
+  const HIDE_AFTER = 80;   // px донизу від зміни напрямку → СХОВАТИ заголовок+категорії
+  const SHOW_AFTER = 60;   // px вгору від зміни напрямку → ПОКАЗАТИ їх назад
   let lastY = main.scrollTop;
+  let accDown = 0, accUp = 0;   // накопичений шлях у кожному напрямку
+  let collapsed = false;
   let ticking = false;
+  const setCollapsed = (v) => {
+    if (v === collapsed) return;   // не чіпаємо клас якщо стан не змінився → без миготіння
+    collapsed = v;
+    getBoardRoot()?.querySelector('.bd-controls')?.classList.toggle('bd-controls--collapsed', v);
+  };
   const apply = () => {
     ticking = false;
     if (main.dataset.tab !== 'board') return;   // тільки вкладка Дошка
-    const controls = getBoardRoot()?.querySelector('.bd-controls');
-    if (!controls) return;
     const y = main.scrollTop;
-    if (y <= THRESHOLD) {
-      controls.classList.remove('bd-controls--collapsed');   // біля верху — повна
-      lastY = y;
-    } else if (y > lastY + DELTA) {
-      controls.classList.add('bd-controls--collapsed');      // вниз — ховаємо
-      lastY = y;
-    } else if (y < lastY - DELTA) {
-      controls.classList.remove('bd-controls--collapsed');   // вгору — показуємо
-      lastY = y;
+    const dy = y - lastY;
+    lastY = y;
+    if (y <= TOP_ZONE) { setCollapsed(false); accDown = accUp = 0; return; }  // верх — завжди повна
+    if (dy > 0) {                 // рух вниз
+      accDown += dy; accUp = 0;   // зміна напрямку скидає протилежний лічильник
+      if (accDown >= HIDE_AFTER) setCollapsed(true);
+    } else if (dy < 0) {          // рух вгору
+      accUp -= dy; accDown = 0;
+      if (accUp >= SHOW_AFTER) setCollapsed(false);
     }
   };
   main.addEventListener('scroll', () => {
