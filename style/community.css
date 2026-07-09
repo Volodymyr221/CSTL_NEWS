@@ -764,6 +764,7 @@
   font-weight: 800;
   letter-spacing: 0.4px;
   text-transform: uppercase;
+  text-align: center;   /* назва НП по центру (Вова) */
   color: #5C2128;   /* бордовий, у тон заголовка Дошки */
   text-shadow: 0 1px 3px rgba(255, 248, 235, 0.5);   /* легкий світлий ореол для читабельності на корку */
 }

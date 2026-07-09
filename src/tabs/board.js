@@ -1342,8 +1342,8 @@ function renderBody() {
         : '';
       return `
         <div class="board-backdrop" id="board-backdrop"></div>
-        ${section(`Оголошення ${activeLocation}`, npGroup)}
-        ${section(`Оголошення «${COMMUNITY_ALL_LABEL}»`, wideGroup)}
+        ${section(activeLocation, npGroup)}
+        ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
     }
     return `
