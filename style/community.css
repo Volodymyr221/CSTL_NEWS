@@ -2447,10 +2447,12 @@
   margin-bottom: 0;
   pointer-events: none;
 }
-/* Згорнута шапка: заголовок зник → підтягуємо рядок «лічильник+локація» вгору
-   до шапки застосунку (Вова: між шапкою і рядком була завелика порожнеча). */
+/* Згорнута шапка: заголовок зник → рядок «лічильник+локація» центруємо рівно між
+   нижнім краєм шапки застосунку і блоком пошуку (Вова). Оскільки .bd-controls має
+   симетричні краї (padding-top 6px = flex-gap 6px до пошуку), симетричні margin рядка
+   дають точне вертикальне центрування в цій смузі. */
 .bd-controls--collapsed .bd-titlebar { margin-top: 0; margin-bottom: 0; }
-.bd-controls--collapsed .bd-subrow { margin-top: 0; }
+.bd-controls--collapsed .bd-subrow { margin-top: 8px; margin-bottom: 8px; }
 
 /* Таби типів постів */
 .bd-tabs {
