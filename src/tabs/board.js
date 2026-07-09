@@ -67,10 +67,21 @@ const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="non
 // Дата на картці/модалці: якщо оголошення підняли — показуємо СВІЖИЙ час підняття
 // з міткою «🔼 піднято …» (щоб верхня позиція узгоджувалась із показаною датою —
 // раніше сортування йшло за bumped_at, а дата показувала стару ts → «26 червня вгорі»).
+// Чи оголошення РЕАЛЬНО піднімали (≥1 раз). На створенні RPC ставить
+// bumped_at == published_at == ts (усі now()), тож наявність bumped_at ще НЕ означає
+// підйом. Реальний підйом (bumpPost) робить bumped_at помітно пізнішим за час публікації.
+function wasBumped(p) {
+  if (!p || !p.bumped_at) return false;
+  const bumpMs = new Date(p.bumped_at).getTime();
+  const t = postTime(p);   // ts || published_at || created_at
+  const origMs = typeof t === 'number' ? t : (t ? new Date(t).getTime() : 0);
+  if (!bumpMs || !origMs) return false;
+  return bumpMs - origMs > 60000;   // >1 хв пізніше публікації = реально піднято
+}
+
 function renderPostTime(p) {
-  if (p && p.bumped_at) {
-    // Підняте оголошення: свіжий час у ТОМУ Ж стилі що звичайна дата + стрілка вгору
-    // як позначка «підняте» (Вова). Стрілка — лише на піднятих.
+  if (wasBumped(p)) {
+    // Реально підняте: свіжий час у ТОМУ Ж стилі що звичайна дата + стрілка-позначка «підняте».
     return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
   }
   return formatTime(postTime(p));
