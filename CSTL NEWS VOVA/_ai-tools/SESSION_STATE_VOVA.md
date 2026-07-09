@@ -46,6 +46,12 @@
 
 ---
 
+## 📝 2026-07-09 (вечір) — Д-19: показ локації «Олицька громада» (гілка `claude/startup-uem-gwreea`)
+- **Задача:** на картці/зум-модалці Дошки показувати локацію завжди, включно з COMMUNITY_ALL; старі пости `location=null` — нічого (Вова: «старі будуть видалятись»).
+- **Зроблено:** хелпер `renderLoc(loc)` (`board.js` після `PIN_ICON_SVG`) — `!loc`→''; `COMMUNITY_ALL`→`COMMUNITY_ALL_LABEL` («Олицька громада»); інакше назва НП. Guard `!isCommunityWide` прибрано ЛИШЕ у показі (картка `renderBoardCard` + `renderAdModal`); фільтр `getFilteredPosts`/`isCommunityWide` не чіпав.
+- **Перевірка:** `node --check` OK, `node build.js` exit 0 (24 файли, `renderLoc` ×3 у bundle), логіка-смоук node (null→'', ALL→«Олицька громада», Дерно→«Дерно»). CACHE `cstl-20260709-1859`. Коміт `f0a95e27`.
+- ⚠️ **Push заблоковано** push-замком (Ромин /byyou active) — коміт лежить локально, чекає завершення її потоку / слова «деплой». Незакінчено: `/finish` (PR).
+
 ## 📝 2026-07-09 — /byyou Дошка: дата піднятих + групи НП (гілка `vova/board-np-bump`)
 - **Баг дати «піднято»:** сортування йшло за `bumped_at`, а картка показувала дату через `postTime()` (`ts/published_at`, оригінал) → підняте вгорі, але зі старою датою («26 червня вгорі, свіже нижче»). Фікс: `renderPostTime(p)` — якщо є `bumped_at` → «🔼 піднято {formatTime(bumped_at)}» (вектор-стрілка `BUMP_ICON_SVG`, клас `.cm-board-bumped`, акцентний колір); інакше звичайна дата. Застосовано в `renderBoardCard` (×2) + `renderAdModal` (×2). Офіційні картки/чат не чіпав.
 - **Фільтр НП — 2 групи (рішення Вови, варіант ii):** `renderBody` при `activeLocation !== COMMUNITY_ALL` розділяє на `npGroup` (`location===НП`) + `wideGroup` (`isCommunityWide`), кожна свій корк-борд + підзаголовок `.bd-group-title` («Оголошення {НП}» / «Оголошення «Олицька громада»»). Порожня група ховається. Дефолт «Уся громада» — один список (хелпер `corkboard()`).
