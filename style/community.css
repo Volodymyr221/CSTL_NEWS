@@ -2353,7 +2353,11 @@
   margin: 0;
   text-align: center;
   text-transform: uppercase;   /* «ДОШКА ОГОЛОШЕНЬ» */
-  letter-spacing: 1.4px;        /* трохи ширший інтервал між літерами */
+  letter-spacing: 2.2px;        /* ширший інтервал між літерами (Вова: «збільши трішки») */
+  /* Букви трохи витягнуті по вертикалі (Вова) — scaleY навколо центру, текст лишається
+     центрованим. transform не впливає на layout, тож syncBoardBodyOffset це врахує сам. */
+  transform: scaleY(1.14);
+  transform-origin: center;
   text-shadow: 0 1px 4px rgba(30, 8, 11, 0.35);   /* трохи сильніша м'яка тінь */
 }
 .bd-subrow {
