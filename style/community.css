@@ -917,10 +917,16 @@
 }
 
 /* Д-9: категорію позначає КОЛІР ТЕГА (переюз p.color), а не фон картки.
+   Кольори СЕМАНТИЧНІ (колір = зміст): купити=зелений, продати=червоний,
+   шукаю=синій, послуга=фіолетовий, знайдено/загубилось=бурштин (спільний).
    Приглушені пігулки — у тон преміальності дошки. */
-.cm-board-cat--green  { background: rgba(46,125,80,0.12);  color: #2E7D50; }
-.cm-board-cat--yellow { background: rgba(176,124,20,0.14); color: #9A6A12; }
-.cm-board-cat--blue   { background: rgba(40,90,150,0.11);  color: #2E5C8A; }
+.cm-board-cat--green  { background: rgba(46,125,80,0.14);  color: #2E7D50; }  /* куплю */
+.cm-board-cat--red    { background: rgba(192,57,43,0.13);  color: #C0392B; }  /* продам */
+.cm-board-cat--blue   { background: rgba(40,90,150,0.12);  color: #2E5C8A; }  /* шукаю */
+.cm-board-cat--purple { background: rgba(109,76,159,0.14); color: #6D4C9F; }  /* послуга */
+.cm-board-cat--amber  { background: rgba(176,124,20,0.16); color: #8A6410; }  /* знайдено/загубилось */
+/* Старі ключі (сумісність зі старими постами до перекласифікації) */
+.cm-board-cat--yellow { background: rgba(176,124,20,0.16); color: #8A6410; }
 .cm-board-cat--pink   { background: rgba(170,60,90,0.12);  color: #A03A5A; }
 .cm-board-cat--white  { background: rgba(90,90,90,0.10);   color: #5A5A5A; }
 

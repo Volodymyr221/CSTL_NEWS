@@ -1324,13 +1324,12 @@
 
   // src/tabs/community-modal.js
   var BOARD_CATEGORIES = [
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "red" },
     { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
     { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "purple" },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "amber" },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "amber" }
   ];
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
@@ -1384,7 +1383,7 @@
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
       author: accountAuthorName(),
-      category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
+      category: "\u043F\u0440\u043E\u0434\u0430\u043C",
       contact: "",
       title: "",
       location: COMMUNITY_ALL
@@ -3388,8 +3387,7 @@
     { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
     { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", match: ["\u0448\u0443\u043A\u0430\u044E"] },
     { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}", match: ["\u043F\u043E\u0441\u043B\u0443\u0433\u0430"] },
-    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", match: ["\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"] }
+    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] }
   ];
   var CATEGORY_EMOJI = {
     "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",

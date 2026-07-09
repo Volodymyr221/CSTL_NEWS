@@ -12,15 +12,17 @@ import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
-// купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
+// купівля-продаж → пошук → послуга → знахідки/втрати.
+// Кольори — семантичні (колір = зміст тега): купити=зелений, продати=червоний,
+// шукаю=синій, послуга=фіолетовий, знайдено/загубилось=бурштин (спільна тема).
+// «Оголошення» прибрано (уся Дошка = оголошення, окрема категорія зайва).
 const BOARD_CATEGORIES = [
-  { id: 'продам',     emoji: '💰', color: 'yellow' },
+  { id: 'продам',     emoji: '💰', color: 'red'    },
   { id: 'куплю',      emoji: '🛒', color: 'green'  },
   { id: 'шукаю',      emoji: '🔍', color: 'blue'   },
-  { id: 'послуга',    emoji: '🔧', color: 'blue'   },
-  { id: 'знайдено',   emoji: '🎁', color: 'yellow' },
-  { id: 'загубилось', emoji: '😟', color: 'pink'   },
-  { id: 'оголошення', emoji: '📢', color: 'pink'   },
+  { id: 'послуга',    emoji: '🔧', color: 'purple' },
+  { id: 'знайдено',   emoji: '🎁', color: 'amber'  },
+  { id: 'загубилось', emoji: '😟', color: 'amber'  },
 ];
 
 // Чи виглядає рядок як телефон
@@ -78,7 +80,7 @@ export function openBoardModal() {
     photos: [],         // URL-и фото: blob: під час upload, https: після
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
     author: accountAuthorName(),
-    category: 'оголошення',
+    category: 'продам',
     contact: '',
     title: '',
     location: COMMUNITY_ALL,   // Д-10: дефолт — вся громада
