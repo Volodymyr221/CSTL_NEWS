@@ -53,14 +53,17 @@ API_URL = "https://api.anthropic.com/v1/messages"
 # Скільки оригінальних матеріалів просимо в агента за прогін Громади.
 TARGET_PER_MISSION = {"Громада": 10, "Волинь": 8, "Україна та світ": 10}
 MAX_DRAFTS_TOTAL = 10     # тримати ~10 готових чернеток у кабінеті НАПЕРЕД (Алла публікує → агент домалує)
-BATCH_MAX = 4             # статей за ОДИН виклик: 10 разом модель не тягне (з 10 виходило 3) — пишемо пакетами
+BATCH_MAX = 2             # статей за ОДИН виклик (4→2 08.07): менша/швидша відповідь = менший ризик socket-таймауту (корінь пропалу грошей). Пишемо більше пакетів, кожен дешевший.
 SUPA_URL = os.environ.get("SUPABASE_URL", "https://uabyfecseqnemvcqhdem.supabase.co").rstrip("/")
 
 # ── ЗАПОБІЖНИК ВИТРАТ (circuit breaker — аварійний вимикач) ───────────────────
 # Захист від зациклення/пропалу токенів: агент рахує $ на льоту й спиняється,
 # щойно прогін або місяць перетнув стелю. Стелі можна перекрити через env.
 MAX_RUN_COST_USD = float(os.environ.get("AI_MAX_RUN_USD", "1.20"))     # стеля на ОДИН прогін: вистачає на ~3 пакети (повне наповнення до 10); типовий долив = 1 пакет ≈ $0.3
-MAX_MONTH_COST_USD = float(os.environ.get("AI_MAX_MONTH_USD", "15.0")) # стеля на МІСЯЦЬ (сума всіх прогонів; захист крону)
+MAX_MONTH_COST_USD = float(os.environ.get("AI_MAX_MONTH_USD", "4.0"))  # стеля на МІСЯЦЬ (15→4 08.07: реально ~$5/міс, $15 не спиняла; тепер щільно над фактом)
+# Оцінка «підозра на списання» для перерваного мережею виклику: Anthropic міг списати
+# server-side, а клієнтський usage=0. Додаємо цю суму в run_cost щоб breaker бачив ризик.
+SUSPECT_CHARGE_USD = float(os.environ.get("AI_SUSPECT_USD", "0.30"))
 
 # ── Лічильник витрат AI (Фаза 0 оптимізації) ──────────────────────────────────
 # Прилад: скільки $ їсть автопостинг. Пише data/ai_spend.json (читає адмінка).
@@ -396,9 +399,44 @@ def _roll_cache_breakpoint(messages: list):
         last[-1]["cache_control"] = {"type": "ephemeral"}
 
 
+def _post_once(payload, headers):
+    """Один POST до Anthropic з backoff-повтором ТОГО САМОГО запиту на транзиентних
+    збоях (429/5xx/мережа/таймаут) — idempotent, промпт НЕ змінюється. Повертає dict або None.
+    Закриває корінь пропалу грошей: раніше таймаут великого пакета → виняток → 0 output →
+    платний повтор з ІНШИМ промптом. Тепер транзиентний збій повторюється тим самим запитом."""
+    import urllib.request, urllib.error, socket
+    data = json.dumps(payload).encode("utf-8")
+    for attempt in range(3):   # 1 основна спроба + 2 backoff-повтори
+        req = urllib.request.Request(API_URL, data=data, headers=headers)
+        try:
+            with urllib.request.urlopen(req, timeout=420) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", "replace")[:300]
+            if e.code in (429, 500, 502, 503, 504, 529) and attempt < 2:
+                wait = 2 ** (attempt + 1)
+                print(f"  ↻ транзиентна HTTP {e.code} — повтор через {wait}с (той самий запит)…")
+                time.sleep(wait); continue
+            print(f"✗ виклик API: HTTP {e.code} — {body}")
+            return None
+        except (socket.timeout, TimeoutError, urllib.error.URLError) as e:
+            if attempt < 2:
+                wait = 2 ** (attempt + 1)
+                print(f"  ↻ мережа/таймаут ({e}) — повтор через {wait}с (idempotent, той самий запит)…")
+                time.sleep(wait); continue
+            print(f"✗ виклик API (мережа/таймаут) остаточно: {e}")
+            return None
+        except Exception as e:
+            print(f"✗ виклик API: {e}")
+            return None
+    return None
+
+
 def call_agent(prompt: str):
-    """Повертає (text, usage). Текст — фінальний JSON-масив (порожній при помилці).
-    usage — акумульовані токени/пошуки за ВСІ під-виклики циклу pause_turn."""
+    """Повертає (text, usage, ok). Текст — фінальний JSON-масив (порожній при помилці).
+    usage — акумульовані токени/пошуки за ВСІ під-виклики циклу pause_turn.
+    ok=False → виклик остаточно впав (мережа/таймаут після backoff). Тоді НЕ переписувати
+    промпт (перерваний виклик Anthropic міг списати server-side) — наступний крон доллє."""
     import urllib.request
     import urllib.error
     usage = {"input_tokens": 0, "output_tokens": 0,
@@ -420,6 +458,7 @@ def call_agent(prompt: str):
     messages = [{"role": "user", "content": [
         {"type": "text", "text": prompt, "cache_control": {"type": "ephemeral"}}]}]
     resp = None
+    ok = True
     # Ліміт ітерацій pause_turn МАЄ бути помітно більший за MAX_SEARCHES_PER_MISSION:
     # інакше модель витрачає всі кроки на веб-пошук і не встигає написати фінальний
     # JSON (баг: 6==6 давало found=0). Запас на пошук + написання відповіді.
@@ -431,19 +470,10 @@ def call_agent(prompt: str):
                        "max_uses": MAX_SEARCHES_PER_MISSION}],
             "messages": messages,
         }
-        req = urllib.request.Request(API_URL, data=json.dumps(payload).encode("utf-8"), headers=headers)
-        try:
-            # 180с не вистачало: пакет із 3-4 статей + 6 веб-пошуків генерується довго —
-            # у бою (прогін #15) двічі "read timed out", рятував лише повтор. 420с із запасом.
-            with urllib.request.urlopen(req, timeout=420) as r:
-                resp = json.loads(r.read().decode("utf-8"))
-        except urllib.error.HTTPError as e:
-            body = e.read().decode("utf-8", "replace")[:500]
-            print(f"✗ виклик API: HTTP {e.code} — {body}")
-            return "", usage
-        except Exception as e:
-            print(f"✗ виклик API: {e}")
-            return "", usage
+        resp = _post_once(payload, headers)   # backoff-повтор ТОГО САМОГО запиту всередині
+        if resp is None:
+            ok = False
+            break
         _accumulate_usage(usage, resp.get("usage") or {})
         if resp.get("stop_reason") == "pause_turn":
             messages.append({"role": "assistant", "content": resp.get("content", [])})
@@ -454,10 +484,10 @@ def call_agent(prompt: str):
     parts = [b.get("text", "") for b in (resp or {}).get("content", []) if b.get("type") == "text"]
     text = "\n".join(parts).strip()
     # діагностика (щоб бачити чому 0 знайдено + скільки коштувало)
-    print(f"  [debug] stop_reason={resp.get('stop_reason') if resp else None} "
+    print(f"  [debug] ok={ok} stop_reason={resp.get('stop_reason') if resp else None} "
           f"text_len={len(text)} in={usage['input_tokens']} cached={usage['cache_read_input_tokens']} "
           f"out={usage['output_tokens']} searches={usage['web_search_requests']}")
-    return text, usage
+    return text, usage, ok
 
 
 def _salvage_objects(t: str) -> list:
@@ -720,7 +750,7 @@ def count_cabinet_drafts() -> int:
     if key:
         import urllib.request
         req = urllib.request.Request(
-            SUPA_URL + "/rest/v1/cms_articles?select=id&status=eq.draft&type=eq.news",
+            SUPA_URL + "/rest/v1/cms_articles?select=id&status=eq.draft",   # ВСЯ черга draft (не лише type=news): свято-чернетки теж рахуємо, щоб не було 16 (08.07)
             headers={"apikey": key, "Authorization": "Bearer " + key})
         try:
             with urllib.request.urlopen(req, timeout=20) as r:
@@ -848,23 +878,31 @@ def main():
             # щоб пакет 2 не повторив теми пакета 1.
             prompt = build_prompt(name, cfg, seen_pool + found, target=target)
             print(f"→ місія {name}, пакет {batch_no}: пишу {target}…")
-            raw, usage = call_agent(prompt)
+            raw, usage, ok = call_agent(prompt)
             items = extract_json_array(raw)
             arts = [x for x in (item_to_article(i) for i in items) if x]
-            print(f"  {name} №{batch_no}: знайдено {len(items)}, валідних {len(arts)}")
-            run_cost += record_spend(f"{name} №{batch_no}", usage, len(arts), note=("" if raw else "агент нічого не повернув")) or 0
+            print(f"  {name} №{batch_no}: знайдено {len(items)}, валідних {len(arts)} (ok={ok})")
+            run_cost += record_spend(
+                f"{name} №{batch_no}", usage, len(arts),
+                note=("мережевий збій — можливе списання server-side" if not ok else ("" if raw else "агент нічого не повернув"))
+            ) or 0
+            if not ok:
+                # Перерваний мережею виклик: Anthropic міг списати server-side, а usage=0 →
+                # додаємо оцінку «підозра на списання» щоб breaker бачив реальний ризик.
+                run_cost += SUSPECT_CHARGE_USD
+                print(f"  ⚠ мережевий збій — +${SUSPECT_CHARGE_USD} оцінка до breaker; НЕ переписую промпт (idempotent backoff уже був у call_agent)")
 
-            # САМО-РЕМОНТ: 0 валідних → РІВНО ОДИН повтор з переписаним запитом
-            # (менше + коротше + суворий JSON), під гейтом стелі.
-            if not arts and run_cost < MAX_RUN_COST_USD:
-                print(f"  ↻ 0 валідних — переписую запит (менше, коротше, суворий JSON) і повторюю (1 раз)…")
+            # САМО-РЕМОНТ: текст ПРИЙШОВ (ok) але 0 валідних → РІВНО ОДИН повтор з переписаним
+            # запитом. При мережевому збої (not ok) — НЕ переписуємо (уникаємо платного подвійного виклику).
+            if ok and not arts and run_cost < MAX_RUN_COST_USD:
+                print(f"  ↻ 0 валідних (текст прийшов) — переписую запит (менше, коротше, суворий JSON) і повторюю (1 раз)…")
                 retry_prompt = build_prompt(name, cfg, seen_pool + found, target=min(3, target)) + (
                     "\n\n⚠️ ПОВТОР: попередня відповідь була невалідна/обрізана. Тепер:\n"
                     f"• поверни РІВНО валідний JSON-масив (починається '[' і закінчується ']');\n"
                     f"• МАКСИМУМ {min(3, target)} статті; кожна КОРОТКА (лід + 2-3 стислі абзаци);\n"
                     "• без пояснень до/після масиву; не обривай на півслові."
                 )
-                raw, usage = call_agent(retry_prompt)
+                raw, usage, ok = call_agent(retry_prompt)
                 items = extract_json_array(raw)
                 arts = [x for x in (item_to_article(i) for i in items) if x]
                 print(f"  {name} №{batch_no} (повтор): знайдено {len(items)}, валідних {len(arts)}")
