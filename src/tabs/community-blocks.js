@@ -163,36 +163,44 @@ export async function renderWeatherBlock() {
 // Два графіки (iOS-стиль): температура за годинами + ймовірність опадів за годинами.
 // Дані беремо з кешу _wxData (hourly), зрізаємо 24 години обраного дня.
 
-// Побудова легкого SVG-графіка. points = [{h, v}], де h — година (0..23), v — значення.
-function wxLineChart(points, { unit = '°', color = '#FFFFFF', pad: padTop = 16 } = {}) {
-  const W = 320, H = 96, padL = 6, padR = 6, padB = 18;
+// Спільна геометрія графіків (лінія/бари/скрабер). padR більший — місце під праву шкалу °.
+const WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
+
+function wxGeom(points) {
   const vals = points.map(p => p.v);
   let min = Math.min(...vals), max = Math.max(...vals);
   if (min === max) { min -= 1; max += 1; }
-  const range = max - min;
-  const innerW = W - padL - padR;
-  const innerH = H - padTop - padB;
-  const x = i => padL + (innerW * i) / (points.length - 1);
-  const y = v => padTop + innerH - ((v - min) / range) * innerH;
-  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(' ');
-  const area = `${line} L${x(points.length - 1).toFixed(1)},${(padTop + innerH).toFixed(1)} L${x(0).toFixed(1)},${(padTop + innerH).toFixed(1)} Z`;
-  // Підписи години кожні 3 год + значення на екстремумах.
-  const maxI = vals.indexOf(max), minI = vals.indexOf(min);
-  const labels = points.map((p, i) => {
-    let out = '';
-    if (i % 3 === 0) out += `<text x="${x(i).toFixed(1)}" y="${H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>`;
-    if (i === maxI || i === minI) out += `<text x="${x(i).toFixed(1)}" y="${(y(p.v) - 5).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}${unit}</text>`;
-    return out;
+  const innerW = WX.W - WX.padL - WX.padR;
+  const innerH = WX.H - WX.padTop - WX.padB;
+  return {
+    min, max, innerW, innerH,
+    x: i => WX.padL + (innerW * i) / (points.length - 1),
+    y: v => WX.padTop + innerH - ((v - min) / (max - min)) * innerH,
+  };
+}
+
+// Лінія температури + ПРАВА шкала ° (Y-тіки min/середина/max) + підписи годин кожні 2 год.
+function wxLineChart(points, { unit = '°', color = '#FFFFFF' } = {}) {
+  const g = wxGeom(points);
+  const line = points.map((p, i) => `${i === 0 ? 'M' : 'L'}${g.x(i).toFixed(1)},${g.y(p.v).toFixed(1)}`).join(' ');
+  const area = `${line} L${g.x(points.length - 1).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} L${g.x(0).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} Z`;
+  const xLabels = points.map((p, i) => i % 2 === 0
+    ? `<text x="${g.x(i).toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : '').join('');
+  const yAxis = [g.min, (g.min + g.max) / 2, g.max].map(v => {
+    const yy = g.y(v);
+    return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/>`
+         + `<text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${Math.round(v)}${unit}</text>`;
   }).join('');
   return `
-    <svg class="wx-chart" viewBox="0 0 ${W} ${H}" role="img">
+    <svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
       <defs><linearGradient id="wxfill" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
         <stop offset="1" stop-color="${color}" stop-opacity="0"/>
       </linearGradient></defs>
+      ${yAxis}
       <path d="${area}" fill="url(#wxfill)"/>
       <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-      ${labels}
+      ${xLabels}
     </svg>`;
 }
 
