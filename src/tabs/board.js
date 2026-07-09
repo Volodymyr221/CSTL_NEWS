@@ -69,7 +69,9 @@ const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="non
 // раніше сортування йшло за bumped_at, а дата показувала стару ts → «26 червня вгорі»).
 function renderPostTime(p) {
   if (p && p.bumped_at) {
-    return `<span class="cm-board-bumped">${BUMP_ICON_SVG}піднято ${formatTime(p.bumped_at)}</span>`;
+    // Підняте оголошення: свіжий час у ТОМУ Ж стилі що звичайна дата + стрілка вгору
+    // як позначка «підняте» (Вова). Стрілка — лише на піднятих.
+    return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
   }
   return formatTime(postTime(p));
 }

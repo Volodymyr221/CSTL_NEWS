@@ -960,14 +960,14 @@
 .cm-board-time { font-size: 10px; }
 /* Мітка «піднято» біля дати: вектор-стрілка вгору + акцентний колір (видно що
    оголошення підняли — узгоджено з верхньою позицією в сортуванні). */
+/* Підняте оголошення: час у тому ж стилі що звичайна дата (успадковує колір/розмір
+   від .cm-board-time — сірий, uppercase) + стрілка вгору як позначка «підняте». */
 .cm-board-bumped {
   display: inline-flex;
   align-items: center;
   gap: 2px;
-  color: var(--red, #722F37);
-  font-weight: 700;
 }
-.cm-board-bumped svg { flex-shrink: 0; }
+.cm-board-bumped svg { flex-shrink: 0; width: 11px; height: 11px; }
 
 .cm-board-contact {
   font-size: 13px;

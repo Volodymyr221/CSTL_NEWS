@@ -3361,7 +3361,7 @@
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function renderPostTime(p) {
     if (p && p.bumped_at) {
-      return `<span class="cm-board-bumped">${BUMP_ICON_SVG}\u043F\u0456\u0434\u043D\u044F\u0442\u043E ${formatTime(p.bumped_at)}</span>`;
+      return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
     }
     return formatTime(postTime(p));
   }
