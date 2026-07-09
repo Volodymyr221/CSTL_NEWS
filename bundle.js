@@ -3359,8 +3359,18 @@
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
+  function wasBumped(p) {
+    if (!p || !p.bumped_at)
+      return false;
+    const bumpMs = new Date(p.bumped_at).getTime();
+    const t = postTime(p);
+    const origMs = typeof t === "number" ? t : t ? new Date(t).getTime() : 0;
+    if (!bumpMs || !origMs)
+      return false;
+    return bumpMs - origMs > 6e4;
+  }
   function renderPostTime(p) {
-    if (p && p.bumped_at) {
+    if (wasBumped(p)) {
       return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
     }
     return formatTime(postTime(p));
@@ -4493,8 +4503,8 @@ ${post.text}
         const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
         return `
         <div class="board-backdrop" id="board-backdrop"></div>
-        ${section(`\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F ${activeLocation}`, npGroup)}
-        ${section(`\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \xAB${COMMUNITY_ALL_LABEL}\xBB`, wideGroup)}
+        ${section(activeLocation, npGroup)}
+        ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
       }
       return `
