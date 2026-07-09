@@ -930,7 +930,7 @@ function renderBoardCard(p) {
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone ? `
       <div class="cm-board-footer">
@@ -983,7 +983,7 @@ function renderAdModal(p) {
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ''}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1484,6 +1484,9 @@ function renderAll() {
   // Zoom-перегляд тільки для board-стікерів
   initBoardNoteExpand(el);
 
+  // Відступ тіла = реальна висота шапки (щоб картки не залазили під неї). Через rAF —
+  // щоб вимір відбувся після того як браузер порахував layout свіжої розмітки.
+  requestAnimationFrame(syncBoardBodyOffset);
 }
 
 function renderBodyOnly() {
@@ -2063,6 +2066,24 @@ export async function openChatById(postId) {
   if (post) openChatModal(post);
 }
 
+// Відступ тіла Дошки = реальна висота «прибитої» шапки (.bd-controls), щоб картки
+// не залазили під неї. Раніше це було магічне число в CSS (padding-top), яке «пливло»
+// щоразу як у шапку щось додавали (Д-11 його зламав, додавши заголовок). Тепер міряємо
+// висоту в рантаймі → self-correcting: хоч би що додали в шапку, картки сядуть рівно під нею.
+const BOARD_BODY_GAP = 12;   // зазор між нижнім краєм шапки і верхом коркової панелі
+function syncBoardBodyOffset() {
+  const root = getBoardRoot();
+  if (!root || activeType !== 'board') return;   // тільки board (у нього шапка з заголовком+чіпами)
+  const controls = root.querySelector('.bd-controls');
+  const body = root.querySelector('.bd-body');
+  if (!controls || !body) return;
+  // Міряємо лише коли шапка РОЗГОРНУТА — у згорнутому стані (скрол вниз) висота
+  // занижена, і картки б підстрибнули. У згорнутому лишаємо вже виставлений відступ.
+  if (controls.classList.contains('bd-controls--collapsed')) return;
+  const h = controls.offsetHeight;
+  if (h > 0) body.style.paddingTop = (h + BOARD_BODY_GAP) + 'px';   // h=0 → вкладка схована, лишаємо CSS-запас
+}
+
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
 // прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
@@ -2072,30 +2093,42 @@ function setupHeaderCollapse() {
   const main = document.querySelector('.app-main');
   if (!main) return;
   _headerCollapseWired = true;
-  const THRESHOLD = 90;   // «через деякий час» — до цього шапка завжди повна
-  const DELTA = 6;        // анти-джитер: реагуємо лише на помітний рух
+  // Скільки треба проскролити У НАПРЯМКУ щоб перемкнути шапку (накопичувально —
+  // рахуємо пройдений шлях від зміни напрямку, а не миттєвий рух). Більше = пізніше
+  // реагує, плавніше. При зміні напрямку протилежний лічильник скидається (гістерезис —
+  // немає смикання на межі). Числа підбираються за відчуттям на телефоні.
+  const TOP_ZONE   = 90;   // біля самого верху шапка завжди повна (не чіпаємо)
+  const HIDE_AFTER = 80;   // px донизу від зміни напрямку → СХОВАТИ заголовок+категорії
+  const SHOW_AFTER = 60;   // px вгору від зміни напрямку → ПОКАЗАТИ їх назад
   let lastY = main.scrollTop;
+  let accDown = 0, accUp = 0;   // накопичений шлях у кожному напрямку
+  let collapsed = false;
   let ticking = false;
+  const setCollapsed = (v) => {
+    if (v === collapsed) return;   // не чіпаємо клас якщо стан не змінився → без миготіння
+    collapsed = v;
+    getBoardRoot()?.querySelector('.bd-controls')?.classList.toggle('bd-controls--collapsed', v);
+  };
   const apply = () => {
     ticking = false;
     if (main.dataset.tab !== 'board') return;   // тільки вкладка Дошка
-    const controls = getBoardRoot()?.querySelector('.bd-controls');
-    if (!controls) return;
     const y = main.scrollTop;
-    if (y <= THRESHOLD) {
-      controls.classList.remove('bd-controls--collapsed');   // біля верху — повна
-      lastY = y;
-    } else if (y > lastY + DELTA) {
-      controls.classList.add('bd-controls--collapsed');      // вниз — ховаємо
-      lastY = y;
-    } else if (y < lastY - DELTA) {
-      controls.classList.remove('bd-controls--collapsed');   // вгору — показуємо
-      lastY = y;
+    const dy = y - lastY;
+    lastY = y;
+    if (y <= TOP_ZONE) { setCollapsed(false); accDown = accUp = 0; return; }  // верх — завжди повна
+    if (dy > 0) {                 // рух вниз
+      accDown += dy; accUp = 0;   // зміна напрямку скидає протилежний лічильник
+      if (accDown >= HIDE_AFTER) setCollapsed(true);
+    } else if (dy < 0) {          // рух вгору
+      accUp -= dy; accDown = 0;
+      if (accUp >= SHOW_AFTER) setCollapsed(false);
     }
   };
   main.addEventListener('scroll', () => {
     if (!ticking) { ticking = true; requestAnimationFrame(apply); }
   }, { passive: true });
+  // Зміна розміру екрана (поворот, зміна вікна) → перерахувати відступ тіла під шапку.
+  window.addEventListener('resize', () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
 }
 
 export function initBoard() {
@@ -2121,6 +2154,10 @@ export function initBoard() {
       activeLocation = COMMUNITY_ALL;
       renderAll();
     }
+    // Відступ під шапку: при ВХОДІ на Дошку вкладка щойно стала видимою, тому
+    // тепер .bd-controls має реальну висоту (на старті вона була схована → offsetHeight=0
+    // → вимір не спрацьовував). Міряємо тут. rAF — дочекатись layout після показу.
+    if (tab === 'board') requestAnimationFrame(syncBoardBodyOffset);
   });
   // Авто-ховання шапки при скролі Дошки (гортаєш вниз — ховаються назва+категорії;
   // вгору — з'являються). Лічильник/локація + пошук лишаються закріпленими.

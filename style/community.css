@@ -905,6 +905,15 @@
   color: var(--ink-soft, #6b6b6b);
   margin-bottom: 6px;
   align-self: flex-start;
+  text-transform: uppercase;   /* Д-20: назва НП великими буквами (як у фільтрі) */
+  letter-spacing: 0.2px;
+}
+/* Д-20: пін НП — векторний (той самий силует що біля фільтра), акцентний колір */
+.cm-board-loc svg {
+  width: 12px;
+  height: 12px;
+  color: var(--red, #722F37);   /* SVG stroke=currentColor → підхоплює цей колір */
+  flex-shrink: 0;
 }
 
 .cm-board-title {
@@ -2230,9 +2239,13 @@
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
    Обговорення (chat): шапка ≈22 + пошук 40 + відступи ≈16 ≈ 78 → підтягуємо картку
    ближче до пошуку (Рома: «занадто далеко»), лишаючи легкий зазор.
-   З категоріями (тип board): пошук 40 + чіпи 32 + відступи ≈ 108. */
+   З категоріями (тип board): заголовок Д-11 + пошук + чіпи ≈ 160.
+   ⚠️ Це лише ЗАПАСНЕ значення (до запуску JS / коли вкладка схована).
+   Точну висоту виставляє syncBoardBodyOffset() у board.js — міряє реальний
+   .bd-controls у рантаймі, тож при будь-якій зміні шапки картки не залазять під неї
+   (раніше це число «пливло» щоразу — Д-11 його зламав). */
 .bd-body { padding-top: 100px; }
-.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 110px; }
+.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 160px; }
 
 /* Обговорення тепер справжня .page у .app-main (не overlay) — .disc-screen прибрано.
    #disc-content поводиться як .board-content на Дошці; шапку/таб-бар/скрол дає .app-main. */
@@ -2283,17 +2296,23 @@
 .bd-titlebar {
   margin-top: 8px;
   margin-bottom: 4px;
+  transition: margin 0.3s ease;   /* плавно підтягується вгору при згортанні */
 }
 .bd-title {
   font-size: 18px;
   font-weight: 800;
-  color: var(--red, #722F37);   /* фірмовий бордовий відтінок — заголовок виділяється */
+  color: #5C2128;   /* бордовий трішки світліший за #4C1C22 (Вова), але темніший за бренд #722F37 */
   line-height: 1.15;
   margin: 0;
   text-align: center;
   text-transform: uppercase;   /* «ДОШКА ОГОЛОШЕНЬ» */
-  letter-spacing: 1.4px;        /* трохи ширший інтервал між літерами */
-  text-shadow: 0 1px 3px rgba(114, 47, 55, 0.22);   /* м'яка тінь для насиченості */
+  letter-spacing: 2.2px;        /* ширший інтервал між літерами (Вова: «збільши трішки») */
+  /* Букви трохи витягнуті по вертикалі (Вова) — scaleY навколо центру, текст лишається
+     центрованим. transform не впливає на layout, тож syncBoardBodyOffset це врахує сам.
+     1.08 — стягнуто назад від 1.14 (Вова), але не до 1.0 як на старті. */
+  transform: scaleY(1.08);
+  transform-origin: center;
+  text-shadow: 0 1px 4px rgba(30, 8, 11, 0.35);   /* трохи сильніша м'яка тінь */
 }
 .bd-subrow {
   display: flex;
@@ -2301,6 +2320,7 @@
   justify-content: space-between;
   gap: 10px;
   margin-top: 12px;   /* рядок лічильник+локація опущено нижче (назва лишається) */
+  transition: margin 0.3s ease;   /* плавно підтягується вгору при згортанні */
 }
 /* Лічильник — чіткіший (темніший + напівжирний) + великими буквами */
 .bd-count {
@@ -2366,8 +2386,10 @@
    згортаються, subrow (лічильник+локація) і пошук лишаються закріпленими. */
 .bd-title,
 .bd-cat-wrap {
-  transition: max-height 0.28s ease, opacity 0.2s ease, margin 0.28s ease;
-  max-height: 80px;   /* із запасом над реальною висотою, щоб не різати вміст */
+  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
+  /* Тісно над реальною висотою (заголовок ~24px, чіпи ~30px). Раніше було 80px —
+     завеликий запас → перша половина анімації «стояла», потім стрибок. 48px = плавно. */
+  max-height: 48px;
   overflow: hidden;
 }
 .bd-controls--collapsed .bd-title,
@@ -2378,6 +2400,12 @@
   margin-bottom: 0;
   pointer-events: none;
 }
+/* Згорнута шапка: заголовок зник → рядок «лічильник+локація» центруємо рівно між
+   нижнім краєм шапки застосунку і блоком пошуку (Вова). Оскільки .bd-controls має
+   симетричні краї (padding-top 6px = flex-gap 6px до пошуку), симетричні margin рядка
+   дають точне вертикальне центрування в цій смузі. */
+.bd-controls--collapsed .bd-titlebar { margin-top: 0; margin-bottom: 0; }
+.bd-controls--collapsed .bd-subrow { margin-top: 8px; margin-bottom: 8px; }
 
 /* Таби типів постів */
 .bd-tabs {

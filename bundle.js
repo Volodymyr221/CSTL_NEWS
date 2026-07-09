@@ -4174,7 +4174,7 @@ ${post.text}
       ${photoHtml}
       <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
+      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4219,7 +4219,7 @@ ${post.text}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
+        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -4647,6 +4647,7 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
+    requestAnimationFrame(syncBoardBodyOffset);
   }
   function renderBodyOnly() {
     const el = getBoardRoot();
@@ -5210,6 +5211,21 @@ ${post.text}
     if (post)
       openChatModal(post);
   }
+  var BOARD_BODY_GAP = 12;
+  function syncBoardBodyOffset() {
+    const root = getBoardRoot();
+    if (!root || activeType !== "board")
+      return;
+    const controls = root.querySelector(".bd-controls");
+    const body = root.querySelector(".bd-body");
+    if (!controls || !body)
+      return;
+    if (controls.classList.contains("bd-controls--collapsed"))
+      return;
+    const h = controls.offsetHeight;
+    if (h > 0)
+      body.style.paddingTop = h + BOARD_BODY_GAP + "px";
+  }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
     if (_headerCollapseWired)
@@ -5218,27 +5234,41 @@ ${post.text}
     if (!main)
       return;
     _headerCollapseWired = true;
-    const THRESHOLD = 90;
-    const DELTA = 6;
+    const TOP_ZONE = 90;
+    const HIDE_AFTER = 80;
+    const SHOW_AFTER = 60;
     let lastY = main.scrollTop;
+    let accDown = 0, accUp = 0;
+    let collapsed = false;
     let ticking = false;
+    const setCollapsed = (v) => {
+      if (v === collapsed)
+        return;
+      collapsed = v;
+      getBoardRoot()?.querySelector(".bd-controls")?.classList.toggle("bd-controls--collapsed", v);
+    };
     const apply = () => {
       ticking = false;
       if (main.dataset.tab !== "board")
         return;
-      const controls = getBoardRoot()?.querySelector(".bd-controls");
-      if (!controls)
-        return;
       const y = main.scrollTop;
-      if (y <= THRESHOLD) {
-        controls.classList.remove("bd-controls--collapsed");
-        lastY = y;
-      } else if (y > lastY + DELTA) {
-        controls.classList.add("bd-controls--collapsed");
-        lastY = y;
-      } else if (y < lastY - DELTA) {
-        controls.classList.remove("bd-controls--collapsed");
-        lastY = y;
+      const dy = y - lastY;
+      lastY = y;
+      if (y <= TOP_ZONE) {
+        setCollapsed(false);
+        accDown = accUp = 0;
+        return;
+      }
+      if (dy > 0) {
+        accDown += dy;
+        accUp = 0;
+        if (accDown >= HIDE_AFTER)
+          setCollapsed(true);
+      } else if (dy < 0) {
+        accUp -= dy;
+        accDown = 0;
+        if (accUp >= SHOW_AFTER)
+          setCollapsed(false);
       }
     };
     main.addEventListener("scroll", () => {
@@ -5247,6 +5277,7 @@ ${post.text}
         requestAnimationFrame(apply);
       }
     }, { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
   }
   function initBoard() {
     attachBoardDelegation();
@@ -5268,6 +5299,8 @@ ${post.text}
         activeLocation = COMMUNITY_ALL;
         renderAll();
       }
+      if (tab === "board")
+        requestAnimationFrame(syncBoardBodyOffset);
     });
     setupHeaderCollapse();
     onAuthChange(() => {
