@@ -2431,8 +2431,10 @@
    згортаються, subrow (лічильник+локація) і пошук лишаються закріпленими. */
 .bd-title,
 .bd-cat-wrap {
-  transition: max-height 0.28s ease, opacity 0.2s ease, margin 0.28s ease;
-  max-height: 80px;   /* із запасом над реальною висотою, щоб не різати вміст */
+  transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
+  /* Тісно над реальною висотою (заголовок ~24px, чіпи ~30px). Раніше було 80px —
+     завеликий запас → перша половина анімації «стояла», потім стрибок. 48px = плавно. */
+  max-height: 48px;
   overflow: hidden;
 }
 .bd-controls--collapsed .bd-title,

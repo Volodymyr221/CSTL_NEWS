@@ -5234,27 +5234,41 @@ ${post.text}
     if (!main)
       return;
     _headerCollapseWired = true;
-    const THRESHOLD = 90;
-    const DELTA = 6;
+    const TOP_ZONE = 90;
+    const HIDE_AFTER = 80;
+    const SHOW_AFTER = 60;
     let lastY = main.scrollTop;
+    let accDown = 0, accUp = 0;
+    let collapsed = false;
     let ticking = false;
+    const setCollapsed = (v) => {
+      if (v === collapsed)
+        return;
+      collapsed = v;
+      getBoardRoot()?.querySelector(".bd-controls")?.classList.toggle("bd-controls--collapsed", v);
+    };
     const apply = () => {
       ticking = false;
       if (main.dataset.tab !== "board")
         return;
-      const controls = getBoardRoot()?.querySelector(".bd-controls");
-      if (!controls)
-        return;
       const y = main.scrollTop;
-      if (y <= THRESHOLD) {
-        controls.classList.remove("bd-controls--collapsed");
-        lastY = y;
-      } else if (y > lastY + DELTA) {
-        controls.classList.add("bd-controls--collapsed");
-        lastY = y;
-      } else if (y < lastY - DELTA) {
-        controls.classList.remove("bd-controls--collapsed");
-        lastY = y;
+      const dy = y - lastY;
+      lastY = y;
+      if (y <= TOP_ZONE) {
+        setCollapsed(false);
+        accDown = accUp = 0;
+        return;
+      }
+      if (dy > 0) {
+        accDown += dy;
+        accUp = 0;
+        if (accDown >= HIDE_AFTER)
+          setCollapsed(true);
+      } else if (dy < 0) {
+        accUp -= dy;
+        accDown = 0;
+        if (accUp >= SHOW_AFTER)
+          setCollapsed(false);
       }
     };
     main.addEventListener("scroll", () => {
