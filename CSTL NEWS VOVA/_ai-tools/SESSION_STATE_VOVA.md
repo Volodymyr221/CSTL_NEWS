@@ -46,6 +46,12 @@
 
 ---
 
+## 📝 2026-07-09 (вечір) — Д-9: єдиний фон карток + категорія кольором тега (гілка `claude/startup-uem-gwreea`)
+- **Було:** фон картки тінтований за категорією (`p.color`→`cm-board-note--{color}`, 5 майже-білих тонів), тег `cm-board-cat` — однаковий бордовий.
+- **Стало (рішення Вови «нейтральніший, майже білий»):** усі картки єдиний фон `#FBFBF9`; категорію позначає **колір тега** `cm-board-cat--{color}` (переюз наявного `p.color`, без нової мапи). Пігулки: green/yellow/blue/pink/white — приглушені.
+- **Зміни:** база `.cm-board-note` bg `#FFF59D`→`#FBFBF9`, 5 тонових класів прибрано, +5 `.cm-board-cat--{color}` (`community.css`). Рендер оновлено у 4 місцях: `board.js` (картка `renderBoardCard` + зум `renderAdModal`), `community-modal.js` (прев'ю), `community-blocks.js` (міні-віджет Громади — щоб не втратив колір; зона Громади, Г-12 колись перебудує з нуля).
+- **Перевірка:** `node --check` ×3 OK, `node build.js` exit 0 (bundle: 3 місця з `cm-board-cat--`, тоновий клас картки 0), скріншот Chromium з реальним CSS — 4 картки єдиний фон + кольорові теги (надіслано Вові). CACHE `cstl-20260709-2007`. Коміт `7522650d`. Push чекає byyou.
+
 ## 📝 2026-07-09 (вечір) — Д-19: показ локації «Олицька громада» (гілка `claude/startup-uem-gwreea`)
 - **Задача:** на картці/зум-модалці Дошки показувати локацію завжди, включно з COMMUNITY_ALL; старі пости `location=null` — нічого (Вова: «старі будуть видалятись»).
 - **Зроблено:** хелпер `renderLoc(loc)` (`board.js` після `PIN_ICON_SVG`) — `!loc`→''; `COMMUNITY_ALL`→`COMMUNITY_ALL_LABEL` («Олицька громада»); інакше назва НП. Guard `!isCommunityWide` прибрано ЛИШЕ у показі (картка `renderBoardCard` + `renderAdModal`); фільтр `getFilteredPosts`/`isCommunityWide` не чіпав.
