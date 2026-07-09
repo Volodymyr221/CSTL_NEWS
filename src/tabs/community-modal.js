@@ -353,10 +353,10 @@ export function openBoardModal() {
         ${escapeHtml(contactTrim)}
       </div>` : '';
     previewCanvas.innerHTML = `
-      <article class="cm-board-note cm-board-note--${cat.color}${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
+      <article class="cm-board-note${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
-        <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>

@@ -1649,10 +1649,10 @@
         ${escapeHtml(contactTrim)}
       </div>` : "";
       previewCanvas.innerHTML = `
-      <article class="cm-board-note cm-board-note--${cat.color}${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
+      <article class="cm-board-note${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
-        <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
@@ -3358,6 +3358,12 @@
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  function renderLoc(loc) {
+    if (!loc)
+      return "";
+    const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+    return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+  }
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
     if (!p || !p.bumped_at)
@@ -4186,12 +4192,12 @@ ${post.text}
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
-    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || "yellow")}${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+    <article class="cm-board-note bd-card bd-card--board${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(p.color || "white")}">${emoji} ${escapeHtml(p.category)}</span>
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
+      ${renderLoc(p.location)}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4234,9 +4240,9 @@ ${post.text}
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(p.color || "white")}">${emoji} ${escapeHtml(p.category)}</span>
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
+        ${renderLoc(p.location)}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -8053,10 +8059,10 @@ ${post.text}
       const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
-      <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
+      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat">${emoji} ${escapeHtml(item.category || "")}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(item.color || "white")}">${emoji} ${escapeHtml(item.category || "")}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;
