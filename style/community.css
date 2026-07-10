@@ -2235,7 +2235,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
+  gap: 6px;
   margin-top: 8px;
   padding-top: 8px;
 }
@@ -2249,23 +2249,33 @@
 }
 .cm-board-foot-actions {
   display: flex;
-  gap: 8px;
+  gap: 6px;
   flex-shrink: 0;
 }
+/* Компактні кнопки — щоб футер влазив у вузьку картку (2 колонки) */
+.cm-board-foot-actions .cm-board-call,
+.cm-board-foot-actions .cm-board-msg-btn { width: 32px; height: 32px; }
 .cm-board-foot-actions .cm-board-call svg,
-.cm-board-foot-actions .cm-board-msg-btn svg { width: 17px; height: 17px; }
+.cm-board-foot-actions .cm-board-msg-btn svg { width: 15px; height: 15px; }
 .cm-board-foot-who {
   min-width: 0;
   text-align: right;
-  line-height: 1.35;
+  line-height: 1.3;
 }
 .cm-board-foot-who .cm-board-author--card {
   display: block;
+  font-size: 10px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
-.cm-board-foot-who .cm-board-time { display: block; }
+/* Час — завжди в один рядок (стрілка+«13 год тому» не переносяться) */
+.cm-board-foot-who .cm-board-time {
+  display: block;
+  font-size: 9px;
+  white-space: nowrap;
+}
+.cm-board-foot-who .cm-board-bumped { white-space: nowrap; }
 .cm-board-author--card {
   font-size: 11px;
   font-weight: 600;
