@@ -1148,18 +1148,51 @@ async function ensureChatPush() {
   } catch (e) { console.warn('[chat-push] ensure:', e && e.message); }
 }
 
+// ── P-9: відкрити конкретну розмову за id треда (з нотифікації/hash-роутингу) ──
+export async function openThreadById(threadId) {
+  if (!isLoggedIn() || threadId == null) return;
+  const threads = await fetchMyThreads(currentUserId());
+  const thread = threads.find(t => String(t.id) === String(threadId));
+  if (thread) openChat(thread, thread.post);
+}
+
+// ── P-8: банер вхідного push (chat) коли застосунок у фокусі — раніше нічого
+// візуально не показувалось, лише бейдж (легко пропустити). Тап → відкрити розмову.
+let _chatBannerTimer = null;
+function showChatPushBanner({ title, body, threadId }) {
+  let el = document.getElementById('chat-push-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'chat-push-banner';
+    el.className = 'chat-push-banner';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<div class="cpb-title">${escapeHtml(title || 'Нове повідомлення')}</div><div class="cpb-body">${escapeHtml(body || '')}</div>`;
+  el.onclick = () => { el.classList.remove('visible'); if (threadId != null) openThreadById(threadId); };
+  requestAnimationFrame(() => el.classList.add('visible'));
+  clearTimeout(_chatBannerTimer);
+  _chatBannerTimer = setTimeout(() => el.classList.remove('visible'), 4500);
+}
+
 // ── Ініціалізація (з app.js): бейдж + realtime + реакція на вхід/вихід ─────
 let _threadsUnsub = null;
 export function initBoardChat() {
   refreshUnreadBadge();
   // SW повідомляє про вхідний push (надійніше за realtime, який буває пропускає
   // нові треди між акаунтами): оновлюємо бейдж + сигналимо відкритому списку розмов
-  // оновитись наживо (подія 'cstl-chat-refresh').
+  // оновитись наживо (подія 'cstl-chat-refresh') + банер якщо застосунок у фокусі (P-8)
+  // + відкриває розмову якщо клікнули по системній нотифікації (P-9).
   if ('serviceWorker' in navigator && navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', (e) => {
-      if (e.data && e.data.__cstl === 'push') {
+      if (!e.data) return;
+      if (e.data.__cstl === 'push') {
         refreshUnreadBadge();
         window.dispatchEvent(new CustomEvent('cstl-chat-refresh'));
+        if (e.data.pushType === 'chat' && document.visibilityState === 'visible') {
+          showChatPushBanner({ title: e.data.title, body: e.data.body, threadId: e.data.threadId });
+        }
+      } else if (e.data.__cstl === 'notif-click' && e.data.threadId != null) {
+        openThreadById(e.data.threadId);
       }
     });
   }

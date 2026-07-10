@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260710-1610';
+const CACHE_NAME = 'cstl-20260710-1614';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -154,9 +154,15 @@ self.addEventListener('push', e => {
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(list => {
-        // Повідомити ВІДКРИТИЙ додаток про push → оновити список розмов/бейдж наживо.
+        // Повідомити ВІДКРИТИЙ додаток про push → оновити список розмов/бейдж наживо +
+        // показати in-app банер (P-8). title/body/threadId/groupId — раніше форвардили
+        // лише pushType, банер не мав чим себе заповнити.
         // Realtime-підписка буває пропускає нові треди між акаунтами; push — надійний.
-        list.forEach(c => { try { c.postMessage({ __cstl: 'push', pushType: data.type || null }); } catch (_) {} });
+        list.forEach(c => { try { c.postMessage({
+          __cstl: 'push', pushType: data.type || null,
+          title: data.title || '', body: data.body || '',
+          threadId: data.thread_id ?? null, groupId: data.group_id ?? null,
+        }); } catch (_) {} });
         // App is in foreground — skip system notification, in-app banner handles it
         if (list.some(c => c.visibilityState === 'visible')) return;
         return self.registration.showNotification(data.title || 'CSTL LIFE', {
@@ -164,7 +170,11 @@ self.addEventListener('push', e => {
           icon:               './logo.png',
           badge:              './logo.png',
           tag:                data.tag   || 'bus-push',
-          data:               { url: data.url || (data.type === 'chat' ? './' : './#buses') },
+          // threadId/groupId (P-9) — щоб клік по пуші відкрив САМЕ цю розмову, не просто застосунок.
+          data:               {
+            url: data.url || (data.type === 'chat' ? './' : './#buses'),
+            threadId: data.thread_id ?? null, groupId: data.group_id ?? null,
+          },
           requireInteraction: false,
         });
       })
@@ -173,13 +183,24 @@ self.addEventListener('push', e => {
 
 self.addEventListener('notificationclick', e => {
   e.notification.close();
+  const { threadId, groupId, url } = e.notification.data || {};
   e.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
       .then(list => {
+        // Застосунок уже відкритий — фокусуємо і кажемо йому відкрити САМЕ цю розмову
+        // (P-9: раніше просто фокусувало, thread_id ігнорувався).
         for (const c of list) {
-          if ('focus' in c) return c.focus();
+          if ('focus' in c) {
+            if (threadId != null || groupId != null) {
+              try { c.postMessage({ __cstl: 'notif-click', threadId, groupId }); } catch (_) {}
+            }
+            return c.focus();
+          }
         }
-        return clients.openWindow(e.notification.data?.url || './');
+        // Холодний старт — передаємо thread_id через hash (як #/join/<uuid> для інвайтів),
+        // app.js підхопить після завантаження.
+        const coldUrl = threadId != null ? `./#/thread/${threadId}` : (url || './');
+        return clients.openWindow(coldUrl);
       })
   );
 });
