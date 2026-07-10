@@ -2270,11 +2270,11 @@
   gap: 6px;
   flex-shrink: 0;
 }
-/* Компактні кнопки — щоб футер влазив у вузьку картку (2 колонки) */
+/* Кнопки футера — трохи більші; ім'я поряд підганяється по ширині динамічно (JS fitBoardAuthors) */
 .cm-board-foot-actions .cm-board-call,
-.cm-board-foot-actions .cm-board-msg-btn { width: 32px; height: 32px; }
+.cm-board-foot-actions .cm-board-msg-btn { width: 34px; height: 34px; }
 .cm-board-foot-actions .cm-board-call svg,
-.cm-board-foot-actions .cm-board-msg-btn svg { width: 15px; height: 15px; }
+.cm-board-foot-actions .cm-board-msg-btn svg { width: 16px; height: 16px; }
 .cm-board-foot-who {
   min-width: 0;
   text-align: right;
@@ -2282,7 +2282,7 @@
 }
 .cm-board-foot-who .cm-board-author--card {
   display: block;
-  font-size: 10px;
+  font-size: 11px;   /* дефолт (fallback) — JS підганяє 8.5–12.5px під ширину */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

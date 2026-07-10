@@ -4656,7 +4656,10 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
-    requestAnimationFrame(syncBoardBodyOffset);
+    requestAnimationFrame(() => {
+      syncBoardBodyOffset();
+      fitBoardAuthors();
+    });
   }
   function renderBodyOnly() {
     const el = getBoardRoot();
@@ -4673,6 +4676,7 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
+    requestAnimationFrame(fitBoardAuthors);
   }
   var _boardCollapseRef = null;
   var _boardTabHookSet = false;
@@ -5235,6 +5239,19 @@ ${post.text}
     if (h > 0)
       body.style.paddingTop = h + BOARD_BODY_GAP + "px";
   }
+  function fitBoardAuthors() {
+    const MAX = 12.5, MIN = 8.5, STEP = 0.5;
+    document.querySelectorAll(".cm-board-foot-who .cm-board-author--card").forEach((el) => {
+      if (!el.clientWidth)
+        return;
+      let size = MAX;
+      el.style.fontSize = size + "px";
+      while (size > MIN && el.scrollWidth > el.clientWidth + 1) {
+        size -= STEP;
+        el.style.fontSize = size + "px";
+      }
+    });
+  }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
     if (_headerCollapseWired)
@@ -5286,7 +5303,10 @@ ${post.text}
         requestAnimationFrame(apply);
       }
     }, { passive: true });
-    window.addEventListener("resize", () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(() => {
+      syncBoardBodyOffset();
+      fitBoardAuthors();
+    }), { passive: true });
   }
   function initBoard() {
     attachBoardDelegation();
@@ -5309,7 +5329,10 @@ ${post.text}
         renderAll();
       }
       if (tab === "board")
-        requestAnimationFrame(syncBoardBodyOffset);
+        requestAnimationFrame(() => {
+          syncBoardBodyOffset();
+          fitBoardAuthors();
+        });
     });
     setupHeaderCollapse();
     onAuthChange(() => {
