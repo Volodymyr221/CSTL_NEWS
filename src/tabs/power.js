@@ -11,6 +11,7 @@
 // При міграції: замінити fetch('./data/power.json') на Supabase client queries.
 
 import { escapeHtml, pad, todayKey } from '../core/utils.js';
+import { openModal } from '../core/modal.js';
 
 let powerData  = null;
 let selCity    = null; // { id, name, streets[] }
@@ -459,17 +460,9 @@ function renderPowerPage() {
 // (Волиньобленерго не дає публічного API) + 3 способи дізнатись.
 
 function openQueueHelpModal() {
-  if (document.getElementById('pw-help-modal')) return;
-
-  const wrap = document.createElement('div');
-  wrap.id = 'pw-help-modal';
-  wrap.className = 'pw-help-modal';
-  wrap.innerHTML = `
-    <div class="pw-help-backdrop"></div>
-    <div class="pw-help-panel" role="dialog" aria-modal="true">
-      <div class="pw-help-handle"></div>
-      <button class="pw-help-close" type="button" aria-label="Закрити">✕</button>
-      <h3 class="pw-help-title">Як дізнатись свою чергу?</h3>
+  openModal({
+    title: 'Як дізнатись свою чергу?',
+    bodyHtml: `
       <p class="pw-help-sub">
         Чергу призначає <b>Волиньобленерго</b> за фізичним підключенням вашого
         будинку до підстанції. На жаль, ВОЕ не дає публічного API — ми не
@@ -508,22 +501,7 @@ function openQueueHelpModal() {
         💡 Скоро у Фазі 3 додамо краудсорсинг — жителі позначатимуть свою чергу,
         і додаток автоматично запам'ятає вулицю → чергу.
       </p>
-    </div>
-  `;
-  document.body.appendChild(wrap);
-  document.body.classList.add('modal-open');
-  requestAnimationFrame(() => wrap.classList.add('open'));
-
-  function close() {
-    wrap.classList.remove('open');
-    document.body.classList.remove('modal-open');
-    setTimeout(() => wrap.remove(), 220);
-  }
-
-  wrap.querySelector('.pw-help-backdrop')?.addEventListener('click', close);
-  wrap.querySelector('.pw-help-close')?.addEventListener('click', close);
-  document.addEventListener('keydown', function onEsc(e) {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+    `,
   });
 }
 
