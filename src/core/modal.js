@@ -35,8 +35,10 @@ function buildCenter({ title, bodyHtml }) {
 }
 
 // Відкриває модалку. onMount(wrap) — щоб викликач дов'язав власні обробники до bodyHtml.
+// onClose() — викликається ОДИН раз перед закриттям (будь-яким шляхом: backdrop/X/ESC/свайп) —
+// для прибирання ресурсів викликача (напр. URL.revokeObjectURL на blob-фото).
 // Повертає { close, el }. swipeClose=false вимикає свайп (напр. коли всередині свій скрол-жест).
-export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMount, swipeClose = true, className = '' } = {}) {
+export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMount, onClose, swipeClose = true, className = '' } = {}) {
   closeModal();   // одна модалка примітиву за раз — друга просто заміняє першу
 
   const wrap = document.createElement('div');
@@ -56,6 +58,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   function close() {
     if (_active?.el !== wrap) return;
     _active = null;
+    onClose?.();
     wrap.classList.remove('open');
     document.body.classList.remove('modal-open');
     document.removeEventListener('keydown', onKey);

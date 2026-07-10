@@ -1322,6 +1322,95 @@
   var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
   var COMMUNITY_ALL_LABEL = "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
 
+  // src/core/modal.js
+  var _active = null;
+  function buildSheet({ title, bodyHtml }) {
+    return `
+    <div class="app-modal-backdrop"></div>
+    <div class="app-modal-sheet" role="dialog" aria-modal="true"${title ? ` aria-label="${escapeHtml(title)}"` : ""}>
+      <div class="app-modal-handle"></div>
+      <button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
+      <div class="app-modal-body">${bodyHtml}</div>
+    </div>`;
+  }
+  function buildCenter({ title, bodyHtml }) {
+    return `
+    <div class="app-modal-backdrop"></div>
+    <div class="app-modal-card" role="dialog" aria-modal="true">
+      <button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
+      <div class="app-modal-body">${bodyHtml}</div>
+    </div>`;
+  }
+  function openModal({ title = "", bodyHtml = "", variant = "sheet", onMount, onClose, swipeClose = true, className = "" } = {}) {
+    closeModal();
+    const wrap = document.createElement("div");
+    wrap.className = `app-modal app-modal--${variant}${className ? " " + className : ""}`;
+    wrap.innerHTML = variant === "center" ? buildCenter({ title, bodyHtml }) : buildSheet({ title, bodyHtml });
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    const backdrop = wrap.querySelector(".app-modal-backdrop");
+    const panel = wrap.querySelector(".app-modal-sheet, .app-modal-card");
+    const closeBtn = wrap.querySelector(".app-modal-close");
+    const onKey = (e) => {
+      if (e.key === "Escape")
+        close();
+    };
+    document.addEventListener("keydown", onKey);
+    function close() {
+      if (_active?.el !== wrap)
+        return;
+      _active = null;
+      onClose?.();
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      document.removeEventListener("keydown", onKey);
+      setTimeout(() => wrap.remove(), 240);
+    }
+    backdrop?.addEventListener("click", close);
+    closeBtn?.addEventListener("click", close);
+    if (variant === "sheet" && swipeClose && panel) {
+      let startY = 0, dragging = false, dy = 0;
+      panel.addEventListener("touchstart", (e) => {
+        if (panel.scrollTop > 2)
+          return;
+        startY = e.touches[0].clientY;
+        dragging = true;
+        dy = 0;
+        panel.style.transition = "none";
+      }, { passive: true });
+      panel.addEventListener("touchmove", (e) => {
+        if (!dragging)
+          return;
+        dy = e.touches[0].clientY - startY;
+        if (dy < 0) {
+          panel.style.transform = "";
+          return;
+        }
+        panel.style.transform = `translateY(${dy}px)`;
+      }, { passive: true });
+      panel.addEventListener("touchend", () => {
+        if (!dragging)
+          return;
+        dragging = false;
+        panel.style.transition = "";
+        if (dy > 90)
+          close();
+        else
+          panel.style.transform = "";
+        dy = 0;
+      });
+    }
+    onMount?.(wrap);
+    _active = { el: wrap, close };
+    return { close, el: wrap };
+  }
+  function closeModal() {
+    _active?.close();
+  }
+
   // src/tabs/community-modal.js
   var BOARD_CATEGORIES = [
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "red" },
@@ -1378,7 +1467,7 @@
     });
   }
   function openBoardModal() {
-    if (document.getElementById("cm-board-modal"))
+    if (document.querySelector(".app-modal--board-compose"))
       return;
     const state = {
       text: "",
@@ -1393,93 +1482,33 @@
       location: COMMUNITY_ALL
       // Д-10: дефолт — вся громада
     };
-    const wrap = document.createElement("div");
-    wrap.id = "cm-board-modal";
-    wrap.className = "cm-board-modal";
-    wrap.innerHTML = `
-    <div class="cm-board-modal-backdrop"></div>
-    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
-      <div class="cm-board-modal-handle"></div>
-      <button class="cm-board-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
-      <p class="cm-board-modal-sub">\u0417\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F \u043D\u0438\u0436\u0447\u0435.</p>
+    const bodyHtml = `
+    <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+    <p class="cm-board-modal-sub">\u0417\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F \u043D\u0438\u0436\u0447\u0435.</p>
 
-      <form id="cm-board-modal-form" novalidate>
-        <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 -->
-        <div id="bm-dynamic"></div>
+    <form id="cm-board-modal-form" novalidate>
+      <!-- \u0414\u0438\u043D\u0430\u043C\u0456\u0447\u043D\u0430 \u0447\u0430\u0441\u0442\u0438\u043D\u0430 -->
+      <div id="bm-dynamic"></div>
 
-        <!-- LIVE-preview -->
-        <div class="bm-preview-section" id="bm-preview-section">
-          <div class="bm-preview-label">\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0442\u0438\u043C\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>
-          <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
-        </div>
+      <!-- LIVE-preview -->
+      <div class="bm-preview-section" id="bm-preview-section">
+        <div class="bm-preview-label">\u042F\u043A \u0432\u0438\u0433\u043B\u044F\u0434\u0430\u0442\u0438\u043C\u0435 \u043D\u0430 \u0434\u043E\u0448\u0446\u0456</div>
+        <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
+      </div>
 
-        <button class="cm-board-submit" type="submit">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
-        <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</p>
-      </form>
-    </div>
+      <button class="cm-board-submit" type="submit">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
+      <p class="cm-board-hint">\u0417\u0430\u043F\u0438\u0442 \u0439\u0434\u0435 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0443. \u041F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u043A\u0438 \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043D\u0430 \u0434\u043E\u0448\u0446\u0456.</p>
+    </form>
   `;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    function close() {
-      state.photos.forEach((p) => {
+    const { close, el: wrap } = openModal({
+      bodyHtml,
+      variant: "sheet",
+      className: "app-modal--board-compose",
+      onClose: () => state.photos.forEach((p) => {
         if (p && p.startsWith("blob:"))
           URL.revokeObjectURL(p);
-      });
-      wrap.classList.remove("open");
-      document.body.classList.remove("modal-open");
-      setTimeout(() => wrap.remove(), 220);
-    }
-    wrap.querySelector(".cm-board-modal-backdrop")?.addEventListener("click", close);
-    wrap.querySelector(".cm-board-modal-close")?.addEventListener("click", close);
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key === "Escape") {
-        close();
-        document.removeEventListener("keydown", onEsc);
-      }
+      })
     });
-    const panel = wrap.querySelector(".cm-board-modal-panel");
-    const handle = wrap.querySelector(".cm-board-modal-handle");
-    let dragStartY = 0, dragging = false, dragDelta = 0;
-    panel.addEventListener("touchstart", (e) => {
-      const onHandle = handle && (e.target === handle || handle.contains(e.target));
-      dragging = onHandle || panel.scrollTop <= 2;
-      if (!dragging)
-        return;
-      dragStartY = e.touches[0].clientY;
-      dragDelta = 0;
-      panel.style.transition = "none";
-    }, { passive: true });
-    panel.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
-      dragDelta = e.touches[0].clientY - dragStartY;
-      if (dragDelta <= 0) {
-        panel.style.transform = "translateY(0)";
-        return;
-      }
-      e.preventDefault();
-      panel.style.transform = `translateY(${dragDelta}px)`;
-    }, { passive: false });
-    panel.addEventListener("touchend", () => {
-      if (!dragging)
-        return;
-      dragging = false;
-      if (dragDelta > 90) {
-        panel.style.transition = "transform 0.25s ease-in";
-        panel.style.transform = "translateY(100%)";
-        setTimeout(close, 240);
-      } else {
-        panel.style.transition = "transform 0.3s cubic-bezier(0.32,0.72,0,1)";
-        panel.style.transform = "translateY(0)";
-        setTimeout(() => {
-          panel.style.transition = "";
-          panel.style.transform = "";
-        }, 300);
-      }
-      dragDelta = 0;
-    }, { passive: true });
     const dynamicEl = wrap.querySelector("#bm-dynamic");
     function renderBoardFields() {
       dynamicEl.innerHTML = `
@@ -3837,29 +3866,13 @@
       closeChatModal();
   }
   function openDiscSheet(opts) {
-    const backdrop = document.createElement("div");
-    backdrop.className = "board-backdrop disc-sheet-backdrop";
-    const sheet = document.createElement("div");
-    sheet.className = "disc-sheet";
-    sheet.innerHTML = `
-    <div class="disc-sheet-handle"></div>
-    <header class="disc-sheet-head">
-      <div class="disc-sheet-title">${escapeHtml(opts.title)}</div>
-      <button class="disc-sheet-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-    </header>
-    <div class="disc-sheet-body">${opts.bodyHtml}</div>`;
-    const close = () => {
-      sheet.remove();
-      backdrop.remove();
-      document.body.classList.remove("modal-open");
-    };
-    backdrop.addEventListener("click", close);
-    sheet.querySelector(".disc-sheet-close")?.addEventListener("click", close);
-    document.body.appendChild(backdrop);
-    document.body.appendChild(sheet);
-    document.body.classList.add("modal-open");
-    if (opts.onMount)
-      opts.onMount(sheet, close);
+    const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
+    const { close } = openModal({
+      bodyHtml,
+      variant: "sheet",
+      className: "app-modal--disc",
+      onMount: (wrap) => opts.onMount?.(wrap, close)
+    });
     return close;
   }
   function openDiscussionList(title, posts) {
@@ -7762,94 +7775,6 @@ ${ev.description || ""}`
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
-  }
-
-  // src/core/modal.js
-  var _active = null;
-  function buildSheet({ title, bodyHtml }) {
-    return `
-    <div class="app-modal-backdrop"></div>
-    <div class="app-modal-sheet" role="dialog" aria-modal="true"${title ? ` aria-label="${escapeHtml(title)}"` : ""}>
-      <div class="app-modal-handle"></div>
-      <button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
-      <div class="app-modal-body">${bodyHtml}</div>
-    </div>`;
-  }
-  function buildCenter({ title, bodyHtml }) {
-    return `
-    <div class="app-modal-backdrop"></div>
-    <div class="app-modal-card" role="dialog" aria-modal="true">
-      <button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
-      <div class="app-modal-body">${bodyHtml}</div>
-    </div>`;
-  }
-  function openModal({ title = "", bodyHtml = "", variant = "sheet", onMount, swipeClose = true, className = "" } = {}) {
-    closeModal();
-    const wrap = document.createElement("div");
-    wrap.className = `app-modal app-modal--${variant}${className ? " " + className : ""}`;
-    wrap.innerHTML = variant === "center" ? buildCenter({ title, bodyHtml }) : buildSheet({ title, bodyHtml });
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    const backdrop = wrap.querySelector(".app-modal-backdrop");
-    const panel = wrap.querySelector(".app-modal-sheet, .app-modal-card");
-    const closeBtn = wrap.querySelector(".app-modal-close");
-    const onKey = (e) => {
-      if (e.key === "Escape")
-        close();
-    };
-    document.addEventListener("keydown", onKey);
-    function close() {
-      if (_active?.el !== wrap)
-        return;
-      _active = null;
-      wrap.classList.remove("open");
-      document.body.classList.remove("modal-open");
-      document.removeEventListener("keydown", onKey);
-      setTimeout(() => wrap.remove(), 240);
-    }
-    backdrop?.addEventListener("click", close);
-    closeBtn?.addEventListener("click", close);
-    if (variant === "sheet" && swipeClose && panel) {
-      let startY = 0, dragging = false, dy = 0;
-      panel.addEventListener("touchstart", (e) => {
-        if (panel.scrollTop > 2)
-          return;
-        startY = e.touches[0].clientY;
-        dragging = true;
-        dy = 0;
-        panel.style.transition = "none";
-      }, { passive: true });
-      panel.addEventListener("touchmove", (e) => {
-        if (!dragging)
-          return;
-        dy = e.touches[0].clientY - startY;
-        if (dy < 0) {
-          panel.style.transform = "";
-          return;
-        }
-        panel.style.transform = `translateY(${dy}px)`;
-      }, { passive: true });
-      panel.addEventListener("touchend", () => {
-        if (!dragging)
-          return;
-        dragging = false;
-        panel.style.transition = "";
-        if (dy > 90)
-          close();
-        else
-          panel.style.transform = "";
-        dy = 0;
-      });
-    }
-    onMount?.(wrap);
-    _active = { el: wrap, close };
-    return { close, el: wrap };
-  }
-  function closeModal() {
-    _active?.close();
   }
 
   // src/tabs/community-blocks.js

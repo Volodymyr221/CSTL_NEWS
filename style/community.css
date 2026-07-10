@@ -1057,50 +1057,13 @@
 .cm-board-trigger-icon { font-size: 18px; line-height: 1; }
 .cm-board-trigger-text { flex: 1; text-align: left; }
 
-/* Модалка «Подати оголошення» — повноекранна, з білою панеллю знизу */
-.cm-board-modal {
-  position: fixed; inset: 0;
-  z-index: 2700;   /* вище екрана «Мої оголошення» (2401) — інакше модалка ховається під ним */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s;
+/* Модалка «Подати оголошення» — chrome (backdrop/панель/handle/close/свайп) тепер
+   спільний примітив core/modal.js (Потік C2); тут лишається контент-специфічне. */
+.app-modal--board-compose {
+  z-index: 2700;   /* вище екрана «Мої оголошення» (.pm-screen) — інакше модалка ховається під ним */
 }
-.cm-board-modal.open { opacity: 1; pointer-events: auto; }
-.cm-board-modal-backdrop {
-  position: absolute; inset: 0;
-  background: rgba(0,0,0,0.45);
-}
-.cm-board-modal-panel {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  max-height: 90svh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  background: #FFFFFF;
-  border-radius: 22px 22px 0 0;
+.app-modal--board-compose .app-modal-sheet {
   padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
-  transform: translateY(100%);
-  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-  box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
-}
-.cm-board-modal.open .cm-board-modal-panel { transform: translateY(0); }
-.cm-board-modal-handle {
-  width: 40px; height: 4px;
-  background: rgba(0,0,0,0.18);
-  border-radius: 2px;
-  margin: 4px auto 12px;
-}
-.cm-board-modal-close {
-  position: absolute;
-  top: 12px; right: 14px;
-  background: var(--gray-light);
-  border: 0;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  font-size: 14px;
-  color: var(--ink-soft);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
 }
 .cm-board-modal-title {
   font-size: 18px;
@@ -1113,8 +1076,8 @@
   color: var(--ink-soft);
   margin-bottom: 14px;
 }
-.cm-board-modal-panel .cm-board-input { margin-bottom: 10px; }
-.cm-board-modal-panel .cm-board-input:last-of-type { margin-bottom: 14px; }
+.app-modal--board-compose .cm-board-input { margin-bottom: 10px; }
+.app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
 
 .cm-board-form-title {
   font-size: 14px;
@@ -3052,37 +3015,9 @@
 .cm-board-trigger.disc-fab-plus .cm-board-trigger-icon svg,
 .cm-board-trigger.disc-fab-plus .cm-board-trigger-close svg { width: 26px; height: 26px; }
 
-/* ── Кімнати/модалка Обговорень (bottom-sheet) ──────────────────────────── */
-.disc-sheet-backdrop { z-index: 1050; }
-.disc-sheet {
-  position: fixed;
-  left: 0; right: 0; bottom: 0;
-  z-index: 1051;
-  max-height: 86vh;
-  display: flex;
-  flex-direction: column;
-  background: var(--white, #fff);
-  border-radius: 18px 18px 0 0;
-  box-shadow: 0 -8px 30px rgba(0,0,0,0.22);
-  animation: disc-sheet-up 0.22s ease;
-}
-@keyframes disc-sheet-up { from { transform: translateY(100%); } to { transform: translateY(0); } }
-.disc-sheet-handle {
-  width: 38px; height: 4px; border-radius: 2px;
-  background: rgba(0,0,0,0.15);
-  margin: 8px auto 4px;
-}
-.disc-sheet-head {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 16px 10px;
-  border-bottom: 1px solid var(--border, rgba(0,0,0,0.08));
-}
-.disc-sheet-title { font-size: 17px; font-weight: 800; color: var(--black, #1C1C1E); }
-.disc-sheet-close {
-  border: none; background: none; font-size: 20px; line-height: 1;
-  color: var(--gray); cursor: pointer; padding: 4px 6px;
-}
-.disc-sheet-body { overflow-y: auto; padding: 14px 16px calc(20px + env(safe-area-inset-bottom)); }
+/* ── Кімнати/модалка Обговорень (bottom-sheet) — chrome тепер спільний
+   примітив core/modal.js (Потік C2); тут лишається контент-специфічне. ── */
+.disc-sheet-title { font-size: 17px; font-weight: 800; color: var(--black, #1C1C1E); margin-bottom: 10px; }
 .disc-sheet-list { display: flex; flex-direction: column; gap: 12px; }
 .disc-sheet-empty { text-align: center; color: var(--gray); padding: 40px 0; font-size: 14px; }
 
