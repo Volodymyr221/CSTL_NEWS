@@ -36,6 +36,7 @@ import {
   ACT_ICONS, buildScreen, avatar, clockTime, dayLabel, threadListTime,
   setupKeyboardResize, setupBubbleGestures,
 } from '../core/chat-core.js';
+import { ensurePushSubscription } from '../core/push.js';
 
 const BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1000;   // кулдаун підняття: 3 год
 
@@ -57,6 +58,7 @@ let _chatUnsub = null;
 
 export async function openChat(thread, post) {
   if (!isLoggedIn()) { requireAuth('відкрити чат', () => {}); return; }
+  ensureChatPush();   // P-5: тап відкрити чат — реальний жест користувача, просимо дозвіл push
   const me = currentUserId();
   const p = post || thread.post || {};
   const title = p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
@@ -1111,7 +1113,7 @@ export async function refreshUnreadBadge() {
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
 }
 
-// ── Реєстрація push-пристрою під акаунт (без запиту дозволу) ───────────────
+// ── Реєстрація push-пристрою під акаунт (пасивний ресинк, без запиту дозволу) ──
 // Використовуємо НАЯВНУ браузерну підписку (її вже міг створити трекер автобусів).
 // Якщо підписки ще немає — нічого не робимо (не нав'язуємо дозвіл при вході).
 async function registerChatPushDevice() {
@@ -1127,6 +1129,23 @@ async function registerChatPushDevice() {
       uid: currentUserId(), endpoint: j.endpoint, p256dh: j.keys.p256dh, auth_key: j.keys.auth,
     });
   } catch (e) { console.warn('[chat-push] register:', e && e.message); }
+}
+
+// ── P-5: активний запит push (на відміну від registerChatPushDevice вище, який
+// лише пасивно ресинкає НАЯВНУ підписку). Хто ніколи не вмикав автобусні
+// сповіщення — раніше НІКОЛИ не отримував запит дозволу для чату, бо той код
+// теж чекав готову підписку замість створити нову. Викликається з жесту
+// користувача (тап «відкрити чат» у openChat) — fire-and-forget, не блокує чат.
+async function ensureChatPush() {
+  if (!isLoggedIn()) return;
+  try {
+    const sub = await ensurePushSubscription();
+    if (!sub) return;
+    const j = sub.toJSON();
+    await saveUserPushDevice({
+      uid: currentUserId(), endpoint: j.endpoint, p256dh: j.keys.p256dh, auth_key: j.keys.auth,
+    });
+  } catch (e) { console.warn('[chat-push] ensure:', e && e.message); }
 }
 
 // ── Ініціалізація (з app.js): бейдж + realtime + реакція на вхід/вихід ─────

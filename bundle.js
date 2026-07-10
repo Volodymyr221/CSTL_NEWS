@@ -2104,6 +2104,63 @@
     });
   }
 
+  // src/core/push.js
+  var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
+  function urlBase64ToUint8Array(b64) {
+    const pad2 = "=".repeat((4 - b64.length % 4) % 4);
+    const base = (b64 + pad2).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base);
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+  function isPushCapable() {
+    return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  }
+  function pushKeysEqual(a, b) {
+    if (!a || !b)
+      return false;
+    const ua = new Uint8Array(a);
+    const ub = new Uint8Array(b);
+    if (ua.length !== ub.length)
+      return false;
+    for (let i = 0; i < ua.length; i++)
+      if (ua[i] !== ub[i])
+        return false;
+    return true;
+  }
+  async function ensurePushSubscription() {
+    if (!isPushCapable())
+      return null;
+    try {
+      let perm = Notification.permission;
+      if (perm === "denied")
+        return null;
+      if (perm === "default")
+        perm = await Notification.requestPermission();
+      if (perm !== "granted")
+        return null;
+      const reg = await navigator.serviceWorker.ready;
+      const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const existingKey = sub.options && sub.options.applicationServerKey;
+        if (existingKey && !pushKeysEqual(existingKey, appKey)) {
+          await sub.unsubscribe();
+          sub = null;
+        }
+      }
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appKey
+        });
+      }
+      return sub;
+    } catch (e) {
+      console.warn("[push] ensurePushSubscription:", e && e.message);
+      return null;
+    }
+  }
+
   // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
   function otherName(thread) {
@@ -2123,6 +2180,7 @@
       });
       return;
     }
+    ensureChatPush();
     const me = currentUserId();
     const p = post || thread.post || {};
     const title = p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
@@ -3294,6 +3352,24 @@
       });
     } catch (e) {
       console.warn("[chat-push] register:", e && e.message);
+    }
+  }
+  async function ensureChatPush() {
+    if (!isLoggedIn())
+      return;
+    try {
+      const sub = await ensurePushSubscription();
+      if (!sub)
+        return;
+      const j = sub.toJSON();
+      await saveUserPushDevice({
+        uid: currentUserId(),
+        endpoint: j.endpoint,
+        p256dh: j.keys.p256dh,
+        auth_key: j.keys.auth
+      });
+    } catch (e) {
+      console.warn("[chat-push] ensure:", e && e.message);
     }
   }
   var _threadsUnsub = null;
@@ -5675,7 +5751,6 @@ ${ev.description || ""}`
   var PREFS_KEY = "bus_prefs_v2";
   var TRACK_KEY = "bus_track_v2";
   var PENDING_UNSUB_KEY = "bus_pending_unsub_v1";
-  var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;
@@ -5748,27 +5823,6 @@ ${ev.description || ""}`
     } catch {
     }
   }
-  function urlBase64ToUint8Array(b64) {
-    const pad2 = "=".repeat((4 - b64.length % 4) % 4);
-    const base = (b64 + pad2).replace(/-/g, "+").replace(/_/g, "/");
-    const raw = atob(base);
-    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-  }
-  function pushKeysEqual(a, b) {
-    if (!a || !b)
-      return false;
-    const ua = new Uint8Array(a);
-    const ub = new Uint8Array(b);
-    if (ua.length !== ub.length)
-      return false;
-    for (let i = 0; i < ua.length; i++)
-      if (ua[i] !== ub[i])
-        return false;
-    return true;
-  }
-  function isPushCapable() {
-    return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
-  }
   function pushBlockedMsg() {
     if (!isPushCapable())
       return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
@@ -5779,32 +5833,10 @@ ${ev.description || ""}`
   async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
     if (trackDate < getTodayISO())
       return;
-    if (!("Notification" in window) || !("serviceWorker" in navigator))
-      return;
     try {
-      let perm = Notification.permission;
-      if (perm === "denied")
+      const sub = await ensurePushSubscription();
+      if (!sub)
         return;
-      if (perm === "default")
-        perm = await Notification.requestPermission();
-      if (perm !== "granted")
-        return;
-      const reg = await navigator.serviceWorker.ready;
-      const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      let sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        const existingKey = sub.options && sub.options.applicationServerKey;
-        if (existingKey && !pushKeysEqual(existingKey, appKey)) {
-          await sub.unsubscribe();
-          sub = null;
-        }
-      }
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: appKey
-        });
-      }
       const subJson = sub.toJSON();
       const payload = {
         // uid залогіненого жителя (Етап 2). RLS-перепис вимагає user_uuid = auth.uid()::text.

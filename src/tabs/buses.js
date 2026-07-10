@@ -6,6 +6,7 @@ import {
 } from '../core/bus-schedule.js';
 import { getAnonId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
+import { isPushCapable, ensurePushSubscription } from '../core/push.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -13,10 +14,6 @@ const TRACK_KEY = 'bus_track_v2';
 // (офлайн у момент «Скасувати») — запам'ятовуємо {endpoint,routeId,trackDate}
 // і доганяємо при наступному відкритті. Гарантує «жодних push після скасування».
 const PENDING_UNSUB_KEY = 'bus_pending_unsub_v1';
-
-// VAPID public key (публічний ключ — безпечно зберігати у коді).
-// Private key — тільки у Supabase Edge Function Secrets (VAPID_PRIVATE_KEY).
-const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
 
 let busData       = null;
 let busDay          = getTodayISO(); // "2026-06-07" — обраний день у тижневій смужці
@@ -87,33 +84,7 @@ function loadPrefs() {
 }
 
 // ── Push-сповіщення Level B ───────────────────────────────────────────────────
-
-// Перетворює VAPID public key з Base64url у Uint8Array для pushManager.subscribe()
-function urlBase64ToUint8Array(b64) {
-  const pad  = '='.repeat((4 - b64.length % 4) % 4);
-  const base = (b64 + pad).replace(/-/g, '+').replace(/_/g, '/');
-  const raw  = atob(base);
-  return Uint8Array.from([...raw].map(c => c.charCodeAt(0)));
-}
-
-// Підписує браузер на Web Push і зберігає у Supabase.
-// Запитує дозвіл на сповіщення якщо ще не надано.
-// Тихо виходить якщо: заборонено, немає SW, не сьогодні.
-// Порівнює два ключі застосунку (applicationServerKey) побайтно.
-// Потрібно щоб виявити стару підписку зі старим VAPID-ключем після ротації.
-function pushKeysEqual(a, b) {
-  if (!a || !b) return false;
-  const ua = new Uint8Array(a);
-  const ub = new Uint8Array(b);
-  if (ua.length !== ub.length) return false;
-  for (let i = 0; i < ua.length; i++) if (ua[i] !== ub[i]) return false;
-  return true;
-}
-
-// Чи здатний цей пристрій/браузер взагалі показувати push (iOS-PWA, дозвіл тощо).
-function isPushCapable() {
-  return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
-}
+// VAPID+urlBase64+isPushCapable+підписка браузера — спільний модуль core/push.js (Б8.1).
 
 // Якщо push недоступний — повертає текст пояснення, інакше null.
 // Використовується для чесного стану дзвіночка і тосту при збереженні.
@@ -128,34 +99,9 @@ async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, 
   // track_date<today і відбирає track_date==today, тож майбутній рядок вистрелить
   // у свій день. Блокуємо тільки минуле (підписка на нього безсенсова).
   if (trackDate < getTodayISO()) return;
-  if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
   try {
-    let perm = Notification.permission;
-    if (perm === 'denied') return;
-    if (perm === 'default') perm = await Notification.requestPermission();
-    if (perm !== 'granted') return;
-
-    const reg    = await navigator.serviceWorker.ready;
-    const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-
-    // Якщо в браузері вже є підписка зі ЗМІНЕНИМ ключем (після ротації VAPID) —
-    // скасовуємо її, інакше pushManager.subscribe() кине InvalidStateError
-    // і рейс лишиться без сповіщень. Якщо ключ не читається — не чіпаємо
-    // (щоб не зламати робочу підписку на iOS, де options можуть бути приховані).
-    let sub = await reg.pushManager.getSubscription();
-    if (sub) {
-      const existingKey = sub.options && sub.options.applicationServerKey;
-      if (existingKey && !pushKeysEqual(existingKey, appKey)) {
-        await sub.unsubscribe();
-        sub = null;
-      }
-    }
-    if (!sub) {
-      sub = await reg.pushManager.subscribe({
-        userVisibleOnly:      true,
-        applicationServerKey: appKey,
-      });
-    }
+    const sub = await ensurePushSubscription();
+    if (!sub) return;
 
     const subJson = sub.toJSON();
     const payload = {
