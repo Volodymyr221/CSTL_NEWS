@@ -2346,9 +2346,11 @@
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
   padding: 6px 14px 4px;   /* низ 8→4: менша відстань від пошуку до низу блоку (Вова) */
-  /* Заокруглені нижні кути — «плаваючий» блок (верх під шапкою застосунку — прямий). */
-  border-bottom-left-radius: 18px;
-  border-bottom-right-radius: 18px;
+  /* Заокруглені нижні кути (трохи гостріші, Вова) + тінь знизу — «плаваючий» блок над
+     картками; верх під шапкою застосунку — прямий. */
+  border-bottom-left-radius: 12px;
+  border-bottom-right-radius: 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.16);
   display: flex;
   flex-direction: column;
   gap: 6px;
