@@ -2207,7 +2207,8 @@
 .cm-board-contact-num {
   flex: 1;
   min-width: 0;
-  word-break: break-all;
+  white-space: nowrap;   /* номер завжди в один рядок — не ламається посеред цифр */
+  font-size: 12px;       /* трохи менше — щоб довший номер влазив біля більших кнопок */
 }
 .cm-board-call {
   flex-shrink: 0;
