@@ -8,7 +8,7 @@
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
-import { setBoardActiveType } from './board.js';
+import { setBoardActiveType, openAdModalStandalone, openChatById } from './board.js';
 import { catColor } from './community-modal.js';
 import { openShotamModal } from './events.js';
 import {
@@ -18,7 +18,7 @@ import {
   getRouteState, getRouteTimings,
   formatCountdownUpper,
 } from '../core/bus-schedule.js';
-import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints } from './buses.js';
+import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import { ensureNewsLoaded, newsCardsHtml, openArticle } from './news.js';
 
@@ -599,18 +599,26 @@ function renderCmBusCard(el) {
   el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
 
   // Свайп
-  let touchStartX = 0;
+  let touchStartX = 0, touchMoved = false;
   const card = el.querySelector('.bhv4') || el.lastElementChild;
   if (!card) return;
-  card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  card.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; touchMoved = false; }, { passive: true });
   card.addEventListener('touchend', e => {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) < 40) return;
+    touchMoved = true;
     cmBusIndex = dx < 0
       ? (cmBusIndex + 1) % cmBusEntries.length
       : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
     switchCmBusCard(el);
   }, { passive: true });
+  // Тап по картці (не свайп) → САМЕ цей рейс на вкладці Автобуси, знайдено аудитом
+  // перенаправлень — раніше картка взагалі нічого не робила при тапі.
+  card.addEventListener('click', () => {
+    if (touchMoved) return;
+    if (typeof window.switchTab === 'function') window.switchTab('buses');
+    openSavedRouteOnBuses(route.id, dateISO, null, null);
+  });
 
   // Тап по крапках
   el.querySelectorAll('.bhv4-dot-nav').forEach(dot => {
@@ -760,11 +768,23 @@ function renderBoardMiniSlide(el) {
         renderBoardMiniSlide(el);
       });
     });
-    // Тап по вмісту слайда → відповідний повний екран (замість прибраної CTA):
-    // «Дошка» → вкладка Дошка, «Розмови» → overlay Обговорень.
+    // Тап по конкретній картці → САМЕ цей пост (замість глухого переходу на вкладку,
+    // знайдено аудитом перенаправлень): «Дошка» → zoom-модалка оголошення,
+    // «Розмови» → модалка обговорення. Тап повз картку (порожньо/відступи) — fallback
+    // на вкладку, як було раніше.
     const content = wrap.querySelector('.cm-board-mini-content');
     if (content) {
-      content.addEventListener('click', () => {
+      content.addEventListener('click', e => {
+        const card = e.target.closest('[data-item-id]');
+        const itemId = card ? Number(card.dataset.itemId) : null;
+        if (itemId != null && Number.isFinite(itemId)) {
+          const item = _boardMiniData.userPosts.find(p => p.id === itemId);
+          if (item) {
+            if (cfg.id === 'chat') openChatById(itemId);
+            else openAdModalStandalone(item);
+            return;
+          }
+        }
         if (cfg.id === 'chat') { if (typeof window.switchTab === 'function') window.switchTab('discussions'); return; }
         setBoardActiveType(cfg.id);
         if (typeof window.switchTab === 'function') window.switchTab('board');
@@ -784,7 +804,7 @@ function renderMiniCard(item, type) {
       ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
       : '';
     return `
-      <article class="cm-board-note cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg">
+      <article class="cm-board-note cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
         <span class="cm-board-pin"></span>
         ${photoHtml}
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || '')}</span>
@@ -800,7 +820,7 @@ function renderMiniCard(item, type) {
       ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600`
       : 'background:#f5f5f5;color:#666;font-size:18px';
     return `
-      <article class="cm-mini-chat">
+      <article class="cm-mini-chat" data-item-id="${item.id}">
         <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
         <div class="cm-mini-chat-body">
           <div class="cm-mini-chat-author">${escapeHtml(item.author || 'анонімно')}</div>

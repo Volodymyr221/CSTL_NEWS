@@ -8193,20 +8193,29 @@ ${ev.description || ""}`
     const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
     const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : "";
     el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
-    let touchStartX = 0;
+    let touchStartX = 0, touchMoved = false;
     const card = el.querySelector(".bhv4") || el.lastElementChild;
     if (!card)
       return;
     card.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
+      touchMoved = false;
     }, { passive: true });
     card.addEventListener("touchend", (e) => {
       const dx = e.changedTouches[0].clientX - touchStartX;
       if (Math.abs(dx) < 40)
         return;
+      touchMoved = true;
       cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusEntries.length : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
       switchCmBusCard(el);
     }, { passive: true });
+    card.addEventListener("click", () => {
+      if (touchMoved)
+        return;
+      if (typeof window.switchTab === "function")
+        window.switchTab("buses");
+      openSavedRouteOnBuses(route.id, dateISO, null, null);
+    });
     el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
       dot.addEventListener("click", (e) => {
         cmBusIndex = parseInt(e.target.dataset.idx, 10);
@@ -8340,7 +8349,19 @@ ${ev.description || ""}`
       });
       const content = wrap.querySelector(".cm-board-mini-content");
       if (content) {
-        content.addEventListener("click", () => {
+        content.addEventListener("click", (e) => {
+          const card = e.target.closest("[data-item-id]");
+          const itemId = card ? Number(card.dataset.itemId) : null;
+          if (itemId != null && Number.isFinite(itemId)) {
+            const item = _boardMiniData.userPosts.find((p) => p.id === itemId);
+            if (item) {
+              if (cfg.id === "chat")
+                openChatById(itemId);
+              else
+                openAdModalStandalone(item);
+              return;
+            }
+          }
           if (cfg.id === "chat") {
             if (typeof window.switchTab === "function")
               window.switchTab("discussions");
@@ -8359,7 +8380,7 @@ ${ev.description || ""}`
       const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
-      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
+      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
         <span class="cm-board-pin"></span>
         ${photoHtml}
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || "")}</span>
@@ -8372,7 +8393,7 @@ ${ev.description || ""}`
       const hue = item.author ? item.author.charCodeAt(0) * 47 % 360 : 0;
       const avatarStyle = item.author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
       return `
-      <article class="cm-mini-chat">
+      <article class="cm-mini-chat" data-item-id="${item.id}">
         <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
         <div class="cm-mini-chat-body">
           <div class="cm-mini-chat-author">${escapeHtml(item.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</div>
