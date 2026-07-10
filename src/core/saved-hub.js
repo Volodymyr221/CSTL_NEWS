@@ -2,16 +2,18 @@
 // Хаб «Збережені» — bottom-sheet з іконки 🔖 у шапці (рішення Роми 08.07).
 // Показує збережені картки користувача, розкладені по категоріях вкладок:
 //   📰 СТАТТІ       (localStorage cstl_saved_articles) → тап: модалка статті. Доступно й гостю.
+//   🚌 АВТОБУСИ    (trackedRoutes, buses.js)           → тап: вкладка Автобуси + скрол на рейс
 //   💬 ОБГОВОРЕННЯ (пости type='chat')  → тап по картці: вкладка Обговорення + модалка чату
 //   📌 ОГОЛОШЕННЯ  (пости type='board') → тап по картці: Дошка, таб «Збережені»
-// Обговорення/Оголошення — таблиця saved_posts (закладки акаунта), лише залогінені.
-// Статті — локальне сховище пристрою (Б5.4), без акаунта. Порожньо всюди → підказка.
+// Обговорення/Оголошення/Автобуси — вимагають акаунт (кожен по-своєму). Статті — локальне
+// сховище пристрою (Б5.4), без акаунта. Порожньо всюди → підказка.
 
 import { escapeHtml } from './utils.js';
 import { isLoggedIn, currentUserId, requireAuth } from './auth.js';
 import { getSupabase, fetchSavedPostIds } from './supabase.js';
 import { setBoardActiveType, openChatById } from '../tabs/board.js';
 import { getSavedArticleIds, getArticlesByIds, openArticle } from '../tabs/news.js';
+import { getSavedRoutesForUI, openSavedRouteOnBuses } from '../tabs/buses.js';
 
 let _sheet = null;
 let _backdrop = null;
@@ -45,6 +47,25 @@ function sectionHtml(title, icon, items, type) {
     </div>`;
 }
 
+// Б7.2: автобуси — власна ідентичність (routeId+дата+зупинки, не один числовий id).
+function busCardHtml(r) {
+  return `
+    <button class="shub-card" type="button" data-shub-type="bus"
+            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
+            data-shub-from="${escapeHtml(r.from || '')}" data-shub-to="${escapeHtml(r.to || '')}">
+      <span class="shub-card-text">${escapeHtml(r.title)}</span>
+      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
+    </button>`;
+}
+function busSectionHtml(items) {
+  if (!items.length) return '';
+  return `
+    <div class="shub-section">
+      <div class="shub-section-title">🚌 АВТОБУСИ <span class="shub-count">${items.length}</span></div>
+      ${items.map(busCardHtml).join('')}
+    </div>`;
+}
+
 async function loadInto(bodyEl) {
   const sections = [];
 
@@ -56,6 +77,12 @@ async function loadInto(bodyEl) {
       sections.push(sectionHtml('СТАТТІ', '📰', arts, 'article'));
     }
   } catch (e) { console.warn('[saved-hub] articles', e); }
+
+  // Автобуси — trackedRoutes (buses.js), вже порожні для гостя на джерелі (loadTrackedRoute).
+  try {
+    const routes = getSavedRoutesForUI();
+    if (routes.length) sections.push(busSectionHtml(routes));
+  } catch (e) { console.warn('[saved-hub] buses', e); }
 
   // Обговорення/Оголошення — Supabase saved_posts, лише залогінені.
   if (isLoggedIn()) {
@@ -112,6 +139,14 @@ export function openSavedHub() {
     if (e.target.closest('#shub-login')) {
       closeHub();
       requireAuth('бачити збережені', () => {});
+      return;
+    }
+    const busCard = e.target.closest('[data-shub-type="bus"]');
+    if (busCard) {
+      const { shubRid, shubDate, shubFrom, shubTo } = busCard.dataset;
+      closeHub();
+      window.switchTab && window.switchTab('buses');
+      openSavedRouteOnBuses(shubRid, shubDate, shubFrom || null, shubTo || null);
       return;
     }
     const card = e.target.closest('[data-shub-open]');

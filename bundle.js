@@ -7191,6 +7191,33 @@ ${ev.description || ""}`
     const [, mm, dd] = trackDate.split("-");
     return `${dd}.${mm}`;
   }
+  function pageForDate(iso) {
+    const toIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (getWeekDays(0).some((d) => toIso(d) === iso))
+      return 0;
+    if (getWeekDays(1).some((d) => toIso(d) === iso))
+      return 1;
+    return 0;
+  }
+  function openSavedRouteOnBuses(rid, date, from, to) {
+    busDay = date;
+    weekPage = pageForDate(date);
+    showAll = true;
+    smartRowIndex = 0;
+    fromStop = from || "";
+    toStop = to || "";
+    renderWeekStrip();
+    renderSmartRow();
+    renderRouteList();
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`[data-route-id="${CSS.escape(rid)}"]`);
+      if (!card)
+        return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("bus-card--flash");
+      setTimeout(() => card.classList.remove("bus-card--flash"), 1500);
+    });
+  }
   function getSavedRoutesForUI() {
     return [...trackedRoutes].sort((a, b) => (a.trackDate + (a.depTime || "")).localeCompare(b.trackDate + (b.depTime || ""))).map((t) => ({
       routeId: t.routeId,
@@ -9456,6 +9483,24 @@ END:VEVENT`
       ${items.map((p) => cardHtml2(p, type)).join("")}
     </div>`;
   }
+  function busCardHtml(r) {
+    return `
+    <button class="shub-card" type="button" data-shub-type="bus"
+            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
+            data-shub-from="${escapeHtml(r.from || "")}" data-shub-to="${escapeHtml(r.to || "")}">
+      <span class="shub-card-text">${escapeHtml(r.title)}</span>
+      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? " \xB7 " + escapeHtml(r.timeStr) : ""}</span>
+    </button>`;
+  }
+  function busSectionHtml(items) {
+    if (!items.length)
+      return "";
+    return `
+    <div class="shub-section">
+      <div class="shub-section-title">\u{1F68C} \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u0418 <span class="shub-count">${items.length}</span></div>
+      ${items.map(busCardHtml).join("")}
+    </div>`;
+  }
   async function loadInto(bodyEl) {
     const sections = [];
     try {
@@ -9466,6 +9511,13 @@ END:VEVENT`
       }
     } catch (e) {
       console.warn("[saved-hub] articles", e);
+    }
+    try {
+      const routes = getSavedRoutesForUI();
+      if (routes.length)
+        sections.push(busSectionHtml(routes));
+    } catch (e) {
+      console.warn("[saved-hub] buses", e);
     }
     if (isLoggedIn()) {
       try {
@@ -9517,6 +9569,14 @@ END:VEVENT`
         closeHub();
         requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
         });
+        return;
+      }
+      const busCard = e.target.closest('[data-shub-type="bus"]');
+      if (busCard) {
+        const { shubRid, shubDate, shubFrom, shubTo } = busCard.dataset;
+        closeHub();
+        window.switchTab && window.switchTab("buses");
+        openSavedRouteOnBuses(shubRid, shubDate, shubFrom || null, shubTo || null);
         return;
       }
       const card = e.target.closest("[data-shub-open]");
