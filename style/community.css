@@ -2248,11 +2248,11 @@
 
 /* Новий футер картки/модалки (рішення Вови): кнопки зліва · ім'я+час справа.
    БЕЗ номера телефону. Роздільна лінія зверху як у контакту.
-   align-items:flex-end — низ рядка часу на одному рівні з низом кнопок (рішення Вови). */
+   align-items:center — ім'я+відступ+час по центру висоти кнопок, обидва рядки в межах іконок. */
 .cm-board-foot {
   position: relative;
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   justify-content: space-between;
   gap: 6px;
   margin-top: 8px;
@@ -2279,7 +2279,7 @@
 .cm-board-foot-who {
   min-width: 0;
   text-align: right;
-  line-height: 1.3;
+  line-height: 1.15;   /* компактно — щоб ім'я+відступ+час влазили у висоту кнопок (34px) */
 }
 .cm-board-foot-who .cm-board-author--card {
   display: block;
@@ -2287,6 +2287,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  margin-bottom: 3px;   /* невеликий відступ до часу; блок лишається в межах висоти кнопок */
 }
 /* Час — завжди в один рядок (стрілка+«13 год тому» не переносяться) */
 .cm-board-foot-who .cm-board-time {
@@ -2295,6 +2296,9 @@
   white-space: nowrap;
 }
 .cm-board-foot-who .cm-board-bumped { white-space: nowrap; }
+/* Стрілка «піднято» у футері — під розмір тексту часу (9px), щоб не роздувала рядок
+   і низ часу був рівно на низу кнопок (не вилазив на 2px). */
+.cm-board-foot-who .cm-board-bumped svg { width: 9px; height: 9px; }
 .cm-board-author--card {
   font-size: 11px;
   font-weight: 600;
