@@ -5382,7 +5382,7 @@ ${post.text}
     _headerCollapseWired = true;
     const TOP_ZONE = 90;
     const HIDE_AFTER = 80;
-    const SHOW_AFTER = 160;
+    const SHOW_AFTER = 320;
     let lastY = main.scrollTop;
     let accDown = 0, accUp = 0;
     let collapsed = false;
