@@ -7628,6 +7628,8 @@ ${post.text}
       return { icon: "\u2744\uFE0F", text: "\u0421\u043D\u0456\u0433" };
     if (code <= 82)
       return { icon: "\u{1F327}\uFE0F", text: "\u0417\u043B\u0438\u0432\u0438" };
+    if (code <= 86)
+      return { icon: "\u{1F328}\uFE0F", text: "\u0421\u043D\u0456\u0433\u043E\u0432\u0456 \u0437\u043B\u0438\u0432\u0438" };
     if (code >= 95)
       return { icon: "\u26C8\uFE0F", text: "\u0413\u0440\u043E\u0437\u0430" };
     return { icon: "\u{1F321}\uFE0F", text: "\u2014" };

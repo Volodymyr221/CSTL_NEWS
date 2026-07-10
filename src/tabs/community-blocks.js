@@ -73,6 +73,7 @@ function weatherCodeInfo(code) {
   if (code <= 65)               return { icon: '🌧️', text: 'Дощ' };
   if (code <= 77)               return { icon: '❄️', text: 'Сніг' };
   if (code <= 82)               return { icon: '🌧️', text: 'Зливи' };
+  if (code <= 86)               return { icon: '🌨️', text: 'Снігові зливи' };
   if (code >= 95)               return { icon: '⛈️', text: 'Гроза' };
   return { icon: '🌡️', text: '—' };
 }
