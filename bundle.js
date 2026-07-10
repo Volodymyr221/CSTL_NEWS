@@ -3372,14 +3372,48 @@
       console.warn("[chat-push] ensure:", e && e.message);
     }
   }
+  async function openThreadById(threadId) {
+    if (!isLoggedIn() || threadId == null)
+      return;
+    const threads = await fetchMyThreads(currentUserId());
+    const thread = threads.find((t) => String(t.id) === String(threadId));
+    if (thread)
+      openChat(thread, thread.post);
+  }
+  var _chatBannerTimer = null;
+  function showChatPushBanner({ title, body, threadId }) {
+    let el = document.getElementById("chat-push-banner");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "chat-push-banner";
+      el.className = "chat-push-banner";
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `<div class="cpb-title">${escapeHtml(title || "\u041D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F")}</div><div class="cpb-body">${escapeHtml(body || "")}</div>`;
+    el.onclick = () => {
+      el.classList.remove("visible");
+      if (threadId != null)
+        openThreadById(threadId);
+    };
+    requestAnimationFrame(() => el.classList.add("visible"));
+    clearTimeout(_chatBannerTimer);
+    _chatBannerTimer = setTimeout(() => el.classList.remove("visible"), 4500);
+  }
   var _threadsUnsub = null;
   function initBoardChat() {
     refreshUnreadBadge();
     if ("serviceWorker" in navigator && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", (e) => {
-        if (e.data && e.data.__cstl === "push") {
+        if (!e.data)
+          return;
+        if (e.data.__cstl === "push") {
           refreshUnreadBadge();
           window.dispatchEvent(new CustomEvent("cstl-chat-refresh"));
+          if (e.data.pushType === "chat" && document.visibilityState === "visible") {
+            showChatPushBanner({ title: e.data.title, body: e.data.body, threadId: e.data.threadId });
+          }
+        } else if (e.data.__cstl === "notif-click" && e.data.threadId != null) {
+          openThreadById(e.data.threadId);
         }
       });
     }
@@ -10644,6 +10678,13 @@ END:VEVENT`
     history.replaceState(null, "", location.pathname + location.search);
     openInviteJoin(m[1]);
   }
+  function handleThreadHash() {
+    const m = (location.hash || "").match(/^#\/thread\/(\d+)/);
+    if (!m)
+      return;
+    history.replaceState(null, "", location.pathname + location.search);
+    openThreadById(Number(m[1]));
+  }
   function init() {
     bootApp();
     initAuth();
@@ -10670,6 +10711,8 @@ END:VEVENT`
     initAdminShortcut();
     handleInviteHash();
     window.addEventListener("hashchange", handleInviteHash);
+    handleThreadHash();
+    window.addEventListener("hashchange", handleThreadHash);
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {
