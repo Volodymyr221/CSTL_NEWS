@@ -46,7 +46,7 @@ serve(async (req) => {
 
     // Повідомлення + перевірка що викликач — його автор
     const { data: msg } = await admin
-      .from('messages').select('id, thread_id, sender_uid, text').eq('id', message_id).single();
+      .from('messages').select('id, thread_id, sender_uid, text, photo_url').eq('id', message_id).single();
     if (!msg) return json({ error: 'message not found' }, 404);
     if (msg.sender_uid !== callerUid) return json({ error: 'not sender' }, 403);
 
@@ -66,11 +66,14 @@ serve(async (req) => {
       .from('user_push_devices').select('*').eq('uid', recipientUid);
     if (!devices?.length) return json({ sent: 0, reason: 'no devices' });
 
+    // P-2: msg.text буває null (фото-повідомлення) — .length на null валив функцію
+    // (500, отримувач БЕЗ пуша). Патерн — як у send-group-push (еталон).
+    const bodyText = msg.text || (msg.photo_url ? '📷 Фото' : '');
     const payload = JSON.stringify({
       type:  'chat',
       thread_id: thread.id,
       title: senderName,
-      body:  msg.text.length > 120 ? msg.text.slice(0, 117) + '…' : msg.text,
+      body:  bodyText.length > 120 ? bodyText.slice(0, 117) + '…' : bodyText,
       tag:   `chat-${thread.id}`,
       url:   './',
     });
