@@ -2464,13 +2464,13 @@
 .bd-title::after {
   content: "";
   display: block;
-  width: 200px;
+  width: 240px;
   height: 2px;
   margin: 6px auto 0;   /* відступ від тексту + центрування */
   border-radius: 1px;
   background: linear-gradient(to right,
     rgba(92, 33, 40, 0),
-    rgba(92, 33, 40, 0.5),
+    rgba(92, 33, 40, 0.35),
     rgba(92, 33, 40, 0));
 }
 .bd-subrow {
