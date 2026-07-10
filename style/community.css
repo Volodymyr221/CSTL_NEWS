@@ -2367,7 +2367,10 @@
   background: rgba(244, 241, 230, 0.62);
   -webkit-backdrop-filter: blur(14px) saturate(1.4);
   backdrop-filter: blur(14px) saturate(1.4);
-  padding: 6px 14px 8px;
+  padding: 6px 14px 4px;   /* низ 8→4: менша відстань від пошуку до низу блоку (Вова) */
+  /* Заокруглені нижні кути — «плаваючий» блок (верх під шапкою застосунку — прямий). */
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
   display: flex;
   flex-direction: column;
   gap: 6px;
