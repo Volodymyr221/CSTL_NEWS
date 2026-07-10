@@ -5328,6 +5328,233 @@ ${post.text}
     });
   }
 
+  // src/tabs/events.js
+  var CATEGORY_COLORS = {
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
+    "Kino_Castle": "#722F37",
+    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
+    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
+    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
+    // коричневий — нейтральний для свят (державних і релігійних)
+  };
+  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+  var allEvents = [];
+  function formatFullDate(dateStr) {
+    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
+  }
+  function catColor2(category) {
+    return CATEGORY_COLORS[category] || "#722F37";
+  }
+  function buildIcsContent(ev) {
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
+    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CSTL LIFE//UA",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${esc(ev.title)}`,
+      `DESCRIPTION:${esc(ev.description)}`,
+      `LOCATION:${esc(ev.location)}`,
+      "BEGIN:VALARM",
+      "TRIGGER:-PT1H",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\r\n");
+  }
+  function downloadIcs(ev) {
+    const ics = buildIcsContent(ev);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function renderSkeleton(el) {
+    el.innerHTML = Array(3).fill(`
+    <div class="ev-skeleton">
+      <div class="ev-skel-img"></div>
+      <div class="ev-skel-body">
+        <div class="ev-skel-line w60"></div>
+        <div class="ev-skel-line w100"></div>
+        <div class="ev-skel-line w80"></div>
+        <div class="ev-skel-line w40"></div>
+      </div>
+    </div>
+  `).join("");
+  }
+  function cardHtml(ev) {
+    const catC = catColor2(ev.category);
+    let cover;
+    if (ev.image) {
+      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+    } else {
+      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
+      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
+    }
+    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
+    return `
+    <article class="shotam-card" data-id="${ev.id}">
+      ${cover}
+      <div class="shotam-card-body">
+        <div class="news-card-meta">
+          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
+        </div>
+        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
+        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
+      </div>
+    </article>`;
+  }
+  function openShotamModal(id) {
+    const ev = allEvents.find((e) => e.id === id);
+    if (!ev)
+      return;
+    const modal = document.getElementById("article-modal");
+    const modalContent = document.getElementById("article-modal-content");
+    const modalMetaTags = document.getElementById("modalMetaTags");
+    if (!modal || !modalContent)
+      return;
+    const catC = catColor2(ev.category);
+    if (modalMetaTags) {
+      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
+    }
+    let cover;
+    if (ev.image) {
+      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
+    } else {
+      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
+      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
+    }
+    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
+    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
+    modalContent.innerHTML = `
+    <div class="article-modal-header">
+      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
+      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
+    </div>
+    ${cover}
+    <div class="article-body">${bodyHtml}</div>
+    <div class="article-source-row">
+      <div class="article-source-actions">
+        <button class="ev-ics-btn" type="button">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+          </svg>
+          \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
+        </button>
+        <button class="share-btn share-btn--inline" type="button" data-shotam-share>\u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C</button>
+      </div>
+    </div>`;
+    const icsBtn = modalContent.querySelector(".ev-ics-btn");
+    if (icsBtn)
+      icsBtn.addEventListener("click", () => {
+        if (!isLoggedIn()) {
+          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
+          });
+          return;
+        }
+        downloadIcs(ev);
+      });
+    const shareBtn = modalContent.querySelector("[data-shotam-share]");
+    if (shareBtn)
+      shareBtn.addEventListener("click", () => {
+        sharePost({
+          title: ev.title,
+          text: `\u{1F4C5} ${ev.title}
+${when}${ev.location ? " \xB7 " + ev.location : ""}
+
+${ev.description || ""}`
+        });
+      });
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("modal-open");
+  }
+  function getFiltered() {
+    const now = /* @__PURE__ */ new Date();
+    now.setHours(0, 0, 0, 0);
+    return allEvents.filter((e) => {
+      if (e.auto)
+        return false;
+      const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
+      return d >= now;
+    }).sort((a, b) => {
+      const byDate = new Date(a.date) - new Date(b.date);
+      if (byDate !== 0)
+        return byDate;
+      return (a.time || "").localeCompare(b.time || "");
+    });
+  }
+  function renderList() {
+    const el = document.getElementById("events-list");
+    if (!el)
+      return;
+    const list = getFiltered();
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
+      return;
+    }
+    el.innerHTML = list.map(cardHtml).join("");
+    el.querySelectorAll(".shotam-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = Number(card.dataset.id);
+        if (Number.isFinite(id))
+          openShotamModal(id);
+      });
+    });
+  }
+  function handleEvImgError(e) {
+    const img = e.target;
+    if (!img || img.tagName !== "IMG")
+      return;
+    const ph = document.createElement("div");
+    ph.className = img.className + " img-fallback";
+    ph.textContent = "\u{1F3F0}";
+    img.replaceWith(ph);
+  }
+  async function initEvents() {
+    const el = document.getElementById("events-list");
+    if (el) {
+      renderSkeleton(el);
+      el.addEventListener("error", handleEvImgError, true);
+    }
+    try {
+      const [evRes, holRes] = await Promise.all([
+        fetch("./data/events.json"),
+        fetch("./data/holidays.json")
+      ]);
+      const events = await evRes.json();
+      const holData = await holRes.json();
+      const holidays = (holData.holidays || []).map((h) => ({ ...h, time: null, location: null }));
+      allEvents = [...events, ...holidays];
+    } catch {
+      allEvents = [];
+    }
+    renderList();
+  }
+
   // src/core/bus-schedule.js
   function toMinutes(hhmm) {
     if (!hhmm || typeof hhmm !== "string")
@@ -7354,7 +7581,7 @@ ${post.text}
 
   // src/tabs/news.js
   var allArticles = [];
-  var CATEGORY_COLORS = {
+  var CATEGORY_COLORS2 = {
     "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
     // темно-сірий (новинний)
     "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
@@ -7394,8 +7621,8 @@ ${post.text}
     "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
     // синій — злитий розділ (на випадок майбутнього geo)
   };
-  function catColor2(c) {
-    return CATEGORY_COLORS[c] || "#546e7a";
+  function catColor3(c) {
+    return CATEGORY_COLORS2[c] || "#546e7a";
   }
   function geoColor(g) {
     return GEO_COLORS[g] || "#546e7a";
@@ -7451,7 +7678,7 @@ ${post.text}
   function badgesHtml(a) {
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(a.category)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor3(a.category)}">${escapeHtml(a.category)}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
@@ -8227,7 +8454,7 @@ ${post.text}
       try {
         const res = await fetch("./data/events.json");
         const events = await res.json();
-        items = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((e) => ({ kind: "event", date: e.date, time: e.time, title: e.title, category: e.category, location: e.location }));
+        items = events.filter((e) => !e.auto).filter((e) => /* @__PURE__ */ new Date(e.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((e) => ({ kind: "event", id: e.id, date: e.date, time: e.time, title: e.title, category: e.category, location: e.location, image: e.image }));
       } catch {
       }
       if (!items.length) {
@@ -8235,7 +8462,7 @@ ${post.text}
           const hres = await fetch("./data/holidays.json");
           const hall = await hres.json();
           const harr = Array.isArray(hall) ? hall : hall.holidays || [];
-          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
+          items = harr.filter((h) => /* @__PURE__ */ new Date(h.date + "T00:00:00") >= today).sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 5).map((h) => ({ kind: "holiday", id: h.id, date: h.date, title: h.title, category: h.category || "\u0421\u0432\u044F\u0442\u043E", emoji: h.cover_emoji, gradient: h.cover_gradient }));
         } catch {
         }
       }
@@ -8263,7 +8490,7 @@ ${post.text}
       const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : "";
       return `
       <div class="cm-ev-slide">
-        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? " tablo-hero--urgent" : ""}"${grad} data-switch-tab="shotam">
+        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? " tablo-hero--urgent" : ""}"${grad} data-ev-id="${it.id}">
           <div class="evh-top">
             <span class="tablo-countdown">${countdown}</span>
             ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
@@ -8277,9 +8504,11 @@ ${post.text}
     }
     const timeStr = it.time ? escapeHtml(it.time) : "";
     const locStr = it.location ? escapeHtml(it.location) : "";
+    const thumb = it.image ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">` : "";
     return `
     <div class="cm-ev-slide">
-      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}" data-switch-tab="shotam">
+      <article class="evh-card tablo-hero${isUrgent ? " tablo-hero--urgent" : ""}${it.image ? " evh-card--photo" : ""}" data-ev-id="${it.id}">
+        ${thumb}
         <div class="evh-top">
           <span class="tablo-countdown">${countdown}</span>
           ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ""}
@@ -8310,6 +8539,13 @@ ${post.text}
         _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
         updateEvPosition(el);
         startEvRotator(el);
+      });
+    });
+    el.querySelectorAll(".evh-card[data-ev-id]").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = Number(card.dataset.evId);
+        if (Number.isFinite(id))
+          openShotamModal(id);
       });
     });
     startEvRotator(el);
@@ -8538,7 +8774,7 @@ ${post.text}
     const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
     return `${wd} \xB7 ${d.getDate()} ${m}`;
   }
-  function renderSkeleton() {
+  function renderSkeleton2() {
     const el = document.getElementById("cm-content");
     if (!el)
       return;
@@ -8675,7 +8911,7 @@ ${post.text}
     main.addEventListener("scroll", onScroll, { passive: true });
   }
   function initCommunity() {
-    renderSkeleton();
+    renderSkeleton2();
     attachSwitchTabDelegation();
     startHeroRotator();
     wireHeroBlur();
@@ -8703,233 +8939,6 @@ ${post.text}
       if (tab && typeof window.switchTab === "function")
         window.switchTab(tab);
     });
-  }
-
-  // src/tabs/events.js
-  var CATEGORY_COLORS2 = {
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
-    "Kino_Castle": "#722F37",
-    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
-    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
-    // коричневий — нейтральний для свят (державних і релігійних)
-  };
-  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-  var allEvents = [];
-  function formatFullDate(dateStr) {
-    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
-  }
-  function catColor3(category) {
-    return CATEGORY_COLORS2[category] || "#722F37";
-  }
-  function buildIcsContent(ev) {
-    const pad2 = (n) => String(n).padStart(2, "0");
-    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
-    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-    return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//CSTL LIFE//UA",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
-      `DTSTART:${fmt(start)}`,
-      `DTEND:${fmt(end)}`,
-      `SUMMARY:${esc(ev.title)}`,
-      `DESCRIPTION:${esc(ev.description)}`,
-      `LOCATION:${esc(ev.location)}`,
-      "BEGIN:VALARM",
-      "TRIGGER:-PT1H",
-      "ACTION:DISPLAY",
-      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
-      "END:VALARM",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\r\n");
-  }
-  function downloadIcs(ev) {
-    const ics = buildIcsContent(ev);
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
-  function renderSkeleton2(el) {
-    el.innerHTML = Array(3).fill(`
-    <div class="ev-skeleton">
-      <div class="ev-skel-img"></div>
-      <div class="ev-skel-body">
-        <div class="ev-skel-line w60"></div>
-        <div class="ev-skel-line w100"></div>
-        <div class="ev-skel-line w80"></div>
-        <div class="ev-skel-line w40"></div>
-      </div>
-    </div>
-  `).join("");
-  }
-  function cardHtml(ev) {
-    const catC = catColor3(ev.category);
-    let cover;
-    if (ev.image) {
-      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
-    }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    return `
-    <article class="shotam-card" data-id="${ev.id}">
-      ${cover}
-      <div class="shotam-card-body">
-        <div class="news-card-meta">
-          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
-        </div>
-        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
-        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
-        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
-      </div>
-    </article>`;
-  }
-  function openShotamModal(id) {
-    const ev = allEvents.find((e) => e.id === id);
-    if (!ev)
-      return;
-    const modal = document.getElementById("article-modal");
-    const modalContent = document.getElementById("article-modal-content");
-    const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
-    const catC = catColor3(ev.category);
-    if (modalMetaTags) {
-      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
-    }
-    let cover;
-    if (ev.image) {
-      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
-    }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
-    modalContent.innerHTML = `
-    <div class="article-modal-header">
-      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
-      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
-    </div>
-    ${cover}
-    <div class="article-body">${bodyHtml}</div>
-    <div class="article-source-row">
-      <div class="article-source-actions">
-        <button class="ev-ics-btn" type="button">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-          </svg>
-          \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
-        </button>
-        <button class="share-btn share-btn--inline" type="button" data-shotam-share>\u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C</button>
-      </div>
-    </div>`;
-    const icsBtn = modalContent.querySelector(".ev-ics-btn");
-    if (icsBtn)
-      icsBtn.addEventListener("click", () => {
-        if (!isLoggedIn()) {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
-          });
-          return;
-        }
-        downloadIcs(ev);
-      });
-    const shareBtn = modalContent.querySelector("[data-shotam-share]");
-    if (shareBtn)
-      shareBtn.addEventListener("click", () => {
-        sharePost({
-          title: ev.title,
-          text: `\u{1F4C5} ${ev.title}
-${when}${ev.location ? " \xB7 " + ev.location : ""}
-
-${ev.description || ""}`
-        });
-      });
-    modal.classList.add("open");
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("modal-open");
-  }
-  function getFiltered() {
-    const now = /* @__PURE__ */ new Date();
-    now.setHours(0, 0, 0, 0);
-    return allEvents.filter((e) => {
-      if (e.auto)
-        return false;
-      const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
-      return d >= now;
-    }).sort((a, b) => {
-      const byDate = new Date(a.date) - new Date(b.date);
-      if (byDate !== 0)
-        return byDate;
-      return (a.time || "").localeCompare(b.time || "");
-    });
-  }
-  function renderList() {
-    const el = document.getElementById("events-list");
-    if (!el)
-      return;
-    const list = getFiltered();
-    if (!list.length) {
-      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
-      return;
-    }
-    el.innerHTML = list.map(cardHtml).join("");
-    el.querySelectorAll(".shotam-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const id = Number(card.dataset.id);
-        if (Number.isFinite(id))
-          openShotamModal(id);
-      });
-    });
-  }
-  function handleEvImgError(e) {
-    const img = e.target;
-    if (!img || img.tagName !== "IMG")
-      return;
-    const ph = document.createElement("div");
-    ph.className = img.className + " img-fallback";
-    ph.textContent = "\u{1F3F0}";
-    img.replaceWith(ph);
-  }
-  async function initEvents() {
-    const el = document.getElementById("events-list");
-    if (el) {
-      renderSkeleton2(el);
-      el.addEventListener("error", handleEvImgError, true);
-    }
-    try {
-      const [evRes, holRes] = await Promise.all([
-        fetch("./data/events.json"),
-        fetch("./data/holidays.json")
-      ]);
-      const events = await evRes.json();
-      const holData = await holRes.json();
-      const holidays = (holData.holidays || []).map((h) => ({ ...h, time: null, location: null }));
-      allEvents = [...events, ...holidays];
-    } catch {
-      allEvents = [];
-    }
-    renderList();
   }
 
   // src/tabs/power.js

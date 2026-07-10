@@ -126,7 +126,7 @@ function cardHtml(ev) {
 
 // Повне прочитання картки «Шо в селі» — переюзуємо статейну модалку
 // (#article-modal: свайп-закриття + хрестик уже готові в app.js/index.html).
-function openShotamModal(id) {
+export function openShotamModal(id) {
   const ev = allEvents.find(e => e.id === id);
   if (!ev) return;
 
