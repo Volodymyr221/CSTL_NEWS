@@ -1,7 +1,7 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** active
-<!-- ▶ 10.07 ПОТІК 4 — Потік C2 (звужено): Board ad modal + Disc sheets на примітив. -->
+**Статус:** done
+<!-- ✅ 10.07 ПОТІК 4 — Потік C2 ЗАДЕПЛОЄНО: PR #328, мердж eaf6824c, live v2654 · 10.07 22:48, CACHE cstl-20260710-2246. -->
 
 ## 🧩 ПОТІК 4 (10.07) — Потік C2 звужено: Board ad modal + Disc sheets
 
@@ -19,7 +19,7 @@
 | 3 | Прибрати мертвий CSS: `.cm-board-modal/backdrop/panel/handle/close` (НЕ чіпати `.cm-board-modal-note/gallery/dots/...` — то Ad zoom sheet, інша функція, лишається), `.disc-sheet-backdrop/handle/head/close` (лишити `.disc-sheet-title/body/list/empty` — контент) | `style/community.css` | ✅ `8c091cbb` |
 | 4 | Тест-блок: `node --check`+build+check-imports, Playwright-смоук (відкрити форму оголошення, заповнити поле, свайп-закрити; відкрити «Мої обговорення»/«Створити обговорення», перевірити submit), регресія Дошки | — | ✅ 26 файлів чисто; обидва входи в реальному UI за `requireAuth` (гість не пройде) — протестувала ПРЯМИМ ES-module викликом (як юніт-тест). **Знайшла й виправила реальний баг:** `openDiscSheet` мав temporal dead zone — `close` читався в `onMount` до завершення деструктуризації, кидало `ReferenceError` при КОЖНОМУ відкритті. Виправлено (`let`+відкладена стрілка), обидва тести зелені (position:fixed, z-index:2700 збережено, форма+прев'ю+close працюють) |
 | 5 | Оновити `docs/PLAN_MODALS_STANDARDIZATION.md`: C2 — 2/4 done, задокументувати архітектурне рішення не чіпати morph/realtime-чат (з поясненням чому) | `docs/PLAN_MODALS_STANDARDIZATION.md` | ✅ `d978df1c` |
-| 6 | Брама деплою — реліз-нотатки, чекати «деплой» | — | 🟡 чекаю слово |
+| 6 | Брама деплою — реліз-нотатки, чекати «деплой» | — | ✅ **ЗАДЕПЛОЄНО PR #328, `eaf6824c`, live v2654 · 10.07 22:48, CACHE `cstl-20260710-2246`** |
 
 ### 📋 РЕЛІЗ-НОТАТКИ ПОТОКУ C2 (Фаза 3, перед деплоєм)
 
