@@ -3367,6 +3367,22 @@
     const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
     return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
   }
+  function renderCardFoot(p) {
+    const contact = p.contact ? String(p.contact).trim() : "";
+    const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+    const tel = isPhone2 ? contact.replace(/[^\d+]/g, "") : "";
+    return `
+      <div class="cm-board-foot">
+        <div class="cm-board-foot-actions">
+          ${isPhone2 ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
+          <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+        </div>
+        <div class="cm-board-foot-who">
+          <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-time">${renderPostTime(p)}</span>
+        </div>
+      </div>`;
+  }
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
     if (!p || !p.bumped_at)
@@ -4188,9 +4204,6 @@ ${post.text}
   function renderBoardCard(p) {
     const tilt = 0;
     const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
-    const contact = p.contact ? String(p.contact).trim() : "";
-    const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-    const tel = isPhone2 ? contact.replace(/[^\d+]/g, "") : "";
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
@@ -4201,24 +4214,7 @@ ${post.text}
       ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      ${!isPhone2 ? `
-      <div class="cm-board-footer">
-        <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-        <span class="cm-board-time">${renderPostTime(p)}</span>
-      </div>` : ""}
-      ${isPhone2 ? `
-        <div class="cm-board-contact cm-board-contact--phone">
-          <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-          <div class="cm-board-contact-btns">
-            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
-            <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-          </div>
-        </div>
-        <div class="cm-board-author-row">
-          <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="cm-board-time">${renderPostTime(p)}</span>
-        </div>
-      ` : contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}
+      ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -4251,29 +4247,7 @@ ${post.text}
       </div>
     </div>
     <div class="cm-board-modal-foot">
-      ${(() => {
-      const contact = p.contact ? String(p.contact).trim() : "";
-      const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-      const tel = isPhone2 ? contact.replace(/[^\d+]/g, "") : "";
-      if (isPhone2)
-        return `
-          <div class="cm-board-modal-meta">
-            <div class="cm-board-modal-meta-text">
-              <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> \u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>
-              <span class="cm-board-time">${renderPostTime(p)}</span>
-            </div>
-            <div class="cm-board-modal-meta-btns">
-              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>
-              <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-            </div>
-          </div>`;
-      return `
-          <div class="cm-board-footer">
-            <span class="cm-board-author">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-            <span class="cm-board-time">${renderPostTime(p)}</span>
-          </div>
-          ${contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ""}`;
-    })()}
+      ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </div>
   `;

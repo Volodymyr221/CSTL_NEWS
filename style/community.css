@@ -2227,6 +2227,45 @@
   gap: 8px;
   margin-top: 8px;
 }
+
+/* Новий футер картки/модалки (рішення Вови): кнопки зліва · ім'я+час справа,
+   навпроти, по центру. БЕЗ номера телефону. Роздільна лінія зверху як у контакту. */
+.cm-board-foot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding-top: 8px;
+}
+.cm-board-foot::before {
+  content: "";
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 1px;
+  background: linear-gradient(to right, transparent 0%, rgba(0,0,0,0.12) 50%, transparent 100%);
+  filter: drop-shadow(0 -2px 3px rgba(0,0,0,0.12));
+}
+.cm-board-foot-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.cm-board-foot-actions .cm-board-call svg,
+.cm-board-foot-actions .cm-board-msg-btn svg { width: 17px; height: 17px; }
+.cm-board-foot-who {
+  min-width: 0;
+  text-align: right;
+  line-height: 1.35;
+}
+.cm-board-foot-who .cm-board-author--card {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-board-foot-who .cm-board-time { display: block; }
 .cm-board-author--card {
   font-size: 11px;
   font-weight: 600;
