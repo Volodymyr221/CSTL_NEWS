@@ -98,6 +98,12 @@ export async function ensureNewsLoaded() {
   return allArticles;
 }
 
+// Для хаба «Збережені» (Б5.4) — статті за списком id, у порядку id (найновіші збережені зверху).
+export async function getArticlesByIds(ids) {
+  await ensureNewsLoaded();
+  return ids.map(id => allArticles.find(a => a.id === id)).filter(Boolean);
+}
+
 // HTML для двох кольорових бейджів (geo + category) — використовується у обох картках
 function badgesHtml(a) {
   return `

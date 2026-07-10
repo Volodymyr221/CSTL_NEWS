@@ -7672,6 +7672,10 @@ ${ev.description || ""}`
     }
     return allArticles;
   }
+  async function getArticlesByIds(ids) {
+    await ensureNewsLoaded();
+    return ids.map((id) => allArticles.find((a) => a.id === id)).filter(Boolean);
+  }
   function badgesHtml(a) {
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
@@ -9435,44 +9439,59 @@ END:VEVENT`
       b?.remove();
     }, 240);
   }
-  function cardHtml2(p) {
+  function cardHtml2(p, type) {
     const when = new Date(p.created_at || p.ts || Date.now()).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
     return `
-    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${escapeHtml(p.type || "board")}">
-      <span class="shub-card-text">${escapeHtml(p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
+    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
+      <span class="shub-card-text">${escapeHtml(p.title || p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
       <span class="shub-card-meta">${escapeHtml(when)}</span>
     </button>`;
   }
-  function sectionHtml(title, icon, items) {
+  function sectionHtml(title, icon, items, type) {
     if (!items.length)
       return "";
     return `
     <div class="shub-section">
       <div class="shub-section-title">${icon} ${title} <span class="shub-count">${items.length}</span></div>
-      ${items.map(cardHtml2).join("")}
+      ${items.map((p) => cardHtml2(p, type)).join("")}
     </div>`;
   }
   async function loadInto(bodyEl) {
+    const sections = [];
     try {
-      const ids = [...await fetchSavedPostIds(currentUserId())];
-      if (!ids.length) {
-        bodyEl.innerHTML = `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
-        <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0447\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
-        return;
+      const artIds = [...getSavedArticleIds()].reverse();
+      if (artIds.length) {
+        const arts = await getArticlesByIds(artIds);
+        sections.push(sectionHtml("\u0421\u0422\u0410\u0422\u0422\u0406", "\u{1F4F0}", arts, "article"));
       }
-      const supa2 = getSupabase();
-      const { data, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
-      if (error)
-        throw error;
-      const posts = data || [];
-      const chats = posts.filter((p) => p.type === "chat");
-      const boards = posts.filter((p) => p.type !== "chat");
-      const html = sectionHtml("\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", "\u{1F4AC}", chats) + sectionHtml("\u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F", "\u{1F4CC}", boards);
-      bodyEl.innerHTML = html || `<div class="shub-empty">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 \u0432\u0436\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 (\u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0456 \u0430\u0432\u0442\u043E\u0440\u0430\u043C\u0438).</div>`;
     } catch (e) {
-      console.warn("[saved-hub]", e);
-      bodyEl.innerHTML = `<div class="shub-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.</div>`;
+      console.warn("[saved-hub] articles", e);
     }
+    if (isLoggedIn()) {
+      try {
+        const ids = [...await fetchSavedPostIds(currentUserId())];
+        if (ids.length) {
+          const supa2 = getSupabase();
+          const { data, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
+          if (error)
+            throw error;
+          const posts = data || [];
+          const chats = posts.filter((p) => p.type === "chat");
+          const boards = posts.filter((p) => p.type !== "chat");
+          sections.push(sectionHtml("\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", "\u{1F4AC}", chats, "chat"));
+          sections.push(sectionHtml("\u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F", "\u{1F4CC}", boards, "board"));
+        }
+      } catch (e) {
+        console.warn("[saved-hub] posts", e);
+        sections.push('<div class="shub-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F/\u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.</div>');
+      }
+    } else {
+      sections.push(`<div class="shub-hint-block">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.<br>
+      <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`);
+    }
+    const html = sections.filter(Boolean).join("");
+    bodyEl.innerHTML = html || `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
+    <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
   }
   function openSavedHub() {
     if (_sheet)
@@ -9484,10 +9503,7 @@ END:VEVENT`
     _sheet.innerHTML = `
     <div class="shub-handle"></div>
     <div class="shub-title">\u{1F516} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
-    <div class="shub-body" id="shub-body">
-      ${isLoggedIn() ? '<div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>' : `<div class="shub-empty">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0432\u0438\u0434\u043D\u043E \u043B\u0438\u0448\u0435 \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0430\u043A\u0430\u0443\u043D\u0442\u0456.<br>
-             <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`}
-    </div>`;
+    <div class="shub-body" id="shub-body"><div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>`;
     document.body.appendChild(_backdrop);
     document.body.appendChild(_sheet);
     document.body.classList.add("modal-open");
@@ -9496,19 +9512,22 @@ END:VEVENT`
       _sheet.classList.add("visible");
     });
     _backdrop.addEventListener("click", closeHub);
-    _sheet.querySelector("#shub-login")?.addEventListener("click", () => {
-      closeHub();
-      requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
-      });
-    });
     _sheet.addEventListener("click", (e) => {
+      if (e.target.closest("#shub-login")) {
+        closeHub();
+        requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
+        });
+        return;
+      }
       const card = e.target.closest("[data-shub-open]");
       if (!card)
         return;
       const id = Number(card.dataset.shubOpen);
       const type = card.dataset.shubType;
       closeHub();
-      if (type === "chat") {
+      if (type === "article") {
+        openArticle(id);
+      } else if (type === "chat") {
         window.switchTab && window.switchTab("discussions");
         openChatById(id);
       } else {
@@ -9516,8 +9535,7 @@ END:VEVENT`
         setBoardActiveType("saved");
       }
     });
-    if (isLoggedIn())
-      loadInto(_sheet.querySelector("#shub-body"));
+    loadInto(_sheet.querySelector("#shub-body"));
   }
   function initSavedHub() {
     document.getElementById("saved-hub-btn")?.addEventListener("click", openSavedHub);
