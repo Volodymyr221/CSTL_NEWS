@@ -1,7 +1,32 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** paused
-<!-- ⏸ 10.07 Батч 4 ЗАДЕПЛОЄНО (PR #314). Далі — Батч 5. Новий чат → /byyou. -->
+**Статус:** active
+<!-- ▶ 10.07 Батч 5-8+аудит — РОБЛЮ САМА, без хендоффу Вові навіть у крос-зоні (рішення Роми 10.07: "Вові не передавай роботу"). -->
+
+## 🚀 ПОТІК 2 (10.07) — Батч 5-8 + аудит перенаправлень, план на 15 кроків
+
+**Рішення Роми (дослівно, 10.07):** «Вові не передавай роботу. Склади план під /byyou і роби сам в цій сесії.» → Батч 6 і 7 (позначені в майстер-плані як «крос-зона Вові») роблю САМА — торкаюсь `board.js`/`community.css`/`buses.js`, позначаю це в PR як завжди (BOARD п.5 «зона = хто головний, не стіна»), не чекаю Вову.
+
+**Кроки (звірено з реальним кодом 10.07):**
+| # | Крок | Файли | Стан |
+|---|------|-------|------|
+| 1 | Б5.1 — 3 іконки (📤🔔🔖) у `.modal-sticky-header` | `index.html:151-160`, `style/modal.css` | 🟢 |
+| 2 | Б5.2 — events.js: підключити іконки, прибрати `.ev-ics-btn`+`.share-btn--inline` знизу+мертвий CSS | `events.js:170-197`, `style/events.css` | 🟢 |
+| 3 | Б5.3 — news.js: підключити іконки (share+save, нове `localStorage cstl_saved_articles`), прибрати нижній `.share-btn--inline` | `news.js:200-215` | 🟢 |
+| 4 | Б5.4 — saved-hub.js: секція «Збережені статті» (реюз хаба) | `saved-hub.js` | 🟢 |
+| 5 | Б6.1 — прибрати `transform` з `.board-fab-item` (лишити opacity), пом'якшити white-glass кнопки | `community.css:1718-1788` | 🟢 |
+| 6 | Б7.1 — export `getSavedRoutesForUI` (вже є, рядок 1845) + нова `openSavedRouteOnBuses(rid,date,from,to)` | `buses.js:1845+` | 🟢 |
+| 7 | Б7.2 — saved-hub.js: секція 🚌 автобуси, фікс гілки `if(!ids.length)return` | `saved-hub.js:46-49` | 🟢 |
+| 8 | Б7.3 — прибрати `#saved-routes-btn`+DOM-частину `initSavedRoutesHeader` (⚠️ зберегти завантаження `loadTrackedRoute`/`hydrateTrackedFromDB`/`onAuthChange`), прибрати `openSavedModal/renderSavedRows/updateSavedBadge`+CSS `.sr-*` | `buses.js:1922-2075`, `index.html:37-43`, `app.js:213` | 🟢 |
+| 9 | Б8.1 — `ensureChatPush()` в `openChat`, спільний модуль VAPID+urlBase64 (реюз buses.js:17-141) | `board-chat.js:58`, новий/спільний модуль | 🟢 |
+| 10 | Б8.2 — банер/тост на chat/group push (P-8) + title/body/thread_id у postMessage | `sw.js:159`, `board-chat.js:1141` | 🟢 |
+| 11 | Б8.3 — thread_id у notification data (P-9), notificationclick→postMessage, `openThreadById` | `sw.js:162-176`, `board-chat.js` | 🟢 |
+| 12 | Б8.4 — код P-2 (photo_url select+fallback body) — **комічу, живий деплой Edge Function НЕ можу** (нема Supabase CLI доступу з цієї сесії — інфраструктурне обмеження, не хендофф) | `supabase/functions/send-chat-push/index.ts:49,73` | 🟢 (код) / 🔴 (деплой) |
+| 13 | Аудит перенаправлень інших блоків Громади (Дошка-віджет/автобус/погода/контакти) | `community-blocks.js` | 🟢 |
+| 14 | Тест-блок: `node --check` усіх, Playwright-смоук по зачеплених екранах | — | 🟢 |
+| 15 | Брама деплою — реліз-нотатки, чекати «деплой» | — | 🟡 |
+
+**Оцінка обсягу:** 15 кроків × ~35K ≈ 525K токенів, це ~54% від вікна 967K (уже використано 33% до старту потоку) → сумарно може підійти близько до ліміту автостиснення контексту. Пропоную не ділити на 2 потоки (Рома просив зробити все в цій сесії) — контекст стискається автоматично, тільки якщо реально впремось у сторож 75% (`byyou-context-guard.sh`) — зупинюсь і задокументую «де зупинились».
 
 **Ціль:** Майстер-план 18 задач Роми (`PLAN_2026-07-09_batch.md`), 8 батчів. Виконуємо по черзі, кожен = окремий деплой.
 **Власник:** Рома · **Гілка (поточна сесія):** `claude/new-session-gj49q9` (харнес цієї сесії закріпив саме її, не `3k5u9n` — деталі в SESSION_STATE_ROMA.md 10.07) · **Rollback-теги:** byyou-start-agent / -tablo2 / -weather
