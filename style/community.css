@@ -2421,6 +2421,21 @@
   transform-origin: center;
   text-shadow: 0 1px 4px rgba(30, 8, 11, 0.35);   /* трохи сильніша м'яка тінь */
 }
+/* Легенька бордова лінія під заголовком, що затухає по краях (Вова 10.07).
+   Той самий бордовий #5C2128 = rgba(92,33,40) що й текст заголовка й лінії груп НП.
+   ::after всередині .bd-title → ховається разом із заголовком при згортанні шапки. */
+.bd-title::after {
+  content: "";
+  display: block;
+  width: 240px;
+  height: 2px;
+  margin: 6px auto 0;   /* відступ від тексту + центрування */
+  border-radius: 1px;
+  background: linear-gradient(to right,
+    rgba(92, 33, 40, 0),
+    rgba(92, 33, 40, 0.35),
+    rgba(92, 33, 40, 0));
+}
 .bd-subrow {
   display: flex;
   align-items: center;
