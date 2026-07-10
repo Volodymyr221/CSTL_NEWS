@@ -7690,55 +7690,68 @@ ${post.text}
       el.innerHTML = '<div class="cm-block-empty">\u041F\u043E\u0433\u043E\u0434\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
   }
-  function wxLineChart(points, { unit = "\xB0", color = "#FFFFFF", pad: padTop = 16 } = {}) {
-    const W = 320, H = 96, padL = 6, padR = 6, padB = 18;
+  var WX = { W: 320, H: 96, padL: 8, padR: 26, padTop: 16, padB: 18 };
+  function wxGeom(points) {
     const vals = points.map((p) => p.v);
     let min = Math.min(...vals), max = Math.max(...vals);
     if (min === max) {
       min -= 1;
       max += 1;
     }
-    const range = max - min;
-    const innerW = W - padL - padR;
-    const innerH = H - padTop - padB;
-    const x = (i) => padL + innerW * i / (points.length - 1);
-    const y = (v) => padTop + innerH - (v - min) / range * innerH;
-    const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${x(i).toFixed(1)},${y(p.v).toFixed(1)}`).join(" ");
-    const area = `${line} L${x(points.length - 1).toFixed(1)},${(padTop + innerH).toFixed(1)} L${x(0).toFixed(1)},${(padTop + innerH).toFixed(1)} Z`;
-    const maxI = vals.indexOf(max), minI = vals.indexOf(min);
-    const labels = points.map((p, i) => {
-      let out = "";
-      if (i % 3 === 0)
-        out += `<text x="${x(i).toFixed(1)}" y="${H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>`;
-      if (i === maxI || i === minI)
-        out += `<text x="${x(i).toFixed(1)}" y="${(y(p.v) - 5).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}${unit}</text>`;
-      return out;
+    const innerW = WX.W - WX.padL - WX.padR;
+    const innerH = WX.H - WX.padTop - WX.padB;
+    return {
+      min,
+      max,
+      innerW,
+      innerH,
+      x: (i) => WX.padL + innerW * i / (points.length - 1),
+      y: (v) => WX.padTop + innerH - (v - min) / (max - min) * innerH
+    };
+  }
+  function wxLineChart(points, { unit = "\xB0", color = "#FFFFFF" } = {}) {
+    const g = wxGeom(points);
+    const line = points.map((p, i) => `${i === 0 ? "M" : "L"}${g.x(i).toFixed(1)},${g.y(p.v).toFixed(1)}`).join(" ");
+    const area = `${line} L${g.x(points.length - 1).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} L${g.x(0).toFixed(1)},${(WX.padTop + g.innerH).toFixed(1)} Z`;
+    const xLabels = points.map((p, i) => i % 2 === 0 ? `<text x="${g.x(i).toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : "").join("");
+    const yAxis = [g.min, (g.min + g.max) / 2, g.max].map((v) => {
+      const yy = g.y(v);
+      return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/><text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${Math.round(v)}${unit}</text>`;
     }).join("");
     return `
-    <svg class="wx-chart" viewBox="0 0 ${W} ${H}" role="img">
+    <svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
       <defs><linearGradient id="wxfill" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0" stop-color="${color}" stop-opacity="0.35"/>
         <stop offset="1" stop-color="${color}" stop-opacity="0"/>
       </linearGradient></defs>
+      ${yAxis}
       <path d="${area}" fill="url(#wxfill)"/>
       <path d="${line}" fill="none" stroke="${color}" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>
-      ${labels}
+      ${xLabels}
     </svg>`;
   }
   function wxBarChart(points) {
-    const W = 320, H = 96, padL = 6, padR = 6, padTop = 16, padB = 18;
-    const innerW = W - padL - padR;
-    const innerH = H - padTop - padB;
-    const bw = innerW / points.length * 0.62;
+    const innerW = WX.W - WX.padL - WX.padR;
+    const innerH = WX.H - WX.padTop - WX.padB;
+    const bw = innerW / points.length * 0.6;
     const bars = points.map((p, i) => {
-      const cx = padL + innerW * (i + 0.5) / points.length;
+      const cx = WX.padL + innerW * (i + 0.5) / points.length;
       const h = Math.max(1, Math.min(100, p.v) / 100 * innerH);
-      const yTop = padTop + innerH - h;
-      const label = i % 3 === 0 ? `<text x="${cx.toFixed(1)}" y="${H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : "";
-      const pct = p.v >= 20 && i % 3 === 0 ? `<text x="${cx.toFixed(1)}" y="${(yTop - 4).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}%</text>` : "";
-      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="#FFFFFF" fill-opacity="${(0.35 + 0.6 * Math.min(100, p.v) / 100).toFixed(2)}"/>${pct}${label}`;
+      const yTop = WX.padTop + innerH - h;
+      const label = i % 2 === 0 ? `<text x="${cx.toFixed(1)}" y="${WX.H - 4}" class="wx-axis" text-anchor="middle">${p.h}</text>` : "";
+      const pct = p.v >= 20 && i % 2 === 0 ? `<text x="${cx.toFixed(1)}" y="${(yTop - 4).toFixed(1)}" class="wx-val" text-anchor="middle">${Math.round(p.v)}%</text>` : "";
+      return `<rect x="${(cx - bw / 2).toFixed(1)}" y="${yTop.toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" rx="2" fill="url(#wxbar)" fill-opacity="${(0.5 + 0.5 * Math.min(100, p.v) / 100).toFixed(2)}"/>${pct}${label}`;
     }).join("");
-    return `<svg class="wx-chart" viewBox="0 0 ${W} ${H}" role="img">${bars}</svg>`;
+    const yAxis = [0, 50, 100].map((v) => {
+      const yy = WX.padTop + innerH - v / 100 * innerH;
+      return `<line x1="${WX.padL}" y1="${yy.toFixed(1)}" x2="${(WX.W - WX.padR).toFixed(1)}" y2="${yy.toFixed(1)}" class="wx-grid"/><text x="${(WX.W - WX.padR + 3).toFixed(1)}" y="${(yy + 3).toFixed(1)}" class="wx-axis" text-anchor="start">${v}</text>`;
+    }).join("");
+    return `<svg class="wx-chart" viewBox="0 0 ${WX.W} ${WX.H}" role="img" preserveAspectRatio="none">
+      <defs><linearGradient id="wxbar" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#4DA3FF"/><stop offset="1" stop-color="#2F80FF"/>
+      </linearGradient></defs>
+      ${yAxis}${bars}
+    </svg>`;
   }
   function closeWeatherModal(overlay) {
     overlay.classList.remove("wx-open");
@@ -7761,6 +7774,7 @@ ${post.text}
       return;
     const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
     const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
+    const iconPts = idxs.map((i) => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     const dayName = dayIndex === 0 ? "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456" : WEEKDAYS_UA_FULL[d.getDay()];
     const dateLabel = `${d.getDate()}.${pad(d.getMonth() + 1)}`;
@@ -7782,11 +7796,19 @@ ${post.text}
       </div>
       <div class="wx-chart-block">
         <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
-        <div class="wx-chart-svg-wrap">${wxLineChart(tempPts, { unit: "\xB0" })}</div>
+        <div class="wx-chart-svg-wrap" data-wx="temp">
+          ${wxLineChart(tempPts, { unit: "\xB0" })}
+          <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
+          <div class="wx-readout"></div>
+        </div>
       </div>
       <div class="wx-chart-block">
         <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
-        <div class="wx-chart-svg-wrap">${wxBarChart(precipPts)}</div>
+        <div class="wx-chart-svg-wrap" data-wx="precip">
+          ${wxBarChart(precipPts)}
+          <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
+          <div class="wx-readout"></div>
+        </div>
       </div>
     </div>`;
     overlay.addEventListener("click", (e) => {
@@ -7795,6 +7817,96 @@ ${post.text}
     });
     document.body.appendChild(overlay);
     requestAnimationFrame(() => overlay.classList.add("wx-open"));
+    wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts });
+    wireWeatherSwipe(overlay);
+  }
+  function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
+    const n = tempPts.length;
+    if (!n)
+      return;
+    const gTemp = wxGeom(tempPts);
+    const wraps = [...overlay.querySelectorAll(".wx-chart-svg-wrap")];
+    function place(idx) {
+      idx = Math.max(0, Math.min(n - 1, idx));
+      const xPct = gTemp.x(idx) / WX.W * 100;
+      wraps.forEach((wrap) => {
+        const kind = wrap.dataset.wx;
+        const cursor = wrap.querySelector(".wx-cursor");
+        const readout = wrap.querySelector(".wx-readout");
+        cursor.style.left = xPct + "%";
+        cursor.classList.add("is-on");
+        const p = kind === "temp" ? tempPts[idx] : precipPts[idx];
+        const val = kind === "temp" ? `${Math.round(p.v)}\xB0` : `${Math.round(p.v)}%`;
+        readout.innerHTML = `<span class="wx-ro-ic">${iconPts[idx]}</span><span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
+        readout.style.left = xPct + "%";
+        readout.classList.add("is-on");
+      });
+    }
+    function clear() {
+      wraps.forEach((wrap) => {
+        wrap.querySelector(".wx-cursor").classList.remove("is-on");
+        wrap.querySelector(".wx-readout").classList.remove("is-on");
+      });
+    }
+    function idxFromX(wrap, clientX) {
+      const r = wrap.getBoundingClientRect();
+      const frac = (clientX - r.left) / r.width;
+      const usable = (frac * WX.W - WX.padL) / (WX.W - WX.padL - WX.padR);
+      return Math.round(usable * (n - 1));
+    }
+    wraps.forEach((wrap) => {
+      wrap.addEventListener("pointerdown", (e) => {
+        wrap.setPointerCapture(e.pointerId);
+        place(idxFromX(wrap, e.clientX));
+        e.preventDefault();
+      });
+      wrap.addEventListener("pointermove", (e) => {
+        if (e.pressure === 0 && e.buttons === 0)
+          return;
+        if (!wrap.hasPointerCapture(e.pointerId))
+          return;
+        place(idxFromX(wrap, e.clientX));
+      });
+      const end = (e) => {
+        try {
+          wrap.releasePointerCapture(e.pointerId);
+        } catch (_) {
+        }
+        clear();
+      };
+      wrap.addEventListener("pointerup", end);
+      wrap.addEventListener("pointercancel", end);
+    });
+  }
+  function wireWeatherSwipe(overlay) {
+    const sheet = overlay.querySelector(".wx-sheet");
+    if (!sheet)
+      return;
+    let startY = 0, dragging = false;
+    sheet.addEventListener("touchstart", (e) => {
+      if (e.target.closest(".wx-chart-svg-wrap"))
+        return;
+      if (sheet.scrollTop > 2)
+        return;
+      startY = e.touches[0].clientY;
+      dragging = true;
+    }, { passive: true });
+    sheet.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      const dy = e.touches[0].clientY - startY;
+      if (dy > 0)
+        sheet.style.transform = `translateY(${dy}px)`;
+    }, { passive: true });
+    sheet.addEventListener("touchend", (e) => {
+      if (!dragging)
+        return;
+      dragging = false;
+      const dy = e.changedTouches[0].clientY - startY;
+      sheet.style.transform = "";
+      if (dy > 90)
+        closeWeatherModal(overlay);
+    });
   }
   async function renderBusBlock() {
     const el = document.getElementById("cm-bus-content");

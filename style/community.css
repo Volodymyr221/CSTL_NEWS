@@ -221,10 +221,13 @@
   overflow: visible;
 }
 .wx-chart-svg-wrap {
+  position: relative;                 /* база для курсора/бульбашки скрабера */
   background: rgba(255, 255, 255, 0.16);
   border-radius: 14px;
   padding: 10px 4px 4px;
+  touch-action: none;                 /* палець тягне скрабер, а не скролить сторінку */
 }
+.wx-chart-svg-wrap[data-wx="precip"] { background: rgba(30, 70, 140, 0.22); }
 .wx-axis {
   font-size: 9px;
   fill: rgba(255, 255, 255, 0.75);
@@ -235,6 +238,40 @@
   fill: #FFFFFF;
   font-weight: 800;
 }
+/* тонкі лінії шкали (сітка) */
+.wx-grid {
+  stroke: rgba(255, 255, 255, 0.22);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;  /* товщина не тягнеться при preserveAspectRatio=none */
+}
+/* Скрабер: вертикальна лінія + точка + бульбашка-підказка */
+.wx-cursor {
+  position: absolute; top: 10px; bottom: 4px;
+  width: 0; border-left: 1.5px solid rgba(255, 255, 255, 0.85);
+  transform: translateX(-0.75px);
+  opacity: 0; transition: opacity 0.12s;
+  pointer-events: none;
+}
+.wx-cursor.is-on { opacity: 1; }
+.wx-cursor-dot {
+  position: absolute; top: -3px; left: 50%;
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #FFFFFF; transform: translateX(-50%);
+}
+.wx-readout {
+  position: absolute; top: -4px;
+  transform: translate(-50%, -100%);
+  background: rgba(20, 40, 80, 0.92);
+  color: #FFFFFF; border-radius: 10px;
+  padding: 4px 8px; white-space: nowrap;
+  display: flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700;
+  opacity: 0; transition: opacity 0.12s;
+  pointer-events: none; z-index: 2;
+}
+.wx-readout.is-on { opacity: 1; }
+.wx-ro-ic { font-size: 14px; }
+.wx-ro-h { opacity: 0.85; font-weight: 600; }
 
 /* ── Блок 2: Світло ── */
 .cm-power-status {
