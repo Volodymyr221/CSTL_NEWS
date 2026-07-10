@@ -1324,14 +1324,17 @@
 
   // src/tabs/community-modal.js
   var BOARD_CATEGORIES = [
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "yellow" },
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "red" },
     { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
     { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "blue" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "yellow" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "pink" },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", color: "pink" }
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "white" },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "amber" },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "amber" }
   ];
+  function catColor(category) {
+    const c = BOARD_CATEGORIES.find((x) => x.id === category);
+    return c ? c.color : "white";
+  }
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
   }
@@ -1384,7 +1387,7 @@
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
       author: accountAuthorName(),
-      category: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F",
+      category: "\u043F\u0440\u043E\u0434\u0430\u043C",
       contact: "",
       title: "",
       location: COMMUNITY_ALL
@@ -1641,7 +1644,7 @@
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[0];
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
       const contactHtml = contactTrim ? `
@@ -1649,12 +1652,12 @@
         ${escapeHtml(contactTrim)}
       </div>` : "";
       previewCanvas.innerHTML = `
-      <article class="cm-board-note cm-board-note--${cat.color}${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
+      <article class="cm-board-note${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
-        <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
-        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
+        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>
@@ -1732,7 +1735,7 @@
     });
   }
   function buildPayload(state) {
-    const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES.find((c) => c.id === "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+    const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[0];
     return {
       type: "board",
       text: state.text.trim(),
@@ -3358,6 +3361,12 @@
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  function renderLoc(loc) {
+    if (!loc)
+      return "";
+    const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+    return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+  }
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
     if (!p || !p.bumped_at)
@@ -3382,8 +3391,7 @@
     { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
     { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", match: ["\u0448\u0443\u043A\u0430\u044E"] },
     { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}", match: ["\u043F\u043E\u0441\u043B\u0443\u0433\u0430"] },
-    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] },
-    { id: "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", emoji: "\u{1F4E2}", match: ["\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"] }
+    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] }
   ];
   var CATEGORY_EMOJI = {
     "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
@@ -4186,12 +4194,12 @@ ${post.text}
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
-    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || "yellow")}${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+    <article class="cm-board-note bd-card bd-card--board${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+      ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone2 ? `
       <div class="cm-board-footer">
@@ -4202,8 +4210,8 @@ ${post.text}
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
           <div class="cm-board-contact-btns">
-            <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
             <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438 ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
+            <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
           </div>
         </div>
         <div class="cm-board-author-row">
@@ -4234,9 +4242,9 @@ ${post.text}
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+        ${renderLoc(p.location)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ""}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -4255,8 +4263,8 @@ ${post.text}
               <span class="cm-board-time">${renderPostTime(p)}</span>
             </div>
             <div class="cm-board-modal-meta-btns">
-              <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
               <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>
+              <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
             </div>
           </div>`;
       return `
@@ -7412,7 +7420,7 @@ ${post.text}
     "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
     // синій — злитий розділ (на випадок майбутнього geo)
   };
-  function catColor(c) {
+  function catColor2(c) {
     return CATEGORY_COLORS[c] || "#546e7a";
   }
   function geoColor(g) {
@@ -7469,7 +7477,7 @@ ${post.text}
   function badgesHtml(a) {
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(a.category)}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
@@ -8165,10 +8173,10 @@ ${post.text}
       const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
-      <article class="cm-board-note cm-board-note--${escapeHtml(item.color || "yellow")} cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
+      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat">${emoji} ${escapeHtml(item.category || "")}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || "")}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;
@@ -8736,7 +8744,7 @@ ${post.text}
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
-  function catColor2(category) {
+  function catColor3(category) {
     return CATEGORY_COLORS2[category] || "#722F37";
   }
   function buildIcsContent(ev) {
@@ -8793,7 +8801,7 @@ ${post.text}
   `).join("");
   }
   function cardHtml(ev) {
-    const catC = catColor2(ev.category);
+    const catC = catColor3(ev.category);
     let cover;
     if (ev.image) {
       cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
@@ -8825,7 +8833,7 @@ ${post.text}
     const modalMetaTags = document.getElementById("modalMetaTags");
     if (!modal || !modalContent)
       return;
-    const catC = catColor2(ev.category);
+    const catC = catColor3(ev.category);
     if (modalMetaTags) {
       modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
     }

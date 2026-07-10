@@ -6,7 +6,7 @@
 //   chat  = обговорення — горизонтальна картка з аватаркою і хештегами
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
-import { openBoardModal } from './community-modal.js';
+import { openBoardModal, catColor } from './community-modal.js';
 import { startChatFromPost, openMyAds, openThreadsList, refreshUnreadBadge } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
@@ -62,6 +62,14 @@ const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 // Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+// Д-19: показ локації на картці/зум-модалці. null/порожньо (старі пости — будуть
+// видалені) → нічого; COMMUNITY_ALL → «Олицька громада» (COMMUNITY_ALL_LABEL);
+// конкретний НП → його назву. Guard прибрано ЛИШЕ для показу — фільтр не чіпаємо.
+function renderLoc(loc) {
+  if (!loc) return '';
+  const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+  return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+}
 // Стрілка вгору (векторна) — мітка «піднято» біля дати.
 const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
 // Дата на картці/модалці: якщо оголошення підняли — показуємо СВІЖИЙ час підняття
@@ -98,7 +106,6 @@ const BOARD_CATEGORIES = [
   { id: 'шукаю',      label: 'Шукаю',               emoji: '🔍', match: ['шукаю'] },
   { id: 'послуга',    label: 'Послуги',             emoji: '🔧', match: ['послуга'] },
   { id: 'lostfound',  label: 'Знайдено/Загубилось', emoji: '🎁', match: ['знайдено', 'загубилось'] },
-  { id: 'оголошення', label: 'Оголошення',          emoji: '📢', match: ['оголошення'] },
 ];
 
 // Окрема явна мапа конкретна-категорія → emoji (для лейбла на стікері).
@@ -299,8 +306,8 @@ function renderContact(contact) {
       <div class="cm-board-contact cm-board-contact--phone">
         <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
         <div class="cm-board-contact-btns">
-          <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
           <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
+          <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
         </div>
       </div>
     `;
@@ -949,12 +956,12 @@ function renderBoardCard(p) {
     ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
     : '';
   return `
-    <article class="cm-board-note bd-card bd-card--board cm-board-note--${escapeHtml(p.color || 'yellow')}${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
+    <article class="cm-board-note bd-card bd-card--board${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+      ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-      ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
       ${!isPhone ? `
       <div class="cm-board-footer">
@@ -965,8 +972,8 @@ function renderBoardCard(p) {
         <div class="cm-board-contact cm-board-contact--phone">
           <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
           <div class="cm-board-contact-btns">
-            <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
             <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
+            <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
           </div>
         </div>
         <div class="cm-board-author-row">
@@ -1005,9 +1012,9 @@ function renderAdModal(p) {
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+        ${renderLoc(p.location)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-        ${!isCommunityWide(p.location) ? `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(p.location)}</span>` : ''}
       </div>
       <div class="cm-board-modal-content">
         <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -1025,8 +1032,8 @@ function renderAdModal(p) {
               <span class="cm-board-time">${renderPostTime(p)}</span>
             </div>
             <div class="cm-board-modal-meta-btns">
-              <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
               <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
+              <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
             </div>
           </div>`;
         return `

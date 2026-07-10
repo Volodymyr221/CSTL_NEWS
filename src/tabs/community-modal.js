@@ -12,16 +12,26 @@ import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
-// купівля-продаж → пошук → послуга → знахідки/втрати → загальне оголошення.
+// купівля-продаж → пошук → послуга → знахідки/втрати.
+// Кольори — семантичні (колір = зміст тега): купити=зелений, продати=червоний,
+// шукаю=синій, послуга=сірий, знайдено/загубилось=бурштин (спільна тема).
+// «Оголошення» прибрано (уся Дошка = оголошення, окрема категорія зайва).
 const BOARD_CATEGORIES = [
-  { id: 'продам',     emoji: '💰', color: 'yellow' },
+  { id: 'продам',     emoji: '💰', color: 'red'    },
   { id: 'куплю',      emoji: '🛒', color: 'green'  },
   { id: 'шукаю',      emoji: '🔍', color: 'blue'   },
-  { id: 'послуга',    emoji: '🔧', color: 'blue'   },
-  { id: 'знайдено',   emoji: '🎁', color: 'yellow' },
-  { id: 'загубилось', emoji: '😟', color: 'pink'   },
-  { id: 'оголошення', emoji: '📢', color: 'pink'   },
+  { id: 'послуга',    emoji: '🔧', color: 'white'  },
+  { id: 'знайдено',   emoji: '🎁', color: 'amber'  },
+  { id: 'загубилось', emoji: '😟', color: 'amber'  },
 ];
+
+// Семантичний колір тега рахуємо З КАТЕГОРІЇ при рендері (не зі збереженого
+// p.color) — щоб колір застосувався до ВСІХ оголошень, і старих теж. Невідома
+// категорія (старі 'оголошення'/null) → 'white' (нейтральний сірий).
+export function catColor(category) {
+  const c = BOARD_CATEGORIES.find(x => x.id === category);
+  return c ? c.color : 'white';
+}
 
 // Чи виглядає рядок як телефон
 function isPhone(s) {
@@ -78,7 +88,7 @@ export function openBoardModal() {
     photos: [],         // URL-и фото: blob: під час upload, https: після
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
     author: accountAuthorName(),
-    category: 'оголошення',
+    category: 'продам',
     contact: '',
     title: '',
     location: COMMUNITY_ALL,   // Д-10: дефолт — вся громада
@@ -345,7 +355,7 @@ export function openBoardModal() {
 
   function renderPreview() {
     const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
-      || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
+      || BOARD_CATEGORIES[0];
     const firstPhoto = state.photos.find(p => p);
     const contactTrim = state.contact.trim();
     const contactHtml = contactTrim ? `
@@ -353,12 +363,12 @@ export function openBoardModal() {
         ${escapeHtml(contactTrim)}
       </div>` : '';
     previewCanvas.innerHTML = `
-      <article class="cm-board-note cm-board-note--${cat.color}${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
+      <article class="cm-board-note${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
-        <span class="cm-board-cat">${cat.emoji} ${escapeHtml(state.category)}</span>
-        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
+        <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
@@ -449,7 +459,7 @@ export function openBoardModal() {
 // scripts/supabase_reputation.sql) форсує їх сам на сервері.
 function buildPayload(state) {
   const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
-    || BOARD_CATEGORIES.find(c => c.id === 'оголошення');
+    || BOARD_CATEGORIES[0];
   return {
     type:      'board',
     text:      state.text.trim(),

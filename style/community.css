@@ -864,7 +864,7 @@
   width: 100%;
   min-height: 100px;
   padding: 16px 14px 14px;
-  background: #FFF59D;
+  background: #FBFBF9;   /* Д-9: єдиний нейтральний фон усіх карток (майже білий) */
   border-radius: 20px;
   box-shadow:
     0 1px 2px rgba(0,0,0,0.10),
@@ -883,13 +883,8 @@
 }
 .cm-board-note:hover { transform: rotate(0deg) scale(1.02); z-index: 5; }
 
-/* Кольори папірців — дещо приглушені для преміальності */
-/* Відтінки карток — приглушені (ледь помітний тон, не насичений) */
-.cm-board-note--yellow { background: #FDFCF5; }
-.cm-board-note--blue   { background: #F5F8FC; }
-.cm-board-note--pink   { background: #FBF5F6; }
-.cm-board-note--white  { background: #FBFBF9; }
-.cm-board-note--green  { background: #F5FAF6; }
+/* Д-9: тонові класи карток прибрано — фон тепер єдиний (базове правило вище).
+   Колір категорії переїхав на тег .cm-board-cat--{color} (нижче). */
 
 /* Офіційний папірець (адміністрація) — на повну ширину, бронзова рамка */
 .cm-board-note--official {
@@ -957,6 +952,20 @@
   margin-bottom: 8px;
   align-self: flex-start;
 }
+
+/* Д-9: категорію позначає КОЛІР ТЕГА (переюз p.color), а не фон картки.
+   Кольори СЕМАНТИЧНІ (колір = зміст): купити=зелений, продати=червоний,
+   шукаю=синій, послуга=фіолетовий, знайдено/загубилось=бурштин (спільний).
+   Приглушені пігулки — у тон преміальності дошки. */
+.cm-board-cat--green  { background: rgba(46,125,80,0.14);  color: #2E7D50; }  /* куплю */
+.cm-board-cat--red    { background: rgba(192,57,43,0.13);  color: #C0392B; }  /* продам */
+.cm-board-cat--blue   { background: rgba(40,90,150,0.12);  color: #2E5C8A; }  /* шукаю */
+.cm-board-cat--purple { background: rgba(109,76,159,0.14); color: #6D4C9F; }  /* послуга */
+.cm-board-cat--amber  { background: rgba(176,124,20,0.16); color: #8A6410; }  /* знайдено/загубилось */
+/* Старі ключі (сумісність зі старими постами до перекласифікації) */
+.cm-board-cat--yellow { background: rgba(176,124,20,0.16); color: #8A6410; }
+.cm-board-cat--pink   { background: rgba(170,60,90,0.12);  color: #A03A5A; }
+.cm-board-cat--white  { background: rgba(90,90,90,0.10);   color: #5A5A5A; }
 
 /* Локація оголошення (Д-10) — рядок під заголовком у картці/модалці/прев'ю */
 .cm-board-loc {
@@ -2201,13 +2210,13 @@
 /* Менші кнопки на картці щоб номер завжди влазив */
 .cm-board-contact--phone .cm-board-msg-btn,
 .cm-board-contact--phone .cm-board-call {
-  width: 32px;
-  height: 32px;
+  width: 36px;
+  height: 36px;
 }
 .cm-board-contact--phone .cm-board-msg-btn svg,
 .cm-board-contact--phone .cm-board-call svg {
-  width: 15px;
-  height: 15px;
+  width: 17px;
+  height: 17px;
 }
 /* Ім'я під номером телефону на картці */
 /* Рядок під контактом: ім'я (зліва) + час публікації (справа) на одному рівні */
@@ -2222,6 +2231,10 @@
   font-size: 11px;
   font-weight: 600;
   color: rgba(43,43,43,0.5);
+  min-width: 0;
+  white-space: nowrap;        /* ім'я завжди в один рядок — не ламається «— / Володимир» */
+  overflow: hidden;
+  text-overflow: ellipsis;    /* дуже довге ім'я — трикрапка, а не негарний перенос */
 }
 .cm-board-author-row .cm-board-time {
   color: rgba(43,43,43,0.5);
@@ -2235,7 +2248,8 @@
 .cm-board-contact-num {
   flex: 1;
   min-width: 0;
-  word-break: break-all;
+  white-space: nowrap;   /* номер завжди в один рядок — не ламається посеред цифр */
+  font-size: 12px;       /* трохи менше — щоб довший номер влазив біля більших кнопок */
 }
 .cm-board-call {
   flex-shrink: 0;
@@ -3509,7 +3523,7 @@
   background:
     radial-gradient(75% 55% at 50% 50%, rgba(255, 170, 185, 0.16) 0%, rgba(255, 140, 160, 0.04) 48%, rgba(255, 140, 160, 0) 72%);
   margin: 0 4px;
-  padding: 2px 4px;   /* інсет зони скролу тепер через margin на .cm-news-feed (п.10) */
+  padding: 2px 10px;   /* +6px боків (перенесено з .cm-news-feed): це НЕ-overflow батько → бокова винна зона тепер скролить СТОРІНКУ, а не стрічку (п.10) */
 }
 /* Тонкі смужки-розпливи ТІЛЬКИ на краях зони екрана: розчиняють самий край, звідки
    картка «зʼявляється» (верх) і «зникає» (низ) при скролі. Лежать НАД картками,
@@ -3578,8 +3592,7 @@
   /* Стелю карток піднято на 20px (padding-top 20→0, рішення Роми). Маску з карток
      ПРИБРАНО (робила «ужасні» червоні краї на самих картках). Замість неї — тонкі
      смужки-розпливи на КРАЯХ зони екрана (::before/::after у .cm-block-body). */
-  padding: 0 0 8px;
-  margin: 6px 12px 0;   /* ІНСЕТ зони скролу (Рома 09.07): стрічка ВУЖЧА за блок → винна рамка навколо (шапка/боки/фільтри) скролить СТОРІНКУ, а внутрішній скрол спрацьовує ЛИШЕ в зоні карток (п.10) */
+  padding: 0 0 8px;   /* бокові поля прибрано з overflow-контейнера → зона внутрішнього скролу = рівно ширина карток; винна рамка боків скролить СТОРІНКУ (п.10) */
   scrollbar-width: none;
   border-radius: 14px;   /* заокруглений clip overflow → картки клипаються по дузі на верх/низ, не квадратом (п.11) */
 }
