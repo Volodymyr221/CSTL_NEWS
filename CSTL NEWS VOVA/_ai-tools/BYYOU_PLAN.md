@@ -1,7 +1,30 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** done
-<!-- ✅ 10.07 ПОТІК 3 — Потік C1 ЗАДЕПЛОЄНО: PR #322, мердж a0521717, live v2643 · 10.07 20:10, CACHE cstl-20260710-1929. -->
+**Статус:** active
+<!-- ▶ 10.07 ПОТІК 4 — Потік C2 (звужено): Board ad modal + Disc sheets на примітив. -->
+
+## 🧩 ПОТІК 4 (10.07) — Потік C2 звужено: Board ad modal + Disc sheets
+
+**Джерело:** `docs/PLAN_MODALS_STANDARDIZATION.md`, підпотік C2 («sheets/compose»). План від 07.07 називав 4 цілі — прочитала реальний код board.js, 2 з них виявились архітектурно непридатні для спільного примітиву:
+- **Ad zoom sheet** — насправді ДВІ дубльовані реалізації (`expand()` — FLIP-морфінг картки в модалку за координатами джерела; `openAdModalStandalone()` — той самий вигляд без картки-джерела). Морфінг несумісний з примітивом (немає підтримки «росту з елемента»).
+- **Discussion chat modal** (`openChatModal`) — keyboard-aware realtime чат: динамічно рухає top/height/bottom під клавіатуру, жести на бульбашках, скрол-пігулка. Конфліктує з фіксованою `position:fixed;inset:0` моделлю примітиву.
+
+**Рішення (підтверджено Ромою):** мігрую лише 2 архітектурно прості — Board ad modal + Disc sheets. Морфінг і realtime-чат лишаю як є (задокументую причину в PLAN_MODALS_STANDARDIZATION.md, не спроба-і-відкат).
+
+### Кроки (9 кроків)
+| # | Крок | Файли | Стан |
+|---|------|-------|------|
+| 1 | Мігрувати Board ad modal (`openBoardModal`) на примітив, sheet-варіант. Заголовок+підзаголовок лишаються в bodyHtml (власний шрифт, не generic `.app-modal-title`) — лише chrome (backdrop/panel/handle/close/swipe) на примітив, свій custom-свайп прибрати (primitive's вбудований еквівалентний) | `src/tabs/community-modal.js` | 🟢 |
+| 2 | Мігрувати Disc sheets (`openDiscSheet`) — тонка обгортка над примітивом, зберегти сигнатуру `openDiscSheet(opts)→close` і `onMount(sheet,close)` (2 аргументи) щоб не чіпати 4 виклики (`openMyDiscussions`/`openSavedDiscussions`/`openDiscussionCompose`+`openDiscussionList`) | `src/tabs/board.js` | 🟢 |
+| 3 | Прибрати мертвий CSS: `.cm-board-modal/backdrop/panel/handle/close` (НЕ чіпати `.cm-board-modal-note/gallery/dots/...` — то Ad zoom sheet, інша функція, лишається), `.disc-sheet-backdrop/handle/head/close` (лишити `.disc-sheet-title/body/list/empty` — контент) | `style/community.css` | 🟢 |
+| 4 | Тест-блок: `node --check`+build+check-imports, Playwright-смоук (відкрити форму оголошення, заповнити поле, свайп-закрити; відкрити «Мої обговорення»/«Створити обговорення», перевірити submit), регресія Дошки | — | 🟢 |
+| 5 | Оновити `docs/PLAN_MODALS_STANDARDIZATION.md`: C2 — 2/4 done, задокументувати архітектурне рішення не чіпати morph/realtime-чат (з поясненням чому) | `docs/PLAN_MODALS_STANDARDIZATION.md` | 🟢 |
+| 6 | Брама деплою — реліз-нотатки, чекати «деплой» | — | 🟡 |
+
+**Оцінка:** 6 кроків × ~35K ≈ 210K токенів (~22% вікна) — менше за C1, менший обсяг.
+**Ризик:** низький — обидві цілі вже мають майже ідентичну до примітиву логіку свайпу/backdrop. `board.js` активно редагує Вова (зона Дошки) — торкаюсь лише 2 конкретні функції (`openDiscSheet`+4 виклики), не структуру шапки/скролу що він щойно міняв.
+
+---
 
 ## 🧩 ПОТІК 3 (10.07) — Потік C1: спільний примітив модалки + 4 прості overlay
 
