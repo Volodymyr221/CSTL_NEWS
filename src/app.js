@@ -11,7 +11,7 @@ import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
 import { initConsent } from './core/consent.js';
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
-import { initBoardChat, openThreadsList } from './tabs/board-chat.js';
+import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
 
 // Поточна активна вкладка
@@ -195,6 +195,15 @@ function handleInviteHash() {
   openInviteJoin(m[1]);
 }
 
+// P-9: холодний старт з нотифікації чату — sw.js кладе #/thread/<id> у clients.openWindow(),
+// той самий hash-патерн що інвайти груп (GitHub Pages — статичний хостинг, без справжніх шляхів).
+function handleThreadHash() {
+  const m = (location.hash || '').match(/^#\/thread\/(\d+)/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  openThreadById(Number(m[1]));
+}
+
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
@@ -223,6 +232,8 @@ function init() {
   initAdminShortcut();
   handleInviteHash();                              // вступ за посиланням при відкритті
   window.addEventListener('hashchange', handleInviteHash);
+  handleThreadHash();                              // P-9: холодний старт з нотифікації чату
+  window.addEventListener('hashchange', handleThreadHash);
 
   // Splash screen — прибираємо після завантаження
   setTimeout(() => {
