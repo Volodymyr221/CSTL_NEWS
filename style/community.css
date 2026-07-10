@@ -1725,10 +1725,11 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
   opacity: 0;
-  transform: translateY(12px) scale(0.9);
-  transition: opacity 0.18s ease, transform 0.18s cubic-bezier(0.32, 0.72, 0, 1);
+  /* Б6.1: transform прибрано — разом з backdrop-filter на .board-fab-label/.board-fab-ic
+     давало WebKit-привид (подвійний рендер шару). Лишається лише fade, каскад через delay. */
+  transition: opacity 0.18s ease;
 }
-.board-fab.open .board-fab-item { opacity: 1; transform: none; }
+.board-fab.open .board-fab-item { opacity: 1; }
 /* Каскад появи знизу вгору */
 .board-fab.open .board-fab-item:nth-child(4) { transition-delay: 0.02s; }
 .board-fab.open .board-fab-item:nth-child(3) { transition-delay: 0.05s; }
@@ -1782,7 +1783,8 @@
 }
 
 /* Відкрито: скло трохи щільніше; бульбашка зникає, проявляється ✕ (cross-fade) */
-.board-fab.open .board-trigger--fixed { z-index: 152; background: rgba(255, 255, 255, 0.62); }
+/* Б6.1: пом'якшено 0.62→0.52 — базовий стан теж скло 0.45, різкий стрибок опасності відчувався як «перефарбування» */
+.board-fab.open .board-trigger--fixed { z-index: 152; background: rgba(255, 255, 255, 0.52); }
 .board-fab.open .board-trigger--fixed .cm-board-trigger-icon { opacity: 0; }
 .board-fab.open .board-trigger--fixed .cm-board-trigger-close { opacity: 1; }
 .board-fab.open .board-trigger-badge { display: none; }
