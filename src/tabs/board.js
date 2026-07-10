@@ -19,6 +19,7 @@ import {
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
+import { openModal as openModalPrimitive } from '../core/modal.js';
 
 // Д-10/Д-12: локація вважається «загальногромадською» (видима скрізь) якщо
 // порожня/null або дорівнює COMMUNITY_ALL. Конкретний НП — лише свій фільтр.
@@ -505,27 +506,21 @@ function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 
 // ── ОБГОВОРЕННЯ: створення + кімнати «Мої» / «Збережені» (окремий FAB) ─────────
 
-// Легкий bottom-sheet для дій Обговорень. Повну стандартизацію модалок винесено
-// в окремий потік — тут мінімальний власний шелл.
+// Легкий bottom-sheet для дій Обговорень — тонка обгортка над спільним примітивом
+// core/modal.js (Потік C2). Сигнатура (opts.title/bodyHtml/onMount(sheet,close), повертає
+// close) лишена незмінною — 4 виклики нижче не чіпав.
 function openDiscSheet(opts) {
-  const backdrop = document.createElement('div');
-  backdrop.className = 'board-backdrop disc-sheet-backdrop';
-  const sheet = document.createElement('div');
-  sheet.className = 'disc-sheet';
-  sheet.innerHTML = `
-    <div class="disc-sheet-handle"></div>
-    <header class="disc-sheet-head">
-      <div class="disc-sheet-title">${escapeHtml(opts.title)}</div>
-      <button class="disc-sheet-close" type="button" aria-label="Закрити">✕</button>
-    </header>
-    <div class="disc-sheet-body">${opts.bodyHtml}</div>`;
-  const close = () => { sheet.remove(); backdrop.remove(); document.body.classList.remove('modal-open'); };
-  backdrop.addEventListener('click', close);
-  sheet.querySelector('.disc-sheet-close')?.addEventListener('click', close);
-  document.body.appendChild(backdrop);
-  document.body.appendChild(sheet);
-  document.body.classList.add('modal-open');
-  if (opts.onMount) opts.onMount(sheet, close);
+  const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
+  // onMount виконується СИНХРОННО всередині openModalPrimitive(), до завершення
+  // деструктуризації нижче — пряме читання `close` тут ловить temporal dead zone.
+  // Обгортка-стрілка відкладає читання до реального виклику (завжди пізніше, асинхронно).
+  let close;
+  ({ close } = openModalPrimitive({
+    bodyHtml,
+    variant: 'sheet',
+    className: 'app-modal--disc',
+    onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+  }));
   return close;
 }
 

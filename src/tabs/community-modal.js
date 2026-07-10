@@ -10,6 +10,7 @@ import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
 import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
+import { openModal } from '../core/modal.js';
 
 // Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
 // купівля-продаж → пошук → послуга → знахідки/втрати.
@@ -80,7 +81,7 @@ function compressImage(file) {
 }
 
 export function openBoardModal() {
-  if (document.getElementById('cm-board-modal')) return;
+  if (document.querySelector('.app-modal--board-compose')) return;
 
   // Стан форми — тільки поля оголошення (chat/tagsRaw видалено)
   const state = {
@@ -94,85 +95,33 @@ export function openBoardModal() {
     location: COMMUNITY_ALL,   // Д-10: дефолт — вся громада
   };
 
-  const wrap = document.createElement('div');
-  wrap.id = 'cm-board-modal';
-  wrap.className = 'cm-board-modal';
-  wrap.innerHTML = `
-    <div class="cm-board-modal-backdrop"></div>
-    <div class="cm-board-modal-panel" role="dialog" aria-modal="true">
-      <div class="cm-board-modal-handle"></div>
-      <button class="cm-board-modal-close" type="button" aria-label="Закрити">✕</button>
-      <h3 class="cm-board-modal-title">✏️ Нове оголошення</h3>
-      <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
+  const bodyHtml = `
+    <h3 class="cm-board-modal-title">✏️ Нове оголошення</h3>
+    <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
 
-      <form id="cm-board-modal-form" novalidate>
-        <!-- Динамічна частина -->
-        <div id="bm-dynamic"></div>
+    <form id="cm-board-modal-form" novalidate>
+      <!-- Динамічна частина -->
+      <div id="bm-dynamic"></div>
 
-        <!-- LIVE-preview -->
-        <div class="bm-preview-section" id="bm-preview-section">
-          <div class="bm-preview-label">Як виглядатиме на дошці</div>
-          <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
-        </div>
+      <!-- LIVE-preview -->
+      <div class="bm-preview-section" id="bm-preview-section">
+        <div class="bm-preview-label">Як виглядатиме на дошці</div>
+        <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
+      </div>
 
-        <button class="cm-board-submit" type="submit">Опублікувати</button>
-        <p class="cm-board-hint">Запит йде модератору. Після перевірки зʼявиться на дошці.</p>
-      </form>
-    </div>
+      <button class="cm-board-submit" type="submit">Опублікувати</button>
+      <p class="cm-board-hint">Запит йде модератору. Після перевірки зʼявиться на дошці.</p>
+    </form>
   `;
-  document.body.appendChild(wrap);
-  document.body.classList.add('modal-open');
-  requestAnimationFrame(() => wrap.classList.add('open'));
 
-  // ── Close ──
-  function close() {
-    state.photos.forEach(p => { if (p && p.startsWith('blob:')) URL.revokeObjectURL(p); });
-    wrap.classList.remove('open');
-    document.body.classList.remove('modal-open');
-    setTimeout(() => wrap.remove(), 220);
-  }
-  wrap.querySelector('.cm-board-modal-backdrop')?.addEventListener('click', close);
-  wrap.querySelector('.cm-board-modal-close')?.addEventListener('click', close);
-  document.addEventListener('keydown', function onEsc(e) {
-    if (e.key === 'Escape') { close(); document.removeEventListener('keydown', onEsc); }
+  // chrome (backdrop/панель/handle/close/свайп) — спільний примітив core/modal.js (Потік C1/C2).
+  // onClose — прибирає blob: URL фото незалежно від того, ЯК модалку закрили.
+  const { close, el: wrap } = openModal({
+    bodyHtml,
+    variant: 'sheet',
+    className: 'app-modal--board-compose',
+    onClose: () => state.photos.forEach(p => { if (p && p.startsWith('blob:')) URL.revokeObjectURL(p); }),
   });
-
-  // ── Свайп вниз → закрити ──
-  const panel  = wrap.querySelector('.cm-board-modal-panel');
-  const handle = wrap.querySelector('.cm-board-modal-handle');
-  let dragStartY = 0, dragging = false, dragDelta = 0;
-
-  panel.addEventListener('touchstart', e => {
-    const onHandle = handle && (e.target === handle || handle.contains(e.target));
-    dragging = onHandle || panel.scrollTop <= 2;
-    if (!dragging) return;
-    dragStartY = e.touches[0].clientY;
-    dragDelta = 0;
-    panel.style.transition = 'none';
-  }, { passive: true });
-
-  panel.addEventListener('touchmove', e => {
-    if (!dragging) return;
-    dragDelta = e.touches[0].clientY - dragStartY;
-    if (dragDelta <= 0) { panel.style.transform = 'translateY(0)'; return; }
-    e.preventDefault();
-    panel.style.transform = `translateY(${dragDelta}px)`;
-  }, { passive: false });
-
-  panel.addEventListener('touchend', () => {
-    if (!dragging) return;
-    dragging = false;
-    if (dragDelta > 90) {
-      panel.style.transition = 'transform 0.25s ease-in';
-      panel.style.transform  = 'translateY(100%)';
-      setTimeout(close, 240);
-    } else {
-      panel.style.transition = 'transform 0.3s cubic-bezier(0.32,0.72,0,1)';
-      panel.style.transform  = 'translateY(0)';
-      setTimeout(() => { panel.style.transition = ''; panel.style.transform = ''; }, 300);
-    }
-    dragDelta = 0;
-  }, { passive: true });
 
   // ── Рендер полів оголошення ──
   const dynamicEl = wrap.querySelector('#bm-dynamic');
