@@ -7570,6 +7570,24 @@ ${ev.description || ""}`
 
   // src/tabs/news.js
   var allArticles = [];
+  var SAVED_KEY = "cstl_saved_articles";
+  function getSavedArticleIds() {
+    try {
+      return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function toggleSavedArticle(id) {
+    const ids = getSavedArticleIds();
+    const idx = ids.indexOf(id);
+    if (idx === -1)
+      ids.push(id);
+    else
+      ids.splice(idx, 1);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+    return idx === -1;
+  }
   var CATEGORY_COLORS2 = {
     "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
     // темно-сірий (новинний)
@@ -7623,16 +7641,6 @@ ${ev.description || ""}`
   function attachNewsListeners() {
     const modal = document.getElementById("article-modal");
     if (modal) {
-      modal.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-share-article]");
-        if (!btn)
-          return;
-        sharePost({
-          title: btn.dataset.shareTitle,
-          text: btn.dataset.shareText,
-          url: btn.dataset.shareUrl
-        });
-      });
       modal.addEventListener("error", handleImgError, true);
     }
   }
@@ -7753,18 +7761,29 @@ ${ev.description || ""}`
     ` : ""}
     <div class="article-source-row">
       <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
-      <div class="article-source-actions">
-        <button class="share-btn share-btn--inline" type="button"
-                data-share-article
-                data-share-title="${escapeHtml(article.title)}"
-                data-share-text="${escapeHtml(article.excerpt || "")}"
-                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
-          \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
-        </button>
-        ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
-      </div>
+      ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
     </div>
   `;
+    const shareBtn = document.getElementById("modal-share-btn");
+    const remindBtn = document.getElementById("modal-remind-btn");
+    const saveBtn = document.getElementById("modal-save-btn");
+    if (shareBtn)
+      shareBtn.onclick = () => sharePost({
+        title: article.title,
+        text: article.excerpt || "",
+        url: article.sourceUrl || location.href
+      });
+    if (remindBtn)
+      remindBtn.hidden = true;
+    if (saveBtn) {
+      saveBtn.hidden = false;
+      saveBtn.classList.toggle("modal-icon-btn--active", getSavedArticleIds().includes(article.id));
+      saveBtn.onclick = () => {
+        const nowSaved = toggleSavedArticle(article.id);
+        saveBtn.classList.toggle("modal-icon-btn--active", nowSaved);
+        showToast(nowSaved ? "\u0421\u0442\u0430\u0442\u0442\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E" : "\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445");
+      };
+    }
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");

@@ -263,9 +263,8 @@ body.cm-zoom-open .app-main { overflow: hidden; }
 }
 
 /* ===== SHARE BUTTON (📤 Web Share API, віральність 17.05.2026) =====
-   Два варіанти:
-   - .share-btn--inline — поряд з іншою CTA (модалка новини, картка події)
-   - .share-btn--corner — крихітна іконка у кутку (стікер Дошки) */
+   .share-btn--inline (модалка новини/події) прибрано Б5 — share переїхав у header-іконку
+   #modal-share-btn (.modal-icon-btn, style/modal.css). Лишається .share-btn--corner (Дошка). */
 .share-btn {
   display: inline-flex;
   align-items: center;
@@ -284,13 +283,6 @@ body.cm-zoom-open .app-main { overflow: hidden; }
   transform: scale(0.96);
 }
 
-.share-btn--inline {
-  padding: 8px 14px;
-  border-radius: 14px;
-  font-size: 13px;
-  font-weight: 600;
-}
-
 .share-btn--corner {
   position: absolute;
   top: 6px;
@@ -306,14 +298,6 @@ body.cm-zoom-open .app-main { overflow: hidden; }
 }
 .share-btn--corner:active {
   background: rgba(255, 255, 255, 1);
-}
-
-/* article-source-row тепер flex: автор зліва, дії справа в один ряд */
-.article-source-actions {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
 }
 
 /* ===== TABLO DESIGN TOKENS (табло-стиль УЗ-станції, 18.05.2026) =====
