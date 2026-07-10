@@ -21,6 +21,7 @@ import {
 import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnBuses } from './buses.js';
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import { ensureNewsLoaded, newsCardsHtml, openArticle } from './news.js';
+import { openModal } from '../core/modal.js';
 
 let cmBusIndex = 0;
 let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
@@ -236,11 +237,6 @@ function wxBarChart(points) {
     </svg>`;
 }
 
-function closeWeatherModal(overlay) {
-  overlay.classList.remove('wx-open');
-  setTimeout(() => overlay.remove(), 280);
-}
-
 export function openWeatherDayModal(dayIndex) {
   if (!_wxData || !_wxData.hourly) return;
   const daily = _wxData.daily;
@@ -265,42 +261,42 @@ export function openWeatherDayModal(dayIndex) {
   const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
   const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
 
-  const overlay = document.createElement('div');
-  overlay.className = 'wx-modal';
-  overlay.innerHTML = `
-    <div class="wx-sheet" role="dialog" aria-label="Погода по годинах">
-      <div class="wx-grabber"></div>
-      <div class="wx-head">
-        <div class="wx-head-icon">${info.icon}</div>
-        <div class="wx-head-info">
-          <div class="wx-head-day">${escapeHtml(dayName)} · ${dateLabel}</div>
-          <div class="wx-head-desc">${escapeHtml(info.text)}</div>
-        </div>
-        <div class="wx-head-range">${tMax}° / ${tMin}°</div>
+  const bodyHtml = `
+    <div class="wx-head">
+      <div class="wx-head-icon">${info.icon}</div>
+      <div class="wx-head-info">
+        <div class="wx-head-day">${escapeHtml(dayName)} · ${dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
       </div>
-      <div class="wx-chart-block">
-        <div class="wx-chart-title">🌡️ Температура, °C</div>
-        <div class="wx-chart-svg-wrap" data-wx="temp">
-          ${wxLineChart(tempPts, { unit: '°' })}
-          <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-          <div class="wx-readout"></div>
-        </div>
+      <div class="wx-head-range">${tMax}° / ${tMin}°</div>
+    </div>
+    <div class="wx-chart-block">
+      <div class="wx-chart-title">🌡️ Температура, °C</div>
+      <div class="wx-chart-svg-wrap" data-wx="temp">
+        ${wxLineChart(tempPts, { unit: '°' })}
+        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
+        <div class="wx-readout"></div>
       </div>
-      <div class="wx-chart-block">
-        <div class="wx-chart-title">💧 Ймовірність опадів, %</div>
-        <div class="wx-chart-svg-wrap" data-wx="precip">
-          ${wxBarChart(precipPts)}
-          <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-          <div class="wx-readout"></div>
-        </div>
+    </div>
+    <div class="wx-chart-block">
+      <div class="wx-chart-title">💧 Ймовірність опадів, %</div>
+      <div class="wx-chart-svg-wrap" data-wx="precip">
+        ${wxBarChart(precipPts)}
+        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
+        <div class="wx-readout"></div>
       </div>
     </div>`;
 
-  overlay.addEventListener('click', (e) => { if (e.target === overlay) closeWeatherModal(overlay); });
-  document.body.appendChild(overlay);
-  requestAnimationFrame(() => overlay.classList.add('wx-open'));
-  wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts });
-  wireWeatherSwipe(overlay);
+  // swipeClose:false — власний wireWeatherSwipe нижче (ігнорує свайп що почався
+  // на скрабер-графіку, спільний примітив цього не вміє).
+  const { close, el } = openModal({
+    bodyHtml,
+    variant: 'sheet',
+    className: 'app-modal--weather',
+    swipeClose: false,
+    onMount: (wrap) => wireWeatherScrubber(wrap, { tempPts, precipPts, iconPts }),
+  });
+  wireWeatherSwipe(el, close);
 }
 
 // Скрабер (перетягування пальцем по графіку): снапить до найближчої години,
@@ -357,10 +353,11 @@ function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
   });
 }
 
-// Свайп вниз по аркушу закриває модалку (як у community-modal.js). Не заважає
-// скраберу: якщо палець на графіку — свайп ігнорується (там працює скрабер).
-function wireWeatherSwipe(overlay) {
-  const sheet = overlay.querySelector('.wx-sheet');
+// Свайп вниз по аркушу закриває модалку. Не заважає скраберу: якщо палець
+// на графіку — свайп ігнорується (там працює скрабер). close — від primitive
+// core/modal.js (Потік C1, крок 6).
+function wireWeatherSwipe(overlay, close) {
+  const sheet = overlay.querySelector('.app-modal-sheet');
   if (!sheet) return;
   let startY = 0, dragging = false;
   sheet.addEventListener('touchstart', e => {
@@ -379,7 +376,7 @@ function wireWeatherSwipe(overlay) {
     dragging = false;
     const dy = e.changedTouches[0].clientY - startY;
     sheet.style.transform = '';
-    if (dy > 90) closeWeatherModal(overlay);
+    if (dy > 90) close();
   });
 }
 
