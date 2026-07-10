@@ -10,6 +10,7 @@ import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSw
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType } from './board.js';
 import { catColor } from './community-modal.js';
+import { openShotamModal } from './events.js';
 import {
   nowMinutes,
   getStopMins as scheduleGetStopMins,
@@ -73,6 +74,7 @@ function weatherCodeInfo(code) {
   if (code <= 65)               return { icon: '🌧️', text: 'Дощ' };
   if (code <= 77)               return { icon: '❄️', text: 'Сніг' };
   if (code <= 82)               return { icon: '🌧️', text: 'Зливи' };
+  if (code <= 86)               return { icon: '🌨️', text: 'Снігові зливи' };
   if (code >= 95)               return { icon: '⛈️', text: 'Гроза' };
   return { icon: '🌡️', text: '—' };
 }
@@ -869,7 +871,7 @@ export async function renderEventBlock() {
         .filter(e => new Date(e.date + 'T00:00:00') >= today)
         .sort((a, b) => new Date(a.date) - new Date(b.date))
         .slice(0, 5)
-        .map(e => ({ kind: 'event', date: e.date, time: e.time, title: e.title, category: e.category, location: e.location }));
+        .map(e => ({ kind: 'event', id: e.id, date: e.date, time: e.time, title: e.title, category: e.category, location: e.location, image: e.image }));
     } catch {}
 
     // 2) Fallback (Г-16): якщо майбутніх подій нема — найближчі свята з holidays.json
@@ -882,7 +884,7 @@ export async function renderEventBlock() {
           .filter(h => new Date(h.date + 'T00:00:00') >= today)
           .sort((a, b) => new Date(a.date) - new Date(b.date))
           .slice(0, 5)
-          .map(h => ({ kind: 'holiday', date: h.date, title: h.title, category: h.category || 'Свято', emoji: h.cover_emoji, gradient: h.cover_gradient }));
+          .map(h => ({ kind: 'holiday', id: h.id, date: h.date, title: h.title, category: h.category || 'Свято', emoji: h.cover_emoji, gradient: h.cover_gradient }));
       } catch {}
     }
 
@@ -913,7 +915,7 @@ function evSlideHtml(it, now) {
     const grad = it.gradient ? ` style="background:${escapeHtml(it.gradient)}"` : '';
     return `
       <div class="cm-ev-slide">
-        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? ' tablo-hero--urgent' : ''}"${grad} data-switch-tab="shotam">
+        <article class="evh-card tablo-hero cm-ev-holiday${isUrgent ? ' tablo-hero--urgent' : ''}"${grad} data-ev-id="${it.id}">
           <div class="evh-top">
             <span class="tablo-countdown">${countdown}</span>
             ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
@@ -928,9 +930,14 @@ function evSlideHtml(it, now) {
 
   const timeStr = it.time ? escapeHtml(it.time) : '';
   const locStr  = it.location ? escapeHtml(it.location) : '';
+  // Мініатюра фото (якщо є) — маленький квадрат у кутку картки, текст лишається зліва.
+  const thumb = it.image
+    ? `<img class="evh-thumb" src="${escapeHtml(it.image)}" alt="" loading="lazy" onerror="this.remove(); this.closest('.evh-card')?.classList.remove('evh-card--photo')">`
+    : '';
   return `
     <div class="cm-ev-slide">
-      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}" data-switch-tab="shotam">
+      <article class="evh-card tablo-hero${isUrgent ? ' tablo-hero--urgent' : ''}${it.image ? ' evh-card--photo' : ''}" data-ev-id="${it.id}">
+        ${thumb}
         <div class="evh-top">
           <span class="tablo-countdown">${countdown}</span>
           ${catStr ? `<span class="evh-cat tablo-soft">${catStr}</span>` : ''}
@@ -969,6 +976,14 @@ function renderEvCarousel(el) {
       _evIdx = parseInt(dot.dataset.evIdx, 10) || 0;
       updateEvPosition(el);
       startEvRotator(el);   // рестарт таймера від нового індексу
+    });
+  });
+
+  // Тап по картці → відкрити САМЕ цю подію/свято в статейній модалці (не просто вкладку).
+  el.querySelectorAll('.evh-card[data-ev-id]').forEach(card => {
+    card.addEventListener('click', () => {
+      const id = Number(card.dataset.evId);
+      if (Number.isFinite(id)) openShotamModal(id);
     });
   });
 

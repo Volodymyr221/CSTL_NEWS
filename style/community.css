@@ -592,6 +592,24 @@
 .cm-ev-holiday { align-items: flex-start; }
 .cm-ev-holiday-emoji { font-size: 40px; line-height: 1; margin: 4px 0 2px; }
 
+/* Мініатюра фото події (Батч 4) — маленький квадрат у правому верхньому куті
+   картки-табло, поверх темного градієнта. Текст (дата/назва/лічильник) лишається
+   зліва без змін — мініатюра лише декоративна, не займає layout-простір тексту. */
+.evh-thumb {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid rgba(255,255,255,0.25);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+/* Коли є мініатюра — звільнити для неї місце в верхньому рядку (countdown+категорія),
+   інакше бейдж категорії заїжджає під фото (спіймано смоуком). */
+.evh-card--photo .evh-top { padding-right: 54px; }
+
 /* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
 
