@@ -4656,7 +4656,10 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
-    requestAnimationFrame(syncBoardBodyOffset);
+    requestAnimationFrame(() => {
+      syncBoardBodyOffset();
+      fitBoardAuthors();
+    });
   }
   function renderBodyOnly() {
     const el = getBoardRoot();
@@ -4673,6 +4676,7 @@ ${post.text}
       }, { capture: true });
     });
     initBoardNoteExpand(el);
+    requestAnimationFrame(fitBoardAuthors);
   }
   var _boardCollapseRef = null;
   var _boardTabHookSet = false;
@@ -5235,6 +5239,29 @@ ${post.text}
     if (h > 0)
       body.style.paddingTop = h + BOARD_BODY_GAP + "px";
   }
+  function fitBoardAuthors() {
+    const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
+    const range = document.createRange();
+    document.querySelectorAll(".cm-board-foot").forEach((foot) => {
+      if (!foot.clientWidth)
+        return;
+      const nameEl = foot.querySelector(".cm-board-foot-who .cm-board-author--card");
+      const actions = foot.querySelector(".cm-board-foot-actions");
+      if (!nameEl)
+        return;
+      const fcs = getComputedStyle(foot);
+      const gap = parseFloat(fcs.columnGap) || parseFloat(fcs.gap) || 0;
+      const avail = foot.clientWidth - (actions ? actions.offsetWidth : 0) - gap - PAD;
+      let size = MAX;
+      nameEl.style.fontSize = size + "px";
+      range.selectNodeContents(nameEl);
+      while (size > MIN && range.getBoundingClientRect().width > avail) {
+        size -= STEP;
+        nameEl.style.fontSize = size + "px";
+        range.selectNodeContents(nameEl);
+      }
+    });
+  }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
     if (_headerCollapseWired)
@@ -5286,7 +5313,10 @@ ${post.text}
         requestAnimationFrame(apply);
       }
     }, { passive: true });
-    window.addEventListener("resize", () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
+    window.addEventListener("resize", () => requestAnimationFrame(() => {
+      syncBoardBodyOffset();
+      fitBoardAuthors();
+    }), { passive: true });
   }
   function initBoard() {
     attachBoardDelegation();
@@ -5309,7 +5339,10 @@ ${post.text}
         renderAll();
       }
       if (tab === "board")
-        requestAnimationFrame(syncBoardBodyOffset);
+        requestAnimationFrame(() => {
+          syncBoardBodyOffset();
+          fitBoardAuthors();
+        });
     });
     setupHeaderCollapse();
     onAuthChange(() => {

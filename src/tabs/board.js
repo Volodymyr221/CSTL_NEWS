@@ -1484,7 +1484,7 @@ function renderAll() {
 
   // Відступ тіла = реальна висота шапки (щоб картки не залазили під неї). Через rAF —
   // щоб вимір відбувся після того як браузер порахував layout свіжої розмітки.
-  requestAnimationFrame(syncBoardBodyOffset);
+  requestAnimationFrame(() => { syncBoardBodyOffset(); fitBoardAuthors(); });
 }
 
 function renderBodyOnly() {
@@ -1499,6 +1499,7 @@ function renderBodyOnly() {
     btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
   });
   initBoardNoteExpand(el);
+  requestAnimationFrame(fitBoardAuthors);
 }
 
 // Zoom-перегляд стікера через окрему модалку (тільки board)
@@ -2082,6 +2083,33 @@ function syncBoardBodyOffset() {
   if (h > 0) body.style.paddingTop = (h + BOARD_BODY_GAP) + 'px';   // h=0 → вкладка схована, лишаємо CSS-запас
 }
 
+// Динамічний розмір імені автора у футері картки (рішення Вови): коротке ім'я —
+// більше (до MAX, добре видно), довге — зменшується рівно доки не влізе в ОДИН рядок
+// у ДОСТУПНЕ місце (ширина футера − кнопки − gap; до MIN); якщо й на MIN не влазить —
+// трикрапка (CSS). Реальну ширину гліфів міряємо через Range.getBoundingClientRect()
+// — не залежить від контейнера/overflow (scrollWidth/max-content у flex тут брешуть).
+function fitBoardAuthors() {
+  const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
+  const range = document.createRange();
+  document.querySelectorAll('.cm-board-foot').forEach(foot => {
+    if (!foot.clientWidth) return;            // схований — пропускаємо (перерахуємо при вході на вкладку)
+    const nameEl = foot.querySelector('.cm-board-foot-who .cm-board-author--card');
+    const actions = foot.querySelector('.cm-board-foot-actions');
+    if (!nameEl) return;
+    const fcs = getComputedStyle(foot);
+    const gap = parseFloat(fcs.columnGap) || parseFloat(fcs.gap) || 0;
+    const avail = foot.clientWidth - (actions ? actions.offsetWidth : 0) - gap - PAD;
+    let size = MAX;
+    nameEl.style.fontSize = size + 'px';
+    range.selectNodeContents(nameEl);
+    while (size > MIN && range.getBoundingClientRect().width > avail) {
+      size -= STEP;
+      nameEl.style.fontSize = size + 'px';
+      range.selectNodeContents(nameEl);       // переміряти гліфи після зміни шрифту
+    }
+  });
+}
+
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
 // rAF-throttle (як hero-blur у community.js). Ховаємо назву+категорії лише коли
 // прогорнули «через деякий час» (THRESHOLD) і напрямок — вниз; вгору → показуємо.
@@ -2126,7 +2154,7 @@ function setupHeaderCollapse() {
     if (!ticking) { ticking = true; requestAnimationFrame(apply); }
   }, { passive: true });
   // Зміна розміру екрана (поворот, зміна вікна) → перерахувати відступ тіла під шапку.
-  window.addEventListener('resize', () => requestAnimationFrame(syncBoardBodyOffset), { passive: true });
+  window.addEventListener('resize', () => requestAnimationFrame(() => { syncBoardBodyOffset(); fitBoardAuthors(); }), { passive: true });
 }
 
 export function initBoard() {
@@ -2155,7 +2183,7 @@ export function initBoard() {
     // Відступ під шапку: при ВХОДІ на Дошку вкладка щойно стала видимою, тому
     // тепер .bd-controls має реальну висоту (на старті вона була схована → offsetHeight=0
     // → вимір не спрацьовував). Міряємо тут. rAF — дочекатись layout після показу.
-    if (tab === 'board') requestAnimationFrame(syncBoardBodyOffset);
+    if (tab === 'board') requestAnimationFrame(() => { syncBoardBodyOffset(); fitBoardAuthors(); });
   });
   // Авто-ховання шапки при скролі Дошки (гортаєш вниз — ховаються назва+категорії;
   // вгору — з'являються). Лічильник/локація + пошук лишаються закріпленими.
