@@ -1,7 +1,33 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** paused
-<!-- ⏸ 10.07 УВЕСЬ ПОТІК ЗАВЕРШЕНО. СЕСІЯ А (Батч 5+6+7) — PR #319, live v2639. СЕСІЯ Б (Батч 8 Push + аудит перенаправлень) — PR #321, live v2640, CACHE cstl-20260710-1714. Батчі 1-8 + аудит усі задеплоєні. Роблено САМА, без хендоффу Вові навіть у крос-зоні (рішення Роми 10.07: "Вові не передавай роботу"). Наступне — контент п.4 (переписати 4 свята-статті, чекає уточнення Роми) або нова ціль з AUDIT_2026-07.md. -->
+**Статус:** active
+<!-- ▶ 10.07 ПОТІК 3 — Потік C1 (стандартизація модалок, підпотік 1/3): примітив + 4 прості overlay. -->
+
+## 🧩 ПОТІК 3 (10.07) — Потік C1: спільний примітив модалки + 4 прості overlay
+
+**Джерело:** `docs/PLAN_MODALS_STANDARDIZATION.md` (відкладено 07.07, Рома обрав продовжити 10.07). Інвентар звірено з реальним кодом сьогодні — план застарів: `.sr-modal` видалено (Батч 7), з'явився новий патерн `.shub-sheet` (хаб «Збережені»), «Disc actions sheet» тепер дублюється у 2 файлах. Разом 15 модалок (не 14), 3 підпотоки (C1/C2/C3) — це C1, найменший ризик.
+
+**Досліджено (реальний код, не з пам'яті):** `account-ui.js` вже має власний міні-примітив `openModal(innerHtml)` (center-варіант, `scale()`); `power.js`/`sidebar.js`/`community-blocks.js` (погода) — кожен свій bottom-sheet (`translateY()`) з майже ідентичною структурою (backdrop+panel+handle+close). Article-modal (`style/modal.css`) — найближче до готового sheet-еталону (sticky header з іконками, вже зроблено Б5.1).
+
+### Кроки (10 кроків)
+| # | Крок | Файли | Стан |
+|---|------|-------|------|
+| 1 | Новий `src/core/modal.js`: `openModal({title,bodyHtml,variant,onMount,swipeClose})` → `{close,el}`. Variant `sheet` (bottom, handle, swipe-down) і `center` (scale-in). Реюз патернів з article-modal + account-ui.js | `src/core/modal.js` (новий) | 🟢 |
+| 2 | CSS: `style/modal.css` — генеричні `.app-modal*` класи (backdrop/sheet/center/close), кольори з існуючих реалізацій (не вигадувати нові) | `style/modal.css` | 🟢 |
+| 3 | Мігрувати Power help-модалку (`openQueueHelpModal`) на примітив, sheet-варіант | `src/tabs/power.js` | 🟢 |
+| 4 | Мігрувати Sidebar info-модалку (`openInfoModal`, враховуючи `--doc` варіант для правового тексту) | `src/core/sidebar.js` | 🟢 |
+| 5 | Мігрувати Account-модалку (`openModal` у account-ui.js) на примітив, center-варіант — власний API `openModal(innerHtml)` лишається (тонка обгортка над новим) | `src/core/account-ui.js` | 🟢 |
+| 6 | Мігрувати Weather-модалку (`openWeatherDayModal`), sheet-варіант — **графіки/скрабер НЕ чіпати**, лише chrome (backdrop/sheet/close/swipe) | `src/tabs/community-blocks.js` | 🟢 |
+| 7 | Прибрати мертвий CSS після міграції (`.pw-help-modal/backdrop/panel/handle/close`, `.sidebar-info-modal/sheet/head/close`, `.acc-modal/backdrop/card`, `.wx-modal` структурні — контент-специфічні класи лишити) | `style/power.css`, `style/sidebar.css`, `style/account.css`, `style/community.css` | 🟢 |
+| 8 | Тест-блок: `node --check` усіх, Playwright-смоук (відкрити/закрити кожну з 4 модалок, перевірити контент+свайп+ESC, регресія інших вкладок) | — | 🟢 |
+| 9 | Оновити `docs/PLAN_MODALS_STANDARDIZATION.md` — C1 ✅, інвентар звірено, C2/C3 лишаються | `docs/PLAN_MODALS_STANDARDIZATION.md` | 🟢 |
+| 10 | Брама деплою — реліз-нотатки, чекати «деплой» | — | 🟡 |
+
+**Оцінка:** 10 кроків × ~35K ≈ 350K токенів (~36% вікна). Сесія вже довга (кілька потоків сьогодні) — якщо контекст-хук покаже 🟡35%/🟠55% по дорозі, зупинюсь і задокументую «де зупинились» як завжди.
+
+**Ризик:** мінімальний — 4 НАЙПРОСТІШІ overlay з 15 (свідомий вибір плану), складні (chat/lightbox/popover) — окремі підпотоки C2/C3 пізніше.
+
+---
 
 ## 🚀 ПОТІК 2 (10.07) — Батч 5-8 + аудит перенаправлень, розбито на 2 сесії (за проханням Роми — вміститись у 75-80% контексту)
 
