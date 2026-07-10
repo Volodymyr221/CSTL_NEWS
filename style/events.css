@@ -194,22 +194,3 @@
   100% { background-position: -200% 0; }
 }
 
-/* Кнопка "Створити нагадування" — завантажує .ics у рідний Calendar */
-.ev-ics-btn {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 7px;
-  width: 100%;
-  padding: 11px 14px;
-  background: var(--red);
-  color: white;
-  border: none;
-  border-radius: 10px;
-  font-size: 14px;
-  font-weight: 700;
-  cursor: pointer;
-  letter-spacing: 0.3px;
-  transition: background 0.15s;
-}
-.ev-ics-btn:active { background: var(--red-dark); }

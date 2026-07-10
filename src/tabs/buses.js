@@ -1825,7 +1825,6 @@ function buildSourceHtml() {
 // можна лишити рейс збереженим, але вимкнути нагадування.
 // ════════════════════════════════════════════════════════════════════════════
 
-const SR_BOOKMARK_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
 const SR_BELL_ON_SVG  = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
 const SR_BELL_OFF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
 
@@ -1842,7 +1841,36 @@ function savedRouteDayLabel(trackDate) {
 }
 
 // Збережені рейси для UI (відсортовані за датою+часом)
-function getSavedRoutesForUI() {
+// Яка сторінка тижневої смужки (0=цей тиждень, 1=наступний) містить дату iso.
+function pageForDate(iso) {
+  const toIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (getWeekDays(0).some(d => toIso(d) === iso)) return 0;
+  if (getWeekDays(1).some(d => toIso(d) === iso)) return 1;
+  return 0;
+}
+
+// Б7.1: перехід із хабу «Збережені» на конкретний збережений рейс — виставляє день+фільтр
+// зупинок, перемальовує список і скролить+підсвічує потрібну картку.
+export function openSavedRouteOnBuses(rid, date, from, to) {
+  busDay        = date;
+  weekPage      = pageForDate(date);
+  showAll       = true;   // збережений рейс міг бути «минулим» на сьогодні — не ховати
+  smartRowIndex = 0;
+  fromStop      = from || '';
+  toStop        = to   || '';
+  renderWeekStrip();
+  renderSmartRow();
+  renderRouteList();
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`[data-route-id="${CSS.escape(rid)}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('bus-card--flash');
+    setTimeout(() => card.classList.remove('bus-card--flash'), 1500);
+  });
+}
+
+export function getSavedRoutesForUI() {
   return [...trackedRoutes]
     .sort((a, b) => (a.trackDate + (a.depTime || '')).localeCompare(b.trackDate + (b.depTime || '')))
     .map(t => ({
@@ -1861,8 +1889,6 @@ function getSavedRoutesForUI() {
       fullTimeStr: t.fullTimeStr || '',
     }));
 }
-
-function getSavedCount() { return trackedRoutes.length; }
 
 // Зняти збереження рейсу (зникає зі списку, відстеження стоп)
 function unsaveRoute(rid, date, from, to) {
@@ -1903,7 +1929,7 @@ async function requestPushForSavedRoute(rid, date, from, to) {
   if (!entry) return;
   // subscribeToPush сам запитає дозвіл (по жесту користувача) і збереже підписку.
   await subscribeToPush(rid, entry.title || '', from || null, to || null, date, entry.depTime || null);
-  renderSavedRows();   // оновити стан дзвіночка (⚠️ → 🔔 якщо дозвіл надано)
+  updateBannerBell();   // оновити стан дзвіночка на банері (⚠️ → 🔔 якщо дозвіл надано)
 }
 
 // Self-heal: при відкритті Автобусів звіряємо збережені рейси (notify=on, сьогодні+майбутні)
@@ -1919,157 +1945,21 @@ function selfHealPushSubscriptions() {
   }
 }
 
-// Іконка хедера: показуємо ЛИШЕ на вкладці Автобуси і коли є збережені рейси.
-// Цифра (кількість збережених) — біла, всередині червоної кнопки.
-function updateSavedBadge() {
-  const btn = document.getElementById('saved-routes-btn');
-  if (!btn) return;
-  const n = getSavedCount();
-  const onBuses = document.querySelector('.app-main')?.dataset.tab === 'buses';
-  btn.hidden = n === 0 || !onBuses || !isLoggedIn();
-  const cnt = document.getElementById('saved-routes-count');
-  if (cnt) cnt.textContent = n > 0 ? String(n) : '';
-}
+// Б7.3: кнопка-хедер + слайд-модалка «Збережені рейси» прибрані — тепер через
+// хаб «Збережені» (saved-hub.js, секція 🚌, реюзує getSavedRoutesForUI+openSavedRouteOnBuses).
+// Дані (завантаження + крос-девайс синхрон) і банер лишились — initSavedRoutesHeader нижче.
 
-// ── Слайд-модалка «Збережені рейси» ──
-let _srModalEl = null;
-
-function srRowHtml(r) {
-  // Чесний стан дзвіночка (3 стани): off (вимкнув користувач) / warn (notify=true,
-  // але push недоступний — немає дозволу/не iOS-PWA) / on (реально працює).
-  const pushBlocked = !!pushBlockedMsg();
-  let bellSvg, bellCls, bellLabel;
-  if (!r.notify) {
-    bellSvg = SR_BELL_OFF_SVG; bellCls = 'sr-bell sr-bell--off'; bellLabel = 'Нагадування вимкнені';
-  } else if (pushBlocked) {
-    bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--warn'; bellLabel = 'Сповіщення недоступні — натисніть щоб увімкнути';
-  } else {
-    bellSvg = SR_BELL_ON_SVG;  bellCls = 'sr-bell sr-bell--on';  bellLabel = 'Нагадування увімкнені';
-  }
-  const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || '')}" data-to="${escapeHtml(r.to || '')}"`;
-  // «СЬОГОДНІ/ЗАВТРА/дата» — окремим рядком великими над назвою рейсу.
-  const dayTop = r.dayLabel ? `<div class="sr-row-day">${escapeHtml(r.dayLabel)}</div>` : '';
-  // Проміжний рейс: заголовок = сегмент ВІД - ДО + час сегмента ЗБОКУ; нижче — повний
-  // маршрут-батько з 📍 (той самий патерн, що в картці «Розкладу», .bs-route-full).
-  // Звичайний рейс: заголовок = назва, час окремим підрядком знизу (без змін).
-  const titleText = r.isSegment
-    ? `${r.from} - ${r.to}${r.timeStr ? ' | ' + r.timeStr : ''}`
-    : r.title;
-  const belowLine = r.isSegment
-    ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? ' | ' + escapeHtml(r.fullTimeStr) : ''}</div>`
-    : (r.timeStr ? `<div class="sr-row-sub">${escapeHtml(r.timeStr)}</div>` : '');
-  return `
-    <div class="sr-row">
-      <div class="sr-row-info">
-        ${dayTop}
-        <div class="sr-row-title">${escapeHtml(titleText)}</div>
-        ${belowLine}
-      </div>
-      <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
-      <button class="sr-unsave" type="button" ${data} aria-label="Зняти збереження">${SR_BOOKMARK_SVG}</button>
-    </div>`;
-}
-
-function renderSavedRows() {
-  const list = _srModalEl?.querySelector('.sr-list');
-  if (!list) return;
-  const rows = getSavedRoutesForUI();
-  list.innerHTML = rows.length
-    ? rows.map(srRowHtml).join('')
-    : '<div class="sr-empty">Немає збережених рейсів</div>';
-}
-
-function closeSavedModal() {
-  if (!_srModalEl) return;
-  const m = _srModalEl;
-  _srModalEl = null;
-  m.classList.remove('open');
-  document.body.classList.remove('modal-open');
-  setTimeout(() => m.remove(), 240);
-}
-
-function openSavedModal() {
-  if (_srModalEl) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'sr-modal';
-  wrap.innerHTML = `
-    <div class="sr-backdrop"></div>
-    <div class="sr-panel" role="dialog" aria-modal="true">
-      <div class="sr-head">
-        <span class="sr-title">Збережені рейси</span>
-        <button class="sr-close" type="button" aria-label="Закрити">✕</button>
-      </div>
-      <div class="sr-list"></div>
-      <div class="sr-handle"></div>
-    </div>`;
-  document.body.appendChild(wrap);
-  document.body.classList.add('modal-open');
-  _srModalEl = wrap;
-  renderSavedRows();
-  requestAnimationFrame(() => wrap.classList.add('open'));
-
-  wrap.querySelector('.sr-backdrop').addEventListener('click', closeSavedModal);
-  wrap.querySelector('.sr-close').addEventListener('click', closeSavedModal);
-
-  // Делегований клік: дзвіночок (нагадування) / закладка (зняти)
-  wrap.querySelector('.sr-list').addEventListener('click', e => {
-    const bell = e.target.closest('.sr-bell');
-    const uns  = e.target.closest('.sr-unsave');
-    const t = bell || uns;
-    if (!t) return;
-    const { rid, date, from, to } = t.dataset;
-    if (bell) {
-      // Стан ⚠️ (notify=true, але push недоступний) → тап = спроба увімкнути
-      // (запит дозволу / пояснення), а не вимкнути нагадування.
-      if (bell.classList.contains('sr-bell--warn')) requestPushForSavedRoute(rid, date, from || null, to || null);
-      else toggleRouteReminders(rid, date, from || null, to || null);
-    } else {
-      unsaveRoute(rid, date, from || null, to || null);
-    }
-    renderSavedRows();   // бейдж оновиться через подію cstl-bus-track-changed
-  });
-
-  // Свайп вгору по панелі → закрити (модалка спускається зверху)
-  const panel = wrap.querySelector('.sr-panel');
-  let sy = 0, drag = false, dd = 0;
-  panel.addEventListener('touchstart', e => { sy = e.touches[0].clientY; drag = true; dd = 0; panel.style.transition = 'none'; }, { passive: true });
-  panel.addEventListener('touchmove', e => {
-    if (!drag) return;
-    dd = e.touches[0].clientY - sy;
-    if (dd >= 0) { panel.style.transform = 'translateY(0)'; return; }   // вниз — ігнор
-    panel.style.transform = `translateY(${dd}px)`;
-  }, { passive: true });
-  panel.addEventListener('touchend', () => {
-    if (!drag) return; drag = false;
-    panel.style.transition = '';
-    if (dd < -70) closeSavedModal();
-    else panel.style.transform = '';
-    dd = 0;
-  }, { passive: true });
-}
-
-// Ініціалізація глобальної іконки хедера (викликається з app.js при старті)
+// Ініціалізація даних відстеження (викликається з app.js при старті). Раніше також
+// малювала кнопку-хедер+модалку — прибрано Б7.3, лишилось завантаження+синхрон+банер.
 export function initSavedRoutesHeader() {
   loadTrackedRoute();
-  const btn = document.getElementById('saved-routes-btn');
-  if (btn && !btn.dataset.wired) {
-    btn.dataset.wired = '1';
-    btn.addEventListener('click', openSavedModal);
-  }
-  updateSavedBadge();
-  window.addEventListener('cstl-bus-track-changed', () => {
-    updateSavedBadge();
-    if (_srModalEl) renderSavedRows();
-    updateBannerBell();   // банер ділить той самий запис — синхронізуємо дзвіночок/напис
-  });
-  // Перемикання вкладок → показати/сховати іконку (вона лише на Автобусах)
-  window.addEventListener('cstl-tab-changed', updateSavedBadge);
+  // Банер «сповіщення про рейс активовано» ділить той самий запис — синхронізуємо дзвіночок.
+  window.addEventListener('cstl-bus-track-changed', updateBannerBell);
   // Вхід/вихід → перезавантажити відстеження (per-uid) + підтягнути з БД (крос-девайс).
-  // Гість → trackedRoutes порожні, hero/бейдж/іконки зникають.
+  // Гість → trackedRoutes порожні.
   onAuthChange(async () => {
     loadTrackedRoute();
     await hydrateTrackedFromDB();
-    updateSavedBadge();
     if (document.getElementById('bus-list')) { renderSmartRow(); renderRouteList(); }
     window.dispatchEvent(new CustomEvent('cstl-bus-track-changed'));
   });

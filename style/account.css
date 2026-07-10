@@ -348,3 +348,8 @@
   border: none; border-radius: 12px; padding: 10px 26px;
   font-size: 15px; font-weight: 700; cursor: pointer;
 }
+/* Б5.4: підказка увійти під секцією статей (гість бачить статті, але не оголошення/обговорення) */
+.shub-hint-block {
+  text-align: center; color: var(--gray, #777); padding: 18px 8px;
+  font-size: 13px; line-height: 1.5; border-top: 1px solid var(--border, #eee); margin-top: 8px;
+}

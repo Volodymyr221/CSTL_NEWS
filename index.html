@@ -34,10 +34,6 @@
     </div>
     <div class="deploy-stamp">v1 · 01.01 00:00</div>
     <div class="header-right">
-      <button class="saved-routes-btn" id="saved-routes-btn" type="button" hidden aria-label="Збережені рейси">
-        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
-        <span class="saved-routes-count" id="saved-routes-count"></span>
-      </button>
       <button class="saved-hub-btn" id="saved-hub-btn" type="button" aria-label="Збережені">
         <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
       </button>
@@ -152,6 +148,11 @@
     <div class="article-modal-inner">
       <div class="modal-sticky-header">
         <div class="modal-handle"></div>
+        <div class="modal-icon-group">
+          <button class="modal-icon-btn" id="modal-share-btn" type="button" aria-label="Поділитись">📤</button>
+          <button class="modal-icon-btn" id="modal-remind-btn" type="button" aria-label="Нагадування" hidden>🔔</button>
+          <button class="modal-icon-btn" id="modal-save-btn" type="button" aria-label="Зберегти" hidden>🔖</button>
+        </div>
         <button class="modal-close-btn" onclick="closeArticleModal()">✕</button>
         <div class="modal-meta-tags" id="modalMetaTags"></div>
       </div>

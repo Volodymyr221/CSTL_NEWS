@@ -1,6 +1,20 @@
-import { formatTime, escapeHtml, sharePost } from '../core/utils.js';
+import { formatTime, escapeHtml, sharePost, showToast } from '../core/utils.js';
 
 let allArticles = [];
+
+// Батч 5.3: збереження статей (нове — раніше save для статей не існував).
+// Зберігаємо лише id (не контент — контент завжди з data/articles.json, правило CLAUDE.md).
+const SAVED_KEY = 'cstl_saved_articles';
+export function getSavedArticleIds() {
+  try { return JSON.parse(localStorage.getItem(SAVED_KEY) || '[]'); } catch { return []; }
+}
+function toggleSavedArticle(id) {
+  const ids = getSavedArticleIds();
+  const idx = ids.indexOf(id);
+  if (idx === -1) ids.push(id); else ids.splice(idx, 1);
+  localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+  return idx === -1;   // true = щойно збережено
+}
 
 // Кольори категорій — pill-бейдж на картці новини (Tier 6 — 17.05.2026)
 const CATEGORY_COLORS = {
@@ -39,21 +53,10 @@ export async function initNews() {
   attachNewsListeners();
 }
 
-// Слухач модалки статті (share + плейсхолдер битих фото).
+// Слухач модалки статті (плейсхолдер битих фото; share тепер через header-іконку в openArticle).
 function attachNewsListeners() {
-  // Кнопка 📤 «Поділитись» у модалці статті — Web Share API + fallback на clipboard.
-  // Стратегія віральності з docs/COMMUNITY_BOARD_VISION.md.
   const modal = document.getElementById('article-modal');
   if (modal) {
-    modal.addEventListener('click', e => {
-      const btn = e.target.closest('[data-share-article]');
-      if (!btn) return;
-      sharePost({
-        title: btn.dataset.shareTitle,
-        text:  btn.dataset.shareText,
-        url:   btn.dataset.shareUrl,
-      });
-    });
     // Биті зображення у модалці статті → плейсхолдер
     modal.addEventListener('error', handleImgError, true);
   }
@@ -93,6 +96,12 @@ export async function ensureNewsLoaded() {
     }
   }
   return allArticles;
+}
+
+// Для хаба «Збережені» (Б5.4) — статті за списком id, у порядку id (найновіші збережені зверху).
+export async function getArticlesByIds(ids) {
+  await ensureNewsLoaded();
+  return ids.map(id => allArticles.find(a => a.id === id)).filter(Boolean);
 }
 
 // HTML для двох кольорових бейджів (geo + category) — використовується у обох картках
@@ -199,20 +208,31 @@ export function openArticle(id) {
     ` : ''}
     <div class="article-source-row">
       <span class="article-source-author"><strong>Автор публікації:</strong><br>${escapeHtml(article.source)}</span>
-      <div class="article-source-actions">
-        <button class="share-btn share-btn--inline" type="button"
-                data-share-article
-                data-share-title="${escapeHtml(article.title)}"
-                data-share-text="${escapeHtml(article.excerpt || '')}"
-                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
-          📤 Поділитись
-        </button>
-        ${article.sourceUrl
-          ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
-          : ''}
-      </div>
+      ${article.sourceUrl
+        ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
+        : ''}
     </div>
   `;
+
+  // Батч 5.3: іконки зверху модалки (спільні кнопки — onclick перезаписуємо щоразу).
+  const shareBtn  = document.getElementById('modal-share-btn');
+  const remindBtn = document.getElementById('modal-remind-btn');
+  const saveBtn   = document.getElementById('modal-save-btn');
+  if (shareBtn) shareBtn.onclick = () => sharePost({
+    title: article.title,
+    text:  article.excerpt || '',
+    url:   article.sourceUrl || location.href,
+  });
+  if (remindBtn) remindBtn.hidden = true;   // нагадування лише для подій/свят (events.js)
+  if (saveBtn) {
+    saveBtn.hidden = false;
+    saveBtn.classList.toggle('modal-icon-btn--active', getSavedArticleIds().includes(article.id));
+    saveBtn.onclick = () => {
+      const nowSaved = toggleSavedArticle(article.id);
+      saveBtn.classList.toggle('modal-icon-btn--active', nowSaved);
+      showToast(nowSaved ? 'Статтю збережено' : 'Прибрано зі збережених');
+    };
+  }
 
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';

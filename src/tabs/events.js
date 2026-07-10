@@ -164,37 +164,25 @@ export function openShotamModal(id) {
       <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
     </div>
     ${cover}
-    <div class="article-body">${bodyHtml}</div>
-    <div class="article-source-row">
-      <div class="article-source-actions">
-        <button class="ev-ics-btn" type="button">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-          </svg>
-          Створити нагадування
-        </button>
-        <button class="share-btn share-btn--inline" type="button" data-shotam-share>📤 Поділитись</button>
-      </div>
-    </div>`;
+    <div class="article-body">${bodyHtml}</div>`;
 
-  // Нагадування (.ics) — гейтинг як у Подіях (лише залогінені)
-  const icsBtn = modalContent.querySelector('.ev-ics-btn');
-  if (icsBtn) icsBtn.addEventListener('click', () => {
-    if (!isLoggedIn()) { requireAuth('створити нагадування', () => {}); return; }
-    downloadIcs(ev);
+  // Батч 5: іконки зверху модалки (спільні кнопки, перевикористовуються для новин і подій —
+  // onclick перезаписуємо щоразу, не addEventListener, щоб не плодити обробники).
+  const shareBtn  = document.getElementById('modal-share-btn');
+  const remindBtn = document.getElementById('modal-remind-btn');
+  const saveBtn   = document.getElementById('modal-save-btn');
+  if (shareBtn) shareBtn.onclick = () => sharePost({
+    title: ev.title,
+    text:  `📅 ${ev.title}\n${when}${ev.location ? ' · ' + ev.location : ''}\n\n${ev.description || ''}`,
   });
-
-  // Поділитись — Web Share API + fallback на clipboard (sharePost)
-  const shareBtn = modalContent.querySelector('[data-shotam-share]');
-  if (shareBtn) shareBtn.addEventListener('click', () => {
-    sharePost({
-      title: ev.title,
-      text:  `📅 ${ev.title}\n${when}${ev.location ? ' · ' + ev.location : ''}\n\n${ev.description || ''}`,
-    });
-  });
+  if (remindBtn) {
+    remindBtn.hidden = false;
+    remindBtn.onclick = () => {
+      if (!isLoggedIn()) { requireAuth('створити нагадування', () => {}); return; }
+      downloadIcs(ev);
+    };
+  }
+  if (saveBtn) saveBtn.hidden = true;   // збереження статей — лише новини (Б5.3), не події
 
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';

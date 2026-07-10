@@ -210,7 +210,7 @@ function init() {
   initNews();
   initEvents();
   initBuses();
-  initSavedRoutesHeader();   // іконка «Збережені рейси» в хедері (лише на Автобусах)
+  initSavedRoutesHeader();   // дані відстеження + банер (Б7.3: без окремої іконки — тепер через хаб)
   initSavedHub();            // хаб «Збережені» (іконка 🔖 в шапці)
   initPower();
 

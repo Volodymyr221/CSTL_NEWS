@@ -5485,42 +5485,31 @@ ${post.text}
       <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
     </div>
     ${cover}
-    <div class="article-body">${bodyHtml}</div>
-    <div class="article-source-row">
-      <div class="article-source-actions">
-        <button class="ev-ics-btn" type="button">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2"/>
-            <line x1="3" y1="10" x2="21" y2="10"/>
-            <line x1="8" y1="2" x2="8" y2="6"/>
-            <line x1="16" y1="2" x2="16" y2="6"/>
-          </svg>
-          \u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F
-        </button>
-        <button class="share-btn share-btn--inline" type="button" data-shotam-share>\u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C</button>
-      </div>
-    </div>`;
-    const icsBtn = modalContent.querySelector(".ev-ics-btn");
-    if (icsBtn)
-      icsBtn.addEventListener("click", () => {
+    <div class="article-body">${bodyHtml}</div>`;
+    const shareBtn = document.getElementById("modal-share-btn");
+    const remindBtn = document.getElementById("modal-remind-btn");
+    const saveBtn = document.getElementById("modal-save-btn");
+    if (shareBtn)
+      shareBtn.onclick = () => sharePost({
+        title: ev.title,
+        text: `\u{1F4C5} ${ev.title}
+${when}${ev.location ? " \xB7 " + ev.location : ""}
+
+${ev.description || ""}`
+      });
+    if (remindBtn) {
+      remindBtn.hidden = false;
+      remindBtn.onclick = () => {
         if (!isLoggedIn()) {
           requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
           });
           return;
         }
         downloadIcs(ev);
-      });
-    const shareBtn = modalContent.querySelector("[data-shotam-share]");
-    if (shareBtn)
-      shareBtn.addEventListener("click", () => {
-        sharePost({
-          title: ev.title,
-          text: `\u{1F4C5} ${ev.title}
-${when}${ev.location ? " \xB7 " + ev.location : ""}
-
-${ev.description || ""}`
-        });
-      });
+      };
+    }
+    if (saveBtn)
+      saveBtn.hidden = true;
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
@@ -7220,7 +7209,6 @@ ${ev.description || ""}`
       return "";
     return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
   }
-  var SR_BOOKMARK_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SR_BELL_ON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
   var SR_BELL_OFF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   function savedRouteDayLabel(trackDate) {
@@ -7234,6 +7222,33 @@ ${ev.description || ""}`
       return "\u0437\u0430\u0432\u0442\u0440\u0430";
     const [, mm, dd] = trackDate.split("-");
     return `${dd}.${mm}`;
+  }
+  function pageForDate(iso) {
+    const toIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    if (getWeekDays(0).some((d) => toIso(d) === iso))
+      return 0;
+    if (getWeekDays(1).some((d) => toIso(d) === iso))
+      return 1;
+    return 0;
+  }
+  function openSavedRouteOnBuses(rid, date, from, to) {
+    busDay = date;
+    weekPage = pageForDate(date);
+    showAll = true;
+    smartRowIndex = 0;
+    fromStop = from || "";
+    toStop = to || "";
+    renderWeekStrip();
+    renderSmartRow();
+    renderRouteList();
+    requestAnimationFrame(() => {
+      const card = document.querySelector(`[data-route-id="${CSS.escape(rid)}"]`);
+      if (!card)
+        return;
+      card.scrollIntoView({ behavior: "smooth", block: "center" });
+      card.classList.add("bus-card--flash");
+      setTimeout(() => card.classList.remove("bus-card--flash"), 1500);
+    });
   }
   function getSavedRoutesForUI() {
     return [...trackedRoutes].sort((a, b) => (a.trackDate + (a.depTime || "")).localeCompare(b.trackDate + (b.depTime || ""))).map((t) => ({
@@ -7251,19 +7266,6 @@ ${ev.description || ""}`
       fullTitle: t.fullTitle || "",
       fullTimeStr: t.fullTimeStr || ""
     }));
-  }
-  function getSavedCount() {
-    return trackedRoutes.length;
-  }
-  function unsaveRoute(rid, date, from, to) {
-    const entry = findTrackedEntry(rid, from || null, to || null, date);
-    if (!entry)
-      return;
-    unsubscribeFromPush(entry.routeId, entry.trackDate);
-    removeTrackedEntry(entry);
-    checkTrackNotifications(false);
-    renderSmartRow();
-    renderRouteList();
   }
   function toggleRouteReminders(rid, date, from, to) {
     const entry = findTrackedEntry(rid, from || null, to || null, date);
@@ -7300,7 +7302,7 @@ ${ev.description || ""}`
     if (!entry)
       return;
     await subscribeToPush(rid, entry.title || "", from || null, to || null, date, entry.depTime || null);
-    renderSavedRows();
+    updateBannerBell();
   }
   function selfHealPushSubscriptions() {
     if (!isPushCapable() || Notification.permission !== "granted")
@@ -7312,153 +7314,12 @@ ${ev.description || ""}`
       }
     }
   }
-  function updateSavedBadge() {
-    const btn = document.getElementById("saved-routes-btn");
-    if (!btn)
-      return;
-    const n = getSavedCount();
-    const onBuses = document.querySelector(".app-main")?.dataset.tab === "buses";
-    btn.hidden = n === 0 || !onBuses || !isLoggedIn();
-    const cnt = document.getElementById("saved-routes-count");
-    if (cnt)
-      cnt.textContent = n > 0 ? String(n) : "";
-  }
-  var _srModalEl = null;
-  function srRowHtml(r) {
-    const pushBlocked = !!pushBlockedMsg();
-    let bellSvg, bellCls, bellLabel;
-    if (!r.notify) {
-      bellSvg = SR_BELL_OFF_SVG;
-      bellCls = "sr-bell sr-bell--off";
-      bellLabel = "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456";
-    } else if (pushBlocked) {
-      bellSvg = SR_BELL_ON_SVG;
-      bellCls = "sr-bell sr-bell--warn";
-      bellLabel = "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0449\u043E\u0431 \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438";
-    } else {
-      bellSvg = SR_BELL_ON_SVG;
-      bellCls = "sr-bell sr-bell--on";
-      bellLabel = "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u0456";
-    }
-    const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || "")}" data-to="${escapeHtml(r.to || "")}"`;
-    const dayTop = r.dayLabel ? `<div class="sr-row-day">${escapeHtml(r.dayLabel)}</div>` : "";
-    const titleText = r.isSegment ? `${r.from} - ${r.to}${r.timeStr ? " | " + r.timeStr : ""}` : r.title;
-    const belowLine = r.isSegment ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? " | " + escapeHtml(r.fullTimeStr) : ""}</div>` : r.timeStr ? `<div class="sr-row-sub">${escapeHtml(r.timeStr)}</div>` : "";
-    return `
-    <div class="sr-row">
-      <div class="sr-row-info">
-        ${dayTop}
-        <div class="sr-row-title">${escapeHtml(titleText)}</div>
-        ${belowLine}
-      </div>
-      <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
-      <button class="sr-unsave" type="button" ${data} aria-label="\u0417\u043D\u044F\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F">${SR_BOOKMARK_SVG}</button>
-    </div>`;
-  }
-  function renderSavedRows() {
-    const list = _srModalEl?.querySelector(".sr-list");
-    if (!list)
-      return;
-    const rows = getSavedRoutesForUI();
-    list.innerHTML = rows.length ? rows.map(srRowHtml).join("") : '<div class="sr-empty">\u041D\u0435\u043C\u0430\u0454 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0440\u0435\u0439\u0441\u0456\u0432</div>';
-  }
-  function closeSavedModal() {
-    if (!_srModalEl)
-      return;
-    const m = _srModalEl;
-    _srModalEl = null;
-    m.classList.remove("open");
-    document.body.classList.remove("modal-open");
-    setTimeout(() => m.remove(), 240);
-  }
-  function openSavedModal() {
-    if (_srModalEl)
-      return;
-    const wrap = document.createElement("div");
-    wrap.className = "sr-modal";
-    wrap.innerHTML = `
-    <div class="sr-backdrop"></div>
-    <div class="sr-panel" role="dialog" aria-modal="true">
-      <div class="sr-head">
-        <span class="sr-title">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0440\u0435\u0439\u0441\u0438</span>
-        <button class="sr-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      </div>
-      <div class="sr-list"></div>
-      <div class="sr-handle"></div>
-    </div>`;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    _srModalEl = wrap;
-    renderSavedRows();
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    wrap.querySelector(".sr-backdrop").addEventListener("click", closeSavedModal);
-    wrap.querySelector(".sr-close").addEventListener("click", closeSavedModal);
-    wrap.querySelector(".sr-list").addEventListener("click", (e) => {
-      const bell = e.target.closest(".sr-bell");
-      const uns = e.target.closest(".sr-unsave");
-      const t = bell || uns;
-      if (!t)
-        return;
-      const { rid, date, from, to } = t.dataset;
-      if (bell) {
-        if (bell.classList.contains("sr-bell--warn"))
-          requestPushForSavedRoute(rid, date, from || null, to || null);
-        else
-          toggleRouteReminders(rid, date, from || null, to || null);
-      } else {
-        unsaveRoute(rid, date, from || null, to || null);
-      }
-      renderSavedRows();
-    });
-    const panel = wrap.querySelector(".sr-panel");
-    let sy = 0, drag = false, dd = 0;
-    panel.addEventListener("touchstart", (e) => {
-      sy = e.touches[0].clientY;
-      drag = true;
-      dd = 0;
-      panel.style.transition = "none";
-    }, { passive: true });
-    panel.addEventListener("touchmove", (e) => {
-      if (!drag)
-        return;
-      dd = e.touches[0].clientY - sy;
-      if (dd >= 0) {
-        panel.style.transform = "translateY(0)";
-        return;
-      }
-      panel.style.transform = `translateY(${dd}px)`;
-    }, { passive: true });
-    panel.addEventListener("touchend", () => {
-      if (!drag)
-        return;
-      drag = false;
-      panel.style.transition = "";
-      if (dd < -70)
-        closeSavedModal();
-      else
-        panel.style.transform = "";
-      dd = 0;
-    }, { passive: true });
-  }
   function initSavedRoutesHeader() {
     loadTrackedRoute();
-    const btn = document.getElementById("saved-routes-btn");
-    if (btn && !btn.dataset.wired) {
-      btn.dataset.wired = "1";
-      btn.addEventListener("click", openSavedModal);
-    }
-    updateSavedBadge();
-    window.addEventListener("cstl-bus-track-changed", () => {
-      updateSavedBadge();
-      if (_srModalEl)
-        renderSavedRows();
-      updateBannerBell();
-    });
-    window.addEventListener("cstl-tab-changed", updateSavedBadge);
+    window.addEventListener("cstl-bus-track-changed", updateBannerBell);
     onAuthChange(async () => {
       loadTrackedRoute();
       await hydrateTrackedFromDB();
-      updateSavedBadge();
       if (document.getElementById("bus-list")) {
         renderSmartRow();
         renderRouteList();
@@ -7614,6 +7475,24 @@ ${ev.description || ""}`
 
   // src/tabs/news.js
   var allArticles = [];
+  var SAVED_KEY = "cstl_saved_articles";
+  function getSavedArticleIds() {
+    try {
+      return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function toggleSavedArticle(id) {
+    const ids = getSavedArticleIds();
+    const idx = ids.indexOf(id);
+    if (idx === -1)
+      ids.push(id);
+    else
+      ids.splice(idx, 1);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+    return idx === -1;
+  }
   var CATEGORY_COLORS2 = {
     "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
     // темно-сірий (новинний)
@@ -7667,16 +7546,6 @@ ${ev.description || ""}`
   function attachNewsListeners() {
     const modal = document.getElementById("article-modal");
     if (modal) {
-      modal.addEventListener("click", (e) => {
-        const btn = e.target.closest("[data-share-article]");
-        if (!btn)
-          return;
-        sharePost({
-          title: btn.dataset.shareTitle,
-          text: btn.dataset.shareText,
-          url: btn.dataset.shareUrl
-        });
-      });
       modal.addEventListener("error", handleImgError, true);
     }
   }
@@ -7707,6 +7576,10 @@ ${ev.description || ""}`
       }
     }
     return allArticles;
+  }
+  async function getArticlesByIds(ids) {
+    await ensureNewsLoaded();
+    return ids.map((id) => allArticles.find((a) => a.id === id)).filter(Boolean);
   }
   function badgesHtml(a) {
     return `
@@ -7797,18 +7670,29 @@ ${ev.description || ""}`
     ` : ""}
     <div class="article-source-row">
       <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
-      <div class="article-source-actions">
-        <button class="share-btn share-btn--inline" type="button"
-                data-share-article
-                data-share-title="${escapeHtml(article.title)}"
-                data-share-text="${escapeHtml(article.excerpt || "")}"
-                data-share-url="${escapeHtml(article.sourceUrl || location.href)}">
-          \u{1F4E4} \u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C
-        </button>
-        ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
-      </div>
+      ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
     </div>
   `;
+    const shareBtn = document.getElementById("modal-share-btn");
+    const remindBtn = document.getElementById("modal-remind-btn");
+    const saveBtn = document.getElementById("modal-save-btn");
+    if (shareBtn)
+      shareBtn.onclick = () => sharePost({
+        title: article.title,
+        text: article.excerpt || "",
+        url: article.sourceUrl || location.href
+      });
+    if (remindBtn)
+      remindBtn.hidden = true;
+    if (saveBtn) {
+      saveBtn.hidden = false;
+      saveBtn.classList.toggle("modal-icon-btn--active", getSavedArticleIds().includes(article.id));
+      saveBtn.onclick = () => {
+        const nowSaved = toggleSavedArticle(article.id);
+        saveBtn.classList.toggle("modal-icon-btn--active", nowSaved);
+        showToast(nowSaved ? "\u0421\u0442\u0430\u0442\u0442\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E" : "\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445");
+      };
+    }
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
@@ -9460,44 +9344,84 @@ END:VEVENT`
       b?.remove();
     }, 240);
   }
-  function cardHtml2(p) {
+  function cardHtml2(p, type) {
     const when = new Date(p.created_at || p.ts || Date.now()).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
     return `
-    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${escapeHtml(p.type || "board")}">
-      <span class="shub-card-text">${escapeHtml(p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
+    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
+      <span class="shub-card-text">${escapeHtml(p.title || p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
       <span class="shub-card-meta">${escapeHtml(when)}</span>
     </button>`;
   }
-  function sectionHtml(title, icon, items) {
+  function sectionHtml(title, icon, items, type) {
     if (!items.length)
       return "";
     return `
     <div class="shub-section">
       <div class="shub-section-title">${icon} ${title} <span class="shub-count">${items.length}</span></div>
-      ${items.map(cardHtml2).join("")}
+      ${items.map((p) => cardHtml2(p, type)).join("")}
+    </div>`;
+  }
+  function busCardHtml(r) {
+    return `
+    <button class="shub-card" type="button" data-shub-type="bus"
+            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
+            data-shub-from="${escapeHtml(r.from || "")}" data-shub-to="${escapeHtml(r.to || "")}">
+      <span class="shub-card-text">${escapeHtml(r.title)}</span>
+      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? " \xB7 " + escapeHtml(r.timeStr) : ""}</span>
+    </button>`;
+  }
+  function busSectionHtml(items) {
+    if (!items.length)
+      return "";
+    return `
+    <div class="shub-section">
+      <div class="shub-section-title">\u{1F68C} \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u0418 <span class="shub-count">${items.length}</span></div>
+      ${items.map(busCardHtml).join("")}
     </div>`;
   }
   async function loadInto(bodyEl) {
+    const sections = [];
     try {
-      const ids = [...await fetchSavedPostIds(currentUserId())];
-      if (!ids.length) {
-        bodyEl.innerHTML = `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
-        <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0447\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
-        return;
+      const artIds = [...getSavedArticleIds()].reverse();
+      if (artIds.length) {
+        const arts = await getArticlesByIds(artIds);
+        sections.push(sectionHtml("\u0421\u0422\u0410\u0422\u0422\u0406", "\u{1F4F0}", arts, "article"));
       }
-      const supa2 = getSupabase();
-      const { data, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
-      if (error)
-        throw error;
-      const posts = data || [];
-      const chats = posts.filter((p) => p.type === "chat");
-      const boards = posts.filter((p) => p.type !== "chat");
-      const html = sectionHtml("\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", "\u{1F4AC}", chats) + sectionHtml("\u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F", "\u{1F4CC}", boards);
-      bodyEl.innerHTML = html || `<div class="shub-empty">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043A\u0430\u0440\u0442\u043A\u0438 \u0432\u0436\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 (\u0432\u0438\u0434\u0430\u043B\u0435\u043D\u0456 \u0430\u0432\u0442\u043E\u0440\u0430\u043C\u0438).</div>`;
     } catch (e) {
-      console.warn("[saved-hub]", e);
-      bodyEl.innerHTML = `<div class="shub-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.</div>`;
+      console.warn("[saved-hub] articles", e);
     }
+    try {
+      const routes = getSavedRoutesForUI();
+      if (routes.length)
+        sections.push(busSectionHtml(routes));
+    } catch (e) {
+      console.warn("[saved-hub] buses", e);
+    }
+    if (isLoggedIn()) {
+      try {
+        const ids = [...await fetchSavedPostIds(currentUserId())];
+        if (ids.length) {
+          const supa2 = getSupabase();
+          const { data, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
+          if (error)
+            throw error;
+          const posts = data || [];
+          const chats = posts.filter((p) => p.type === "chat");
+          const boards = posts.filter((p) => p.type !== "chat");
+          sections.push(sectionHtml("\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", "\u{1F4AC}", chats, "chat"));
+          sections.push(sectionHtml("\u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F", "\u{1F4CC}", boards, "board"));
+        }
+      } catch (e) {
+        console.warn("[saved-hub] posts", e);
+        sections.push('<div class="shub-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F/\u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.</div>');
+      }
+    } else {
+      sections.push(`<div class="shub-hint-block">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.<br>
+      <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`);
+    }
+    const html = sections.filter(Boolean).join("");
+    bodyEl.innerHTML = html || `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
+    <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
   }
   function openSavedHub() {
     if (_sheet)
@@ -9509,10 +9433,7 @@ END:VEVENT`
     _sheet.innerHTML = `
     <div class="shub-handle"></div>
     <div class="shub-title">\u{1F516} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
-    <div class="shub-body" id="shub-body">
-      ${isLoggedIn() ? '<div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>' : `<div class="shub-empty">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0432\u0438\u0434\u043D\u043E \u043B\u0438\u0448\u0435 \u0443 \u0441\u0432\u043E\u0454\u043C\u0443 \u0430\u043A\u0430\u0443\u043D\u0442\u0456.<br>
-             <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`}
-    </div>`;
+    <div class="shub-body" id="shub-body"><div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>`;
     document.body.appendChild(_backdrop);
     document.body.appendChild(_sheet);
     document.body.classList.add("modal-open");
@@ -9521,19 +9442,30 @@ END:VEVENT`
       _sheet.classList.add("visible");
     });
     _backdrop.addEventListener("click", closeHub);
-    _sheet.querySelector("#shub-login")?.addEventListener("click", () => {
-      closeHub();
-      requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
-      });
-    });
     _sheet.addEventListener("click", (e) => {
+      if (e.target.closest("#shub-login")) {
+        closeHub();
+        requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
+        });
+        return;
+      }
+      const busCard = e.target.closest('[data-shub-type="bus"]');
+      if (busCard) {
+        const { shubRid, shubDate, shubFrom, shubTo } = busCard.dataset;
+        closeHub();
+        window.switchTab && window.switchTab("buses");
+        openSavedRouteOnBuses(shubRid, shubDate, shubFrom || null, shubTo || null);
+        return;
+      }
       const card = e.target.closest("[data-shub-open]");
       if (!card)
         return;
       const id = Number(card.dataset.shubOpen);
       const type = card.dataset.shubType;
       closeHub();
-      if (type === "chat") {
+      if (type === "article") {
+        openArticle(id);
+      } else if (type === "chat") {
         window.switchTab && window.switchTab("discussions");
         openChatById(id);
       } else {
@@ -9541,8 +9473,7 @@ END:VEVENT`
         setBoardActiveType("saved");
       }
     });
-    if (isLoggedIn())
-      loadInto(_sheet.querySelector("#shub-body"));
+    loadInto(_sheet.querySelector("#shub-body"));
   }
   function initSavedHub() {
     document.getElementById("saved-hub-btn")?.addEventListener("click", openSavedHub);
