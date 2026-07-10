@@ -70,6 +70,25 @@ function renderLoc(loc) {
   const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
   return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
 }
+// Футер картки/зум-модалки (рішення Вови): БЕЗ номера телефону (персональні дані +
+// дублює кнопку дзвінка). Кнопки зліва — дзвінок лише якщо контакт=телефон,
+// повідомлення завжди (внутрішній чат). Ім'я+час справа, навпроти кнопок.
+function renderCardFoot(p) {
+  const contact = p.contact ? String(p.contact).trim() : '';
+  const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+  const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
+  return `
+      <div class="cm-board-foot">
+        <div class="cm-board-foot-actions">
+          ${isPhone ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>` : ''}
+          <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
+        </div>
+        <div class="cm-board-foot-who">
+          <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
+          <span class="cm-board-time">${renderPostTime(p)}</span>
+        </div>
+      </div>`;
+}
 // Стрілка вгору (векторна) — мітка «піднято» біля дати.
 const BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
 // Дата на картці/модалці: якщо оголошення підняли — показуємо СВІЖИЙ час підняття
@@ -288,32 +307,6 @@ function authorAvatar(author) {
   const letter = a.charAt(0).toUpperCase();
   const hue = (a.charCodeAt(0) * 47) % 360;
   return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
-}
-
-// Контакт-картка з кнопкою-іконкою:
-//   номер телефону → 📞 Подзвонити (tel:)
-//   інший текст → просто текст без кнопки
-// (Telegram-кнопку прибрано 13.06 — спонукаємо дзвонити або писати в чаті додатка;
-//  приватний чат у додатку — Фаза Б, BOARD_FINAL_PLAN.md)
-function renderContact(contact) {
-  if (!contact) return '';
-  const trimmed = String(contact).trim();
-  const isPhone = /^[\+\d][\d\s\-\(\)]{5,}$/.test(trimmed);
-
-  if (isPhone) {
-    const tel = trimmed.replace(/[^\d+]/g, '');
-    return `
-      <div class="cm-board-contact cm-board-contact--phone">
-        <span class="cm-board-contact-num">${escapeHtml(trimmed)}</span>
-        <div class="cm-board-contact-btns">
-          <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(trimmed)}">${PHONE_ICON_SVG}</a>
-          <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-        </div>
-      </div>
-    `;
-  }
-
-  return `<div class="cm-board-contact">${escapeHtml(trimmed)}</div>`;
 }
 
 // ── Реакції + share + bookmark — спільний рядок дій під/над постом ───────────
@@ -948,9 +941,6 @@ function buildShareText(post) {
 function renderBoardCard(p) {
   const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
   const emoji = CATEGORY_EMOJI[p.category] || '📌';
-  const contact = p.contact ? String(p.contact).trim() : '';
-  const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-  const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   const photoHtml = photo
     ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
@@ -963,24 +953,7 @@ function renderBoardCard(p) {
       ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
-      ${!isPhone ? `
-      <div class="cm-board-footer">
-        <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-        <span class="cm-board-time">${renderPostTime(p)}</span>
-      </div>` : ''}
-      ${isPhone ? `
-        <div class="cm-board-contact cm-board-contact--phone">
-          <span class="cm-board-contact-num">${escapeHtml(contact)}</span>
-          <div class="cm-board-contact-btns">
-            <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити ${escapeHtml(contact)}">${PHONE_ICON_SVG}</a>
-            <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-          </div>
-        </div>
-        <div class="cm-board-author-row">
-          <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
-          <span class="cm-board-time">${renderPostTime(p)}</span>
-        </div>
-      ` : (contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : '')}
+      ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -1021,28 +994,7 @@ function renderAdModal(p) {
       </div>
     </div>
     <div class="cm-board-modal-foot">
-      ${(()=>{
-        const contact = p.contact ? String(p.contact).trim() : '';
-        const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-        const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
-        if (isPhone) return `
-          <div class="cm-board-modal-meta">
-            <div class="cm-board-modal-meta-text">
-              <span class="cm-board-contact-line"><span class="cm-board-contact-phone">${escapeHtml(contact)}</span><span class="cm-board-contact-name"> — ${escapeHtml(p.author || 'анонімно')}</span></span>
-              <span class="cm-board-time">${renderPostTime(p)}</span>
-            </div>
-            <div class="cm-board-modal-meta-btns">
-              <a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>
-              <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-            </div>
-          </div>`;
-        return `
-          <div class="cm-board-footer">
-            <span class="cm-board-author">— ${escapeHtml(p.author || 'анонімно')}</span>
-            <span class="cm-board-time">${renderPostTime(p)}</span>
-          </div>
-          ${contact ? `<div class="cm-board-contact">${escapeHtml(contact)}</div>` : ''}`;
-      })()}
+      ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </div>
   `;
