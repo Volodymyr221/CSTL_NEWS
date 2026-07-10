@@ -1842,7 +1842,36 @@ function savedRouteDayLabel(trackDate) {
 }
 
 // Збережені рейси для UI (відсортовані за датою+часом)
-function getSavedRoutesForUI() {
+// Яка сторінка тижневої смужки (0=цей тиждень, 1=наступний) містить дату iso.
+function pageForDate(iso) {
+  const toIso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (getWeekDays(0).some(d => toIso(d) === iso)) return 0;
+  if (getWeekDays(1).some(d => toIso(d) === iso)) return 1;
+  return 0;
+}
+
+// Б7.1: перехід із хабу «Збережені» на конкретний збережений рейс — виставляє день+фільтр
+// зупинок, перемальовує список і скролить+підсвічує потрібну картку.
+export function openSavedRouteOnBuses(rid, date, from, to) {
+  busDay        = date;
+  weekPage      = pageForDate(date);
+  showAll       = true;   // збережений рейс міг бути «минулим» на сьогодні — не ховати
+  smartRowIndex = 0;
+  fromStop      = from || '';
+  toStop        = to   || '';
+  renderWeekStrip();
+  renderSmartRow();
+  renderRouteList();
+  requestAnimationFrame(() => {
+    const card = document.querySelector(`[data-route-id="${CSS.escape(rid)}"]`);
+    if (!card) return;
+    card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    card.classList.add('bus-card--flash');
+    setTimeout(() => card.classList.remove('bus-card--flash'), 1500);
+  });
+}
+
+export function getSavedRoutesForUI() {
   return [...trackedRoutes]
     .sort((a, b) => (a.trackDate + (a.depTime || '')).localeCompare(b.trackDate + (b.depTime || '')))
     .map(t => ({

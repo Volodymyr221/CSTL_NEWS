@@ -705,6 +705,12 @@
 .bus-card.next {
   background: #ECEEF2;
 }
+/* Б7.1: коротка підсвітка картки при переході з хабу «Збережені» (не зсуває layout — box-shadow) */
+.bus-card--flash { animation: bus-card-flash 1.5s ease-out; }
+@keyframes bus-card-flash {
+  0%   { box-shadow: 0 0 0 3px var(--red, #722F37); }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
 
 .bus-card-main {
   display: flex;
