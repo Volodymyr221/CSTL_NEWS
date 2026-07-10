@@ -13,8 +13,8 @@ import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { openSavedHub } from './saved-hub.js';
 import { SETTLEMENTS } from './settlements.js';
 import { escapeHtml, showToast } from './utils.js';
+import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } from './modal.js';
 
-let _modal = null;            // поточна відкрита модалка (або null)
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
 
 // ── Іконка в шапці ──────────────────────────────────────────────
@@ -25,28 +25,16 @@ function updateHeaderBtn() {
   btn.setAttribute('aria-label', isLoggedIn() ? 'Кабінет жителя' : 'Увійти');
 }
 
-// ── Базова модалка (центрована картка з затемненням) ─────────────
+// ── Базова модалка (центрована картка) — тонка обгортка над спільним примітивом
+// core/modal.js (Потік C1). Власна сигнатура openModal(innerHtml) → DOM-елемент
+// лишається як є, щоб не чіпати виклики нижче (openJoin/openProfile).
 function closeModal() {
-  if (!_modal) return;
-  const m = _modal; _modal = null;
-  m.classList.remove('open');
-  document.body.classList.remove('modal-open');
-  setTimeout(() => m.remove(), 220);
+  closeModalPrimitive();
 }
 
 function openModal(innerHtml) {
-  closeModal();
-  const wrap = document.createElement('div');
-  wrap.className = 'acc-modal';
-  wrap.innerHTML = `
-    <div class="acc-backdrop"></div>
-    <div class="acc-card" role="dialog" aria-modal="true">${innerHtml}</div>`;
-  document.body.appendChild(wrap);
-  document.body.classList.add('modal-open');
-  _modal = wrap;
-  requestAnimationFrame(() => wrap.classList.add('open'));
-  wrap.querySelector('.acc-backdrop').addEventListener('click', closeModal);
-  return wrap;
+  const { el } = openModalPrimitive({ bodyHtml: innerHtml, variant: 'center' });
+  return el;
 }
 
 // ── Екран 1: «Приєднайтесь» (гість) ──────────────────────────────

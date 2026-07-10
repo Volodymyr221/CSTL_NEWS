@@ -9631,7 +9631,6 @@ END:VEVENT`
   }
 
   // src/core/account-ui.js
-  var _modal = null;
   var _newUserChecked = false;
   function updateHeaderBtn() {
     const btn = document.getElementById("account-btn");
@@ -9641,27 +9640,11 @@ END:VEVENT`
     btn.setAttribute("aria-label", isLoggedIn() ? "\u041A\u0430\u0431\u0456\u043D\u0435\u0442 \u0436\u0438\u0442\u0435\u043B\u044F" : "\u0423\u0432\u0456\u0439\u0442\u0438");
   }
   function closeModal2() {
-    if (!_modal)
-      return;
-    const m = _modal;
-    _modal = null;
-    m.classList.remove("open");
-    document.body.classList.remove("modal-open");
-    setTimeout(() => m.remove(), 220);
+    closeModal();
   }
   function openModal2(innerHtml) {
-    closeModal2();
-    const wrap = document.createElement("div");
-    wrap.className = "acc-modal";
-    wrap.innerHTML = `
-    <div class="acc-backdrop"></div>
-    <div class="acc-card" role="dialog" aria-modal="true">${innerHtml}</div>`;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    _modal = wrap;
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    wrap.querySelector(".acc-backdrop").addEventListener("click", closeModal2);
-    return wrap;
+    const { el } = openModal({ bodyHtml: innerHtml, variant: "center" });
+    return el;
   }
   function openJoin(reason) {
     const sub = reason ? `\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 ${escapeHtml(reason)}.` : "\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u0438\u0441\u0430\u0442\u0438 \u0439 \u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438.";

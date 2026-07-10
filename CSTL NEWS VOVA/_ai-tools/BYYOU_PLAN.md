@@ -15,7 +15,7 @@
 | 1 | Новий `src/core/modal.js`: `openModal({title,bodyHtml,variant,onMount,swipeClose})` → `{close,el}`. Variant `sheet` (bottom, handle, swipe-down) і `center` (scale-in). Реюз патернів з article-modal + account-ui.js | `src/core/modal.js` (новий) | 🟢 |
 | 2 | CSS: `style/modal.css` — генеричні `.app-modal*` класи (backdrop/sheet/center/close), кольори з існуючих реалізацій (не вигадувати нові) | `style/modal.css` | 🟢 |
 | 3 | Мігрувати Power help-модалку (`openQueueHelpModal`) на примітив, sheet-варіант | `src/tabs/power.js` | 🟢 |
-| 4 | Мігрувати Sidebar info-модалку (`openInfoModal`, враховуючи `--doc` варіант для правового тексту) | `src/core/sidebar.js` | 🟢 |
+| 4 | Мігрувати Sidebar info-модалку (`openInfoModal`, враховуючи `--doc` варіант для правового тексту) | `src/core/sidebar.js` | ✅ `d57d9589` — смоук зелений (Підтримка + Політика --doc, max-height 776px = 92svh) |
 | 5 | Мігрувати Account-модалку (`openModal` у account-ui.js) на примітив, center-варіант — власний API `openModal(innerHtml)` лишається (тонка обгортка над новим) | `src/core/account-ui.js` | 🟢 |
 | 6 | Мігрувати Weather-модалку (`openWeatherDayModal`), sheet-варіант — **графіки/скрабер НЕ чіпати**, лише chrome (backdrop/sheet/close/swipe) | `src/tabs/community-blocks.js` | 🟢 |
 | 7 | Прибрати мертвий CSS після міграції (`.pw-help-modal/backdrop/panel/handle/close`, `.sidebar-info-modal/sheet/head/close`, `.acc-modal/backdrop/card`, `.wx-modal` структурні — контент-специфічні класи лишити) | `style/power.css`, `style/sidebar.css`, `style/account.css`, `style/community.css` | 🟢 |
