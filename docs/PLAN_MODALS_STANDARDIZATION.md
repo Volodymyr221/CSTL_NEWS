@@ -1,6 +1,6 @@
-# План: стандартизація модалок (Потік C) — ВІДКЛАДЕНО
+# План: стандартизація модалок (Потік C)
 
-> Статус: **відкладено** (Рома, 07.07.2026). Записано щоб не загубити. Виконувати окремим `/byyou`-потоком — це ~14 екранів, потрібен посмоук кожного.
+> Статус: **C1 ✅ ЗАВЕРШЕНО** (10.07.2026, `/byyou` Потік 3). Примітив `src/core/modal.js` + `style/modal.css` (`.app-modal*`, variants `sheet`/`center`) створено й перевірено на 4 найпростіших overlay-модалках. C2/C3 лишаються окремими потоками.
 
 ## Мета
 У застосунку **немає спільного компонента модалки** — кожна фіча має власну (createElement + backdrop + swipe-to-close). ~14 різних реалізацій, ≥5 різних стилів закриття. Треба:
@@ -20,11 +20,11 @@
 | Disc actions sheet `.pm-actions` | `src/tabs/board.js:690` | bottom-sheet |
 | Private chat backdrop `.pm-backdrop` | `src/core/chat-core.js:33` | overlay |
 | Private chat lightbox `.pm-lightbox` | `src/tabs/board-chat.js:141` | fullscreen |
-| Account modal `.acc-modal` | `src/core/account-ui.js:38` | overlay |
-| Sidebar info modal `.sidebar-info-modal` | `src/core/sidebar.js:118` | overlay |
-| Weather modal `.wx-modal` | `src/tabs/community-blocks.js:241` | overlay |
-| Power help modal `.pw-help-modal` | `src/tabs/power.js:466` | overlay |
-| Saved-routes modal `.sr-modal` | `src/tabs/buses.js:1994` | overlay |
+| ✅ Account modal | `src/core/account-ui.js` | **C1 done** — `.app-modal--center`, власний API `openModal(innerHtml)` лишився тонкою обгорткою |
+| ✅ Sidebar info modal | `src/core/sidebar.js` | **C1 done** — `.app-modal--sheet` (+`--doc` для Політики) |
+| ✅ Weather modal | `src/tabs/community-blocks.js` | **C1 done** — `.app-modal--sheet.app-modal--weather`, графіки/скрабер не чіпались |
+| ✅ Power help modal | `src/tabs/power.js` | **C1 done** — `.app-modal--sheet`. UI недоступний живому юзеру (кнопка «Світло» прихована з 16.05.2026, `index.html:192`) — код перевірено, живий смоук неможливий |
+| ~~Saved-routes modal~~ `.sr-modal` | — | **видалено повністю** (Батч 7, Б7.3, 10.07) — функціонал переїхав у хаб «Збережені» (`shub-sheet`), інвентар був застарілий |
 
 - CSS модалок розкидано: `style/modal.css` (лише стаття) + `community.css`, `events.css`, `sidebar.css`, `account.css`, `buses.css`, `messages.css`, `power.css`, `news.css`.
 - Спільне: `document.body.classList.add('modal-open')` (майже всюди) — точка для єдиного body-lock.
@@ -36,4 +36,7 @@
 4. **Реюз `.disc-sheet`** (Потік A) як базу для sheet-варіанту — вона вже близька до стандарту.
 
 ## Обсяг
-Завеликий для одного потоку (14 екранів × посмоук). Розбити на 2-3 підпотоки: (C1) примітив + прості overlay; (C2) sheets/compose; (C3) chat/lightbox/popover.
+Завеликий для одного потоку (14 екранів × посмоук). Розбито на підпотоки:
+- **C1 ✅ done (10.07.2026):** примітив (`src/core/modal.js`+`style/modal.css`) + 4 прості overlay (Power/Sidebar/Account/Weather). Заодно знайдено й виправлено критичний баг: коментар у `modal.css` містив буквальний `*/`, який "з'їдав" правило `.app-modal { position: fixed }` — без живого Playwright-тесту з перевіркою bounding-box це лишилось б непоміченим (класи/текст-асерти проходили, але модалка рендерилась поза екраном).
+- **C2 (не почато):** sheets/compose — Board ad modal, Disc sheets, Ad zoom sheet, Discussion chat modal.
+- **C3 (не почато):** chat/lightbox/popover — Reaction popup, Photo lightbox, Disc actions sheet, Private chat backdrop/lightbox.
