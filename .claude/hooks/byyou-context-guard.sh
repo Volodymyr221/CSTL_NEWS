@@ -26,6 +26,10 @@ tokens_k=$((tokens / 1000))
 THRESHOLD=75
 SOFT=60
 SOFT_FLAG="$dir/.byyou-handoff-warned"
+# Раніші, чисто інформаційні мітки (не блокують) — щоб бачити наростання контексту
+# заздалегідь, не лише на 60%/75%. Кожна показується один раз (прапорець-файл), як SOFT_FLAG.
+WARN35_FLAG="$dir/.byyou-warn-35"
+WARN55_FLAG="$dir/.byyou-warn-55"
 if [[ "$percent" -ge "$THRESHOLD" ]]; then
   {
     echo "КОНТЕКСТ ${percent}% (${tokens_k}K/1M) — /byyou ПОРА ЗУПИНИТИ"
@@ -45,5 +49,21 @@ if [[ "$percent" -ge "$SOFT" ]]; then
   fi
 else
   [[ -f "$SOFT_FLAG" ]] && rm -f "$SOFT_FLAG"
+fi
+if [[ "$percent" -ge 55 ]]; then
+  if [[ ! -f "$WARN55_FLAG" ]]; then
+    touch "$WARN55_FLAG"
+    echo "🟠 КОНТЕКСТ ${percent}% (${tokens_k}K/1M) — половина позаду, стеж за прогресом." >&2
+  fi
+else
+  [[ -f "$WARN55_FLAG" ]] && rm -f "$WARN55_FLAG"
+fi
+if [[ "$percent" -ge 35 ]]; then
+  if [[ ! -f "$WARN35_FLAG" ]]; then
+    touch "$WARN35_FLAG"
+    echo "🟡 КОНТЕКСТ ${percent}% (${tokens_k}K/1M) — попередження, ще багато запасу." >&2
+  fi
+else
+  [[ -f "$WARN35_FLAG" ]] && rm -f "$WARN35_FLAG"
 fi
 exit 0

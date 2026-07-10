@@ -79,49 +79,8 @@
 }
 .pw-help-icon { width: 14px; height: 14px; flex-shrink: 0; }
 
-/* ── Модалка help ─────────────────────────────────────────────────────────── */
-.pw-help-modal {
-  position: fixed; inset: 0; z-index: 1200;
-  opacity: 0; pointer-events: none;
-  transition: opacity 0.2s;
-}
-.pw-help-modal.open { opacity: 1; pointer-events: auto; }
-.pw-help-backdrop { position: absolute; inset: 0; background: rgba(0,0,0,0.45); }
-.pw-help-panel {
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  max-height: 90svh;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  background: var(--bg-card);
-  border-radius: 22px 22px 0 0;
-  padding: 14px 20px calc(20px + env(safe-area-inset-bottom, 0px));
-  transform: translateY(100%);
-  transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
-  box-shadow: 0 -8px 30px rgba(0,0,0,0.25);
-}
-.pw-help-modal.open .pw-help-panel { transform: translateY(0); }
-.pw-help-handle {
-  width: 40px; height: 4px;
-  background: rgba(0,0,0,0.18);
-  border-radius: 2px;
-  margin: 4px auto 12px;
-}
-.pw-help-close {
-  position: absolute; top: 12px; right: 14px;
-  background: var(--gray-light);
-  border: 0;
-  width: 32px; height: 32px;
-  border-radius: 50%;
-  font-size: 14px; color: var(--ink-soft);
-  cursor: pointer; -webkit-tap-highlight-color: transparent;
-}
-.pw-help-title {
-  font-family: Georgia, serif;
-  font-size: 22px; font-weight: 700;
-  color: var(--ink);
-  margin-bottom: 8px;
-}
+/* ── Модалка help — chrome (backdrop/панель/handle/close/титул) тепер спільний
+   примітив core/modal.js (Потік C1); тут лишається контент-специфічне. ── */
 .pw-help-sub {
   font-size: 13.5px;
   color: var(--ink-soft);

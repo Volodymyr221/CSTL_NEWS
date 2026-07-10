@@ -7764,6 +7764,94 @@ ${ev.description || ""}`
     document.body.classList.add("modal-open");
   }
 
+  // src/core/modal.js
+  var _active = null;
+  function buildSheet({ title, bodyHtml }) {
+    return `
+    <div class="app-modal-backdrop"></div>
+    <div class="app-modal-sheet" role="dialog" aria-modal="true"${title ? ` aria-label="${escapeHtml(title)}"` : ""}>
+      <div class="app-modal-handle"></div>
+      <button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
+      <div class="app-modal-body">${bodyHtml}</div>
+    </div>`;
+  }
+  function buildCenter({ title, bodyHtml }) {
+    return `
+    <div class="app-modal-backdrop"></div>
+    <div class="app-modal-card" role="dialog" aria-modal="true">
+      <button class="app-modal-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+      ${title ? `<h2 class="app-modal-title">${escapeHtml(title)}</h2>` : ""}
+      <div class="app-modal-body">${bodyHtml}</div>
+    </div>`;
+  }
+  function openModal({ title = "", bodyHtml = "", variant = "sheet", onMount, swipeClose = true, className = "" } = {}) {
+    closeModal();
+    const wrap = document.createElement("div");
+    wrap.className = `app-modal app-modal--${variant}${className ? " " + className : ""}`;
+    wrap.innerHTML = variant === "center" ? buildCenter({ title, bodyHtml }) : buildSheet({ title, bodyHtml });
+    document.body.appendChild(wrap);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => wrap.classList.add("open"));
+    const backdrop = wrap.querySelector(".app-modal-backdrop");
+    const panel = wrap.querySelector(".app-modal-sheet, .app-modal-card");
+    const closeBtn = wrap.querySelector(".app-modal-close");
+    const onKey = (e) => {
+      if (e.key === "Escape")
+        close();
+    };
+    document.addEventListener("keydown", onKey);
+    function close() {
+      if (_active?.el !== wrap)
+        return;
+      _active = null;
+      wrap.classList.remove("open");
+      document.body.classList.remove("modal-open");
+      document.removeEventListener("keydown", onKey);
+      setTimeout(() => wrap.remove(), 240);
+    }
+    backdrop?.addEventListener("click", close);
+    closeBtn?.addEventListener("click", close);
+    if (variant === "sheet" && swipeClose && panel) {
+      let startY = 0, dragging = false, dy = 0;
+      panel.addEventListener("touchstart", (e) => {
+        if (panel.scrollTop > 2)
+          return;
+        startY = e.touches[0].clientY;
+        dragging = true;
+        dy = 0;
+        panel.style.transition = "none";
+      }, { passive: true });
+      panel.addEventListener("touchmove", (e) => {
+        if (!dragging)
+          return;
+        dy = e.touches[0].clientY - startY;
+        if (dy < 0) {
+          panel.style.transform = "";
+          return;
+        }
+        panel.style.transform = `translateY(${dy}px)`;
+      }, { passive: true });
+      panel.addEventListener("touchend", () => {
+        if (!dragging)
+          return;
+        dragging = false;
+        panel.style.transition = "";
+        if (dy > 90)
+          close();
+        else
+          panel.style.transform = "";
+        dy = 0;
+      });
+    }
+    onMount?.(wrap);
+    _active = { el: wrap, close };
+    return { close, el: wrap };
+  }
+  function closeModal() {
+    _active?.close();
+  }
+
   // src/tabs/community-blocks.js
   var cmBusIndex = 0;
   var cmBusEntries = [];
@@ -7939,10 +8027,6 @@ ${ev.description || ""}`
       ${yAxis}${bars}
     </svg>`;
   }
-  function closeWeatherModal(overlay) {
-    overlay.classList.remove("wx-open");
-    setTimeout(() => overlay.remove(), 280);
-  }
   function openWeatherDayModal(dayIndex) {
     if (!_wxData || !_wxData.hourly)
       return;
@@ -7967,44 +8051,39 @@ ${ev.description || ""}`
     const info = weatherCodeInfo(daily.weather_code[dayIndex]);
     const tMax = Math.round(daily.temperature_2m_max[dayIndex]);
     const tMin = Math.round(daily.temperature_2m_min[dayIndex]);
-    const overlay = document.createElement("div");
-    overlay.className = "wx-modal";
-    overlay.innerHTML = `
-    <div class="wx-sheet" role="dialog" aria-label="\u041F\u043E\u0433\u043E\u0434\u0430 \u043F\u043E \u0433\u043E\u0434\u0438\u043D\u0430\u0445">
-      <div class="wx-grabber"></div>
-      <div class="wx-head">
-        <div class="wx-head-icon">${info.icon}</div>
-        <div class="wx-head-info">
-          <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
-          <div class="wx-head-desc">${escapeHtml(info.text)}</div>
-        </div>
-        <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
+    const bodyHtml = `
+    <div class="wx-head">
+      <div class="wx-head-icon">${info.icon}</div>
+      <div class="wx-head-info">
+        <div class="wx-head-day">${escapeHtml(dayName)} \xB7 ${dateLabel}</div>
+        <div class="wx-head-desc">${escapeHtml(info.text)}</div>
       </div>
-      <div class="wx-chart-block">
-        <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
-        <div class="wx-chart-svg-wrap" data-wx="temp">
-          ${wxLineChart(tempPts, { unit: "\xB0" })}
-          <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-          <div class="wx-readout"></div>
-        </div>
+      <div class="wx-head-range">${tMax}\xB0 / ${tMin}\xB0</div>
+    </div>
+    <div class="wx-chart-block">
+      <div class="wx-chart-title">\u{1F321}\uFE0F \u0422\u0435\u043C\u043F\u0435\u0440\u0430\u0442\u0443\u0440\u0430, \xB0C</div>
+      <div class="wx-chart-svg-wrap" data-wx="temp">
+        ${wxLineChart(tempPts, { unit: "\xB0" })}
+        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
+        <div class="wx-readout"></div>
       </div>
-      <div class="wx-chart-block">
-        <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
-        <div class="wx-chart-svg-wrap" data-wx="precip">
-          ${wxBarChart(precipPts)}
-          <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
-          <div class="wx-readout"></div>
-        </div>
+    </div>
+    <div class="wx-chart-block">
+      <div class="wx-chart-title">\u{1F4A7} \u0419\u043C\u043E\u0432\u0456\u0440\u043D\u0456\u0441\u0442\u044C \u043E\u043F\u0430\u0434\u0456\u0432, %</div>
+      <div class="wx-chart-svg-wrap" data-wx="precip">
+        ${wxBarChart(precipPts)}
+        <div class="wx-cursor"><div class="wx-cursor-dot"></div></div>
+        <div class="wx-readout"></div>
       </div>
     </div>`;
-    overlay.addEventListener("click", (e) => {
-      if (e.target === overlay)
-        closeWeatherModal(overlay);
+    const { close, el } = openModal({
+      bodyHtml,
+      variant: "sheet",
+      className: "app-modal--weather",
+      swipeClose: false,
+      onMount: (wrap) => wireWeatherScrubber(wrap, { tempPts, precipPts, iconPts })
     });
-    document.body.appendChild(overlay);
-    requestAnimationFrame(() => overlay.classList.add("wx-open"));
-    wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts });
-    wireWeatherSwipe(overlay);
+    wireWeatherSwipe(el, close);
   }
   function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
     const n = tempPts.length;
@@ -8064,8 +8143,8 @@ ${ev.description || ""}`
       wrap.addEventListener("pointercancel", end);
     });
   }
-  function wireWeatherSwipe(overlay) {
-    const sheet = overlay.querySelector(".wx-sheet");
+  function wireWeatherSwipe(overlay, close) {
+    const sheet = overlay.querySelector(".app-modal-sheet");
     if (!sheet)
       return;
     let startY = 0, dragging = false;
@@ -8091,7 +8170,7 @@ ${ev.description || ""}`
       const dy = e.changedTouches[0].clientY - startY;
       sheet.style.transform = "";
       if (dy > 90)
-        closeWeatherModal(overlay);
+        close();
     });
   }
   async function renderBusBlock() {
@@ -9320,17 +9399,9 @@ END:VEVENT`
     });
   }
   function openQueueHelpModal() {
-    if (document.getElementById("pw-help-modal"))
-      return;
-    const wrap = document.createElement("div");
-    wrap.id = "pw-help-modal";
-    wrap.className = "pw-help-modal";
-    wrap.innerHTML = `
-    <div class="pw-help-backdrop"></div>
-    <div class="pw-help-panel" role="dialog" aria-modal="true">
-      <div class="pw-help-handle"></div>
-      <button class="pw-help-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      <h3 class="pw-help-title">\u042F\u043A \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C \u0441\u0432\u043E\u044E \u0447\u0435\u0440\u0433\u0443?</h3>
+    openModal({
+      title: "\u042F\u043A \u0434\u0456\u0437\u043D\u0430\u0442\u0438\u0441\u044C \u0441\u0432\u043E\u044E \u0447\u0435\u0440\u0433\u0443?",
+      bodyHtml: `
       <p class="pw-help-sub">
         \u0427\u0435\u0440\u0433\u0443 \u043F\u0440\u0438\u0437\u043D\u0430\u0447\u0430\u0454 <b>\u0412\u043E\u043B\u0438\u043D\u044C\u043E\u0431\u043B\u0435\u043D\u0435\u0440\u0433\u043E</b> \u0437\u0430 \u0444\u0456\u0437\u0438\u0447\u043D\u0438\u043C \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F\u043C \u0432\u0430\u0448\u043E\u0433\u043E
         \u0431\u0443\u0434\u0438\u043D\u043A\u0443 \u0434\u043E \u043F\u0456\u0434\u0441\u0442\u0430\u043D\u0446\u0456\u0457. \u041D\u0430 \u0436\u0430\u043B\u044C, \u0412\u041E\u0415 \u043D\u0435 \u0434\u0430\u0454 \u043F\u0443\u0431\u043B\u0456\u0447\u043D\u043E\u0433\u043E API \u2014 \u043C\u0438 \u043D\u0435
@@ -9369,23 +9440,7 @@ END:VEVENT`
         \u{1F4A1} \u0421\u043A\u043E\u0440\u043E \u0443 \u0424\u0430\u0437\u0456 3 \u0434\u043E\u0434\u0430\u043C\u043E \u043A\u0440\u0430\u0443\u0434\u0441\u043E\u0440\u0441\u0438\u043D\u0433 \u2014 \u0436\u0438\u0442\u0435\u043B\u0456 \u043F\u043E\u0437\u043D\u0430\u0447\u0430\u0442\u0438\u043C\u0443\u0442\u044C \u0441\u0432\u043E\u044E \u0447\u0435\u0440\u0433\u0443,
         \u0456 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E \u0437\u0430\u043F\u0430\u043C'\u044F\u0442\u0430\u0454 \u0432\u0443\u043B\u0438\u0446\u044E \u2192 \u0447\u0435\u0440\u0433\u0443.
       </p>
-    </div>
-  `;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    function close() {
-      wrap.classList.remove("open");
-      document.body.classList.remove("modal-open");
-      setTimeout(() => wrap.remove(), 220);
-    }
-    wrap.querySelector(".pw-help-backdrop")?.addEventListener("click", close);
-    wrap.querySelector(".pw-help-close")?.addEventListener("click", close);
-    document.addEventListener("keydown", function onEsc(e) {
-      if (e.key === "Escape") {
-        close();
-        document.removeEventListener("keydown", onEsc);
-      }
+    `
     });
   }
   function initPower() {
@@ -9567,7 +9622,6 @@ END:VEVENT`
   }
 
   // src/core/account-ui.js
-  var _modal = null;
   var _newUserChecked = false;
   function updateHeaderBtn() {
     const btn = document.getElementById("account-btn");
@@ -9576,32 +9630,16 @@ END:VEVENT`
     btn.classList.toggle("account-btn--in", isLoggedIn());
     btn.setAttribute("aria-label", isLoggedIn() ? "\u041A\u0430\u0431\u0456\u043D\u0435\u0442 \u0436\u0438\u0442\u0435\u043B\u044F" : "\u0423\u0432\u0456\u0439\u0442\u0438");
   }
-  function closeModal() {
-    if (!_modal)
-      return;
-    const m = _modal;
-    _modal = null;
-    m.classList.remove("open");
-    document.body.classList.remove("modal-open");
-    setTimeout(() => m.remove(), 220);
-  }
-  function openModal(innerHtml) {
+  function closeModal2() {
     closeModal();
-    const wrap = document.createElement("div");
-    wrap.className = "acc-modal";
-    wrap.innerHTML = `
-    <div class="acc-backdrop"></div>
-    <div class="acc-card" role="dialog" aria-modal="true">${innerHtml}</div>`;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    _modal = wrap;
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    wrap.querySelector(".acc-backdrop").addEventListener("click", closeModal);
-    return wrap;
+  }
+  function openModal2(innerHtml) {
+    const { el } = openModal({ bodyHtml: innerHtml, variant: "center" });
+    return el;
   }
   function openJoin(reason) {
     const sub = reason ? `\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 ${escapeHtml(reason)}.` : "\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u0438\u0441\u0430\u0442\u0438 \u0439 \u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438.";
-    const wrap = openModal(`
+    const wrap = openModal2(`
     <div class="acc-emoji">\u{1F464}</div>
     <h2 class="acc-title">\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0434\u043E \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
     <p class="acc-sub">${sub}</p>
@@ -9610,14 +9648,14 @@ END:VEVENT`
     </button>
     <button class="acc-skip" type="button">\u041F\u043E\u043A\u0438 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438</button>`);
     wrap.querySelector(".acc-google").addEventListener("click", () => signInWithGoogle());
-    wrap.querySelector(".acc-skip").addEventListener("click", closeModal);
+    wrap.querySelector(".acc-skip").addEventListener("click", closeModal2);
   }
   function openProfile() {
     const u = currentUser();
     if (!u)
       return;
     const defaultName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
-    const wrap = openModal(`
+    const wrap = openModal2(`
     <h2 class="acc-title">\u0420\u0430\u0434\u0456 \u0432\u0430\u0441 \u0431\u0430\u0447\u0438\u0442\u0438!</h2>
     <label class="acc-label">\u0406\u043C'\u044F</label>
     <input class="acc-input" id="acc-name" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(defaultName)}">
@@ -9633,7 +9671,7 @@ END:VEVENT`
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
         return;
       }
-      closeModal();
+      closeModal2();
       if (withDate)
         showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
     };
@@ -10049,27 +10087,11 @@ END:VEVENT`
     const data = INFO[key];
     if (!data)
       return;
-    const ov = document.createElement("div");
-    ov.className = "sidebar-info-modal";
-    ov.innerHTML = `
-    <div class="sidebar-info-sheet${data.doc ? " sidebar-info-sheet--doc" : ""}" role="dialog" aria-label="${data.title}">
-      <div class="sidebar-info-head">
-        <h2>${data.title}</h2>
-        <button class="sidebar-info-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      </div>
-      <div class="sidebar-info-body">${data.body}</div>
-    </div>`;
-    const shut = () => {
-      ov.classList.remove("sidebar-info-modal--show");
-      setTimeout(() => ov.remove(), 240);
-    };
-    ov.addEventListener("click", (e) => {
-      if (e.target === ov)
-        shut();
+    openModal({
+      title: data.title,
+      bodyHtml: data.body,
+      className: data.doc ? "app-modal--doc" : ""
     });
-    ov.querySelector(".sidebar-info-close").addEventListener("click", shut);
-    document.body.appendChild(ov);
-    requestAnimationFrame(() => ov.classList.add("sidebar-info-modal--show"));
   }
   async function refreshCabinet() {
     const btn = document.querySelector('[data-nav="cabinet"]');

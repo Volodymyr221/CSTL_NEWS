@@ -21,3 +21,5 @@ graphify-out/
 # /byyou — рантайм-маркери (не комітимо)
 .claude/.byyou-release
 .claude/hooks/.byyou-handoff-warned
+.claude/hooks/.byyou-warn-35
+.claude/hooks/.byyou-warn-55
