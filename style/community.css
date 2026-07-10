@@ -2194,6 +2194,10 @@
   font-size: 11px;
   font-weight: 600;
   color: rgba(43,43,43,0.5);
+  min-width: 0;
+  white-space: nowrap;        /* ім'я завжди в один рядок — не ламається «— / Володимир» */
+  overflow: hidden;
+  text-overflow: ellipsis;    /* дуже довге ім'я — трикрапка, а не негарний перенос */
 }
 .cm-board-author-row .cm-board-time {
   color: rgba(43,43,43,0.5);
