@@ -7176,7 +7176,6 @@ ${ev.description || ""}`
       return "";
     return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
   }
-  var SR_BOOKMARK_SVG = '<svg viewBox="0 0 24 24" width="19" height="19" fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SR_BELL_ON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
   var SR_BELL_OFF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   function savedRouteDayLabel(trackDate) {
@@ -7235,19 +7234,6 @@ ${ev.description || ""}`
       fullTimeStr: t.fullTimeStr || ""
     }));
   }
-  function getSavedCount() {
-    return trackedRoutes.length;
-  }
-  function unsaveRoute(rid, date, from, to) {
-    const entry = findTrackedEntry(rid, from || null, to || null, date);
-    if (!entry)
-      return;
-    unsubscribeFromPush(entry.routeId, entry.trackDate);
-    removeTrackedEntry(entry);
-    checkTrackNotifications(false);
-    renderSmartRow();
-    renderRouteList();
-  }
   function toggleRouteReminders(rid, date, from, to) {
     const entry = findTrackedEntry(rid, from || null, to || null, date);
     if (!entry)
@@ -7283,7 +7269,7 @@ ${ev.description || ""}`
     if (!entry)
       return;
     await subscribeToPush(rid, entry.title || "", from || null, to || null, date, entry.depTime || null);
-    renderSavedRows();
+    updateBannerBell();
   }
   function selfHealPushSubscriptions() {
     if (!isPushCapable() || Notification.permission !== "granted")
@@ -7295,153 +7281,12 @@ ${ev.description || ""}`
       }
     }
   }
-  function updateSavedBadge() {
-    const btn = document.getElementById("saved-routes-btn");
-    if (!btn)
-      return;
-    const n = getSavedCount();
-    const onBuses = document.querySelector(".app-main")?.dataset.tab === "buses";
-    btn.hidden = n === 0 || !onBuses || !isLoggedIn();
-    const cnt = document.getElementById("saved-routes-count");
-    if (cnt)
-      cnt.textContent = n > 0 ? String(n) : "";
-  }
-  var _srModalEl = null;
-  function srRowHtml(r) {
-    const pushBlocked = !!pushBlockedMsg();
-    let bellSvg, bellCls, bellLabel;
-    if (!r.notify) {
-      bellSvg = SR_BELL_OFF_SVG;
-      bellCls = "sr-bell sr-bell--off";
-      bellLabel = "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456";
-    } else if (pushBlocked) {
-      bellSvg = SR_BELL_ON_SVG;
-      bellCls = "sr-bell sr-bell--warn";
-      bellLabel = "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u2014 \u043D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0449\u043E\u0431 \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438";
-    } else {
-      bellSvg = SR_BELL_ON_SVG;
-      bellCls = "sr-bell sr-bell--on";
-      bellLabel = "\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u0456";
-    }
-    const data = `data-rid="${escapeHtml(r.routeId)}" data-date="${r.trackDate}" data-from="${escapeHtml(r.from || "")}" data-to="${escapeHtml(r.to || "")}"`;
-    const dayTop = r.dayLabel ? `<div class="sr-row-day">${escapeHtml(r.dayLabel)}</div>` : "";
-    const titleText = r.isSegment ? `${r.from} - ${r.to}${r.timeStr ? " | " + r.timeStr : ""}` : r.title;
-    const belowLine = r.isSegment ? `<div class="sr-row-full bs-route-full"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5"/></svg>${escapeHtml(r.fullTitle)}${r.fullTimeStr ? " | " + escapeHtml(r.fullTimeStr) : ""}</div>` : r.timeStr ? `<div class="sr-row-sub">${escapeHtml(r.timeStr)}</div>` : "";
-    return `
-    <div class="sr-row">
-      <div class="sr-row-info">
-        ${dayTop}
-        <div class="sr-row-title">${escapeHtml(titleText)}</div>
-        ${belowLine}
-      </div>
-      <button class="${bellCls}" type="button" ${data} aria-label="${escapeHtml(bellLabel)}">${bellSvg}</button>
-      <button class="sr-unsave" type="button" ${data} aria-label="\u0417\u043D\u044F\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F">${SR_BOOKMARK_SVG}</button>
-    </div>`;
-  }
-  function renderSavedRows() {
-    const list = _srModalEl?.querySelector(".sr-list");
-    if (!list)
-      return;
-    const rows = getSavedRoutesForUI();
-    list.innerHTML = rows.length ? rows.map(srRowHtml).join("") : '<div class="sr-empty">\u041D\u0435\u043C\u0430\u0454 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u0440\u0435\u0439\u0441\u0456\u0432</div>';
-  }
-  function closeSavedModal() {
-    if (!_srModalEl)
-      return;
-    const m = _srModalEl;
-    _srModalEl = null;
-    m.classList.remove("open");
-    document.body.classList.remove("modal-open");
-    setTimeout(() => m.remove(), 240);
-  }
-  function openSavedModal() {
-    if (_srModalEl)
-      return;
-    const wrap = document.createElement("div");
-    wrap.className = "sr-modal";
-    wrap.innerHTML = `
-    <div class="sr-backdrop"></div>
-    <div class="sr-panel" role="dialog" aria-modal="true">
-      <div class="sr-head">
-        <span class="sr-title">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u0440\u0435\u0439\u0441\u0438</span>
-        <button class="sr-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      </div>
-      <div class="sr-list"></div>
-      <div class="sr-handle"></div>
-    </div>`;
-    document.body.appendChild(wrap);
-    document.body.classList.add("modal-open");
-    _srModalEl = wrap;
-    renderSavedRows();
-    requestAnimationFrame(() => wrap.classList.add("open"));
-    wrap.querySelector(".sr-backdrop").addEventListener("click", closeSavedModal);
-    wrap.querySelector(".sr-close").addEventListener("click", closeSavedModal);
-    wrap.querySelector(".sr-list").addEventListener("click", (e) => {
-      const bell = e.target.closest(".sr-bell");
-      const uns = e.target.closest(".sr-unsave");
-      const t = bell || uns;
-      if (!t)
-        return;
-      const { rid, date, from, to } = t.dataset;
-      if (bell) {
-        if (bell.classList.contains("sr-bell--warn"))
-          requestPushForSavedRoute(rid, date, from || null, to || null);
-        else
-          toggleRouteReminders(rid, date, from || null, to || null);
-      } else {
-        unsaveRoute(rid, date, from || null, to || null);
-      }
-      renderSavedRows();
-    });
-    const panel = wrap.querySelector(".sr-panel");
-    let sy = 0, drag = false, dd = 0;
-    panel.addEventListener("touchstart", (e) => {
-      sy = e.touches[0].clientY;
-      drag = true;
-      dd = 0;
-      panel.style.transition = "none";
-    }, { passive: true });
-    panel.addEventListener("touchmove", (e) => {
-      if (!drag)
-        return;
-      dd = e.touches[0].clientY - sy;
-      if (dd >= 0) {
-        panel.style.transform = "translateY(0)";
-        return;
-      }
-      panel.style.transform = `translateY(${dd}px)`;
-    }, { passive: true });
-    panel.addEventListener("touchend", () => {
-      if (!drag)
-        return;
-      drag = false;
-      panel.style.transition = "";
-      if (dd < -70)
-        closeSavedModal();
-      else
-        panel.style.transform = "";
-      dd = 0;
-    }, { passive: true });
-  }
   function initSavedRoutesHeader() {
     loadTrackedRoute();
-    const btn = document.getElementById("saved-routes-btn");
-    if (btn && !btn.dataset.wired) {
-      btn.dataset.wired = "1";
-      btn.addEventListener("click", openSavedModal);
-    }
-    updateSavedBadge();
-    window.addEventListener("cstl-bus-track-changed", () => {
-      updateSavedBadge();
-      if (_srModalEl)
-        renderSavedRows();
-      updateBannerBell();
-    });
-    window.addEventListener("cstl-tab-changed", updateSavedBadge);
+    window.addEventListener("cstl-bus-track-changed", updateBannerBell);
     onAuthChange(async () => {
       loadTrackedRoute();
       await hydrateTrackedFromDB();
-      updateSavedBadge();
       if (document.getElementById("bus-list")) {
         renderSmartRow();
         renderRouteList();
