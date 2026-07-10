@@ -2084,18 +2084,28 @@ function syncBoardBodyOffset() {
 }
 
 // Динамічний розмір імені автора у футері картки (рішення Вови): коротке ім'я —
-// більше (до MAX, добре видно), довге — зменшується рівно доки не влізе в ОДИН
-// рядок на всю ширину (до MIN). Якщо навіть на MIN не влазить — трикрапка (CSS).
-// CSS сам довжину тексту не «бачить», тому міряємо scrollWidth vs clientWidth.
+// більше (до MAX, добре видно), довге — зменшується рівно доки не влізе в ОДИН рядок
+// у ДОСТУПНЕ місце (ширина футера − кнопки − gap; до MIN); якщо й на MIN не влазить —
+// трикрапка (CSS). Реальну ширину гліфів міряємо через Range.getBoundingClientRect()
+// — не залежить від контейнера/overflow (scrollWidth/max-content у flex тут брешуть).
 function fitBoardAuthors() {
-  const MAX = 12.5, MIN = 8.5, STEP = 0.5;
-  document.querySelectorAll('.cm-board-foot-who .cm-board-author--card').forEach(el => {
-    if (!el.clientWidth) return;              // схований елемент — пропускаємо (перерахуємо при вході на вкладку)
+  const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
+  const range = document.createRange();
+  document.querySelectorAll('.cm-board-foot').forEach(foot => {
+    if (!foot.clientWidth) return;            // схований — пропускаємо (перерахуємо при вході на вкладку)
+    const nameEl = foot.querySelector('.cm-board-foot-who .cm-board-author--card');
+    const actions = foot.querySelector('.cm-board-foot-actions');
+    if (!nameEl) return;
+    const fcs = getComputedStyle(foot);
+    const gap = parseFloat(fcs.columnGap) || parseFloat(fcs.gap) || 0;
+    const avail = foot.clientWidth - (actions ? actions.offsetWidth : 0) - gap - PAD;
     let size = MAX;
-    el.style.fontSize = size + 'px';
-    while (size > MIN && el.scrollWidth > el.clientWidth + 1) {
+    nameEl.style.fontSize = size + 'px';
+    range.selectNodeContents(nameEl);
+    while (size > MIN && range.getBoundingClientRect().width > avail) {
       size -= STEP;
-      el.style.fontSize = size + 'px';
+      nameEl.style.fontSize = size + 'px';
+      range.selectNodeContents(nameEl);       // переміряти гліфи після зміни шрифту
     }
   });
 }
