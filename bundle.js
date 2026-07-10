@@ -10113,27 +10113,11 @@ END:VEVENT`
     const data = INFO[key];
     if (!data)
       return;
-    const ov = document.createElement("div");
-    ov.className = "sidebar-info-modal";
-    ov.innerHTML = `
-    <div class="sidebar-info-sheet${data.doc ? " sidebar-info-sheet--doc" : ""}" role="dialog" aria-label="${data.title}">
-      <div class="sidebar-info-head">
-        <h2>${data.title}</h2>
-        <button class="sidebar-info-close" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
-      </div>
-      <div class="sidebar-info-body">${data.body}</div>
-    </div>`;
-    const shut = () => {
-      ov.classList.remove("sidebar-info-modal--show");
-      setTimeout(() => ov.remove(), 240);
-    };
-    ov.addEventListener("click", (e) => {
-      if (e.target === ov)
-        shut();
+    openModal({
+      title: data.title,
+      bodyHtml: data.body,
+      className: data.doc ? "app-modal--doc" : ""
     });
-    ov.querySelector(".sidebar-info-close").addEventListener("click", shut);
-    document.body.appendChild(ov);
-    requestAnimationFrame(() => ov.classList.add("sidebar-info-modal--show"));
   }
   async function refreshCabinet() {
     const btn = document.querySelector('[data-nav="cabinet"]');
