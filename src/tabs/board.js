@@ -511,12 +511,16 @@ function onChatEsc(e) { if (e.key === 'Escape') closeChatModal(); }
 // close) лишена незмінною — 4 виклики нижче не чіпав.
 function openDiscSheet(opts) {
   const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
-  const { close } = openModalPrimitive({
+  // onMount виконується СИНХРОННО всередині openModalPrimitive(), до завершення
+  // деструктуризації нижче — пряме читання `close` тут ловить temporal dead zone.
+  // Обгортка-стрілка відкладає читання до реального виклику (завжди пізніше, асинхронно).
+  let close;
+  ({ close } = openModalPrimitive({
     bodyHtml,
     variant: 'sheet',
     className: 'app-modal--disc',
-    onMount: (wrap) => opts.onMount?.(wrap, close),
-  });
+    onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+  }));
   return close;
 }
 

@@ -3867,12 +3867,13 @@
   }
   function openDiscSheet(opts) {
     const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
-    const { close } = openModal({
+    let close;
+    ({ close } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--disc",
-      onMount: (wrap) => opts.onMount?.(wrap, close)
-    });
+      onMount: (wrap) => opts.onMount?.(wrap, () => close())
+    }));
     return close;
   }
   function openDiscussionList(title, posts) {
