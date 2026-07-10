@@ -1509,7 +1509,7 @@ let _boardTabHookSet = false;   // слухач зміни вкладки віш
 // Самодостатня: власна підкладка + той самий renderAdModal + галерея + свайп-закрити.
 // z-index інлайном вище за чат (.pm-screen=2401), щоб лягти ПОВЕРХ нього.
 // Дротування дзеркалить expand() (свідоме дрібне дублювання — щоб не чіпати робочу Дошку).
-function openAdModalStandalone(post) {
+export function openAdModalStandalone(post) {
   if (!post) return;
   const backdrop = document.createElement('div');
   backdrop.className = 'board-backdrop';

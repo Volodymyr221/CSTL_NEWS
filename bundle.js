@@ -2104,6 +2104,63 @@
     });
   }
 
+  // src/core/push.js
+  var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
+  function urlBase64ToUint8Array(b64) {
+    const pad2 = "=".repeat((4 - b64.length % 4) % 4);
+    const base = (b64 + pad2).replace(/-/g, "+").replace(/_/g, "/");
+    const raw = atob(base);
+    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
+  }
+  function isPushCapable() {
+    return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
+  }
+  function pushKeysEqual(a, b) {
+    if (!a || !b)
+      return false;
+    const ua = new Uint8Array(a);
+    const ub = new Uint8Array(b);
+    if (ua.length !== ub.length)
+      return false;
+    for (let i = 0; i < ua.length; i++)
+      if (ua[i] !== ub[i])
+        return false;
+    return true;
+  }
+  async function ensurePushSubscription() {
+    if (!isPushCapable())
+      return null;
+    try {
+      let perm = Notification.permission;
+      if (perm === "denied")
+        return null;
+      if (perm === "default")
+        perm = await Notification.requestPermission();
+      if (perm !== "granted")
+        return null;
+      const reg = await navigator.serviceWorker.ready;
+      const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
+      let sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        const existingKey = sub.options && sub.options.applicationServerKey;
+        if (existingKey && !pushKeysEqual(existingKey, appKey)) {
+          await sub.unsubscribe();
+          sub = null;
+        }
+      }
+      if (!sub) {
+        sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey: appKey
+        });
+      }
+      return sub;
+    } catch (e) {
+      console.warn("[push] ensurePushSubscription:", e && e.message);
+      return null;
+    }
+  }
+
   // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
   function otherName(thread) {
@@ -2123,6 +2180,7 @@
       });
       return;
     }
+    ensureChatPush();
     const me = currentUserId();
     const p = post || thread.post || {};
     const title = p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
@@ -3296,14 +3354,66 @@
       console.warn("[chat-push] register:", e && e.message);
     }
   }
+  async function ensureChatPush() {
+    if (!isLoggedIn())
+      return;
+    try {
+      const sub = await ensurePushSubscription();
+      if (!sub)
+        return;
+      const j = sub.toJSON();
+      await saveUserPushDevice({
+        uid: currentUserId(),
+        endpoint: j.endpoint,
+        p256dh: j.keys.p256dh,
+        auth_key: j.keys.auth
+      });
+    } catch (e) {
+      console.warn("[chat-push] ensure:", e && e.message);
+    }
+  }
+  async function openThreadById(threadId) {
+    if (!isLoggedIn() || threadId == null)
+      return;
+    const threads = await fetchMyThreads(currentUserId());
+    const thread = threads.find((t) => String(t.id) === String(threadId));
+    if (thread)
+      openChat(thread, thread.post);
+  }
+  var _chatBannerTimer = null;
+  function showChatPushBanner({ title, body, threadId }) {
+    let el = document.getElementById("chat-push-banner");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "chat-push-banner";
+      el.className = "chat-push-banner";
+      document.body.appendChild(el);
+    }
+    el.innerHTML = `<div class="cpb-title">${escapeHtml(title || "\u041D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F")}</div><div class="cpb-body">${escapeHtml(body || "")}</div>`;
+    el.onclick = () => {
+      el.classList.remove("visible");
+      if (threadId != null)
+        openThreadById(threadId);
+    };
+    requestAnimationFrame(() => el.classList.add("visible"));
+    clearTimeout(_chatBannerTimer);
+    _chatBannerTimer = setTimeout(() => el.classList.remove("visible"), 4500);
+  }
   var _threadsUnsub = null;
   function initBoardChat() {
     refreshUnreadBadge();
     if ("serviceWorker" in navigator && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", (e) => {
-        if (e.data && e.data.__cstl === "push") {
+        if (!e.data)
+          return;
+        if (e.data.__cstl === "push") {
           refreshUnreadBadge();
           window.dispatchEvent(new CustomEvent("cstl-chat-refresh"));
+          if (e.data.pushType === "chat" && document.visibilityState === "visible") {
+            showChatPushBanner({ title: e.data.title, body: e.data.body, threadId: e.data.threadId });
+          }
+        } else if (e.data.__cstl === "notif-click" && e.data.threadId != null) {
+          openThreadById(e.data.threadId);
         }
       });
     }
@@ -5675,7 +5785,6 @@ ${ev.description || ""}`
   var PREFS_KEY = "bus_prefs_v2";
   var TRACK_KEY = "bus_track_v2";
   var PENDING_UNSUB_KEY = "bus_pending_unsub_v1";
-  var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
   var busData = null;
   var busDay = getTodayISO();
   var weekPage = 0;
@@ -5748,27 +5857,6 @@ ${ev.description || ""}`
     } catch {
     }
   }
-  function urlBase64ToUint8Array(b64) {
-    const pad2 = "=".repeat((4 - b64.length % 4) % 4);
-    const base = (b64 + pad2).replace(/-/g, "+").replace(/_/g, "/");
-    const raw = atob(base);
-    return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-  }
-  function pushKeysEqual(a, b) {
-    if (!a || !b)
-      return false;
-    const ua = new Uint8Array(a);
-    const ub = new Uint8Array(b);
-    if (ua.length !== ub.length)
-      return false;
-    for (let i = 0; i < ua.length; i++)
-      if (ua[i] !== ub[i])
-        return false;
-    return true;
-  }
-  function isPushCapable() {
-    return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
-  }
   function pushBlockedMsg() {
     if (!isPushCapable())
       return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
@@ -5779,32 +5867,10 @@ ${ev.description || ""}`
   async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
     if (trackDate < getTodayISO())
       return;
-    if (!("Notification" in window) || !("serviceWorker" in navigator))
-      return;
     try {
-      let perm = Notification.permission;
-      if (perm === "denied")
+      const sub = await ensurePushSubscription();
+      if (!sub)
         return;
-      if (perm === "default")
-        perm = await Notification.requestPermission();
-      if (perm !== "granted")
-        return;
-      const reg = await navigator.serviceWorker.ready;
-      const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
-      let sub = await reg.pushManager.getSubscription();
-      if (sub) {
-        const existingKey = sub.options && sub.options.applicationServerKey;
-        if (existingKey && !pushKeysEqual(existingKey, appKey)) {
-          await sub.unsubscribe();
-          sub = null;
-        }
-      }
-      if (!sub) {
-        sub = await reg.pushManager.subscribe({
-          userVisibleOnly: true,
-          applicationServerKey: appKey
-        });
-      }
       const subJson = sub.toJSON();
       const payload = {
         // uid залогіненого жителя (Етап 2). RLS-перепис вимагає user_uuid = auth.uid()::text.
@@ -8127,20 +8193,29 @@ ${ev.description || ""}`
     const label = cmDayLabel(dateISO, todayISO, tomorrowISO);
     const labelHtml = label ? `<div class="cm-bus-daylabel">${escapeHtml(label)}</div>` : "";
     el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
-    let touchStartX = 0;
+    let touchStartX = 0, touchMoved = false;
     const card = el.querySelector(".bhv4") || el.lastElementChild;
     if (!card)
       return;
     card.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
+      touchMoved = false;
     }, { passive: true });
     card.addEventListener("touchend", (e) => {
       const dx = e.changedTouches[0].clientX - touchStartX;
       if (Math.abs(dx) < 40)
         return;
+      touchMoved = true;
       cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusEntries.length : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
       switchCmBusCard(el);
     }, { passive: true });
+    card.addEventListener("click", () => {
+      if (touchMoved)
+        return;
+      if (typeof window.switchTab === "function")
+        window.switchTab("buses");
+      openSavedRouteOnBuses(route.id, dateISO, null, null);
+    });
     el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
       dot.addEventListener("click", (e) => {
         cmBusIndex = parseInt(e.target.dataset.idx, 10);
@@ -8274,7 +8349,19 @@ ${ev.description || ""}`
       });
       const content = wrap.querySelector(".cm-board-mini-content");
       if (content) {
-        content.addEventListener("click", () => {
+        content.addEventListener("click", (e) => {
+          const card = e.target.closest("[data-item-id]");
+          const itemId = card ? Number(card.dataset.itemId) : null;
+          if (itemId != null && Number.isFinite(itemId)) {
+            const item = _boardMiniData.userPosts.find((p) => p.id === itemId);
+            if (item) {
+              if (cfg.id === "chat")
+                openChatById(itemId);
+              else
+                openAdModalStandalone(item);
+              return;
+            }
+          }
           if (cfg.id === "chat") {
             if (typeof window.switchTab === "function")
               window.switchTab("discussions");
@@ -8293,7 +8380,7 @@ ${ev.description || ""}`
       const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
-      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg">
+      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
         <span class="cm-board-pin"></span>
         ${photoHtml}
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || "")}</span>
@@ -8306,7 +8393,7 @@ ${ev.description || ""}`
       const hue = item.author ? item.author.charCodeAt(0) * 47 % 360 : 0;
       const avatarStyle = item.author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
       return `
-      <article class="cm-mini-chat">
+      <article class="cm-mini-chat" data-item-id="${item.id}">
         <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
         <div class="cm-mini-chat-body">
           <div class="cm-mini-chat-author">${escapeHtml(item.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</div>
@@ -10612,6 +10699,13 @@ END:VEVENT`
     history.replaceState(null, "", location.pathname + location.search);
     openInviteJoin(m[1]);
   }
+  function handleThreadHash() {
+    const m = (location.hash || "").match(/^#\/thread\/(\d+)/);
+    if (!m)
+      return;
+    history.replaceState(null, "", location.pathname + location.search);
+    openThreadById(Number(m[1]));
+  }
   function init() {
     bootApp();
     initAuth();
@@ -10638,6 +10732,8 @@ END:VEVENT`
     initAdminShortcut();
     handleInviteHash();
     window.addEventListener("hashchange", handleInviteHash);
+    handleThreadHash();
+    window.addEventListener("hashchange", handleThreadHash);
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {

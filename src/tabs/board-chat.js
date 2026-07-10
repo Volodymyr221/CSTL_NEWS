@@ -36,6 +36,7 @@ import {
   ACT_ICONS, buildScreen, avatar, clockTime, dayLabel, threadListTime,
   setupKeyboardResize, setupBubbleGestures,
 } from '../core/chat-core.js';
+import { ensurePushSubscription } from '../core/push.js';
 
 const BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1000;   // кулдаун підняття: 3 год
 
@@ -57,6 +58,7 @@ let _chatUnsub = null;
 
 export async function openChat(thread, post) {
   if (!isLoggedIn()) { requireAuth('відкрити чат', () => {}); return; }
+  ensureChatPush();   // P-5: тап відкрити чат — реальний жест користувача, просимо дозвіл push
   const me = currentUserId();
   const p = post || thread.post || {};
   const title = p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
@@ -1111,7 +1113,7 @@ export async function refreshUnreadBadge() {
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
 }
 
-// ── Реєстрація push-пристрою під акаунт (без запиту дозволу) ───────────────
+// ── Реєстрація push-пристрою під акаунт (пасивний ресинк, без запиту дозволу) ──
 // Використовуємо НАЯВНУ браузерну підписку (її вже міг створити трекер автобусів).
 // Якщо підписки ще немає — нічого не робимо (не нав'язуємо дозвіл при вході).
 async function registerChatPushDevice() {
@@ -1129,18 +1131,68 @@ async function registerChatPushDevice() {
   } catch (e) { console.warn('[chat-push] register:', e && e.message); }
 }
 
+// ── P-5: активний запит push (на відміну від registerChatPushDevice вище, який
+// лише пасивно ресинкає НАЯВНУ підписку). Хто ніколи не вмикав автобусні
+// сповіщення — раніше НІКОЛИ не отримував запит дозволу для чату, бо той код
+// теж чекав готову підписку замість створити нову. Викликається з жесту
+// користувача (тап «відкрити чат» у openChat) — fire-and-forget, не блокує чат.
+async function ensureChatPush() {
+  if (!isLoggedIn()) return;
+  try {
+    const sub = await ensurePushSubscription();
+    if (!sub) return;
+    const j = sub.toJSON();
+    await saveUserPushDevice({
+      uid: currentUserId(), endpoint: j.endpoint, p256dh: j.keys.p256dh, auth_key: j.keys.auth,
+    });
+  } catch (e) { console.warn('[chat-push] ensure:', e && e.message); }
+}
+
+// ── P-9: відкрити конкретну розмову за id треда (з нотифікації/hash-роутингу) ──
+export async function openThreadById(threadId) {
+  if (!isLoggedIn() || threadId == null) return;
+  const threads = await fetchMyThreads(currentUserId());
+  const thread = threads.find(t => String(t.id) === String(threadId));
+  if (thread) openChat(thread, thread.post);
+}
+
+// ── P-8: банер вхідного push (chat) коли застосунок у фокусі — раніше нічого
+// візуально не показувалось, лише бейдж (легко пропустити). Тап → відкрити розмову.
+let _chatBannerTimer = null;
+function showChatPushBanner({ title, body, threadId }) {
+  let el = document.getElementById('chat-push-banner');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'chat-push-banner';
+    el.className = 'chat-push-banner';
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<div class="cpb-title">${escapeHtml(title || 'Нове повідомлення')}</div><div class="cpb-body">${escapeHtml(body || '')}</div>`;
+  el.onclick = () => { el.classList.remove('visible'); if (threadId != null) openThreadById(threadId); };
+  requestAnimationFrame(() => el.classList.add('visible'));
+  clearTimeout(_chatBannerTimer);
+  _chatBannerTimer = setTimeout(() => el.classList.remove('visible'), 4500);
+}
+
 // ── Ініціалізація (з app.js): бейдж + realtime + реакція на вхід/вихід ─────
 let _threadsUnsub = null;
 export function initBoardChat() {
   refreshUnreadBadge();
   // SW повідомляє про вхідний push (надійніше за realtime, який буває пропускає
   // нові треди між акаунтами): оновлюємо бейдж + сигналимо відкритому списку розмов
-  // оновитись наживо (подія 'cstl-chat-refresh').
+  // оновитись наживо (подія 'cstl-chat-refresh') + банер якщо застосунок у фокусі (P-8)
+  // + відкриває розмову якщо клікнули по системній нотифікації (P-9).
   if ('serviceWorker' in navigator && navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener('message', (e) => {
-      if (e.data && e.data.__cstl === 'push') {
+      if (!e.data) return;
+      if (e.data.__cstl === 'push') {
         refreshUnreadBadge();
         window.dispatchEvent(new CustomEvent('cstl-chat-refresh'));
+        if (e.data.pushType === 'chat' && document.visibilityState === 'visible') {
+          showChatPushBanner({ title: e.data.title, body: e.data.body, threadId: e.data.threadId });
+        }
+      } else if (e.data.__cstl === 'notif-click' && e.data.threadId != null) {
+        openThreadById(e.data.threadId);
       }
     });
   }
