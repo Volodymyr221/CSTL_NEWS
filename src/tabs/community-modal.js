@@ -103,6 +103,15 @@ export function openBoardModal() {
     onClose: () => state.photos.forEach(p => { if (p && p.startsWith('blob:')) URL.revokeObjectURL(p); }),
   });
 
+  // Д-17: лінія-роздільник під липкою шапкою з'являється лише коли контент почав скролитись
+  // під неї (при повністю відкритій нескроленій модалці лінія візуально зайва — фідбек Вови).
+  const sheetEl = wrap.querySelector('.app-modal-sheet');
+  if (sheetEl) {
+    const syncScrolled = () => sheetEl.classList.toggle('is-scrolled', sheetEl.scrollTop > 2);
+    sheetEl.addEventListener('scroll', syncScrolled, { passive: true });
+    syncScrolled();
+  }
+
   // ── Рендер полів оголошення ──
   const dynamicEl = wrap.querySelector('#bm-dynamic');
 
