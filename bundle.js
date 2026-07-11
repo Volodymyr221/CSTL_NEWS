@@ -1480,8 +1480,31 @@
 
   // src/tabs/community-modal.js
   var PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-  function isPhone(s) {
-    return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
+  function maskUaPhone(v) {
+    let d = String(v || "").replace(/\D/g, "");
+    if (d.startsWith("380"))
+      d = d.slice(3);
+    else if (d.startsWith("0"))
+      d = d.slice(1);
+    d = d.slice(0, 9);
+    let out = "+380";
+    if (d.length)
+      out += " " + d.slice(0, 2);
+    if (d.length > 2)
+      out += " " + d.slice(2, 5);
+    if (d.length > 5)
+      out += " " + d.slice(5, 7);
+    if (d.length > 7)
+      out += " " + d.slice(7, 9);
+    return out;
+  }
+  function phoneDigits(v) {
+    let d = String(v || "").replace(/\D/g, "");
+    if (d.startsWith("380"))
+      d = d.slice(3);
+    else if (d.startsWith("0"))
+      d = d.slice(1);
+    return Math.min(d.length, 9);
   }
   function firstNameOnly(full) {
     const w = String(full || "").trim().split(/\s+/)[0] || "";
@@ -1534,7 +1557,8 @@
       author: accountAuthorName(),
       category: "",
       // Д-23: без автовибору — юзер має сам обрати (сабміт блокується поки не обрано)
-      contact: "",
+      contact: "+380",
+      // Д-24: дефолт-префікс; автопідставиться з профілю нижче якщо є телефон
       title: "",
       location: COMMUNITY_ALL
       // Д-10: дефолт — вся громада
@@ -1611,8 +1635,8 @@
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-contact">\u041A\u043E\u043D\u0442\u0430\u043A\u0442 <span class="bm-label-hint">(\u0442\u0435\u043B\u0435\u0444\u043E\u043D / Telegram)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-contact" type="text" placeholder="+38 050 ___ __ __" inputmode="tel" value="${escapeHtml(state.contact)}">
+        <label class="bm-label" for="bm-contact">\u0422\u0435\u043B\u0435\u0444\u043E\u043D <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
+        <input class="cm-board-input cm-board-input--small" id="bm-contact" type="tel" placeholder="+380 XX XXX XX XX" inputmode="tel" value="${escapeHtml(state.contact)}">
       </div>
 
       <div class="bm-section">
@@ -1641,6 +1665,7 @@
         renderPreview();
       });
       dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
+        e.target.value = maskUaPhone(e.target.value);
         state.contact = e.target.value;
         renderPreview();
       });
@@ -1739,10 +1764,10 @@
       const cat = state.category ? BOARD_CATEGORIES.find((c) => c.id === state.category) : null;
       const catHtml = cat ? `<span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>` : `<span class="cm-board-cat cm-board-cat--placeholder">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</span>`;
       const firstPhoto = state.photos.find((p) => p);
-      const contactTrim = state.contact.trim();
-      const contactHtml = contactTrim ? `
-      <div class="cm-board-contact${isPhone(contactTrim) ? " cm-board-contact--phone" : ""}">
-        ${escapeHtml(contactTrim)}
+      const contactShow = phoneDigits(state.contact) === 9 ? maskUaPhone(state.contact) : "";
+      const contactHtml = contactShow ? `
+      <div class="cm-board-contact cm-board-contact--phone">
+        ${escapeHtml(contactShow)}
       </div>` : "";
       previewCanvas.innerHTML = `
       <article class="cm-board-note${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
@@ -1765,13 +1790,19 @@
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
     if (isLoggedIn()) {
       getProfile().then((p) => {
+        if (p && p.phone && phoneDigits(state.contact) === 0) {
+          state.contact = maskUaPhone(p.phone);
+          const cEl = dynamicEl.querySelector("#bm-contact");
+          if (cEl)
+            cEl.value = state.contact;
+        }
         const nm = firstNameOnly(p && p.name || currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
-        if (nm === state.author)
-          return;
-        state.author = nm;
-        const el = dynamicEl.querySelector("#bm-author-fixed");
-        if (el)
-          el.textContent = `\u{1F464} ${nm}`;
+        if (nm !== state.author) {
+          state.author = nm;
+          const el = dynamicEl.querySelector("#bm-author-fixed");
+          if (el)
+            el.textContent = `\u{1F464} ${nm}`;
+        }
         renderPreview();
       }).catch(() => {
       });
@@ -1791,6 +1822,12 @@
       if (!state.text.trim()) {
         showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
         wrap.querySelector("#bm-text")?.focus();
+        return;
+      }
+      const pd = phoneDigits(state.contact);
+      if (pd > 0 && pd < 9) {
+        showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043F\u043E\u0432\u043D\u0438\u0439 \u043D\u043E\u043C\u0435\u0440 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443 \u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0442\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C", 3e3);
+        wrap.querySelector("#bm-contact")?.focus();
         return;
       }
       if (containsProfanity(state.text) || containsProfanity(state.contact)) {
@@ -1841,7 +1878,8 @@
       photos: state.photos.filter(Boolean),
       category: state.category,
       color: cat.color,
-      contact: state.contact.trim() || null,
+      contact: phoneDigits(state.contact) === 9 ? maskUaPhone(state.contact) : null,
+      // Д-24: лише повний номер
       title: state.title.trim(),
       // обов'язковий (Д-16); сервер теж перевіряє
       location: state.location || COMMUNITY_ALL,
@@ -3567,12 +3605,12 @@
   }
   function renderCardFoot(p) {
     const contact = p.contact ? String(p.contact).trim() : "";
-    const isPhone2 = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-    const tel = isPhone2 ? contact.replace(/[^\d+]/g, "") : "";
+    const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+    const tel = isPhone ? contact.replace(/[^\d+]/g, "") : "";
     return `
       <div class="cm-board-foot">
         <div class="cm-board-foot-actions">
-          ${isPhone2 ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
+          ${isPhone ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
           <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
         </div>
         <div class="cm-board-foot-who">
