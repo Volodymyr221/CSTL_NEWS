@@ -2364,7 +2364,7 @@
    .bd-controls у рантаймі, тож при будь-якій зміні шапки картки не залазять під неї
    (раніше це число «пливло» щоразу — Д-11 його зламав). */
 .bd-body { padding-top: 100px; }
-.bd-controls:has(.bd-cat-chip) ~ .bd-body { padding-top: 160px; }
+.bd-controls:has(.bd-search-row) ~ .bd-body { padding-top: 140px; }
 
 /* Обговорення тепер справжня .page у .app-main (не overlay) — .disc-screen прибрано.
    #disc-content поводиться як .board-content на Дошці; шапку/таб-бар/скрол дає .app-main. */
@@ -2516,18 +2516,15 @@
   pointer-events: none;
 }
 
-/* Авто-ховання при скролі вниз (byyou): назва «Дошка оголошень» + категорії
-   згортаються, subrow (лічильник+локація) і пошук лишаються закріпленими. */
-.bd-title,
-.bd-cat-wrap {
+/* Авто-ховання при скролі вниз (byyou): назва «Дошка оголошень» згортається,
+   subrow (лічильник+локація) і рядок пошуку (з кнопкою-фільтром) лишаються закріпленими. */
+.bd-title {
   transition: max-height 0.3s ease, opacity 0.22s ease, margin 0.3s ease;
-  /* Тісно над реальною висотою (заголовок ~24px, чіпи ~30px). Раніше було 80px —
-     завеликий запас → перша половина анімації «стояла», потім стрибок. 48px = плавно. */
+  /* Тісно над реальною висотою заголовка (~24px). */
   max-height: 48px;
   overflow: hidden;
 }
-.bd-controls--collapsed .bd-title,
-.bd-controls--collapsed .bd-cat-wrap {
+.bd-controls--collapsed .bd-title {
   max-height: 0;
   opacity: 0;
   margin-top: 0;
@@ -2615,63 +2612,70 @@
   user-select: none;
 }
 
-/* Категорії-чіпи (другий ряд, тільки для табу board) */
-/* Ряд підкатегорій: «ВСІ» закріплена зліва + «|» роздільник + контейнер що скролиться */
-.bd-cat-wrap {
+/* Рядок пошуку: кнопка-фільтр категорій (зліва) + поле пошуку (розтягується). */
+.bd-search-row {
   display: flex;
   align-items: center;
-  gap: 0;
+  gap: 8px;
 }
-.bd-cat-wrap > .bd-cat-chip[data-bd-cat="all"] { margin-right: 8px; }
-/* Вертикальна риска між «ВСІ» і контейнером; чіпи обрізаються лівим краєм контейнера праворуч від неї */
-.bd-cat-divider {
-  flex-shrink: 0;
-  width: 1px;
-  height: 20px;
-  margin-right: 8px;
-  background: rgba(0,0,0,0.18);
-  border-radius: 1px;
-}
-.bd-categories {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  gap: 5px;
-  overflow-x: auto;
-  scrollbar-width: none;
-  padding-bottom: 2px;
-}
-.bd-categories::-webkit-scrollbar { display: none; }
-.bd-cat-chip {
+.bd-search-row > .bd-search { flex: 1; min-width: 0; }
+
+/* Кнопка-фільтр категорій — показує іконку активної категорії + каретку. */
+.bd-cat-filter-wrap { position: relative; flex-shrink: 0; }
+.bd-cat-filter {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 5px 10px;
-  border-radius: 10px;
-  border: 1px solid var(--paper-deep);
+  height: 40px;
+  padding: 0 10px;
+  font-size: 19px;   /* задає розмір іконки (1em) */
   background: var(--card-cream);
+  border: 1.5px solid rgba(0,0,0,0.22);
+  border-radius: 14px;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.10);
   color: var(--black);
-  font-size: 12px;
-  text-transform: uppercase;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.10);
-  font-family: inherit;
   cursor: pointer;
-  white-space: nowrap;
   -webkit-tap-highlight-color: transparent;
 }
-.bd-cat-chip--active {
+.bd-cat-filter.open { border-color: rgba(0,0,0,0.4); }
+.bd-cat-filter-ico { display: inline-flex; }
+.bd-cat-caret { color: var(--ink-soft, #5a5a5a); flex: none; }
+
+/* Випадне меню категорій — під кнопкою, поверх карток. */
+.bd-cat-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  min-width: 210px;
   background: var(--card-cream);
+  border: 1px solid rgba(0,0,0,0.15);
+  border-radius: 14px;
+  box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+  overflow: hidden;
+  padding: 4px;
+}
+.bd-cat-menu[hidden] { display: none; }
+.bd-cat-mi {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  width: 100%;
+  padding: 10px 12px;
+  border: none;
+  background: none;
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 14px;
   color: var(--black);
-  border-color: rgba(0,0,0,0.30);
-  font-weight: 700;
-  box-shadow: inset 0 2px 12px rgba(0,0,0,0.28), 0 2px 8px rgba(0,0,0,0.10);
+  text-align: left;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.bd-cat-emoji { font-size: 13px; }
-/* «ВСІ» закріплена (поза контейнером скролу) — не стискається */
-.bd-cat-wrap > .bd-cat-chip[data-bd-cat="all"] {
-  font-weight: 700;
-  flex-shrink: 0;
-}
+.bd-cat-mi:active { background: rgba(0,0,0,0.05); }
+.bd-cat-mi.active { background: rgba(114,47,55,0.10); font-weight: 700; }
+.bd-cat-mi-ico { display: inline-flex; font-size: 18px; flex: none; }
+.bd-cat-mi-label { min-width: 0; }
 
 /* Тіло — порожній стан і стрічка */
 .bd-body { min-height: 50vh; }

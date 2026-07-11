@@ -7,8 +7,9 @@
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
-// Таксономія категорій (колір/іконка/назва) — спільний модуль.
-import { catColor, catIcon, catShort, catLabel } from '../core/board-categories.js';
+// Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
+// конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
+import { catColor, catIcon, catShort, catLabel, BOARD_CATEGORIES as CATS, ALL_ICON } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, refreshUnreadBadge } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
@@ -119,16 +120,6 @@ function renderPostTime(p) {
 // Векторні іконки для пунктів FAB-меню (у стилі MSG_ICON — лінійні, currentColor)
 const EDIT_ICON_SVG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
-
-// Фільтр-чіпи (6 шт): деякі групують ДВІ конкретні категорії через `match`.
-// Пост зберігає конкретну категорію (продам/куплю/...), а чіп групує.
-const BOARD_CATEGORIES = [
-  { id: 'all',        label: 'Всі',                 emoji: '✦',  match: null },
-  { id: 'trade',      label: 'Куплю/Продам',        emoji: '🛒', match: ['продам', 'куплю'] },
-  { id: 'шукаю',      label: 'Шукаю',               emoji: '🔍', match: ['шукаю'] },
-  { id: 'послуга',    label: 'Послуги',             emoji: '🔧', match: ['послуга'] },
-  { id: 'lostfound',  label: 'Знайдено/Загубилось', emoji: '🎁', match: ['знайдено', 'загубилось'] },
-];
 
 
 const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
@@ -1149,11 +1140,10 @@ function getFilteredPosts() {
     } else if (p.type !== activeType) {
       return false;
     }
-    // Фільтр по категорії — тільки для board. Чіп може групувати кілька
-    // конкретних категорій (напр. «Куплю/Продам» → ['продам','куплю']).
+    // Фільтр по категорії — тільки для board. Кожна категорія = одна конкретна
+    // (куплю/продам/віддам/шукаю/послуга/знайдено/загубилось); 'all' = усі.
     if (activeType === 'board' && activeCategory !== 'all') {
-      const cat = BOARD_CATEGORIES.find(c => c.id === activeCategory);
-      if (!cat || !cat.match || !cat.match.includes(p.category)) return false;
+      if (p.category !== activeCategory) return false;
     }
     // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
     // + загальногромадські (COMMUNITY_ALL/порожні/старі) — вони релевантні скрізь.
@@ -1187,19 +1177,26 @@ function renderHeader() {
     : '';
 
   const showCategories = activeType === 'board';
-  const chipHtml = c => `
-    <button class="bd-cat-chip${c.id === activeCategory ? ' bd-cat-chip--active' : ''}" type="button" data-bd-cat="${c.id}">
-      <span class="bd-cat-emoji">${c.emoji}</span>
-      ${escapeHtml(c.label)}
+  // Кнопка-фільтр категорій (зліва від пошуку) + випадне меню. Іконка кнопки =
+  // іконка активної категорії (для 'all' — лійка), у семантичному кольорі. Тап →
+  // меню зі списком усіх категорій; вибір закриває меню й фільтрує (див. обробники).
+  const activeIcon = activeCategory === 'all' ? ALL_ICON : catIcon(activeCategory);
+  const activeColorCls = activeCategory === 'all' ? '' : 'cat-c-' + catColor(activeCategory);
+  const CARET_SVG = '<svg class="bd-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  const menuItem = (id, icon, color, label) => `
+    <button class="bd-cat-mi${id === activeCategory ? ' active' : ''}" type="button" role="menuitem" data-bd-cat="${id}">
+      <span class="bd-cat-mi-ico ${color ? 'cat-c-' + color : ''}">${icon}</span>
+      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
     </button>`;
-  // «ВСІ» (перша категорія) — закріплена ЗА межами контейнера що скролиться, з відступом.
-  // Решта чіпів у .bd-categories — обрізаються його краєм (overflow), тож ховаються повністю.
-  const categoriesHtml = showCategories ? `
-    <div class="bd-cat-wrap">
-      ${chipHtml(BOARD_CATEGORIES[0])}
-      <span class="bd-cat-divider" aria-hidden="true"></span>
-      <div class="bd-categories">
-        ${BOARD_CATEGORIES.slice(1).map(chipHtml).join('')}
+  const catFilterHtml = showCategories ? `
+    <div class="bd-cat-filter-wrap">
+      <button class="bd-cat-filter" id="bd-cat-filter" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за категорією">
+        <span class="bd-cat-filter-ico ${activeColorCls}">${activeIcon}</span>
+        ${CARET_SVG}
+      </button>
+      <div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+        ${menuItem('all', ALL_ICON, '', 'Всі')}
+        ${CATS.map(c => menuItem(c.id, c.icon, c.color, c.label)).join('')}
       </div>
     </div>
   ` : '';
@@ -1228,13 +1225,15 @@ function renderHeader() {
     <div class="bd-controls">
       ${discHead}
       ${titlebarHtml}
-      <div class="bd-search">
-        <span class="bd-search-icon">🔍</span>
-        <input class="bd-search-input" id="bd-search-input" type="search"
-               placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
-        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
+      <div class="bd-search-row">
+        ${catFilterHtml}
+        <div class="bd-search">
+          <span class="bd-search-icon">🔍</span>
+          <input class="bd-search-input" id="bd-search-input" type="search"
+                 placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
+          ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
+        </div>
       </div>
-      ${categoriesHtml}
     </div>
   `;
 }
@@ -1353,7 +1352,6 @@ export async function renderBoard() {
 function renderAll() {
   const el = getBoardRoot();
   if (!el) return;
-  const savedCatScroll = el.querySelector('.bd-categories')?.scrollLeft ?? 0;
   const hasCork = activeType === 'board';
   el.innerHTML = `
     ${hasCork ? `
@@ -1371,9 +1369,6 @@ function renderAll() {
   el.style.backgroundImage = '';
   el.style.backgroundSize  = '';
   el.style.backgroundPosition = '';
-
-  const catsEl = el.querySelector('.bd-categories');
-  if (catsEl) catsEl.scrollLeft = savedCatScroll;
 
   // FAB-підменю (speed-dial): тап по кнопці розкриває дії; повторний/фон — закриває.
   const fab     = document.getElementById('board-fab');
@@ -1442,19 +1437,37 @@ function renderAll() {
     });
   }
 
-  // Категорії-чіпи (тільки для board)
-  el.querySelectorAll('[data-bd-cat]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = btn.dataset.bdCat;
-      activeCategory = cat;
-      renderAll(el);
-      // При виборі «ВСІ» — плавно повернути стрічку підкатегорій на початок
-      // (renderAll відновив поточну позицію, звідси й стартує анімація скролу до 0).
-      if (cat === 'all') {
-        el.querySelector('.bd-categories')?.scrollTo({ left: 0, behavior: 'smooth' });
-      }
+  // Фільтр категорій (тільки board): кнопка відкриває/закриває меню; пункт меню
+  // обирає категорію → renderAll перебудовує шапку (меню відроджується закритим).
+  const catBtn = document.getElementById('bd-cat-filter');
+  const catMenu = document.getElementById('bd-cat-menu');
+  if (catBtn && catMenu) {
+    catBtn.addEventListener('click', e => {
+      e.stopPropagation();   // щоб document-listener (закриття по кліку повз) не спрацював одразу
+      const willOpen = catMenu.hasAttribute('hidden');
+      catMenu.toggleAttribute('hidden', !willOpen);
+      catBtn.classList.toggle('open', willOpen);
+      catBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+  }
+  el.querySelectorAll('#bd-cat-menu [data-bd-cat]').forEach(mi => {
+    mi.addEventListener('click', () => {
+      activeCategory = mi.dataset.bdCat;
+      renderAll();
     });
   });
+  // Закриття меню по кліку повз / Escape / скролу — document-рівень, ОДИН раз (guard).
+  if (!_catMenuWired) {
+    _catMenuWired = true;
+    document.addEventListener('click', e => {
+      const m = document.getElementById('bd-cat-menu');
+      if (!m || m.hasAttribute('hidden')) return;
+      if (e.target.closest('.bd-cat-filter-wrap')) return;   // клік усередині кнопки/меню
+      closeCatMenu();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCatMenu(); });
+    document.querySelector('.app-main')?.addEventListener('scroll', closeCatMenu, { passive: true });
+  }
 
   // Кнопки виклика — окремий handler (capture щоб клік не лизнув на стікер)
   el.querySelectorAll('.cm-board-call').forEach(btn => {
@@ -2090,6 +2103,15 @@ function fitBoardAuthors() {
       range.selectNodeContents(nameEl);       // переміряти гліфи після зміни шрифту
     }
   });
+}
+
+// Закрити меню фільтра категорій (кнопка зліва від пошуку).
+let _catMenuWired = false;
+function closeCatMenu() {
+  const m = document.getElementById('bd-cat-menu');
+  const b = document.getElementById('bd-cat-filter');
+  if (m) m.setAttribute('hidden', '');
+  if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
 }
 
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),
