@@ -287,6 +287,15 @@ export function openWeatherDayModal(dayIndex) {
       </div>
     </div>`;
 
+  // Актуальна година — по timezone з відповіді Open-Meteo (timezone=auto вже рахує
+  // геодані користувача при фетчі; якщо геолокація недоступна, getCoords() підставляє
+  // Олику → Open-Meteo сам резолвить її у Europe/Kyiv, тож окремий фолбек не потрібен).
+  const offsetSec = _wxData.utc_offset_seconds ?? 7200;   // 7200с=+2год — фолбек лише якщо API не віддав поле
+  const nowLocal = new Date(Date.now() + offsetSec * 1000);
+  const nowDateStr = nowLocal.toISOString().slice(0, 10);
+  const nowHour = nowLocal.getUTCHours();
+  const initialIdx = dateStr === nowDateStr ? tempPts.findIndex(p => p.h === nowHour) : -1;
+
   // swipeClose:false — власний wireWeatherSwipe нижче (ігнорує свайп що почався
   // на скрабер-графіку, спільний примітив цього не вміє).
   const { close, el } = openModal({
@@ -294,14 +303,19 @@ export function openWeatherDayModal(dayIndex) {
     variant: 'sheet',
     className: 'app-modal--weather',
     swipeClose: false,
-    onMount: (wrap) => wireWeatherScrubber(wrap, { tempPts, precipPts, iconPts }),
+    onMount: (wrap) => wireWeatherScrubber(wrap, {
+      tempPts, precipPts, iconPts,
+      initialIdx: initialIdx >= 0 ? initialIdx : null,
+    }),
   });
   wireWeatherSwipe(el, close);
 }
 
 // Скрабер (перетягування пальцем по графіку): снапить до найближчої години,
 // показує спільну вертикальну лінію + бульбашку з іконкою і значенням.
-function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
+// initialIdx — якщо задано, курсор одразу показується на цій годині (актуальна
+// година, лише коли відкрито «Сьогодні»), без потреби торкатись графіка.
+function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
   const n = tempPts.length;
   if (!n) return;
   const gTemp = wxGeom(tempPts);
@@ -323,12 +337,6 @@ function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
       readout.classList.add('is-on');
     });
   }
-  function clear() {
-    wraps.forEach(wrap => {
-      wrap.querySelector('.wx-cursor').classList.remove('is-on');
-      wrap.querySelector('.wx-readout').classList.remove('is-on');
-    });
-  }
   function idxFromX(wrap, clientX) {
     const r = wrap.getBoundingClientRect();
     // Врахувати внутрішні відступи графіка (padL/padR) — X-вісь займає не всю ширину.
@@ -347,10 +355,14 @@ function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
       if (!wrap.hasPointerCapture(e.pointerId)) return;
       place(idxFromX(wrap, e.clientX));
     });
-    const end = e => { try { wrap.releasePointerCapture(e.pointerId); } catch (_) {} clear(); };
+    // Відпустив палець — курсор ЛИШАЄТЬСЯ на обраній годині (не ховається), щоб
+    // бачити погоду на цю годину й далі, без потреби тримати палець притиснутим.
+    const end = e => { try { wrap.releasePointerCapture(e.pointerId); } catch (_) {} };
     wrap.addEventListener('pointerup', end);
     wrap.addEventListener('pointercancel', end);
   });
+
+  if (initialIdx != null) place(initialIdx);
 }
 
 // Свайп вниз по аркушу закриває модалку. Не заважає скраберу: якщо палець
