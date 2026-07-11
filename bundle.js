@@ -4502,7 +4502,7 @@ ${post.text}
         const npGroup = sorted.filter((p) => p.location === activeLocation);
         const wideGroup = sorted.filter((p) => isCommunityWide(p.location));
         const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
-        const npEmptyMsg = !npGroup.length ? `<div class="bd-group-empty">\u0423 \xAB${escapeHtml(activeLocation)}\xBB \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</div>` : "";
+        const npEmptyMsg = !npGroup.length ? `<div class="bd-group-empty">\u0423 \xAB${escapeHtml(activeLocation)}\xBB \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E<span class="bd-group-empty-hint">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u044C\u0442\u0435 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</span></div>` : "";
         return `
         <div class="board-backdrop" id="board-backdrop"></div>
         ${section(activeLocation, npGroup)}
