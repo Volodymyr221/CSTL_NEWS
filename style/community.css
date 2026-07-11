@@ -963,6 +963,16 @@
 .cm-board-cat--pink   { background: rgba(170,60,90,0.12);  color: #A03A5A; }
 .cm-board-cat--white  { background: rgba(90,90,90,0.10);   color: #5A5A5A; }
 
+/* Векторні іконки категорій (src/core/board-categories.js) — масштаб під шрифт місця,
+   колір = currentColor (у пігулці бере семантичний колір тексту тега). */
+.cat-ico { width: 1em; height: 1em; vertical-align: -0.14em; flex: none; }
+/* Колір іконки БЕЗ фону (чіп форми / меню фільтра) — дзеркалить текст .cm-board-cat--*. */
+.cat-c-green { color: #2E7D50; }
+.cat-c-red   { color: #C0392B; }
+.cat-c-blue  { color: #2E5C8A; }
+.cat-c-amber { color: #8A6410; }
+.cat-c-white { color: #5A5A5A; }
+
 /* Локація оголошення (Д-10) — рядок під заголовком у картці/модалці/прев'ю */
 .cm-board-loc {
   display: inline-flex;
@@ -1190,7 +1200,9 @@
   border-color: var(--red);
   color: white;
 }
-.bm-chip-emoji { font-size: 14px; line-height: 1; }
+.bm-chip-emoji { font-size: 14px; line-height: 1; display: inline-flex; }
+/* Активний чіп — червоний фон: іконка теж біла (перебиває семантичний .cat-c-*). */
+.bm-chip.active .bm-chip-emoji { color: #fff; }
 .bm-chip-label { text-transform: capitalize; }
 
 /* Фото-слоти */

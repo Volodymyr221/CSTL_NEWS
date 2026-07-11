@@ -6,7 +6,9 @@
 //   chat  = обговорення — горизонтальна картка з аватаркою і хештегами
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
-import { openBoardModal, catColor } from './community-modal.js';
+import { openBoardModal } from './community-modal.js';
+// Таксономія категорій (колір/іконка/назва) — спільний модуль.
+import { catColor, catIcon, catShort, catLabel } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, refreshUnreadBadge } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
@@ -128,18 +130,6 @@ const BOARD_CATEGORIES = [
   { id: 'lostfound',  label: 'Знайдено/Загубилось', emoji: '🎁', match: ['знайдено', 'загубилось'] },
 ];
 
-// Окрема явна мапа конкретна-категорія → emoji (для лейбла на стікері).
-// Раніше виводилась з BOARD_CATEGORIES, але після групування чіпів
-// конкретних категорій там більше нема.
-const CATEGORY_EMOJI = {
-  'продам':     '💰',
-  'куплю':      '🛒',
-  'шукаю':      '🔍',
-  'знайдено':   '🎁',
-  'загубилось': '😟',
-  'послуга':    '🔧',
-  'оголошення': '📢',
-};
 
 const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
 
@@ -920,8 +910,7 @@ function closeReactionPopup() {
 
 function buildShareText(post) {
   if (post.type === 'board') {
-    const cat = CATEGORY_EMOJI[post.category] || '📌';
-    return `${cat} ${post.category}\n\n${post.text}\n— ${post.author || 'анонімно'}`;
+    return `${catLabel(post.category)}\n\n${post.text}\n— ${post.author || 'анонімно'}`;
   }
   if (post.type === 'chat') {
     const tags = (post.tags || []).join(' ');
@@ -935,7 +924,6 @@ function buildShareText(post) {
 // BOARD: стікер на корку (як було, з реакціями і ❤️-зберегти)
 function renderBoardCard(p) {
   const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
-  const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   const photoHtml = photo
     ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
@@ -944,7 +932,7 @@ function renderBoardCard(p) {
     <article class="cm-board-note bd-card bd-card--board${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -960,7 +948,6 @@ function renderBoardCard(p) {
 // Дії (реакції/зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
 // обробники працюють без змін.
 function renderAdModal(p) {
-  const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
   const hasPhoto = photos.length > 0;
   const multi = photos.length > 1;
@@ -980,7 +967,7 @@ function renderAdModal(p) {
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
         ${renderLoc(p.location)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       </div>
