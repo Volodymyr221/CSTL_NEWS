@@ -48,6 +48,11 @@ const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 // Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+// Векторні іконки Обговорень (заміна емодзі 💬/👥/📢) — той самий лінійний стиль.
+const USERS_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+const DISC_TITLE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>';
+const HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+const HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 // Д-19: показ локації на картці/зум-модалці. null/порожньо (старі пости — будуть
 // видалені) → нічого; COMMUNITY_ALL → «Олицька громада» (COMMUNITY_ALL_LABEL);
 // конкретний НП → його назву. Guard прибрано ЛИШЕ для показу — фільтр не чіпаємо.
@@ -299,7 +304,7 @@ function chatMessagesHtml(post) {
   const items = getComments(post.id);
   if (!items.length) {
     return `<div class="bd-chat-stream" data-comments-for="${post.id}">
-      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">💬</span>Поки порожньо.<br>Напишіть перше повідомлення 👋</div>
+      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>Поки порожньо.<br>Напишіть перше повідомлення</div>
     </div>`;
   }
   const byId = new Map(items.map(c => [c.id, c]));
@@ -396,7 +401,7 @@ function updateChatHeaderCount(postId) {
   const el = document.getElementById('bd-chat-reply-count');
   if (el) {
     const n = getComments(postId).length;
-    el.textContent = `💬 ${n} ${msgWord(n)}`;
+    el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
   }
 }
 
@@ -516,7 +521,7 @@ function openChatModal(post) {
       <button class="bd-chat-modal-back" type="button" aria-label="Назад">←</button>
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${msgWord(replyCount)}</div>
+        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">${COMMENT_ICON_SVG} ${replyCount} ${msgWord(replyCount)}</div>
       </div>
     </header>
     <div class="bd-chat-modal-body" id="bd-chat-modal-body">
@@ -1065,7 +1070,7 @@ function renderHeader() {
   // Обговорення — головна сторінка вкладки, тому кнопки «← назад» НЕМА (нікуди виходити).
   const discHead = activeType === 'chat'
     ? `<div class="bd-disc-head">
-         <span class="bd-disc-title">📢 Обговорення</span>
+         <span class="bd-disc-title">${DISC_TITLE_ICON_SVG} Обговорення</span>
        </div>`
     : '';
 
