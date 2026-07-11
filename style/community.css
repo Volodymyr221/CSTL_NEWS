@@ -1122,13 +1122,23 @@
   right: auto;
   z-index: 7;
   margin: 0 0 -32px 0;     /* прибрати висоту кнопки з потоку */
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16);  /* тінь — щоб кнопка не зливалася з фоном (фідбек Вови) */
 }
 .cm-board-modal-title {
   font-size: 18px;
   font-weight: 800;
   color: var(--ink);
   margin-bottom: 4px;
+  text-transform: uppercase;   /* «НОВЕ ОГОЛОШЕННЯ» великими (розмір не змінено) */
+  display: flex;
+  align-items: center;
+  gap: 8px;                     /* відступ вектор-олівець → текст */
 }
+.cm-board-title-ic {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+.cm-board-title-ic svg { width: 22px; height: 22px; }
 .cm-board-modal-sub {
   font-size: 13px;
   color: var(--ink-soft);

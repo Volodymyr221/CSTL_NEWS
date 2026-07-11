@@ -1477,6 +1477,7 @@
   }
 
   // src/tabs/community-modal.js
+  var PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
   }
@@ -1536,7 +1537,7 @@
       // Д-10: дефолт — вся громада
     };
     const bodyHtml = `
-    <h3 class="cm-board-modal-title">\u270F\uFE0F \u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
+    <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>\u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</h3>
     <p class="cm-board-modal-sub">\u0417\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u043F\u043E\u043B\u044F \u043D\u0438\u0436\u0447\u0435.</p>
 
     <form id="cm-board-modal-form" novalidate>

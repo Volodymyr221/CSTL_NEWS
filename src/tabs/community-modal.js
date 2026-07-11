@@ -14,6 +14,10 @@ import { openModal } from '../core/modal.js';
 // Таксономія категорій (id/label/колір/векторна іконка) — спільний модуль, єдине джерело.
 import { BOARD_CATEGORIES, catShort } from '../core/board-categories.js';
 
+// Вектор-олівець у заголовку модалки (мірор EDIT_ICON_SVG з board.js — не імпортуємо
+// звідти, бо board.js імпортує цей файл → був би циклічний імпорт).
+const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
 // Чи виглядає рядок як телефон
 function isPhone(s) {
   return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || '').trim());
@@ -76,7 +80,7 @@ export function openBoardModal() {
   };
 
   const bodyHtml = `
-    <h3 class="cm-board-modal-title">✏️ Нове оголошення</h3>
+    <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>Нове оголошення</h3>
     <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
 
     <form id="cm-board-modal-form" novalidate>
