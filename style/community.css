@@ -1990,6 +1990,30 @@
   padding-top: 6px;
 }
 
+/* Мердж двох блоків футера модалки в один рядок (Вова 11.07): call+msg+ім'я зліва
+   (пояснює кому дзвониш/пишеш), save+share справа (де раніше було ім'я). Прибрано
+   верхню лінію над call/msg/ім'ям — блоки стали одним рядком, розділювач не потрібен. */
+.cm-board-modal-note .cm-board-modal-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot {
+  justify-content: flex-start;
+  gap: 10px;
+  margin-top: 0;
+  padding-top: 0;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot::before { display: none; }
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: left; }
+.cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
+  margin-top: 0;
+  padding-top: 0;
+  flex: 0 0 auto;
+}
+.cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact::before { display: none; }
+
 /* ── Мета-блок футера модалки: «номер — ім'я» + кнопки ── */
 .cm-board-modal-foot {
   border-top: none;
