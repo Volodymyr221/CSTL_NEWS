@@ -1487,6 +1487,8 @@
     let d = String(v || "").replace(/\D/g, "");
     if (d.startsWith("380"))
       d = d.slice(3);
+    else if ("380".startsWith(d))
+      d = "";
     else if (d.startsWith("0"))
       d = d.slice(1);
     d = d.slice(0, 9);
@@ -1505,6 +1507,8 @@
     let d = String(v || "").replace(/\D/g, "");
     if (d.startsWith("380"))
       d = d.slice(3);
+    else if ("380".startsWith(d))
+      d = "";
     else if (d.startsWith("0"))
       d = d.slice(1);
     return Math.min(d.length, 9);

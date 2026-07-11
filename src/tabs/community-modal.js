@@ -23,6 +23,7 @@ const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentCol
 function maskUaPhone(v) {
   let d = String(v || '').replace(/\D/g, '');
   if (d.startsWith('380')) d = d.slice(3);
+  else if ('380'.startsWith(d)) d = '';         // d = '', '3' або '38' — залишок префікса при backspace, НЕ user-цифри
   else if (d.startsWith('0')) d = d.slice(1);   // ввели 0XX… — прибираємо провідний 0
   d = d.slice(0, 9);                             // рівно 9 цифр після 380
   let out = '+380';
@@ -36,6 +37,7 @@ function maskUaPhone(v) {
 function phoneDigits(v) {
   let d = String(v || '').replace(/\D/g, '');
   if (d.startsWith('380')) d = d.slice(3);
+  else if ('380'.startsWith(d)) d = '';         // залишок префікса (38/3/'') — 0 user-цифр
   else if (d.startsWith('0')) d = d.slice(1);
   return Math.min(d.length, 9);
 }
