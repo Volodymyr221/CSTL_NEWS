@@ -561,39 +561,6 @@
       return "anon-fallback";
     }
   }
-  async function fetchAllReactions(anonId) {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
-    if (error) {
-      console.warn("[supabase] fetchAllReactions error:", error.message);
-      return /* @__PURE__ */ new Map();
-    }
-    const map = /* @__PURE__ */ new Map();
-    for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { counts: {}, my: null });
-      const e = map.get(r.post_id);
-      e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
-      if (r.user_id === anonId)
-        e.my = r.emoji;
-    }
-    return map;
-  }
-  async function setReaction(postId, userId, emoji) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    if (emoji == null) {
-      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId);
-      if (error2)
-        return { ok: false, error: error2.message };
-      return { ok: true };
-    }
-    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" });
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true };
-  }
   async function fetchAllComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
@@ -1141,17 +1108,6 @@
       return { ok: false, error: error.message };
     }
     return { ok: true };
-  }
-  function subscribeReactions(onChange) {
-    if (!supa)
-      return () => {
-      };
-    const ch = supa.channel("reactions-watch").on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "reactions" },
-      (payload) => onChange(payload)
-    ).subscribe();
-    return () => supa.removeChannel(ch);
   }
   function subscribeComments(onChange) {
     if (!supa)
@@ -3562,14 +3518,12 @@
   }
   var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
-  var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
   var allPosts = [];
   var allAnnouncements = [];
   var activeType = "board";
   var activeCategory = "all";
   var activeLocation = COMMUNITY_ALL;
   var searchQuery = "";
-  var reactionsByPost = /* @__PURE__ */ new Map();
   var commentsByPost = /* @__PURE__ */ new Map();
   var savedIds = /* @__PURE__ */ new Set();
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
@@ -3586,18 +3540,6 @@
       localStorage.setItem(key, JSON.stringify(value));
     } catch {
     }
-  }
-  function getMyReaction(postId) {
-    const r = reactionsByPost.get(postId);
-    return r ? r.my : null;
-  }
-  function getReactionCounts(postId) {
-    const r = reactionsByPost.get(postId);
-    return r ? r.counts : {};
-  }
-  function getTotalReactionCount(postId) {
-    const counts = getReactionCounts(postId);
-    return Object.values(counts).reduce((s, n) => s + n, 0);
   }
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
@@ -3710,25 +3652,6 @@
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
   }
-  function reactTriggerHtml(post) {
-    const myReaction = getMyReaction(post.id);
-    const counts = getReactionCounts(post.id);
-    const total = getTotalReactionCount(post.id);
-    const top3 = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    let content;
-    if (total === 0) {
-      content = `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
-    } else {
-      content = top3.map(([em, n]) => `
-      <span class="bd-react-trigger-group${em === myReaction ? " bd-react-trigger-group--mine" : ""}">
-        <span class="bd-react-trigger-emoji">${em}</span>
-        <span class="bd-react-trigger-count">${n}</span>
-      </span>
-    `).join("");
-    }
-    return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
-          data-react-trigger="${post.id}" aria-label="\u0420\u0435\u0430\u043A\u0446\u0456\u0457 (${total})">${content}</button>`;
-  }
   function saveBtnHtml(post) {
     const saved = isSaved(post.id);
     return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
@@ -3749,7 +3672,6 @@
   function boardActionsHtml(post) {
     return `
     <div class="bd-actions bd-actions--board-compact">
-      ${reactTriggerHtml(post)}
       <div class="bd-actions-extra">
         ${saveBtnHtml(post)}
         ${shareBtnHtml(post)}
@@ -4275,46 +4197,6 @@
       showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
     }
   }
-  function openReactionPopup(triggerBtn, postId) {
-    closeReactionPopup();
-    const myReaction = getMyReaction(postId);
-    const counts = getReactionCounts(postId);
-    const popup = document.createElement("div");
-    popup.className = "bd-react-popup";
-    popup.id = "bd-react-popup";
-    popup.innerHTML = REACTIONS.map((em) => {
-      const n = counts[em] || 0;
-      return `
-      <button class="bd-react-opt${myReaction === em ? " bd-react-opt--active" : ""}" type="button"
-              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
-        <span class="bd-react-opt-emoji">${em}</span>
-        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ""}
-      </button>
-    `;
-    }).join("");
-    document.body.appendChild(popup);
-    const rect = triggerBtn.getBoundingClientRect();
-    const popupRect = popup.getBoundingClientRect();
-    let top = rect.top - popupRect.height - 8;
-    if (top < 8)
-      top = rect.bottom + 8;
-    let left = rect.left + rect.width / 2 - popupRect.width / 2;
-    if (left < 8)
-      left = 8;
-    if (left + popupRect.width > window.innerWidth - 8) {
-      left = window.innerWidth - popupRect.width - 8;
-    }
-    popup.style.top = `${top + window.scrollY}px`;
-    popup.style.left = `${left}px`;
-    requestAnimationFrame(() => popup.classList.add("visible"));
-  }
-  function closeReactionPopup() {
-    const existing = document.getElementById("bd-react-popup");
-    if (existing) {
-      existing.classList.remove("visible");
-      setTimeout(() => existing.remove(), 150);
-    }
-  }
   function buildShareText(post) {
     if (post.type === "board") {
       return `${catLabel(post.category)}
@@ -4641,17 +4523,15 @@ ${post.text}
       return;
     if (isSupabaseReady()) {
       const uid = currentUserId();
-      const [posts, anns, reactions, comments, saved] = await Promise.all([
+      const [posts, anns, comments, saved] = await Promise.all([
         fetchPublishedPosts(),
         fetchPublishedAnnouncements(),
-        fetchAllReactions(uid),
         fetchAllComments(),
         uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set())
       ]);
       if (posts !== null) {
         allPosts = posts;
         allAnnouncements = anns || [];
-        reactionsByPost = reactions;
         commentsByPost = comments;
         savedIds = saved;
         renderAll(el);
@@ -4667,7 +4547,6 @@ ${post.text}
       const communityData = await communityRes.json();
       allPosts = boardData.posts || [];
       allAnnouncements = communityData.announcements || [];
-      reactionsByPost = /* @__PURE__ */ new Map();
       commentsByPost = /* @__PURE__ */ new Map();
     } catch {
       el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
@@ -5190,54 +5069,6 @@ ${post.text}
           showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", 2500);
         return;
       }
-      const trigger = e.target.closest("[data-react-trigger]");
-      if (trigger) {
-        e.stopPropagation();
-        const id = Number(trigger.dataset.reactTrigger);
-        const existing = document.getElementById("bd-react-popup");
-        if (existing && existing.dataset.forPost == id) {
-          closeReactionPopup();
-        } else {
-          openReactionPopup(trigger, id);
-          const p = document.getElementById("bd-react-popup");
-          if (p)
-            p.dataset.forPost = id;
-        }
-        return;
-      }
-      const opt = e.target.closest("[data-react-opt]");
-      if (opt) {
-        e.stopPropagation();
-        if (!isLoggedIn()) {
-          closeReactionPopup();
-          requireAuth("\u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438", () => {
-          });
-          return;
-        }
-        const id = Number(opt.dataset.reactPost);
-        const emoji = opt.dataset.reactOpt;
-        const current = getMyReaction(id);
-        const newReaction = current === emoji ? null : emoji;
-        const r = reactionsByPost.get(id) || { counts: {}, my: null };
-        if (r.my)
-          r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
-        if (newReaction)
-          r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
-        r.my = newReaction;
-        reactionsByPost.set(id, r);
-        closeReactionPopup();
-        document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach((btn) => {
-          btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === id) || { id });
-        });
-        if (isSupabaseReady()) {
-          setReaction(id, currentUserId(), newReaction).then((result) => {
-            if (!result.ok) {
-              console.warn("[reactions] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F:", result.error);
-            }
-          });
-        }
-        return;
-      }
       if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
         e.stopPropagation();
         return;
@@ -5271,23 +5102,7 @@ ${post.text}
         });
         return;
       }
-      if (document.getElementById("bd-react-popup") && !e.target.closest(".bd-react-popup")) {
-        closeReactionPopup();
-      }
     }, { capture: true });
-  }
-  function onReactionRealtimeEvent(payload) {
-    const row = payload.new || payload.old;
-    if (!row || !row.post_id)
-      return;
-    const postId = row.post_id;
-    fetchAllReactions(currentUserId()).then((fresh) => {
-      const r = fresh.get(postId) || { counts: {}, my: null };
-      reactionsByPost.set(postId, r);
-      document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
-        btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === postId) || { id: postId });
-      });
-    });
   }
   function onCommentRealtimeEvent(payload) {
     const postId = (payload.new || payload.old || {}).post_id;
@@ -5326,7 +5141,6 @@ ${post.text}
     if (_realtimeAttached || !isSupabaseReady())
       return;
     _realtimeAttached = true;
-    subscribeReactions(onReactionRealtimeEvent);
     subscribeComments(onCommentRealtimeEvent);
   }
   var discOpen = false;
