@@ -30,23 +30,6 @@ function isCommunityWide(loc) {
   return !loc || loc === COMMUNITY_ALL;
 }
 
-// Підгонка ширини dropdown локації під ПОТОЧНУ назву (не під найдовшу опцію),
-// щоб каретка ▾ завжди стояла на однаковій відстані від тексту (фікс Вови).
-function sizeLocSelect(sel) {
-  if (!sel) return;
-  const opt = sel.options[sel.selectedIndex];
-  const txt = (opt ? opt.text : '') || '';
-  const cs = getComputedStyle(sel);
-  const canvas = sizeLocSelect._c || (sizeLocSelect._c = document.createElement('canvas'));
-  const ctx = canvas.getContext('2d');
-  ctx.font = `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
-  const shown = cs.textTransform === 'uppercase' ? txt.toUpperCase() : txt;
-  let w = ctx.measureText(shown).width;
-  w += (parseFloat(cs.letterSpacing) || 0) * shown.length;   // + літер-спейсинг
-  w += parseFloat(cs.paddingRight) || 0;                    // + місце під каретку
-  sel.style.width = Math.ceil(w) + 2 + 'px';
-}
-
 // Українська відміна слова «оголошення» для лічильника (Д-11).
 function pluralAds(n) {
   const d = n % 10, dd = n % 100;
@@ -1211,11 +1194,15 @@ function renderHeader() {
       <div class="bd-subrow">
         <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
-          <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
-          <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
-            <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
-            ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
-          </select>
+          <button class="bd-loc-btn" id="bd-loc-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за населеним пунктом">
+            <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
+            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : activeLocation)}</span>
+            <svg class="bd-loc-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="bd-loc-menu" id="bd-loc-menu" role="menu" hidden>
+            <button class="bd-loc-mi${activeLocation === COMMUNITY_ALL ? ' active' : ''}" type="button" role="menuitem" data-bd-loc="${escapeHtml(COMMUNITY_ALL)}">${escapeHtml(COMMUNITY_ALL_LABEL)}</button>
+            ${SETTLEMENTS.map(s => `<button class="bd-loc-mi${activeLocation === s ? ' active' : ''}" type="button" role="menuitem" data-bd-loc="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
+          </div>
         </div>
       </div>
     </div>
@@ -1426,47 +1413,40 @@ function renderAll() {
   });
 
 
-  // Фільтр за локацією (Д-12) — dropdown, тільки для board
-  const locSel = document.getElementById('bd-loc-select');
-  if (locSel) {
-    sizeLocSelect(locSel);   // підігнати ширину під поточну назву (щоб каретка не відлітала)
-    locSel.addEventListener('change', e => {
-      activeLocation = e.target.value;
-      sizeLocSelect(locSel);
-      renderBodyOnly(el);
-    });
-  }
-
-  // Фільтр категорій (тільки board): кнопка відкриває/закриває меню; пункт меню
-  // обирає категорію → renderAll перебудовує шапку (меню відроджується закритим).
-  const catBtn = document.getElementById('bd-cat-filter');
-  const catMenu = document.getElementById('bd-cat-menu');
-  if (catBtn && catMenu) {
-    catBtn.addEventListener('click', e => {
+  // Фільтри Дошки (категорії + локація) — обидва кастомні меню в стилі додатку
+  // (не нативний select). Кнопка відкриває/закриває СВОЄ меню, взаємовиключно
+  // (відкриття одного закриває інше); вибір пункту застосовує фільтр → renderAll
+  // перебудовує шапку (меню відроджується закритим, кнопка показує новий стан).
+  const wireMenuButton = (btnId, menuId, onPick) => {
+    const btn = document.getElementById(btnId);
+    const menu = document.getElementById(menuId);
+    if (!btn || !menu) return;
+    btn.addEventListener('click', e => {
       e.stopPropagation();   // щоб document-listener (закриття по кліку повз) не спрацював одразу
-      const willOpen = catMenu.hasAttribute('hidden');
-      catMenu.toggleAttribute('hidden', !willOpen);
-      catBtn.classList.toggle('open', willOpen);
-      catBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+      const wasHidden = menu.hasAttribute('hidden');
+      closeBoardMenus();     // закрити обидва (взаємовиключність)
+      if (wasHidden) {       // було закрите → відкрити
+        menu.removeAttribute('hidden');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
+      }
     });
-  }
-  el.querySelectorAll('#bd-cat-menu [data-bd-cat]').forEach(mi => {
-    mi.addEventListener('click', () => {
-      activeCategory = mi.dataset.bdCat;
-      renderAll();
+    menu.querySelectorAll('[data-bd-cat], [data-bd-loc]').forEach(mi => {
+      mi.addEventListener('click', () => { onPick(mi); renderAll(); });
     });
-  });
+  };
+  wireMenuButton('bd-cat-filter', 'bd-cat-menu', mi => { activeCategory = mi.dataset.bdCat; });
+  wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });
+
   // Закриття меню по кліку повз / Escape / скролу — document-рівень, ОДИН раз (guard).
-  if (!_catMenuWired) {
-    _catMenuWired = true;
+  if (!_boardMenusWired) {
+    _boardMenusWired = true;
     document.addEventListener('click', e => {
-      const m = document.getElementById('bd-cat-menu');
-      if (!m || m.hasAttribute('hidden')) return;
-      if (e.target.closest('.bd-cat-filter-wrap')) return;   // клік усередині кнопки/меню
-      closeCatMenu();
+      if (e.target.closest('.bd-cat-filter-wrap') || e.target.closest('.bd-loc-filter')) return;
+      closeBoardMenus();
     });
-    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeCatMenu(); });
-    document.querySelector('.app-main')?.addEventListener('scroll', closeCatMenu, { passive: true });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBoardMenus(); });
+    document.querySelector('.app-main')?.addEventListener('scroll', closeBoardMenus, { passive: true });
   }
 
   // Кнопки виклика — окремий handler (capture щоб клік не лизнув на стікер)
@@ -2105,13 +2085,14 @@ function fitBoardAuthors() {
   });
 }
 
-// Закрити меню фільтра категорій (кнопка зліва від пошуку).
-let _catMenuWired = false;
-function closeCatMenu() {
-  const m = document.getElementById('bd-cat-menu');
-  const b = document.getElementById('bd-cat-filter');
-  if (m) m.setAttribute('hidden', '');
-  if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
+// Закрити обидва меню-фільтри Дошки (категорії + локація).
+let _boardMenusWired = false;
+function closeBoardMenus() {
+  [['bd-cat-menu', 'bd-cat-filter'], ['bd-loc-menu', 'bd-loc-btn']].forEach(([menuId, btnId]) => {
+    document.getElementById(menuId)?.setAttribute('hidden', '');
+    const b = document.getElementById(btnId);
+    if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
+  });
 }
 
 // Авто-ховання шапки Дошки при скролі. Слухач на .app-main (справжній скролер),

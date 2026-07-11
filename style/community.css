@@ -2485,36 +2485,26 @@
   margin-right: 4px;
   color: var(--red, #722F37);
 }
-.bd-loc-select {
+/* Кнопка-фільтр локації — пін + назва НП + каретка (кастомна, не нативний select). */
+.bd-loc-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   max-width: 100%;
-  box-sizing: border-box;   /* width включає padding → каретка на стабільній відстані */
-  background: transparent;
+  background: none;
   border: none;
-  outline: none;
-  font-size: 12.5px;
+  padding: 0;
   font-family: inherit;
+  font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.3px;
-  text-transform: uppercase;   /* назви НП великими буквами (Д — за побажанням) */
+  text-transform: uppercase;   /* назви НП великими буквами */
   color: var(--ink-soft, #5a5a5a);
-  -webkit-appearance: none;
-  appearance: none;
-  padding-right: 18px;   /* місце під чітку каретку */
-  text-overflow: ellipsis;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-/* Каретка «розгорнути список» — векторний шеврон, добре видно (акцентний колір) */
-.bd-loc-filter::after {
-  content: '';
-  position: absolute;
-  right: 0;
-  top: 50%;
-  width: 13px;
-  height: 13px;
-  transform: translateY(-50%);
-  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23722F37' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E") no-repeat center / contain;
-  pointer-events: none;
-}
+.bd-loc-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bd-loc-caret { flex: none; color: var(--red, #722F37); }
 
 /* Авто-ховання при скролі вниз (byyou): назва «Дошка оголошень» згортається,
    subrow (лічильник+локація) і рядок пошуку (з кнопкою-фільтром) лишаються закріпленими. */
@@ -2642,7 +2632,9 @@
 .bd-cat-caret { color: var(--ink-soft, #5a5a5a); flex: none; }
 
 /* Випадне меню категорій — під кнопкою, поверх карток. */
-.bd-cat-menu {
+/* Спільна база випадних меню Дошки (категорії + локація). */
+.bd-cat-menu,
+.bd-loc-menu {
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -2655,8 +2647,10 @@
   overflow: hidden;
   padding: 4px;
 }
-.bd-cat-menu[hidden] { display: none; }
-.bd-cat-mi {
+.bd-cat-menu[hidden],
+.bd-loc-menu[hidden] { display: none; }
+.bd-cat-mi,
+.bd-loc-mi {
   display: flex;
   align-items: center;
   gap: 11px;
@@ -2672,10 +2666,21 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.bd-cat-mi:active { background: rgba(0,0,0,0.05); }
-.bd-cat-mi.active { background: rgba(114,47,55,0.10); font-weight: 700; }
+.bd-cat-mi:active,
+.bd-loc-mi:active { background: rgba(0,0,0,0.05); }
+.bd-cat-mi.active,
+.bd-loc-mi.active { background: rgba(114,47,55,0.10); font-weight: 700; }
 .bd-cat-mi-ico { display: inline-flex; font-size: 18px; flex: none; }
 .bd-cat-mi-label { min-width: 0; }
+/* Меню локації: праворуч під кнопкою (щоб не вилазило за правий край) + прокрутка
+   (довгий список НП). ПІСЛЯ спільної бази — щоб перекрити left:0/overflow:hidden. */
+.bd-loc-menu {
+  right: 0;
+  left: auto;
+  max-height: 60vh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
 
 /* Тіло — порожній стан і стрічка */
 .bd-body { min-height: 50vh; }

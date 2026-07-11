@@ -3507,21 +3507,6 @@
   function isCommunityWide(loc) {
     return !loc || loc === COMMUNITY_ALL;
   }
-  function sizeLocSelect(sel) {
-    if (!sel)
-      return;
-    const opt = sel.options[sel.selectedIndex];
-    const txt = (opt ? opt.text : "") || "";
-    const cs = getComputedStyle(sel);
-    const canvas = sizeLocSelect._c || (sizeLocSelect._c = document.createElement("canvas"));
-    const ctx = canvas.getContext("2d");
-    ctx.font = `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
-    const shown = cs.textTransform === "uppercase" ? txt.toUpperCase() : txt;
-    let w = ctx.measureText(shown).width;
-    w += (parseFloat(cs.letterSpacing) || 0) * shown.length;
-    w += parseFloat(cs.paddingRight) || 0;
-    sel.style.width = Math.ceil(w) + 2 + "px";
-  }
   function pluralAds(n) {
     const d = n % 10, dd = n % 100;
     if (d === 1 && dd !== 11)
@@ -4581,11 +4566,15 @@ ${post.text}
       <div class="bd-subrow">
         <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
-          <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
-          <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
-            <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
-            ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
-          </select>
+          <button class="bd-loc-btn" id="bd-loc-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
+            <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
+            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : activeLocation)}</span>
+            <svg class="bd-loc-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="bd-loc-menu" id="bd-loc-menu" role="menu" hidden>
+            <button class="bd-loc-mi${activeLocation === COMMUNITY_ALL ? " active" : ""}" type="button" role="menuitem" data-bd-loc="${escapeHtml(COMMUNITY_ALL)}">${escapeHtml(COMMUNITY_ALL_LABEL)}</button>
+            ${SETTLEMENTS.map((s) => `<button class="bd-loc-mi${activeLocation === s ? " active" : ""}" type="button" role="menuitem" data-bd-loc="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
+          </div>
         </div>
       </div>
     </div>
@@ -4775,47 +4764,46 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    const locSel = document.getElementById("bd-loc-select");
-    if (locSel) {
-      sizeLocSelect(locSel);
-      locSel.addEventListener("change", (e) => {
-        activeLocation = e.target.value;
-        sizeLocSelect(locSel);
-        renderBodyOnly(el);
-      });
-    }
-    const catBtn = document.getElementById("bd-cat-filter");
-    const catMenu = document.getElementById("bd-cat-menu");
-    if (catBtn && catMenu) {
-      catBtn.addEventListener("click", (e) => {
+    const wireMenuButton = (btnId, menuId, onPick) => {
+      const btn = document.getElementById(btnId);
+      const menu = document.getElementById(menuId);
+      if (!btn || !menu)
+        return;
+      btn.addEventListener("click", (e) => {
         e.stopPropagation();
-        const willOpen = catMenu.hasAttribute("hidden");
-        catMenu.toggleAttribute("hidden", !willOpen);
-        catBtn.classList.toggle("open", willOpen);
-        catBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+        const wasHidden = menu.hasAttribute("hidden");
+        closeBoardMenus();
+        if (wasHidden) {
+          menu.removeAttribute("hidden");
+          btn.classList.add("open");
+          btn.setAttribute("aria-expanded", "true");
+        }
       });
-    }
-    el.querySelectorAll("#bd-cat-menu [data-bd-cat]").forEach((mi) => {
-      mi.addEventListener("click", () => {
-        activeCategory = mi.dataset.bdCat;
-        renderAll();
+      menu.querySelectorAll("[data-bd-cat], [data-bd-loc]").forEach((mi) => {
+        mi.addEventListener("click", () => {
+          onPick(mi);
+          renderAll();
+        });
       });
+    };
+    wireMenuButton("bd-cat-filter", "bd-cat-menu", (mi) => {
+      activeCategory = mi.dataset.bdCat;
     });
-    if (!_catMenuWired) {
-      _catMenuWired = true;
+    wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
+      activeLocation = mi.dataset.bdLoc;
+    });
+    if (!_boardMenusWired) {
+      _boardMenusWired = true;
       document.addEventListener("click", (e) => {
-        const m = document.getElementById("bd-cat-menu");
-        if (!m || m.hasAttribute("hidden"))
+        if (e.target.closest(".bd-cat-filter-wrap") || e.target.closest(".bd-loc-filter"))
           return;
-        if (e.target.closest(".bd-cat-filter-wrap"))
-          return;
-        closeCatMenu();
+        closeBoardMenus();
       });
       document.addEventListener("keydown", (e) => {
         if (e.key === "Escape")
-          closeCatMenu();
+          closeBoardMenus();
       });
-      document.querySelector(".app-main")?.addEventListener("scroll", closeCatMenu, { passive: true });
+      document.querySelector(".app-main")?.addEventListener("scroll", closeBoardMenus, { passive: true });
     }
     el.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {
@@ -5429,16 +5417,16 @@ ${post.text}
       }
     });
   }
-  var _catMenuWired = false;
-  function closeCatMenu() {
-    const m = document.getElementById("bd-cat-menu");
-    const b = document.getElementById("bd-cat-filter");
-    if (m)
-      m.setAttribute("hidden", "");
-    if (b) {
-      b.classList.remove("open");
-      b.setAttribute("aria-expanded", "false");
-    }
+  var _boardMenusWired = false;
+  function closeBoardMenus() {
+    [["bd-cat-menu", "bd-cat-filter"], ["bd-loc-menu", "bd-loc-btn"]].forEach(([menuId, btnId]) => {
+      document.getElementById(menuId)?.setAttribute("hidden", "");
+      const b = document.getElementById(btnId);
+      if (b) {
+        b.classList.remove("open");
+        b.setAttribute("aria-expanded", "false");
+      }
+    });
   }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
