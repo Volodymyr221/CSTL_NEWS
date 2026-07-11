@@ -561,6 +561,39 @@
       return "anon-fallback";
     }
   }
+  async function fetchAllReactions(anonId) {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
+    if (error) {
+      console.warn("[supabase] fetchAllReactions error:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const r of data || []) {
+      if (!map.has(r.post_id))
+        map.set(r.post_id, { counts: {}, my: null });
+      const e = map.get(r.post_id);
+      e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
+      if (r.user_id === anonId)
+        e.my = r.emoji;
+    }
+    return map;
+  }
+  async function setReaction(postId, userId, emoji) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (emoji == null) {
+      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId);
+      if (error2)
+        return { ok: false, error: error2.message };
+      return { ok: true };
+    }
+    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" });
+    if (error)
+      return { ok: false, error: error.message };
+    return { ok: true };
+  }
   async function fetchAllComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
@@ -1108,6 +1141,17 @@
       return { ok: false, error: error.message };
     }
     return { ok: true };
+  }
+  function subscribeReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
   }
   function subscribeComments(onChange) {
     if (!supa)
@@ -3475,8 +3519,13 @@
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  var USERS_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+  var DISC_TITLE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>';
+  var HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+  var HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   function renderLoc(loc) {
     if (!loc)
       return "";
@@ -3526,6 +3575,18 @@
   var searchQuery = "";
   var commentsByPost = /* @__PURE__ */ new Map();
   var savedIds = /* @__PURE__ */ new Set();
+  var LIKE_EMOJI = "\u2764\uFE0F";
+  var reactionsByPost = /* @__PURE__ */ new Map();
+  function getLikeCount(postId) {
+    return reactionsByPost.get(postId)?.counts?.[LIKE_EMOJI] || 0;
+  }
+  function isLikedByMe(postId) {
+    return reactionsByPost.get(postId)?.my === LIKE_EMOJI;
+  }
+  function likeBtnInner(postId) {
+    const liked = isLikedByMe(postId);
+    return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
+  }
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
   function lsGet(key, fallback) {
     try {
@@ -3683,7 +3744,7 @@
     const items = getComments(post.id);
     if (!items.length) {
       return `<div class="bd-chat-stream" data-comments-for="${post.id}">
-      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">\u{1F4AC}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>
+      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div>
     </div>`;
     }
     const byId2 = new Map(items.map((c) => [c.id, c]));
@@ -3779,7 +3840,7 @@
     const el = document.getElementById("bd-chat-reply-count");
     if (el) {
       const n = getComments(postId).length;
-      el.textContent = `\u{1F4AC} ${n} ${msgWord(n)}`;
+      el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
     }
   }
   var _chatModalEl = null;
@@ -3799,9 +3860,45 @@
       bodyHtml,
       variant: "sheet",
       className: "app-modal--disc",
-      onMount: (wrap) => opts.onMount?.(wrap, () => close())
+      onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+      onClose: opts.onClose
     }));
     return close;
+  }
+  function attachSheetKeyboardFix(wrap, input) {
+    const vv = window.visualViewport;
+    const fullH = window.innerHeight;
+    const applyKb = () => {
+      const visH = vv ? vv.height : window.innerHeight;
+      const open = visH < fullH - 80;
+      if (open) {
+        wrap.style.top = (vv ? vv.offsetTop : 0) + "px";
+        wrap.style.height = (vv ? vv.height : window.innerHeight) + "px";
+        wrap.style.bottom = "auto";
+      } else {
+        wrap.style.top = "";
+        wrap.style.height = "";
+        wrap.style.bottom = "";
+      }
+    };
+    let kbTimer = null;
+    const handler = () => {
+      clearTimeout(kbTimer);
+      kbTimer = setTimeout(applyKb, 80);
+    };
+    window.addEventListener("resize", handler);
+    vv?.addEventListener("resize", handler);
+    vv?.addEventListener("scroll", handler);
+    input?.addEventListener("focus", handler);
+    input?.addEventListener("blur", handler);
+    return () => {
+      clearTimeout(kbTimer);
+      window.removeEventListener("resize", handler);
+      vv?.removeEventListener("resize", handler);
+      vv?.removeEventListener("scroll", handler);
+      input?.removeEventListener("focus", handler);
+      input?.removeEventListener("blur", handler);
+    };
   }
   function openDiscussionList(title, posts) {
     const body = posts.length ? posts.map(renderChatCard).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
@@ -3826,12 +3923,16 @@
       <button type="submit" class="disc-compose-submit">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438</button>
       <p class="disc-compose-note">\u0417\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443. \u041C\u0430\u0442\u044E\u043A\u0438/\u043E\u0431\u0440\u0430\u0437\u0438 \u0431\u043B\u043E\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.</p>
     </form>`;
+    let detachKb = null;
     openDiscSheet({
       title: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F",
       bodyHtml: form,
+      // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
+      // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
+      // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
       onMount: (sheet, close) => {
         const ta = sheet.querySelector("#disc-compose-topic");
-        ta?.focus();
+        detachKb = attachSheetKeyboardFix(sheet, ta);
         sheet.querySelector("#disc-compose-form")?.addEventListener("submit", async (e) => {
           e.preventDefault();
           const text = (ta?.value || "").trim();
@@ -3870,6 +3971,10 @@
           showToast("\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!", 3e3);
           renderBoard();
         });
+      },
+      onClose: () => {
+        detachKb?.();
+        detachKb = null;
       }
     });
   }
@@ -3890,7 +3995,7 @@
       <button class="bd-chat-modal-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">\u{1F4AC} ${replyCount} ${msgWord(replyCount)}</div>
+        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">${COMMENT_ICON_SVG} ${replyCount} ${msgWord(replyCount)}</div>
       </div>
     </header>
     <div class="bd-chat-modal-body" id="bd-chat-modal-body">
@@ -4308,15 +4413,22 @@ ${post.text}
            <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(m.text)}</span>
            <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
          </div>`).join("")}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
+    const liked = isLikedByMe(p.id);
     return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <div class="bd-chat-msgcount">\u{1F4AC} ${count} ${msgWord(count)}</div>
+      <div class="bd-chat-topline">
+        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
+      </div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">\u{1F465} ${participants}</span>
+        <button class="bd-chat-like${liked ? " bd-chat-like--active" : ""}" type="button"
+                data-like-id="${p.id}" aria-label="${liked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A"}">
+          ${likeBtnInner(p.id)}
+        </button>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
@@ -4350,7 +4462,7 @@ ${post.text}
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed disc-fab-plus" id="board-trigger" type="button" aria-label="\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
       </button>
@@ -4425,7 +4537,7 @@ ${post.text}
   }
   function renderHeader() {
     const discHead = activeType === "chat" ? `<div class="bd-disc-head">
-         <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
+         <span class="bd-disc-title">${DISC_TITLE_ICON_SVG} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
        </div>` : "";
     const showCategories = activeType === "board";
     const activeIcon = activeCategory === "all" ? ALL_ICON : catIcon(activeCategory);
@@ -4532,14 +4644,16 @@ ${post.text}
       return;
     if (isSupabaseReady()) {
       const uid = currentUserId();
-      const [posts, anns, comments, saved] = await Promise.all([
+      const [posts, anns, comments, saved, reactions] = await Promise.all([
         fetchPublishedPosts(),
         fetchPublishedAnnouncements(),
         fetchAllComments(),
-        uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set())
+        uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set()),
+        fetchAllReactions(uid || getAnonId())
       ]);
       if (posts !== null) {
         allPosts = posts;
+        reactionsByPost = reactions;
         allAnnouncements = anns || [];
         commentsByPost = comments;
         savedIds = saved;
@@ -5059,7 +5173,7 @@ ${post.text}
     });
     document.addEventListener("click", (e) => {
       const chatCard = e.target.closest("[data-chat-open]");
-      if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]")) {
+      if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]") && !e.target.closest("[data-like-id]")) {
         const id = Number(chatCard.dataset.chatOpen);
         const post = allPosts.find((p) => p.id === id);
         if (post)
@@ -5100,6 +5214,33 @@ ${post.text}
           document.querySelector("#board-backdrop.visible")?.click();
           renderBodyOnly();
         }
+        return;
+      }
+      const likeBtn = e.target.closest("[data-like-id]");
+      if (likeBtn) {
+        e.stopPropagation();
+        const id = Number(likeBtn.dataset.likeId);
+        requireAuth("\u043B\u0430\u0439\u043A\u0430\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", async () => {
+          const uid = currentUserId();
+          const wasLiked = isLikedByMe(id);
+          const entry = reactionsByPost.get(id) || { counts: {}, my: null };
+          entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
+          entry.my = wasLiked ? null : LIKE_EMOJI;
+          reactionsByPost.set(id, entry);
+          likeBtn.innerHTML = likeBtnInner(id);
+          likeBtn.classList.toggle("bd-chat-like--active", !wasLiked);
+          likeBtn.setAttribute("aria-label", wasLiked ? "\u041B\u0430\u0439\u043A" : "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A");
+          const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
+          if (!res.ok) {
+            entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
+            entry.my = wasLiked ? LIKE_EMOJI : null;
+            reactionsByPost.set(id, entry);
+            likeBtn.innerHTML = likeBtnInner(id);
+            likeBtn.classList.toggle("bd-chat-like--active", wasLiked);
+            likeBtn.setAttribute("aria-label", wasLiked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A");
+            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043B\u0430\u0439\u043A", 2500, "error");
+          }
+        });
         return;
       }
       const shareBtn = e.target.closest("[data-share-board]");
@@ -5145,12 +5286,23 @@ ${post.text}
       refreshChatCardPreview(postId);
     });
   }
+  function onReactionRealtimeEvent(payload) {
+    const postId = (payload.new || payload.old || {}).post_id;
+    if (!postId)
+      return;
+    const uid = currentUserId();
+    fetchAllReactions(uid || getAnonId()).then((fresh) => {
+      reactionsByPost = fresh;
+      refreshChatCardPreview(postId);
+    });
+  }
   var _realtimeAttached = false;
   function attachRealtime() {
     if (_realtimeAttached || !isSupabaseReady())
       return;
     _realtimeAttached = true;
     subscribeComments(onCommentRealtimeEvent);
+    subscribeReactions(onReactionRealtimeEvent);
   }
   var discOpen = false;
   function getBoardRoot() {
