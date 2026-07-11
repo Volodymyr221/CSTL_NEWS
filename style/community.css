@@ -2704,15 +2704,17 @@
   z-index: 1;
   text-align: center;
   padding: 18px 24px 10px;
-  color: #6b5a3f;
-  font-size: 13px;
+  color: #4A3B22;
+  font-size: 14px;
+  font-weight: 700;
   line-height: 1.5;
 }
 .bd-group-empty-hint {
   display: block;
   margin-top: 4px;
-  color: #9a8a70;
-  font-size: 12px;
+  color: #6b5a3f;
+  font-size: 13px;
+  font-weight: 600;
 }
 
 .bd-stream {
