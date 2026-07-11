@@ -39,5 +39,53 @@ CREATE POLICY "Admins can read events"
   TO authenticated
   USING (is_admin());
 
+
+-- 2. Агреговані профіль-метрики для адмінки (село/вік) -------------------------
+-- RLS profiles ("own row read", supabase_profiles.sql) НЕ дає адмінці читати
+-- чужі рядки напряму — і правильно, не варто відкривати сирі профілі (ім'я+пошта+
+-- дата народження кожного) заради статистики. Замість цього — SECURITY DEFINER
+-- функція (той самий патерн що is_admin()/has_editor_perm()): рахує ВСЕРЕДИНІ бази,
+-- назовні віддає лише агреговані числа по кошиках (скільки людей у якому селі/
+-- віковому діапазоні) — жодного конкретного профілю адмінка не бачить.
+CREATE OR REPLACE FUNCTION admin_profile_stats()
+RETURNS JSONB
+LANGUAGE plpgsql STABLE SECURITY DEFINER SET search_path = public
+AS $$
+DECLARE
+  result JSONB;
+BEGIN
+  IF NOT is_admin() THEN
+    RETURN jsonb_build_object('error', 'not admin');
+  END IF;
+  SELECT jsonb_build_object(
+    'total_profiles', (SELECT count(*) FROM profiles),
+    'by_settlement', (
+      SELECT coalesce(jsonb_object_agg(coalesce(settlement, '—'), cnt), '{}'::jsonb)
+      FROM (SELECT settlement, count(*) cnt FROM profiles GROUP BY settlement) s
+    ),
+    'by_age_bracket', (
+      SELECT coalesce(jsonb_object_agg(bracket, cnt), '{}'::jsonb)
+      FROM (
+        SELECT
+          CASE
+            WHEN birth_date IS NULL THEN 'невідомо'
+            WHEN date_part('year', age(birth_date)) < 18 THEN 'до 18'
+            WHEN date_part('year', age(birth_date)) < 26 THEN '18-25'
+            WHEN date_part('year', age(birth_date)) < 36 THEN '26-35'
+            WHEN date_part('year', age(birth_date)) < 51 THEN '36-50'
+            ELSE '50+'
+          END AS bracket,
+          count(*) cnt
+        FROM profiles GROUP BY bracket
+      ) b
+    )
+  ) INTO result;
+  RETURN result;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION admin_profile_stats() TO authenticated;
+
 -- Готово. Перевірка після Run:
 --   1. Таблиця analytics_events існує, RLS увімкнено, 2 політики видно в Authentication → Policies.
+--   2. RPC: select admin_profile_stats(); (залогінена сесія адміна) — повертає jsonb з агрегатами.

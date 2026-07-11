@@ -760,11 +760,13 @@ function renderApp() {
   ) : '';
   const articleTab = canArticles ? tab('articles', '📝 Статті', articles.length) : '';
   const spendTab = isAdmin ? tab('spend', '💸 Витрати AI') : '';
+  const analyticsTab = isAdmin ? tab('analytics', '📊 Аналітика') : '';
   mainEl.innerHTML = `
     <div class="tabs">
       ${articleTab}
       ${boardTabs}
       ${spendTab}
+      ${analyticsTab}
       ${tab('settings', '⚙️ Налаштування')}
     </div>
     <div id="tab-content"></div>
@@ -788,6 +790,7 @@ function renderTabContent() {
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'spend')          return renderSpend(el);
+  if (activeTab === 'analytics')      return renderAnalytics(el);
   if (activeTab === 'settings')       return renderSettings(el);
 }
 
@@ -825,6 +828,96 @@ async function renderSpend(el) {
           <span class="spend-row-meta">${(r.found || 0)} статей · ${(r.web_searches || 0)} пош.${r.cache_read ? ' · кеш ' + Math.round(r.cache_read / 1000) + 'k' : ''}${r.note ? ' · ' + escapeHtml(r.note) : ''}</span>
         </div>`).join('') + '</div>'}
     <p style="font-size:12px;color:#999;margin-top:12px">Ціни claude-sonnet-5: вхід $3 / вихід $15 за 1млн токенів · веб-пошук $10/1000. Оновлюється після кожного запуску агента (кожні 6 год).</p>
+  `;
+}
+
+// ── TAB: Аналітика (Потік 6, byyou) ────────────────────────────────────
+// Власна статистика (без Google Analytics/Plausible) — сирі події з
+// analytics_events (RLS: лише is_admin() читає) + агрегати профілю через
+// SECURITY DEFINER admin_profile_stats() (не бачимо чужі сирі профілі,
+// тільки кошики). Кнопка «Оновити статистику» (AI-висновок) — Потік 2,
+// чекає ANTHROPIC_API_KEY у Supabase secrets, поки задизейблена.
+const TAB_LABELS_UK = {
+  community: 'Громада', shotam: 'Шо в селі', board: 'Дошка', chat: 'Обговорення',
+  buses: 'Автобуси', power: 'Світло', account: 'Кабінет',
+};
+async function fetchAnalyticsEvents(sinceDays) {
+  let q = supa.from('analytics_events').select('visitor_id, event_type, tab, meta, created_at');
+  if (sinceDays !== 'all') {
+    q = q.gte('created_at', new Date(Date.now() - sinceDays * 86400000).toISOString());
+  }
+  const { data, error } = await q.limit(20000);
+  return error ? [] : (data || []);
+}
+function summarizeEvents(rows) {
+  const uniqueVisitors = new Set(rows.map(r => r.visitor_id)).size;
+  const byTab = {}, byDevice = {}, byHour = {};
+  let pwaInstalls = 0;
+  for (const r of rows) {
+    if (r.event_type === 'tab_view' && r.tab) byTab[r.tab] = (byTab[r.tab] || 0) + 1;
+    if (r.event_type === 'pwa_install') pwaInstalls++;
+    const device = r.meta && r.meta.device;
+    if (device) byDevice[device] = (byDevice[device] || 0) + 1;
+    const hour = new Date(r.created_at).getHours();
+    byHour[hour] = (byHour[hour] || 0) + 1;
+  }
+  return { total: rows.length, uniqueVisitors, byTab, byDevice, byHour, pwaInstalls };
+}
+function barRows(counts, labelMap) {
+  const entries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  if (!entries.length) return '<div class="empty">Поки немає даних.</div>';
+  const max = entries[0][1];
+  return '<div class="spend-log">' + entries.map(([k, v]) => `
+    <div class="spend-row">
+      <span class="spend-row-date">${escapeHtml((labelMap && labelMap[k]) || k)}</span>
+      <span class="spend-row-meta" style="flex:1;margin:0 10px">
+        <span style="display:block;height:8px;border-radius:4px;background:#722F37;opacity:.25;width:${Math.round(v / max * 100)}%"></span>
+      </span>
+      <span class="spend-row-cost">${v}</span>
+    </div>`).join('') + '</div>';
+}
+async function renderAnalytics(el) {
+  el.innerHTML = '<div class="empty">Завантаження…</div>';
+  const [today, week, all, profStatsRes] = await Promise.all([
+    fetchAnalyticsEvents(1),
+    fetchAnalyticsEvents(7),
+    fetchAnalyticsEvents('all'),
+    supa.rpc('admin_profile_stats'),
+  ]);
+  const sToday = summarizeEvents(today);
+  const sWeek  = summarizeEvents(week);
+  const sAll   = summarizeEvents(all);
+  const prof = (!profStatsRes.error && profStatsRes.data && !profStatsRes.data.error) ? profStatsRes.data : null;
+
+  el.innerHTML = `
+    <div class="section-title">📊 Статистика застосунку</div>
+    <div class="spend-cards">
+      <article class="card"><div class="spend-lbl">Унікальних сьогодні</div><div class="spend-big">${sToday.uniqueVisitors}</div><div class="spend-sub">${sToday.total} подій</div></article>
+      <article class="card"><div class="spend-lbl">Унікальних за 7 днів</div><div class="spend-big">${sWeek.uniqueVisitors}</div><div class="spend-sub">${sWeek.total} подій</div></article>
+      <article class="card"><div class="spend-lbl">Унікальних усього</div><div class="spend-big">${sAll.uniqueVisitors}</div><div class="spend-sub">${sAll.total} подій · ${sAll.pwaInstalls} встановлень PWA</div></article>
+    </div>
+
+    <div class="section-title" style="margin-top:22px">🤖 AI-висновок</div>
+    <div class="card" style="margin-bottom:16px">
+      <button class="login-btn" id="ai-refresh-btn" disabled style="width:auto;padding:8px 18px;opacity:.5;cursor:not-allowed">Оновити статистику</button>
+      <p style="font-size:12px;color:#999;margin-top:8px">Потребує ключа ANTHROPIC_API_KEY у Supabase secrets (Потік 2) — поки недоступно.</p>
+    </div>
+
+    <div class="section-title">По вкладках (7 днів)</div>
+    ${barRows(sWeek.byTab, TAB_LABELS_UK)}
+
+    <div class="section-title" style="margin-top:22px">Пристрій (7 днів)</div>
+    ${barRows(sWeek.byDevice, { mobile: 'Телефон', desktop: 'Комп’ютер' })}
+
+    <div class="section-title" style="margin-top:22px">Час доби (7 днів, година)</div>
+    ${barRows(sWeek.byHour)}
+
+    ${prof ? `
+      <div class="section-title" style="margin-top:22px">Населені пункти (профілі, ${prof.total_profiles})</div>
+      ${barRows(prof.by_settlement)}
+      <div class="section-title" style="margin-top:22px">Вік (профілі, самозаповнення)</div>
+      ${barRows(prof.by_age_bracket)}
+    ` : `<p style="font-size:12px;color:#999;margin-top:12px">Розподіл по селах/віку недоступний — потрібна SQL-міграція scripts/supabase_analytics.sql (RPC admin_profile_stats).</p>`}
   `;
 }
 
