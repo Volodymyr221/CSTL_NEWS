@@ -1998,6 +1998,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+  padding: 14px 20px 16px;   /* трохи вища панель, вміст по центру вертикалі (Вова 11.07) */
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-foot {
   justify-content: flex-start;
