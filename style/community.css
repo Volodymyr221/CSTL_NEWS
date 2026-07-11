@@ -2386,6 +2386,7 @@
   font-size: 18px; font-weight: 800;
   color: var(--ink);
 }
+.bd-disc-title svg { vertical-align: -3px; margin-right: 4px; color: var(--red); }
 /* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
    картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.
@@ -2865,12 +2866,21 @@
   align-items: flex-start;
 }
 .bd-chat-topic-icon { font-size: 16px; line-height: 1.5; flex-shrink: 0; }
-/* Лічильник повідомлень — окремий рядок під темою (де раніше був автор) */
-.bd-chat-msgcount {
+/* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) */
+.bd-chat-topline {
   margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bd-chat-msgcount, .bd-chat-participants {
   font-size: 12px;
   font-weight: 600;
   color: var(--gray);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .bd-chat-last {
   margin-top: 8px;
@@ -2915,7 +2925,26 @@
   font-size: 12px;
   color: var(--gray);
 }
-.bd-chat-count { font-weight: 600; margin-right: auto; }
+.bd-chat-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-chat-like:active { background: rgba(0,0,0,0.05); }
+.bd-chat-like--active { color: var(--red); }
+.bd-chat-like svg { flex-shrink: 0; }
 .bd-chat-foot-arrow { font-size: 15px; color: var(--red); }
 /* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
 .bd-chat-by {
@@ -2932,26 +2961,6 @@
 .bd-chat-by-date { font-size: 10.5px; color: var(--gray); }
 /* Кнопка «зберегти» в підвалі картки — трохи компактніша */
 .bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
-
-/* ── FAB Обговорень: червоний круг з білим плюсом (окремий від Дошки) ────── */
-.cm-board-trigger.disc-fab-plus {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--red);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 18px rgba(226,55,68,0.42);
-}
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-text { display: none; }
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-icon,
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-close { color: #fff; }
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-icon svg,
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-close svg { width: 26px; height: 26px; }
 
 /* ── Кімнати/модалка Обговорень (bottom-sheet) — chrome тепер спільний
    примітив core/modal.js (Потік C2); тут лишається контент-специфічне. ── */
@@ -3067,6 +3076,7 @@
   font-size: 12px; color: var(--gray); margin-top: 1px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
+.bd-chat-modal-meta svg { vertical-align: -2px; margin-right: 2px; }
 .bd-chat-modal-sub {
   font-size: 12px; color: var(--gray);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
@@ -3084,7 +3094,8 @@
   margin: auto; text-align: center; color: var(--gray);
   font-size: 13px; line-height: 1.5; padding: 24px 12px;
 }
-.bd-chat-empty-icon { display: block; font-size: 40px; margin-bottom: 8px; opacity: 0.5; }
+.bd-chat-empty-icon { display: block; margin-bottom: 8px; opacity: 0.5; }
+.bd-chat-empty-icon svg { width: 32px; height: 32px; }
 
 /* ── Групи бульбашок (месенджер-стиль) ── */
 .bd-msg-group { display: flex; gap: 8px; align-items: flex-end; max-width: 84%; }

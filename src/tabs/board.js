@@ -17,6 +17,7 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
+  fetchAllReactions, setReaction, subscribeReactions, getAnonId,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
@@ -48,6 +49,11 @@ const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="
 const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
 // Пін локації (векторний, у стилі інших іконок додатку) — для фільтра НП.
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+// Векторні іконки Обговорень (заміна емодзі 💬/👥/📢) — той самий лінійний стиль.
+const USERS_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+const DISC_TITLE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>';
+const HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+const HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 // Д-19: показ локації на картці/зум-модалці. null/порожньо (старі пости — будуть
 // видалені) → нічого; COMMUNITY_ALL → «Олицька громада» (COMMUNITY_ALL_LABEL);
 // конкретний НП → його назву. Guard прибрано ЛИШЕ для показу — фільтр не чіпаємо.
@@ -116,6 +122,24 @@ let searchQuery    = '';
 // renderBoard(), оновлюється при кліках через optimistic update.
 let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
 let savedIds        = new Set();  // postId закладок ПОТОЧНОГО акаунта (з БД saved_posts)
+
+// Лайки Обговорень (Д-задача 3) — реюз наявного дата-шару reactions (setReaction/
+// fetchAllReactions/subscribeReactions у supabase.js), той самий що раніше живив
+// реакції оголошень (прибрані з Дошки 11.07, Д-13) — тут інша концепція: одна
+// емоція ❤️ = «лайк» теми обговорення, не набір реакцій.
+const LIKE_EMOJI = '❤️';
+let reactionsByPost = new Map();  // postId → { counts:{emoji:count}, my: emoji|null }
+
+function getLikeCount(postId) {
+  return reactionsByPost.get(postId)?.counts?.[LIKE_EMOJI] || 0;
+}
+function isLikedByMe(postId) {
+  return reactionsByPost.get(postId)?.my === LIKE_EMOJI;
+}
+function likeBtnInner(postId) {
+  const liked = isLikedByMe(postId);
+  return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
+}
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
 
@@ -299,7 +323,7 @@ function chatMessagesHtml(post) {
   const items = getComments(post.id);
   if (!items.length) {
     return `<div class="bd-chat-stream" data-comments-for="${post.id}">
-      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">💬</span>Поки порожньо.<br>Напишіть перше повідомлення 👋</div>
+      <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>Поки порожньо.<br>Напишіть перше повідомлення</div>
     </div>`;
   }
   const byId = new Map(items.map(c => [c.id, c]));
@@ -396,7 +420,7 @@ function updateChatHeaderCount(postId) {
   const el = document.getElementById('bd-chat-reply-count');
   if (el) {
     const n = getComments(postId).length;
-    el.textContent = `💬 ${n} ${msgWord(n)}`;
+    el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
   }
 }
 
@@ -427,8 +451,46 @@ function openDiscSheet(opts) {
     variant: 'sheet',
     className: 'app-modal--disc',
     onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+    onClose: opts.onClose,
   }));
   return close;
+}
+
+// Клавіатура на iOS PWA (аркуш «Створити обговорення») — той самий debounce-патерн,
+// що й applyKb у openChatModal: слухаємо visualViewport, при відкритій клавіатурі
+// стискаємо .app-modal (position:fixed;inset:0) під видиму область, щоб форма
+// лишалась над клавіатурою, а не переставала бути видною знизу. Повертає cleanup.
+function attachSheetKeyboardFix(wrap, input) {
+  const vv = window.visualViewport;
+  const fullH = window.innerHeight;
+  const applyKb = () => {
+    const visH = vv ? vv.height : window.innerHeight;
+    const open = visH < fullH - 80;
+    if (open) {
+      wrap.style.top = (vv ? vv.offsetTop : 0) + 'px';
+      wrap.style.height = (vv ? vv.height : window.innerHeight) + 'px';
+      wrap.style.bottom = 'auto';
+    } else {
+      wrap.style.top = '';
+      wrap.style.height = '';
+      wrap.style.bottom = '';
+    }
+  };
+  let kbTimer = null;
+  const handler = () => { clearTimeout(kbTimer); kbTimer = setTimeout(applyKb, 80); };
+  window.addEventListener('resize', handler);
+  vv?.addEventListener('resize', handler);
+  vv?.addEventListener('scroll', handler);
+  input?.addEventListener('focus', handler);
+  input?.addEventListener('blur', handler);
+  return () => {
+    clearTimeout(kbTimer);
+    window.removeEventListener('resize', handler);
+    vv?.removeEventListener('resize', handler);
+    vv?.removeEventListener('scroll', handler);
+    input?.removeEventListener('focus', handler);
+    input?.removeEventListener('blur', handler);
+  };
 }
 
 // Список обговорень (Мої / Збережені) — реюз renderChatCard; тап відкриває чат
@@ -462,12 +524,16 @@ function openDiscussionCompose() {
       <button type="submit" class="disc-compose-submit">Створити</button>
       <p class="disc-compose-note">Зʼявиться одразу. Матюки/образи блокуються автоматично.</p>
     </form>`;
+  let detachKb = null;
   openDiscSheet({
     title: 'Створити обговорення',
     bodyHtml: form,
+    // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
+    // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
+    // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
     onMount: (sheet, close) => {
       const ta = sheet.querySelector('#disc-compose-topic');
-      ta?.focus();
+      detachKb = attachSheetKeyboardFix(sheet, ta);
       sheet.querySelector('#disc-compose-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const text = (ta?.value || '').trim();
@@ -494,6 +560,7 @@ function openDiscussionCompose() {
         renderBoard();   // перезавантажити стрічку — нове обговорення одразу видно
       });
     },
+    onClose: () => { detachKb?.(); detachKb = null; },
   });
 }
 
@@ -516,7 +583,7 @@ function openChatModal(post) {
       <button class="bd-chat-modal-back" type="button" aria-label="Назад">←</button>
       <div class="bd-chat-modal-titles">
         <div class="bd-chat-modal-title">${escapeHtml(post.text)}</div>
-        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">💬 ${replyCount} ${msgWord(replyCount)}</div>
+        <div class="bd-chat-modal-meta" id="bd-chat-reply-count">${COMMENT_ICON_SVG} ${replyCount} ${msgWord(replyCount)}</div>
       </div>
     </header>
     <div class="bd-chat-modal-body" id="bd-chat-modal-body">
@@ -921,15 +988,22 @@ function renderChatCard(p) {
            <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
          </div>`).join('')}</div>`
     : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
+  const liked = isLikedByMe(p.id);
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
+      <div class="bd-chat-topline">
+        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
+      </div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">👥 ${participants}</span>
+        <button class="bd-chat-like${liked ? ' bd-chat-like--active' : ''}" type="button"
+                data-like-id="${p.id}" aria-label="${liked ? 'Прибрати лайк' : 'Лайк'}">
+          ${likeBtnInner(p.id)}
+        </button>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
@@ -968,7 +1042,7 @@ function renderFab() {
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
-      <button class="cm-board-trigger board-trigger--fixed disc-fab-plus" id="board-trigger" type="button" aria-label="Обговорення" aria-expanded="false">
+      <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Обговорення" aria-expanded="false">
         <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg></span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
       </button>
@@ -1065,7 +1139,7 @@ function renderHeader() {
   // Обговорення — головна сторінка вкладки, тому кнопки «← назад» НЕМА (нікуди виходити).
   const discHead = activeType === 'chat'
     ? `<div class="bd-disc-head">
-         <span class="bd-disc-title">📢 Обговорення</span>
+         <span class="bd-disc-title">${DISC_TITLE_ICON_SVG} Обговорення</span>
        </div>`
     : '';
 
@@ -1214,18 +1288,20 @@ export async function renderBoard() {
   const el = getBoardRoot();
   if (!el) return;
 
-  // 1. Supabase: пости + анонси + коментарі + закладки паралельно
+  // 1. Supabase: пости + анонси + коментарі + закладки + реакції(лайки) паралельно
   if (isSupabaseReady()) {
     // «Моя» закладка — лише для залогіненого акаунта (uid). Гість → нічого персонального.
     const uid = currentUserId();
-    const [posts, anns, comments, saved] = await Promise.all([
+    const [posts, anns, comments, saved, reactions] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
       fetchAllComments(),
       uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
+      fetchAllReactions(uid || getAnonId()),
     ]);
     if (posts !== null) {
       allPosts         = posts;
+      reactionsByPost  = reactions;
       allAnnouncements = anns || [];
       commentsByPost   = comments;
       savedIds         = saved;
@@ -1717,7 +1793,8 @@ function attachBoardDelegation() {
     // Тап по картці обговорення → повноекранна модалка-чат
     const chatCard = e.target.closest('[data-chat-open]');
     if (chatCard && !e.target.closest('.bd-chat-modal')
-        && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')) {
+        && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')
+        && !e.target.closest('[data-like-id]')) {
       const id = Number(chatCard.dataset.chatOpen);
       const post = allPosts.find(p => p.id === id);
       if (post) openChatModal(post);
@@ -1761,6 +1838,36 @@ function attachBoardDelegation() {
         document.querySelector('#board-backdrop.visible')?.click();
         renderBodyOnly();
       }
+      return;
+    }
+
+    // Лайк теми обговорення — тогл через наявний data-шар reactions (одна емоція ❤️)
+    const likeBtn = e.target.closest('[data-like-id]');
+    if (likeBtn) {
+      e.stopPropagation();
+      const id = Number(likeBtn.dataset.likeId);
+      requireAuth('лайкати обговорення', async () => {
+        const uid = currentUserId();
+        const wasLiked = isLikedByMe(id);
+        const entry = reactionsByPost.get(id) || { counts: {}, my: null };
+        entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
+        entry.my = wasLiked ? null : LIKE_EMOJI;
+        reactionsByPost.set(id, entry);
+        likeBtn.innerHTML = likeBtnInner(id);
+        likeBtn.classList.toggle('bd-chat-like--active', !wasLiked);
+        likeBtn.setAttribute('aria-label', wasLiked ? 'Лайк' : 'Прибрати лайк');
+        const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
+        if (!res.ok) {
+          // Відкат при помилці мережі/RLS
+          entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
+          entry.my = wasLiked ? LIKE_EMOJI : null;
+          reactionsByPost.set(id, entry);
+          likeBtn.innerHTML = likeBtnInner(id);
+          likeBtn.classList.toggle('bd-chat-like--active', wasLiked);
+          likeBtn.setAttribute('aria-label', wasLiked ? 'Прибрати лайк' : 'Лайк');
+          showToast('Не вдалося зберегти лайк', 2500, 'error');
+        }
+      });
       return;
     }
 
@@ -1813,11 +1920,23 @@ function onCommentRealtimeEvent(payload) {
   });
 }
 
+// Лайки Обговорень — той самий рефетч-і-перемалюй підхід, що й коментарі.
+function onReactionRealtimeEvent(payload) {
+  const postId = (payload.new || payload.old || {}).post_id;
+  if (!postId) return;
+  const uid = currentUserId();
+  fetchAllReactions(uid || getAnonId()).then(fresh => {
+    reactionsByPost = fresh;
+    refreshChatCardPreview(postId);
+  });
+}
+
 let _realtimeAttached = false;
 function attachRealtime() {
   if (_realtimeAttached || !isSupabaseReady()) return;
   _realtimeAttached = true;
   subscribeComments(onCommentRealtimeEvent);
+  subscribeReactions(onReactionRealtimeEvent);
 }
 
 // ── «Обговорення» як повноекранний overlay поверх вкладки «Чати» (варіант Б) ──
