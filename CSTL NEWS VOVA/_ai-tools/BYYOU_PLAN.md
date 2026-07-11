@@ -17,15 +17,15 @@
 | 1 | SQL: `analytics_events` (visitor_id, event_type, tab, ts, meta jsonb) — insert відкритий (анонім+акаунт), select лише `admins`. **Виправлено на кроці 4:** `profiles.age` НЕ додаю — `birth_date` вже є (`supabase_profiles.sql`, збирається в анкеті), вік рахую з нього на льоту | `scripts/supabase_analytics.sql` (новий) | ✅ `bee55ff8`, виправлено далі |
 | 2 | `supabase.js`: `logEvent(visitorId,type,{tab,meta})` (fire-and-forget), `fetchAnalyticsSummary()` (агрегати: унікальні, по вкладках, пристрій, час доби) | `src/core/supabase.js` | ✅ `f1c1d8d4` |
 | 3 | `logEvent` у точці зміни вкладки (`window.switchTab`, `app.js`) + перший перегляд дефолтної вкладки при `init()` + `PWA install` (`appinstalled`, `boot.js`) | `src/app.js`, `src/core/boot.js` | ✅ `da582d38` |
-| 4 | ~~Профіль: поле «Вік»~~ — **не потрібно**, `birth_date` вже збирається (`openProfile`/`openAccount`, `account-ui.js:59-83,112-241`). Виправила SQL кроку 1 (прибрала зайву колонку `age`) | `scripts/supabase_analytics.sql` | 🟢 |
-| 5 | `admin.html`: нова вкладка «📊 Аналітика» — stat-card сітка (мірор `renderSpend`), прямі Supabase-запити (унікальні/сьогодні/тиждень, топ-вкладки, пристрій, вік з `birth_date`, села) | `admin.html` | 🟢 |
-| 6 | `admin.html`: іконки вкладок → Tabler SVG (замість емодзі), кнопка «Оновити статистику» (поки без дії — Потік 2 підключить) | `admin.html` | 🟢 |
-| 7 | Тест-блок: `node --check` усіх `.js`, ручна перевірка `admin.html` (валідний HTML, немає розсинхрону тегів) | — | 🟢 |
-| 8 | Playwright-смоук: поле «Вік» зберігається (юніт-тест функції як у Потоці C2, гейт `requireAuth`), `logEvent` не кидає помилок на зміні вкладки | — | 🟢 |
+| 4 | ~~Профіль: поле «Вік»~~ — **не потрібно**, `birth_date` вже збирається (`openProfile`/`openAccount`, `account-ui.js:59-83,112-241`). Виправила SQL кроку 1 (прибрала зайву колонку `age`) | `scripts/supabase_analytics.sql` | ✅ `69f9f563` |
+| 5 | `admin.html`: нова вкладка «Аналітика» — stat-cards (мірор `renderSpend`), прямі запити до `analytics_events` (унікальні сьогодні/7д/усього, PWA-встановлення, по вкладках/пристрою/годині). **Знахідка:** RLS `profiles` (own-row) не дає читати чужі профілі — нова SECURITY DEFINER `admin_profile_stats()` (мірор `is_admin()`) віддає лише агреговані кошики (село/вік), не сирі профілі | `admin.html`, `scripts/supabase_analytics.sql` | ✅ `b94e5032` |
+| 6 | `admin.html`: 9 вкладок емодзі→Tabler SVG (реальні path з github.com/tabler/tabler-icons, MIT), кнопка «Оновити статистику» — задизейблена заглушка (Потік 2 підключить) | `admin.html` | ✅ `88a6dbaf` |
+| 7 | Тест-блок: `node --check` усіх `.js` + `node build.js`, `admin.html` (вилучений inline-скрипт синтаксично чистий, баланс div/svg) | — | ✅ `96f196dd` |
+| 8 | Playwright-смоук: перемикання вкладок з `logEvent` — 0 `pageerror`, `analytics_events` (ще не в БД) фейлить тихо (console.warn, не ламає UI) | — | ✅ зелено |
 | 9 | CACHE_NAME bump | `sw.js` | 🟢 |
 | 10 | Реліз-нотатки + BOARD.md позначка (зона «Системне», Вова в курсі) | — | 🟢 |
 | 11 | Брама деплою — чекати «деплой» | — | 🟡 |
-| 12 | SQL-міграцію (крок 1) застосувати в Supabase — **тут MCP `supabase` недоступний (потребує авторизації)**, дам Вові/собі готовий SQL-блок для Table Editor/SQL Editor вручну | — | 🔴 стоп — окремий крок після коду |
+| 12 | SQL-міграцію (`scripts/supabase_analytics.sql`) застосувати в Supabase — **MCP `supabase` без авторизації в цій сесії**, готовий SQL-блок для SQL Editor власнику | — | 🔴 стоп — окремий крок після коду |
 | 13 | Хендовер у Потік 2 (AI-кнопка) — чекає `ANTHROPIC_API_KEY` у Supabase secrets | — | — |
 
 **Оцінка:** 13 кроків × ~35K ≈ 450K токенів (~46% вікна) — великий потік, стежу за контекст-хуком (35%/55%/75%).
