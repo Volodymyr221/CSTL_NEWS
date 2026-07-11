@@ -1432,11 +1432,11 @@
     sliders: `<svg ${A}><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>`
   };
   var BOARD_CATEGORIES = [
-    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u0438\u0442\u0438", color: "green", icon: SVG.cart },
+    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", color: "green", icon: SVG.cart },
     { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", color: "red", icon: SVG.tag },
-    { id: "\u0432\u0456\u0434\u0434\u0430\u043C", label: "\u0412\u0456\u0434\u0434\u0430\u043C \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E", short: "\u0412\u0456\u0434\u0434\u0430\u043C", color: "green", icon: SVG.gift },
-    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", color: "blue", icon: SVG.search },
     { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", color: "white", icon: SVG.wrench },
+    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", color: "blue", icon: SVG.search },
+    { id: "\u0432\u0456\u0434\u0434\u0430\u043C", label: "\u0412\u0456\u0434\u0434\u0430\u043C \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E", short: "\u0412\u0456\u0434\u0434\u0430\u043C", color: "green", icon: SVG.gift },
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", color: "amber", icon: SVG.check },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", color: "amber", icon: SVG.help }
   ];

@@ -31,11 +31,11 @@ const SVG = {
 // Порядок = порядок у меню фільтра й чіпах форми.
 // short — коротка назва для вузької пігулки картки (де label задовгий).
 export const BOARD_CATEGORIES = [
-  { id: 'куплю',      label: 'Купити',             color: 'green',  icon: SVG.cart   },
+  { id: 'куплю',      label: 'Куплю',              color: 'green',  icon: SVG.cart   },
   { id: 'продам',     label: 'Продам',             color: 'red',    icon: SVG.tag    },
-  { id: 'віддам',     label: 'Віддам безкоштовно', short: 'Віддам', color: 'green', icon: SVG.gift },
-  { id: 'шукаю',      label: 'Шукаю',              color: 'blue',   icon: SVG.search },
   { id: 'послуга',    label: 'Послуги',            color: 'white',  icon: SVG.wrench },
+  { id: 'шукаю',      label: 'Шукаю',              color: 'blue',   icon: SVG.search },
+  { id: 'віддам',     label: 'Віддам безкоштовно', short: 'Віддам', color: 'green', icon: SVG.gift },
   { id: 'знайдено',   label: 'Знайдено',           color: 'amber',  icon: SVG.check  },
   { id: 'загубилось', label: 'Загубилось',         color: 'amber',  icon: SVG.help   },
 ];
