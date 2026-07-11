@@ -1187,7 +1187,7 @@ function renderBody() {
       // Немає оголошень у КОНКРЕТНОМУ НП (напр. «Олика») — не мовчки перескакувати
       // одразу на загальногромадські, а показати явне повідомлення (Вова 11.07).
       const npEmptyMsg = !npGroup.length
-        ? `<div class="bd-group-empty">У «${escapeHtml(activeLocation)}» оголошень не знайдено<span class="bd-group-empty-hint">Перегляньте всі оголошення громади</span></div>`
+        ? `<div class="bd-group-empty">В розділі «${escapeHtml(activeLocation)}» оголошень не знайдено<span class="bd-group-empty-hint">Перегляньте всі оголошення громади</span></div>`
         : '';
       return `
         <div class="board-backdrop" id="board-backdrop"></div>
