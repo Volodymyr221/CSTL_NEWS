@@ -1428,8 +1428,8 @@
     check: `<svg ${A}><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`,
     // Загубилось — знак «?» у колі
     help: `<svg ${A}><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
-    // Всі — лійка-фільтр (дефолт кнопки фільтра)
-    funnel: `<svg ${A}><polygon points="21 4 3 4 10 12.5 10 19 14 21 14 12.5 21 4"/></svg>`
+    // Всі — повзунки (налаштування фільтра; дефолт кнопки фільтра)
+    sliders: `<svg ${A}><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>`
   };
   var BOARD_CATEGORIES = [
     { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u0438\u0442\u0438", color: "green", icon: SVG.cart },
@@ -1440,7 +1440,7 @@
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", color: "amber", icon: SVG.check },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", color: "amber", icon: SVG.help }
   ];
-  var ALL_ICON = SVG.funnel;
+  var ALL_ICON = SVG.sliders;
   var byId = (id) => BOARD_CATEGORIES.find((c) => c.id === id);
   function catColor(id) {
     const c = byId(id);
