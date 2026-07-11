@@ -68,20 +68,28 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   backdrop?.addEventListener('click', close);
   closeBtn?.addEventListener('click', close);
 
-  // Свайп-вниз закриває (лише sheet-варіант; ігнорує старт коли вміст сам скролиться).
+  // Свайп-вниз закриває (лише sheet-варіант).
   if (variant === 'sheet' && swipeClose && panel) {
     let startY = 0, dragging = false, dy = 0;
     panel.addEventListener('touchstart', e => {
-      if (panel.scrollTop > 2) return;
-      startY = e.touches[0].clientY; dragging = true; dy = 0;
-      panel.style.transition = 'none';
+      const y = e.touches[0].clientY;
+      // Граб від верхньої шапки (перші ~64px аркуша — рисочка/заголовок) закриває свайпом
+      // ЗАВЖДИ, навіть коли контент прогорнуто. У тілі — лише коли скрол на самому верху,
+      // інакше це звичайний скрол (не перехоплюємо).
+      const inHeader = (y - panel.getBoundingClientRect().top) < 64;
+      if (!inHeader && panel.scrollTop > 0) return;
+      startY = y; dragging = true; dy = 0;
     }, { passive: true });
     panel.addEventListener('touchmove', e => {
       if (!dragging) return;
       dy = e.touches[0].clientY - startY;
-      if (dy < 0) { panel.style.transform = ''; return; }
+      if (dy <= 0) { panel.style.transform = ''; return; }   // тягнуть вгору — віддаємо нативному скролу
+      // passive:false + preventDefault — БЛОКУЄ нативний скрол поки тягнемо аркуш вниз.
+      // Інакше контент рухався б і від transform, і від скролу разом (візуально 2× + відрив тексту).
+      e.preventDefault();
+      panel.style.transition = 'none';
       panel.style.transform = `translateY(${dy}px)`;
-    }, { passive: true });
+    }, { passive: false });
     panel.addEventListener('touchend', () => {
       if (!dragging) return;
       dragging = false;

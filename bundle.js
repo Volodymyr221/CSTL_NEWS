@@ -1391,23 +1391,26 @@
     if (variant === "sheet" && swipeClose && panel) {
       let startY = 0, dragging = false, dy = 0;
       panel.addEventListener("touchstart", (e) => {
-        if (panel.scrollTop > 2)
+        const y = e.touches[0].clientY;
+        const inHeader = y - panel.getBoundingClientRect().top < 64;
+        if (!inHeader && panel.scrollTop > 0)
           return;
-        startY = e.touches[0].clientY;
+        startY = y;
         dragging = true;
         dy = 0;
-        panel.style.transition = "none";
       }, { passive: true });
       panel.addEventListener("touchmove", (e) => {
         if (!dragging)
           return;
         dy = e.touches[0].clientY - startY;
-        if (dy < 0) {
+        if (dy <= 0) {
           panel.style.transform = "";
           return;
         }
+        e.preventDefault();
+        panel.style.transition = "none";
         panel.style.transform = `translateY(${dy}px)`;
-      }, { passive: true });
+      }, { passive: false });
       panel.addEventListener("touchend", () => {
         if (!dragging)
           return;
@@ -1484,6 +1487,8 @@
     let d = String(v || "").replace(/\D/g, "");
     if (d.startsWith("380"))
       d = d.slice(3);
+    else if ("380".startsWith(d))
+      d = "";
     else if (d.startsWith("0"))
       d = d.slice(1);
     d = d.slice(0, 9);
@@ -1502,6 +1507,8 @@
     let d = String(v || "").replace(/\D/g, "");
     if (d.startsWith("380"))
       d = d.slice(3);
+    else if ("380".startsWith(d))
+      d = "";
     else if (d.startsWith("0"))
       d = d.slice(1);
     return Math.min(d.length, 9);
