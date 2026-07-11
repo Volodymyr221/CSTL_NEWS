@@ -451,8 +451,46 @@ function openDiscSheet(opts) {
     variant: 'sheet',
     className: 'app-modal--disc',
     onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+    onClose: opts.onClose,
   }));
   return close;
+}
+
+// Клавіатура на iOS PWA (аркуш «Створити обговорення») — той самий debounce-патерн,
+// що й applyKb у openChatModal: слухаємо visualViewport, при відкритій клавіатурі
+// стискаємо .app-modal (position:fixed;inset:0) під видиму область, щоб форма
+// лишалась над клавіатурою, а не переставала бути видною знизу. Повертає cleanup.
+function attachSheetKeyboardFix(wrap, input) {
+  const vv = window.visualViewport;
+  const fullH = window.innerHeight;
+  const applyKb = () => {
+    const visH = vv ? vv.height : window.innerHeight;
+    const open = visH < fullH - 80;
+    if (open) {
+      wrap.style.top = (vv ? vv.offsetTop : 0) + 'px';
+      wrap.style.height = (vv ? vv.height : window.innerHeight) + 'px';
+      wrap.style.bottom = 'auto';
+    } else {
+      wrap.style.top = '';
+      wrap.style.height = '';
+      wrap.style.bottom = '';
+    }
+  };
+  let kbTimer = null;
+  const handler = () => { clearTimeout(kbTimer); kbTimer = setTimeout(applyKb, 80); };
+  window.addEventListener('resize', handler);
+  vv?.addEventListener('resize', handler);
+  vv?.addEventListener('scroll', handler);
+  input?.addEventListener('focus', handler);
+  input?.addEventListener('blur', handler);
+  return () => {
+    clearTimeout(kbTimer);
+    window.removeEventListener('resize', handler);
+    vv?.removeEventListener('resize', handler);
+    vv?.removeEventListener('scroll', handler);
+    input?.removeEventListener('focus', handler);
+    input?.removeEventListener('blur', handler);
+  };
 }
 
 // Список обговорень (Мої / Збережені) — реюз renderChatCard; тап відкриває чат
@@ -486,12 +524,16 @@ function openDiscussionCompose() {
       <button type="submit" class="disc-compose-submit">Створити</button>
       <p class="disc-compose-note">Зʼявиться одразу. Матюки/образи блокуються автоматично.</p>
     </form>`;
+  let detachKb = null;
   openDiscSheet({
     title: 'Створити обговорення',
     bodyHtml: form,
+    // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
+    // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
+    // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
     onMount: (sheet, close) => {
       const ta = sheet.querySelector('#disc-compose-topic');
-      ta?.focus();
+      detachKb = attachSheetKeyboardFix(sheet, ta);
       sheet.querySelector('#disc-compose-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();
         const text = (ta?.value || '').trim();
@@ -518,6 +560,7 @@ function openDiscussionCompose() {
         renderBoard();   // перезавантажити стрічку — нове обговорення одразу видно
       });
     },
+    onClose: () => { detachKb?.(); detachKb = null; },
   });
 }
 

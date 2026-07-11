@@ -3860,9 +3860,45 @@
       bodyHtml,
       variant: "sheet",
       className: "app-modal--disc",
-      onMount: (wrap) => opts.onMount?.(wrap, () => close())
+      onMount: (wrap) => opts.onMount?.(wrap, () => close()),
+      onClose: opts.onClose
     }));
     return close;
+  }
+  function attachSheetKeyboardFix(wrap, input) {
+    const vv = window.visualViewport;
+    const fullH = window.innerHeight;
+    const applyKb = () => {
+      const visH = vv ? vv.height : window.innerHeight;
+      const open = visH < fullH - 80;
+      if (open) {
+        wrap.style.top = (vv ? vv.offsetTop : 0) + "px";
+        wrap.style.height = (vv ? vv.height : window.innerHeight) + "px";
+        wrap.style.bottom = "auto";
+      } else {
+        wrap.style.top = "";
+        wrap.style.height = "";
+        wrap.style.bottom = "";
+      }
+    };
+    let kbTimer = null;
+    const handler = () => {
+      clearTimeout(kbTimer);
+      kbTimer = setTimeout(applyKb, 80);
+    };
+    window.addEventListener("resize", handler);
+    vv?.addEventListener("resize", handler);
+    vv?.addEventListener("scroll", handler);
+    input?.addEventListener("focus", handler);
+    input?.addEventListener("blur", handler);
+    return () => {
+      clearTimeout(kbTimer);
+      window.removeEventListener("resize", handler);
+      vv?.removeEventListener("resize", handler);
+      vv?.removeEventListener("scroll", handler);
+      input?.removeEventListener("focus", handler);
+      input?.removeEventListener("blur", handler);
+    };
   }
   function openDiscussionList(title, posts) {
     const body = posts.length ? posts.map(renderChatCard).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
@@ -3887,12 +3923,16 @@
       <button type="submit" class="disc-compose-submit">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438</button>
       <p class="disc-compose-note">\u0417\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443. \u041C\u0430\u0442\u044E\u043A\u0438/\u043E\u0431\u0440\u0430\u0437\u0438 \u0431\u043B\u043E\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u0430\u0432\u0442\u043E\u043C\u0430\u0442\u0438\u0447\u043D\u043E.</p>
     </form>`;
+    let detachKb = null;
     openDiscSheet({
       title: "\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F",
       bodyHtml: form,
+      // Автофокус прибрано (клавіатура раніше вилітала одразу, поки аркуш ще не
+      // доїхав знизу, і перекривала форму) — клавіатура тепер лише по тапу в поле.
+      // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
       onMount: (sheet, close) => {
         const ta = sheet.querySelector("#disc-compose-topic");
-        ta?.focus();
+        detachKb = attachSheetKeyboardFix(sheet, ta);
         sheet.querySelector("#disc-compose-form")?.addEventListener("submit", async (e) => {
           e.preventDefault();
           const text = (ta?.value || "").trim();
@@ -3931,6 +3971,10 @@
           showToast("\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!", 3e3);
           renderBoard();
         });
+      },
+      onClose: () => {
+        detachKb?.();
+        detachKb = null;
       }
     });
   }
