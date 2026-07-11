@@ -17,6 +17,7 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
+  fetchAllReactions, setReaction, subscribeReactions, getAnonId,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
@@ -121,6 +122,24 @@ let searchQuery    = '';
 // renderBoard(), оновлюється при кліках через optimistic update.
 let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
 let savedIds        = new Set();  // postId закладок ПОТОЧНОГО акаунта (з БД saved_posts)
+
+// Лайки Обговорень (Д-задача 3) — реюз наявного дата-шару reactions (setReaction/
+// fetchAllReactions/subscribeReactions у supabase.js), той самий що раніше живив
+// реакції оголошень (прибрані з Дошки 11.07, Д-13) — тут інша концепція: одна
+// емоція ❤️ = «лайк» теми обговорення, не набір реакцій.
+const LIKE_EMOJI = '❤️';
+let reactionsByPost = new Map();  // postId → { counts:{emoji:count}, my: emoji|null }
+
+function getLikeCount(postId) {
+  return reactionsByPost.get(postId)?.counts?.[LIKE_EMOJI] || 0;
+}
+function isLikedByMe(postId) {
+  return reactionsByPost.get(postId)?.my === LIKE_EMOJI;
+}
+function likeBtnInner(postId) {
+  const liked = isLikedByMe(postId);
+  return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
+}
 
 // ── localStorage (per-device) — лише час перегляду тем; закладки тепер у БД ──
 
@@ -926,15 +945,22 @@ function renderChatCard(p) {
            <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
          </div>`).join('')}</div>`
     : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
+  const liked = isLikedByMe(p.id);
   return `
     <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
       <div class="bd-chat-topic">
         <p class="bd-chat-text">${escapeHtml(p.text)}</p>
       </div>
-      <div class="bd-chat-msgcount">💬 ${count} ${msgWord(count)}</div>
+      <div class="bd-chat-topline">
+        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
+      </div>
       ${lastHtml}
       <div class="bd-chat-foot">
-        <span class="bd-chat-count">👥 ${participants}</span>
+        <button class="bd-chat-like${liked ? ' bd-chat-like--active' : ''}" type="button"
+                data-like-id="${p.id}" aria-label="${liked ? 'Прибрати лайк' : 'Лайк'}">
+          ${likeBtnInner(p.id)}
+        </button>
         <div class="bd-chat-by">
           <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
@@ -1219,18 +1245,20 @@ export async function renderBoard() {
   const el = getBoardRoot();
   if (!el) return;
 
-  // 1. Supabase: пости + анонси + коментарі + закладки паралельно
+  // 1. Supabase: пости + анонси + коментарі + закладки + реакції(лайки) паралельно
   if (isSupabaseReady()) {
     // «Моя» закладка — лише для залогіненого акаунта (uid). Гість → нічого персонального.
     const uid = currentUserId();
-    const [posts, anns, comments, saved] = await Promise.all([
+    const [posts, anns, comments, saved, reactions] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
       fetchAllComments(),
       uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
+      fetchAllReactions(uid || getAnonId()),
     ]);
     if (posts !== null) {
       allPosts         = posts;
+      reactionsByPost  = reactions;
       allAnnouncements = anns || [];
       commentsByPost   = comments;
       savedIds         = saved;
@@ -1722,7 +1750,8 @@ function attachBoardDelegation() {
     // Тап по картці обговорення → повноекранна модалка-чат
     const chatCard = e.target.closest('[data-chat-open]');
     if (chatCard && !e.target.closest('.bd-chat-modal')
-        && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')) {
+        && !e.target.closest('[data-save-id]') && !e.target.closest('[data-share-board]')
+        && !e.target.closest('[data-like-id]')) {
       const id = Number(chatCard.dataset.chatOpen);
       const post = allPosts.find(p => p.id === id);
       if (post) openChatModal(post);
@@ -1766,6 +1795,36 @@ function attachBoardDelegation() {
         document.querySelector('#board-backdrop.visible')?.click();
         renderBodyOnly();
       }
+      return;
+    }
+
+    // Лайк теми обговорення — тогл через наявний data-шар reactions (одна емоція ❤️)
+    const likeBtn = e.target.closest('[data-like-id]');
+    if (likeBtn) {
+      e.stopPropagation();
+      const id = Number(likeBtn.dataset.likeId);
+      requireAuth('лайкати обговорення', async () => {
+        const uid = currentUserId();
+        const wasLiked = isLikedByMe(id);
+        const entry = reactionsByPost.get(id) || { counts: {}, my: null };
+        entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
+        entry.my = wasLiked ? null : LIKE_EMOJI;
+        reactionsByPost.set(id, entry);
+        likeBtn.innerHTML = likeBtnInner(id);
+        likeBtn.classList.toggle('bd-chat-like--active', !wasLiked);
+        likeBtn.setAttribute('aria-label', wasLiked ? 'Лайк' : 'Прибрати лайк');
+        const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
+        if (!res.ok) {
+          // Відкат при помилці мережі/RLS
+          entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
+          entry.my = wasLiked ? LIKE_EMOJI : null;
+          reactionsByPost.set(id, entry);
+          likeBtn.innerHTML = likeBtnInner(id);
+          likeBtn.classList.toggle('bd-chat-like--active', wasLiked);
+          likeBtn.setAttribute('aria-label', wasLiked ? 'Прибрати лайк' : 'Лайк');
+          showToast('Не вдалося зберегти лайк', 2500, 'error');
+        }
+      });
       return;
     }
 
@@ -1818,11 +1877,23 @@ function onCommentRealtimeEvent(payload) {
   });
 }
 
+// Лайки Обговорень — той самий рефетч-і-перемалюй підхід, що й коментарі.
+function onReactionRealtimeEvent(payload) {
+  const postId = (payload.new || payload.old || {}).post_id;
+  if (!postId) return;
+  const uid = currentUserId();
+  fetchAllReactions(uid || getAnonId()).then(fresh => {
+    reactionsByPost = fresh;
+    refreshChatCardPreview(postId);
+  });
+}
+
 let _realtimeAttached = false;
 function attachRealtime() {
   if (_realtimeAttached || !isSupabaseReady()) return;
   _realtimeAttached = true;
   subscribeComments(onCommentRealtimeEvent);
+  subscribeReactions(onReactionRealtimeEvent);
 }
 
 // ── «Обговорення» як повноекранний overlay поверх вкладки «Чати» (варіант Б) ──

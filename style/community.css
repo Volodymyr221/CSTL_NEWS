@@ -2866,12 +2866,21 @@
   align-items: flex-start;
 }
 .bd-chat-topic-icon { font-size: 16px; line-height: 1.5; flex-shrink: 0; }
-/* Лічильник повідомлень — окремий рядок під темою (де раніше був автор) */
-.bd-chat-msgcount {
+/* Верхній рядок під темою: лічильник повідомлень зліва, учасники справа (навпроти) */
+.bd-chat-topline {
   margin-top: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.bd-chat-msgcount, .bd-chat-participants {
   font-size: 12px;
   font-weight: 600;
   color: var(--gray);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
 }
 .bd-chat-last {
   margin-top: 8px;
@@ -2916,7 +2925,26 @@
   font-size: 12px;
   color: var(--gray);
 }
-.bd-chat-count { font-weight: 600; margin-right: auto; }
+.bd-chat-like {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-right: auto;
+  padding: 4px 6px;
+  margin-left: -6px;
+  border: 0;
+  background: transparent;
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bd-chat-like:active { background: rgba(0,0,0,0.05); }
+.bd-chat-like--active { color: var(--red); }
+.bd-chat-like svg { flex-shrink: 0; }
 .bd-chat-foot-arrow { font-size: 15px; color: var(--red); }
 /* Блок «автор + дата публікації» у підвалі картки — біля кнопки збереження, вирівняний праворуч */
 .bd-chat-by {
