@@ -1530,7 +1530,8 @@
       uploadingCount: 0,
       // скільки фото зараз заливаються у Storage — блокує submit
       author: accountAuthorName(),
-      category: "\u043F\u0440\u043E\u0434\u0430\u043C",
+      category: "",
+      // Д-23: без автовибору — юзер має сам обрати (сабміт блокується поки не обрано)
       contact: "",
       title: "",
       location: COMMUNITY_ALL
@@ -1733,7 +1734,8 @@
     }
     const previewCanvas = wrap.querySelector("#bm-preview-canvas");
     function renderPreview() {
-      const cat = BOARD_CATEGORIES.find((c) => c.id === state.category) || BOARD_CATEGORIES[0];
+      const cat = state.category ? BOARD_CATEGORIES.find((c) => c.id === state.category) : null;
+      const catHtml = cat ? `<span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>` : `<span class="cm-board-cat cm-board-cat--placeholder">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</span>`;
       const firstPhoto = state.photos.find((p) => p);
       const contactTrim = state.contact.trim();
       const contactHtml = contactTrim ? `
@@ -1744,7 +1746,7 @@
       <article class="cm-board-note${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
-        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>
+        ${catHtml}
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
@@ -1774,6 +1776,11 @@
     }
     wrap.querySelector("#cm-board-modal-form")?.addEventListener("submit", async (e) => {
       e.preventDefault();
+      if (!state.category) {
+        showToast("\u041E\u0431\u0435\u0440\u0456\u0442\u044C \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044E \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 2500);
+        wrap.querySelector("#bm-chips")?.scrollIntoView({ behavior: "smooth", block: "center" });
+        return;
+      }
       if (!state.title.trim()) {
         showToast("\u0414\u043E\u0434\u0430\u0439\u0442\u0435 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 2500);
         wrap.querySelector("#bm-title")?.focus();

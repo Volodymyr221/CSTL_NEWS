@@ -961,6 +961,8 @@
 .cm-board-cat--yellow { background: rgba(176,124,20,0.16); color: #8A6410; }
 .cm-board-cat--pink   { background: rgba(170,60,90,0.12);  color: #A03A5A; }
 .cm-board-cat--white  { background: rgba(90,90,90,0.10);   color: #5A5A5A; }
+/* Д-23: плейсхолдер тегу в прев'ю поки категорію не обрано (приглушений, курсивом) */
+.cm-board-cat--placeholder { background: rgba(90,90,90,0.08); color: #9a9a9a; font-style: italic; }
 
 /* Векторні іконки категорій (src/core/board-categories.js) — масштаб під шрифт місця,
    колір = currentColor (у пігулці бере семантичний колір тексту тега). */

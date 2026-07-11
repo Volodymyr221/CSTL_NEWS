@@ -73,7 +73,7 @@ export function openBoardModal() {
     photos: [],         // URL-и фото: blob: під час upload, https: після
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
     author: accountAuthorName(),
-    category: 'продам',
+    category: '',      // Д-23: без автовибору — юзер має сам обрати (сабміт блокується поки не обрано)
     contact: '',
     title: '',
     location: COMMUNITY_ALL,   // Д-10: дефолт — вся громада
@@ -296,8 +296,11 @@ export function openBoardModal() {
   const previewCanvas = wrap.querySelector('#bm-preview-canvas');
 
   function renderPreview() {
-    const cat = BOARD_CATEGORIES.find(c => c.id === state.category)
-      || BOARD_CATEGORIES[0];
+    // Д-23: поки категорію не обрано (state.category === '') — приглушений плейсхолдер-тег.
+    const cat = state.category ? BOARD_CATEGORIES.find(c => c.id === state.category) : null;
+    const catHtml = cat
+      ? `<span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>`
+      : `<span class="cm-board-cat cm-board-cat--placeholder">Категорія</span>`;
     const firstPhoto = state.photos.find(p => p);
     const contactTrim = state.contact.trim();
     const contactHtml = contactTrim ? `
@@ -308,7 +311,7 @@ export function openBoardModal() {
       <article class="cm-board-note${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
-        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>
+        ${catHtml}
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
@@ -341,6 +344,11 @@ export function openBoardModal() {
   // ── Submit ──
   wrap.querySelector('#cm-board-modal-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!state.category) {   // Д-23: категорію обов'язково обрати (нема автовибору)
+      showToast('Оберіть категорію оголошення', 2500);
+      wrap.querySelector('#bm-chips')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     if (!state.title.trim()) {
       showToast('Додайте заголовок оголошення', 2500);
       wrap.querySelector('#bm-title')?.focus();
