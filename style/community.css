@@ -2277,7 +2277,7 @@
 /* Тільки закрита картка (не zoom-модалка): більший зазор ім'я→час, час трішки нижче (Вова 11.07). */
 .bd-card--board .cm-board-foot-who .cm-board-author--card { margin-bottom: 6px; }
 /* Час публікації на картці — жирним (Вова 11.07). */
-.bd-card--board .cm-board-foot-who .cm-board-time { font-weight: 700; }
+.bd-card--board .cm-board-foot-who .cm-board-time { font-weight: 700; font-size: 10px; }
 /* Час — завжди в один рядок (стрілка+«13 год тому» не переносяться) */
 .cm-board-foot-who .cm-board-time {
   display: block;
