@@ -2244,6 +2244,8 @@
   text-overflow: ellipsis;
   margin-bottom: 3px;   /* невеликий відступ до часу; блок лишається в межах висоти кнопок */
 }
+/* Тільки закрита картка (не zoom-модалка): більший зазор ім'я→час, час трішки нижче (Вова 11.07). */
+.bd-card--board .cm-board-foot-who .cm-board-author--card { margin-bottom: 6px; }
 /* Час — завжди в один рядок (стрілка+«13 год тому» не переносяться) */
 .cm-board-foot-who .cm-board-time {
   display: block;
