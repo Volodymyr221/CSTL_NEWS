@@ -1072,7 +1072,42 @@
   z-index: 2700;   /* вище екрана «Мої оголошення» (.pm-screen) — інакше модалка ховається під ним */
 }
 .app-modal--board-compose .app-modal-sheet {
-  padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  /* padding-top = 0: скрол-контент починається з самого верху, щоб липка шапка
+     (рисочка+✕) сиділа ФЛЕШ до верху без прозорої смуги над нею (iOS Safari sticky
+     не пінить впритул при негативному верхньому margin — тому padding-top прибрано). */
+  padding: 0 18px calc(20px + env(safe-area-inset-bottom, 0px));
+}
+/* Д-17: рисочка-хендл + ✕ ЛИПКІ зверху — форма скролиться під ними (лише ця модалка;
+   спільний примітив core/modal.js не чіпаємо). Скрол-контейнер = сам .app-modal-sheet. */
+.app-modal--board-compose .app-modal-handle {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  width: auto;
+  height: auto;
+  /* full-bleed смуга на всю ширину аркуша (бокові -18px скасовують його padding);
+     БЕЗ негативного верхнього margin — сидить від самого верху (top:0 пінить флеш). */
+  margin: 0 -18px 12px;
+  padding: 14px 0 10px;
+  background: var(--bg-card, #fff);
+  border-radius: 22px 22px 0 0;
+}
+.app-modal--board-compose .app-modal-handle::before {
+  content: '';
+  display: block;
+  width: 40px;
+  height: 4px;
+  margin: 0 auto;
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 2px;
+}
+.app-modal--board-compose .app-modal-close {
+  position: sticky;
+  float: right;
+  top: 12px;
+  right: auto;
+  z-index: 5;
+  margin: 0 0 -32px 0;   /* прибрати висоту кнопки з потоку — вона накладається на смугу рисочки */
 }
 /* Д-17: рисочка-хендл + ✕ ЛИПКІ зверху — форма скролиться під ними (лише ця модалка;
    спільний примітив core/modal.js не чіпаємо). Скрол-контейнер = сам .app-modal-sheet. */
