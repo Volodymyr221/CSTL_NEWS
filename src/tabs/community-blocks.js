@@ -9,7 +9,7 @@
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType, openAdModalStandalone, openChatById } from './board.js';
-import { catColor } from './community-modal.js';
+import { catColor, catIcon, catShort } from '../core/board-categories.js';
 import { openShotamModal } from './events.js';
 import {
   nowMinutes,
@@ -656,16 +656,6 @@ function switchCmBusCard(el) {
 
 // ── Блок 4: Дошка громади (мешканці + офіційні в одному блоці) ───────────────
 
-const CATEGORY_EMOJI = {
-  'продам':      '💰',
-  'куплю':       '🛒',
-  'шукаю':       '🔍',
-  'знайдено':    '🎁',
-  'загубилось':  '😟',
-  'послуга':     '🔧',
-  'оголошення':  '📢',
-};
-
 // Міні-блок Дошки — свайпом перемикається тип: Офіційні → Дошка → Розмови.
 // Повна Дошка відкривається тапом на CTA внизу.
 export async function renderBoardBlock() {
@@ -808,7 +798,6 @@ function renderMiniCard(item, type) {
   const tilt = ((item.id * 7) % 5) - 2;
 
   if (type === 'board') {
-    const emoji = CATEGORY_EMOJI[item.category] || '📌';
     const photoHtml = item.photo
       ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
       : '';
@@ -816,7 +805,7 @@ function renderMiniCard(item, type) {
       <article class="cm-board-note cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || '')}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${catIcon(item.category)} ${escapeHtml(catShort(item.category || ''))}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;

@@ -1,20 +1,22 @@
 // src/tabs/board.js
-// Вкладка «Дошка громади 2.0» — 3 типи постів + пошук + фільтри + реакції + збережені.
+// Вкладка «Дошка громади 2.0» — 3 типи постів + пошук + фільтри + збережені.
 //
 // Типи постів:
 //   board = оголошення (продам/куплю/...) — стікер на корку
 //   chat  = обговорення — горизонтальна картка з аватаркою і хештегами
 
 import { escapeHtml, formatTime, sharePost, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
-import { openBoardModal, catColor } from './community-modal.js';
+import { openBoardModal } from './community-modal.js';
+// Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
+// конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
+import { catColor, catIcon, catShort, catLabel, BOARD_CATEGORIES as CATS, ALL_ICON } from '../core/board-categories.js';
 import { startChatFromPost, openMyAds, openThreadsList, refreshUnreadBadge } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
-  fetchAllReactions, setReaction,
   fetchAllComments, addComment, editComment, deleteComment,
-  subscribeReactions, subscribeComments,
+  subscribeComments,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
@@ -25,23 +27,6 @@ import { openModal as openModalPrimitive } from '../core/modal.js';
 // порожня/null або дорівнює COMMUNITY_ALL. Конкретний НП — лише свій фільтр.
 function isCommunityWide(loc) {
   return !loc || loc === COMMUNITY_ALL;
-}
-
-// Підгонка ширини dropdown локації під ПОТОЧНУ назву (не під найдовшу опцію),
-// щоб каретка ▾ завжди стояла на однаковій відстані від тексту (фікс Вови).
-function sizeLocSelect(sel) {
-  if (!sel) return;
-  const opt = sel.options[sel.selectedIndex];
-  const txt = (opt ? opt.text : '') || '';
-  const cs = getComputedStyle(sel);
-  const canvas = sizeLocSelect._c || (sizeLocSelect._c = document.createElement('canvas'));
-  const ctx = canvas.getContext('2d');
-  ctx.font = `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
-  const shown = cs.textTransform === 'uppercase' ? txt.toUpperCase() : txt;
-  let w = ctx.measureText(shown).width;
-  w += (parseFloat(cs.letterSpacing) || 0) * shown.length;   // + літер-спейсинг
-  w += parseFloat(cs.paddingRight) || 0;                    // + місце під каретку
-  sel.style.width = Math.ceil(w) + 2 + 'px';
 }
 
 // Українська відміна слова «оголошення» для лічильника (Д-11).
@@ -118,31 +103,6 @@ function renderPostTime(p) {
 const EDIT_ICON_SVG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
 
-// Фільтр-чіпи (6 шт): деякі групують ДВІ конкретні категорії через `match`.
-// Пост зберігає конкретну категорію (продам/куплю/...), а чіп групує.
-const BOARD_CATEGORIES = [
-  { id: 'all',        label: 'Всі',                 emoji: '✦',  match: null },
-  { id: 'trade',      label: 'Куплю/Продам',        emoji: '🛒', match: ['продам', 'куплю'] },
-  { id: 'шукаю',      label: 'Шукаю',               emoji: '🔍', match: ['шукаю'] },
-  { id: 'послуга',    label: 'Послуги',             emoji: '🔧', match: ['послуга'] },
-  { id: 'lostfound',  label: 'Знайдено/Загубилось', emoji: '🎁', match: ['знайдено', 'загубилось'] },
-];
-
-// Окрема явна мапа конкретна-категорія → emoji (для лейбла на стікері).
-// Раніше виводилась з BOARD_CATEGORIES, але після групування чіпів
-// конкретних категорій там більше нема.
-const CATEGORY_EMOJI = {
-  'продам':     '💰',
-  'куплю':      '🛒',
-  'шукаю':      '🔍',
-  'знайдено':   '🎁',
-  'загубилось': '😟',
-  'послуга':    '🔧',
-  'оголошення': '📢',
-};
-
-const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
-
 // ── Стан (зберігається в межах сесії) ────────────────────────────────────────
 
 let allPosts       = [];   // [{id, type, ...}]
@@ -152,9 +112,8 @@ let activeCategory = 'all';
 let activeLocation = COMMUNITY_ALL;   // Д-12: фільтр за НП; дефолт «вся громада» = усі
 let searchQuery    = '';
 
-// Реакції і коментарі — централізовано у Map<postId, ...>. Завантажується з
-// Supabase у renderBoard(), оновлюється при кліках через optimistic update.
-let reactionsByPost = new Map();  // postId → { counts: {emoji: count}, my: emoji|null }
+// Коментарі — централізовано у Map<postId, ...>. Завантажується з Supabase у
+// renderBoard(), оновлюється при кліках через optimistic update.
 let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
 let savedIds        = new Set();  // postId закладок ПОТОЧНОГО акаунта (з БД saved_posts)
 
@@ -170,21 +129,6 @@ function lsGet(key, fallback) {
 }
 function lsSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
-
-// ── Реакції (з Supabase, fallback на in-memory map) ─────────────────────────
-
-function getMyReaction(postId) {
-  const r = reactionsByPost.get(postId);
-  return r ? r.my : null;
-}
-function getReactionCounts(postId) {
-  const r = reactionsByPost.get(postId);
-  return r ? r.counts : {};
-}
-function getTotalReactionCount(postId) {
-  const counts = getReactionCounts(postId);
-  return Object.values(counts).reduce((s, n) => s + n, 0);
 }
 
 // ── Коментарі (з Supabase, in-memory map) ───────────────────────────────────
@@ -310,46 +254,9 @@ function authorAvatar(author) {
   return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
 }
 
-// ── Реакції + share + bookmark — спільний рядок дій під/над постом ───────────
-
-// ── Рядок дій під карткою — різний для board/chat/greeting ──────────────
-//
-// BOARD (стікер):
-//   - Згорнутий: тільки 🙂+ маленька в лівому нижньому куті
-//   - Розгорнутий (zoom-modal): додатково 📑 save + ↗ share
-// CHAT (розмова):
-//   - 🙂+ + 📑 + ↗ + повноцінне поле введення коментарів (inline)
-// GREETING (вітання):
-//   - 🙂+ + 📑 + ↗ (без коментарів)
-
-function reactTriggerHtml(post) {
-  const myReaction = getMyReaction(post.id);
-  const counts    = getReactionCounts(post.id);
-  const total     = getTotalReactionCount(post.id);
-
-  // Топ-3 emoji за кількістю натискань усіх юзерів
-  const top3 = Object.entries(counts)
-    .filter(([, n]) => n > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
-  let content;
-  if (total === 0) {
-    // Ніхто ще не реагував — показуємо запрошення
-    content = `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
-  } else {
-    // Топ-3 emoji кожна зі своїм лічильником. Моя виділена.
-    content = top3.map(([em, n]) => `
-      <span class="bd-react-trigger-group${em === myReaction ? ' bd-react-trigger-group--mine' : ''}">
-        <span class="bd-react-trigger-emoji">${em}</span>
-        <span class="bd-react-trigger-count">${n}</span>
-      </span>
-    `).join('');
-  }
-
-  return `<button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
-          data-react-trigger="${post.id}" aria-label="Реакції (${total})">${content}</button>`;
-}
+// ── Рядок дій під карткою (share + bookmark) ─────────────────────────────
+// Реакції прибрано з Дошки повністю (рішення Вови 11.07 — на маркетплейсі не
+// доречні; інтерес виражається кнопками 💬 написати / 🔖 зберегти).
 
 function saveBtnHtml(post) {
   const saved = isSaved(post.id);
@@ -372,11 +279,11 @@ function shareBtnHtml(post) {
           aria-label="Поділитися">${SHARE_ICON_SVG}</button>`;
 }
 
-// BOARD-стікер: тільки реакція. У zoom-modal CSS показує `.bd-actions-extra`
+// BOARD-стікер: дії збереження+поділитися (реакції прибрано). На картці CSS може
+// ховати `.bd-actions-extra`, у zoom-modal — показувати.
 function boardActionsHtml(post) {
   return `
     <div class="bd-actions bd-actions--board-compact">
-      ${reactTriggerHtml(post)}
       <div class="bd-actions-extra">
         ${saveBtnHtml(post)}
         ${shareBtnHtml(post)}
@@ -869,59 +776,12 @@ async function doDiscDelete(c) {
   }
 }
 
-// Попап вибору реакції — додається у body над кнопкою-тригером
-function openReactionPopup(triggerBtn, postId) {
-  closeReactionPopup();   // якщо вже відкритий — закрити
-
-  const myReaction = getMyReaction(postId);
-  const counts     = getReactionCounts(postId);
-  const popup = document.createElement('div');
-  popup.className = 'bd-react-popup';
-  popup.id = 'bd-react-popup';
-  popup.innerHTML = REACTIONS.map(em => {
-    const n = counts[em] || 0;
-    return `
-      <button class="bd-react-opt${myReaction === em ? ' bd-react-opt--active' : ''}" type="button"
-              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
-        <span class="bd-react-opt-emoji">${em}</span>
-        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ''}
-      </button>
-    `;
-  }).join('');
-
-  document.body.appendChild(popup);
-
-  // Позиціонуємо над кнопкою (якщо не влізе — під нею)
-  const rect = triggerBtn.getBoundingClientRect();
-  const popupRect = popup.getBoundingClientRect();
-  let top = rect.top - popupRect.height - 8;
-  if (top < 8) top = rect.bottom + 8;
-  let left = rect.left + rect.width / 2 - popupRect.width / 2;
-  if (left < 8) left = 8;
-  if (left + popupRect.width > window.innerWidth - 8) {
-    left = window.innerWidth - popupRect.width - 8;
-  }
-  popup.style.top = `${top + window.scrollY}px`;
-  popup.style.left = `${left}px`;
-
-  requestAnimationFrame(() => popup.classList.add('visible'));
-}
-
-function closeReactionPopup() {
-  const existing = document.getElementById('bd-react-popup');
-  if (existing) {
-    existing.classList.remove('visible');
-    setTimeout(() => existing.remove(), 150);
-  }
-}
-
 // (модалку коментарів видалено 18.05.2026 — заміщена inline-формою у chat-картках.
 //  Board і greeting коментарів не мають за рішенням Вови.)
 
 function buildShareText(post) {
   if (post.type === 'board') {
-    const cat = CATEGORY_EMOJI[post.category] || '📌';
-    return `${cat} ${post.category}\n\n${post.text}\n— ${post.author || 'анонімно'}`;
+    return `${catLabel(post.category)}\n\n${post.text}\n— ${post.author || 'анонімно'}`;
   }
   if (post.type === 'chat') {
     const tags = (post.tags || []).join(' ');
@@ -932,10 +792,9 @@ function buildShareText(post) {
 
 // ── Картки за типом ──────────────────────────────────────────────────────────
 
-// BOARD: стікер на корку (як було, з реакціями і ❤️-зберегти)
+// BOARD: стікер на корку (з збереженням і поділитися)
 function renderBoardCard(p) {
   const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
-  const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
   const photoHtml = photo
     ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
@@ -944,7 +803,7 @@ function renderBoardCard(p) {
     <article class="cm-board-note bd-card bd-card--board${photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -957,10 +816,9 @@ function renderBoardCard(p) {
 // BOARD: вміст зум-модалки оголошення — будується З ДАНИХ поста (не клон картки).
 // Фото flush зверху (без відʼємного margin → не обрізається скролом), нижче —
 // прокручуване тіло з категорією, заголовком, повним описом, контактом і діями.
-// Дії (реакції/зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
+// Дії (зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
 // обробники працюють без змін.
 function renderAdModal(p) {
-  const emoji = CATEGORY_EMOJI[p.category] || '📌';
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
   const hasPhoto = photos.length > 0;
   const multi = photos.length > 1;
@@ -980,7 +838,7 @@ function renderAdModal(p) {
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
         ${renderLoc(p.location)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       </div>
@@ -1149,7 +1007,9 @@ function renderFab() {
 
 // ── Фільтрація і пошук ───────────────────────────────────────────────────────
 
-function getFilteredPosts() {
+// opts.ignoreLocation — пропустити фільтр локації (для fallback «вся громада»
+// коли в обраному НП немає власних оголошень, Вова 11.07).
+function getFilteredPosts(opts = {}) {
   const q = searchQuery.trim().toLowerCase();
   const savedIds = activeType === 'saved' ? getSavedIds() : null;
 
@@ -1162,15 +1022,14 @@ function getFilteredPosts() {
     } else if (p.type !== activeType) {
       return false;
     }
-    // Фільтр по категорії — тільки для board. Чіп може групувати кілька
-    // конкретних категорій (напр. «Куплю/Продам» → ['продам','куплю']).
+    // Фільтр по категорії — тільки для board. Кожна категорія = одна конкретна
+    // (куплю/продам/віддам/шукаю/послуга/знайдено/загубилось); 'all' = усі.
     if (activeType === 'board' && activeCategory !== 'all') {
-      const cat = BOARD_CATEGORIES.find(c => c.id === activeCategory);
-      if (!cat || !cat.match || !cat.match.includes(p.category)) return false;
+      if (p.category !== activeCategory) return false;
     }
     // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
     // + загальногромадські (COMMUNITY_ALL/порожні/старі) — вони релевантні скрізь.
-    if (activeType === 'board' && activeLocation !== COMMUNITY_ALL) {
+    if (activeType === 'board' && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
       if (p.location !== activeLocation && !isCommunityWide(p.location)) return false;
     }
     // Пошук — text + tags + author + title
@@ -1183,6 +1042,17 @@ function getFilteredPosts() {
     }
     return true;
   });
+}
+
+// Кількість для лічильника шапки Дошки. Коли обраний конкретний НП і в ньому
+// НЕМАЄ власних оголошень — рахуємо як загальногромадський перегляд (усі НП),
+// бо саме стільки карток тоді реально показує renderBody (консистентність
+// лічильника з видимими картками, Вова 11.07).
+function getBoardDisplayCount() {
+  if (activeType !== 'board' || activeLocation === COMMUNITY_ALL) return getFilteredPosts().length;
+  const narrow = getFilteredPosts();
+  const hasOwn = narrow.some(p => p.location === activeLocation);
+  return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
 }
 
 
@@ -1200,19 +1070,26 @@ function renderHeader() {
     : '';
 
   const showCategories = activeType === 'board';
-  const chipHtml = c => `
-    <button class="bd-cat-chip${c.id === activeCategory ? ' bd-cat-chip--active' : ''}" type="button" data-bd-cat="${c.id}">
-      <span class="bd-cat-emoji">${c.emoji}</span>
-      ${escapeHtml(c.label)}
+  // Кнопка-фільтр категорій (зліва від пошуку) + випадне меню. Іконка кнопки =
+  // іконка активної категорії (для 'all' — лійка), у семантичному кольорі. Тап →
+  // меню зі списком усіх категорій; вибір закриває меню й фільтрує (див. обробники).
+  const activeIcon = activeCategory === 'all' ? ALL_ICON : catIcon(activeCategory);
+  const activeColorCls = activeCategory === 'all' ? '' : 'cat-c-' + catColor(activeCategory);
+  const CARET_SVG = '<svg class="bd-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+  const menuItem = (id, icon, color, label) => `
+    <button class="bd-cat-mi${id === activeCategory ? ' active' : ''}" type="button" role="menuitem" data-bd-cat="${id}">
+      <span class="bd-cat-mi-ico ${color ? 'cat-c-' + color : ''}">${icon}</span>
+      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
     </button>`;
-  // «ВСІ» (перша категорія) — закріплена ЗА межами контейнера що скролиться, з відступом.
-  // Решта чіпів у .bd-categories — обрізаються його краєм (overflow), тож ховаються повністю.
-  const categoriesHtml = showCategories ? `
-    <div class="bd-cat-wrap">
-      ${chipHtml(BOARD_CATEGORIES[0])}
-      <span class="bd-cat-divider" aria-hidden="true"></span>
-      <div class="bd-categories">
-        ${BOARD_CATEGORIES.slice(1).map(chipHtml).join('')}
+  const catFilterHtml = showCategories ? `
+    <div class="bd-cat-filter-wrap">
+      <button class="bd-cat-filter" id="bd-cat-filter" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за категорією">
+        <span class="bd-cat-filter-ico ${activeColorCls}">${activeIcon}</span>
+        ${CARET_SVG}
+      </button>
+      <div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+        ${menuItem('all', ALL_ICON, '', 'Всі')}
+        ${CATS.map(c => menuItem(c.id, c.icon, c.color, c.label)).join('')}
       </div>
     </div>
   ` : '';
@@ -1220,18 +1097,22 @@ function renderHeader() {
   // Д-11 + Д-12: шапка Дошки — заголовок по центру; під ним рядок:
   // лічильник (зліва) + тонкий фільтр локації (справа). Лічильник рахує
   // поточний відфільтрований список.
-  const count = showCategories ? getFilteredPosts().length : 0;
+  const count = showCategories ? getBoardDisplayCount() : 0;
   const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
       <h2 class="bd-title">Дошка оголошень</h2>
       <div class="bd-subrow">
         <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
-          <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
-          <select class="bd-loc-select" id="bd-loc-select" aria-label="Фільтр за населеним пунктом">
-            <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
-            ${SETTLEMENTS.map(s => `<option value="${escapeHtml(s)}"${activeLocation === s ? ' selected' : ''}>${escapeHtml(s)}</option>`).join('')}
-          </select>
+          <button class="bd-loc-btn" id="bd-loc-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="Фільтр за населеним пунктом">
+            <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
+            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : activeLocation)}</span>
+            <svg class="bd-loc-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="bd-loc-menu" id="bd-loc-menu" role="menu" hidden>
+            <button class="bd-loc-mi${activeLocation === COMMUNITY_ALL ? ' active' : ''}" type="button" role="menuitem" data-bd-loc="${escapeHtml(COMMUNITY_ALL)}">${escapeHtml(COMMUNITY_ALL_LABEL)}</button>
+            ${SETTLEMENTS.map(s => `<button class="bd-loc-mi${activeLocation === s ? ' active' : ''}" type="button" role="menuitem" data-bd-loc="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join('')}
+          </div>
         </div>
       </div>
     </div>
@@ -1241,13 +1122,15 @@ function renderHeader() {
     <div class="bd-controls">
       ${discHead}
       ${titlebarHtml}
-      <div class="bd-search">
-        <span class="bd-search-icon">🔍</span>
-        <input class="bd-search-input" id="bd-search-input" type="search"
-               placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
-        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
+      <div class="bd-search-row">
+        ${catFilterHtml}
+        <div class="bd-search">
+          <span class="bd-search-icon">🔍</span>
+          <input class="bd-search-input" id="bd-search-input" type="search"
+                 placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
+          ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
+        </div>
       </div>
-      ${categoriesHtml}
     </div>
   `;
 }
@@ -1257,7 +1140,7 @@ function renderHeader() {
 function updateAdCount() {
   const el = document.getElementById('bd-count');
   if (!el || activeType !== 'board') return;
-  const n = getFilteredPosts().length;
+  const n = getBoardDisplayCount();
   el.textContent = `${n} ${pluralAds(n)}`;
 }
 
@@ -1289,14 +1172,27 @@ function renderBody() {
     // Фільтр по конкретному НП (Д-12+) → ДВІ групи: спершу оголошення цього НП,
     // нижче — загальногромадські («Олицька громада»). Дефолт «Уся громада» — один список.
     if (activeLocation !== COMMUNITY_ALL) {
-      const npGroup   = sorted.filter(p => p.location === activeLocation);
-      const wideGroup = sorted.filter(p => isCommunityWide(p.location));
+      const npGroup = sorted.filter(p => p.location === activeLocation);
+      // Друга група: якщо в НП Є власні оголошення — лише загальногромадські
+      // (вузько, як і було). Якщо НЕМАЄ — ВСЯ громада (усі НП разом), той самий
+      // набір що й у дефолтному перегляді «Олицька громада» без фільтра —
+      // не лише позначені як «вся громада» (Вова 11.07, знайдений баг: раніше
+      // тут губились пости інших конкретних НП, напр. Жорнище).
+      const wideGroup = npGroup.length
+        ? sorted.filter(p => isCommunityWide(p.location))
+        : [...getFilteredPosts({ ignoreLocation: true })].sort((a, b) => rankTs(b) - rankTs(a));
       const section = (title, list) => list.length
         ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}`
+        : '';
+      // Немає оголошень у КОНКРЕТНОМУ НП (напр. «Олика») — не мовчки перескакувати
+      // одразу на загальногромадські, а показати явне повідомлення (Вова 11.07).
+      const npEmptyMsg = !npGroup.length
+        ? `<div class="bd-group-empty">В розділі «${escapeHtml(activeLocation)}» оголошень не знайдено<span class="bd-group-empty-hint">Перегляньте всі оголошення громади</span></div>`
         : '';
       return `
         <div class="board-backdrop" id="board-backdrop"></div>
         ${section(activeLocation, npGroup)}
+        ${npEmptyMsg}
         ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
     }
@@ -1318,22 +1214,19 @@ export async function renderBoard() {
   const el = getBoardRoot();
   if (!el) return;
 
-  // 1. Supabase: пости + анонси + реакції + коментарі + закладки паралельно
+  // 1. Supabase: пости + анонси + коментарі + закладки паралельно
   if (isSupabaseReady()) {
-    // «Моя» реакція/закладка — лише для залогіненого акаунта (uid). Гість → нічого
-    // персонального; старі анонімні реакції лишаються видимими як публічні лічильники.
+    // «Моя» закладка — лише для залогіненого акаунта (uid). Гість → нічого персонального.
     const uid = currentUserId();
-    const [posts, anns, reactions, comments, saved] = await Promise.all([
+    const [posts, anns, comments, saved] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
-      fetchAllReactions(uid),
       fetchAllComments(),
       uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
     ]);
     if (posts !== null) {
       allPosts         = posts;
       allAnnouncements = anns || [];
-      reactionsByPost  = reactions;
       commentsByPost   = comments;
       savedIds         = saved;
       renderAll(el);
@@ -1351,7 +1244,6 @@ export async function renderBoard() {
     const communityData = await communityRes.json();
     allPosts         = boardData.posts || [];
     allAnnouncements = communityData.announcements || [];
-    reactionsByPost  = new Map();
     commentsByPost   = new Map();
   } catch {
     el.innerHTML = '<div class="empty-state">Дошка тимчасово недоступна</div>';
@@ -1366,7 +1258,6 @@ export async function renderBoard() {
 function renderAll() {
   const el = getBoardRoot();
   if (!el) return;
-  const savedCatScroll = el.querySelector('.bd-categories')?.scrollLeft ?? 0;
   const hasCork = activeType === 'board';
   el.innerHTML = `
     ${hasCork ? `
@@ -1384,9 +1275,6 @@ function renderAll() {
   el.style.backgroundImage = '';
   el.style.backgroundSize  = '';
   el.style.backgroundPosition = '';
-
-  const catsEl = el.querySelector('.bd-categories');
-  if (catsEl) catsEl.scrollLeft = savedCatScroll;
 
   // FAB-підменю (speed-dial): тап по кнопці розкриває дії; повторний/фон — закриває.
   const fab     = document.getElementById('board-fab');
@@ -1444,30 +1332,41 @@ function renderAll() {
   });
 
 
-  // Фільтр за локацією (Д-12) — dropdown, тільки для board
-  const locSel = document.getElementById('bd-loc-select');
-  if (locSel) {
-    sizeLocSelect(locSel);   // підігнати ширину під поточну назву (щоб каретка не відлітала)
-    locSel.addEventListener('change', e => {
-      activeLocation = e.target.value;
-      sizeLocSelect(locSel);
-      renderBodyOnly(el);
-    });
-  }
-
-  // Категорії-чіпи (тільки для board)
-  el.querySelectorAll('[data-bd-cat]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const cat = btn.dataset.bdCat;
-      activeCategory = cat;
-      renderAll(el);
-      // При виборі «ВСІ» — плавно повернути стрічку підкатегорій на початок
-      // (renderAll відновив поточну позицію, звідси й стартує анімація скролу до 0).
-      if (cat === 'all') {
-        el.querySelector('.bd-categories')?.scrollTo({ left: 0, behavior: 'smooth' });
+  // Фільтри Дошки (категорії + локація) — обидва кастомні меню в стилі додатку
+  // (не нативний select). Кнопка відкриває/закриває СВОЄ меню, взаємовиключно
+  // (відкриття одного закриває інше); вибір пункту застосовує фільтр → renderAll
+  // перебудовує шапку (меню відроджується закритим, кнопка показує новий стан).
+  const wireMenuButton = (btnId, menuId, onPick) => {
+    const btn = document.getElementById(btnId);
+    const menu = document.getElementById(menuId);
+    if (!btn || !menu) return;
+    btn.addEventListener('click', e => {
+      e.stopPropagation();   // щоб document-listener (закриття по кліку повз) не спрацював одразу
+      const wasHidden = menu.hasAttribute('hidden');
+      closeBoardMenus();     // закрити обидва (взаємовиключність)
+      if (wasHidden) {       // було закрите → відкрити
+        menu.removeAttribute('hidden');
+        btn.classList.add('open');
+        btn.setAttribute('aria-expanded', 'true');
       }
     });
-  });
+    menu.querySelectorAll('[data-bd-cat], [data-bd-loc]').forEach(mi => {
+      mi.addEventListener('click', () => { onPick(mi); renderAll(); });
+    });
+  };
+  wireMenuButton('bd-cat-filter', 'bd-cat-menu', mi => { activeCategory = mi.dataset.bdCat; });
+  wireMenuButton('bd-loc-btn',    'bd-loc-menu', mi => { activeLocation = mi.dataset.bdLoc; });
+
+  // Закриття меню по кліку повз / Escape / скролу — document-рівень, ОДИН раз (guard).
+  if (!_boardMenusWired) {
+    _boardMenusWired = true;
+    document.addEventListener('click', e => {
+      if (e.target.closest('.bd-cat-filter-wrap') || e.target.closest('.bd-loc-filter')) return;
+      closeBoardMenus();
+    });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBoardMenus(); });
+    document.querySelector('.app-main')?.addEventListener('scroll', closeBoardMenus, { passive: true });
+  }
 
   // Кнопки виклика — окремий handler (capture щоб клік не лизнув на стікер)
   el.querySelectorAll('.cm-board-call').forEach(btn => {
@@ -1715,7 +1614,7 @@ function initBoardNoteExpand(root) {
   }
 }
 
-// ── Document-level listener для реакцій + збережене + share ──────────────────
+// ── Document-level listener для збереженого + share ─────────────────────────
 // Один раз при initBoard. Працює і для оригінальних, і для клонів у zoom-модалці.
 
 let _delegationAttached = false;
@@ -1837,60 +1736,6 @@ function attachBoardDelegation() {
       return;
     }
 
-    // Тригер «🙂+» — відкриває попап реакцій
-    const trigger = e.target.closest('[data-react-trigger]');
-    if (trigger) {
-      e.stopPropagation();
-      const id = Number(trigger.dataset.reactTrigger);
-      const existing = document.getElementById('bd-react-popup');
-      if (existing && existing.dataset.forPost == id) {
-        closeReactionPopup();
-      } else {
-        openReactionPopup(trigger, id);
-        const p = document.getElementById('bd-react-popup');
-        if (p) p.dataset.forPost = id;
-      }
-      return;
-    }
-
-    // Вибір емодзі у попапі
-    const opt = e.target.closest('[data-react-opt]');
-    if (opt) {
-      e.stopPropagation();
-      // Гейтинг (Етап 2): реагувати можуть лише залогінені жителі.
-      if (!isLoggedIn()) { closeReactionPopup(); requireAuth('реагувати', () => {}); return; }
-      const id = Number(opt.dataset.reactPost);
-      const emoji = opt.dataset.reactOpt;
-      const current = getMyReaction(id);
-      const newReaction = current === emoji ? null : emoji;  // тап на ту саму = знімаємо
-
-      // Optimistic: миттєво оновлюємо in-memory map
-      const r = reactionsByPost.get(id) || { counts: {}, my: null };
-      // Прибираємо стару реакцію з counts
-      if (r.my) r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
-      // Додаємо нову (якщо є)
-      if (newReaction) r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
-      r.my = newReaction;
-      reactionsByPost.set(id, r);
-
-      closeReactionPopup();
-      // Оновлюємо тригер на сторінці (і у zoom-модалці якщо відкрита)
-      document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach(btn => {
-        btn.outerHTML = reactTriggerHtml(allPosts.find(p => p.id === id) || { id });
-      });
-
-      // Async POST у Supabase
-      if (isSupabaseReady()) {
-        setReaction(id, currentUserId(), newReaction).then(result => {
-          if (!result.ok) {
-            console.warn('[reactions] помилка збереження:', result.error);
-            // (UI rollback опускаємо — спам у комюніті не критично)
-          }
-        });
-      }
-      return;
-    }
-
     // Усе всередині inline-форми коментарів — не пропускаємо до zoom-модалки
     // (форма має data-comment-form="<id>" і знаходиться у CHAT-картці, не у board)
     if (e.target.closest('[data-comment-form]') || e.target.closest('[data-comment-input]')) {
@@ -1929,33 +1774,11 @@ function attachBoardDelegation() {
       });
       return;
     }
-
-    // Клік поза попапом — закрити
-    if (document.getElementById('bd-react-popup') && !e.target.closest('.bd-react-popup')) {
-      closeReactionPopup();
-    }
   }, { capture: true });
 }
 
 // Realtime — підписки чіпляємо ОДИН раз при initBoard. При подіях БД
 // перерахуємо in-memory map і точково перерендеримо DOM-елементи.
-
-function onReactionRealtimeEvent(payload) {
-  // payload.new / payload.old містить рядок (post_id, user_id, emoji)
-  const row = payload.new || payload.old;
-  if (!row || !row.post_id) return;
-  const postId = row.post_id;
-  // Найпростіше — повний refetch цього поста для коректних counts/my
-  fetchAllReactions(currentUserId()).then(fresh => {
-    // Беремо тільки запис для цього post_id, мерджимо у локальну map
-    const r = fresh.get(postId) || { counts: {}, my: null };
-    reactionsByPost.set(postId, r);
-    // Точково перерендеримо всі тригери цього поста
-    document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach(btn => {
-      btn.outerHTML = reactTriggerHtml(allPosts.find(p => p.id === postId) || { id: postId });
-    });
-  });
-}
 
 function onCommentRealtimeEvent(payload) {
   const postId = (payload.new || payload.old || {}).post_id;
@@ -1994,12 +1817,11 @@ let _realtimeAttached = false;
 function attachRealtime() {
   if (_realtimeAttached || !isSupabaseReady()) return;
   _realtimeAttached = true;
-  subscribeReactions(onReactionRealtimeEvent);
   subscribeComments(onCommentRealtimeEvent);
 }
 
 // ── «Обговорення» як повноекранний overlay поверх вкладки «Чати» (варіант Б) ──
-// Той самий рушій board.js (картки/реакції/коментарі/realtime) рендериться у
+// Той самий рушій board.js (картки/коментарі/realtime) рендериться у
 // #disc-content замість сторінки Дошки. Таб-бар лишається на «Чати».
 let discOpen = false;
 
@@ -2102,6 +1924,16 @@ function fitBoardAuthors() {
       nameEl.style.fontSize = size + 'px';
       range.selectNodeContents(nameEl);       // переміряти гліфи після зміни шрифту
     }
+  });
+}
+
+// Закрити обидва меню-фільтри Дошки (категорії + локація).
+let _boardMenusWired = false;
+function closeBoardMenus() {
+  [['bd-cat-menu', 'bd-cat-filter'], ['bd-loc-menu', 'bd-loc-btn']].forEach(([menuId, btnId]) => {
+    document.getElementById(menuId)?.setAttribute('hidden', '');
+    const b = document.getElementById(btnId);
+    if (b) { b.classList.remove('open'); b.setAttribute('aria-expanded', 'false'); }
   });
 }
 

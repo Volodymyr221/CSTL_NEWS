@@ -561,39 +561,6 @@
       return "anon-fallback";
     }
   }
-  async function fetchAllReactions(anonId) {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
-    if (error) {
-      console.warn("[supabase] fetchAllReactions error:", error.message);
-      return /* @__PURE__ */ new Map();
-    }
-    const map = /* @__PURE__ */ new Map();
-    for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { counts: {}, my: null });
-      const e = map.get(r.post_id);
-      e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
-      if (r.user_id === anonId)
-        e.my = r.emoji;
-    }
-    return map;
-  }
-  async function setReaction(postId, userId, emoji) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    if (emoji == null) {
-      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId);
-      if (error2)
-        return { ok: false, error: error2.message };
-      return { ok: true };
-    }
-    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" });
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true };
-  }
   async function fetchAllComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
@@ -1142,17 +1109,6 @@
     }
     return { ok: true };
   }
-  function subscribeReactions(onChange) {
-    if (!supa)
-      return () => {
-      };
-    const ch = supa.channel("reactions-watch").on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "reactions" },
-      (payload) => onChange(payload)
-    ).subscribe();
-    return () => supa.removeChannel(ch);
-  }
   function subscribeComments(onChange) {
     if (!supa)
       return () => {
@@ -1316,9 +1272,9 @@
     "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
     "\u0421\u0442\u0430\u0432\u043E\u043A",
     "\u0425\u0440\u043E\u043C'\u044F\u043A\u0456\u0432",
-    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D",
-    "\u0406\u043D\u0448\u0435"
+    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D"
   ];
+  var OTHER_SETTLEMENT = "\u0406\u043D\u0448\u0435";
   var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
   var COMMUNITY_ALL_LABEL = "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
 
@@ -1411,19 +1367,55 @@
     _active?.close();
   }
 
-  // src/tabs/community-modal.js
+  // src/core/board-categories.js
+  var A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var SVG = {
+    // Купити — корзина
+    cart: `<svg ${A}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>`,
+    // Продам — цінник
+    tag: `<svg ${A}><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+    // Віддам безкоштовно — подарунок
+    gift: `<svg ${A}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
+    // Шукаю — лупа
+    search: `<svg ${A}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+    // Послуги — ключ
+    wrench: `<svg ${A}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-6.3 6.3a2.1 2.1 0 0 1-3-3l6.3-6.3a6 6 0 0 1 7.9-7.9l-3.1 3.1z"/></svg>`,
+    // Знайдено — галочка в колі
+    check: `<svg ${A}><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`,
+    // Загубилось — знак «?» у колі
+    help: `<svg ${A}><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    // Всі — повзунки (налаштування фільтра; дефолт кнопки фільтра)
+    sliders: `<svg ${A}><line x1="4" y1="6" x2="20" y2="6"/><line x1="4" y1="12" x2="20" y2="12"/><line x1="4" y1="18" x2="20" y2="18"/><circle cx="9" cy="6" r="2" fill="currentColor" stroke="none"/><circle cx="15" cy="12" r="2" fill="currentColor" stroke="none"/><circle cx="8" cy="18" r="2" fill="currentColor" stroke="none"/></svg>`
+  };
   var BOARD_CATEGORIES = [
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "red" },
-    { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
-    { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "white" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "amber" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "amber" }
+    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u043B\u044E", color: "green", icon: SVG.cart },
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", color: "red", icon: SVG.tag },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", color: "white", icon: SVG.wrench },
+    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", color: "blue", icon: SVG.search },
+    { id: "\u0432\u0456\u0434\u0434\u0430\u043C", label: "\u0412\u0456\u0434\u0434\u0430\u043C \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E", short: "\u0412\u0456\u0434\u0434\u0430\u043C", color: "green", icon: SVG.gift },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", color: "amber", icon: SVG.check },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", color: "amber", icon: SVG.help }
   ];
-  function catColor(category) {
-    const c = BOARD_CATEGORIES.find((x) => x.id === category);
+  var ALL_ICON = SVG.sliders;
+  var byId = (id) => BOARD_CATEGORIES.find((c) => c.id === id);
+  function catColor(id) {
+    const c = byId(id);
     return c ? c.color : "white";
   }
+  function catIcon(id) {
+    const c = byId(id);
+    return c ? c.icon : ALL_ICON;
+  }
+  function catLabel(id) {
+    const c = byId(id);
+    return c ? c.label : id;
+  }
+  function catShort(id) {
+    const c = byId(id);
+    return c ? c.short || c.label : id;
+  }
+
+  // src/tabs/community-modal.js
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
   }
@@ -1517,8 +1509,8 @@
         <div class="bm-chips" id="bm-chips">
           ${BOARD_CATEGORIES.map((c) => `
             <button type="button" class="bm-chip${c.id === state.category ? " active" : ""}" data-cat="${c.id}">
-              <span class="bm-chip-emoji">${c.emoji}</span>
-              <span class="bm-chip-label">${c.id}</span>
+              <span class="bm-chip-emoji cat-c-${c.color}">${c.icon}</span>
+              <span class="bm-chip-label">${escapeHtml(c.label)}</span>
             </button>
           `).join("")}
         </div>
@@ -1684,7 +1676,7 @@
       <article class="cm-board-note${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
-        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
@@ -3471,21 +3463,6 @@
   function isCommunityWide(loc) {
     return !loc || loc === COMMUNITY_ALL;
   }
-  function sizeLocSelect(sel) {
-    if (!sel)
-      return;
-    const opt = sel.options[sel.selectedIndex];
-    const txt = (opt ? opt.text : "") || "";
-    const cs = getComputedStyle(sel);
-    const canvas = sizeLocSelect._c || (sizeLocSelect._c = document.createElement("canvas"));
-    const ctx = canvas.getContext("2d");
-    ctx.font = `${cs.fontWeight} ${cs.fontSize}/${cs.lineHeight} ${cs.fontFamily}`;
-    const shown = cs.textTransform === "uppercase" ? txt.toUpperCase() : txt;
-    let w = ctx.measureText(shown).width;
-    w += (parseFloat(cs.letterSpacing) || 0) * shown.length;
-    w += parseFloat(cs.paddingRight) || 0;
-    sel.style.width = Math.ceil(w) + 2 + "px";
-  }
   function pluralAds(n) {
     const d = n % 10, dd = n % 100;
     if (d === 1 && dd !== 11)
@@ -3541,30 +3518,12 @@
   }
   var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
-  var BOARD_CATEGORIES2 = [
-    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726", match: null },
-    { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
-    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", match: ["\u0448\u0443\u043A\u0430\u044E"] },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}", match: ["\u043F\u043E\u0441\u043B\u0443\u0433\u0430"] },
-    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] }
-  ];
-  var CATEGORY_EMOJI = {
-    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
-    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
-    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
-    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
-    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
-    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
-    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
-  };
-  var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
   var allPosts = [];
   var allAnnouncements = [];
   var activeType = "board";
   var activeCategory = "all";
   var activeLocation = COMMUNITY_ALL;
   var searchQuery = "";
-  var reactionsByPost = /* @__PURE__ */ new Map();
   var commentsByPost = /* @__PURE__ */ new Map();
   var savedIds = /* @__PURE__ */ new Set();
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
@@ -3581,18 +3540,6 @@
       localStorage.setItem(key, JSON.stringify(value));
     } catch {
     }
-  }
-  function getMyReaction(postId) {
-    const r = reactionsByPost.get(postId);
-    return r ? r.my : null;
-  }
-  function getReactionCounts(postId) {
-    const r = reactionsByPost.get(postId);
-    return r ? r.counts : {};
-  }
-  function getTotalReactionCount(postId) {
-    const counts = getReactionCounts(postId);
-    return Object.values(counts).reduce((s, n) => s + n, 0);
   }
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
@@ -3705,25 +3652,6 @@
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
   }
-  function reactTriggerHtml(post) {
-    const myReaction = getMyReaction(post.id);
-    const counts = getReactionCounts(post.id);
-    const total = getTotalReactionCount(post.id);
-    const top3 = Object.entries(counts).filter(([, n]) => n > 0).sort((a, b) => b[1] - a[1]).slice(0, 3);
-    let content;
-    if (total === 0) {
-      content = `<span class="bd-react-trigger-default">\u{1F642}</span><span class="bd-react-trigger-plus">+</span>`;
-    } else {
-      content = top3.map(([em, n]) => `
-      <span class="bd-react-trigger-group${em === myReaction ? " bd-react-trigger-group--mine" : ""}">
-        <span class="bd-react-trigger-emoji">${em}</span>
-        <span class="bd-react-trigger-count">${n}</span>
-      </span>
-    `).join("");
-    }
-    return `<button class="bd-react-trigger${myReaction ? " bd-react-trigger--active" : ""}" type="button"
-          data-react-trigger="${post.id}" aria-label="\u0420\u0435\u0430\u043A\u0446\u0456\u0457 (${total})">${content}</button>`;
-  }
   function saveBtnHtml(post) {
     const saved = isSaved(post.id);
     return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
@@ -3744,7 +3672,6 @@
   function boardActionsHtml(post) {
     return `
     <div class="bd-actions bd-actions--board-compact">
-      ${reactTriggerHtml(post)}
       <div class="bd-actions-extra">
         ${saveBtnHtml(post)}
         ${shareBtnHtml(post)}
@@ -3759,14 +3686,14 @@
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">\u{1F4AC}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>
     </div>`;
     }
-    const byId = new Map(items.map((c) => [c.id, c]));
+    const byId2 = new Map(items.map((c) => [c.id, c]));
     const dividerTs = _chatDividerTs;
     let hadOld = false, dividerPlaced = false, lastDay = null;
     const renderDiscBubble = (c) => {
       if (c.deleted_at) {
         return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ""}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
-      const reply = c.reply_to_id ? byId.get(c.reply_to_id) : null;
+      const reply = c.reply_to_id ? byId2.get(c.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "").slice(0, 90))}</span>` : "";
       const edited = c.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
       return `<div class="pm-bubble" data-msg="${c.id}" data-tag="${c.client_tag || ""}">${replyHtml}<span class="pm-bubble-text">${escapeHtml(c.text)}</span><span class="pm-bubble-time">${edited}${clockTime2(postTime(c))}</span></div>`;
@@ -4270,50 +4197,9 @@
       showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
     }
   }
-  function openReactionPopup(triggerBtn, postId) {
-    closeReactionPopup();
-    const myReaction = getMyReaction(postId);
-    const counts = getReactionCounts(postId);
-    const popup = document.createElement("div");
-    popup.className = "bd-react-popup";
-    popup.id = "bd-react-popup";
-    popup.innerHTML = REACTIONS.map((em) => {
-      const n = counts[em] || 0;
-      return `
-      <button class="bd-react-opt${myReaction === em ? " bd-react-opt--active" : ""}" type="button"
-              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
-        <span class="bd-react-opt-emoji">${em}</span>
-        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ""}
-      </button>
-    `;
-    }).join("");
-    document.body.appendChild(popup);
-    const rect = triggerBtn.getBoundingClientRect();
-    const popupRect = popup.getBoundingClientRect();
-    let top = rect.top - popupRect.height - 8;
-    if (top < 8)
-      top = rect.bottom + 8;
-    let left = rect.left + rect.width / 2 - popupRect.width / 2;
-    if (left < 8)
-      left = 8;
-    if (left + popupRect.width > window.innerWidth - 8) {
-      left = window.innerWidth - popupRect.width - 8;
-    }
-    popup.style.top = `${top + window.scrollY}px`;
-    popup.style.left = `${left}px`;
-    requestAnimationFrame(() => popup.classList.add("visible"));
-  }
-  function closeReactionPopup() {
-    const existing = document.getElementById("bd-react-popup");
-    if (existing) {
-      existing.classList.remove("visible");
-      setTimeout(() => existing.remove(), 150);
-    }
-  }
   function buildShareText(post) {
     if (post.type === "board") {
-      const cat = CATEGORY_EMOJI[post.category] || "\u{1F4CC}";
-      return `${cat} ${post.category}
+      return `${catLabel(post.category)}
 
 ${post.text}
 \u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
@@ -4327,14 +4213,13 @@ ${post.text}
   }
   function renderBoardCard(p) {
     const tilt = 0;
-    const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
     <article class="cm-board-note bd-card bd-card--board${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -4344,7 +4229,6 @@ ${post.text}
   `;
   }
   function renderAdModal(p) {
-    const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
     const hasPhoto = photos.length > 0;
     const multi = photos.length > 1;
@@ -4362,7 +4246,7 @@ ${post.text}
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
         ${renderLoc(p.location)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
@@ -4501,7 +4385,7 @@ ${post.text}
       </button>
     </div>`;
   }
-  function getFilteredPosts() {
+  function getFilteredPosts(opts = {}) {
     const q = searchQuery.trim().toLowerCase();
     const savedIds2 = activeType === "saved" ? getSavedIds() : null;
     return allPosts.filter((p) => {
@@ -4512,11 +4396,10 @@ ${post.text}
         return false;
       }
       if (activeType === "board" && activeCategory !== "all") {
-        const cat = BOARD_CATEGORIES2.find((c) => c.id === activeCategory);
-        if (!cat || !cat.match || !cat.match.includes(p.category))
+        if (p.category !== activeCategory)
           return false;
       }
-      if (activeType === "board" && activeLocation !== COMMUNITY_ALL) {
+      if (activeType === "board" && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
         if (p.location !== activeLocation && !isCommunityWide(p.location))
           return false;
       }
@@ -4533,37 +4416,54 @@ ${post.text}
       return true;
     });
   }
+  function getBoardDisplayCount() {
+    if (activeType !== "board" || activeLocation === COMMUNITY_ALL)
+      return getFilteredPosts().length;
+    const narrow = getFilteredPosts();
+    const hasOwn = narrow.some((p) => p.location === activeLocation);
+    return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
+  }
   function renderHeader() {
     const discHead = activeType === "chat" ? `<div class="bd-disc-head">
          <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
        </div>` : "";
     const showCategories = activeType === "board";
-    const chipHtml = (c) => `
-    <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
-      <span class="bd-cat-emoji">${c.emoji}</span>
-      ${escapeHtml(c.label)}
+    const activeIcon = activeCategory === "all" ? ALL_ICON : catIcon(activeCategory);
+    const activeColorCls = activeCategory === "all" ? "" : "cat-c-" + catColor(activeCategory);
+    const CARET_SVG = '<svg class="bd-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    const menuItem = (id, icon, color, label) => `
+    <button class="bd-cat-mi${id === activeCategory ? " active" : ""}" type="button" role="menuitem" data-bd-cat="${id}">
+      <span class="bd-cat-mi-ico ${color ? "cat-c-" + color : ""}">${icon}</span>
+      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
     </button>`;
-    const categoriesHtml = showCategories ? `
-    <div class="bd-cat-wrap">
-      ${chipHtml(BOARD_CATEGORIES2[0])}
-      <span class="bd-cat-divider" aria-hidden="true"></span>
-      <div class="bd-categories">
-        ${BOARD_CATEGORIES2.slice(1).map(chipHtml).join("")}
+    const catFilterHtml = showCategories ? `
+    <div class="bd-cat-filter-wrap">
+      <button class="bd-cat-filter" id="bd-cat-filter" type="button" aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0454\u044E">
+        <span class="bd-cat-filter-ico ${activeColorCls}">${activeIcon}</span>
+        ${CARET_SVG}
+      </button>
+      <div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+        ${menuItem("all", ALL_ICON, "", "\u0412\u0441\u0456")}
+        ${BOARD_CATEGORIES.map((c) => menuItem(c.id, c.icon, c.color, c.label)).join("")}
       </div>
     </div>
   ` : "";
-    const count = showCategories ? getFilteredPosts().length : 0;
+    const count = showCategories ? getBoardDisplayCount() : 0;
     const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
       <h2 class="bd-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
       <div class="bd-subrow">
         <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
-          <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
-          <select class="bd-loc-select" id="bd-loc-select" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
-            <option value="${escapeHtml(COMMUNITY_ALL)}"${activeLocation === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
-            ${SETTLEMENTS.map((s) => `<option value="${escapeHtml(s)}"${activeLocation === s ? " selected" : ""}>${escapeHtml(s)}</option>`).join("")}
-          </select>
+          <button class="bd-loc-btn" id="bd-loc-btn" type="button" aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u043C \u043F\u0443\u043D\u043A\u0442\u043E\u043C">
+            <span class="bd-loc-icon" aria-hidden="true">${PIN_ICON_SVG}</span>
+            <span class="bd-loc-label">${escapeHtml(activeLocation === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : activeLocation)}</span>
+            <svg class="bd-loc-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </button>
+          <div class="bd-loc-menu" id="bd-loc-menu" role="menu" hidden>
+            <button class="bd-loc-mi${activeLocation === COMMUNITY_ALL ? " active" : ""}" type="button" role="menuitem" data-bd-loc="${escapeHtml(COMMUNITY_ALL)}">${escapeHtml(COMMUNITY_ALL_LABEL)}</button>
+            ${SETTLEMENTS.map((s) => `<button class="bd-loc-mi${activeLocation === s ? " active" : ""}" type="button" role="menuitem" data-bd-loc="${escapeHtml(s)}">${escapeHtml(s)}</button>`).join("")}
+          </div>
         </div>
       </div>
     </div>
@@ -4572,13 +4472,15 @@ ${post.text}
     <div class="bd-controls">
       ${discHead}
       ${titlebarHtml}
-      <div class="bd-search">
-        <span class="bd-search-icon">\u{1F50D}</span>
-        <input class="bd-search-input" id="bd-search-input" type="search"
-               placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
-        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
+      <div class="bd-search-row">
+        ${catFilterHtml}
+        <div class="bd-search">
+          <span class="bd-search-icon">\u{1F50D}</span>
+          <input class="bd-search-input" id="bd-search-input" type="search"
+                 placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
+          ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
+        </div>
       </div>
-      ${categoriesHtml}
     </div>
   `;
   }
@@ -4586,7 +4488,7 @@ ${post.text}
     const el = document.getElementById("bd-count");
     if (!el || activeType !== "board")
       return;
-    const n = getFilteredPosts().length;
+    const n = getBoardDisplayCount();
     el.textContent = `${n} ${pluralAds(n)}`;
   }
   function renderBody() {
@@ -4605,11 +4507,13 @@ ${post.text}
       };
       if (activeLocation !== COMMUNITY_ALL) {
         const npGroup = sorted.filter((p) => p.location === activeLocation);
-        const wideGroup = sorted.filter((p) => isCommunityWide(p.location));
+        const wideGroup = npGroup.length ? sorted.filter((p) => isCommunityWide(p.location)) : [...getFilteredPosts({ ignoreLocation: true })].sort((a, b) => rankTs(b) - rankTs(a));
         const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
+        const npEmptyMsg = !npGroup.length ? `<div class="bd-group-empty">\u0412 \u0440\u043E\u0437\u0434\u0456\u043B\u0456 \xAB${escapeHtml(activeLocation)}\xBB \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E<span class="bd-group-empty-hint">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u044C\u0442\u0435 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</span></div>` : "";
         return `
         <div class="board-backdrop" id="board-backdrop"></div>
         ${section(activeLocation, npGroup)}
+        ${npEmptyMsg}
         ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
       }
@@ -4628,17 +4532,15 @@ ${post.text}
       return;
     if (isSupabaseReady()) {
       const uid = currentUserId();
-      const [posts, anns, reactions, comments, saved] = await Promise.all([
+      const [posts, anns, comments, saved] = await Promise.all([
         fetchPublishedPosts(),
         fetchPublishedAnnouncements(),
-        fetchAllReactions(uid),
         fetchAllComments(),
         uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set())
       ]);
       if (posts !== null) {
         allPosts = posts;
         allAnnouncements = anns || [];
-        reactionsByPost = reactions;
         commentsByPost = comments;
         savedIds = saved;
         renderAll(el);
@@ -4654,7 +4556,6 @@ ${post.text}
       const communityData = await communityRes.json();
       allPosts = boardData.posts || [];
       allAnnouncements = communityData.announcements || [];
-      reactionsByPost = /* @__PURE__ */ new Map();
       commentsByPost = /* @__PURE__ */ new Map();
     } catch {
       el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
@@ -4666,7 +4567,6 @@ ${post.text}
     const el = getBoardRoot();
     if (!el)
       return;
-    const savedCatScroll = el.querySelector(".bd-categories")?.scrollLeft ?? 0;
     const hasCork = activeType === "board";
     el.innerHTML = `
     ${hasCork ? `
@@ -4683,9 +4583,6 @@ ${post.text}
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
     el.style.backgroundPosition = "";
-    const catsEl = el.querySelector(".bd-categories");
-    if (catsEl)
-      catsEl.scrollLeft = savedCatScroll;
     const fab = document.getElementById("board-fab");
     const fabBtn = document.getElementById("board-trigger");
     const fabBack = document.getElementById("board-fab-backdrop");
@@ -4755,25 +4652,47 @@ ${post.text}
       searchQuery = "";
       renderAll(el);
     });
-    const locSel = document.getElementById("bd-loc-select");
-    if (locSel) {
-      sizeLocSelect(locSel);
-      locSel.addEventListener("change", (e) => {
-        activeLocation = e.target.value;
-        sizeLocSelect(locSel);
-        renderBodyOnly(el);
-      });
-    }
-    el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const cat = btn.dataset.bdCat;
-        activeCategory = cat;
-        renderAll(el);
-        if (cat === "all") {
-          el.querySelector(".bd-categories")?.scrollTo({ left: 0, behavior: "smooth" });
+    const wireMenuButton = (btnId, menuId, onPick) => {
+      const btn = document.getElementById(btnId);
+      const menu = document.getElementById(menuId);
+      if (!btn || !menu)
+        return;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const wasHidden = menu.hasAttribute("hidden");
+        closeBoardMenus();
+        if (wasHidden) {
+          menu.removeAttribute("hidden");
+          btn.classList.add("open");
+          btn.setAttribute("aria-expanded", "true");
         }
       });
+      menu.querySelectorAll("[data-bd-cat], [data-bd-loc]").forEach((mi) => {
+        mi.addEventListener("click", () => {
+          onPick(mi);
+          renderAll();
+        });
+      });
+    };
+    wireMenuButton("bd-cat-filter", "bd-cat-menu", (mi) => {
+      activeCategory = mi.dataset.bdCat;
     });
+    wireMenuButton("bd-loc-btn", "bd-loc-menu", (mi) => {
+      activeLocation = mi.dataset.bdLoc;
+    });
+    if (!_boardMenusWired) {
+      _boardMenusWired = true;
+      document.addEventListener("click", (e) => {
+        if (e.target.closest(".bd-cat-filter-wrap") || e.target.closest(".bd-loc-filter"))
+          return;
+        closeBoardMenus();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape")
+          closeBoardMenus();
+      });
+      document.querySelector(".app-main")?.addEventListener("scroll", closeBoardMenus, { passive: true });
+    }
     el.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -5159,54 +5078,6 @@ ${post.text}
           showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", 2500);
         return;
       }
-      const trigger = e.target.closest("[data-react-trigger]");
-      if (trigger) {
-        e.stopPropagation();
-        const id = Number(trigger.dataset.reactTrigger);
-        const existing = document.getElementById("bd-react-popup");
-        if (existing && existing.dataset.forPost == id) {
-          closeReactionPopup();
-        } else {
-          openReactionPopup(trigger, id);
-          const p = document.getElementById("bd-react-popup");
-          if (p)
-            p.dataset.forPost = id;
-        }
-        return;
-      }
-      const opt = e.target.closest("[data-react-opt]");
-      if (opt) {
-        e.stopPropagation();
-        if (!isLoggedIn()) {
-          closeReactionPopup();
-          requireAuth("\u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438", () => {
-          });
-          return;
-        }
-        const id = Number(opt.dataset.reactPost);
-        const emoji = opt.dataset.reactOpt;
-        const current = getMyReaction(id);
-        const newReaction = current === emoji ? null : emoji;
-        const r = reactionsByPost.get(id) || { counts: {}, my: null };
-        if (r.my)
-          r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
-        if (newReaction)
-          r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
-        r.my = newReaction;
-        reactionsByPost.set(id, r);
-        closeReactionPopup();
-        document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach((btn) => {
-          btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === id) || { id });
-        });
-        if (isSupabaseReady()) {
-          setReaction(id, currentUserId(), newReaction).then((result) => {
-            if (!result.ok) {
-              console.warn("[reactions] \u043F\u043E\u043C\u0438\u043B\u043A\u0430 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043D\u044F:", result.error);
-            }
-          });
-        }
-        return;
-      }
       if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
         e.stopPropagation();
         return;
@@ -5240,23 +5111,7 @@ ${post.text}
         });
         return;
       }
-      if (document.getElementById("bd-react-popup") && !e.target.closest(".bd-react-popup")) {
-        closeReactionPopup();
-      }
     }, { capture: true });
-  }
-  function onReactionRealtimeEvent(payload) {
-    const row = payload.new || payload.old;
-    if (!row || !row.post_id)
-      return;
-    const postId = row.post_id;
-    fetchAllReactions(currentUserId()).then((fresh) => {
-      const r = fresh.get(postId) || { counts: {}, my: null };
-      reactionsByPost.set(postId, r);
-      document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach((btn) => {
-        btn.outerHTML = reactTriggerHtml(allPosts.find((p) => p.id === postId) || { id: postId });
-      });
-    });
   }
   function onCommentRealtimeEvent(payload) {
     const postId = (payload.new || payload.old || {}).post_id;
@@ -5295,7 +5150,6 @@ ${post.text}
     if (_realtimeAttached || !isSupabaseReady())
       return;
     _realtimeAttached = true;
-    subscribeReactions(onReactionRealtimeEvent);
     subscribeComments(onCommentRealtimeEvent);
   }
   var discOpen = false;
@@ -5383,6 +5237,17 @@ ${post.text}
         size -= STEP;
         nameEl.style.fontSize = size + "px";
         range.selectNodeContents(nameEl);
+      }
+    });
+  }
+  var _boardMenusWired = false;
+  function closeBoardMenus() {
+    [["bd-cat-menu", "bd-cat-filter"], ["bd-loc-menu", "bd-loc-btn"]].forEach(([menuId, btnId]) => {
+      document.getElementById(menuId)?.setAttribute("hidden", "");
+      const b = document.getElementById(btnId);
+      if (b) {
+        b.classList.remove("open");
+        b.setAttribute("aria-expanded", "false");
       }
     });
   }
@@ -8253,15 +8118,6 @@ ${ev.description || ""}`
       }
     }, 80);
   }
-  var CATEGORY_EMOJI2 = {
-    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
-    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
-    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
-    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
-    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
-    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
-    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
-  };
   async function renderBoardBlock() {
     const el = document.getElementById("cm-board-content");
     if (!el)
@@ -8387,13 +8243,12 @@ ${ev.description || ""}`
   function renderMiniCard(item, type) {
     const tilt = item.id * 7 % 5 - 2;
     if (type === "board") {
-      const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
       <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || "")}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${catIcon(item.category)} ${escapeHtml(catShort(item.category || ""))}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;
@@ -9692,7 +9547,7 @@ END:VEVENT`
         <label class="acc-f"><span>\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442</span>
           <select id="cf-settlement">
             <option value="">\u2014 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u2014</option>
-            ${SETTLEMENTS.map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
+            ${[...SETTLEMENTS, OTHER_SETTLEMENT].map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
           </select>
         </label>
         <label class="acc-f"><span>\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430"></label>

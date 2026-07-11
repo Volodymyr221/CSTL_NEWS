@@ -1,8 +1,8 @@
 {
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "updatedAt": "10.07.2026",
-  "updatedTime": "22:03",
+  "updatedAt": "11.07.2026",
+  "updatedTime": "17:05",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -8790,7 +8790,7 @@
         }
       ],
       "fetchedAt": "10.07.2026",
-      "fetchedTime": "22:03"
+      "fetchedTime": "23:50"
     },
     "2026-07-11": {
       "routes": [
@@ -8802,7 +8802,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -8894,7 +8894,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:05",
           "arrival_time": "08:30",
           "duration_min": 85,
@@ -8986,7 +8986,7 @@
           "bus": "АТАМАН А-09216",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:50",
           "arrival_time": "09:00",
           "duration_min": 70,
@@ -9028,7 +9028,7 @@
           "bus": "Баз  А 091",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:10",
           "arrival_time": "10:50",
           "duration_min": 100,
@@ -9070,7 +9070,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "09:20",
           "arrival_time": "10:15",
           "duration_min": 55,
@@ -9157,7 +9157,7 @@
           "bus": "БАЗ 079-23",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:06",
           "arrival_time": "12:05",
           "duration_min": 119,
@@ -9254,7 +9254,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:10",
           "arrival_time": "11:45",
           "duration_min": 95,
@@ -9296,7 +9296,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "11:30",
           "arrival_time": "13:10",
           "duration_min": 100,
@@ -9338,7 +9338,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:25",
           "arrival_time": "14:10",
           "duration_min": 105,
@@ -9380,7 +9380,7 @@
           "bus": "Баз  А  079.17",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "12:40",
           "arrival_time": "14:10",
           "duration_min": 90,
@@ -9471,8 +9471,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "АТАМАН А-09216",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "13:05",
           "arrival_time": "14:30",
           "duration_min": 85,
@@ -9514,7 +9514,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "13:30",
           "arrival_time": "14:42",
           "duration_min": 72,
@@ -9601,7 +9601,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:00",
           "arrival_time": "15:35",
           "duration_min": 95,
@@ -9642,8 +9642,8 @@
           "carrier": "санрайз_л_т_д",
           "bus": "",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:25",
           "arrival_time": "16:05",
           "duration_min": 100,
@@ -9685,7 +9685,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "14:55",
           "arrival_time": "16:35",
           "duration_min": 100,
@@ -9727,7 +9727,7 @@
           "bus": "",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "15:30",
           "arrival_time": "17:15",
           "duration_min": 105,
@@ -9824,7 +9824,7 @@
           "bus": "БОГДАН А0921",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "15:40",
           "arrival_time": "17:20",
           "duration_min": 100,
@@ -9866,7 +9866,7 @@
           "bus": "БОГДАН А0902",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "16:40",
           "arrival_time": "18:30",
           "duration_min": 110,
@@ -9908,7 +9908,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "16:50",
           "arrival_time": "18:00",
           "duration_min": 70,
@@ -10395,8 +10395,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=11.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "22:03"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "17:05"
     },
     "2026-07-12": {
       "routes": [
@@ -12001,8 +12001,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=12.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "17:05"
     },
     "2026-07-13": {
       "routes": [
@@ -13791,8 +13791,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=13.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-14": {
       "routes": [
@@ -15397,8 +15397,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=14.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-15": {
       "routes": [
@@ -17003,13 +17003,13 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=15.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-16": {
       "routes": [],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-17": {
       "routes": [
@@ -18614,8 +18614,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=17.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-18": {
       "routes": [
@@ -20220,8 +20220,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=18.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-19": {
       "routes": [
@@ -21826,8 +21826,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=19.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "10.07.2026",
-      "fetchedTime": "00:38"
+      "fetchedAt": "11.07.2026",
+      "fetchedTime": "01:08"
     },
     "2026-07-20": {
       "routes": [],

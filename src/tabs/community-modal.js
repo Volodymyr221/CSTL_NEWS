@@ -11,28 +11,8 @@ import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supab
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { openModal } from '../core/modal.js';
-
-// Порядок категорій дзеркалить групування фільтра на вкладці Дошка:
-// купівля-продаж → пошук → послуга → знахідки/втрати.
-// Кольори — семантичні (колір = зміст тега): купити=зелений, продати=червоний,
-// шукаю=синій, послуга=сірий, знайдено/загубилось=бурштин (спільна тема).
-// «Оголошення» прибрано (уся Дошка = оголошення, окрема категорія зайва).
-const BOARD_CATEGORIES = [
-  { id: 'продам',     emoji: '💰', color: 'red'    },
-  { id: 'куплю',      emoji: '🛒', color: 'green'  },
-  { id: 'шукаю',      emoji: '🔍', color: 'blue'   },
-  { id: 'послуга',    emoji: '🔧', color: 'white'  },
-  { id: 'знайдено',   emoji: '🎁', color: 'amber'  },
-  { id: 'загубилось', emoji: '😟', color: 'amber'  },
-];
-
-// Семантичний колір тега рахуємо З КАТЕГОРІЇ при рендері (не зі збереженого
-// p.color) — щоб колір застосувався до ВСІХ оголошень, і старих теж. Невідома
-// категорія (старі 'оголошення'/null) → 'white' (нейтральний сірий).
-export function catColor(category) {
-  const c = BOARD_CATEGORIES.find(x => x.id === category);
-  return c ? c.color : 'white';
-}
+// Таксономія категорій (id/label/колір/векторна іконка) — спільний модуль, єдине джерело.
+import { BOARD_CATEGORIES, catShort } from '../core/board-categories.js';
 
 // Чи виглядає рядок як телефон
 function isPhone(s) {
@@ -133,8 +113,8 @@ export function openBoardModal() {
         <div class="bm-chips" id="bm-chips">
           ${BOARD_CATEGORIES.map(c => `
             <button type="button" class="bm-chip${c.id === state.category ? ' active' : ''}" data-cat="${c.id}">
-              <span class="bm-chip-emoji">${c.emoji}</span>
-              <span class="bm-chip-label">${c.id}</span>
+              <span class="bm-chip-emoji cat-c-${c.color}">${c.icon}</span>
+              <span class="bm-chip-label">${escapeHtml(c.label)}</span>
             </button>
           `).join('')}
         </div>
@@ -315,7 +295,7 @@ export function openBoardModal() {
       <article class="cm-board-note${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
-        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
