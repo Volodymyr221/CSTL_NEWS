@@ -1413,10 +1413,12 @@
           return;
         dragging = false;
         panel.style.transition = "";
-        if (dy > 90)
+        if (dy > 90) {
+          panel.style.transform = "translateY(100%)";
           close();
-        else
+        } else {
           panel.style.transform = "";
+        }
         dy = 0;
       });
     }
@@ -1574,7 +1576,7 @@
     function renderBoardFields() {
       dynamicEl.innerHTML = `
       <div class="bm-section">
-        <label class="bm-label">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</label>
+        <label class="bm-label">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F <span class="bm-label-req">*</span></label>
         <div class="bm-chips" id="bm-chips">
           ${BOARD_CATEGORIES.map((c) => `
             <button type="button" class="bm-chip${c.id === state.category ? " active" : ""}" data-cat="${c.id}">

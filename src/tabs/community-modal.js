@@ -122,7 +122,7 @@ export function openBoardModal() {
   function renderBoardFields() {
     dynamicEl.innerHTML = `
       <div class="bm-section">
-        <label class="bm-label">Категорія</label>
+        <label class="bm-label">Категорія <span class="bm-label-req">*</span></label>
         <div class="bm-chips" id="bm-chips">
           ${BOARD_CATEGORIES.map(c => `
             <button type="button" class="bm-chip${c.id === state.category ? ' active' : ''}" data-cat="${c.id}">
