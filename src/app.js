@@ -6,7 +6,8 @@ import { initEvents } from './tabs/events.js';
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard } from './tabs/board.js';
-import { initAuth } from './core/auth.js';
+import { initAuth, currentUserId } from './core/auth.js';
+import { logEvent, getAnonId } from './core/supabase.js';
 import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
 import { initConsent } from './core/consent.js';
@@ -16,6 +17,10 @@ import { initSavedHub } from './core/saved-hub.js';   // хаб «Збереже
 
 // Поточна активна вкладка
 let currentTab = 'community';
+
+// Аналітика (Потік 6, byyou): тип пристрою рахуємо один раз (не змінюється
+// протягом сесії) — прикріплюємо до кожної події tab_view.
+const _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? 'mobile' : 'desktop';
 
 // Переключення між вкладками з плавною анімацією
 window.switchTab = function(tab) {
@@ -63,6 +68,7 @@ window.switchTab = function(tab) {
 
   currentTab = tab;
   window.dispatchEvent(new CustomEvent('cstl-tab-changed'));
+  logEvent(currentUserId() || getAnonId(), 'tab_view', { tab, meta: { device: _analyticsDevice } });
 };
 
 // Закрити модальне вікно статті
@@ -234,6 +240,11 @@ function init() {
   window.addEventListener('hashchange', handleInviteHash);
   handleThreadHash();                              // P-9: холодний старт з нотифікації чату
   window.addEventListener('hashchange', handleThreadHash);
+
+  // Аналітика: switchTab() рано виходить коли tab===currentTab, тому початковий
+  // перегляд дефолтної вкладки (Громада, currentTab вже 'community') інакше
+  // ніколи б не залогувався.
+  logEvent(currentUserId() || getAnonId(), 'tab_view', { tab: currentTab, meta: { device: _analyticsDevice } });
 
   // Splash screen — прибираємо після завантаження
   setTimeout(() => {

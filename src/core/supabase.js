@@ -808,3 +808,49 @@ export function subscribeComments(onChange) {
     .subscribe();
   return () => supa.removeChannel(ch);
 }
+
+// ── АНАЛІТИКА (Потік 6, byyou) ──────────────────────────────────────────────
+// Власна статистика (без Google Analytics/Plausible) — сирі події у
+// analytics_events (scripts/supabase_analytics.sql), агрегати рахує адмінка.
+// visitorId — currentUserId() (акаунт) або getAnonId() (гість), рахує викликач
+// (той самий патерн що fetchAllReactions(uid || getAnonId())).
+
+// Записати подію. Fire-and-forget — НЕ блокує UI і НЕ кидає помилку викликачу
+// (аналітика ніколи не має зламати реальну дію користувача).
+export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
+  if (!supa || !visitorId) return;
+  supa.from('analytics_events')
+    .insert({ visitor_id: visitorId, event_type: type, tab, meta })
+    .then(({ error }) => { if (error) console.warn('[supabase] logEvent:', error.message); });
+}
+
+// Агрегати для дашборду адмінки (лише is_admin() — див. RLS). period: кількість
+// днів назад ('all' → без фільтру дат). Повертає null при помилці/непідключенні.
+export async function fetchAnalyticsSummary(periodDays = 7) {
+  if (!supa) return null;
+  let q = supa.from('analytics_events').select('visitor_id, event_type, tab, meta, created_at');
+  if (periodDays !== 'all') {
+    const since = new Date(Date.now() - periodDays * 86400000).toISOString();
+    q = q.gte('created_at', since);
+  }
+  const { data, error } = await q.limit(20000);
+  if (error) {
+    console.warn('[supabase] fetchAnalyticsSummary:', error.message);
+    return null;
+  }
+  const rows = data || [];
+  const uniqueVisitors = new Set(rows.map(r => r.visitor_id)).size;
+  const byTab = {};
+  const byDevice = {};
+  const byHour = {};
+  let pwaInstalls = 0;
+  for (const r of rows) {
+    if (r.event_type === 'tab_view' && r.tab) byTab[r.tab] = (byTab[r.tab] || 0) + 1;
+    if (r.event_type === 'pwa_install') pwaInstalls++;
+    const device = r.meta?.device;
+    if (device) byDevice[device] = (byDevice[device] || 0) + 1;
+    const hour = new Date(r.created_at).getHours();
+    byHour[hour] = (byHour[hour] || 0) + 1;
+  }
+  return { totalEvents: rows.length, uniqueVisitors, byTab, byDevice, byHour, pwaInstalls };
+}

@@ -1,471 +1,4 @@
 (() => {
-  // src/core/boot.js
-  function setupSW() {
-    if (!("serviceWorker" in navigator))
-      return;
-    const hadController = !!navigator.serviceWorker.controller;
-    let _reloading = false;
-    let _swReg = null;
-    const doReload = () => {
-      if (_reloading)
-        return;
-      _reloading = true;
-      window.location.replace(window.location.href);
-    };
-    navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!hadController)
-        return;
-      doReload();
-    });
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && _swReg)
-        _swReg.update();
-    });
-    window.addEventListener("pageshow", (e) => {
-      if (e.persisted && _swReg)
-        _swReg.update();
-    });
-    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg) => {
-      _swReg = reg;
-      reg.update();
-      reg.addEventListener("updatefound", () => {
-        const sw = reg.installing;
-        if (!sw)
-          return;
-        sw.addEventListener("statechange", () => {
-          if (sw.state === "activated" && hadController)
-            doReload();
-        });
-      });
-    }).catch(() => {
-    });
-  }
-  function bootApp() {
-    try {
-      setupSW();
-    } catch (e) {
-    }
-  }
-
-  // src/core/utils.js
-  function formatTime(value) {
-    if (!value)
-      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
-    const ts = typeof value === "string" ? new Date(value).getTime() : value;
-    if (!ts || isNaN(ts))
-      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
-    const diff = Date.now() - ts;
-    if (diff < 6e4)
-      return "\u0449\u043E\u0439\u043D\u043E";
-    if (diff < 36e5)
-      return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-    if (diff < 864e5)
-      return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
-    return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
-  }
-  function postTime(p) {
-    if (!p)
-      return null;
-    return p.ts || p.published_at || p.created_at || null;
-  }
-  function escapeHtml(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-  }
-  function pad(n) {
-    return String(n).padStart(2, "0");
-  }
-  function todayKey() {
-    const d = /* @__PURE__ */ new Date();
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-  }
-  var OLYKA_COORDS = { lat: 50.7333, lon: 25.8167 };
-  var _coordsPromise = null;
-  function getCoords() {
-    if (_coordsPromise)
-      return _coordsPromise;
-    _coordsPromise = new Promise((resolve) => {
-      if (!navigator.geolocation) {
-        resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" });
-        return;
-      }
-      navigator.geolocation.getCurrentPosition(
-        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
-        () => resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" }),
-        { timeout: 5e3, maximumAge: 6e5 }
-      );
-    });
-    return _coordsPromise;
-  }
-  async function getCityName(lat, lon) {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
-        { headers: { "Accept-Language": "uk" } }
-      );
-      const data = await res.json();
-      return data.address?.city || data.address?.town || data.address?.village || "\u041E\u043B\u0438\u043A\u0430";
-    } catch {
-      return "\u041E\u043B\u0438\u043A\u0430";
-    }
-  }
-  function attachSwipe(el, onLeft, onRight) {
-    let startX = null, startY = null;
-    el.addEventListener("touchstart", (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    el.addEventListener("touchend", (e) => {
-      if (startX == null)
-        return;
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      startX = null;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-        if (dx < 0 && onLeft)
-          onLeft();
-        if (dx > 0 && onRight)
-          onRight();
-      }
-    }, { passive: true });
-  }
-  async function sharePost({ title, text, url }) {
-    const shareData = {
-      title: title || "CSTL LIFE",
-      text: text || "",
-      url: url || location.href
-    };
-    if (navigator.share) {
-      try {
-        await navigator.share(shareData);
-        return true;
-      } catch (err) {
-        if (err && err.name === "AbortError")
-          return false;
-      }
-    }
-    try {
-      await navigator.clipboard.writeText(shareData.url);
-      showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 2500);
-      return true;
-    } catch {
-      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C", 2500);
-      return false;
-    }
-  }
-  function showToast(msg, duration = 3e3, type = "") {
-    let toast = document.getElementById("cstl-toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "cstl-toast";
-      toast.className = "toast";
-      document.body.appendChild(toast);
-    }
-    toast.textContent = msg;
-    toast.classList.toggle("toast--error", type === "error");
-    toast.classList.add("visible");
-    clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => toast.classList.remove("visible"), duration);
-  }
-  var FILTER_HOMOGLYPHS = { a: "\u0430", e: "\u0435", o: "\u043E", c: "\u0441", x: "\u0445", p: "\u0440", y: "\u0443", k: "\u043A", i: "\u0456", b: "\u0431", m: "\u043C", h: "\u043D", t: "\u0442" };
-  var FILTER_LEET = { "0": "o", "3": "e", "4": "a", "5": "s", "6": "g", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s", "!": "i", "|": "l", "+": "t" };
-  function deleet(s) {
-    return String(s).replace(/[03456789@$!|+]/g, (ch) => FILTER_LEET[ch] || ch);
-  }
-  function normalizeForFilter(text) {
-    return deleet(String(text || "").toLowerCase()).replace(/1/g, "i").replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
-  }
-  var PROFANITY_STEMS = [
-    // нецензурні (укр + рос)
-    "\u0445\u0443\u0439",
-    "\u0445\u0443\u0454",
-    "\u0445\u0443\u044F",
-    "\u0445\u0443\u0457",
-    "\u0445\u0443\u0439\u043B",
-    "\u0445\u0443\u0454\u0441",
-    "\u043F\u0438\u0437\u0434",
-    "\u043F\u0456\u0437\u0434",
-    "\u0431\u043B\u044F\u0434",
-    "\u0431\u043B\u044F\u0442",
-    // 'еб' голим стемом НЕ можна: гомогліфи (e→е, b→б) роблять з ebook/ebay/ebola
-    // «ебоок/ебау/ебола» → хибне блокування. Лише довші реальні форми.
-    // 'єб'/'їб' безпечні — є/ї з латинських літер не виникають.
-    "\u0454\u0431",
-    "\u0457\u0431",
-    "\u0439\u043E\u0431",
-    "\u0435\u0431\u0430\u043B",
-    "\u0435\u0431\u0430\u043D",
-    "\u0435\u0431\u0430\u0442",
-    "\u0435\u0431\u0443\u0442",
-    "\u0435\u0431\u0443\u0447",
-    "\u0435\u0431\u043D\u0443",
-    "\u043D\u0430\u0454\u0431",
-    "\u043D\u0430\u0435\u0431",
-    "\u043D\u0430\u0457\u0431",
-    "\u0437\u0430\u0454\u0431",
-    "\u0437\u0430\u0457\u0431",
-    "\u0432\u0438\u0454\u0431",
-    "\u0432\u0438\u0457\u0431",
-    "\u0434\u043E\u0457\u0431",
-    "\u0443\u0457\u0431",
-    "\u0443\u0454\u0431",
-    "\u0443\u0435\u0431",
-    "\u0437\u0430\u043B\u0443\u043F",
-    "\u0433\u0430\u043D\u0434\u043E\u043D",
-    "\u0433\u043E\u043D\u0434\u043E\u043D",
-    "\u043C\u0443\u0434\u0430\u043A",
-    "\u043C\u0443\u0434\u0438\u043B",
-    "\u043F\u0456\u0434\u0430\u0440",
-    "\u043F\u0456\u0434\u043E\u0440",
-    "\u043F\u0438\u0434\u043E\u0440",
-    "\u043F\u0438\u0434\u0430\u0440",
-    "\u043D\u0430\u0445\u0443",
-    "\u043F\u043E\u0445\u0443\u0439",
-    "\u0434\u0440\u043E\u0447",
-    "\u0441\u0446\u0443\u043A",
-    "\u0441\u0446\u0438\u043A\u043B",
-    "\u043A\u0443\u0440\u0432",
-    "\u0441\u0432\u043E\u043B\u043E\u0447",
-    "\u0433\u0456\u0432\u043D",
-    "\u0433\u043E\u0432\u043D",
-    "\u0441\u0440\u0430\u043A",
-    "\u0441\u0440\u0430\u043D",
-    "\u0436\u043E\u043F",
-    "\u043C\u0440\u0430\u0437",
-    "\u0448\u043B\u044E\u0445",
-    "\u0448\u043B\u044C\u043E\u043D\u0434\u0440",
-    "\u043F\u0430\u0434\u043B",
-    "\u0434\u043E\u0432\u0431\u043E",
-    "\u0434\u043E\u043B\u0431\u043E",
-    "\u0441\u043A\u043E\u0442\u0438\u043D",
-    "\u0442\u0432\u0430\u0440\u044E\u043A",
-    "\u043A\u043E\u0437\u043B\u0438\u043D",
-    "\u043B\u043E\u0448\u0430\u0440",
-    // образи
-    "\u0456\u0434\u0456\u043E\u0442",
-    "\u043A\u0440\u0435\u0442\u0438\u043D",
-    "\u043F\u0440\u0438\u0434\u0443\u0440",
-    "\u0456\u043C\u0431\u0435\u0446\u0438\u043B",
-    "\u0434\u0435\u0431\u0456\u043B",
-    "\u0434\u0435\u0431\u0438\u043B",
-    "\u0434\u0438\u0431\u0456\u043B",
-    "\u0434\u0438\u0431\u0438\u043B"
-  ];
-  var PROFANITY_EXACT = /* @__PURE__ */ new Set([
-    "\u0431\u043B\u044F",
-    "\u0441\u0443\u043A\u0430",
-    "\u0441\u0443\u043A\u0438",
-    "\u0441\u0443\u043A\u0443",
-    "\u0441\u0443\u0447\u043A\u0430",
-    "\u0441\u0443\u0447\u043A\u0438",
-    "\u0445\u0435\u0440",
-    "\u043B\u043E\u0445",
-    "\u043B\u043E\u0445\u0430",
-    "\u043B\u043E\u0445\u0438",
-    "\u043C\u0430\u043D\u0434\u0430",
-    "\u043C\u0430\u043D\u0434\u0438",
-    "\u043F\u0435\u0434\u0438\u043A",
-    "\u043F\u0435\u0434\u0438\u043A\u0438",
-    "\u043F\u0435\u0434\u0456\u043A",
-    "\u043F\u0435\u0434\u0456\u043A\u0438",
-    "\u043F\u0454\u0434\u0456\u043A",
-    "\u043F\u0454\u0434\u0438\u043A",
-    "\u043F\u0454\u0434\u0438\u043A\u0438",
-    "\u0433\u043D\u0438\u0434\u0430",
-    "\u0433\u043D\u0438\u0434\u0438",
-    "\u0434\u0443\u0440\u0430\u043A",
-    "\u0434\u0443\u0440\u0435\u043D\u044C",
-    "\u0434\u0443\u0440\u043D\u0438\u0439",
-    "\u0434\u0443\u0440\u043D\u0430",
-    "\u0434\u0443\u0440\u043D\u0435",
-    "\u0434\u0443\u0440\u043D\u0456",
-    "\u0442\u0443\u043F\u0438\u0439",
-    "\u0442\u0443\u043F\u0430",
-    "\u0442\u0443\u043F\u0435",
-    "\u0442\u0443\u043F\u0438\u0446\u044F",
-    "\u0442\u0443\u043F\u0438\u0446\u0456",
-    "\u043A\u043E\u0437\u0435\u043B",
-    "\u043A\u043E\u0437\u043B\u0438",
-    "\u0434\u0430\u0443\u043D",
-    "\u0431\u043E\u0432\u0434\u0443\u0440",
-    "\u0441\u043A\u043E\u0442"
-  ]);
-  var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0457\u0431\u0430\u043B", "\u0439\u043E\u0431", "\u0431\u043B\u044F\u0434", "\u0431\u043B\u044F\u0442", "\u043C\u0443\u0434\u0430\u043A", "\u043F\u0456\u0434\u043E\u0440", "\u043F\u0438\u0434\u043E\u0440"];
-  var PROFANITY_LATIN = [
-    // рос/укр трансліт
-    "huy",
-    "hui",
-    "huil",
-    "huyl",
-    "huylo",
-    "huilo",
-    "huesos",
-    "xyu",
-    "pizd",
-    "pizda",
-    "yeban",
-    "ebal",
-    "ebat",
-    "zaeb",
-    "doeb",
-    "vyeb",
-    "blya",
-    "blyad",
-    "blyat",
-    "suka",
-    "suchka",
-    "suchara",
-    "pidor",
-    "pidar",
-    "pidoras",
-    "mudak",
-    "mudil",
-    "zalupa",
-    "gandon",
-    "gondon",
-    "dolboeb",
-    "dolbaeb",
-    "mraz",
-    "nahui",
-    "nahuy",
-    "nahyi",
-    "nahren",
-    "pohui",
-    "pohuy",
-    "yoban",
-    "yobn",
-    "govno",
-    "gavno",
-    "durak",
-    // англ.
-    "fuck",
-    "fuk",
-    "fuq",
-    "shit",
-    "bullshit",
-    "bitch",
-    "biatch",
-    "asshole",
-    "motherfuck",
-    "faggot",
-    "nigger",
-    "nigga",
-    "whore",
-    "wanker",
-    "bollock",
-    "dickhead",
-    "jackass",
-    "dumbass",
-    "retard",
-    "bastard",
-    "douche"
-  ];
-  var PROFANITY_LATIN_SQUASH = ["blyat", "pizda", "nahui", "pidoras", "zalupa", "dolboeb"];
-  function containsProfanity(text) {
-    const norm = normalizeForFilter(text);
-    const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
-    for (const w of words) {
-      if (PROFANITY_EXACT.has(w))
-        return true;
-      if (PROFANITY_STEMS.some((s) => w.startsWith(s)))
-        return true;
-    }
-    const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
-    if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
-      return true;
-    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1"));
-    for (const one of ["i", "l"]) {
-      const v = latinBase.replace(/1/g, one);
-      for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
-        if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
-          return true;
-      }
-      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s)))
-        return true;
-    }
-    return false;
-  }
-  function sunTimes(date = /* @__PURE__ */ new Date(), lat = 50.717, lon = 25.81) {
-    const rad = Math.PI / 180;
-    const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 864e5);
-    const decl = -23.44 * rad * Math.cos(2 * Math.PI / 365 * (doy + 10));
-    const cosH = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(decl)) / (Math.cos(lat * rad) * Math.cos(decl));
-    if (cosH < -1 || cosH > 1)
-      return null;
-    const H = Math.acos(cosH) / rad;
-    const B = 2 * Math.PI * (doy - 81) / 364;
-    const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
-    const noonMin = 720 - 4 * lon - eot;
-    const mk = (m) => {
-      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
-      d.setUTCMinutes(Math.round(m));
-      return d;
-    };
-    return { sunrise: mk(noonMin - 4 * H), sunset: mk(noonMin + 4 * H) };
-  }
-  function looksLikeSpam(text) {
-    const t = String(text || "").trim();
-    if (t.length === 1)
-      return true;
-    if (/(.)\1{5,}/.test(t))
-      return true;
-    const letters = t.replace(/[^а-яіїєґa-zА-ЯІЇЄҐA-Z]/g, "");
-    if (letters.length >= 12 && !/[аеиіоуяюєїёauoiey]/i.test(letters))
-      return true;
-    return false;
-  }
-
-  // src/core/weather.js
-  function codeToIcon(code) {
-    if (code === 0)
-      return "\u2600\uFE0F";
-    if (code <= 2)
-      return "\u{1F324}\uFE0F";
-    if (code === 3)
-      return "\u2601\uFE0F";
-    if (code <= 48)
-      return "\u{1F32B}\uFE0F";
-    if (code <= 55)
-      return "\u{1F326}\uFE0F";
-    if (code <= 65)
-      return "\u{1F327}\uFE0F";
-    if (code <= 77)
-      return "\u2744\uFE0F";
-    if (code <= 82)
-      return "\u{1F327}\uFE0F";
-    if (code >= 95)
-      return "\u26C8\uFE0F";
-    return "\u{1F321}\uFE0F";
-  }
-  async function initWeather() {
-    const iconEl = document.getElementById("weather-icon");
-    const tempEl = document.getElementById("weather-temp");
-    if (!iconEl || !tempEl)
-      return;
-    const ac = new AbortController();
-    const timeoutId = setTimeout(() => ac.abort(), 5e3);
-    try {
-      const { lat, lon, city: knownCity } = await getCoords();
-      const [weatherRes, cityName] = await Promise.all([
-        fetch(
-          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`,
-          { signal: ac.signal }
-        ),
-        knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
-      ]);
-      clearTimeout(timeoutId);
-      const data = await weatherRes.json();
-      const temp = Math.round(data.current.temperature_2m);
-      iconEl.textContent = codeToIcon(data.current.weather_code);
-      document.getElementById("weather-city").textContent = cityName;
-      tempEl.textContent = `${temp}\xB0`;
-    } catch {
-      clearTimeout(timeoutId);
-      const widget = document.getElementById("weather-widget");
-      if (widget)
-        widget.style.visibility = "hidden";
-    }
-  }
-
   // src/core/supabase.js
   var SUPABASE_URL = "https://uabyfecseqnemvcqhdem.supabase.co";
   var SUPABASE_ANON_KEY = "sb_publishable_sbV0XNktCiTK0iA4659P9g_Y3sT0mDv";
@@ -1164,6 +697,381 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
+    if (!supa || !visitorId)
+      return;
+    supa.from("analytics_events").insert({ visitor_id: visitorId, event_type: type, tab, meta }).then(({ error }) => {
+      if (error)
+        console.warn("[supabase] logEvent:", error.message);
+    });
+  }
+
+  // src/core/utils.js
+  function formatTime(value) {
+    if (!value)
+      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
+    const ts = typeof value === "string" ? new Date(value).getTime() : value;
+    if (!ts || isNaN(ts))
+      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
+    const diff = Date.now() - ts;
+    if (diff < 6e4)
+      return "\u0449\u043E\u0439\u043D\u043E";
+    if (diff < 36e5)
+      return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+    if (diff < 864e5)
+      return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+    return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+  }
+  function postTime(p) {
+    if (!p)
+      return null;
+    return p.ts || p.published_at || p.created_at || null;
+  }
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+  }
+  function pad(n) {
+    return String(n).padStart(2, "0");
+  }
+  function todayKey() {
+    const d = /* @__PURE__ */ new Date();
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  }
+  var OLYKA_COORDS = { lat: 50.7333, lon: 25.8167 };
+  var _coordsPromise = null;
+  function getCoords() {
+    if (_coordsPromise)
+      return _coordsPromise;
+    _coordsPromise = new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" });
+        return;
+      }
+      navigator.geolocation.getCurrentPosition(
+        (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude, city: null }),
+        () => resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" }),
+        { timeout: 5e3, maximumAge: 6e5 }
+      );
+    });
+    return _coordsPromise;
+  }
+  async function getCityName(lat, lon) {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`,
+        { headers: { "Accept-Language": "uk" } }
+      );
+      const data = await res.json();
+      return data.address?.city || data.address?.town || data.address?.village || "\u041E\u043B\u0438\u043A\u0430";
+    } catch {
+      return "\u041E\u043B\u0438\u043A\u0430";
+    }
+  }
+  function attachSwipe(el, onLeft, onRight) {
+    let startX = null, startY = null;
+    el.addEventListener("touchstart", (e) => {
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+    }, { passive: true });
+    el.addEventListener("touchend", (e) => {
+      if (startX == null)
+        return;
+      const dx = e.changedTouches[0].clientX - startX;
+      const dy = e.changedTouches[0].clientY - startY;
+      startX = null;
+      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
+        if (dx < 0 && onLeft)
+          onLeft();
+        if (dx > 0 && onRight)
+          onRight();
+      }
+    }, { passive: true });
+  }
+  async function sharePost({ title, text, url }) {
+    const shareData = {
+      title: title || "CSTL LIFE",
+      text: text || "",
+      url: url || location.href
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+        return true;
+      } catch (err) {
+        if (err && err.name === "AbortError")
+          return false;
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(shareData.url);
+      showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 2500);
+      return true;
+    } catch {
+      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C", 2500);
+      return false;
+    }
+  }
+  function showToast(msg, duration = 3e3, type = "") {
+    let toast = document.getElementById("cstl-toast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "cstl-toast";
+      toast.className = "toast";
+      document.body.appendChild(toast);
+    }
+    toast.textContent = msg;
+    toast.classList.toggle("toast--error", type === "error");
+    toast.classList.add("visible");
+    clearTimeout(toast._hideTimer);
+    toast._hideTimer = setTimeout(() => toast.classList.remove("visible"), duration);
+  }
+  var FILTER_HOMOGLYPHS = { a: "\u0430", e: "\u0435", o: "\u043E", c: "\u0441", x: "\u0445", p: "\u0440", y: "\u0443", k: "\u043A", i: "\u0456", b: "\u0431", m: "\u043C", h: "\u043D", t: "\u0442" };
+  var FILTER_LEET = { "0": "o", "3": "e", "4": "a", "5": "s", "6": "g", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s", "!": "i", "|": "l", "+": "t" };
+  function deleet(s) {
+    return String(s).replace(/[03456789@$!|+]/g, (ch) => FILTER_LEET[ch] || ch);
+  }
+  function normalizeForFilter(text) {
+    return deleet(String(text || "").toLowerCase()).replace(/1/g, "i").replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
+  }
+  var PROFANITY_STEMS = [
+    // нецензурні (укр + рос)
+    "\u0445\u0443\u0439",
+    "\u0445\u0443\u0454",
+    "\u0445\u0443\u044F",
+    "\u0445\u0443\u0457",
+    "\u0445\u0443\u0439\u043B",
+    "\u0445\u0443\u0454\u0441",
+    "\u043F\u0438\u0437\u0434",
+    "\u043F\u0456\u0437\u0434",
+    "\u0431\u043B\u044F\u0434",
+    "\u0431\u043B\u044F\u0442",
+    // 'еб' голим стемом НЕ можна: гомогліфи (e→е, b→б) роблять з ebook/ebay/ebola
+    // «ебоок/ебау/ебола» → хибне блокування. Лише довші реальні форми.
+    // 'єб'/'їб' безпечні — є/ї з латинських літер не виникають.
+    "\u0454\u0431",
+    "\u0457\u0431",
+    "\u0439\u043E\u0431",
+    "\u0435\u0431\u0430\u043B",
+    "\u0435\u0431\u0430\u043D",
+    "\u0435\u0431\u0430\u0442",
+    "\u0435\u0431\u0443\u0442",
+    "\u0435\u0431\u0443\u0447",
+    "\u0435\u0431\u043D\u0443",
+    "\u043D\u0430\u0454\u0431",
+    "\u043D\u0430\u0435\u0431",
+    "\u043D\u0430\u0457\u0431",
+    "\u0437\u0430\u0454\u0431",
+    "\u0437\u0430\u0457\u0431",
+    "\u0432\u0438\u0454\u0431",
+    "\u0432\u0438\u0457\u0431",
+    "\u0434\u043E\u0457\u0431",
+    "\u0443\u0457\u0431",
+    "\u0443\u0454\u0431",
+    "\u0443\u0435\u0431",
+    "\u0437\u0430\u043B\u0443\u043F",
+    "\u0433\u0430\u043D\u0434\u043E\u043D",
+    "\u0433\u043E\u043D\u0434\u043E\u043D",
+    "\u043C\u0443\u0434\u0430\u043A",
+    "\u043C\u0443\u0434\u0438\u043B",
+    "\u043F\u0456\u0434\u0430\u0440",
+    "\u043F\u0456\u0434\u043E\u0440",
+    "\u043F\u0438\u0434\u043E\u0440",
+    "\u043F\u0438\u0434\u0430\u0440",
+    "\u043D\u0430\u0445\u0443",
+    "\u043F\u043E\u0445\u0443\u0439",
+    "\u0434\u0440\u043E\u0447",
+    "\u0441\u0446\u0443\u043A",
+    "\u0441\u0446\u0438\u043A\u043B",
+    "\u043A\u0443\u0440\u0432",
+    "\u0441\u0432\u043E\u043B\u043E\u0447",
+    "\u0433\u0456\u0432\u043D",
+    "\u0433\u043E\u0432\u043D",
+    "\u0441\u0440\u0430\u043A",
+    "\u0441\u0440\u0430\u043D",
+    "\u0436\u043E\u043F",
+    "\u043C\u0440\u0430\u0437",
+    "\u0448\u043B\u044E\u0445",
+    "\u0448\u043B\u044C\u043E\u043D\u0434\u0440",
+    "\u043F\u0430\u0434\u043B",
+    "\u0434\u043E\u0432\u0431\u043E",
+    "\u0434\u043E\u043B\u0431\u043E",
+    "\u0441\u043A\u043E\u0442\u0438\u043D",
+    "\u0442\u0432\u0430\u0440\u044E\u043A",
+    "\u043A\u043E\u0437\u043B\u0438\u043D",
+    "\u043B\u043E\u0448\u0430\u0440",
+    // образи
+    "\u0456\u0434\u0456\u043E\u0442",
+    "\u043A\u0440\u0435\u0442\u0438\u043D",
+    "\u043F\u0440\u0438\u0434\u0443\u0440",
+    "\u0456\u043C\u0431\u0435\u0446\u0438\u043B",
+    "\u0434\u0435\u0431\u0456\u043B",
+    "\u0434\u0435\u0431\u0438\u043B",
+    "\u0434\u0438\u0431\u0456\u043B",
+    "\u0434\u0438\u0431\u0438\u043B"
+  ];
+  var PROFANITY_EXACT = /* @__PURE__ */ new Set([
+    "\u0431\u043B\u044F",
+    "\u0441\u0443\u043A\u0430",
+    "\u0441\u0443\u043A\u0438",
+    "\u0441\u0443\u043A\u0443",
+    "\u0441\u0443\u0447\u043A\u0430",
+    "\u0441\u0443\u0447\u043A\u0438",
+    "\u0445\u0435\u0440",
+    "\u043B\u043E\u0445",
+    "\u043B\u043E\u0445\u0430",
+    "\u043B\u043E\u0445\u0438",
+    "\u043C\u0430\u043D\u0434\u0430",
+    "\u043C\u0430\u043D\u0434\u0438",
+    "\u043F\u0435\u0434\u0438\u043A",
+    "\u043F\u0435\u0434\u0438\u043A\u0438",
+    "\u043F\u0435\u0434\u0456\u043A",
+    "\u043F\u0435\u0434\u0456\u043A\u0438",
+    "\u043F\u0454\u0434\u0456\u043A",
+    "\u043F\u0454\u0434\u0438\u043A",
+    "\u043F\u0454\u0434\u0438\u043A\u0438",
+    "\u0433\u043D\u0438\u0434\u0430",
+    "\u0433\u043D\u0438\u0434\u0438",
+    "\u0434\u0443\u0440\u0430\u043A",
+    "\u0434\u0443\u0440\u0435\u043D\u044C",
+    "\u0434\u0443\u0440\u043D\u0438\u0439",
+    "\u0434\u0443\u0440\u043D\u0430",
+    "\u0434\u0443\u0440\u043D\u0435",
+    "\u0434\u0443\u0440\u043D\u0456",
+    "\u0442\u0443\u043F\u0438\u0439",
+    "\u0442\u0443\u043F\u0430",
+    "\u0442\u0443\u043F\u0435",
+    "\u0442\u0443\u043F\u0438\u0446\u044F",
+    "\u0442\u0443\u043F\u0438\u0446\u0456",
+    "\u043A\u043E\u0437\u0435\u043B",
+    "\u043A\u043E\u0437\u043B\u0438",
+    "\u0434\u0430\u0443\u043D",
+    "\u0431\u043E\u0432\u0434\u0443\u0440",
+    "\u0441\u043A\u043E\u0442"
+  ]);
+  var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0457\u0431\u0430\u043B", "\u0439\u043E\u0431", "\u0431\u043B\u044F\u0434", "\u0431\u043B\u044F\u0442", "\u043C\u0443\u0434\u0430\u043A", "\u043F\u0456\u0434\u043E\u0440", "\u043F\u0438\u0434\u043E\u0440"];
+  var PROFANITY_LATIN = [
+    // рос/укр трансліт
+    "huy",
+    "hui",
+    "huil",
+    "huyl",
+    "huylo",
+    "huilo",
+    "huesos",
+    "xyu",
+    "pizd",
+    "pizda",
+    "yeban",
+    "ebal",
+    "ebat",
+    "zaeb",
+    "doeb",
+    "vyeb",
+    "blya",
+    "blyad",
+    "blyat",
+    "suka",
+    "suchka",
+    "suchara",
+    "pidor",
+    "pidar",
+    "pidoras",
+    "mudak",
+    "mudil",
+    "zalupa",
+    "gandon",
+    "gondon",
+    "dolboeb",
+    "dolbaeb",
+    "mraz",
+    "nahui",
+    "nahuy",
+    "nahyi",
+    "nahren",
+    "pohui",
+    "pohuy",
+    "yoban",
+    "yobn",
+    "govno",
+    "gavno",
+    "durak",
+    // англ.
+    "fuck",
+    "fuk",
+    "fuq",
+    "shit",
+    "bullshit",
+    "bitch",
+    "biatch",
+    "asshole",
+    "motherfuck",
+    "faggot",
+    "nigger",
+    "nigga",
+    "whore",
+    "wanker",
+    "bollock",
+    "dickhead",
+    "jackass",
+    "dumbass",
+    "retard",
+    "bastard",
+    "douche"
+  ];
+  var PROFANITY_LATIN_SQUASH = ["blyat", "pizda", "nahui", "pidoras", "zalupa", "dolboeb"];
+  function containsProfanity(text) {
+    const norm = normalizeForFilter(text);
+    const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
+    for (const w of words) {
+      if (PROFANITY_EXACT.has(w))
+        return true;
+      if (PROFANITY_STEMS.some((s) => w.startsWith(s)))
+        return true;
+    }
+    const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
+    if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
+      return true;
+    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1"));
+    for (const one of ["i", "l"]) {
+      const v = latinBase.replace(/1/g, one);
+      for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
+        if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
+          return true;
+      }
+      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s)))
+        return true;
+    }
+    return false;
+  }
+  function sunTimes(date = /* @__PURE__ */ new Date(), lat = 50.717, lon = 25.81) {
+    const rad = Math.PI / 180;
+    const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 864e5);
+    const decl = -23.44 * rad * Math.cos(2 * Math.PI / 365 * (doy + 10));
+    const cosH = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(decl)) / (Math.cos(lat * rad) * Math.cos(decl));
+    if (cosH < -1 || cosH > 1)
+      return null;
+    const H = Math.acos(cosH) / rad;
+    const B = 2 * Math.PI * (doy - 81) / 364;
+    const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
+    const noonMin = 720 - 4 * lon - eot;
+    const mk = (m) => {
+      const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+      d.setUTCMinutes(Math.round(m));
+      return d;
+    };
+    return { sunrise: mk(noonMin - 4 * H), sunset: mk(noonMin + 4 * H) };
+  }
+  function looksLikeSpam(text) {
+    const t = String(text || "").trim();
+    if (t.length === 1)
+      return true;
+    if (/(.)\1{5,}/.test(t))
+      return true;
+    const letters = t.replace(/[^а-яіїєґa-zА-ЯІЇЄҐA-Z]/g, "");
+    if (letters.length >= 12 && !/[аеиіоуяюєїёauoiey]/i.test(letters))
+      return true;
+    return false;
+  }
 
   // src/core/auth.js
   var _user = null;
@@ -1296,6 +1204,115 @@
     if (row.name)
       _profileName = row.name;
     return { ok: true, partial };
+  }
+
+  // src/core/boot.js
+  function setupInstallTracking() {
+    window.addEventListener("appinstalled", () => {
+      logEvent(currentUserId() || getAnonId(), "pwa_install");
+    });
+  }
+  function setupSW() {
+    if (!("serviceWorker" in navigator))
+      return;
+    const hadController = !!navigator.serviceWorker.controller;
+    let _reloading = false;
+    let _swReg = null;
+    const doReload = () => {
+      if (_reloading)
+        return;
+      _reloading = true;
+      window.location.replace(window.location.href);
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadController)
+        return;
+      doReload();
+    });
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible" && _swReg)
+        _swReg.update();
+    });
+    window.addEventListener("pageshow", (e) => {
+      if (e.persisted && _swReg)
+        _swReg.update();
+    });
+    navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg) => {
+      _swReg = reg;
+      reg.update();
+      reg.addEventListener("updatefound", () => {
+        const sw = reg.installing;
+        if (!sw)
+          return;
+        sw.addEventListener("statechange", () => {
+          if (sw.state === "activated" && hadController)
+            doReload();
+        });
+      });
+    }).catch(() => {
+    });
+  }
+  function bootApp() {
+    try {
+      setupSW();
+    } catch (e) {
+    }
+    try {
+      setupInstallTracking();
+    } catch (e) {
+    }
+  }
+
+  // src/core/weather.js
+  function codeToIcon(code) {
+    if (code === 0)
+      return "\u2600\uFE0F";
+    if (code <= 2)
+      return "\u{1F324}\uFE0F";
+    if (code === 3)
+      return "\u2601\uFE0F";
+    if (code <= 48)
+      return "\u{1F32B}\uFE0F";
+    if (code <= 55)
+      return "\u{1F326}\uFE0F";
+    if (code <= 65)
+      return "\u{1F327}\uFE0F";
+    if (code <= 77)
+      return "\u2744\uFE0F";
+    if (code <= 82)
+      return "\u{1F327}\uFE0F";
+    if (code >= 95)
+      return "\u26C8\uFE0F";
+    return "\u{1F321}\uFE0F";
+  }
+  async function initWeather() {
+    const iconEl = document.getElementById("weather-icon");
+    const tempEl = document.getElementById("weather-temp");
+    if (!iconEl || !tempEl)
+      return;
+    const ac = new AbortController();
+    const timeoutId = setTimeout(() => ac.abort(), 5e3);
+    try {
+      const { lat, lon, city: knownCity } = await getCoords();
+      const [weatherRes, cityName] = await Promise.all([
+        fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&timezone=auto`,
+          { signal: ac.signal }
+        ),
+        knownCity ? Promise.resolve(knownCity) : getCityName(lat, lon)
+      ]);
+      clearTimeout(timeoutId);
+      const data = await weatherRes.json();
+      const temp = Math.round(data.current.temperature_2m);
+      iconEl.textContent = codeToIcon(data.current.weather_code);
+      document.getElementById("weather-city").textContent = cityName;
+      tempEl.textContent = `${temp}\xB0`;
+    } catch {
+      clearTimeout(timeoutId);
+      const widget = document.getElementById("weather-widget");
+      if (widget)
+        widget.style.visibility = "hidden";
+    }
   }
 
   // src/core/settlements.js
@@ -10488,6 +10505,7 @@ END:VEVENT`
 
   // src/app.js
   var currentTab = "community";
+  var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
   window.switchTab = function(tab) {
     if (tab === "news" || tab === "events")
       tab = "shotam";
@@ -10524,6 +10542,7 @@ END:VEVENT`
       main.dataset.tab = tab;
     currentTab = tab;
     window.dispatchEvent(new CustomEvent("cstl-tab-changed"));
+    logEvent(currentUserId() || getAnonId(), "tab_view", { tab, meta: { device: _analyticsDevice } });
   };
   window.closeArticleModal = function() {
     const modal = document.getElementById("article-modal");
@@ -10695,6 +10714,7 @@ END:VEVENT`
     window.addEventListener("hashchange", handleInviteHash);
     handleThreadHash();
     window.addEventListener("hashchange", handleThreadHash);
+    logEvent(currentUserId() || getAnonId(), "tab_view", { tab: currentTab, meta: { device: _analyticsDevice } });
     setTimeout(() => {
       const splash = document.getElementById("splash");
       if (splash) {
