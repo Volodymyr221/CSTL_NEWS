@@ -4502,9 +4502,11 @@ ${post.text}
         const npGroup = sorted.filter((p) => p.location === activeLocation);
         const wideGroup = sorted.filter((p) => isCommunityWide(p.location));
         const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
+        const npEmptyMsg = !npGroup.length ? `<div class="bd-group-empty">\u0423 \xAB${escapeHtml(activeLocation)}\xBB \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</div>` : "";
         return `
         <div class="board-backdrop" id="board-backdrop"></div>
         ${section(activeLocation, npGroup)}
+        ${npEmptyMsg}
         ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
       }

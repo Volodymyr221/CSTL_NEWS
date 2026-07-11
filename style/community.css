@@ -2695,6 +2695,14 @@
   font-size: 14px;
   line-height: 1.5;
 }
+/* Немає оголошень у конкретному НП (перед секцією «Олицька громада») — компактніше за .bd-empty. */
+.bd-group-empty {
+  text-align: center;
+  padding: 18px 24px 26px;
+  color: var(--gray);
+  font-size: 13px;
+  line-height: 1.4;
+}
 
 .bd-stream {
   display: flex;

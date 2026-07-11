@@ -1164,9 +1164,15 @@ function renderBody() {
       const section = (title, list) => list.length
         ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}`
         : '';
+      // Немає оголошень у КОНКРЕТНОМУ НП (напр. «Олика») — не мовчки перескакувати
+      // одразу на загальногромадські, а показати явне повідомлення (Вова 11.07).
+      const npEmptyMsg = !npGroup.length
+        ? `<div class="bd-group-empty">У «${escapeHtml(activeLocation)}» поки немає оголошень</div>`
+        : '';
       return `
         <div class="board-backdrop" id="board-backdrop"></div>
         ${section(activeLocation, npGroup)}
+        ${npEmptyMsg}
         ${section(COMMUNITY_ALL_LABEL, wideGroup)}
       `;
     }
