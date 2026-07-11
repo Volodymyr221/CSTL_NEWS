@@ -1545,6 +1545,12 @@
           URL.revokeObjectURL(p);
       })
     });
+    const sheetEl = wrap.querySelector(".app-modal-sheet");
+    if (sheetEl) {
+      const syncScrolled = () => sheetEl.classList.toggle("is-scrolled", sheetEl.scrollTop > 2);
+      sheetEl.addEventListener("scroll", syncScrolled, { passive: true });
+      syncScrolled();
+    }
     const dynamicEl = wrap.querySelector("#bm-dynamic");
     function renderBoardFields() {
       dynamicEl.innerHTML = `

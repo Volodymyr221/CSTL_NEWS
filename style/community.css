@@ -1107,6 +1107,13 @@
   margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
   padding: 0 46px 10px 18px;  /* правий 46px — місце під ✕; нижній 10px відступ */
   background: var(--bg-card, #fff);
+  border-bottom: 1px solid transparent;  /* прихована при відкритті; місце зарезервоване (без стрибка) */
+  transition: border-color 0.2s ease;
+}
+/* Д-17: лінія-роздільник з'являється плавно лише коли контент скролиться під шапку
+   (при повністю відкритій нескроленій модалці лінія зайва — фідбек Вови). Клас ставить JS. */
+.app-modal--board-compose .app-modal-sheet.is-scrolled .cm-board-modal-title {
+  border-bottom-color: rgba(0, 0, 0, 0.07);
 }
 .app-modal--board-compose .app-modal-close {
   position: sticky;
