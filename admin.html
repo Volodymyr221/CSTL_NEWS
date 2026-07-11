@@ -745,6 +745,18 @@ async function loadAll() {
   }
 }
 
+// ── Векторні іконки вкладок (Tabler Icons, MIT — tabler.io/icons) замість
+// емодзі — той самий підхід що вже у src/core/board-categories.js на сайті.
+const ICO_CLIPBOARD_LIST = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2" /> <path d="M9 5a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2" /> <path d="M9 12l.01 0" /> <path d="M13 12l2 0" /> <path d="M9 16l.01 0" /> <path d="M13 16l2 0" /> </svg>';
+const ICO_SPEAKERPHONE = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M18 8a3 3 0 0 1 0 6" /> <path d="M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5" /> <path d="M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8" /> </svg>';
+const ICO_CHECK = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 12l5 5l10 -10" /> </svg>';
+const ICO_MESSAGE_CIRCLE = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 20l1.3 -3.9c-2.324 -3.437 -1.426 -7.872 2.1 -10.374c3.526 -2.501 8.59 -2.296 11.845 .48c3.255 2.777 3.695 7.266 1.029 10.501c-2.666 3.235 -7.615 4.215 -11.574 2.293l-4.7 1" /> </svg>';
+const ICO_USERS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0" /> <path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2" /> <path d="M16 3.13a4 4 0 0 1 0 7.75" /> <path d="M21 21v-2a4 4 0 0 0 -3 -3.85" /> </svg>';
+const ICO_FILE_TEXT = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M14 3v4a1 1 0 0 0 1 1h4" /> <path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2" /> <path d="M9 9l1 0" /> <path d="M9 13l6 0" /> <path d="M9 17l6 0" /> </svg>';
+const ICO_COIN = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M14.8 9a2 2 0 0 0 -1.8 -1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1" /> <path d="M12 7v10" /> </svg>';
+const ICO_CHART_BAR = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6" /> <path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10" /> <path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14" /> <path d="M4 20h14" /> </svg>';
+const ICO_SETTINGS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg>';
+
 // ── APP VIEW: таби ────────────────────────────────────────────────────
 function renderApp() {
   const canArticles = isAdmin || editorPerms.canCreate;
@@ -752,22 +764,22 @@ function renderApp() {
     `<button class="tab ${activeTab === id ? 'active' : ''}" data-tab="${id}">${label}${count ? ` <span class="tab-count">${count}</span>` : ''}</button>`;
   // Розділи за дозволами: Дошка — лише адмінам; Статті — адмінам+редакторам.
   const boardTabs = isAdmin ? (
-    tab('pending', '📋 Модерація', pendingPosts.length) +
-    tab('announcements', '🏛️ Оголошення') +
-    tab('published', '✓ Опубліковані', publishedPosts.length) +
-    tab('comments', '💬 Коментарі', comments.length) +
-    tab('admins', '👥 Адміни', admins.length)
+    tab('pending', `${ICO_CLIPBOARD_LIST} Модерація`, pendingPosts.length) +
+    tab('announcements', `${ICO_SPEAKERPHONE} Оголошення`) +
+    tab('published', `${ICO_CHECK} Опубліковані`, publishedPosts.length) +
+    tab('comments', `${ICO_MESSAGE_CIRCLE} Коментарі`, comments.length) +
+    tab('admins', `${ICO_USERS} Адміни`, admins.length)
   ) : '';
-  const articleTab = canArticles ? tab('articles', '📝 Статті', articles.length) : '';
-  const spendTab = isAdmin ? tab('spend', '💸 Витрати AI') : '';
-  const analyticsTab = isAdmin ? tab('analytics', '📊 Аналітика') : '';
+  const articleTab = canArticles ? tab('articles', `${ICO_FILE_TEXT} Статті`, articles.length) : '';
+  const spendTab = isAdmin ? tab('spend', `${ICO_COIN} Витрати AI`) : '';
+  const analyticsTab = isAdmin ? tab('analytics', `${ICO_CHART_BAR} Аналітика`) : '';
   mainEl.innerHTML = `
     <div class="tabs">
       ${articleTab}
       ${boardTabs}
       ${spendTab}
       ${analyticsTab}
-      ${tab('settings', '⚙️ Налаштування')}
+      ${tab('settings', `${ICO_SETTINGS} Налаштування`)}
     </div>
     <div id="tab-content"></div>
   `;
