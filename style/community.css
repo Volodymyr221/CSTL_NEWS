@@ -1917,8 +1917,8 @@
   display: flow-root;   /* контейнер для float:right (пін НП) нижче — інакше висота збігається */
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
-/* НП — праворуч від тега категорії, той самий рядок (Вова 11.07) */
-.cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; }
+/* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
+.cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; font-size: 13px; }
 .cm-board-modal-subhead .cm-board-title { clear: both; margin: 0; }
 /* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
