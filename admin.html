@@ -141,51 +141,48 @@
       text-align: left;
     }
 
-    /* ── TABS ───────────────────────────────────────────────────────── */
-    .tabs {
-      display: flex;
-      gap: 4px;
-      background: #EAE4D2;
-      border-radius: 12px;
-      padding: 4px;
-      margin-bottom: 20px;
+
+    /* ── ГОЛОВНИЙ ЕКРАН: сітка іконок (як робочий стіл iPhone) ──────────── */
+    .tile-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+      gap: 12px;
+      padding: 4px 0 8px;
     }
-    .tab {
-      flex: 1;
-      padding: 10px 8px;
-      background: transparent;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 13px;
-      font-family: inherit;
-      color: #666;
-      font-weight: 500;
+    .tile {
+      position: relative;
       display: flex;
+      flex-direction: column;
       align-items: center;
       justify-content: center;
-      gap: 5px;
-    }
-    .tab.active {
+      gap: 7px;
       background: white;
-      color: #722F37;
-      font-weight: 600;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+      border: none;
+      border-radius: 16px;
+      padding: 18px 6px 12px;
+      cursor: pointer;
+      font-family: inherit;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+      -webkit-tap-highlight-color: transparent;
     }
-    .tab-count {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 20px;
-      height: 20px;
-      padding: 0 5px;
-      background: #722F37;
-      color: white;
-      border-radius: 10px;
-      font-size: 11px;
-      font-weight: 600;
+    .tile:active { transform: scale(0.96); }
+    .tile-ic { color: #722F37; }
+    .tile-ic svg { width: 26px; height: 26px; }
+    .tile-label { font-size: 11.5px; font-weight: 600; color: #444; text-align: center; line-height: 1.25; }
+    .tile-badge {
+      position: absolute; top: 8px; right: 8px;
+      min-width: 18px; height: 18px; padding: 0 5px;
+      background: #722F37; color: white; border-radius: 9px;
+      font-size: 10.5px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
     }
-    .tab:not(.active) .tab-count { background: #999; }
+    .back-bar { display: flex; align-items: center; margin-bottom: 14px; }
+    .back-btn {
+      background: none; border: none; color: #722F37;
+      font-size: 14px; font-weight: 600; cursor: pointer;
+      padding: 6px 4px 6px 0; display: flex; align-items: center; gap: 4px;
+      font-family: inherit;
+    }
 
     /* ── CARDS ──────────────────────────────────────────────────────── */
     .section-title {
@@ -377,14 +374,6 @@
     /* ── АДАПТИВ (телефон) — прибирає горизонтальний вихід за екран і зум-аут ── */
     html { background: #F4F1E6; }
     body { overflow-x: hidden; }
-    /* Таби — горизонтальна смужка, що прокручується всередині екрана (не ширша за нього) */
-    .tabs {
-      flex-wrap: nowrap;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .tabs::-webkit-scrollbar { display: none; }
     @media (max-width: 640px) {
       .main { padding: 14px 12px; }
       .header { padding: 10px 12px; }
@@ -392,9 +381,7 @@
       .header-tag { display: none; }
       .header-email { max-width: 96px; }
       .btn-logout, .btn-minimize { padding: 6px 10px; font-size: 11.5px; }
-      /* таби — своя ширина + не тиснуться; свайп по горизонталі */
-      .tab { flex: 0 0 auto; white-space: nowrap; font-size: 12.5px; padding: 9px 13px; }
-      .tab-count { min-width: 18px; height: 18px; font-size: 10.5px; }
+      .tile-grid { grid-template-columns: repeat(auto-fit, minmax(72px, 1fr)); gap: 9px; }
     }
     /* ── Кабінет: пошук/фільтри/прев'ю статей ── */
     .art-filters { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; scrollbar-width: none; }
@@ -483,7 +470,7 @@ const supa = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
 let currentUser = null;       // user object з Supabase Auth
 let isAdmin = false;          // прапорець після перевірки у admins
 let editorPerms = { isEditor: false, canCreate: false, canPublish: false, canEvents: false };
-let activeTab = 'pending';    // pending | announcements | admins | articles | settings
+let activeTab = null;    // null = головний екран (сітка іконок) | pending | announcements | admins | articles | spend | analytics | settings
 let pendingPosts   = [];
 let publishedPosts = [];
 let announcements  = [];
@@ -758,38 +745,59 @@ const ICO_CHART_BAR = '<svg width="16" height="16" xmlns="http://www.w3.org/2000
 const ICO_SETTINGS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"> <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg>';
 
 // ── APP VIEW: таби ────────────────────────────────────────────────────
-function renderApp() {
+// Пункти меню — один список для сітки (головний екран) і для назви в шапці
+// розділу. icon/label/count — count як функція (рахує наживо, дані вже
+// завантажені loadAll()); show — чи пункт видно за поточними дозволами.
+function menuItems() {
   const canArticles = isAdmin || editorPerms.canCreate;
-  const tab = (id, label, count) =>
-    `<button class="tab ${activeTab === id ? 'active' : ''}" data-tab="${id}">${label}${count ? ` <span class="tab-count">${count}</span>` : ''}</button>`;
-  // Розділи за дозволами: Дошка — лише адмінам; Статті — адмінам+редакторам.
-  const boardTabs = isAdmin ? (
-    tab('pending', `${ICO_CLIPBOARD_LIST} Модерація`, pendingPosts.length) +
-    tab('announcements', `${ICO_SPEAKERPHONE} Оголошення`) +
-    tab('published', `${ICO_CHECK} Опубліковані`, publishedPosts.length) +
-    tab('comments', `${ICO_MESSAGE_CIRCLE} Коментарі`, comments.length) +
-    tab('admins', `${ICO_USERS} Адміни`, admins.length)
-  ) : '';
-  const articleTab = canArticles ? tab('articles', `${ICO_FILE_TEXT} Статті`, articles.length) : '';
-  const spendTab = isAdmin ? tab('spend', `${ICO_COIN} Витрати AI`) : '';
-  const analyticsTab = isAdmin ? tab('analytics', `${ICO_CHART_BAR} Аналітика`) : '';
+  return [
+    { id: 'articles',      icon: ICO_FILE_TEXT,      label: 'Статті',       show: canArticles, count: () => articles.length },
+    { id: 'pending',       icon: ICO_CLIPBOARD_LIST, label: 'Модерація',    show: isAdmin,     count: () => pendingPosts.length },
+    { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Оголошення',   show: isAdmin,     count: () => 0 },
+    { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     count: () => publishedPosts.length },
+    { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     count: () => comments.length },
+    { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     count: () => admins.length },
+    { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     count: () => 0 },
+    { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     count: () => 0 },
+    { id: 'settings',      icon: ICO_SETTINGS,       label: 'Налаштування', show: true,        count: () => 0 },
+  ].filter(m => m.show);
+}
+
+function renderApp() {
+  if (activeTab === null) return renderHomeGrid();
+
+  const item = menuItems().find(m => m.id === activeTab);
   mainEl.innerHTML = `
-    <div class="tabs">
-      ${articleTab}
-      ${boardTabs}
-      ${spendTab}
-      ${analyticsTab}
-      ${tab('settings', `${ICO_SETTINGS} Налаштування`)}
+    <div class="back-bar">
+      <button class="back-btn" id="back-to-grid">← Меню${item ? ' · ' + item.label : ''}</button>
     </div>
     <div id="tab-content"></div>
   `;
-  document.querySelectorAll('.tab').forEach(btn => {
+  document.getElementById('back-to-grid').addEventListener('click', () => {
+    activeTab = null;
+    renderApp();
+  });
+  renderTabContent();
+}
+
+// Головний екран — сітка іконок (тап відкриває розділ, як застосунок на
+// робочому столі iPhone). Лічильник — бейдж у кутку плитки (0 не показуємо).
+function renderHomeGrid() {
+  const tiles = menuItems().map(m => {
+    const n = m.count();
+    return `<button class="tile" data-tab="${m.id}">
+      ${n ? `<span class="tile-badge">${n}</span>` : ''}
+      <span class="tile-ic">${m.icon}</span>
+      <span class="tile-label">${m.label}</span>
+    </button>`;
+  }).join('');
+  mainEl.innerHTML = `<div class="tile-grid">${tiles}</div>`;
+  document.querySelectorAll('.tile').forEach(btn => {
     btn.addEventListener('click', () => {
       activeTab = btn.dataset.tab;
       renderApp();
     });
   });
-  renderTabContent();
 }
 
 function renderTabContent() {
