@@ -77,6 +77,7 @@
 - **RSS Parser:** запусти вручну (Actions → RSS Parser → Run workflow) — cron GitHub затримує; після цього Волинь/Громада зʼявляться у стрічці.
 - **Branch protection на `main` (ручний крок, лише власник має права):** GitHub → Settings → Branches → require PR + заборонити force-push. Щоб правило «тільки через PR» трималось на рівні GitHub, а не лише домовленості. Auto-merge я вже вимкнув (PR #198).
 ### Вова → Рома
+- ✅ **[12.07] Твою Edge Function `ai-analytics-summary` (Потік 2, AI-кнопка статистики) ЗАДЕПЛОЄНО** — Вова попросив зробити замість ручного заходу в Supabase; задеплоїв з репо-файлу через Supabase MCP (`deploy_edge_function`), status ACTIVE, version 1, verify_jwt:true. Таблиці `admins`(2)/`analytics_events`(96 подій) на місці. ⚠️ Секрет `ANTHROPIC_API_KEY` з коду не перевірити — якщо кнопка дасть помилку «не налаштовано», Вова додасть у Supabase secrets. Твоя ручна дія «🔴 supabase functions deploy» закрита.
 - (з `ПРОПОЗИЦІЇ.md` секція Push) А-3 зачіпає push-шлях — перепровір при роботі з Push-системою.
 - **[08.07] 4 push-баги з аудиту приватного чату (Д-15) — твоя зона Push, підтверджую твої P-2/P-5/P-8/P-9:**
   - 🔴 **P-2 (фото-пуш падає):** `send-chat-push/index.ts:73` `msg.text.length` — при фото `text=null` → `null.length` → виняток → 500, отримувач БЕЗ пуша. Запит (рядок 49) не тягне `photo_url`. Фікс = скопіювати патерн групового каналу: `body = msg.text || '📷 Фото'` + додати `photo_url` у select. **Критичний — варто взяти першим.**
