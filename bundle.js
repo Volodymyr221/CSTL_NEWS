@@ -4385,7 +4385,7 @@ ${post.text}
       </button>
     </div>`;
   }
-  function getFilteredPosts() {
+  function getFilteredPosts(opts = {}) {
     const q = searchQuery.trim().toLowerCase();
     const savedIds2 = activeType === "saved" ? getSavedIds() : null;
     return allPosts.filter((p) => {
@@ -4399,7 +4399,7 @@ ${post.text}
         if (p.category !== activeCategory)
           return false;
       }
-      if (activeType === "board" && activeLocation !== COMMUNITY_ALL) {
+      if (activeType === "board" && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
         if (p.location !== activeLocation && !isCommunityWide(p.location))
           return false;
       }
@@ -4415,6 +4415,13 @@ ${post.text}
       }
       return true;
     });
+  }
+  function getBoardDisplayCount() {
+    if (activeType !== "board" || activeLocation === COMMUNITY_ALL)
+      return getFilteredPosts().length;
+    const narrow = getFilteredPosts();
+    const hasOwn = narrow.some((p) => p.location === activeLocation);
+    return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
   }
   function renderHeader() {
     const discHead = activeType === "chat" ? `<div class="bd-disc-head">
@@ -4441,7 +4448,7 @@ ${post.text}
       </div>
     </div>
   ` : "";
-    const count = showCategories ? getFilteredPosts().length : 0;
+    const count = showCategories ? getBoardDisplayCount() : 0;
     const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
       <h2 class="bd-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
@@ -4481,7 +4488,7 @@ ${post.text}
     const el = document.getElementById("bd-count");
     if (!el || activeType !== "board")
       return;
-    const n = getFilteredPosts().length;
+    const n = getBoardDisplayCount();
     el.textContent = `${n} ${pluralAds(n)}`;
   }
   function renderBody() {
@@ -4500,7 +4507,7 @@ ${post.text}
       };
       if (activeLocation !== COMMUNITY_ALL) {
         const npGroup = sorted.filter((p) => p.location === activeLocation);
-        const wideGroup = sorted.filter((p) => isCommunityWide(p.location));
+        const wideGroup = npGroup.length ? sorted.filter((p) => isCommunityWide(p.location)) : [...getFilteredPosts({ ignoreLocation: true })].sort((a, b) => rankTs(b) - rankTs(a));
         const section = (title, list) => list.length ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}` : "";
         const npEmptyMsg = !npGroup.length ? `<div class="bd-group-empty">\u0423 \xAB${escapeHtml(activeLocation)}\xBB \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E<span class="bd-group-empty-hint">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u044C\u0442\u0435 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438</span></div>` : "";
         return `
