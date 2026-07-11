@@ -1077,18 +1077,17 @@
      не пінить впритул при негативному верхньому margin — тому padding-top прибрано). */
   padding: 0 18px calc(20px + env(safe-area-inset-bottom, 0px));
 }
-/* Д-17: рисочка-хендл + ✕ ЛИПКІ зверху — форма скролиться під ними (лише ця модалка;
-   спільний примітив core/modal.js не чіпаємо). Скрол-контейнер = сам .app-modal-sheet. */
+/* Липка шапка = рисочка + заголовок + ✕ (Вова: усе над лінією-роздільником статичне).
+   Три елементи стекаються зверху: рисочка (top:0) → заголовок (top:22, під баром) → ✕ на рядку заголовка.
+   БЕЗ негативних верхніх margin (iOS Safari через них не пінить впритул). */
 .app-modal--board-compose .app-modal-handle {
   position: sticky;
   top: 0;
-  z-index: 4;
+  z-index: 6;
   width: auto;
   height: auto;
-  /* full-bleed смуга на всю ширину аркуша (бокові -18px скасовують його padding);
-     БЕЗ негативного верхнього margin — сидить від самого верху (top:0 пінить флеш). */
-  margin: 0 -18px 12px;
-  padding: 14px 0 10px;
+  margin: 0 -18px 0;        /* full-bleed; без нижнього відступу — заголовок одразу під баром */
+  padding: 12px 0 8px;      /* смуга ~24px */
   background: var(--bg-card, #fff);
   border-radius: 22px 22px 0 0;
 }
@@ -1101,44 +1100,22 @@
   background: rgba(0, 0, 0, 0.18);
   border-radius: 2px;
 }
-.app-modal--board-compose .app-modal-close {
+.app-modal--board-compose .cm-board-modal-title {
   position: sticky;
-  float: right;
-  top: 12px;
-  right: auto;
+  top: 22px;               /* липне одразу під баром рисочки (2px перекриття, без гапу) */
   z-index: 5;
-  margin: 0 0 -32px 0;   /* прибрати висоту кнопки з потоку — вона накладається на смугу рисочки */
-}
-/* Д-17: рисочка-хендл + ✕ ЛИПКІ зверху — форма скролиться під ними (лише ця модалка;
-   спільний примітив core/modal.js не чіпаємо). Скрол-контейнер = сам .app-modal-sheet. */
-.app-modal--board-compose .app-modal-handle {
-  position: sticky;
-  top: 0;
-  z-index: 4;
-  width: auto;
-  height: auto;
-  /* full-bleed смуга: скасувати верхній (14px) + бокові (18px) padding аркуша */
-  margin: -14px -18px 12px;
-  padding: 14px 0 10px;
+  margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
+  padding: 0 46px 10px 18px;  /* правий 46px — місце під ✕; нижній 10px до лінії */
   background: var(--bg-card, #fff);
-  border-radius: 22px 22px 0 0;
-}
-.app-modal--board-compose .app-modal-handle::before {
-  content: '';
-  display: block;
-  width: 40px;
-  height: 4px;
-  margin: 0 auto;
-  background: rgba(0, 0, 0, 0.18);
-  border-radius: 2px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.07);  /* лінія-роздільник (межа статичної шапки) */
 }
 .app-modal--board-compose .app-modal-close {
   position: sticky;
   float: right;
-  top: 12px;
+  top: 24px;               /* на рядку заголовка */
   right: auto;
-  z-index: 5;
-  margin: 0 0 -32px 0;   /* прибрати висоту кнопки з потоку — вона накладається на смугу рисочки */
+  z-index: 7;
+  margin: 0 0 -32px 0;     /* прибрати висоту кнопки з потоку */
 }
 .cm-board-modal-title {
   font-size: 18px;
