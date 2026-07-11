@@ -1,8 +1,20 @@
 // boot.js — ініціалізація PWA і Service Worker
 
+import { logEvent, getAnonId } from './supabase.js';
+import { currentUserId } from './auth.js';
+
 // PWA manifest — статичний у index.html (<link rel="manifest" href="manifest.json">).
 // B-16 fix: прибрано динамічний Blob-manifest який дублювався і конфліктував
 // зі статичним на iOS Safari (iOS краще бачить файл, не blob URL).
+
+// Аналітика (Потік 6, byyou): 'appinstalled' — надійний сигнал РЕАЛЬНОГО
+// встановлення PWA (на відміну від 'beforeinstallprompt', який лише означає
+// «можна встановити», ще не факт встановлення).
+function setupInstallTracking() {
+  window.addEventListener('appinstalled', () => {
+    logEvent(currentUserId() || getAnonId(), 'pwa_install');
+  });
+}
 
 // === SERVICE WORKER (офлайн-кешування) ===
 function setupSW() {
@@ -48,4 +60,5 @@ function setupSW() {
 
 export function bootApp() {
   try { setupSW(); } catch(e) {}
+  try { setupInstallTracking(); } catch(e) {}
 }
