@@ -7867,16 +7867,26 @@ ${ev.description || ""}`
         <div class="wx-readout"></div>
       </div>
     </div>`;
+    const offsetSec = _wxData.utc_offset_seconds ?? 7200;
+    const nowLocal = new Date(Date.now() + offsetSec * 1e3);
+    const nowDateStr = nowLocal.toISOString().slice(0, 10);
+    const nowHour = nowLocal.getUTCHours();
+    const initialIdx = dateStr === nowDateStr ? tempPts.findIndex((p) => p.h === nowHour) : -1;
     const { close, el } = openModal({
       bodyHtml,
       variant: "sheet",
       className: "app-modal--weather",
       swipeClose: false,
-      onMount: (wrap) => wireWeatherScrubber(wrap, { tempPts, precipPts, iconPts })
+      onMount: (wrap) => wireWeatherScrubber(wrap, {
+        tempPts,
+        precipPts,
+        iconPts,
+        initialIdx: initialIdx >= 0 ? initialIdx : null
+      })
     });
     wireWeatherSwipe(el, close);
   }
-  function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts }) {
+  function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
     const n = tempPts.length;
     if (!n)
       return;
@@ -7893,15 +7903,10 @@ ${ev.description || ""}`
         cursor.classList.add("is-on");
         const p = kind === "temp" ? tempPts[idx] : precipPts[idx];
         const val = kind === "temp" ? `${Math.round(p.v)}\xB0` : `${Math.round(p.v)}%`;
-        readout.innerHTML = `<span class="wx-ro-ic">${iconPts[idx]}</span><span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
+        const icHtml = kind === "temp" ? `<span class="wx-ro-ic">${iconPts[idx]}</span>` : "";
+        readout.innerHTML = `${icHtml}<span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
         readout.style.left = xPct + "%";
         readout.classList.add("is-on");
-      });
-    }
-    function clear() {
-      wraps.forEach((wrap) => {
-        wrap.querySelector(".wx-cursor").classList.remove("is-on");
-        wrap.querySelector(".wx-readout").classList.remove("is-on");
       });
     }
     function idxFromX(wrap, clientX) {
@@ -7928,11 +7933,12 @@ ${ev.description || ""}`
           wrap.releasePointerCapture(e.pointerId);
         } catch (_) {
         }
-        clear();
       };
       wrap.addEventListener("pointerup", end);
       wrap.addEventListener("pointercancel", end);
     });
+    if (initialIdx != null)
+      place(initialIdx);
   }
   function wireWeatherSwipe(overlay, close) {
     const sheet = overlay.querySelector(".app-modal-sheet");
