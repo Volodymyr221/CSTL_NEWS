@@ -177,7 +177,7 @@ export function openBoardModal() {
 
       <div class="bm-section">
         <label class="bm-label" for="bm-contact">Телефон <span class="bm-label-hint">(необов'язково)</span></label>
-        <input class="cm-board-input cm-board-input--small" id="bm-contact" type="tel" placeholder="+380 XX XXX XX XX" inputmode="tel" value="${escapeHtml(state.contact)}">
+        <input class="cm-board-input cm-board-input--small" id="bm-contact" type="tel" size="18" placeholder="+380 XX XXX XX XX" inputmode="tel" value="${escapeHtml(state.contact)}">
       </div>
 
       <div class="bm-section">

@@ -1148,6 +1148,10 @@
 }
 .app-modal--board-compose .cm-board-input { margin-bottom: 10px; }
 .app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
+/* Полиш (Вова): локація і телефон не на всю ширину — стільки, скільки треба даним.
+   Телефон — ширина за атрибутом size="18" (трохи більше за макс. "+380 XX XXX XX XX"). */
+.app-modal--board-compose #bm-location { width: auto; max-width: 100%; }
+.app-modal--board-compose #bm-contact  { width: auto; }
 
 .cm-board-form-title {
   font-size: 14px;
