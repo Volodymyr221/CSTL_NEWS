@@ -1316,9 +1316,9 @@
     "\u041F\u0443\u0442\u0438\u043B\u0456\u0432\u043A\u0430",
     "\u0421\u0442\u0430\u0432\u043E\u043A",
     "\u0425\u0440\u043E\u043C'\u044F\u043A\u0456\u0432",
-    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D",
-    "\u0406\u043D\u0448\u0435"
+    "\u0427\u0435\u043C\u0435\u0440\u0438\u043D"
   ];
+  var OTHER_SETTLEMENT = "\u0406\u043D\u0448\u0435";
   var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
   var COMMUNITY_ALL_LABEL = "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
 
@@ -9719,7 +9719,7 @@ END:VEVENT`
         <label class="acc-f"><span>\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442</span>
           <select id="cf-settlement">
             <option value="">\u2014 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u2014</option>
-            ${SETTLEMENTS.map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
+            ${[...SETTLEMENTS, OTHER_SETTLEMENT].map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
           </select>
         </label>
         <label class="acc-f"><span>\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430"></label>

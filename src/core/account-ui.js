@@ -11,7 +11,7 @@ import {
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { openSavedHub } from './saved-hub.js';
-import { SETTLEMENTS } from './settlements.js';
+import { SETTLEMENTS, OTHER_SETTLEMENT } from './settlements.js';
 import { escapeHtml, showToast } from './utils.js';
 import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } from './modal.js';
 
@@ -161,7 +161,7 @@ async function openAccount() {
         <label class="acc-f"><span>Населений пункт</span>
           <select id="cf-settlement">
             <option value="">— оберіть —</option>
-            ${SETTLEMENTS.map(s => `<option ${val.settlement === s ? 'selected' : ''}>${s}</option>`).join('')}
+            ${[...SETTLEMENTS, OTHER_SETTLEMENT].map(s => `<option ${val.settlement === s ? 'selected' : ''}>${s}</option>`).join('')}
           </select>
         </label>
         <label class="acc-f"><span>Вулиця (необов'язково)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="напр. вул. Замкова"></label>
