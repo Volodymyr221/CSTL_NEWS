@@ -14,11 +14,11 @@
 ### Кроки (13 кроків)
 | # | Крок | Файли | Стан |
 |---|------|-------|------|
-| 1 | SQL: `analytics_events` (visitor_id, event_type, tab, ts, meta jsonb) — insert відкритий (анонім+акаунт), select лише `admins`; `profiles` — `ADD COLUMN age int` | `scripts/supabase_analytics.sql` (новий) | 🟢 |
-| 2 | `supabase.js`: `logEvent(type, meta)` (fire-and-forget, не блокує UI), `fetchAnalyticsSummary()` (агрегати: унікальні, по вкладках, пристрій з User-Agent, час доби) | `src/core/supabase.js` | 🟢 |
-| 3 | Підключити `logEvent` у точці зміни вкладки (знайти реальний роутер у `app.js`/`community.js`) + `PWA install` подію (вже є `beforeinstallprompt`? перевірити `boot.js`) | `src/app.js` або `core/boot.js` | 🟢 |
-| 4 | Профіль: поле «Вік» (`#cf-age`, опційне, 0-120) у `openAccount` + `openProfile`; `age` у `PROFILE_FIELDS` (`auth.js:109`) | `src/core/account-ui.js`, `src/core/auth.js` | 🟢 |
-| 5 | `admin.html`: нова вкладка «📊 Аналітика» — stat-card сітка (мірор `renderSpend`), прямі Supabase-запити (унікальні/сьогодні/тиждень, топ-вкладки, пристрій, віковий розподіл, села) | `admin.html` | 🟢 |
+| 1 | SQL: `analytics_events` (visitor_id, event_type, tab, ts, meta jsonb) — insert відкритий (анонім+акаунт), select лише `admins`. **Виправлено на кроці 4:** `profiles.age` НЕ додаю — `birth_date` вже є (`supabase_profiles.sql`, збирається в анкеті), вік рахую з нього на льоту | `scripts/supabase_analytics.sql` (новий) | ✅ `bee55ff8`, виправлено далі |
+| 2 | `supabase.js`: `logEvent(visitorId,type,{tab,meta})` (fire-and-forget), `fetchAnalyticsSummary()` (агрегати: унікальні, по вкладках, пристрій, час доби) | `src/core/supabase.js` | ✅ `f1c1d8d4` |
+| 3 | `logEvent` у точці зміни вкладки (`window.switchTab`, `app.js`) + перший перегляд дефолтної вкладки при `init()` + `PWA install` (`appinstalled`, `boot.js`) | `src/app.js`, `src/core/boot.js` | ✅ `da582d38` |
+| 4 | ~~Профіль: поле «Вік»~~ — **не потрібно**, `birth_date` вже збирається (`openProfile`/`openAccount`, `account-ui.js:59-83,112-241`). Виправила SQL кроку 1 (прибрала зайву колонку `age`) | `scripts/supabase_analytics.sql` | 🟢 |
+| 5 | `admin.html`: нова вкладка «📊 Аналітика» — stat-card сітка (мірор `renderSpend`), прямі Supabase-запити (унікальні/сьогодні/тиждень, топ-вкладки, пристрій, вік з `birth_date`, села) | `admin.html` | 🟢 |
 | 6 | `admin.html`: іконки вкладок → Tabler SVG (замість емодзі), кнопка «Оновити статистику» (поки без дії — Потік 2 підключить) | `admin.html` | 🟢 |
 | 7 | Тест-блок: `node --check` усіх `.js`, ручна перевірка `admin.html` (валідний HTML, немає розсинхрону тегів) | — | 🟢 |
 | 8 | Playwright-смоук: поле «Вік» зберігається (юніт-тест функції як у Потоці C2, гейт `requireAuth`), `logEvent` не кидає помилок на зміні вкладки | — | 🟢 |

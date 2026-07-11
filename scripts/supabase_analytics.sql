@@ -4,9 +4,13 @@
 --
 -- Що створює:
 --   1. analytics_events  — сирі події (перегляд вкладки, встановлення PWA тощо)
---   2. profiles.age      — самозаповнення у профілі (не вираховується)
---   3. RLS                — писати може будь-хто (анонім теж, як реакції/коментарі);
+--   2. RLS                — писати може будь-хто (анонім теж, як реакції/коментарі);
 --                           читати сирі рядки — лише is_admin() (уже є, supabase_schema.sql)
+--
+-- Вік НЕ додаю окремою колонкою — profiles.birth_date (supabase_profiles.sql) вже
+-- збирає точну дату народження в анкеті (openProfile/openAccount, account-ui.js).
+-- Вік для дашборду рахується з birth_date на льоту (не застаріває щороку, як
+-- окреме число). Дублювати в новій колонці — зайве.
 
 -- 1. Сирі події ---------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS analytics_events (
@@ -35,16 +39,5 @@ CREATE POLICY "Admins can read events"
   TO authenticated
   USING (is_admin());
 
-
--- 2. Вік у профілі (самозаповнення, опційне) -----------------------------------
-ALTER TABLE public.profiles
-  ADD COLUMN IF NOT EXISTS age INTEGER;
-
-ALTER TABLE public.profiles
-  DROP CONSTRAINT IF EXISTS profiles_age_range;
-ALTER TABLE public.profiles
-  ADD CONSTRAINT profiles_age_range CHECK (age IS NULL OR (age >= 0 AND age <= 120));
-
 -- Готово. Перевірка після Run:
 --   1. Таблиця analytics_events існує, RLS увімкнено, 2 політики видно в Authentication → Policies.
---   2. profiles має колонку age (Table Editor).
