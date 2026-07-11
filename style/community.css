@@ -1072,7 +1072,10 @@
   z-index: 2700;   /* вище екрана «Мої оголошення» (.pm-screen) — інакше модалка ховається під ним */
 }
 .app-modal--board-compose .app-modal-sheet {
-  padding: 14px 18px calc(20px + env(safe-area-inset-bottom, 0px));
+  /* padding-top = 0: скрол-контент починається з самого верху, щоб липка шапка
+     (рисочка+✕) сиділа ФЛЕШ до верху без прозорої смуги над нею (iOS Safari sticky
+     не пінить впритул при негативному верхньому margin — тому padding-top прибрано). */
+  padding: 0 18px calc(20px + env(safe-area-inset-bottom, 0px));
 }
 /* Д-17: рисочка-хендл + ✕ ЛИПКІ зверху — форма скролиться під ними (лише ця модалка;
    спільний примітив core/modal.js не чіпаємо). Скрол-контейнер = сам .app-modal-sheet. */
@@ -1082,8 +1085,9 @@
   z-index: 4;
   width: auto;
   height: auto;
-  /* full-bleed смуга: скасувати верхній (14px) + бокові (18px) padding аркуша */
-  margin: -14px -18px 12px;
+  /* full-bleed смуга на всю ширину аркуша (бокові -18px скасовують його padding);
+     БЕЗ негативного верхнього margin — сидить від самого верху (top:0 пінить флеш). */
+  margin: 0 -18px 12px;
   padding: 14px 0 10px;
   background: var(--bg-card, #fff);
   border-radius: 22px 22px 0 0;
