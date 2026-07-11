@@ -1,5 +1,5 @@
 // src/tabs/board.js
-// Вкладка «Дошка громади 2.0» — 3 типи постів + пошук + фільтри + реакції + збережені.
+// Вкладка «Дошка громади 2.0» — 3 типи постів + пошук + фільтри + збережені.
 //
 // Типи постів:
 //   board = оголошення (продам/куплю/...) — стікер на корку
@@ -15,9 +15,8 @@ import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
-  fetchAllReactions, setReaction,
   fetchAllComments, addComment, editComment, deleteComment,
-  subscribeReactions, subscribeComments,
+  subscribeComments,
   fetchSavedPostIds, addSavedPost, removeSavedPost,
   submitPost, submitDiscussion,
 } from '../core/supabase.js';
@@ -104,9 +103,6 @@ function renderPostTime(p) {
 const EDIT_ICON_SVG  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 const MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
 
-
-const REACTIONS = ['❤️', '👍', '👏', '🔥', '😂', '😮', '😢', '🙏'];
-
 // ── Стан (зберігається в межах сесії) ────────────────────────────────────────
 
 let allPosts       = [];   // [{id, type, ...}]
@@ -116,9 +112,8 @@ let activeCategory = 'all';
 let activeLocation = COMMUNITY_ALL;   // Д-12: фільтр за НП; дефолт «вся громада» = усі
 let searchQuery    = '';
 
-// Реакції і коментарі — централізовано у Map<postId, ...>. Завантажується з
-// Supabase у renderBoard(), оновлюється при кліках через optimistic update.
-let reactionsByPost = new Map();  // postId → { counts: {emoji: count}, my: emoji|null }
+// Коментарі — централізовано у Map<postId, ...>. Завантажується з Supabase у
+// renderBoard(), оновлюється при кліках через optimistic update.
 let commentsByPost  = new Map();  // postId → [{id, author, text, created_at}]
 let savedIds        = new Set();  // postId закладок ПОТОЧНОГО акаунта (з БД saved_posts)
 
@@ -134,21 +129,6 @@ function lsGet(key, fallback) {
 }
 function lsSet(key, value) {
   try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
-
-// ── Реакції (з Supabase, fallback на in-memory map) ─────────────────────────
-
-function getMyReaction(postId) {
-  const r = reactionsByPost.get(postId);
-  return r ? r.my : null;
-}
-function getReactionCounts(postId) {
-  const r = reactionsByPost.get(postId);
-  return r ? r.counts : {};
-}
-function getTotalReactionCount(postId) {
-  const counts = getReactionCounts(postId);
-  return Object.values(counts).reduce((s, n) => s + n, 0);
 }
 
 // ── Коментарі (з Supabase, in-memory map) ───────────────────────────────────
@@ -274,46 +254,9 @@ function authorAvatar(author) {
   return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
 }
 
-// ── Реакції + share + bookmark — спільний рядок дій під/над постом ───────────
-
-// ── Рядок дій під карткою — різний для board/chat/greeting ──────────────
-//
-// BOARD (стікер):
-//   - Згорнутий: тільки 🙂+ маленька в лівому нижньому куті
-//   - Розгорнутий (zoom-modal): додатково 📑 save + ↗ share
-// CHAT (розмова):
-//   - 🙂+ + 📑 + ↗ + повноцінне поле введення коментарів (inline)
-// GREETING (вітання):
-//   - 🙂+ + 📑 + ↗ (без коментарів)
-
-function reactTriggerHtml(post) {
-  const myReaction = getMyReaction(post.id);
-  const counts    = getReactionCounts(post.id);
-  const total     = getTotalReactionCount(post.id);
-
-  // Топ-3 emoji за кількістю натискань усіх юзерів
-  const top3 = Object.entries(counts)
-    .filter(([, n]) => n > 0)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
-  let content;
-  if (total === 0) {
-    // Ніхто ще не реагував — показуємо запрошення
-    content = `<span class="bd-react-trigger-default">🙂</span><span class="bd-react-trigger-plus">+</span>`;
-  } else {
-    // Топ-3 emoji кожна зі своїм лічильником. Моя виділена.
-    content = top3.map(([em, n]) => `
-      <span class="bd-react-trigger-group${em === myReaction ? ' bd-react-trigger-group--mine' : ''}">
-        <span class="bd-react-trigger-emoji">${em}</span>
-        <span class="bd-react-trigger-count">${n}</span>
-      </span>
-    `).join('');
-  }
-
-  return `<button class="bd-react-trigger${myReaction ? ' bd-react-trigger--active' : ''}" type="button"
-          data-react-trigger="${post.id}" aria-label="Реакції (${total})">${content}</button>`;
-}
+// ── Рядок дій під карткою (share + bookmark) ─────────────────────────────
+// Реакції прибрано з Дошки повністю (рішення Вови 11.07 — на маркетплейсі не
+// доречні; інтерес виражається кнопками 💬 написати / 🔖 зберегти).
 
 function saveBtnHtml(post) {
   const saved = isSaved(post.id);
@@ -336,11 +279,11 @@ function shareBtnHtml(post) {
           aria-label="Поділитися">${SHARE_ICON_SVG}</button>`;
 }
 
-// BOARD-стікер: тільки реакція. У zoom-modal CSS показує `.bd-actions-extra`
+// BOARD-стікер: дії збереження+поділитися (реакції прибрано). На картці CSS може
+// ховати `.bd-actions-extra`, у zoom-modal — показувати.
 function boardActionsHtml(post) {
   return `
     <div class="bd-actions bd-actions--board-compact">
-      ${reactTriggerHtml(post)}
       <div class="bd-actions-extra">
         ${saveBtnHtml(post)}
         ${shareBtnHtml(post)}
@@ -833,52 +776,6 @@ async function doDiscDelete(c) {
   }
 }
 
-// Попап вибору реакції — додається у body над кнопкою-тригером
-function openReactionPopup(triggerBtn, postId) {
-  closeReactionPopup();   // якщо вже відкритий — закрити
-
-  const myReaction = getMyReaction(postId);
-  const counts     = getReactionCounts(postId);
-  const popup = document.createElement('div');
-  popup.className = 'bd-react-popup';
-  popup.id = 'bd-react-popup';
-  popup.innerHTML = REACTIONS.map(em => {
-    const n = counts[em] || 0;
-    return `
-      <button class="bd-react-opt${myReaction === em ? ' bd-react-opt--active' : ''}" type="button"
-              data-react-opt="${escapeHtml(em)}" data-react-post="${postId}">
-        <span class="bd-react-opt-emoji">${em}</span>
-        ${n > 0 ? `<span class="bd-react-opt-count">${n}</span>` : ''}
-      </button>
-    `;
-  }).join('');
-
-  document.body.appendChild(popup);
-
-  // Позиціонуємо над кнопкою (якщо не влізе — під нею)
-  const rect = triggerBtn.getBoundingClientRect();
-  const popupRect = popup.getBoundingClientRect();
-  let top = rect.top - popupRect.height - 8;
-  if (top < 8) top = rect.bottom + 8;
-  let left = rect.left + rect.width / 2 - popupRect.width / 2;
-  if (left < 8) left = 8;
-  if (left + popupRect.width > window.innerWidth - 8) {
-    left = window.innerWidth - popupRect.width - 8;
-  }
-  popup.style.top = `${top + window.scrollY}px`;
-  popup.style.left = `${left}px`;
-
-  requestAnimationFrame(() => popup.classList.add('visible'));
-}
-
-function closeReactionPopup() {
-  const existing = document.getElementById('bd-react-popup');
-  if (existing) {
-    existing.classList.remove('visible');
-    setTimeout(() => existing.remove(), 150);
-  }
-}
-
 // (модалку коментарів видалено 18.05.2026 — заміщена inline-формою у chat-картках.
 //  Board і greeting коментарів не мають за рішенням Вови.)
 
@@ -895,7 +792,7 @@ function buildShareText(post) {
 
 // ── Картки за типом ──────────────────────────────────────────────────────────
 
-// BOARD: стікер на корку (як було, з реакціями і ❤️-зберегти)
+// BOARD: стікер на корку (з збереженням і поділитися)
 function renderBoardCard(p) {
   const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
@@ -919,7 +816,7 @@ function renderBoardCard(p) {
 // BOARD: вміст зум-модалки оголошення — будується З ДАНИХ поста (не клон картки).
 // Фото flush зверху (без відʼємного margin → не обрізається скролом), нижче —
 // прокручуване тіло з категорією, заголовком, повним описом, контактом і діями.
-// Дії (реакції/зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
+// Дії (зберегти/шер/контакт) — ті самі хелпери, що й на картці → делеговані
 // обробники працюють без змін.
 function renderAdModal(p) {
   const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : (p.photo ? [p.photo] : []);
@@ -1291,22 +1188,19 @@ export async function renderBoard() {
   const el = getBoardRoot();
   if (!el) return;
 
-  // 1. Supabase: пости + анонси + реакції + коментарі + закладки паралельно
+  // 1. Supabase: пости + анонси + коментарі + закладки паралельно
   if (isSupabaseReady()) {
-    // «Моя» реакція/закладка — лише для залогіненого акаунта (uid). Гість → нічого
-    // персонального; старі анонімні реакції лишаються видимими як публічні лічильники.
+    // «Моя» закладка — лише для залогіненого акаунта (uid). Гість → нічого персонального.
     const uid = currentUserId();
-    const [posts, anns, reactions, comments, saved] = await Promise.all([
+    const [posts, anns, comments, saved] = await Promise.all([
       fetchPublishedPosts(),
       fetchPublishedAnnouncements(),
-      fetchAllReactions(uid),
       fetchAllComments(),
       uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
     ]);
     if (posts !== null) {
       allPosts         = posts;
       allAnnouncements = anns || [];
-      reactionsByPost  = reactions;
       commentsByPost   = comments;
       savedIds         = saved;
       renderAll(el);
@@ -1324,7 +1218,6 @@ export async function renderBoard() {
     const communityData = await communityRes.json();
     allPosts         = boardData.posts || [];
     allAnnouncements = communityData.announcements || [];
-    reactionsByPost  = new Map();
     commentsByPost   = new Map();
   } catch {
     el.innerHTML = '<div class="empty-state">Дошка тимчасово недоступна</div>';
@@ -1695,7 +1588,7 @@ function initBoardNoteExpand(root) {
   }
 }
 
-// ── Document-level listener для реакцій + збережене + share ──────────────────
+// ── Document-level listener для збереженого + share ─────────────────────────
 // Один раз при initBoard. Працює і для оригінальних, і для клонів у zoom-модалці.
 
 let _delegationAttached = false;
@@ -1817,60 +1710,6 @@ function attachBoardDelegation() {
       return;
     }
 
-    // Тригер «🙂+» — відкриває попап реакцій
-    const trigger = e.target.closest('[data-react-trigger]');
-    if (trigger) {
-      e.stopPropagation();
-      const id = Number(trigger.dataset.reactTrigger);
-      const existing = document.getElementById('bd-react-popup');
-      if (existing && existing.dataset.forPost == id) {
-        closeReactionPopup();
-      } else {
-        openReactionPopup(trigger, id);
-        const p = document.getElementById('bd-react-popup');
-        if (p) p.dataset.forPost = id;
-      }
-      return;
-    }
-
-    // Вибір емодзі у попапі
-    const opt = e.target.closest('[data-react-opt]');
-    if (opt) {
-      e.stopPropagation();
-      // Гейтинг (Етап 2): реагувати можуть лише залогінені жителі.
-      if (!isLoggedIn()) { closeReactionPopup(); requireAuth('реагувати', () => {}); return; }
-      const id = Number(opt.dataset.reactPost);
-      const emoji = opt.dataset.reactOpt;
-      const current = getMyReaction(id);
-      const newReaction = current === emoji ? null : emoji;  // тап на ту саму = знімаємо
-
-      // Optimistic: миттєво оновлюємо in-memory map
-      const r = reactionsByPost.get(id) || { counts: {}, my: null };
-      // Прибираємо стару реакцію з counts
-      if (r.my) r.counts[r.my] = Math.max(0, (r.counts[r.my] || 0) - 1);
-      // Додаємо нову (якщо є)
-      if (newReaction) r.counts[newReaction] = (r.counts[newReaction] || 0) + 1;
-      r.my = newReaction;
-      reactionsByPost.set(id, r);
-
-      closeReactionPopup();
-      // Оновлюємо тригер на сторінці (і у zoom-модалці якщо відкрита)
-      document.querySelectorAll(`[data-react-trigger="${id}"]`).forEach(btn => {
-        btn.outerHTML = reactTriggerHtml(allPosts.find(p => p.id === id) || { id });
-      });
-
-      // Async POST у Supabase
-      if (isSupabaseReady()) {
-        setReaction(id, currentUserId(), newReaction).then(result => {
-          if (!result.ok) {
-            console.warn('[reactions] помилка збереження:', result.error);
-            // (UI rollback опускаємо — спам у комюніті не критично)
-          }
-        });
-      }
-      return;
-    }
-
     // Усе всередині inline-форми коментарів — не пропускаємо до zoom-модалки
     // (форма має data-comment-form="<id>" і знаходиться у CHAT-картці, не у board)
     if (e.target.closest('[data-comment-form]') || e.target.closest('[data-comment-input]')) {
@@ -1909,33 +1748,11 @@ function attachBoardDelegation() {
       });
       return;
     }
-
-    // Клік поза попапом — закрити
-    if (document.getElementById('bd-react-popup') && !e.target.closest('.bd-react-popup')) {
-      closeReactionPopup();
-    }
   }, { capture: true });
 }
 
 // Realtime — підписки чіпляємо ОДИН раз при initBoard. При подіях БД
 // перерахуємо in-memory map і точково перерендеримо DOM-елементи.
-
-function onReactionRealtimeEvent(payload) {
-  // payload.new / payload.old містить рядок (post_id, user_id, emoji)
-  const row = payload.new || payload.old;
-  if (!row || !row.post_id) return;
-  const postId = row.post_id;
-  // Найпростіше — повний refetch цього поста для коректних counts/my
-  fetchAllReactions(currentUserId()).then(fresh => {
-    // Беремо тільки запис для цього post_id, мерджимо у локальну map
-    const r = fresh.get(postId) || { counts: {}, my: null };
-    reactionsByPost.set(postId, r);
-    // Точково перерендеримо всі тригери цього поста
-    document.querySelectorAll(`[data-react-trigger="${postId}"]`).forEach(btn => {
-      btn.outerHTML = reactTriggerHtml(allPosts.find(p => p.id === postId) || { id: postId });
-    });
-  });
-}
 
 function onCommentRealtimeEvent(payload) {
   const postId = (payload.new || payload.old || {}).post_id;
@@ -1974,12 +1791,11 @@ let _realtimeAttached = false;
 function attachRealtime() {
   if (_realtimeAttached || !isSupabaseReady()) return;
   _realtimeAttached = true;
-  subscribeReactions(onReactionRealtimeEvent);
   subscribeComments(onCommentRealtimeEvent);
 }
 
 // ── «Обговорення» як повноекранний overlay поверх вкладки «Чати» (варіант Б) ──
-// Той самий рушій board.js (картки/реакції/коментарі/realtime) рендериться у
+// Той самий рушій board.js (картки/коментарі/realtime) рендериться у
 // #disc-content замість сторінки Дошки. Таб-бар лишається на «Чати».
 let discOpen = false;
 
