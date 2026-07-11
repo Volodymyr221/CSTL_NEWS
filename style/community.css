@@ -1915,9 +1915,12 @@
   top: -1px;
   z-index: 2;
   box-shadow: 0 5px 7px -4px rgba(0,0,0,0.16);
+  display: flow-root;   /* контейнер для float:right (пін НП) нижче — інакше висота збігається */
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
-.cm-board-modal-subhead .cm-board-title { margin: 0; }
+/* НП — праворуч від тега категорії, той самий рядок (Вова 11.07) */
+.cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; }
+.cm-board-modal-subhead .cm-board-title { clear: both; margin: 0; }
 /* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
   display: flex;
@@ -1985,6 +1988,8 @@
   height: 36px;
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-call svg { width: 17px; height: 17px; }
+/* Дата публікації в модалці — трохи більша за базові 9px (Вова 11.07). */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-time { font-size: 11px; }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
   margin-top: 5px;
   padding-top: 6px;
