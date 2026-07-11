@@ -85,9 +85,15 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
     panel.addEventListener('touchend', () => {
       if (!dragging) return;
       dragging = false;
-      panel.style.transition = '';
-      if (dy > 90) close();
-      else panel.style.transform = '';
+      panel.style.transition = '';   // повертаємо CSS-анімацію (0.25s) — і для закриття, і для відскоку
+      if (dy > 90) {
+        // Плавно доїхати донизу ПЕРЕД видаленням. Раніше close() лишав інлайн transform
+        // на translateY(dy) → панель застигала на місці й різко зникала (дьоргання).
+        panel.style.transform = 'translateY(100%)';
+        close();
+      } else {
+        panel.style.transform = '';   // не дотягнув до порогу — плавно назад на місце
+      }
       dy = 0;
     });
   }
