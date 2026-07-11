@@ -1411,19 +1411,55 @@
     _active?.close();
   }
 
-  // src/tabs/community-modal.js
+  // src/core/board-categories.js
+  var A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var SVG = {
+    // Купити — корзина
+    cart: `<svg ${A}><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"/></svg>`,
+    // Продам — цінник
+    tag: `<svg ${A}><path d="M20.6 13.4l-7.2 7.2a2 2 0 0 1-2.8 0L2 12V2h10l8.6 8.6a2 2 0 0 1 0 2.8z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>`,
+    // Віддам безкоштовно — подарунок
+    gift: `<svg ${A}><polyline points="20 12 20 22 4 22 4 12"/><rect x="2" y="7" width="20" height="5"/><line x1="12" y1="22" x2="12" y2="7"/><path d="M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z"/><path d="M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>`,
+    // Шукаю — лупа
+    search: `<svg ${A}><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>`,
+    // Послуги — ключ
+    wrench: `<svg ${A}><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.1-3.1a6 6 0 0 1-7.9 7.9l-6.3 6.3a2.1 2.1 0 0 1-3-3l6.3-6.3a6 6 0 0 1 7.9-7.9l-3.1 3.1z"/></svg>`,
+    // Знайдено — галочка в колі
+    check: `<svg ${A}><circle cx="12" cy="12" r="10"/><polyline points="8 12 11 15 16 9"/></svg>`,
+    // Загубилось — знак «?» у колі
+    help: `<svg ${A}><circle cx="12" cy="12" r="10"/><path d="M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`,
+    // Всі — лійка-фільтр (дефолт кнопки фільтра)
+    funnel: `<svg ${A}><polygon points="21 4 3 4 10 12.5 10 19 14 21 14 12.5 21 4"/></svg>`
+  };
   var BOARD_CATEGORIES = [
-    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F4B0}", color: "red" },
-    { id: "\u043A\u0443\u043F\u043B\u044E", emoji: "\u{1F6D2}", color: "green" },
-    { id: "\u0448\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", color: "blue" },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", emoji: "\u{1F527}", color: "white" },
-    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", emoji: "\u{1F381}", color: "amber" },
-    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F61F}", color: "amber" }
+    { id: "\u043A\u0443\u043F\u043B\u044E", label: "\u041A\u0443\u043F\u0438\u0442\u0438", color: "green", icon: SVG.cart },
+    { id: "\u043F\u0440\u043E\u0434\u0430\u043C", label: "\u041F\u0440\u043E\u0434\u0430\u043C", color: "red", icon: SVG.tag },
+    { id: "\u0432\u0456\u0434\u0434\u0430\u043C", label: "\u0412\u0456\u0434\u0434\u0430\u043C \u0431\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E", short: "\u0412\u0456\u0434\u0434\u0430\u043C", color: "green", icon: SVG.gift },
+    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", color: "blue", icon: SVG.search },
+    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", color: "white", icon: SVG.wrench },
+    { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", color: "amber", icon: SVG.check },
+    { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", color: "amber", icon: SVG.help }
   ];
-  function catColor(category) {
-    const c = BOARD_CATEGORIES.find((x) => x.id === category);
+  var ALL_ICON = SVG.funnel;
+  var byId = (id) => BOARD_CATEGORIES.find((c) => c.id === id);
+  function catColor(id) {
+    const c = byId(id);
     return c ? c.color : "white";
   }
+  function catIcon(id) {
+    const c = byId(id);
+    return c ? c.icon : ALL_ICON;
+  }
+  function catLabel(id) {
+    const c = byId(id);
+    return c ? c.label : id;
+  }
+  function catShort(id) {
+    const c = byId(id);
+    return c ? c.short || c.label : id;
+  }
+
+  // src/tabs/community-modal.js
   function isPhone(s) {
     return /^[\+\d][\d\s\-\(\)]{5,}$/.test(String(s || "").trim());
   }
@@ -1517,8 +1553,8 @@
         <div class="bm-chips" id="bm-chips">
           ${BOARD_CATEGORIES.map((c) => `
             <button type="button" class="bm-chip${c.id === state.category ? " active" : ""}" data-cat="${c.id}">
-              <span class="bm-chip-emoji">${c.emoji}</span>
-              <span class="bm-chip-label">${c.id}</span>
+              <span class="bm-chip-emoji cat-c-${c.color}">${c.icon}</span>
+              <span class="bm-chip-label">${escapeHtml(c.label)}</span>
             </button>
           `).join("")}
         </div>
@@ -1684,7 +1720,7 @@
       <article class="cm-board-note${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
-        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.emoji} ${escapeHtml(state.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>
         ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">\u{1F4CD} ${escapeHtml(state.location)}</span>` : ""}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
@@ -3541,22 +3577,6 @@
   }
   var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
-  var BOARD_CATEGORIES2 = [
-    { id: "all", label: "\u0412\u0441\u0456", emoji: "\u2726", match: null },
-    { id: "trade", label: "\u041A\u0443\u043F\u043B\u044E/\u041F\u0440\u043E\u0434\u0430\u043C", emoji: "\u{1F6D2}", match: ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043A\u0443\u043F\u043B\u044E"] },
-    { id: "\u0448\u0443\u043A\u0430\u044E", label: "\u0428\u0443\u043A\u0430\u044E", emoji: "\u{1F50D}", match: ["\u0448\u0443\u043A\u0430\u044E"] },
-    { id: "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", label: "\u041F\u043E\u0441\u043B\u0443\u0433\u0438", emoji: "\u{1F527}", match: ["\u043F\u043E\u0441\u043B\u0443\u0433\u0430"] },
-    { id: "lostfound", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E/\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", emoji: "\u{1F381}", match: ["\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C"] }
-  ];
-  var CATEGORY_EMOJI = {
-    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
-    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
-    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
-    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
-    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
-    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
-    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
-  };
   var REACTIONS = ["\u2764\uFE0F", "\u{1F44D}", "\u{1F44F}", "\u{1F525}", "\u{1F602}", "\u{1F62E}", "\u{1F622}", "\u{1F64F}"];
   var allPosts = [];
   var allAnnouncements = [];
@@ -3759,14 +3779,14 @@
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">\u{1F4AC}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u{1F44B}</div>
     </div>`;
     }
-    const byId = new Map(items.map((c) => [c.id, c]));
+    const byId2 = new Map(items.map((c) => [c.id, c]));
     const dividerTs = _chatDividerTs;
     let hadOld = false, dividerPlaced = false, lastDay = null;
     const renderDiscBubble = (c) => {
       if (c.deleted_at) {
         return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ""}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
-      const reply = c.reply_to_id ? byId.get(c.reply_to_id) : null;
+      const reply = c.reply_to_id ? byId2.get(c.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "").slice(0, 90))}</span>` : "";
       const edited = c.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
       return `<div class="pm-bubble" data-msg="${c.id}" data-tag="${c.client_tag || ""}">${replyHtml}<span class="pm-bubble-text">${escapeHtml(c.text)}</span><span class="pm-bubble-time">${edited}${clockTime2(postTime(c))}</span></div>`;
@@ -4312,8 +4332,7 @@
   }
   function buildShareText(post) {
     if (post.type === "board") {
-      const cat = CATEGORY_EMOJI[post.category] || "\u{1F4CC}";
-      return `${cat} ${post.category}
+      return `${catLabel(post.category)}
 
 ${post.text}
 \u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
@@ -4327,14 +4346,13 @@ ${post.text}
   }
   function renderBoardCard(p) {
     const tilt = 0;
-    const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
     const photo = Array.isArray(p.photos) && p.photos[0] || p.photo;
     const photoHtml = photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
     return `
     <article class="cm-board-note bd-card bd-card--board${photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-post-id="${p.id}">
       <span class="cm-board-pin"></span>
       ${photoHtml}
-      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+      <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderLoc(p.location)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       <p class="cm-board-text">${escapeHtml(p.text)}</p>
@@ -4344,7 +4362,6 @@ ${post.text}
   `;
   }
   function renderAdModal(p) {
-    const emoji = CATEGORY_EMOJI[p.category] || "\u{1F4CC}";
     const photos = Array.isArray(p.photos) ? p.photos.filter(Boolean) : p.photo ? [p.photo] : [];
     const hasPhoto = photos.length > 0;
     const multi = photos.length > 1;
@@ -4362,7 +4379,7 @@ ${post.text}
     <div class="cm-board-modal-scrollarea">
       ${photoHtml}
       <div class="cm-board-modal-subhead">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${emoji} ${escapeHtml(p.category)}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
         ${renderLoc(p.location)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
@@ -4512,8 +4529,7 @@ ${post.text}
         return false;
       }
       if (activeType === "board" && activeCategory !== "all") {
-        const cat = BOARD_CATEGORIES2.find((c) => c.id === activeCategory);
-        if (!cat || !cat.match || !cat.match.includes(p.category))
+        if (p.category !== activeCategory)
           return false;
       }
       if (activeType === "board" && activeLocation !== COMMUNITY_ALL) {
@@ -4538,17 +4554,23 @@ ${post.text}
          <span class="bd-disc-title">\u{1F4E2} \u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
        </div>` : "";
     const showCategories = activeType === "board";
-    const chipHtml = (c) => `
-    <button class="bd-cat-chip${c.id === activeCategory ? " bd-cat-chip--active" : ""}" type="button" data-bd-cat="${c.id}">
-      <span class="bd-cat-emoji">${c.emoji}</span>
-      ${escapeHtml(c.label)}
+    const activeIcon = activeCategory === "all" ? ALL_ICON : catIcon(activeCategory);
+    const activeColorCls = activeCategory === "all" ? "" : "cat-c-" + catColor(activeCategory);
+    const CARET_SVG = '<svg class="bd-cat-caret" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+    const menuItem = (id, icon, color, label) => `
+    <button class="bd-cat-mi${id === activeCategory ? " active" : ""}" type="button" role="menuitem" data-bd-cat="${id}">
+      <span class="bd-cat-mi-ico ${color ? "cat-c-" + color : ""}">${icon}</span>
+      <span class="bd-cat-mi-label">${escapeHtml(label)}</span>
     </button>`;
-    const categoriesHtml = showCategories ? `
-    <div class="bd-cat-wrap">
-      ${chipHtml(BOARD_CATEGORIES2[0])}
-      <span class="bd-cat-divider" aria-hidden="true"></span>
-      <div class="bd-categories">
-        ${BOARD_CATEGORIES2.slice(1).map(chipHtml).join("")}
+    const catFilterHtml = showCategories ? `
+    <div class="bd-cat-filter-wrap">
+      <button class="bd-cat-filter" id="bd-cat-filter" type="button" aria-haspopup="true" aria-expanded="false" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0437\u0430 \u043A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u0454\u044E">
+        <span class="bd-cat-filter-ico ${activeColorCls}">${activeIcon}</span>
+        ${CARET_SVG}
+      </button>
+      <div class="bd-cat-menu" id="bd-cat-menu" role="menu" hidden>
+        ${menuItem("all", ALL_ICON, "", "\u0412\u0441\u0456")}
+        ${BOARD_CATEGORIES.map((c) => menuItem(c.id, c.icon, c.color, c.label)).join("")}
       </div>
     </div>
   ` : "";
@@ -4572,13 +4594,15 @@ ${post.text}
     <div class="bd-controls">
       ${discHead}
       ${titlebarHtml}
-      <div class="bd-search">
-        <span class="bd-search-icon">\u{1F50D}</span>
-        <input class="bd-search-input" id="bd-search-input" type="search"
-               placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
-        ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
+      <div class="bd-search-row">
+        ${catFilterHtml}
+        <div class="bd-search">
+          <span class="bd-search-icon">\u{1F50D}</span>
+          <input class="bd-search-input" id="bd-search-input" type="search"
+                 placeholder="${activeType === "chat" ? "\u041F\u043E\u0448\u0443\u043A \u0432 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F\u0445..." : activeType === "saved" ? "\u041F\u043E\u0448\u0443\u043A \u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445..." : "\u041F\u043E\u0448\u0443\u043A \u043F\u043E \u0434\u043E\u0448\u0446\u0456..."}" value="${escapeHtml(searchQuery)}">
+          ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">\u2715</button>' : ""}
+        </div>
       </div>
-      ${categoriesHtml}
     </div>
   `;
   }
@@ -4666,7 +4690,6 @@ ${post.text}
     const el = getBoardRoot();
     if (!el)
       return;
-    const savedCatScroll = el.querySelector(".bd-categories")?.scrollLeft ?? 0;
     const hasCork = activeType === "board";
     el.innerHTML = `
     ${hasCork ? `
@@ -4683,9 +4706,6 @@ ${post.text}
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
     el.style.backgroundPosition = "";
-    const catsEl = el.querySelector(".bd-categories");
-    if (catsEl)
-      catsEl.scrollLeft = savedCatScroll;
     const fab = document.getElementById("board-fab");
     const fabBtn = document.getElementById("board-trigger");
     const fabBack = document.getElementById("board-fab-backdrop");
@@ -4764,16 +4784,39 @@ ${post.text}
         renderBodyOnly(el);
       });
     }
-    el.querySelectorAll("[data-bd-cat]").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        const cat = btn.dataset.bdCat;
-        activeCategory = cat;
-        renderAll(el);
-        if (cat === "all") {
-          el.querySelector(".bd-categories")?.scrollTo({ left: 0, behavior: "smooth" });
-        }
+    const catBtn = document.getElementById("bd-cat-filter");
+    const catMenu = document.getElementById("bd-cat-menu");
+    if (catBtn && catMenu) {
+      catBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = catMenu.hasAttribute("hidden");
+        catMenu.toggleAttribute("hidden", !willOpen);
+        catBtn.classList.toggle("open", willOpen);
+        catBtn.setAttribute("aria-expanded", willOpen ? "true" : "false");
+      });
+    }
+    el.querySelectorAll("#bd-cat-menu [data-bd-cat]").forEach((mi) => {
+      mi.addEventListener("click", () => {
+        activeCategory = mi.dataset.bdCat;
+        renderAll();
       });
     });
+    if (!_catMenuWired) {
+      _catMenuWired = true;
+      document.addEventListener("click", (e) => {
+        const m = document.getElementById("bd-cat-menu");
+        if (!m || m.hasAttribute("hidden"))
+          return;
+        if (e.target.closest(".bd-cat-filter-wrap"))
+          return;
+        closeCatMenu();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape")
+          closeCatMenu();
+      });
+      document.querySelector(".app-main")?.addEventListener("scroll", closeCatMenu, { passive: true });
+    }
     el.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
@@ -5385,6 +5428,17 @@ ${post.text}
         range.selectNodeContents(nameEl);
       }
     });
+  }
+  var _catMenuWired = false;
+  function closeCatMenu() {
+    const m = document.getElementById("bd-cat-menu");
+    const b = document.getElementById("bd-cat-filter");
+    if (m)
+      m.setAttribute("hidden", "");
+    if (b) {
+      b.classList.remove("open");
+      b.setAttribute("aria-expanded", "false");
+    }
   }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
@@ -8248,15 +8302,6 @@ ${ev.description || ""}`
       }
     }, 80);
   }
-  var CATEGORY_EMOJI2 = {
-    "\u043F\u0440\u043E\u0434\u0430\u043C": "\u{1F4B0}",
-    "\u043A\u0443\u043F\u043B\u044E": "\u{1F6D2}",
-    "\u0448\u0443\u043A\u0430\u044E": "\u{1F50D}",
-    "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E": "\u{1F381}",
-    "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C": "\u{1F61F}",
-    "\u043F\u043E\u0441\u043B\u0443\u0433\u0430": "\u{1F527}",
-    "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F": "\u{1F4E2}"
-  };
   async function renderBoardBlock() {
     const el = document.getElementById("cm-board-content");
     if (!el)
@@ -8382,13 +8427,12 @@ ${ev.description || ""}`
   function renderMiniCard(item, type) {
     const tilt = item.id * 7 % 5 - 2;
     if (type === "board") {
-      const emoji = CATEGORY_EMOJI2[item.category] || "\u{1F4CC}";
       const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
       return `
       <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
         <span class="cm-board-pin"></span>
         ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${emoji} ${escapeHtml(item.category || "")}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${catIcon(item.category)} ${escapeHtml(catShort(item.category || ""))}</span>
         <p class="cm-board-text">${escapeHtml(item.text)}</p>
       </article>
     `;
