@@ -2933,26 +2933,6 @@
 /* Кнопка «зберегти» в підвалі картки — трохи компактніша */
 .bd-chat-foot .bd-bookmark { width: 36px; height: 36px; }
 
-/* ── FAB Обговорень: червоний круг з білим плюсом (окремий від Дошки) ────── */
-.cm-board-trigger.disc-fab-plus {
-  width: 56px;
-  height: 56px;
-  min-width: 56px;
-  padding: 0;
-  border-radius: 50%;
-  background: var(--red);
-  color: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 18px rgba(226,55,68,0.42);
-}
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-text { display: none; }
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-icon,
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-close { color: #fff; }
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-icon svg,
-.cm-board-trigger.disc-fab-plus .cm-board-trigger-close svg { width: 26px; height: 26px; }
-
 /* ── Кімнати/модалка Обговорень (bottom-sheet) — chrome тепер спільний
    примітив core/modal.js (Потік C2); тут лишається контент-специфічне. ── */
 .disc-sheet-title { font-size: 17px; font-weight: 800; color: var(--black, #1C1C1E); margin-bottom: 10px; }
