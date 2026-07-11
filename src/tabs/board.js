@@ -1007,7 +1007,9 @@ function renderFab() {
 
 // ── Фільтрація і пошук ───────────────────────────────────────────────────────
 
-function getFilteredPosts() {
+// opts.ignoreLocation — пропустити фільтр локації (для fallback «вся громада»
+// коли в обраному НП немає власних оголошень, Вова 11.07).
+function getFilteredPosts(opts = {}) {
   const q = searchQuery.trim().toLowerCase();
   const savedIds = activeType === 'saved' ? getSavedIds() : null;
 
@@ -1027,7 +1029,7 @@ function getFilteredPosts() {
     }
     // Фільтр по локації (Д-12) — тільки board. Конкретний НП показує свої пости
     // + загальногромадські (COMMUNITY_ALL/порожні/старі) — вони релевантні скрізь.
-    if (activeType === 'board' && activeLocation !== COMMUNITY_ALL) {
+    if (activeType === 'board' && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
       if (p.location !== activeLocation && !isCommunityWide(p.location)) return false;
     }
     // Пошук — text + tags + author + title
@@ -1040,6 +1042,17 @@ function getFilteredPosts() {
     }
     return true;
   });
+}
+
+// Кількість для лічильника шапки Дошки. Коли обраний конкретний НП і в ньому
+// НЕМАЄ власних оголошень — рахуємо як загальногромадський перегляд (усі НП),
+// бо саме стільки карток тоді реально показує renderBody (консистентність
+// лічильника з видимими картками, Вова 11.07).
+function getBoardDisplayCount() {
+  if (activeType !== 'board' || activeLocation === COMMUNITY_ALL) return getFilteredPosts().length;
+  const narrow = getFilteredPosts();
+  const hasOwn = narrow.some(p => p.location === activeLocation);
+  return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
 }
 
 
@@ -1084,7 +1097,7 @@ function renderHeader() {
   // Д-11 + Д-12: шапка Дошки — заголовок по центру; під ним рядок:
   // лічильник (зліва) + тонкий фільтр локації (справа). Лічильник рахує
   // поточний відфільтрований список.
-  const count = showCategories ? getFilteredPosts().length : 0;
+  const count = showCategories ? getBoardDisplayCount() : 0;
   const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
       <h2 class="bd-title">Дошка оголошень</h2>
@@ -1127,7 +1140,7 @@ function renderHeader() {
 function updateAdCount() {
   const el = document.getElementById('bd-count');
   if (!el || activeType !== 'board') return;
-  const n = getFilteredPosts().length;
+  const n = getBoardDisplayCount();
   el.textContent = `${n} ${pluralAds(n)}`;
 }
 
@@ -1159,8 +1172,15 @@ function renderBody() {
     // Фільтр по конкретному НП (Д-12+) → ДВІ групи: спершу оголошення цього НП,
     // нижче — загальногромадські («Олицька громада»). Дефолт «Уся громада» — один список.
     if (activeLocation !== COMMUNITY_ALL) {
-      const npGroup   = sorted.filter(p => p.location === activeLocation);
-      const wideGroup = sorted.filter(p => isCommunityWide(p.location));
+      const npGroup = sorted.filter(p => p.location === activeLocation);
+      // Друга група: якщо в НП Є власні оголошення — лише загальногромадські
+      // (вузько, як і було). Якщо НЕМАЄ — ВСЯ громада (усі НП разом), той самий
+      // набір що й у дефолтному перегляді «Олицька громада» без фільтра —
+      // не лише позначені як «вся громада» (Вова 11.07, знайдений баг: раніше
+      // тут губились пости інших конкретних НП, напр. Жорнище).
+      const wideGroup = npGroup.length
+        ? sorted.filter(p => isCommunityWide(p.location))
+        : [...getFilteredPosts({ ignoreLocation: true })].sort((a, b) => rankTs(b) - rankTs(a));
       const section = (title, list) => list.length
         ? `<h3 class="bd-group-title">${escapeHtml(title)}</h3>${corkboard(list)}`
         : '';
