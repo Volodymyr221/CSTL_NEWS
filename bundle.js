@@ -7903,7 +7903,8 @@ ${ev.description || ""}`
         cursor.classList.add("is-on");
         const p = kind === "temp" ? tempPts[idx] : precipPts[idx];
         const val = kind === "temp" ? `${Math.round(p.v)}\xB0` : `${Math.round(p.v)}%`;
-        readout.innerHTML = `<span class="wx-ro-ic">${iconPts[idx]}</span><span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
+        const icHtml = kind === "temp" ? `<span class="wx-ro-ic">${iconPts[idx]}</span>` : "";
+        readout.innerHTML = `${icHtml}<span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
         readout.style.left = xPct + "%";
         readout.classList.add("is-on");
       });

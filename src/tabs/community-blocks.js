@@ -332,7 +332,10 @@ function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx 
       cursor.classList.add('is-on');
       const p = kind === 'temp' ? tempPts[idx] : precipPts[idx];
       const val = kind === 'temp' ? `${Math.round(p.v)}°` : `${Math.round(p.v)}%`;
-      readout.innerHTML = `<span class="wx-ro-ic">${iconPts[idx]}</span><span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
+      // Іконка погоди — лише в бульбашці температури; графік опадів дублював той самий
+      // емодзі, хоча має показувати ЛИШЕ ймовірність опадів (година+відсоток).
+      const icHtml = kind === 'temp' ? `<span class="wx-ro-ic">${iconPts[idx]}</span>` : '';
+      readout.innerHTML = `${icHtml}<span class="wx-ro-h">${pad(p.h)}:00</span><span class="wx-ro-v">${val}</span>`;
       readout.style.left = xPct + '%';
       readout.classList.add('is-on');
     });

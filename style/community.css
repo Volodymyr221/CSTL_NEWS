@@ -200,12 +200,11 @@
 }
 .wx-chart-svg-wrap {
   position: relative;                 /* база для курсора/бульбашки скрабера */
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(30, 70, 140, 0.22);   /* єдиний фон для обох графіків (раніше графік температури мав інший, світліший) */
   border-radius: 14px;
   padding: 10px 4px 4px;
   touch-action: none;                 /* палець тягне скрабер, а не скролить сторінку */
 }
-.wx-chart-svg-wrap[data-wx="precip"] { background: rgba(30, 70, 140, 0.22); }
 .wx-axis {
   font-size: 9px;
   fill: rgba(255, 255, 255, 0.75);
