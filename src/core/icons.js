@@ -12,10 +12,10 @@
 // повторюється між ≥2 файлами сайту (users/phone тут дедуплікують по 2-3
 // копії, що вже розійшлись у товщині лінії — знахідка аудиту).
 
-// stroke-width 2 — стандартна вага Tabler (обрано Ромою 12.07: sw1 «дуже тонка»
-// на дрібних іконках виглядала занадто хайрлайн). Заокруглені кінці/стики,
-// 1em-масштаб під розмір тексту поруч. Змінити тут — переміняться ВСІ JS-іконки.
-const A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+// stroke-width 1.75 — обрано Ромою 12.07 (sw1 занадто тонка/хайрлайн, sw2 забагато;
+// 1.75 = золота середина). Заокруглені кінці/стики, 1em-масштаб під розмір тексту
+// поруч. Змінити тут — переміняться ВСІ JS-іконки одним рядком.
+const A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
 
 export const ICONS = {
   // Люди / учасники (дедуп: 2 копії зведено сюди — board.js, messages-ui.js.
