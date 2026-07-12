@@ -40,6 +40,11 @@ import { ensurePushSubscription } from '../core/push.js';
 
 const BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1000;   // кулдаун підняття: 3 год
 
+// Векторний олівець для FAB «Нове оголошення» — мірор board.js:109 (той самий, що на
+// пункті «Подати оголошення» FAB Дошки). Локальна копія, бо board.js імпортує цей файл
+// (циклічний імпорт) — та сама причина, що для PENCIL_ICON_SVG/PIN_ICON_SVG.
+const EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+
 // Ім'я співрозмовника у треді (з точки зору поточного користувача)
 function otherName(thread) {
   const me = currentUserId();
@@ -801,7 +806,7 @@ export function openMyAds() {
         <button class="pm-ad-tab" type="button" data-filter="archive">Архів</button>
       </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">Завантаження…</div></div>
-      <button class="pm-fab-ad" type="button" data-new-ad aria-label="Нове оголошення">✏️</button>
+      <button class="pm-fab-ad" type="button" data-new-ad aria-label="Нове оголошення">${EDIT_ICON_SVG}</button>
     `, 'pm-screen--ads');
 
     const listEl = api.screen.querySelector('#pm-ads');
