@@ -1154,4 +1154,30 @@ export async function renderCommunityNews() {
       if (Number.isFinite(id)) openArticle(id);
     }
   });
+
+  // Бокова зона свайпу сторінки (#3, рішення Роми «вигляд табло зберігаємо»):
+  // картки повної ширини, АЛЕ палець у 30px від краю стрічки → на час жесту стрічка
+  // не скролиться (overflow:hidden) → вертикальний свайп іде СТОРІНЦІ; у центрі —
+  // скролить стрічку; тап відкриває картку (не чіпаємо, бо БЕЗ preventDefault).
+  // Хардненуто за дослідженням iOS: рішення на touchstart (до руху, момент-скрол цілий),
+  // {passive:true}, обовʼязковий restore на touchcancel (iOS PWA шле pointercancel).
+  const EDGE = 30;
+  let feedArmed = false;
+  const feedNow = () => section.querySelector('.cm-news-feed');
+  section.addEventListener('touchstart', e => {
+    if (e.touches.length !== 1) return;            // мультитач/пінч — ігноруємо
+    const feed = feedNow(); if (!feed) return;
+    const r = feed.getBoundingClientRect();
+    const t = e.touches[0];
+    const inFeedY = t.clientY >= r.top && t.clientY <= r.bottom;
+    const inEdge  = t.clientX < r.left + EDGE || t.clientX > r.right - EDGE;
+    if (inFeedY && inEdge) { feed.style.overflowY = 'hidden'; feedArmed = true; }
+  }, { passive: true });
+  const releaseFeed = () => {
+    if (!feedArmed) return;
+    const feed = feedNow(); if (feed) feed.style.overflowY = '';   // повертаємо CSS-значення (auto)
+    feedArmed = false;
+  };
+  section.addEventListener('touchend', releaseFeed, { passive: true });
+  section.addEventListener('touchcancel', releaseFeed, { passive: true });
 }

@@ -9027,6 +9027,34 @@ ${ev.description || ""}`
           openArticle(id);
       }
     });
+    const EDGE = 30;
+    let feedArmed = false;
+    const feedNow = () => section.querySelector(".cm-news-feed");
+    section.addEventListener("touchstart", (e) => {
+      if (e.touches.length !== 1)
+        return;
+      const feed = feedNow();
+      if (!feed)
+        return;
+      const r = feed.getBoundingClientRect();
+      const t = e.touches[0];
+      const inFeedY = t.clientY >= r.top && t.clientY <= r.bottom;
+      const inEdge = t.clientX < r.left + EDGE || t.clientX > r.right - EDGE;
+      if (inFeedY && inEdge) {
+        feed.style.overflowY = "hidden";
+        feedArmed = true;
+      }
+    }, { passive: true });
+    const releaseFeed = () => {
+      if (!feedArmed)
+        return;
+      const feed = feedNow();
+      if (feed)
+        feed.style.overflowY = "";
+      feedArmed = false;
+    };
+    section.addEventListener("touchend", releaseFeed, { passive: true });
+    section.addEventListener("touchcancel", releaseFeed, { passive: true });
   }
 
   // src/tabs/community.js
