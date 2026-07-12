@@ -2977,13 +2977,13 @@
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", async () => {
       const me = currentUserId();
       const api = buildScreen(`
-      <header class="pm-head pm-head--bar">
+      <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+        <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${ICONS.message}</span>\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div></div>
       </header>
       <div class="pm-list pm-list--threads" id="pm-list">
-        <h1 class="pm-bigtitle">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</h1>
         <div class="pm-search">
-          <span class="pm-search-ic" aria-hidden="true">\u{1F50D}</span>
+          <span class="pm-search-ic" aria-hidden="true">${ICONS.search}</span>
           <input class="pm-search-input" id="pm-search" type="search"
                  placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" aria-label="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" autocomplete="off">
         </div>
