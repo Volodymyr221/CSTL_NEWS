@@ -10,6 +10,9 @@ alter table public.messages add column if not exists edited_at   timestamptz;
 alter table public.messages add column if not exists deleted_at  timestamptz;
 
 -- Дозволити фото-без-тексту: text стає nullable, нове обмеження «текст АБО фото»
+-- ⚠️ ЗАСТАРІЛО (12.07.2026): цей варіант constraint ламав soft-delete (обнулення
+-- text+photo_url порушувало CHECK → видалення повідомлення падало у ВСІХ користувачів).
+-- Чинна версія — supabase_chat_delete_fix.sql (+виняток deleted_at). НЕ застосовувати цей блок.
 alter table public.messages alter column text drop not null;
 alter table public.messages drop constraint if exists messages_text_check;
 alter table public.messages add constraint messages_text_check
