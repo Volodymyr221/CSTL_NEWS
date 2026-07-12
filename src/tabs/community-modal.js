@@ -18,6 +18,15 @@ import { BOARD_CATEGORIES, catShort } from '../core/board-categories.js';
 // звідти, бо board.js імпортує цей файл → був би циклічний імпорт).
 const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
 
+// Д-6: векторний пін локації в прев'ю — мірор board.js PIN_ICON_SVG/renderLoc (не імпортуємо
+// з board.js через циклічний імпорт). Щоб прев'ю показувало локацію так само, як реальна картка.
+const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+function renderPreviewLoc(loc) {
+  if (!loc) return '';
+  const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+  return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+}
+
 // Д-24: маска українського номера — завжди префікс +380, далі рівно 9 цифр,
 // формат "+380 XX XXX XX XX". Приймає будь-який ввід (+380…, 0XX…, XX…) → нормалізує.
 function maskUaPhone(v) {
@@ -329,11 +338,11 @@ export function openBoardModal() {
         ${escapeHtml(contactShow)}
       </div>` : '';
     previewCanvas.innerHTML = `
-      <article class="cm-board-note${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
+      <article class="cm-board-note bd-card bd-card--board${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         ${catHtml}
-        ${state.location && state.location !== COMMUNITY_ALL ? `<span class="cm-board-loc">📍 ${escapeHtml(state.location)}</span>` : ''}
+        ${renderPreviewLoc(state.location)}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
         <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
