@@ -755,15 +755,15 @@ export function openThreadsList() {
 }
 
 // ── 3. «Мої оголошення» (керування власними оголошеннями) ──────────────────
-// Дві вкладки: Активні (published+pending) / Архів (rejected+closed).
+// Три вкладки: Активні (published) / На модерації (pending) / Архів (rejected+closed).
 // Картка: фото/emoji + назва + мета(категорія·дата·статус) + бейдж звернень,
 // кнопка «Підняти» (тільки published, кулдаун 3 год) + меню дій (⋯).
 // Чати тут НЕ розкриваємо — бейдж веде у «Повідомлення».
 const AD_STATUS = {
-  published: { label: 'активне',      icon: '✅', group: 'active'  },
-  pending:   { label: 'на перевірці', icon: '⏳', group: 'active'  },
-  closed:    { label: 'завершено',    icon: '✔️', group: 'archive' },
-  rejected:  { label: 'відхилено',    icon: '❌', group: 'archive' },
+  published: { label: 'активне',      icon: '✅', group: 'active'     },
+  pending:   { label: 'на перевірці', icon: '⏳', group: 'moderation' },
+  closed:    { label: 'завершено',    icon: '✔️', group: 'archive'    },
+  rejected:  { label: 'відхилено',    icon: '❌', group: 'archive'    },
 };
 
 function adDate(p) {
@@ -797,6 +797,7 @@ export function openMyAds() {
       </header>
       <div class="pm-ad-tabs">
         <button class="pm-ad-tab active" type="button" data-filter="active">Активні</button>
+        <button class="pm-ad-tab" type="button" data-filter="moderation">На модерації</button>
         <button class="pm-ad-tab" type="button" data-filter="archive">Архів</button>
       </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">Завантаження…</div></div>
@@ -898,9 +899,12 @@ export function openMyAds() {
       openRow = null;   // innerHTML перемальовується — стара відкрита картка зникає
       const list = posts.filter(p => (AD_STATUS[p.status]?.group || 'active') === filter);
       if (!list.length) {
-        listEl.innerHTML = filter === 'active'
-          ? `<div class="pm-empty"><span class="pm-empty-ic">📋</span>У вас ще немає активних оголошень.<br>Подайте перше — кнопка ✏️ внизу.</div>`
-          : `<div class="pm-empty"><span class="pm-empty-ic">🗄️</span>Архів порожній.</div>`;
+        const empty = {
+          active:     `<span class="pm-empty-ic">📋</span>У вас ще немає активних оголошень.<br>Подайте перше — кнопка ✏️ внизу.`,
+          moderation: `<span class="pm-empty-ic">⏳</span>Немає оголошень на модерації.`,
+          archive:    `<span class="pm-empty-ic">🗄️</span>Архів порожній.`,
+        };
+        listEl.innerHTML = `<div class="pm-empty">${empty[filter] || empty.active}</div>`;
         return;
       }
       listEl.innerHTML = list.map(adCard).join('');

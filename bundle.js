@@ -3110,7 +3110,7 @@
   }
   var AD_STATUS = {
     published: { label: "\u0430\u043A\u0442\u0438\u0432\u043D\u0435", icon: "\u2705", group: "active" },
-    pending: { label: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", icon: "\u23F3", group: "active" },
+    pending: { label: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", icon: "\u23F3", group: "moderation" },
     closed: { label: "\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E", icon: "\u2714\uFE0F", group: "archive" },
     rejected: { label: "\u0432\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043E", icon: "\u274C", group: "archive" }
   };
@@ -3142,6 +3142,7 @@
       </header>
       <div class="pm-ad-tabs">
         <button class="pm-ad-tab active" type="button" data-filter="active">\u0410\u043A\u0442\u0438\u0432\u043D\u0456</button>
+        <button class="pm-ad-tab" type="button" data-filter="moderation">\u041D\u0430 \u043C\u043E\u0434\u0435\u0440\u0430\u0446\u0456\u0457</button>
         <button class="pm-ad-tab" type="button" data-filter="archive">\u0410\u0440\u0445\u0456\u0432</button>
       </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
@@ -3229,7 +3230,12 @@
         openRow = null;
         const list = posts.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
         if (!list.length) {
-          listEl.innerHTML = filter === "active" ? `<div class="pm-empty"><span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u270F\uFE0F \u0432\u043D\u0438\u0437\u0443.</div>` : `<div class="pm-empty"><span class="pm-empty-ic">\u{1F5C4}\uFE0F</span>\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.</div>`;
+          const empty = {
+            active: `<span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u270F\uFE0F \u0432\u043D\u0438\u0437\u0443.`,
+            moderation: `<span class="pm-empty-ic">\u23F3</span>\u041D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043D\u0430 \u043C\u043E\u0434\u0435\u0440\u0430\u0446\u0456\u0457.`,
+            archive: `<span class="pm-empty-ic">\u{1F5C4}\uFE0F</span>\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.`
+          };
+          listEl.innerHTML = `<div class="pm-empty">${empty[filter] || empty.active}</div>`;
           return;
         }
         listEl.innerHTML = list.map(adCard).join("");
