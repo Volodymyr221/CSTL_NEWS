@@ -1125,6 +1125,12 @@
   z-index: 7;
   margin: 0 0 -32px 0;     /* прибрати висоту кнопки з потоку */
   box-shadow: 0 1px 5px rgba(0, 0, 0, 0.16);  /* тінь — щоб кнопка не зливалася з фоном (фідбек Вови) */
+  /* Векторний бордовий ✕ замість текстового: ховаємо текст, малюємо SVG-X. Кружок кнопки лишається. */
+  font-size: 0;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="%23722F37" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>');
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 15px;
 }
 .cm-board-modal-title {
   font-size: 18px;
@@ -1139,6 +1145,7 @@
 .cm-board-title-ic {
   display: inline-flex;
   flex-shrink: 0;
+  color: var(--red);   /* олівець бордовий (SVG stroke=currentColor) */
 }
 .cm-board-title-ic svg { width: 22px; height: 22px; }
 .cm-board-modal-sub {
