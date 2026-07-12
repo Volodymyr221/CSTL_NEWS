@@ -6,7 +6,7 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, scrollEdgeCatchersHtml } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType, openAdModalStandalone, openChatById } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
@@ -1114,11 +1114,10 @@ function paintCmNews(el, arts) {
   const filtered = arts.filter(cmNewsMatch)
     .slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
   // Екран табло — лише новини (стрічка), від самого верху.
-  // scrollEdgeCatchersHtml() (утиль, core/utils.js): прозорі смужки над краями
-  // картки — звужують ЗОНУ ДОТИКУ внутрішнього скролу, не сам вигляд картки.
+  // Стрічку (.cm-news-feed) звужено на 30px з кожного боку і зацентровано (CSS margin):
+  // краї табло поза overflow-контейнером → дотик там скролить СТОРІНКУ, а не стрічку.
   el.innerHTML = `
     <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-    ${scrollEdgeCatchersHtml()}
   `;
   // Кнопки-фільтри — у нижню панель, інтегровану в раму табло.
   const controls = document.getElementById('cm-news-controls');

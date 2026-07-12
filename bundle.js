@@ -800,12 +800,6 @@
       }
     }, { passive: true });
   }
-  function scrollEdgeCatchersHtml() {
-    return `
-    <div class="scroll-edge-catch scroll-edge-catch--l" aria-hidden="true"></div>
-    <div class="scroll-edge-catch scroll-edge-catch--r" aria-hidden="true"></div>
-  `;
-  }
   async function sharePost({ title, text, url }) {
     const shareData = {
       title: title || "CSTL LIFE",
@@ -8961,7 +8955,6 @@ ${ev.description || ""}`
     const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
     el.innerHTML = `
     <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
-    ${scrollEdgeCatchersHtml()}
   `;
     const controls = document.getElementById("cm-news-controls");
     if (controls) {
