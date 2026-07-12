@@ -1435,6 +1435,12 @@
           panel.style.transform = "";
           return;
         }
+        if (panel.scrollTop > 0) {
+          panel.style.transform = "";
+          startY = e.touches[0].clientY;
+          dy = 0;
+          return;
+        }
         e.preventDefault();
         panel.style.transition = "none";
         panel.style.transform = `translateY(${dy}px)`;
