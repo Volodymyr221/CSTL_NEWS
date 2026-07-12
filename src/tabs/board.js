@@ -10,7 +10,7 @@ import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
 import { catColor, catIcon, catShort, catLabel, BOARD_CATEGORIES as CATS, ALL_ICON } from '../core/board-categories.js';
-import { startChatFromPost, openMyAds, openThreadsList, refreshUnreadBadge } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, refreshUnreadBadge } from './board-chat.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName, onAuthChange } from '../core/auth.js';
 import {
@@ -1383,10 +1383,23 @@ function renderAll() {
       // покаже тост і запропонує увійти (подія cstl-need-login → екран входу).
       if (act === 'post') { requireAuth('подати оголошення', openBoardModal); return; }
       if (act === 'saved') { requireAuth('переглянути збережені', () => {
-        // «Збережені» — маркетплейс-таб на сторінці Дошки. З overlay Обговорень
-        // виходимо у Дошку; інакше перемикаємось у тип на місці.
-        if (discOpen) { closeDiscussions(); window.switchTab('board'); }
-        setBoardActiveType('saved');
+        // Д-27: «Збережені» — окремий екран (pm-screen), як «Мої оголошення».
+        // Список = published-оголошення з закладок (обговорення мають свою кімнату).
+        const saved = getSavedIds();
+        const list = allPosts.filter(p => saved.has(p.id) && p.type !== 'chat');
+        openSavedAds(list, {
+          // Прибрали зі збережених на екрані → синхронізуємо стан дошки:
+          // оновлюємо savedIds і, якщо картка видима на дошці, іконку закладки.
+          onRemove: (id) => {
+            savedIds.delete(id);
+            const btn = document.querySelector(`[data-save-id="${id}"]`);
+            if (btn) {
+              btn.innerHTML = BOOKMARK_OUTLINE_SVG;
+              btn.classList.remove('bd-bookmark--active');
+              btn.setAttribute('aria-label', 'Зберегти у Мої');
+            }
+          },
+        });
       }); return; }
       if (act === 'messages') { openThreadsList(); return; }   // requireAuth усередині
       if (act === 'mine') openMyAds();        // requireAuth усередині openMyAds

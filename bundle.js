@@ -2441,6 +2441,8 @@
   // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
   var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var BOOKMARK_FILLED_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  var BOOKMARK_OUTLINE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   function otherName(thread) {
     const me = currentUserId();
     if (me && me === thread.author_uid)
@@ -3565,6 +3567,66 @@
       });
     });
   }
+  function openSavedAds(posts, opts = {}) {
+    let list = Array.isArray(posts) ? posts.slice() : [];
+    const api = buildScreen(`
+    <header class="pm-head pm-head--list">
+      <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${BOOKMARK_FILLED_SVG}</span>\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div></div>
+    </header>
+    <div class="pm-list" id="pm-saved"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
+  `, "pm-screen--saved");
+    const listEl = api.screen.querySelector("#pm-saved");
+    const locOf = (p) => p.location && p.location !== COMMUNITY_ALL ? p.location : "";
+    function card(p) {
+      const photo = Array.isArray(p.photos) ? p.photos.find((x) => x) : null;
+      const thumb = photo ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : `<div class="pm-ad-thumb" style="background:linear-gradient(135deg,#ece4d8,#dccfba)"><span class="pm-ad-thumb-ic">${ICONS.clipboard}</span></div>`;
+      const title = escapeHtml(p.title && p.title.trim() || (p.text || "").trim().slice(0, 54) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+      const meta = [p.category, locOf(p), p.author].filter(Boolean).map(escapeHtml).join(" \xB7 ");
+      return `
+      <div class="pm-ad-row">
+        <div class="pm-ad">
+          <div class="pm-ad-main" data-open-ad="${p.id}">
+            ${thumb}
+            <div class="pm-ad-info">
+              <span class="pm-ad-title">${title}</span>
+              <span class="pm-ad-meta">${meta}</span>
+            </div>
+            <button class="pm-saved-remove" type="button" data-unsave="${p.id}" aria-label="\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445">${BOOKMARK_FILLED_SVG}</button>
+          </div>
+        </div>
+      </div>`;
+    }
+    function render2() {
+      if (!list.length) {
+        listEl.innerHTML = `<div class="pm-empty"><span class="pm-empty-ic">${BOOKMARK_OUTLINE_SVG}</span>\u0423 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u0442\u0438\u0441\u043D\u0456\u0442\u044C \u0437\u0430\u043A\u043B\u0430\u0434\u043A\u0443 \u043D\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u0456, \u0449\u043E\u0431 \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438.</div>`;
+        return;
+      }
+      listEl.innerHTML = list.map(card).join("");
+    }
+    render2();
+    listEl.addEventListener("click", async (e) => {
+      const un = e.target.closest("[data-unsave]");
+      if (un) {
+        e.stopPropagation();
+        const id = Number(un.dataset.unsave);
+        const me = currentUserId();
+        if (me)
+          await removeSavedPost(me, id);
+        list = list.filter((p) => p.id !== id);
+        opts.onRemove?.(id);
+        render2();
+        showToast("\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445", 2e3);
+        return;
+      }
+      const open = e.target.closest("[data-open-ad]");
+      if (open) {
+        const p = list.find((x) => String(x.id) === open.dataset.openAd);
+        if (p)
+          window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
+      }
+    });
+  }
   function startChatFromPost(post) {
     requireAuth("\u043D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u0440\u043E\u0434\u0430\u0432\u0446\u044E", async () => {
       const me = currentUserId();
@@ -3759,8 +3821,8 @@
     return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
   }
   var PHONE_ICON_SVG = ICONS.phone;
-  var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
-  var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  var BOOKMARK_OUTLINE_SVG2 = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
+  var BOOKMARK_FILLED_SVG2 = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
@@ -3961,7 +4023,7 @@
     return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
           data-save-id="${post.id}"
           aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
-    ${saved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG}
+    ${saved ? BOOKMARK_FILLED_SVG2 : BOOKMARK_OUTLINE_SVG2}
   </button>`;
   }
   function shareBtnHtml(post) {
@@ -4702,7 +4764,7 @@ ${post.text}
         </button>
         <button class="board-fab-item" data-fab="disc-saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
-          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F" aria-expanded="false">
@@ -4729,7 +4791,7 @@ ${post.text}
         </button>
         <button class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
-          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
+          <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
       </div>
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
@@ -4980,11 +5042,21 @@ ${post.text}
         }
         if (act === "saved") {
           requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
-            if (discOpen) {
-              closeDiscussions();
-              window.switchTab("board");
-            }
-            setBoardActiveType("saved");
+            const saved = getSavedIds();
+            const list = allPosts.filter((p) => saved.has(p.id) && p.type !== "chat");
+            openSavedAds(list, {
+              // Прибрали зі збережених на екрані → синхронізуємо стан дошки:
+              // оновлюємо savedIds і, якщо картка видима на дошці, іконку закладки.
+              onRemove: (id) => {
+                savedIds.delete(id);
+                const btn = document.querySelector(`[data-save-id="${id}"]`);
+                if (btn) {
+                  btn.innerHTML = BOOKMARK_OUTLINE_SVG2;
+                  btn.classList.remove("bd-bookmark--active");
+                  btn.setAttribute("aria-label", "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
+                }
+              }
+            });
           });
           return;
         }
@@ -5450,7 +5522,7 @@ ${post.text}
         const id = Number(saveBtn.dataset.saveId);
         toggleSaved(id);
         const nowSaved = isSaved(id);
-        saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG : BOOKMARK_OUTLINE_SVG;
+        saveBtn.innerHTML = nowSaved ? BOOKMARK_FILLED_SVG2 : BOOKMARK_OUTLINE_SVG2;
         saveBtn.classList.toggle("bd-bookmark--active", nowSaved);
         saveBtn.setAttribute("aria-label", nowSaved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457");
         if (activeType === "saved" && !nowSaved) {
