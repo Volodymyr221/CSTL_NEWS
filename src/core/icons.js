@@ -15,7 +15,9 @@
 const A = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
 
 export const ICONS = {
-  // Люди / учасники (дедуп: раніше 3 окремі копії — board.js, messages-ui.js, admin.html)
+  // Люди / учасники (дедуп: 2 копії зведено сюди — board.js, messages-ui.js.
+  // admin.html тримає ВЛАСНУ ICO_USERS — то standalone-файл без бандлера, за
+  // задумом Потоку 7 його не чіпаємо; при зміні цього svg свідомо синхронити й там)
   users: `<svg ${A}><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>`,
   // Телефон / дзвінок (дедуп: раніше 2 байт-в-байт копії — board.js, community-blocks.js)
   phone: `<svg ${A}><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>`,
