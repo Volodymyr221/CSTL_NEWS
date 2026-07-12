@@ -547,6 +547,7 @@ async function saveArticle(a) {
   if (a.status) row.status = a.status;
   if (a.publish_at !== undefined) row.publish_at = a.publish_at;  // ISO-рядок або null
   if (a.event_date !== undefined) row.event_date = a.event_date;  // дата свята/події (Шо в селі)
+  if (a.source_article_id !== undefined) row.source_article_id = a.source_article_id;  // Потік 8: слід копії в Найближчі події
   if (a.id) {
     if (a.type) row.type = a.type;   // тип можна змінити й при редагуванні
     const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
@@ -1036,6 +1037,8 @@ function renderArticles(el) {
     <div id="art-list"></div>
   `;
   const listEl = el.querySelector('#art-list');
+  // Потік 8: id оригіналів, які ВЖЕ скопійовані в Найближчі події (щоб не плодити дублі).
+  const copiedFrom = new Set(articles.filter(a => a.source_article_id != null).map(a => Number(a.source_article_id)));
 
   const paint = () => {
     let list = articles.filter(a => typeOfArt(a) === artCategory);
@@ -1065,6 +1068,11 @@ function renderArticles(el) {
             <button class="btn" data-art-edit="${a.id}">✏️ Редагувати</button>
             ${a.status === 'draft' && canPub ? `<button class="btn btn--approve" data-art-pub="${a.id}">🚀 Опублікувати</button>` : ''}
             ${a.status === 'ready' ? `<button class="btn" data-art-unpub="${a.id}">↩︎ У чернетки</button>` : ''}
+            ${((a.status === 'ready' || a.status === 'published') && (typeOfArt(a) === 'news' || typeOfArt(a) === 'holiday'))
+              ? (copiedFrom.has(Number(a.id))
+                  ? '<span class="badge" style="background:#2e6b40;color:#fff">📌 у Найближчих подіях</span>'
+                  : `<button class="btn" data-art-copyev="${a.id}">📌 Скопіювати в Найближчі події</button>`)
+              : ''}
             <button class="btn btn--reject" data-art-del="${a.id}">🗑 Видалити</button>
           </div>
         </article>`;
@@ -1099,6 +1107,22 @@ function renderArticles(el) {
     listEl.querySelectorAll('[data-art-del]').forEach(b => b.addEventListener('click', async () => {
       if (!confirm('Видалити статтю?')) return;
       await deleteArticle(b.dataset.artDel); articles = await fetchArticles(); renderApp();
+    }));
+    // Потік 8: «Скопіювати в Найближчі події» — відкриває форму НОВОГО запису type='event'
+    // з копією фото+тексту оригіналу; модератор ставить дату події й зберігає (INSERT).
+    // source_article_id = оригінал → не дублюємо (позначка «📌 у Найближчих подіях»).
+    listEl.querySelectorAll('[data-art-copyev]').forEach(b => b.addEventListener('click', () => {
+      const a = articles.find(x => String(x.id) === b.dataset.artCopyev);
+      if (!a) return;
+      articleDraft = {
+        title: a.title || '', excerpt: a.excerpt || '', content: a.content || '',
+        category: a.category || '', geo: a.geo || 'Громада',
+        image: a.image || null, image_type: a.image_type || (a.image ? 'source' : 'none'),
+        image_credit: a.image_credit || null,
+        type: 'event', status: 'draft', event_date: a.event_date || '',
+        source_article_id: a.id,   // слід оригіналу (нема id → буде INSERT нового рядка)
+      };
+      renderApp();
     }));
   };
 
