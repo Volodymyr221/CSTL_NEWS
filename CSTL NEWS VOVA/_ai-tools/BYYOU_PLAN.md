@@ -1,7 +1,40 @@
 # BYYOU_PLAN — стан потоку /byyou (CSTL)
 
-**Статус:** done
-<!-- ✅ 12.07 ПОТІК 6 ЗАДЕПЛОЄНО: PR #354, мердж 0d28b6ad, live v2717 · 12.07 00:44, CACHE cstl-20260712-0055. -->
+**Статус:** active
+<!-- 🧩 ПОТІК 7 (12.07) — Іконки: фундамент (icons.js + погода), Потік А з кількох. -->
+
+## 🧩 ПОТІК 7 (12.07) — Стандартизація іконок: Потік А (фундамент)
+
+**Джерело:** розмова з Ромою — ~150 літеральних емодзі по всьому застосунку, дослідив 2 агентами (інвентар файл-за-файлом + підбір точних Tabler-назв + окремий набір для погоди). Рома відхилила «лишити емодзі бо кольорове» — колір зберігається іконкою-в-кольоровому-кружечку (вже є патерн, `CONTACT_ICONS` у `community-blocks.js`), а сирий emoji візуально різний на iOS/Android/Windows — само по собі анти-патерн для бренду.
+
+**⚠️ Координація з Вовою:** він зараз активно в `board.js`/`community-modal.js`/`board-chat.js` (форма подачі оголошення, кілька деплоїв цієї ночі) — Дошку НЕ чіпаю в цьому потоці, щоб не заважати. Той самий підхід виявив: він уже сам додав `PENCIL_ICON_SVG` у `community-modal.js` (дублікат `EDIT_ICON_SVG` з `board.js` — 4-й дублікат "олівця" в коді, підтверджує що спільний файл потрібен).
+
+**Обсяг усієї задачі (~20 файлів) розбито на потоки. Це Потік А — фундамент, розблоковує решту:**
+- Потік А (цей): `src/core/icons.js` (спільні generic-іконки) + окремий погодний набір (Meteocons) + дедуп users/phone де безпечно (НЕ в board.js)
+- Потік Б (пізніше): sidebar.js, saved-hub.js, account-ui.js, messages-ui.js
+- Потік В (пізніше): news.js, events.js, buses.js, power.js, community-blocks.js (тости/бейджі/кнопки)
+- Потік Г (пізніше, коли Вова звільнить зону): board.js/board-chat.js/community-modal.js дедуп
+- Потік Ґ (пізніше): index.html дрібні залишки
+
+### Кроки Потоку А (11 кроків)
+| # | Крок | Файли | Стан |
+|---|------|-------|------|
+| 1 | `src/core/icons.js` (новий) — спільні іконки (users/phone/pin/search/check/alert-triangle/calendar/clock/lock/settings/trash/pencil/x/chevron-right/arrow-right/eye/rocket/photo/file-text/robot), Tabler SVG (реальні path, той самий патерн що `board-categories.js` — `const A`, 1em) | `src/core/icons.js` (новий) | 🟢 |
+| 2 | Погода: завантажити Meteocons `line`-варіант (MIT) для clear-day/cloudy/partly-cloudy-day/overcast/fog/drizzle/rain/snow/sleet/thunderstorms — вшити як SVG-константи (не живий CDN, статично як Tabler) | `src/core/weather.js` (нова секція) | 🟢 |
+| 3 | `weather.js`: `weatherIcon(code)` → повертає SVG замість emoji (єдине джерело правди) | `src/core/weather.js` | 🟢 |
+| 4 | `community-blocks.js`: прибрати ДРУГУ копію `weatherIcon` (розійшлась з weather.js — забула снігову зливу), імпортувати з weather.js | `src/tabs/community-blocks.js` | 🟢 |
+| 5 | Дедуп "users": `messages-ui.js` (`GR_SVG.users`) → імпорт з `icons.js`. `board.js`/`admin.html` НЕ чіпаю (Дошка = зона Вови; admin.html без бандлера) | `src/core/messages-ui.js` | 🟢 |
+| 6 | Дедуп "phone": `community-blocks.js` (`CONTACT_ICONS.default`) → імпорт з `icons.js`. `board.js` НЕ чіпаю (Дошка) | `src/tabs/community-blocks.js` | 🟢 |
+| 7 | Тест-блок: `node --check` + `node build.js` + check-imports | — | 🟢 |
+| 8 | Playwright-смоук: погода (мокнутий Open-Meteo, усі 10 станів рендерять іконку не emoji), міні-віджет погоди Громади, 0 помилок консолі | — | 🟢 |
+| 9 | CACHE_NAME bump | `sw.js` | 🟢 |
+| 10 | Реліз-нотатки + BOARD.md (позначити координацію з Вовою) | — | 🟢 |
+| 11 | Брама деплою — чекати «деплой» | — | 🟡 |
+
+**Оцінка:** 11 кроків × ~35K ≈ 385K токенів (~40% вікна).
+**Ризик:** низький — нових файлів більшість, дедуп тільки в 2 файлах поза зоною Вови, погода вже мала подібний рефактор раніше (скрабер) без проблем.
+
+---
 <!-- ✅ 12.07 ПОТОКИ 2+3 (AI-кнопка + сітка іконок адмінки) ЗАДЕПЛОЄНО: PR #356, мердж e6634c64, live v2720 · 12.07 00:58. -->
 <!-- 🔴 Ручна дія власника: `supabase functions deploy ai-analytics-summary` — живий деплой Edge Function. -->
 <!-- 🔜 ПОТІК 2 (AI-кнопка «Оновити статистику») — окремий /byyou, чекає ANTHROPIC_API_KEY у Supabase secrets. -->
