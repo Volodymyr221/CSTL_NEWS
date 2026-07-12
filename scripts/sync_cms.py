@@ -111,8 +111,18 @@ def cms_to_event(row, next_id):
     }
 
 
+def _event_key(title, date):
+    """Стабільний ключ події: заголовок(нормалізований) + дата. Дата розрізняє
+    річні свята (те саме свято іншого року — інша подія)."""
+    return ((title or "").strip().lower(), (date or "").strip())
+
+
 def publish_shotam():
-    """Публікує готові свята/події у data/events.json («Шо в селі»). Дедуп за заголовком."""
+    """Публікує готові свята/події у data/events.json («Шо в селі»).
+    Дедуп за (заголовок+дата) з ОНОВЛЕННЯМ на місці (P4): раніше дедуп за самим
+    заголовком тихо КОВТАВ новий/відредагований запис (позначав published БЕЗ
+    додавання) — річні свята зникали, правки не доходили. Тепер: збіг ключа →
+    оновлюємо існуючий запис (зберігаємо його id); нема збігу → додаємо новий."""
     try:
         ready = fetch_shotam_ready()
     except Exception as e:
@@ -122,26 +132,30 @@ def publish_shotam():
         return
     events = json.loads(EVENTS_PATH.read_text(encoding="utf-8")) if EVENTS_PATH.exists() else []
     next_id = max((e["id"] for e in events if isinstance(e.get("id"), int)), default=0) + 1
-    seen = {(e.get("title") or "").strip().lower() for e in events}
-    added = 0
+    by_key = {_event_key(e.get("title"), e.get("date")): i for i, e in enumerate(events)}
+    changed = 0
     for row in ready:
         title = (row.get("title") or "").strip()
         if not title:
             continue
-        if title.lower() in seen:
-            mark_published(row["id"], None)   # уже у стрічці
-            continue
-        events.append(cms_to_event(row, next_id))
-        seen.add(title.lower())
+        ev = cms_to_event(row, next_id)
+        key = _event_key(ev["title"], ev["date"])
+        if key in by_key:
+            old = events[by_key[key]]
+            ev["id"] = old.get("id", ev["id"])   # зберегти наявний id — оновлення на місці
+            events[by_key[key]] = ev
+        else:
+            events.append(ev)
+            by_key[key] = len(events) - 1
+            next_id += 1
         try:
-            mark_published(row["id"], next_id)
-            added += 1
+            mark_published(row["id"], ev["id"])   # P11: захищено — один збій не валить решту
         except Exception as e:
             print(f"⚠ mark_published свято id={row['id']}: {e}")
-        next_id += 1
-    if added:
+        changed += 1
+    if changed:
         EVENTS_PATH.write_text(json.dumps(events, ensure_ascii=False, indent=2), encoding="utf-8")
-        print(f"✓ синк: +{added} свят/подій у «Шо в селі» (усього {len(events)})")
+        print(f"✓ синк: оновлено/додано {changed} свят/подій у «Шо в селі» (усього {len(events)})")
 
 
 def cms_to_article(row, next_id):
@@ -170,9 +184,13 @@ def main():
     if not SERVICE_KEY:
         print("✗ немає SUPABASE_SERVICE_ROLE_KEY — пропускаю синк")
         return
-    promote_scheduled()     # автопостинг: scheduled з насталим часом → ready
-    heal_phantom_drafts()   # фантомні чернетки (draft, але вже в стрічці) → published
-    publish_shotam()        # свята/події (type=holiday/event) → data/events.json
+    # P11: кожен під-крок ізольовано — збій одного (напр. транзиентна REST-помилка)
+    # не має обривати весь синк і блокувати публікацію новин нижче.
+    for step in (promote_scheduled, heal_phantom_drafts, publish_shotam):
+        try:
+            step()
+        except Exception as e:
+            print(f"⚠ під-крок {step.__name__} впав, продовжую: {e}")
     try:
         ready = fetch_ready()
     except Exception as e:

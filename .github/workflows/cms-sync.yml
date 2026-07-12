@@ -13,7 +13,11 @@ permissions:
 
 concurrency:
   group: "cms-sync"
-  cancel-in-progress: true
+  # false (P3, 12.07): раніше true СКАСОВУВАВ синк посеред роботи — якщо він уже
+  # позначив рядок published у Supabase, але не встиг закомітити/запушити стрічку,
+  # виникав перманентний розсинхрон «в адмінці published, на сайті нема». Тепер
+  # запуски чекають один одного (синк ідемпотентний і швидкий — черга безпечна).
+  cancel-in-progress: false
 
 jobs:
   sync:
