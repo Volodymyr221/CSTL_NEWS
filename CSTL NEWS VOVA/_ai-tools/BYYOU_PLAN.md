@@ -7,32 +7,33 @@
 
 **Джерело:** розмова з Ромою — ~150 літеральних емодзі по всьому застосунку, дослідив 2 агентами (інвентар файл-за-файлом + підбір точних Tabler-назв + окремий набір для погоди). Рома відхилила «лишити емодзі бо кольорове» — колір зберігається іконкою-в-кольоровому-кружечку (вже є патерн, `CONTACT_ICONS` у `community-blocks.js`), а сирий emoji візуально різний на iOS/Android/Windows — само по собі анти-патерн для бренду.
 
-**⚠️ Координація з Вовою:** він зараз активно в `board.js`/`community-modal.js`/`board-chat.js` (форма подачі оголошення, кілька деплоїв цієї ночі) — Дошку НЕ чіпаю в цьому потоці, щоб не заважати. Той самий підхід виявив: він уже сам додав `PENCIL_ICON_SVG` у `community-modal.js` (дублікат `EDIT_ICON_SVG` з `board.js` — 4-й дублікат "олівця" в коді, підтверджує що спільний файл потрібен).
+**Координація з Вовою:** Рома перевірила напряму — Дошку зараз НЕ веде (недавні коміти вночі не значить «просто зараз»). Дедуп users/phone/pencil ТЕПЕР включає й `board.js`. Знахідка все одно валідна: він уже сам додав `PENCIL_ICON_SVG` у `community-modal.js` (дублікат `EDIT_ICON_SVG` з `board.js` — 4-й дублікат "олівця" в коді).
 
 **Обсяг усієї задачі (~20 файлів) розбито на потоки. Це Потік А — фундамент, розблоковує решту:**
-- Потік А (цей): `src/core/icons.js` (спільні generic-іконки) + окремий погодний набір (Meteocons) + дедуп users/phone де безпечно (НЕ в board.js)
-- Потік Б (пізніше): sidebar.js, saved-hub.js, account-ui.js, messages-ui.js
-- Потік В (пізніше): news.js, events.js, buses.js, power.js, community-blocks.js (тости/бейджі/кнопки)
-- Потік Г (пізніше, коли Вова звільнить зону): board.js/board-chat.js/community-modal.js дедуп
+- Потік А (цей): `src/core/icons.js` (спільні generic-іконки) + окремий погодний набір (Meteocons) + дедуп users/phone/pencil УСЮДИ (включно з `board.js`)
+- Потік Б (наступний, одразу): рештки емодзі в Дошці (`board.js`/`board-chat.js`/`community-modal.js` — 🔍✕🏛️👤🗑🚫❌)
+- Потік В (пізніше): sidebar.js, saved-hub.js, account-ui.js, messages-ui.js
+- Потік Г (пізніше): news.js, events.js, buses.js, power.js, community-blocks.js (тости/бейджі/кнопки)
 - Потік Ґ (пізніше): index.html дрібні залишки
 
-### Кроки Потоку А (11 кроків)
+### Кроки Потоку А (12 кроків)
 | # | Крок | Файли | Стан |
 |---|------|-------|------|
 | 1 | `src/core/icons.js` (новий) — спільні іконки (users/phone/pin/search/check/alert-triangle/calendar/clock/lock/settings/trash/pencil/x/chevron-right/arrow-right/eye/rocket/photo/file-text/robot), Tabler SVG (реальні path, той самий патерн що `board-categories.js` — `const A`, 1em) | `src/core/icons.js` (новий) | 🟢 |
 | 2 | Погода: завантажити Meteocons `line`-варіант (MIT) для clear-day/cloudy/partly-cloudy-day/overcast/fog/drizzle/rain/snow/sleet/thunderstorms — вшити як SVG-константи (не живий CDN, статично як Tabler) | `src/core/weather.js` (нова секція) | 🟢 |
 | 3 | `weather.js`: `weatherIcon(code)` → повертає SVG замість emoji (єдине джерело правди) | `src/core/weather.js` | 🟢 |
 | 4 | `community-blocks.js`: прибрати ДРУГУ копію `weatherIcon` (розійшлась з weather.js — забула снігову зливу), імпортувати з weather.js | `src/tabs/community-blocks.js` | 🟢 |
-| 5 | Дедуп "users": `messages-ui.js` (`GR_SVG.users`) → імпорт з `icons.js`. `board.js`/`admin.html` НЕ чіпаю (Дошка = зона Вови; admin.html без бандлера) | `src/core/messages-ui.js` | 🟢 |
-| 6 | Дедуп "phone": `community-blocks.js` (`CONTACT_ICONS.default`) → імпорт з `icons.js`. `board.js` НЕ чіпаю (Дошка) | `src/tabs/community-blocks.js` | 🟢 |
-| 7 | Тест-блок: `node --check` + `node build.js` + check-imports | — | 🟢 |
-| 8 | Playwright-смоук: погода (мокнутий Open-Meteo, усі 10 станів рендерять іконку не emoji), міні-віджет погоди Громади, 0 помилок консолі | — | 🟢 |
-| 9 | CACHE_NAME bump | `sw.js` | 🟢 |
-| 10 | Реліз-нотатки + BOARD.md (позначити координацію з Вовою) | — | 🟢 |
-| 11 | Брама деплою — чекати «деплой» | — | 🟡 |
+| 5 | Дедуп "users": `messages-ui.js` (`GR_SVG.users`) і `board.js` (`USERS_ICON_SVG`) → імпорт з `icons.js`. `admin.html` не чіпаю (без бандлера, свій мірор лишається) | `src/core/messages-ui.js`, `src/tabs/board.js` | 🟢 |
+| 6 | Дедуп "phone": `community-blocks.js` (`CONTACT_ICONS.default`) і `board.js` (`PHONE_ICON_SVG`) → імпорт з `icons.js` | `src/tabs/community-blocks.js`, `src/tabs/board.js` | 🟢 |
+| 7 | Дедуп "pencil": `community-modal.js` (`PENCIL_ICON_SVG`) і `board.js` (`EDIT_ICON_SVG`) → імпорт з `icons.js` | `src/tabs/community-modal.js`, `src/tabs/board.js` | 🟢 |
+| 8 | Тест-блок: `node --check` + `node build.js` + check-imports | — | 🟢 |
+| 9 | Playwright-смоук: погода (мокнутий Open-Meteo, усі 10 станів рендерять іконку не emoji), міні-віджет погоди Громади, Дошка/Обговорення/форма подачі без регресії (users/phone/pencil виглядають так само), 0 помилок консолі | — | 🟢 |
+| 10 | CACHE_NAME bump | `sw.js` | 🟢 |
+| 11 | Реліз-нотатки + BOARD.md | — | 🟢 |
+| 12 | Брама деплою — чекати «деплой» | — | 🟡 |
 
-**Оцінка:** 11 кроків × ~35K ≈ 385K токенів (~40% вікна).
-**Ризик:** низький — нових файлів більшість, дедуп тільки в 2 файлах поза зоною Вови, погода вже мала подібний рефактор раніше (скрабер) без проблем.
+**Оцінка:** 12 кроків × ~35K ≈ 420K токенів (~43% вікна).
+**Ризик:** низький-середній — дедуп тепер зачіпає й `board.js` (Вовина зона), але лише 3 малі механічні заміни (локальна константа → імпорт, без зміни візуалу/логіки); позначу в PR для Вови.
 
 ---
 <!-- ✅ 12.07 ПОТОКИ 2+3 (AI-кнопка + сітка іконок адмінки) ЗАДЕПЛОЄНО: PR #356, мердж e6634c64, live v2720 · 12.07 00:58. -->
