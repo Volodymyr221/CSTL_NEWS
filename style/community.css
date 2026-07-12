@@ -99,6 +99,7 @@
   padding: 2px 0 7px;
 }
 .cm-weather-icon { font-size: 38px; line-height: 1; }
+.cm-weather-icon .wx-ic, .cm-fc-icon .wx-ic, .wx-ro-ic .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
 .cm-weather-temp {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 38px; font-weight: 700; line-height: 0.9;

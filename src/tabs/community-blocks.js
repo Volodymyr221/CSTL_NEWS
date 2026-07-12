@@ -10,6 +10,7 @@ import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSw
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType, openAdModalStandalone, openChatById } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
+import { weatherCodeInfo } from '../core/weather-icons.js';
 import { openShotamModal } from './events.js';
 import {
   nowMinutes,
@@ -64,21 +65,6 @@ const POWER_PREFS_KEY = 'power_prefs_v2';
 const BUS_PREFS_KEY   = 'bus_prefs_v2';
 
 // ── Спільні утиліти ──────────────────────────────────────────────────────────
-
-// WMO weather code → emoji + текстовий опис
-function weatherCodeInfo(code) {
-  if (code === 0)               return { icon: '☀️', text: 'Ясно' };
-  if (code <= 2)                return { icon: '🌤️', text: 'Мінлива хмарність' };
-  if (code === 3)               return { icon: '☁️', text: 'Хмарно' };
-  if (code <= 48)               return { icon: '🌫️', text: 'Туман' };
-  if (code <= 55)               return { icon: '🌦️', text: 'Мряка' };
-  if (code <= 65)               return { icon: '🌧️', text: 'Дощ' };
-  if (code <= 77)               return { icon: '❄️', text: 'Сніг' };
-  if (code <= 82)               return { icon: '🌧️', text: 'Зливи' };
-  if (code <= 86)               return { icon: '🌨️', text: 'Снігові зливи' };
-  if (code >= 95)               return { icon: '⛈️', text: 'Гроза' };
-  return { icon: '🌡️', text: '—' };
-}
 
 function loadPowerPrefs() {
   try { return JSON.parse(localStorage.getItem(POWER_PREFS_KEY) || '{}'); }
