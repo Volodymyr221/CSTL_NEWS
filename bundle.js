@@ -2315,6 +2315,7 @@
 
   // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
+  var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   function otherName(thread) {
     const me = currentUserId();
     if (me && me === thread.author_uid)
@@ -3146,7 +3147,7 @@
         <button class="pm-ad-tab" type="button" data-filter="archive">\u0410\u0440\u0445\u0456\u0432</button>
       </div>
       <div class="pm-list" id="pm-ads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
-      <button class="pm-fab-ad" type="button" data-new-ad aria-label="\u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">\u270F\uFE0F</button>
+      <button class="pm-fab-ad" type="button" data-new-ad aria-label="\u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">${EDIT_ICON_SVG}</button>
     `, "pm-screen--ads");
       const listEl = api.screen.querySelector("#pm-ads");
       let [posts, threads, unread] = await Promise.all([
@@ -3658,7 +3659,7 @@
     }
     return formatTime(postTime(p));
   }
-  var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var EDIT_ICON_SVG2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var allPosts = [];
   var allAnnouncements = [];
@@ -4544,7 +4545,7 @@ ${post.text}
       <div class="board-fab-menu" id="board-fab-menu">
         <button class="board-fab-item" data-fab="disc-create" type="button">
           <span class="board-fab-label">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
         <button class="board-fab-item" data-fab="disc-mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
@@ -4567,7 +4568,7 @@ ${post.text}
       <div class="board-fab-menu" id="board-fab-menu">
         <button class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
-          <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
+          <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
         <button class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>

@@ -398,13 +398,22 @@
 .pm-ad-mi:active { background: rgba(0, 0, 0, 0.05); }
 .pm-ad-mi--danger { color: #C0392B; }
 
+/* Стандартизовано під FAB Дошки (.board-trigger--fixed): те саме скло, контур і тінь;
+   різниться лише іконка (векторний олівець «нове оголошення», бордова). */
 .pm-fab-ad {
   position: absolute; right: 18px;
   bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  width: 56px; height: 56px; border-radius: 50%; border: 0;
-  background: var(--red, #722F37); color: #fff; font-size: 24px;
-  box-shadow: 0 4px 16px rgba(80, 25, 35, 0.42); cursor: pointer; z-index: 6;
+  width: 56px; height: 56px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--red, #722F37); cursor: pointer; z-index: 6;
+  /* Glassmorphism — ідентично .board-trigger--fixed */
+  background: rgba(255, 255, 255, 0.45);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+  border: 1.5px solid rgba(114, 47, 55, 0.55);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.34), 0 0 16px rgba(0,0,0,0.22), inset 0 1px 2px rgba(255,255,255,0.65);
 }
+.pm-fab-ad svg { width: 28px; height: 28px; }
 .pm-ad-tabs ~ .pm-list { padding-bottom: 90px; overflow-x: hidden; }   /* місце під FAB; клип свайпу */
 
 /* ── Бейдж непрочитаних на іконці акаунта в шапці ──────────────────── */
