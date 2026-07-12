@@ -305,8 +305,9 @@
   flex: 1; padding: 9px 0; border: 0; border-radius: 12px;
   background: rgba(0, 0, 0, 0.05); color: var(--ink-soft, #5F5448);
   font-size: 14px; font-weight: 600; cursor: pointer;
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.10);
 }
-.pm-ad-tab.active { background: var(--red, #722F37); color: #fff; }
+.pm-ad-tab.active { background: var(--red, #722F37); color: #fff; box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30); }
 
 /* Обгортка-рядок: картка зверху (z-index 1) ковзає, свайп-дії — ззаду справа. */
 .pm-ad-row { position: relative; margin: 10px 12px; }
@@ -332,7 +333,7 @@
 .pm-ad {
   background: var(--card-cream, #FAF8EF);
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(60, 40, 20, 0.06);
+  box-shadow: 0 3px 10px rgba(60, 40, 20, 0.10), 0 1px 2px rgba(60, 40, 20, 0.06);
   position: relative; z-index: 1;
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -358,7 +359,17 @@
   flex-shrink: 0; font-size: 11px; font-weight: 600;
   padding: 2px 8px; border-radius: 8px;
   background: var(--gray-light, #f5f5f5); color: var(--gray, #666);
+  display: inline-flex; align-items: center; gap: 4px;
 }
+/* Векторні іконки на картці замість емодзі (статус / бейдж звернень / підняти / thumb) */
+.pm-ad-status-ic { display: inline-flex; }
+.pm-ad-status-ic svg { width: 13px; height: 13px; display: block; }
+.pm-ad-msgs-ic { display: inline-flex; }
+.pm-ad-msgs-ic svg { width: 15px; height: 15px; display: block; }
+.pm-ad-bump-ic { display: inline-flex; }
+.pm-ad-bump-ic svg { width: 15px; height: 15px; display: block; }
+.pm-ad-thumb-ic { display: inline-flex; color: var(--ink-soft, #5F5448); }
+.pm-ad-thumb-ic svg { width: 30px; height: 30px; display: block; }
 .pm-ad-status--published { background: #E3F0DC; color: #3C6B2A; }
 .pm-ad-status--pending   { background: #FBEFD0; color: #8A6A14; }
 .pm-ad-status--rejected  { background: #F6DAD9; color: #8A2222; }
@@ -380,8 +391,9 @@
   padding: 7px 11px; font-size: 13px; font-weight: 600;
   color: var(--ink-soft, #5F5448); cursor: pointer;
   display: inline-flex; align-items: center; gap: 6px;
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.10);
 }
-.pm-ad-msgs--none { background: transparent; padding-left: 0; color: var(--ink-mute, #9C9080); cursor: default; }
+.pm-ad-msgs--none { background: transparent; padding-left: 0; color: var(--ink-mute, #9C9080); cursor: default; box-shadow: none; }
 .pm-ad-unread {
   background: var(--red, #722F37); color: #fff;
   font-size: 11px; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
@@ -392,8 +404,10 @@
   border: 0; border-radius: 10px; padding: 8px 14px;
   background: var(--red, #722F37); color: #fff;
   font-size: 13px; font-weight: 700; cursor: pointer;
+  box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30);
+  display: inline-flex; align-items: center; gap: 6px;
 }
-.pm-ad-bump--wait { background: rgba(0, 0, 0, 0.06); color: var(--ink-mute, #9C9080); cursor: default; }
+.pm-ad-bump--wait { background: rgba(0, 0, 0, 0.06); color: var(--ink-mute, #9C9080); cursor: default; box-shadow: none; }
 
 .pm-ad-menu {
   position: absolute; top: 46px; right: 12px; z-index: 5;
