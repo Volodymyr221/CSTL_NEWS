@@ -2475,7 +2475,6 @@
   font-size: 18px; font-weight: 800;
   color: var(--ink);
 }
-.bd-disc-title svg { vertical-align: -3px; margin-right: 4px; color: var(--red); }
 /* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
    картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
 /* Тіло Дошки опускаємо щоб не накладалось на fixed контролі.

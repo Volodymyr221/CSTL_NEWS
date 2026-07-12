@@ -52,7 +52,6 @@ const MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
 // Векторні іконки Обговорень (заміна емодзі 💬/👥/📢) — той самий лінійний стиль.
 const USERS_ICON_SVG = ICONS.users; // дедуп — раніше локальна копія (розійшлась товщиною лінії з messages-ui.js/admin.html)
-const DISC_TITLE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>';
 const HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 const HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 // Д-19: показ локації на картці/зум-модалці. null/порожньо (старі пости — будуть
@@ -1140,7 +1139,7 @@ function renderHeader() {
   // Обговорення — головна сторінка вкладки, тому кнопки «← назад» НЕМА (нікуди виходити).
   const discHead = activeType === 'chat'
     ? `<div class="bd-disc-head">
-         <span class="bd-disc-title">${DISC_TITLE_ICON_SVG} Обговорення</span>
+         <span class="bd-disc-title">Обговорення</span>
        </div>`
     : '';
 
