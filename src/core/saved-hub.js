@@ -15,6 +15,7 @@ import { getSupabase, fetchSavedPostIds } from './supabase.js';
 import { setBoardActiveType, openChatById } from '../tabs/board.js';
 import { getSavedArticleIds, getArticlesByIds, openArticle } from '../tabs/news.js';
 import { getSavedRoutesForUI, openSavedRouteOnBuses } from '../tabs/buses.js';
+import { ICONS } from './icons.js';
 
 let _sheet = null;
 let _backdrop = null;
@@ -22,10 +23,10 @@ let _view = 'categories';   // 'categories' | 'articles' | 'buses' | 'chats' | '
 let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
 
 const CATS = [
-  { key: 'articles', icon: '📰', label: 'Статті',       needsAuth: false },
-  { key: 'buses',    icon: '🚌', label: 'Автобуси',     needsAuth: false },
-  { key: 'chats',    icon: '💬', label: 'Обговорення',  needsAuth: true },
-  { key: 'boards',   icon: '📌', label: 'Оголошення',   needsAuth: true },
+  { key: 'articles', icon: ICONS.newspaper, label: 'Статті',       needsAuth: false },
+  { key: 'buses',    icon: ICONS.bus,       label: 'Автобуси',     needsAuth: false },
+  { key: 'chats',    icon: ICONS.message,   label: 'Обговорення',  needsAuth: true },
+  { key: 'boards',   icon: ICONS.pin,       label: 'Оголошення',   needsAuth: true },
 ];
 
 function closeHub() {
@@ -101,14 +102,14 @@ function categoriesScreenHtml() {
       <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
         <span class="shub-cat-ic">${c.icon}</span>
         <span class="shub-cat-label">${c.label}</span>
-        ${locked ? '<span class="shub-cat-lock">🔒</span>' : `<span class="shub-count">${count}</span>`}
+        ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
         <span class="shub-cat-chev">›</span>
       </button>`;
   }).filter(Boolean).join('');
 
   if (!rows) {
     return `<div class="shub-empty">Поки нічого не збережено.<br>
-      <span class="shub-hint">Тримайте прапорець 🔖 на картці оголошення, обговорення чи статті — і воно зʼявиться тут.</span></div>`;
+      <span class="shub-hint">Тримайте прапорець ${ICONS.bookmark} на картці оголошення, обговорення чи статті — і воно зʼявиться тут.</span></div>`;
   }
   return `<div class="shub-cats">${rows}</div>`;
 }
@@ -158,7 +159,7 @@ export function openSavedHub() {
   _sheet.className = 'shub-sheet';
   _sheet.innerHTML = `
     <div class="shub-handle"></div>
-    <div class="shub-title">🔖 Збережені</div>
+    <div class="shub-title">${ICONS.bookmark} Збережені</div>
     <div class="shub-body" id="shub-body"><div class="shub-empty">Завантаження…</div></div>`;
 
   document.body.appendChild(_backdrop);

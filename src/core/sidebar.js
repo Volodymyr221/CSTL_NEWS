@@ -7,22 +7,24 @@ import { isTeamMember } from './supabase.js';
 import { onAuthChange } from './auth.js';
 import { LEGAL_DOC_HTML } from './legal.js';
 import { openModal } from './modal.js';
+import { ICONS } from './icons.js';
 
 // Пункти меню. kind: 'tab' → switchTab; 'action' → своя дія; 'info' → модалка.
+// Іконки — тонкі Tabler-вектори (Потік 7, варіант 5) замість емодзі: однаковий вигляд на всіх ОС.
 const NAV = [
-  { id: 'cabinet',  label: 'Адмінка',            icon: '🛠️', kind: 'cabinet', team: true },
-  { id: 'account',  label: 'Особистий кабінет',   icon: '👤', kind: 'account' },
+  { id: 'cabinet',  label: 'Адмінка',            icon: ICONS.settings, kind: 'cabinet', team: true },
+  { id: 'account',  label: 'Особистий кабінет',   icon: ICONS.user, kind: 'account' },
   { divider: true },
-  { id: 'community',   label: 'Громада',      icon: '🏘️', kind: 'tab', tab: 'community' },
-  { id: 'news',        label: 'Новини',       icon: '🗞️', kind: 'tab', tab: 'community', scrollTo: '#cm-news-board' },
-  { id: 'shotam',      label: 'Шо в селі',    icon: '📰', kind: 'tab', tab: 'shotam' },
-  { id: 'board',       label: 'Дошка',        icon: '📌', kind: 'tab', tab: 'board' },
-  { id: 'discussions', label: 'Обговорення',  icon: '💬', kind: 'tab', tab: 'discussions' },
-  { id: 'buses',       label: 'Автобуси',     icon: '🚌', kind: 'tab', tab: 'buses' },
-  { id: 'contacts',    label: 'Корисні контакти', icon: '📞', kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
+  { id: 'community',   label: 'Громада',      icon: ICONS.community, kind: 'tab', tab: 'community' },
+  { id: 'news',        label: 'Новини',       icon: ICONS.newspaper, kind: 'tab', tab: 'community', scrollTo: '#cm-news-board' },
+  { id: 'shotam',      label: 'Шо в селі',    icon: ICONS.calendar, kind: 'tab', tab: 'shotam' },
+  { id: 'board',       label: 'Дошка',        icon: ICONS.pin, kind: 'tab', tab: 'board' },
+  { id: 'discussions', label: 'Обговорення',  icon: ICONS.message, kind: 'tab', tab: 'discussions' },
+  { id: 'buses',       label: 'Автобуси',     icon: ICONS.bus, kind: 'tab', tab: 'buses' },
+  { id: 'contacts',    label: 'Корисні контакти', icon: ICONS.phone, kind: 'tab', tab: 'community', scrollTo: '#cm-contacts' },
   { divider: true },
-  { id: 'support', label: 'Підтримка',            icon: '❔', kind: 'info' },
-  { id: 'policy',  label: 'Політика і приватність', icon: '🔒', kind: 'info' },
+  { id: 'support', label: 'Підтримка',            icon: ICONS.help, kind: 'info' },
+  { id: 'policy',  label: 'Політика і приватність', icon: ICONS.lock, kind: 'info' },
 ];
 
 const INFO = {
@@ -30,7 +32,7 @@ const INFO = {
     title: 'Підтримка',
     body: 'Питання, ідеї чи проблема? Напишіть нам на пошту — відповідаємо особисто.<br><br>' +
           '<a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=Підтримка%20CSTL%20LIFE">' +
-          '✉️ Написати в підтримку</a><br><br>' +
+          ICONS.mail + ' Написати в підтримку</a><br><br>' +
           '<span class="info-mail-plain">olykacastle@gmail.com</span>',
   },
   policy: {
