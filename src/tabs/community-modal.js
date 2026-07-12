@@ -7,7 +7,7 @@
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
 import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
-import { submitPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
+import { submitPost, updateBoardPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { openModal } from '../core/modal.js';
@@ -94,25 +94,31 @@ function compressImage(file) {
   });
 }
 
-export function openBoardModal() {
+export function openBoardModal(opts = {}) {
   if (document.querySelector('.app-modal--board-compose')) return;
 
-  // Стан форми — тільки поля оголошення (chat/tagsRaw видалено)
+  // Д-3: режим редагування — відкрито з «Мої оголошення» з наявним постом.
+  const editPost = opts.editPost || null;
+  const isEdit = !!editPost;
+  const submitLabel = isEdit ? 'Зберегти зміни' : 'Опублікувати';
+
+  // Стан форми — тільки поля оголошення (chat/tagsRaw видалено).
+  // У edit-режимі префіл з поста; інакше — дефолти нового оголошення.
   const state = {
-    text: '',
-    photos: [],         // URL-и фото: blob: під час upload, https: після
+    text: isEdit ? (editPost.text || '') : '',
+    photos: isEdit && Array.isArray(editPost.photos) ? editPost.photos.filter(Boolean) : [],
     uploadingCount: 0,  // скільки фото зараз заливаються у Storage — блокує submit
-    author: accountAuthorName(),
-    category: '',      // Д-23: без автовибору — юзер має сам обрати (сабміт блокується поки не обрано)
-    contact: '+380',   // Д-24: дефолт-префікс; автопідставиться з профілю нижче якщо є телефон
-    title: '',
-    location: COMMUNITY_ALL,   // Д-10: дефолт — вся громада
+    author: isEdit ? (editPost.author || accountAuthorName()) : accountAuthorName(),
+    category: isEdit ? (editPost.category || '') : '',   // Д-23: без автовибору для нового
+    contact: isEdit && editPost.contact ? maskUaPhone(editPost.contact) : '+380',   // Д-24
+    title: isEdit ? (editPost.title || '') : '',
+    location: isEdit ? (editPost.location || COMMUNITY_ALL) : COMMUNITY_ALL,   // Д-10
   };
 
   const bodyHtml = `
     <div class="cm-board-modal-head">
-      <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>Нове оголошення</h3>
-      <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
+      <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>${isEdit ? 'Редагувати оголошення' : 'Нове оголошення'}</h3>
+      <p class="cm-board-modal-sub">${isEdit ? 'Змініть потрібні поля.' : 'Заповніть поля нижче.'}</p>
     </div>
 
     <form id="cm-board-modal-form" novalidate>
@@ -125,8 +131,10 @@ export function openBoardModal() {
         <div class="bm-preview-canvas" id="bm-preview-canvas"></div>
       </div>
 
-      <button class="cm-board-submit" type="submit">Опублікувати</button>
-      <p class="cm-board-hint">Запит йде модератору. Після перевірки зʼявиться на дошці.</p>
+      <button class="cm-board-submit" type="submit">${submitLabel}</button>
+      <p class="cm-board-hint">${isEdit
+        ? 'Зміни збережуться. Якщо оголошення ще не автопублікується — піде на повторну перевірку.'
+        : 'Запит йде модератору. Після перевірки зʼявиться на дошці.'}</p>
     </form>
   `;
 
@@ -321,7 +329,7 @@ export function openBoardModal() {
       btn.textContent = `Завантаження фото…`;
     } else {
       btn.disabled = false;
-      btn.textContent = 'Опублікувати';
+      btn.textContent = submitLabel;
     }
   }
 
@@ -364,7 +372,8 @@ export function openBoardModal() {
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
 
   // Уточнюємо ім'я з профілю в БД (кеш міг бути ще не готовий при відкритті).
-  if (isLoggedIn()) {
+  // У edit-режимі НЕ чіпаємо телефон/ім'я — показуємо саме те, що збережено в пості.
+  if (isLoggedIn() && !isEdit) {
     getProfile().then(p => {
       // Д-24: автопідстановка телефону з профілю — лише якщо юзер ще не почав вводити свій
       // (у полі досі тільки префікс +380). Інакше не перебиваємо введене.
@@ -421,18 +430,48 @@ export function openBoardModal() {
     const submitBtn = wrap.querySelector('.cm-board-submit');
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Надсилаємо…';
+      submitBtn.textContent = isEdit ? 'Зберігаємо…' : 'Надсилаємо…';
     }
 
     const payload = buildPayload(state);
 
+    // ── Д-3: РЕДАГУВАННЯ наявного поста ──
+    if (isEdit) {
+      if (!isSupabaseReady()) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitLabel; }
+        showToast('Немає зʼєднання — спробуйте пізніше', 4000);
+        return;
+      }
+      const result = await updateBoardPost(editPost.id, payload);
+      if (!result.ok) {
+        if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = submitLabel; }
+        showToast('Помилка: ' + (result.error || 'не вдалось зберегти'), 4500);
+        return;
+      }
+      close();
+      // Оновлюємо локальний обʼєкт поста, щоб «Мої оголошення» і Дошка перемалювались
+      // з новими даними без перезавантаження (payload = ті самі поля, що в таблиці).
+      Object.assign(editPost, {
+        text: payload.text, title: payload.title, category: payload.category,
+        color: payload.color, contact: payload.contact, location: payload.location,
+        photos: payload.photos, status: result.status,
+      });
+      window.dispatchEvent(new CustomEvent('cstl-post-updated', { detail: { post: editPost } }));
+      window.dispatchEvent(new Event('cstl-posts-changed'));   // Дошка перемалює/сховає
+      showToast(result.status === 'pending'
+        ? 'Збережено ✓ Зміни на повторній перевірці.'
+        : 'Збережено ✓', 3500);
+      return;
+    }
+
+    // ── Створення НОВОГО поста ──
     let published = false;   // довірений автор (5+ схвалених) → пост опубліковано одразу
     if (isSupabaseReady()) {
       const result = await submitPost(payload);
       if (!result.ok) {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.textContent = 'Опублікувати';
+          submitBtn.textContent = submitLabel;
         }
         showToast('Помилка: ' + (result.error || 'не вдалось надіслати'), 4500);
         return;
