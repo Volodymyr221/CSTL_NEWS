@@ -799,7 +799,7 @@ export function openMyAds() {
     const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-        <div class="pm-head-titles"><div class="pm-head-name">📋 Мої оголошення</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${ICONS.clipboard}</span>Мої оголошення</div></div>
       </header>
       <div class="pm-ad-tabs">
         <button class="pm-ad-tab active" type="button" data-filter="active">Активні</button>
@@ -912,9 +912,9 @@ export function openMyAds() {
       const list = posts.filter(p => (AD_STATUS[p.status]?.group || 'active') === filter);
       if (!list.length) {
         const empty = {
-          active:     `<span class="pm-empty-ic">📋</span>У вас ще немає активних оголошень.<br>Подайте перше — кнопка ✏️ внизу.`,
-          moderation: `<span class="pm-empty-ic">⏳</span>Немає оголошень на модерації.`,
-          archive:    `<span class="pm-empty-ic">🗄️</span>Архів порожній.`,
+          active:     `<span class="pm-empty-ic">${ICONS.clipboard}</span>У вас ще немає активних оголошень.<br>Подайте перше — кнопка внизу.`,
+          moderation: `<span class="pm-empty-ic">${ICONS.clock}</span>Немає оголошень на модерації.`,
+          archive:    `<span class="pm-empty-ic">${ICONS.archive}</span>Архів порожній.`,
         };
         listEl.innerHTML = `<div class="pm-empty">${empty[filter] || empty.active}</div>`;
         return;

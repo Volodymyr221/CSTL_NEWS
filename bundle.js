@@ -1557,7 +1557,11 @@
     // Документ / файл (стаття)
     fileText: `<svg ${A2}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"/><path d="M9 9l1 0"/><path d="M9 13l6 0"/><path d="M9 17l6 0"/></svg>`,
     // Робот / AI-позначка
-    robot: `<svg ${A2}><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4"/><path d="M12 2v2"/><path d="M9 12v9"/><path d="M15 12v9"/><path d="M5 16l4 -2"/><path d="M15 14l4 2"/><path d="M9 18h6"/><path d="M10 8v.01"/><path d="M14 8v.01"/></svg>`
+    robot: `<svg ${A2}><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4"/><path d="M12 2v2"/><path d="M9 12v9"/><path d="M15 12v9"/><path d="M5 16l4 -2"/><path d="M15 14l4 2"/><path d="M9 18h6"/><path d="M10 8v.01"/><path d="M14 8v.01"/></svg>`,
+    // Планшет зі списком / «Мої оголошення» (clipboard-list)
+    clipboard: `<svg ${A2}><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>`,
+    // Архів / коробка (archive)
+    archive: `<svg ${A2}><path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10"/><path d="M10 12l4 0"/></svg>`
   };
 
   // src/tabs/community-modal.js
@@ -3254,7 +3258,7 @@
       const api = buildScreen(`
       <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-        <div class="pm-head-titles"><div class="pm-head-name">\u{1F4CB} \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</div></div>
+        <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${ICONS.clipboard}</span>\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</div></div>
       </header>
       <div class="pm-ad-tabs">
         <button class="pm-ad-tab active" type="button" data-filter="active">\u0410\u043A\u0442\u0438\u0432\u043D\u0456</button>
@@ -3350,9 +3354,9 @@
         const list = posts.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
         if (!list.length) {
           const empty = {
-            active: `<span class="pm-empty-ic">\u{1F4CB}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u270F\uFE0F \u0432\u043D\u0438\u0437\u0443.`,
-            moderation: `<span class="pm-empty-ic">\u23F3</span>\u041D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043D\u0430 \u043C\u043E\u0434\u0435\u0440\u0430\u0446\u0456\u0457.`,
-            archive: `<span class="pm-empty-ic">\u{1F5C4}\uFE0F</span>\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.`
+            active: `<span class="pm-empty-ic">${ICONS.clipboard}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u0432\u043D\u0438\u0437\u0443.`,
+            moderation: `<span class="pm-empty-ic">${ICONS.clock}</span>\u041D\u0435\u043C\u0430\u0454 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C \u043D\u0430 \u043C\u043E\u0434\u0435\u0440\u0430\u0446\u0456\u0457.`,
+            archive: `<span class="pm-empty-ic">${ICONS.archive}</span>\u0410\u0440\u0445\u0456\u0432 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439.`
           };
           listEl.innerHTML = `<div class="pm-empty">${empty[filter] || empty.active}</div>`;
           return;
