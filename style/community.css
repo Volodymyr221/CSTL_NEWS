@@ -1272,14 +1272,20 @@
 .bm-chip.active .bm-chip-emoji { color: #fff; }
 .bm-chip-label { text-transform: capitalize; }
 
-/* Фото-слоти */
+/* Фото-слоти — горизонтальний скрол (до 5, видно ~3, решта гортанням) */
 .bm-photos {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
   gap: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 3px 2px 6px;   /* місце щоб тінь слотів не обрізалась при overflow */
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: x proximity;
 }
 .bm-photo-slot {
   position: relative;
+  flex: 0 0 calc((100% - 16px) / 3);   /* 3 видимі (2 gap×8px), решта — скрол */
+  scroll-snap-align: start;
   aspect-ratio: 1;
   background: var(--gray-light);
   background-size: cover;
