@@ -12,6 +12,7 @@
 
 import { escapeHtml, pad, todayKey } from '../core/utils.js';
 import { openModal } from '../core/modal.js';
+import { ICONS } from '../core/icons.js';
 
 let powerData  = null;
 let selCity    = null; // { id, name, streets[] }
@@ -422,7 +423,7 @@ function renderPowerPage() {
     ${renderTomorrowCard(queue)}
 
     <div class="pw-actions">
-      <button class="pw-ics-btn" id="pw-ics-btn">📅 Додати відключення в календар</button>
+      <button class="pw-ics-btn" id="pw-ics-btn">${ICONS.calendar} Додати відключення в календар</button>
     </div>
 
     <div class="pw-footer-note">
@@ -487,7 +488,7 @@ function openQueueHelpModal() {
           </div>
         </div>
         <div class="pw-help-opt">
-          <span class="pw-help-emoji">📞</span>
+          <span class="pw-help-emoji">${ICONS.phone}</span>
           <div>
             <div class="pw-help-opt-title">Зателефонуйте у ВОЕ</div>
             <div class="pw-help-opt-sub">Цілодобова аварійна.</div>

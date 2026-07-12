@@ -6814,7 +6814,7 @@ ${ev.description || ""}`
     const q = query.trim().toLowerCase();
     const filtered = q ? all.filter((s) => s.toLowerCase().includes(q)) : all;
     const current = activeField === "from" ? fromStop : toStop;
-    const clearHtml = current ? `<button class="bs-dd-clear" id="bs-dd-clear">\u2715 \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0438\u0431\u0456\u0440 (${escapeHtml(current)})</button>` : "";
+    const clearHtml = current ? `<button class="bs-dd-clear" id="bs-dd-clear">${ICONS.close} \u041E\u0447\u0438\u0441\u0442\u0438\u0442\u0438 \u0432\u0438\u0431\u0456\u0440 (${escapeHtml(current)})</button>` : "";
     const itemsHtml = filtered.length ? filtered.map(
       (s) => `<button class="bs-dd-item${s === current ? " sel" : ""}" data-stop="${escapeHtml(s)}">
            ${escapeHtml(s)}
@@ -6849,7 +6849,7 @@ ${ev.description || ""}`
     dd.innerHTML = `
     <div class="bs-dd-head">
       <span class="bs-dd-title">${escapeHtml(title)}</span>
-      <button class="bs-dd-x" id="bs-dd-x">\u2715</button>
+      <button class="bs-dd-x" id="bs-dd-x">${ICONS.close}</button>
     </div>
     <div class="bs-dd-search">
       <input class="bs-dd-filter" id="bs-dd-filter"
@@ -7619,7 +7619,7 @@ ${ev.description || ""}`
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
-    ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">\u2715 \u0421\u041A\u0418\u041D\u0423\u0422\u0418 \u0424\u0406\u041B\u042C\u0422\u0420</button></div>` : ""}
+    ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">${ICONS.close} \u0421\u041A\u0418\u041D\u0423\u0422\u0418 \u0424\u0406\u041B\u042C\u0422\u0420</button></div>` : ""}
   `;
     document.getElementById("bs-from-input").addEventListener("click", () => openDropdown("from"));
     document.getElementById("bs-to-input").addEventListener("click", () => openDropdown("to"));
@@ -9666,7 +9666,7 @@ END:VEVENT`
     ${renderTomorrowCard(queue)}
 
     <div class="pw-actions">
-      <button class="pw-ics-btn" id="pw-ics-btn">\u{1F4C5} \u0414\u043E\u0434\u0430\u0442\u0438 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440</button>
+      <button class="pw-ics-btn" id="pw-ics-btn">${ICONS.calendar} \u0414\u043E\u0434\u0430\u0442\u0438 \u0432\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044F \u0432 \u043A\u0430\u043B\u0435\u043D\u0434\u0430\u0440</button>
     </div>
 
     <div class="pw-footer-note">
@@ -9718,7 +9718,7 @@ END:VEVENT`
           </div>
         </div>
         <div class="pw-help-opt">
-          <span class="pw-help-emoji">\u{1F4DE}</span>
+          <span class="pw-help-emoji">${ICONS.phone}</span>
           <div>
             <div class="pw-help-opt-title">\u0417\u0430\u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443\u0439\u0442\u0435 \u0443 \u0412\u041E\u0415</div>
             <div class="pw-help-opt-sub">\u0426\u0456\u043B\u043E\u0434\u043E\u0431\u043E\u0432\u0430 \u0430\u0432\u0430\u0440\u0456\u0439\u043D\u0430.</div>
@@ -10531,7 +10531,7 @@ END:VEVENT`
         groups = await fetchMyGroups();
         if (api._closed)
           return;
-        listEl.innerHTML = groups.length ? groups.map(groupRow).join("") : `<div class="pm-empty"><span class="pm-empty-ic">\u{1F465}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0433\u0440\u0443\u043F.<br>\u0421\u0442\u0432\u043E\u0440\u0456\u0442\u044C \u0441\u0432\u043E\u044E \u0430\u0431\u043E \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C.</div>`;
+        listEl.innerHTML = groups.length ? groups.map(groupRow).join("") : `<div class="pm-empty"><span class="pm-empty-ic">${ICONS.users}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0433\u0440\u0443\u043F.<br>\u0421\u0442\u0432\u043E\u0440\u0456\u0442\u044C \u0441\u0432\u043E\u044E \u0430\u0431\u043E \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C.</div>`;
       };
       await load();
       api.screen.querySelector("[data-gr-new]")?.addEventListener("click", () => openCreateGroup(load));
@@ -10728,7 +10728,7 @@ END:VEVENT`
                 <span class="gr-mbr-name">${nm(m.uid)}</span>
                 <span class="gr-mbr-acts">
                   <button class="gr-mbr-ok" type="button" data-approve="${m.uid}">\u2713</button>
-                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u2715</button>
+                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">${ICONS.close}</button>
                 </span>
               </div>`).join("")}
           </div>` : ""}

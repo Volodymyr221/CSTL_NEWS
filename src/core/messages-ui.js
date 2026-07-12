@@ -68,7 +68,7 @@ export function openGroupsList() {
       if (api._closed) return;
       listEl.innerHTML = groups.length
         ? groups.map(groupRow).join('')
-        : `<div class="pm-empty"><span class="pm-empty-ic">👥</span>У вас ще немає груп.<br>Створіть свою або приєднайтесь за посиланням.</div>`;
+        : `<div class="pm-empty"><span class="pm-empty-ic">${ICONS.users}</span>У вас ще немає груп.<br>Створіть свою або приєднайтесь за посиланням.</div>`;
     };
     await load();
 
@@ -225,7 +225,7 @@ export function openGroupManage(group) {
                 <span class="gr-mbr-name">${nm(m.uid)}</span>
                 <span class="gr-mbr-acts">
                   <button class="gr-mbr-ok" type="button" data-approve="${m.uid}">✓</button>
-                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">✕</button>
+                  <button class="gr-mbr-no" type="button" data-reject="${m.uid}">${ICONS.close}</button>
                 </span>
               </div>`).join('')}
           </div>` : ''}
