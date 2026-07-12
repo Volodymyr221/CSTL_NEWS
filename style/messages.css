@@ -464,6 +464,8 @@
 
 /* ── Відкритий чат — редизайн (Фаза A) ─────────────────────────────── */
 .pm-head--chat .pm-avatar { width: 34px; height: 34px; font-size: 15px; }
+/* Легка тінь на нижньому краї бордової шапки чату (фідбек Вови) */
+.pm-head--chat { position: relative; z-index: 3; box-shadow: 0 3px 8px rgba(60, 25, 30, 0.20); }
 
 /* Картка-контекст оголошення під хедером */
 .pm-ctx {
@@ -471,6 +473,8 @@
   padding: 10px 14px; border: 0; cursor: pointer; flex-shrink: 0;
   background: var(--card-cream, #FAF8EF);
   border-bottom: 1px solid var(--hairline, rgba(60,50,30,0.10));
+  /* Нижні кути злегка заокруглені (гострувато — малий радіус, фідбек Вови) */
+  border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
   box-shadow: 0 4px 8px -4px rgba(0,0,0,0.14);
   position: relative; z-index: 1;
 }
