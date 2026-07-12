@@ -3839,79 +3839,83 @@
     });
   }
 
-  // src/tabs/board.js
-  function isCommunityWide(loc) {
-    return !loc || loc === COMMUNITY_ALL;
-  }
-  function pluralAds(n) {
-    const d = n % 10, dd = n % 100;
-    if (d === 1 && dd !== 11)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14))
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
-  }
-  var PHONE_ICON_SVG = ICONS.phone;
+  // src/core/board-shared.js
   var BOOKMARK_OUTLINE_SVG2 = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG2 = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
+  var savedIds = /* @__PURE__ */ new Set();
+  function getSavedIds() {
+    return savedIds;
+  }
+  function setSavedIds(next) {
+    savedIds = next || /* @__PURE__ */ new Set();
+  }
+  function isSaved(postId) {
+    return savedIds.has(postId);
+  }
+  function toggleSaved(postId) {
+    const uid = currentUserId();
+    if (!uid)
+      return;
+    if (savedIds.has(postId)) {
+      savedIds.delete(postId);
+      removeSavedPost(uid, postId);
+    } else {
+      savedIds.add(postId);
+      addSavedPost(uid, postId);
+    }
+  }
+  function buildShareText(post) {
+    if (post.type === "board") {
+      return `${catLabel(post.category)}
+
+${post.text}
+\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
+    }
+    if (post.type === "chat") {
+      const tags = (post.tags || []).join(" ");
+      return `${post.text}${tags ? "\n\n" + tags : ""}
+\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
+    }
+    return post.text || "";
+  }
+  function saveBtnHtml(post) {
+    const saved = isSaved(post.id);
+    return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
+          data-save-id="${post.id}"
+          aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
+    ${saved ? BOOKMARK_FILLED_SVG2 : BOOKMARK_OUTLINE_SVG2}
+  </button>`;
+  }
+  function shareBtnHtml(post) {
+    const shareText = buildShareText(post);
+    const shareTitle = post.type === "chat" ? "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438" : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438";
+    return `<button class="bd-icon-btn bd-share-btn" type="button"
+          data-share-board
+          data-share-title="${escapeHtml(shareTitle)}"
+          data-share-text="${escapeHtml(shareText)}"
+          aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
+  }
+
+  // src/tabs/board-discussions.js
+  var _getPosts = () => [];
+  function initDiscussionsEngine({ getPosts }) {
+    if (getPosts)
+      _getPosts = getPosts;
+  }
   var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
-  var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
-  var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   var USERS_ICON_SVG = ICONS.users;
   var HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
-  function renderLoc(loc) {
-    if (!loc)
-      return "";
-    const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
-    return `<span class="cm-board-loc">${PIN_ICON_SVG2}${escapeHtml(label)}</span>`;
-  }
-  function renderCardFoot(p) {
-    const contact = p.contact ? String(p.contact).trim() : "";
-    const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-    const tel = isPhone ? contact.replace(/[^\d+]/g, "") : "";
-    return `
-      <div class="cm-board-foot">
-        <div class="cm-board-foot-actions">
-          ${isPhone ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
-          <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-        </div>
-        <div class="cm-board-foot-who">
-          <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
-          <span class="cm-board-time">${renderPostTime(p)}</span>
-        </div>
-      </div>`;
-  }
-  var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
-  function wasBumped(p) {
-    if (!p || !p.bumped_at)
-      return false;
-    const bumpMs = new Date(p.bumped_at).getTime();
-    const t = postTime(p);
-    const origMs = typeof t === "number" ? t : t ? new Date(t).getTime() : 0;
-    if (!bumpMs || !origMs)
-      return false;
-    return bumpMs - origMs > 6e4;
-  }
-  function renderPostTime(p) {
-    if (wasBumped(p)) {
-      return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
-    }
-    return formatTime(postTime(p));
-  }
-  var EDIT_ICON_SVG2 = ICONS.pencil;
-  var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
-  var allPosts = [];
-  var allAnnouncements = [];
-  var activeType = "board";
-  var activeCategory = "all";
-  var activeLocation = COMMUNITY_ALL;
-  var searchQuery = "";
   var commentsByPost = /* @__PURE__ */ new Map();
-  var savedIds = /* @__PURE__ */ new Set();
   var LIKE_EMOJI = "\u2764\uFE0F";
   var reactionsByPost = /* @__PURE__ */ new Map();
+  function setDiscussionsData(comments, reactions) {
+    if (comments)
+      commentsByPost = comments;
+    if (reactions)
+      reactionsByPost = reactions;
+  }
   function getLikeCount(postId) {
     return reactionsByPost.get(postId)?.counts?.[LIKE_EMOJI] || 0;
   }
@@ -4022,24 +4026,6 @@
       return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
-  function getSavedIds() {
-    return savedIds;
-  }
-  function isSaved(postId) {
-    return savedIds.has(postId);
-  }
-  function toggleSaved(postId) {
-    const uid = currentUserId();
-    if (!uid)
-      return;
-    if (savedIds.has(postId)) {
-      savedIds.delete(postId);
-      removeSavedPost(uid, postId);
-    } else {
-      savedIds.add(postId);
-      addSavedPost(uid, postId);
-    }
-  }
   function authorAvatar(author) {
     const a = String(author || "").trim();
     if (!a)
@@ -4047,33 +4033,6 @@
     const letter = a.charAt(0).toUpperCase();
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
-  }
-  function saveBtnHtml(post) {
-    const saved = isSaved(post.id);
-    return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
-          data-save-id="${post.id}"
-          aria-label="${saved ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445" : "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0443 \u041C\u043E\u0457"}">
-    ${saved ? BOOKMARK_FILLED_SVG2 : BOOKMARK_OUTLINE_SVG2}
-  </button>`;
-  }
-  function shareBtnHtml(post) {
-    const shareText = buildShareText(post);
-    const shareTitle = post.type === "chat" ? "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438" : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438";
-    return `<button class="bd-icon-btn bd-share-btn" type="button"
-          data-share-board
-          data-share-title="${escapeHtml(shareTitle)}"
-          data-share-text="${escapeHtml(shareText)}"
-          aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
-  }
-  function boardActionsHtml(post) {
-    return `
-    <div class="bd-actions bd-actions--board-compact">
-      <div class="bd-actions-extra">
-        ${saveBtnHtml(post)}
-        ${shareBtnHtml(post)}
-      </div>
-    </div>
-  `;
   }
   function chatMessagesHtml(post) {
     const items = getComments(post.id);
@@ -4241,12 +4200,12 @@
   }
   function openMyDiscussions() {
     const uid = currentUserId();
-    const mine = allPosts.filter((p) => p.type === "chat" && p.owner_uid && p.owner_uid === uid);
+    const mine = _getPosts().filter((p) => p.type === "chat" && p.owner_uid && p.owner_uid === uid);
     openDiscussionList("\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", mine);
   }
   function openSavedDiscussions() {
     const saved = getSavedIds();
-    const list = allPosts.filter((p) => p.type === "chat" && saved.has(p.id));
+    const list = _getPosts().filter((p) => p.type === "chat" && saved.has(p.id));
     openDiscussionList("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", list);
   }
   function openDiscussionCompose() {
@@ -4304,7 +4263,7 @@
           }
           close();
           showToast("\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E!", 3e3);
-          renderBoard();
+          window.dispatchEvent(new CustomEvent("cstl-posts-changed"));
         });
       },
       onClose: () => {
@@ -4506,7 +4465,7 @@
     const card = document.querySelector(`.bd-card--chat[data-chat-open="${postId}"]`);
     if (!card)
       return;
-    const post = allPosts.find((p) => p.id === postId);
+    const post = _getPosts().find((p) => p.id === postId);
     if (post)
       card.outerHTML = renderChatCard(post);
   }
@@ -4514,7 +4473,7 @@
     const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
     if (!wrap)
       return;
-    const post = allPosts.find((p) => p.id === postId);
+    const post = _getPosts().find((p) => p.id === postId);
     if (!post)
       return;
     wrap.outerHTML = chatMessagesHtml(post);
@@ -4637,19 +4596,306 @@
       showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
     }
   }
-  function buildShareText(post) {
-    if (post.type === "board") {
-      return `${catLabel(post.category)}
+  function renderChatCard(p) {
+    const comments = getComments(p.id);
+    const count = comments.length;
+    const recent = comments.slice(-2);
+    const participants = new Set(comments.map((c) => c.author || "\u0416\u0438\u0442\u0435\u043B\u044C")).size;
+    const lastHtml = recent.length ? `<div class="bd-chat-last">${recent.map((m) => `
+         <div class="bd-chat-last-row">
+           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(m.text)}</span>
+           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
+         </div>`).join("")}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
+    const liked = isLikedByMe(p.id);
+    return `
+    <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
+      <div class="bd-chat-topic">
+        <p class="bd-chat-text">${escapeHtml(p.text)}</p>
+      </div>
+      <div class="bd-chat-topline">
+        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
+        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
+      </div>
+      ${lastHtml}
+      <div class="bd-chat-foot">
+        <button class="bd-chat-like${liked ? " bd-chat-like--active" : ""}" type="button"
+                data-like-id="${p.id}" aria-label="${liked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A"}">
+          ${likeBtnInner(p.id)}
+        </button>
+        <div class="bd-chat-by">
+          <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
+          <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
+        </div>
+        ${saveBtnHtml(p)}
+      </div>
+    </article>
+  `;
+  }
+  function handleLikeClick(likeBtn) {
+    const id = Number(likeBtn.dataset.likeId);
+    requireAuth("\u043B\u0430\u0439\u043A\u0430\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", async () => {
+      const uid = currentUserId();
+      const wasLiked = isLikedByMe(id);
+      const entry = reactionsByPost.get(id) || { counts: {}, my: null };
+      entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
+      entry.my = wasLiked ? null : LIKE_EMOJI;
+      reactionsByPost.set(id, entry);
+      likeBtn.innerHTML = likeBtnInner(id);
+      likeBtn.classList.toggle("bd-chat-like--active", !wasLiked);
+      likeBtn.setAttribute("aria-label", wasLiked ? "\u041B\u0430\u0439\u043A" : "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A");
+      const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
+      if (!res.ok) {
+        entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
+        entry.my = wasLiked ? LIKE_EMOJI : null;
+        reactionsByPost.set(id, entry);
+        likeBtn.innerHTML = likeBtnInner(id);
+        likeBtn.classList.toggle("bd-chat-like--active", wasLiked);
+        likeBtn.setAttribute("aria-label", wasLiked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A");
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043B\u0430\u0439\u043A", 2500, "error");
+      }
+    });
+  }
+  var _delegationAttached = false;
+  function attachDiscussionsDelegation() {
+    if (_delegationAttached)
+      return;
+    _delegationAttached = true;
+    document.addEventListener("submit", async (e) => {
+      const form = e.target.closest("[data-comment-form]");
+      if (!form)
+        return;
+      e.preventDefault();
+      e.stopPropagation();
+      const postId = Number(form.dataset.commentForm);
+      const input = form.querySelector("[data-comment-input]");
+      const text = (input?.value || "").trim();
+      if (!text) {
+        input?.focus();
+        return;
+      }
+      if (!isLoggedIn()) {
+        requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
+        });
+        return;
+      }
+      if (containsProfanity(text)) {
+        showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
+        return;
+      }
+      if (looksLikeSpam(text)) {
+        showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4e3, "error");
+        return;
+      }
+      if (isDuplicateMsg(text)) {
+        showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
+        return;
+      }
+      if (isFlooding()) {
+        showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434", 3500);
+        return;
+      }
+      recordSentMsg(text);
+      if (_discEditing && _discEditing.post_id === postId) {
+        const target = _discEditing;
+        const l0 = commentsByPost.get(postId) || [];
+        const i0 = l0.findIndex((c) => c.id === target.id);
+        const prev0 = i0 >= 0 ? l0[i0] : null;
+        if (i0 >= 0) {
+          l0[i0] = { ...l0[i0], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
+          commentsByPost.set(postId, l0);
+        }
+        if (input)
+          input.value = "";
+        clearDiscCompose();
+        rerenderCommentsBlock(postId);
+        const res = await editComment(target.id, text);
+        if (!res.ok) {
+          const l = commentsByPost.get(postId) || [];
+          const i = l.findIndex((c) => c.id === target.id);
+          if (i >= 0 && prev0) {
+            l[i] = prev0;
+            commentsByPost.set(postId, l);
+            rerenderCommentsBlock(postId);
+          }
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043C\u0456\u043D\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
+        } else if (res.comment) {
+          const l = commentsByPost.get(postId) || [];
+          const i = l.findIndex((c) => c.id === target.id);
+          if (i >= 0) {
+            l[i] = res.comment;
+            commentsByPost.set(postId, l);
+            rerenderCommentsBlock(postId);
+          }
+        }
+        return;
+      }
+      const replyId = _discReplyTo && _discReplyTo.post_id === postId ? _discReplyTo.id : null;
+      const myName = currentUserName();
+      const tempComment = {
+        id: "temp-" + Date.now(),
+        post_id: postId,
+        author: myName,
+        text,
+        created_at: (/* @__PURE__ */ new Date()).toISOString(),
+        sender_uid: currentUserId(),
+        // → isMyComment() підсвітить як мій одразу
+        reply_to_id: replyId
+      };
+      const list = commentsByPost.get(postId) || [];
+      list.push(tempComment);
+      commentsByPost.set(postId, list);
+      if (input)
+        input.value = "";
+      clearDiscCompose();
+      rerenderCommentsBlock(postId);
+      input?.focus();
+      if (isSupabaseReady()) {
+        const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId });
+        if (!result.ok) {
+          const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
+          commentsByPost.set(postId, filtered);
+          rerenderCommentsBlock(postId);
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 4e3, "error");
+        } else if (result.comment) {
+          const updated = (commentsByPost.get(postId) || []).map(
+            (c) => c.id === tempComment.id ? result.comment : c
+          );
+          commentsByPost.set(postId, updated);
+          rerenderCommentsBlock(postId);
+        }
+      }
+    });
+  }
+  function onCommentRealtimeEvent(payload) {
+    const postId = (payload.new || payload.old || {}).post_id;
+    if (!postId)
+      return;
+    const prevCount = getComments(postId).length;
+    fetchAllComments().then((fresh) => {
+      commentsByPost = fresh;
+      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
+      if (wrap) {
+        const post = _getPosts().find((p) => p.id === postId);
+        if (post) {
+          const body = document.getElementById("bd-chat-modal-body");
+          const near = chatBodyNearBottom();
+          const prevTop = body ? body.scrollTop : 0;
+          wrap.outerHTML = chatMessagesHtml(post);
+          if (near) {
+            scrollChatToBottom();
+          } else {
+            if (body)
+              body.scrollTop = prevTop;
+            const delta = Math.max(0, getComments(postId).length - prevCount);
+            if (delta > 0 && postId === _chatOpenPostId) {
+              _chatUnseen += delta;
+              showChatPill(_chatUnseen);
+            }
+          }
+          updateChatHeaderCount(postId);
+        }
+      }
+      refreshChatCardPreview(postId);
+    });
+  }
+  function onReactionRealtimeEvent(payload) {
+    const postId = (payload.new || payload.old || {}).post_id;
+    if (!postId)
+      return;
+    const uid = currentUserId();
+    fetchAllReactions(uid || getAnonId()).then((fresh) => {
+      reactionsByPost = fresh;
+      refreshChatCardPreview(postId);
+    });
+  }
+  var _realtimeAttached = false;
+  function attachDiscussionsRealtime() {
+    if (_realtimeAttached || !isSupabaseReady())
+      return;
+    _realtimeAttached = true;
+    subscribeComments(onCommentRealtimeEvent);
+    subscribeReactions(onReactionRealtimeEvent);
+  }
+  function handleDiscussionsAuthChange() {
+    if (_chatOpenPostId != null) {
+      const post = _getPosts().find((p) => p.id === _chatOpenPostId);
+      closeChatModal();
+      if (post)
+        openChatModal(post);
+    }
+  }
 
-${post.text}
-\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
+  // src/tabs/board.js
+  function isCommunityWide(loc) {
+    return !loc || loc === COMMUNITY_ALL;
+  }
+  function pluralAds(n) {
+    const d = n % 10, dd = n % 100;
+    if (d === 1 && dd !== 11)
+      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14))
+      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
+  }
+  var PHONE_ICON_SVG = ICONS.phone;
+  var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
+  var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  function renderLoc(loc) {
+    if (!loc)
+      return "";
+    const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
+    return `<span class="cm-board-loc">${PIN_ICON_SVG2}${escapeHtml(label)}</span>`;
+  }
+  function renderCardFoot(p) {
+    const contact = p.contact ? String(p.contact).trim() : "";
+    const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
+    const tel = isPhone ? contact.replace(/[^\d+]/g, "") : "";
+    return `
+      <div class="cm-board-foot">
+        <div class="cm-board-foot-actions">
+          ${isPhone ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
+          <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
+        </div>
+        <div class="cm-board-foot-who">
+          <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-time">${renderPostTime(p)}</span>
+        </div>
+      </div>`;
+  }
+  var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
+  function wasBumped(p) {
+    if (!p || !p.bumped_at)
+      return false;
+    const bumpMs = new Date(p.bumped_at).getTime();
+    const t = postTime(p);
+    const origMs = typeof t === "number" ? t : t ? new Date(t).getTime() : 0;
+    if (!bumpMs || !origMs)
+      return false;
+    return bumpMs - origMs > 6e4;
+  }
+  function renderPostTime(p) {
+    if (wasBumped(p)) {
+      return `<span class="cm-board-bumped">${BUMP_ICON_SVG}${formatTime(p.bumped_at)}</span>`;
     }
-    if (post.type === "chat") {
-      const tags = (post.tags || []).join(" ");
-      return `${post.text}${tags ? "\n\n" + tags : ""}
-\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
-    }
-    return post.text || "";
+    return formatTime(postTime(p));
+  }
+  var EDIT_ICON_SVG2 = ICONS.pencil;
+  var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
+  var allPosts = [];
+  var allAnnouncements = [];
+  var activeType = "board";
+  var activeCategory = "all";
+  var activeLocation = COMMUNITY_ALL;
+  var searchQuery = "";
+  function boardActionsHtml(post) {
+    return `
+    <div class="bd-actions bd-actions--board-compact">
+      <div class="bd-actions-extra">
+        ${saveBtnHtml(post)}
+        ${shareBtnHtml(post)}
+      </div>
+    </div>
+  `;
   }
   function renderBoardCard(p) {
     const tilt = 0;
@@ -4737,41 +4983,6 @@ ${post.text}
       if (e.target === wrap)
         close();
     });
-  }
-  function renderChatCard(p) {
-    const comments = getComments(p.id);
-    const count = comments.length;
-    const recent = comments.slice(-2);
-    const participants = new Set(comments.map((c) => c.author || "\u0416\u0438\u0442\u0435\u043B\u044C")).size;
-    const lastHtml = recent.length ? `<div class="bd-chat-last">${recent.map((m) => `
-         <div class="bd-chat-last-row">
-           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(m.text)}</span>
-           <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
-         </div>`).join("")}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
-    const liked = isLikedByMe(p.id);
-    return `
-    <article class="bd-card bd-card--chat" data-post-id="${p.id}" data-chat-open="${p.id}">
-      <div class="bd-chat-topic">
-        <p class="bd-chat-text">${escapeHtml(p.text)}</p>
-      </div>
-      <div class="bd-chat-topline">
-        <span class="bd-chat-msgcount">${COMMENT_ICON_SVG} ${count} ${msgWord(count)}</span>
-        <span class="bd-chat-participants">${USERS_ICON_SVG} ${participants}</span>
-      </div>
-      ${lastHtml}
-      <div class="bd-chat-foot">
-        <button class="bd-chat-like${liked ? " bd-chat-like--active" : ""}" type="button"
-                data-like-id="${p.id}" aria-label="${liked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A"}">
-          ${likeBtnInner(p.id)}
-        </button>
-        <div class="bd-chat-by">
-          <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
-          <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
-        </div>
-        ${saveBtnHtml(p)}
-      </div>
-    </article>
-  `;
   }
   function renderCard(post) {
     if (post.type === "chat")
@@ -4988,10 +5199,9 @@ ${post.text}
       ]);
       if (posts !== null) {
         allPosts = posts;
-        reactionsByPost = reactions;
         allAnnouncements = anns || [];
-        commentsByPost = comments;
-        savedIds = saved;
+        setDiscussionsData(comments, reactions);
+        setSavedIds(saved);
         renderAll(el);
         return;
       }
@@ -5005,7 +5215,7 @@ ${post.text}
       const communityData = await communityRes.json();
       allPosts = boardData.posts || [];
       allAnnouncements = communityData.announcements || [];
-      commentsByPost = /* @__PURE__ */ new Map();
+      setDiscussionsData(/* @__PURE__ */ new Map());
     } catch {
       el.innerHTML = '<div class="empty-state">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
       return;
@@ -5078,7 +5288,7 @@ ${post.text}
               // Прибрали зі збережених на екрані → синхронізуємо стан дошки:
               // оновлюємо savedIds і, якщо картка видима на дошці, іконку закладки.
               onRemove: (id) => {
-                savedIds.delete(id);
+                getSavedIds().delete(id);
                 const btn = document.querySelector(`[data-save-id="${id}"]`);
                 if (btn) {
                   btn.innerHTML = BOOKMARK_OUTLINE_SVG2;
@@ -5406,116 +5616,11 @@ ${post.text}
       });
     }
   }
-  var _delegationAttached = false;
+  var _delegationAttached2 = false;
   function attachBoardDelegation() {
-    if (_delegationAttached)
+    if (_delegationAttached2)
       return;
-    _delegationAttached = true;
-    document.addEventListener("submit", async (e) => {
-      const form = e.target.closest("[data-comment-form]");
-      if (!form)
-        return;
-      e.preventDefault();
-      e.stopPropagation();
-      const postId = Number(form.dataset.commentForm);
-      const input = form.querySelector("[data-comment-input]");
-      const text = (input?.value || "").trim();
-      if (!text) {
-        input?.focus();
-        return;
-      }
-      if (!isLoggedIn()) {
-        requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
-        });
-        return;
-      }
-      if (containsProfanity(text)) {
-        showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
-        return;
-      }
-      if (looksLikeSpam(text)) {
-        showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4e3, "error");
-        return;
-      }
-      if (isDuplicateMsg(text)) {
-        showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
-        return;
-      }
-      if (isFlooding()) {
-        showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434", 3500);
-        return;
-      }
-      recordSentMsg(text);
-      if (_discEditing && _discEditing.post_id === postId) {
-        const target = _discEditing;
-        const l0 = commentsByPost.get(postId) || [];
-        const i0 = l0.findIndex((c) => c.id === target.id);
-        const prev0 = i0 >= 0 ? l0[i0] : null;
-        if (i0 >= 0) {
-          l0[i0] = { ...l0[i0], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
-          commentsByPost.set(postId, l0);
-        }
-        if (input)
-          input.value = "";
-        clearDiscCompose();
-        rerenderCommentsBlock(postId);
-        const res = await editComment(target.id, text);
-        if (!res.ok) {
-          const l = commentsByPost.get(postId) || [];
-          const i = l.findIndex((c) => c.id === target.id);
-          if (i >= 0 && prev0) {
-            l[i] = prev0;
-            commentsByPost.set(postId, l);
-            rerenderCommentsBlock(postId);
-          }
-          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u043C\u0456\u043D\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
-        } else if (res.comment) {
-          const l = commentsByPost.get(postId) || [];
-          const i = l.findIndex((c) => c.id === target.id);
-          if (i >= 0) {
-            l[i] = res.comment;
-            commentsByPost.set(postId, l);
-            rerenderCommentsBlock(postId);
-          }
-        }
-        return;
-      }
-      const replyId = _discReplyTo && _discReplyTo.post_id === postId ? _discReplyTo.id : null;
-      const myName = currentUserName();
-      const tempComment = {
-        id: "temp-" + Date.now(),
-        post_id: postId,
-        author: myName,
-        text,
-        created_at: (/* @__PURE__ */ new Date()).toISOString(),
-        sender_uid: currentUserId(),
-        // → isMyComment() підсвітить як мій одразу
-        reply_to_id: replyId
-      };
-      const list = commentsByPost.get(postId) || [];
-      list.push(tempComment);
-      commentsByPost.set(postId, list);
-      if (input)
-        input.value = "";
-      clearDiscCompose();
-      rerenderCommentsBlock(postId);
-      input?.focus();
-      if (isSupabaseReady()) {
-        const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId });
-        if (!result.ok) {
-          const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
-          commentsByPost.set(postId, filtered);
-          rerenderCommentsBlock(postId);
-          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 4e3, "error");
-        } else if (result.comment) {
-          const updated = (commentsByPost.get(postId) || []).map(
-            (c) => c.id === tempComment.id ? result.comment : c
-          );
-          commentsByPost.set(postId, updated);
-          rerenderCommentsBlock(postId);
-        }
-      }
-    });
+    _delegationAttached2 = true;
     document.addEventListener("click", (e) => {
       const chatCard = e.target.closest("[data-chat-open]");
       if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]") && !e.target.closest("[data-like-id]")) {
@@ -5564,28 +5669,7 @@ ${post.text}
       const likeBtn = e.target.closest("[data-like-id]");
       if (likeBtn) {
         e.stopPropagation();
-        const id = Number(likeBtn.dataset.likeId);
-        requireAuth("\u043B\u0430\u0439\u043A\u0430\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", async () => {
-          const uid = currentUserId();
-          const wasLiked = isLikedByMe(id);
-          const entry = reactionsByPost.get(id) || { counts: {}, my: null };
-          entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? -1 : 1));
-          entry.my = wasLiked ? null : LIKE_EMOJI;
-          reactionsByPost.set(id, entry);
-          likeBtn.innerHTML = likeBtnInner(id);
-          likeBtn.classList.toggle("bd-chat-like--active", !wasLiked);
-          likeBtn.setAttribute("aria-label", wasLiked ? "\u041B\u0430\u0439\u043A" : "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A");
-          const res = await setReaction(id, uid, wasLiked ? null : LIKE_EMOJI);
-          if (!res.ok) {
-            entry.counts[LIKE_EMOJI] = Math.max(0, (entry.counts[LIKE_EMOJI] || 0) + (wasLiked ? 1 : -1));
-            entry.my = wasLiked ? LIKE_EMOJI : null;
-            reactionsByPost.set(id, entry);
-            likeBtn.innerHTML = likeBtnInner(id);
-            likeBtn.classList.toggle("bd-chat-like--active", wasLiked);
-            likeBtn.setAttribute("aria-label", wasLiked ? "\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043B\u0430\u0439\u043A" : "\u041B\u0430\u0439\u043A");
-            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u043B\u0430\u0439\u043A", 2500, "error");
-          }
-        });
+        handleLikeClick(likeBtn);
         return;
       }
       const shareBtn = e.target.closest("[data-share-board]");
@@ -5598,56 +5682,6 @@ ${post.text}
         return;
       }
     }, { capture: true });
-  }
-  function onCommentRealtimeEvent(payload) {
-    const postId = (payload.new || payload.old || {}).post_id;
-    if (!postId)
-      return;
-    const prevCount = getComments(postId).length;
-    fetchAllComments().then((fresh) => {
-      commentsByPost = fresh;
-      const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-      if (wrap) {
-        const post = allPosts.find((p) => p.id === postId);
-        if (post) {
-          const body = document.getElementById("bd-chat-modal-body");
-          const near = chatBodyNearBottom();
-          const prevTop = body ? body.scrollTop : 0;
-          wrap.outerHTML = chatMessagesHtml(post);
-          if (near) {
-            scrollChatToBottom();
-          } else {
-            if (body)
-              body.scrollTop = prevTop;
-            const delta = Math.max(0, getComments(postId).length - prevCount);
-            if (delta > 0 && postId === _chatOpenPostId) {
-              _chatUnseen += delta;
-              showChatPill(_chatUnseen);
-            }
-          }
-          updateChatHeaderCount(postId);
-        }
-      }
-      refreshChatCardPreview(postId);
-    });
-  }
-  function onReactionRealtimeEvent(payload) {
-    const postId = (payload.new || payload.old || {}).post_id;
-    if (!postId)
-      return;
-    const uid = currentUserId();
-    fetchAllReactions(uid || getAnonId()).then((fresh) => {
-      reactionsByPost = fresh;
-      refreshChatCardPreview(postId);
-    });
-  }
-  var _realtimeAttached = false;
-  function attachRealtime() {
-    if (_realtimeAttached || !isSupabaseReady())
-      return;
-    _realtimeAttached = true;
-    subscribeComments(onCommentRealtimeEvent);
-    subscribeReactions(onReactionRealtimeEvent);
   }
   var discOpen = false;
   function getBoardRoot() {
@@ -5805,8 +5839,10 @@ ${post.text}
     }), { passive: true });
   }
   function initBoard() {
+    initDiscussionsEngine({ getPosts: () => allPosts });
+    attachDiscussionsDelegation();
+    attachDiscussionsRealtime();
     attachBoardDelegation();
-    attachRealtime();
     renderBoard();
     window.addEventListener("cstl-open-ad", (e) => {
       const p = e.detail && e.detail.post;
@@ -5833,17 +5869,12 @@ ${post.text}
     setupHeaderCollapse();
     onAuthChange(() => {
       if (!isLoggedIn()) {
-        savedIds = /* @__PURE__ */ new Set();
+        setSavedIds(/* @__PURE__ */ new Set());
         if (activeType === "saved")
           activeType = "board";
       }
       renderBoard();
-      if (_chatOpenPostId != null) {
-        const post = allPosts.find((p) => p.id === _chatOpenPostId);
-        closeChatModal();
-        if (post)
-          openChatModal(post);
-      }
+      handleDiscussionsAuthChange();
     });
   }
 
