@@ -1561,7 +1561,11 @@
     // Планшет зі списком / «Мої оголошення» (clipboard-list)
     clipboard: `<svg ${A2}><path d="M9 5h-2a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-12a2 2 0 0 0 -2 -2h-2"/><path d="M9 3m0 2a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-2a2 2 0 0 1 -2 -2z"/><path d="M9 12l.01 0"/><path d="M13 12l2 0"/><path d="M9 16l.01 0"/><path d="M13 16l2 0"/></svg>`,
     // Архів / коробка (archive)
-    archive: `<svg ${A2}><path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10"/><path d="M10 12l4 0"/></svg>`
+    archive: `<svg ${A2}><path d="M3 4m0 2a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v0a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2z"/><path d="M5 8v10a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-10"/><path d="M10 12l4 0"/></svg>`,
+    // Повідомлення / чат-бульбашка (message)
+    message: `<svg ${A2}><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/></svg>`,
+    // Стрілка вгору / підняти (arrow-up)
+    arrowUp: `<svg ${A2}><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg>`
   };
 
   // src/tabs/community-modal.js
@@ -3229,10 +3233,10 @@
     });
   }
   var AD_STATUS = {
-    published: { label: "\u0430\u043A\u0442\u0438\u0432\u043D\u0435", icon: "\u2705", group: "active" },
-    pending: { label: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", icon: "\u23F3", group: "moderation" },
-    closed: { label: "\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E", icon: "\u2714\uFE0F", group: "archive" },
-    rejected: { label: "\u0432\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043E", icon: "\u274C", group: "archive" }
+    published: { label: "\u0430\u043A\u0442\u0438\u0432\u043D\u0435", icon: ICONS.check, group: "active" },
+    pending: { label: "\u043D\u0430 \u043F\u0435\u0440\u0435\u0432\u0456\u0440\u0446\u0456", icon: ICONS.clock, group: "moderation" },
+    closed: { label: "\u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E", icon: ICONS.check, group: "archive" },
+    rejected: { label: "\u0432\u0456\u0434\u0445\u0438\u043B\u0435\u043D\u043E", icon: ICONS.close, group: "archive" }
   };
   function adDate(p) {
     const ms = p.bumped_at && new Date(p.bumped_at).getTime() || p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime() || 0;
@@ -3248,9 +3252,9 @@
       const h = Math.floor(leftMs / 36e5);
       const m = Math.max(1, Math.ceil(leftMs % 36e5 / 6e4));
       const t = h > 0 ? `${h} \u0433\u043E\u0434` : `${m} \u0445\u0432`;
-      return `<button class="pm-ad-bump pm-ad-bump--wait" type="button" disabled>\u{1F53C} \u041C\u043E\u0436\u043D\u0430 \u0447\u0435\u0440\u0435\u0437 ${t}</button>`;
+      return `<button class="pm-ad-bump pm-ad-bump--wait" type="button" disabled><span class="pm-ad-bump-ic">${ICONS.clock}</span>\u041C\u043E\u0436\u043D\u0430 \u0447\u0435\u0440\u0435\u0437 ${t}</button>`;
     }
-    return `<button class="pm-ad-bump" type="button" data-bump="${p.id}">\u{1F53C} \u041F\u0456\u0434\u043D\u044F\u0442\u0438 \u0432\u0433\u043E\u0440\u0443</button>`;
+    return `<button class="pm-ad-bump" type="button" data-bump="${p.id}"><span class="pm-ad-bump-ic">${ICONS.arrowUp}</span>\u041F\u0456\u0434\u043D\u044F\u0442\u0438 \u0432\u0433\u043E\u0440\u0443</button>`;
   }
   function openMyAds() {
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0430\u0448\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", async () => {
@@ -3301,14 +3305,14 @@
       function adCard(p) {
         const meta = AD_STATUS[p.status] || { label: p.status || "", icon: "", group: "active" };
         const photo = Array.isArray(p.photos) ? p.photos.find((x) => x) : null;
-        const thumb = photo ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : `<div class="pm-ad-thumb" style="background:${escapeHtml(p.cover_gradient || "linear-gradient(135deg,#ece4d8,#dccfba)")}"><span>${escapeHtml(p.cover_emoji || "\u{1F4CB}")}</span></div>`;
+        const thumb = photo ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : `<div class="pm-ad-thumb" style="background:${escapeHtml(p.cover_gradient || "linear-gradient(135deg,#ece4d8,#dccfba)")}"><span class="pm-ad-thumb-ic">${p.cover_emoji ? escapeHtml(p.cover_emoji) : ICONS.clipboard}</span></div>`;
         const title = escapeHtml(p.title && p.title.trim() || (p.text || "").trim().slice(0, 54) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
         const cat = p.category ? `${escapeHtml(p.category)} \xB7 ` : "";
         const isPublished = p.status === "published";
         let actionsRow = "";
         if (isPublished) {
           const tn = threadsFor(p.id), un = unreadFor(p.id);
-          const badge = tn > 0 ? `<button class="pm-ad-msgs" type="button" data-badge="1">\u{1F4AC} ${tn} ${tn === 1 ? "\u0437\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F" : "\u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C"}${un > 0 ? `<span class="pm-ad-unread">${un}</span>` : ""}</button>` : `<span class="pm-ad-msgs pm-ad-msgs--none">\u{1F4AC} \u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C</span>`;
+          const badge = tn > 0 ? `<button class="pm-ad-msgs" type="button" data-badge="1"><span class="pm-ad-msgs-ic">${ICONS.message}</span>${tn} ${tn === 1 ? "\u0437\u0432\u0435\u0440\u043D\u0435\u043D\u043D\u044F" : "\u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C"}${un > 0 ? `<span class="pm-ad-unread">${un}</span>` : ""}</button>` : `<span class="pm-ad-msgs pm-ad-msgs--none"><span class="pm-ad-msgs-ic">${ICONS.message}</span>\u041F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454 \u0437\u0432\u0435\u0440\u043D\u0435\u043D\u044C</span>`;
           actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
         }
         const canEdit = p.status === "published" || p.status === "pending";
@@ -3328,7 +3332,7 @@
               ${thumb}
               <div class="pm-ad-info">
                 <span class="pm-ad-title">${title}</span>
-                <span class="pm-ad-meta">${cat}${adDate(p)} \xB7 <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+                <span class="pm-ad-meta">${cat}${adDate(p)} \xB7 <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || "")}"><span class="pm-ad-status-ic">${meta.icon}</span>${escapeHtml(meta.label)}</span></span>
               </div>
               <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="\u0414\u0456\u0457">\u22EF</button>
             </div>

@@ -766,10 +766,10 @@ export function openThreadsList() {
 // кнопка «Підняти» (тільки published, кулдаун 3 год) + меню дій (⋯).
 // Чати тут НЕ розкриваємо — бейдж веде у «Повідомлення».
 const AD_STATUS = {
-  published: { label: 'активне',      icon: '✅', group: 'active'     },
-  pending:   { label: 'на перевірці', icon: '⏳', group: 'moderation' },
-  closed:    { label: 'завершено',    icon: '✔️', group: 'archive'    },
-  rejected:  { label: 'відхилено',    icon: '❌', group: 'archive'    },
+  published: { label: 'активне',      icon: ICONS.check, group: 'active'     },
+  pending:   { label: 'на перевірці', icon: ICONS.clock, group: 'moderation' },
+  closed:    { label: 'завершено',    icon: ICONS.check, group: 'archive'    },
+  rejected:  { label: 'відхилено',    icon: ICONS.close, group: 'archive'    },
 };
 
 function adDate(p) {
@@ -788,9 +788,9 @@ function bumpRow(p) {
     const h = Math.floor(leftMs / 3600000);
     const m = Math.max(1, Math.ceil((leftMs % 3600000) / 60000));
     const t = h > 0 ? `${h} год` : `${m} хв`;
-    return `<button class="pm-ad-bump pm-ad-bump--wait" type="button" disabled>🔼 Можна через ${t}</button>`;
+    return `<button class="pm-ad-bump pm-ad-bump--wait" type="button" disabled><span class="pm-ad-bump-ic">${ICONS.clock}</span>Можна через ${t}</button>`;
   }
-  return `<button class="pm-ad-bump" type="button" data-bump="${p.id}">🔼 Підняти вгору</button>`;
+  return `<button class="pm-ad-bump" type="button" data-bump="${p.id}"><span class="pm-ad-bump-ic">${ICONS.arrowUp}</span>Підняти вгору</button>`;
 }
 
 export function openMyAds() {
@@ -850,7 +850,7 @@ export function openMyAds() {
       const photo = Array.isArray(p.photos) ? p.photos.find(x => x) : null;
       const thumb = photo
         ? `<div class="pm-ad-thumb pm-ad-thumb--photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
-        : `<div class="pm-ad-thumb" style="background:${escapeHtml(p.cover_gradient || 'linear-gradient(135deg,#ece4d8,#dccfba)')}"><span>${escapeHtml(p.cover_emoji || '📋')}</span></div>`;
+        : `<div class="pm-ad-thumb" style="background:${escapeHtml(p.cover_gradient || 'linear-gradient(135deg,#ece4d8,#dccfba)')}"><span class="pm-ad-thumb-ic">${p.cover_emoji ? escapeHtml(p.cover_emoji) : ICONS.clipboard}</span></div>`;
       const title = escapeHtml((p.title && p.title.trim()) || (p.text || '').trim().slice(0, 54) || 'Оголошення');
       const cat = p.category ? `${escapeHtml(p.category)} · ` : '';
       const isPublished = p.status === 'published';
@@ -860,8 +860,8 @@ export function openMyAds() {
       if (isPublished) {
         const tn = threadsFor(p.id), un = unreadFor(p.id);
         const badge = tn > 0
-          ? `<button class="pm-ad-msgs" type="button" data-badge="1">💬 ${tn} ${tn === 1 ? 'звернення' : 'звернень'}${un > 0 ? `<span class="pm-ad-unread">${un}</span>` : ''}</button>`
-          : `<span class="pm-ad-msgs pm-ad-msgs--none">💬 Поки немає звернень</span>`;
+          ? `<button class="pm-ad-msgs" type="button" data-badge="1"><span class="pm-ad-msgs-ic">${ICONS.message}</span>${tn} ${tn === 1 ? 'звернення' : 'звернень'}${un > 0 ? `<span class="pm-ad-unread">${un}</span>` : ''}</button>`
+          : `<span class="pm-ad-msgs pm-ad-msgs--none"><span class="pm-ad-msgs-ic">${ICONS.message}</span>Поки немає звернень</span>`;
         actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
       }
 
@@ -887,7 +887,7 @@ export function openMyAds() {
               ${thumb}
               <div class="pm-ad-info">
                 <span class="pm-ad-title">${title}</span>
-                <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}">${meta.icon} ${escapeHtml(meta.label)}</span></span>
+                <span class="pm-ad-meta">${cat}${adDate(p)} · <span class="pm-ad-status pm-ad-status--${escapeHtml(p.status || '')}"><span class="pm-ad-status-ic">${meta.icon}</span>${escapeHtml(meta.label)}</span></span>
               </div>
               <button class="pm-ad-more" type="button" data-menu="${p.id}" aria-label="Дії">⋯</button>
             </div>

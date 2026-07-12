@@ -359,7 +359,17 @@
   flex-shrink: 0; font-size: 11px; font-weight: 600;
   padding: 2px 8px; border-radius: 8px;
   background: var(--gray-light, #f5f5f5); color: var(--gray, #666);
+  display: inline-flex; align-items: center; gap: 4px;
 }
+/* Векторні іконки на картці замість емодзі (статус / бейдж звернень / підняти / thumb) */
+.pm-ad-status-ic { display: inline-flex; }
+.pm-ad-status-ic svg { width: 13px; height: 13px; display: block; }
+.pm-ad-msgs-ic { display: inline-flex; }
+.pm-ad-msgs-ic svg { width: 15px; height: 15px; display: block; }
+.pm-ad-bump-ic { display: inline-flex; }
+.pm-ad-bump-ic svg { width: 15px; height: 15px; display: block; }
+.pm-ad-thumb-ic { display: inline-flex; color: var(--ink-soft, #5F5448); }
+.pm-ad-thumb-ic svg { width: 30px; height: 30px; display: block; }
 .pm-ad-status--published { background: #E3F0DC; color: #3C6B2A; }
 .pm-ad-status--pending   { background: #FBEFD0; color: #8A6A14; }
 .pm-ad-status--rejected  { background: #F6DAD9; color: #8A2222; }
@@ -395,6 +405,7 @@
   background: var(--red, #722F37); color: #fff;
   font-size: 13px; font-weight: 700; cursor: pointer;
   box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30);
+  display: inline-flex; align-items: center; gap: 6px;
 }
 .pm-ad-bump--wait { background: rgba(0, 0, 0, 0.06); color: var(--ink-mute, #9C9080); cursor: default; box-shadow: none; }
 
