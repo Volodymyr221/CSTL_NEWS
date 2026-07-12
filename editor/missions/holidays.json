@@ -1,8 +1,8 @@
 {
   "name": "holidays",
-  "description": "Свята з календаря — стаття+фото за 7 днів до дати, чернетка в кабінет Алли",
+  "description": "Свята з календаря — стаття+фото за 31 день до дати, чернетка в кабінет Алли",
   "source": "calendar",
-  "days_before": 7,
+  "days_before": 31,
   "writer": "ai_writer",
   "image": "wikimedia",
   "sink": "cabinet"
