@@ -37,6 +37,7 @@ import {
   setupKeyboardResize, setupBubbleGestures,
 } from '../core/chat-core.js';
 import { ensurePushSubscription } from '../core/push.js';
+import { ICONS } from '../core/icons.js';   // спільні векторні іконки (заміна емодзі в меню картки)
 
 const BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1000;   // кулдаун підняття: 3 год
 
@@ -865,13 +866,16 @@ export function openMyAds() {
       }
 
       // Меню дій: «Редагувати» для активних/на модерації (Д-3); «Завершити» лише для
-      // published; «Повернути» лише для closed; «Видалити» завжди
+      // published; «Повернути» лише для closed; «Видалити» завжди.
+      // Іконки — маленькі векторні (icons.js + локальний ICON_BACK), не емодзі.
       const canEdit = p.status === 'published' || p.status === 'pending';
+      const mi = (act, icon, label, extra = '') =>
+        `<button class="pm-ad-mi${extra}" type="button" data-act="${act}" data-id="${p.id}"><span class="pm-ad-mi-ic">${icon}</span>${label}</button>`;
       const menuItems = [
-        canEdit ? `<button class="pm-ad-mi" type="button" data-act="edit" data-id="${p.id}">✏️ Редагувати</button>` : '',
-        isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">✓ Завершити</button>` : '',
-        p.status === 'closed' ? `<button class="pm-ad-mi" type="button" data-act="restore" data-id="${p.id}">↩️ Повернути в активні</button>` : '',
-        `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">🗑️ Видалити</button>`,
+        canEdit ? mi('edit', ICONS.pencil, 'Редагувати') : '',
+        isPublished ? mi('close', ICONS.check, 'Завершити') : '',
+        p.status === 'closed' ? mi('restore', ICON_BACK, 'Повернути в активні') : '',
+        mi('delete', ICONS.trash, 'Видалити', ' pm-ad-mi--danger'),
       ].join('');
 
       const sw = swipeActions(p);
@@ -979,7 +983,16 @@ export function openMyAds() {
       }
     }, { passive: false });
 
-    const closeMenus = (except) => api.screen.querySelectorAll('.pm-ad-menu').forEach(m => { if (m !== except) m.hidden = true; });
+    // Синхронізуємо клас рядка з видимістю меню — рядок з відкритим меню
+    // піднімається над сусідніми картками (інакше низ меню «Видалити» ховається
+    // під наступною карткою: .pm-ad має власний stacking-контекст z-index:1).
+    const syncMenuRow = (menu) => {
+      const row = menu.closest('.pm-ad-row');
+      if (row) row.classList.toggle('pm-ad-row--menu-open', !menu.hidden);
+    };
+    const closeMenus = (except) => api.screen.querySelectorAll('.pm-ad-menu').forEach(m => {
+      if (m !== except) { m.hidden = true; syncMenuRow(m); }
+    });
 
     // Делеговані дії по списку
     listEl.addEventListener('click', async (e) => {
@@ -993,7 +1006,7 @@ export function openMyAds() {
       if (menuBtn) {
         const menu = api.screen.querySelector(`#pm-ad-menu-${menuBtn.dataset.menu}`);
         closeMenus(menu);
-        if (menu) menu.hidden = !menu.hidden;
+        if (menu) { menu.hidden = !menu.hidden; syncMenuRow(menu); }
         return;
       }
       const bumpBtn = e.target.closest('[data-bump]');

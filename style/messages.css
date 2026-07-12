@@ -330,6 +330,9 @@
   position: relative; z-index: 1;
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
+/* Рядок з відкритим меню — над сусідніми картками, щоб випадне меню (і його нижній
+   пункт «Видалити») не ховалось під наступною карткою (.pm-ad має свій stacking z-index:1). */
+.pm-ad-row--menu-open .pm-ad { z-index: 20; }
 .pm-ad-main { display: flex; align-items: center; gap: 12px; padding: 12px; cursor: pointer; }
 .pm-ad-thumb {
   width: 64px; height: 64px; border-radius: 12px; flex-shrink: 0;
@@ -392,11 +395,16 @@
   box-shadow: 0 6px 24px rgba(40, 25, 10, 0.18); min-width: 162px;
 }
 .pm-ad-mi {
-  display: block; width: 100%; text-align: left; border: 0; background: transparent;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; text-align: left; border: 0; background: transparent;
   padding: 12px 16px; font-size: 14px; color: var(--ink, #2A2520); cursor: pointer;
 }
 .pm-ad-mi:active { background: rgba(0, 0, 0, 0.05); }
 .pm-ad-mi--danger { color: #C0392B; }
+/* Маленька векторна іконка пункту меню (успадковує колір тексту, зокрема червоний для «Видалити») */
+.pm-ad-mi-ic { display: inline-flex; flex-shrink: 0; color: var(--ink-mute, #9C9080); }
+.pm-ad-mi-ic svg { width: 17px; height: 17px; display: block; }
+.pm-ad-mi--danger .pm-ad-mi-ic { color: #C0392B; }
 
 /* Стандартизовано під FAB Дошки (.board-trigger--fixed): те саме скло, контур і тінь;
    різниться лише іконка (векторний олівець «нове оголошення», бордова). */
