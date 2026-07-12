@@ -1146,7 +1146,7 @@
   color: var(--ink-soft);
   margin-bottom: 14px;
 }
-.app-modal--board-compose .cm-board-input { margin-bottom: 10px; }
+.app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }   /* тінь — щоб поле не зливалось з фоном */
 .app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
 /* Полиш (Вова): локація і телефон не на всю ширину — стільки, скільки треба даним.
    Телефон — ширина за атрибутом size="18" (трохи більше за макс. "+380 XX XXX XX XX"). */
@@ -1184,6 +1184,8 @@
   font-size: 14px;
   font-weight: 700;
   font-family: inherit;
+  text-transform: uppercase;    /* «ОПУБЛІКУВАТИ» великими */
+  letter-spacing: 1px;          /* трохи більший відступ між буквами */
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -1256,6 +1258,7 @@
   color: var(--ink);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);   /* щоб чіп не зливався з кремовим фоном */
   transition: background 0.12s, border-color 0.12s, transform 0.08s;
 }
 .bm-chip:active { transform: scale(0.96); }
@@ -1289,6 +1292,7 @@
   cursor: pointer;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);   /* тінь — щоб слот фото не зливався з фоном */
   transition: border-color 0.12s, background-color 0.12s;
 }
 .bm-photo-slot:active { background-color: var(--paper); }
