@@ -23,12 +23,14 @@ class CabinetSink(Sink):
             print(f"✗ немає SUPABASE_SERVICE_ROLE_KEY — cabinet недоступний "
                   f"(тест через --sink queue): {draft.title}")
             return
-        # Ідемпотентність (08.07): щоденний крон календаря × 7-денне вікно плодив ДУБЛІ
-        # однієї свято-чернетки (16 замість ~10). Перед вставкою — GET-перевірка чи вже є
-        # чернетка з тим самим заголовком (+ дата події / тип). Як дедуп у QueueSink.
+        # Ідемпотентність (08.07): щоденний крон календаря × вікно плодив ДУБЛІ
+        # однієї свято-чернетки. Перед вставкою — GET чи вже є запис із тим самим
+        # заголовком (+ дата події / тип). P9 (12.07): перевіряємо БУДЬ-ЯКИЙ статус
+        # (не лише draft) — інакше після публікації свята редактор щодня перестворював
+        # його як нову чернетку (dedup бачив лише draft, а опублікований — вже ні).
         try:
             import urllib.parse
-            q = (REST + "?select=id&status=eq.draft&title=eq." + urllib.parse.quote(draft.title)
+            q = (REST + "?select=id&title=eq." + urllib.parse.quote(draft.title)
                  + ("&event_date=eq." + urllib.parse.quote(draft.date) if draft.date
                     else "&type=eq." + urllib.parse.quote(draft.kind)))
             chk = urllib.request.Request(q, headers={"apikey": KEY, "Authorization": "Bearer " + KEY})

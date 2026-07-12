@@ -776,7 +776,8 @@ function renderApp() {
   `;
   document.getElementById('back-to-grid').addEventListener('click', () => {
     activeTab = null;
-    artCategory = null;   // повторний вхід у «Статті» — з екрану вибору категорії
+    artCategory = null;    // повторний вхід у «Статті» — з екрану вибору категорії
+    articleDraft = null;   // вихід із форми (P8): не застрягати у напівзаповненій чернетці
     renderApp();
   });
   renderTabContent();
@@ -795,8 +796,11 @@ function renderHomeGrid() {
   }).join('');
   mainEl.innerHTML = `<div class="tile-grid">${tiles}</div>`;
   document.querySelectorAll('.tile').forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       activeTab = btn.dataset.tab;
+      // P2: перезавантажити свіжі дані при вході у вкладку — інакше після синку
+      // (ready→published на сервері) адмінка показувала б старий локальний список.
+      if (activeTab === 'articles') { try { articles = await fetchArticles(); } catch (_) {} }
       renderApp();
     });
   });
@@ -1029,6 +1033,7 @@ function renderArticles(el) {
   el.innerHTML = `
     <div class="art-head">
       <button class="btn" id="art-back-cat">← Категорії</button>
+      <button class="btn" id="art-refresh">🔄 Оновити</button>
       <button class="btn btn--approve" id="art-new">+ Створити статтю</button>
     </div>
     <div style="font-weight:700;font-size:15px;margin:2px 0 8px">${catInfo.emoji} ${catInfo.label}</div>
@@ -1038,7 +1043,11 @@ function renderArticles(el) {
   `;
   const listEl = el.querySelector('#art-list');
   // Потік 8: id оригіналів, які ВЖЕ скопійовані в Найближчі події (щоб не плодити дублі).
-  const copiedFrom = new Set(articles.filter(a => a.source_article_id != null).map(a => Number(a.source_article_id)));
+  // P6: рахуємо лише копії у статусі ready/published — чернетка-копія ще не в ефірі,
+  // тому не має світити «вже скопійовано» (інакше здається зроблено, а на сайті нема).
+  const copiedFrom = new Set(articles
+    .filter(a => a.source_article_id != null && (a.status === 'ready' || a.status === 'published'))
+    .map(a => Number(a.source_article_id)));
 
   const paint = () => {
     let list = articles.filter(a => typeOfArt(a) === artCategory);
@@ -1052,6 +1061,7 @@ function renderArticles(el) {
         <article class="card">
           <div class="card-meta">
             <span class="badge" style="background:${st.color};color:#fff">${st.label}</span>
+            ${a.status === 'ready' ? '<span class="badge" style="background:#e0922a;color:#fff">⏳ у черзі на сайт (~15 хв)</span>' : ''}
             ${isAI ? '<span class="badge" style="background:#4b3bd6;color:#fff">🤖 AI</span>' : ''}
             ${a.type && a.type !== 'news' && ART_TYPE_UK[a.type] ? `<span class="badge badge--type">${ART_TYPE_UK[a.type]}</span>` : ''}
             ${a.status === 'scheduled' && a.publish_at ? `<span class="badge" style="background:#7a5cc0;color:#fff">📅 ${escapeHtml(formatDate(a.publish_at))}</span>` : ''}
@@ -1068,7 +1078,7 @@ function renderArticles(el) {
             <button class="btn" data-art-edit="${a.id}">✏️ Редагувати</button>
             ${a.status === 'draft' && canPub ? `<button class="btn btn--approve" data-art-pub="${a.id}">🚀 Опублікувати</button>` : ''}
             ${a.status === 'ready' ? `<button class="btn" data-art-unpub="${a.id}">↩︎ У чернетки</button>` : ''}
-            ${((a.status === 'ready' || a.status === 'published') && (typeOfArt(a) === 'news' || typeOfArt(a) === 'holiday'))
+            ${((a.status === 'ready' || a.status === 'published') && typeOfArt(a) === 'news')
               ? (copiedFrom.has(Number(a.id))
                   ? '<span class="badge" style="background:#2e6b40;color:#fff">📌 у Найближчих подіях</span>'
                   : `<button class="btn" data-art-copyev="${a.id}">📌 Скопіювати в Найближчі події</button>`)
@@ -1127,6 +1137,9 @@ function renderArticles(el) {
   };
 
   document.getElementById('art-back-cat').addEventListener('click', () => { artCategory = null; renderApp(); });
+  document.getElementById('art-refresh')?.addEventListener('click', async () => {
+    articles = await fetchArticles(); renderApp();   // P2: підтягнути свіжий стан із сервера
+  });
   document.getElementById('art-new')?.addEventListener('click', () => {
     articleDraft = { ...DRAFT_ART(), type: artCategory };   // нова стаття вже з типом обраної категорії
     renderApp();
@@ -1247,8 +1260,10 @@ function renderArticleForm(el) {
         a.status = 'scheduled';
         a.publish_at = new Date(dtVal).toISOString();   // локальний час → UTC
       } else if (!publish) {
-        a.status = 'draft';
-        a.publish_at = null;   // зняти розклад при збереженні чернеткою
+        // P5: якщо стаття ВЖЕ у черзі публікації (ready) — звичайне збереження її
+        // ЛИШАЄ ready (не демотуємо в чернетку), інакше правка тихо знімала з черги.
+        a.status = (d.status === 'ready') ? 'ready' : 'draft';
+        if (a.status === 'draft') a.publish_at = null;   // зняти розклад при збереженні чернеткою
       }
     }
     const savedId = await saveArticle(a);
@@ -1261,6 +1276,7 @@ function renderArticleForm(el) {
       if (!ok) alert('Збережено як чернетку, але ОПУБЛІКУВАТИ не вдалося (нема дозволу на публікацію?).');
     }
     articles = await fetchArticles();
+    if (a.type) artCategory = a.type;   // P10: після збереження показати категорію збереженого типу (не «зникло» при зміні типу)
     articleDraft = null; renderApp();
   };
   document.getElementById('af-save').addEventListener('click', () => doSave(false));

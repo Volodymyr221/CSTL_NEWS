@@ -4,7 +4,7 @@ name: CMS Sync — статті кабінету у стрічку
 # і викладає у data/articles.json → деплой. Архітектура «Supabase редагує — Git публікує».
 on:
   schedule:
-    - cron: '5,20,35,50 * * * *'    # кожні ~15 хв
+    - cron: '*/5 * * * *'    # кожні 5 хв (мінімум GitHub) — публікація швидша (P1/C, 12.07)
   workflow_dispatch:
 
 permissions:
@@ -13,7 +13,11 @@ permissions:
 
 concurrency:
   group: "cms-sync"
-  cancel-in-progress: true
+  # false (P3, 12.07): раніше true СКАСОВУВАВ синк посеред роботи — якщо він уже
+  # позначив рядок published у Supabase, але не встиг закомітити/запушити стрічку,
+  # виникав перманентний розсинхрон «в адмінці published, на сайті нема». Тепер
+  # запуски чекають один одного (синк ідемпотентний і швидкий — черга безпечна).
+  cancel-in-progress: false
 
 jobs:
   sync:
