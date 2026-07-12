@@ -1,18 +1,5 @@
 import { getCoords, getCityName } from './utils.js';
-
-// WMO weather codes → emoji
-function codeToIcon(code) {
-  if (code === 0)               return '☀️';
-  if (code <= 2)                return '🌤️';
-  if (code === 3)               return '☁️';
-  if (code <= 48)               return '🌫️';
-  if (code <= 55)               return '🌦️';
-  if (code <= 65)               return '🌧️';
-  if (code <= 77)               return '❄️';
-  if (code <= 82)               return '🌧️';
-  if (code >= 95)               return '⛈️';
-  return '🌡️';
-}
+import { weatherCodeInfo } from './weather-icons.js';
 
 export async function initWeather() {
   // 08.07: погоду з ШАПКИ прибрано (рішення Роми) — елементів #weather-* більше
@@ -39,7 +26,7 @@ export async function initWeather() {
     clearTimeout(timeoutId);
     const data = await weatherRes.json();
     const temp = Math.round(data.current.temperature_2m);
-    iconEl.textContent = codeToIcon(data.current.weather_code);
+    iconEl.innerHTML = weatherCodeInfo(data.current.weather_code).icon;
     document.getElementById('weather-city').textContent = cityName;
     tempEl.textContent = `${temp}°`;
   } catch {

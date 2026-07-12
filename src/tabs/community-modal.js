@@ -13,10 +13,12 @@ import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlem
 import { openModal } from '../core/modal.js';
 // Таксономія категорій (id/label/колір/векторна іконка) — спільний модуль, єдине джерело.
 import { BOARD_CATEGORIES, catShort } from '../core/board-categories.js';
+import { ICONS } from '../core/icons.js';
 
-// Вектор-олівець у заголовку модалки (мірор EDIT_ICON_SVG з board.js — не імпортуємо
-// звідти, бо board.js імпортує цей файл → був би циклічний імпорт).
-const PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+// Вектор-олівець у заголовку модалки — спільна іконка з core/icons.js (дедуп,
+// раніше локальна копія EDIT_ICON_SVG з board.js; icons.js не створює циклу,
+// на відміну від прямого імпорту з board.js).
+const PENCIL_ICON_SVG = ICONS.pencil;
 
 // Д-6: векторний пін локації в прев'ю — мірор board.js PIN_ICON_SVG/renderLoc (не імпортуємо
 // з board.js через циклічний імпорт). Щоб прев'ю показувало локацію так само, як реальна картка.

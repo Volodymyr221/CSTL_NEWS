@@ -11,6 +11,24 @@
   box-shadow: var(--card-shadow);
   overflow: hidden;
 }
+/* Системний утиль (12.07, core/utils.js scrollEdgeCatchersHtml()): невидимі
+   смужки-«ловці дотику» на краях блоку-острівця з власним внутрішнім
+   overflow-y:auto (напр. табло новин) серед набагато ширшої сторінки. Самі
+   без overflow → не скролять; дотик там падає крізь до НЕ-scroll батька і
+   скролить СТОРІНКУ, навіть якщо технічно всередині видимого контенту.
+   Вигляд контенту НЕ змінюється (смужки прозорі). Потребує position:relative
+   на батьківському контейнері. Ширина типово 18px — override через --edge-w
+   на місці використання; висота типово на всю висоту батька — override
+   через bottom на місці використання (див. .cm-block--news нижче). */
+.scroll-edge-catch {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: var(--edge-w, 18px);
+  z-index: 2;
+}
+.scroll-edge-catch--l { left: 0; }
+.scroll-edge-catch--r { right: 0; }
 .cm-block-header {
   display: flex;
   align-items: center;
@@ -99,6 +117,7 @@
   padding: 2px 0 7px;
 }
 .cm-weather-icon { font-size: 38px; line-height: 1; }
+.cm-weather-icon .wx-ic, .cm-fc-icon .wx-ic, .wx-ro-ic .wx-ic { width: 1em; height: 1em; vertical-align: -0.15em; }
 .cm-weather-temp {
   font-family: Georgia, 'Times New Roman', serif;
   font-size: 38px; font-weight: 700; line-height: 0.9;
@@ -3551,6 +3570,7 @@
     radial-gradient(75% 55% at 50% 50%, rgba(255, 170, 185, 0.16) 0%, rgba(255, 140, 160, 0.04) 48%, rgba(255, 140, 160, 0) 72%);
   margin: 0 4px;
   padding: 2px 10px;   /* +6px боків (перенесено з .cm-news-feed): це НЕ-overflow батько → бокова винна зона тепер скролить СТОРІНКУ, а не стрічку (п.10) */
+  touch-action: pan-y;   /* 12.07: явна підказка Safari — ця зона віддає вертикальний свайп СТОРІНЦІ, не бореться зі стрічкою всередині (п.10, посилення) */
 }
 /* Тонкі смужки-розпливи ТІЛЬКИ на краях зони екрана: розчиняють самий край, звідки
    картка «зʼявляється» (верх) і «зникає» (низ) при скролі. Лежать НАД картками,
@@ -3624,6 +3644,9 @@
   border-radius: 14px;   /* заокруглений clip overflow → картки клипаються по дузі на верх/низ, не квадратом (п.11) */
 }
 .cm-news-feed::-webkit-scrollbar { display: none; }
+/* Табло — єдиний користувач .scroll-edge-catch (утиль, база стилю на початку
+   файлу) поки що (12.07): 0 8px = вирівняти з padding-bottom стрічки вище. */
+.cm-block--news .scroll-edge-catch { bottom: 8px; }
 /* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */
 .cm-news-feed > * {
   flex-shrink: 0;
