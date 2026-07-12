@@ -3308,11 +3308,12 @@
           actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
         }
         const canEdit = p.status === "published" || p.status === "pending";
+        const mi = (act, icon, label, extra = "") => `<button class="pm-ad-mi${extra}" type="button" data-act="${act}" data-id="${p.id}"><span class="pm-ad-mi-ic">${icon}</span>${label}</button>`;
         const menuItems = [
-          canEdit ? `<button class="pm-ad-mi" type="button" data-act="edit" data-id="${p.id}">\u270F\uFE0F \u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>` : "",
-          isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">\u2713 \u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438</button>` : "",
-          p.status === "closed" ? `<button class="pm-ad-mi" type="button" data-act="restore" data-id="${p.id}">\u21A9\uFE0F \u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456</button>` : "",
-          `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">\u{1F5D1}\uFE0F \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`
+          canEdit ? mi("edit", ICONS.pencil, "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438") : "",
+          isPublished ? mi("close", ICONS.check, "\u0417\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438") : "",
+          p.status === "closed" ? mi("restore", ICON_BACK, "\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456") : "",
+          mi("delete", ICONS.trash, "\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438", " pm-ad-mi--danger")
         ].join("");
         const sw = swipeActions(p);
         return `
@@ -3434,9 +3435,16 @@
             openRow = null;
         }
       }, { passive: false });
+      const syncMenuRow = (menu) => {
+        const row = menu.closest(".pm-ad-row");
+        if (row)
+          row.classList.toggle("pm-ad-row--menu-open", !menu.hidden);
+      };
       const closeMenus = (except) => api.screen.querySelectorAll(".pm-ad-menu").forEach((m) => {
-        if (m !== except)
+        if (m !== except) {
           m.hidden = true;
+          syncMenuRow(m);
+        }
       });
       listEl.addEventListener("click", async (e) => {
         if (suppressClick)
@@ -3452,8 +3460,10 @@
         if (menuBtn) {
           const menu = api.screen.querySelector(`#pm-ad-menu-${menuBtn.dataset.menu}`);
           closeMenus(menu);
-          if (menu)
+          if (menu) {
             menu.hidden = !menu.hidden;
+            syncMenuRow(menu);
+          }
           return;
         }
         const bumpBtn = e.target.closest("[data-bump]");
