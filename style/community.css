@@ -2093,7 +2093,7 @@
   height: 42px;
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-call svg,
-.cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn svg { width: 21px; height: 21px; }
+.cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn svg { width: 24px; height: 24px; }
 /* Дата публікації в модалці — трохи більша за базові 9px (Вова 11.07). */
 .cm-board-modal-note .cm-board-modal-foot .cm-board-time { font-size: 11px; }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
