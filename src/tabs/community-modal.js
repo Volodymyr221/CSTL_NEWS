@@ -108,8 +108,10 @@ export function openBoardModal() {
   };
 
   const bodyHtml = `
-    <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>Нове оголошення</h3>
-    <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
+    <div class="cm-board-modal-head">
+      <h3 class="cm-board-modal-title"><span class="cm-board-title-ic">${PENCIL_ICON_SVG}</span>Нове оголошення</h3>
+      <p class="cm-board-modal-sub">Заповніть поля нижче.</p>
+    </div>
 
     <form id="cm-board-modal-form" novalidate>
       <!-- Динамічна частина -->
