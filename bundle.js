@@ -1510,7 +1510,7 @@
   }
 
   // src/core/icons.js
-  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
   var ICONS = {
     // Люди / учасники (дедуп: 2 копії зведено сюди — board.js, messages-ui.js.
     // admin.html тримає ВЛАСНУ ICO_USERS — то standalone-файл без бандлера, за
@@ -1561,7 +1561,44 @@
     // Повідомлення / чат-бульбашка (message)
     message: `<svg ${A2}><path d="M8 9h8"/><path d="M8 13h6"/><path d="M18 4a3 3 0 0 1 3 3v8a3 3 0 0 1 -3 3h-5l-5 3v-3h-2a3 3 0 0 1 -3 -3v-8a3 3 0 0 1 3 -3h12z"/></svg>`,
     // Стрілка вгору / підняти (arrow-up)
-    arrowUp: `<svg ${A2}><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg>`
+    arrowUp: `<svg ${A2}><path d="M12 5l0 14"/><path d="M18 11l-6 -6"/><path d="M6 11l6 -6"/></svg>`,
+    // ── Потік 7 (12.07, варіант 5) — реальні Tabler-шляхи, зібрані агентом з github.com/tabler/tabler-icons ──
+    // Одна людина / профіль (Tabler user)
+    user: `<svg ${A2}><path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"/><path d="M6 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/></svg>`,
+    // Зірка (Tabler star)
+    star: `<svg ${A2}><path d="M12 17.75l-6.172 3.245l1.179 -6.873l-5 -4.867l6.9 -1l3.086 -6.253l3.086 6.253l6.9 1l-5 4.867l1.179 6.873l-6.158 -3.245"/></svg>`,
+    // Автобус (Tabler bus)
+    bus: `<svg ${A2}><path d="M4 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M16 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M4 17h-2v-11a1 1 0 0 1 1 -1h14a5 7 0 0 1 5 7v5h-2m-4 0h-8"/><path d="M16 5l1.5 7l4.5 0"/><path d="M2 10l15 0"/><path d="M7 5l0 5"/><path d="M12 5l0 5"/></svg>`,
+    // Мегафон / оголошення (Tabler speakerphone)
+    megaphone: `<svg ${A2}><path d="M18 8a3 3 0 0 1 0 6"/><path d="M10 8v11a1 1 0 0 1 -1 1h-1a1 1 0 0 1 -1 -1v-5"/><path d="M12 8l4.524 -3.77a.9 .9 0 0 1 1.476 .692v12.156a.9 .9 0 0 1 -1.476 .692l-4.524 -3.77h-8a1 1 0 0 1 -1 -1v-4a1 1 0 0 1 1 -1h8"/></svg>`,
+    // Лампочка / світло (Tabler bulb)
+    bulb: `<svg ${A2}><path d="M3 12h1m8 -9v1m8 8h1m-15.4 -6.4l.7 .7m12.1 -.7l-.7 .7"/><path d="M9 16a5 5 0 1 1 6 0a3.5 3.5 0 0 0 -1 3a2 2 0 0 1 -4 0a3.5 3.5 0 0 0 -1 -3"/><path d="M9.7 17l4.6 0"/></svg>`,
+    // Глобус / світ (Tabler world)
+    globe: `<svg ${A2}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M3.6 9h16.8"/><path d="M3.6 15h16.8"/><path d="M11.5 3a17 17 0 0 0 0 18"/><path d="M12.5 3a17 17 0 0 1 0 18"/></svg>`,
+    // Поділитись (Tabler share)
+    share: `<svg ${A2}><path d="M3 12a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 6a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M15 18a3 3 0 1 0 6 0a3 3 0 1 0 -6 0"/><path d="M8.7 10.7l6.6 -3.4"/><path d="M8.7 13.3l6.6 3.4"/></svg>`,
+    // Дзвіночок / сповіщення (Tabler bell)
+    bell: `<svg ${A2}><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>`,
+    // Закладка (Tabler bookmark)
+    bookmark: `<svg ${A2}><path d="M18 7v14l-6 -4l-6 4v-14a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4"/></svg>`,
+    // Конверт / пошта (Tabler mail)
+    mail: `<svg ${A2}><path d="M3 7a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v10a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-10"/><path d="M3 7l9 6l9 -6"/></svg>`,
+    // Газета / новини (Tabler news)
+    newspaper: `<svg ${A2}><path d="M16 6h3a1 1 0 0 1 1 1v11a2 2 0 0 1 -4 0v-13a1 1 0 0 0 -1 -1h-10a1 1 0 0 0 -1 1v12a3 3 0 0 0 3 3h11"/><path d="M8 8l4 0"/><path d="M8 12l4 0"/><path d="M8 16l4 0"/></svg>`,
+    // Візок / купівля (Tabler shopping-cart)
+    cart: `<svg ${A2}><path d="M4 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M15 19a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M17 17h-11v-14h-2"/><path d="M6 5l14 1l-1 7h-13"/></svg>`,
+    // Дім (Tabler home)
+    home: `<svg ${A2}><path d="M5 12l-2 0l9 -9l9 9l-2 0"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-7"/><path d="M9 21v-6a2 2 0 0 1 2 -2h2a2 2 0 0 1 2 2v6"/></svg>`,
+    // Громада / поселення (Tabler building-community)
+    community: `<svg ${A2}><path d="M8 9l5 5v7h-5v-4m0 4h-5v-7l5 -5m1 1v-6a1 1 0 0 1 1 -1h10a1 1 0 0 1 1 1v17h-8"/><path d="M13 7l0 .01"/><path d="M17 7l0 .01"/><path d="M17 11l0 .01"/><path d="M17 15l0 .01"/></svg>`,
+    // Цінник / тег (Tabler tag)
+    tag: `<svg ${A2}><path d="M6.5 7.5a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/><path d="M3 6v5.172a2 2 0 0 0 .586 1.414l7.71 7.71a2.41 2.41 0 0 0 3.408 0l5.592 -5.592a2.41 2.41 0 0 0 0 -3.408l-7.71 -7.71a2 2 0 0 0 -1.414 -.586h-5.172a3 3 0 0 0 -3 3"/></svg>`,
+    // Посилання (Tabler link)
+    link: `<svg ${A2}><path d="M9 15l6 -6"/><path d="M11 6l.463 -.536a5 5 0 0 1 7.071 7.072l-.534 .464"/><path d="M13 18l-.397 .534a5.068 5.068 0 0 1 -7.127 0a4.972 4.972 0 0 1 0 -7.071l.524 -.463"/></svg>`,
+    // Скріпка / вкладення (Tabler paperclip)
+    paperclip: `<svg ${A2}><path d="M15 7l-6.5 6.5a1.5 1.5 0 0 0 3 3l6.5 -6.5a3 3 0 0 0 -6 -6l-6.5 6.5a4.5 4.5 0 0 0 9 9l6.5 -6.5"/></svg>`,
+    // Знак питання / допомога (Tabler help)
+    help: `<svg ${A2}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 17l0 .01"/><path d="M12 13.5a1.5 1.5 0 0 1 1 -1.5a2.6 2.6 0 1 0 -3 -4"/></svg>`
   };
 
   // src/tabs/community-modal.js
@@ -9703,10 +9740,10 @@ END:VEVENT`
   var _view = "categories";
   var _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
   var CATS = [
-    { key: "articles", icon: "\u{1F4F0}", label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
-    { key: "buses", icon: "\u{1F68C}", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
-    { key: "chats", icon: "\u{1F4AC}", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
-    { key: "boards", icon: "\u{1F4CC}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
+    { key: "articles", icon: ICONS.newspaper, label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
+    { key: "buses", icon: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
+    { key: "chats", icon: ICONS.message, label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
+    { key: "boards", icon: ICONS.pin, label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
   ];
   function closeHub() {
     if (!_sheet)
@@ -9781,13 +9818,13 @@ END:VEVENT`
       <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
         <span class="shub-cat-ic">${c.icon}</span>
         <span class="shub-cat-label">${c.label}</span>
-        ${locked ? '<span class="shub-cat-lock">\u{1F512}</span>' : `<span class="shub-count">${count}</span>`}
+        ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
         <span class="shub-cat-chev">\u203A</span>
       </button>`;
     }).filter(Boolean).join("");
     if (!rows) {
       return `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
-      <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
+      <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C ${ICONS.bookmark} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
     }
     return `<div class="shub-cats">${rows}</div>`;
   }
@@ -9834,7 +9871,7 @@ END:VEVENT`
     _sheet.className = "shub-sheet";
     _sheet.innerHTML = `
     <div class="shub-handle"></div>
-    <div class="shub-title">\u{1F516} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
+    <div class="shub-title">${ICONS.bookmark} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
     <div class="shub-body" id="shub-body"><div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>`;
     document.body.appendChild(_backdrop);
     document.body.appendChild(_sheet);
@@ -9953,10 +9990,10 @@ END:VEVENT`
     wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
   }
   var NOTIF_KEYS = [
-    { k: "buses", ic: "\u{1F68C}", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
-    { k: "power", ic: "\u{1F4A1}", label: "\u0421\u0432\u0456\u0442\u043B\u043E", def: true },
-    { k: "news", ic: "\u{1F4F0}", label: "\u041D\u043E\u0432\u0438\u043D\u0438", def: false },
-    { k: "board", ic: "\u{1F4CC}", label: "\u0414\u043E\u0448\u043A\u0430", def: true }
+    { k: "buses", ic: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
+    { k: "power", ic: ICONS.bulb, label: "\u0421\u0432\u0456\u0442\u043B\u043E", def: true },
+    { k: "news", ic: ICONS.newspaper, label: "\u041D\u043E\u0432\u0438\u043D\u0438", def: false },
+    { k: "board", ic: ICONS.pin, label: "\u0414\u043E\u0448\u043A\u0430", def: true }
   ];
   function loadNotifPrefs(uid) {
     try {
@@ -10006,7 +10043,7 @@ END:VEVENT`
     const place = val.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
     const prefs = loadNotifPrefs(u.id);
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const trustHtml = p.trusted ? `<div class="acc-cab-trust acc-cab-trust--on">\u2705 \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440 \u2014 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443</div>` : `<div class="acc-cab-trust">\u2B50 ${p.approved_count || 0}/5 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u044C \u0434\u043E \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457</div>`;
+    const trustHtml = p.trusted ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440 \u2014 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443</div>` : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u044C \u0434\u043E \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457</div>`;
     const cab = document.createElement("div");
     cab.id = "acc-cab";
     cab.className = "acc-cab";
@@ -10045,9 +10082,9 @@ END:VEVENT`
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>\u041C\u043E\u0454</h3>
-        <button class="acc-cab-row" data-go="myads" type="button"><span>\u{1F4E2}</span> \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F <i>\u203A</i></button>
-        <button class="acc-cab-row" data-go="saved" type="button"><span>\u{1F516}</span> \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 <i>\u203A</i></button>
-        <button class="acc-cab-row" data-go="msgs" type="button"><span>\u{1F4AC}</span> \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F <i>\u203A</i></button>
+        <button class="acc-cab-row" data-go="myads" type="button"><span>${ICONS.megaphone}</span> \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F <i>\u203A</i></button>
+        <button class="acc-cab-row" data-go="saved" type="button"><span>${ICONS.bookmark}</span> \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 <i>\u203A</i></button>
+        <button class="acc-cab-row" data-go="msgs" type="button"><span>${ICONS.message}</span> \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F <i>\u203A</i></button>
       </div>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
@@ -10255,24 +10292,24 @@ END:VEVENT`
 
   // src/core/sidebar.js
   var NAV = [
-    { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: "\u{1F6E0}\uFE0F", kind: "cabinet", team: true },
-    { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: "\u{1F464}", kind: "account" },
+    { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: ICONS.settings, kind: "cabinet", team: true },
+    { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: ICONS.user, kind: "account" },
     { divider: true },
-    { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: "\u{1F3D8}\uFE0F", kind: "tab", tab: "community" },
-    { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: "\u{1F5DE}\uFE0F", kind: "tab", tab: "community", scrollTo: "#cm-news-board" },
-    { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: "\u{1F4F0}", kind: "tab", tab: "shotam" },
-    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: "\u{1F4CC}", kind: "tab", tab: "board" },
-    { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: "\u{1F4AC}", kind: "tab", tab: "discussions" },
-    { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: "\u{1F68C}", kind: "tab", tab: "buses" },
-    { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: "\u{1F4DE}", kind: "tab", tab: "community", scrollTo: "#cm-contacts" },
+    { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: ICONS.community, kind: "tab", tab: "community" },
+    { id: "news", label: "\u041D\u043E\u0432\u0438\u043D\u0438", icon: ICONS.newspaper, kind: "tab", tab: "community", scrollTo: "#cm-news-board" },
+    { id: "shotam", label: "\u0428\u043E \u0432 \u0441\u0435\u043B\u0456", icon: ICONS.calendar, kind: "tab", tab: "shotam" },
+    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", icon: ICONS.pin, kind: "tab", tab: "board" },
+    { id: "discussions", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", icon: ICONS.message, kind: "tab", tab: "discussions" },
+    { id: "buses", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", icon: ICONS.bus, kind: "tab", tab: "buses" },
+    { id: "contacts", label: "\u041A\u043E\u0440\u0438\u0441\u043D\u0456 \u043A\u043E\u043D\u0442\u0430\u043A\u0442\u0438", icon: ICONS.phone, kind: "tab", tab: "community", scrollTo: "#cm-contacts" },
     { divider: true },
-    { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: "\u2754", kind: "info" },
-    { id: "policy", label: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C", icon: "\u{1F512}", kind: "info" }
+    { id: "support", label: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430", icon: ICONS.help, kind: "info" },
+    { id: "policy", label: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C", icon: ICONS.lock, kind: "info" }
   ];
   var INFO = {
     support: {
       title: "\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430",
-      body: '\u041F\u0438\u0442\u0430\u043D\u043D\u044F, \u0456\u0434\u0435\u0457 \u0447\u0438 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430? \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u0430\u043C \u043D\u0430 \u043F\u043E\u0448\u0442\u0443 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u043C\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E.<br><br><a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430%20CSTL%20LIFE">\u2709\uFE0F \u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0443</a><br><br><span class="info-mail-plain">olykacastle@gmail.com</span>'
+      body: '\u041F\u0438\u0442\u0430\u043D\u043D\u044F, \u0456\u0434\u0435\u0457 \u0447\u0438 \u043F\u0440\u043E\u0431\u043B\u0435\u043C\u0430? \u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043D\u0430\u043C \u043D\u0430 \u043F\u043E\u0448\u0442\u0443 \u2014 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0430\u0454\u043C\u043E \u043E\u0441\u043E\u0431\u0438\u0441\u0442\u043E.<br><br><a class="info-mail-btn" href="mailto:olykacastle@gmail.com?subject=\u041F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0430%20CSTL%20LIFE">' + ICONS.mail + ' \u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u0432 \u043F\u0456\u0434\u0442\u0440\u0438\u043C\u043A\u0443</a><br><br><span class="info-mail-plain">olykacastle@gmail.com</span>'
     },
     policy: {
       title: "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430 \u0456 \u043F\u0440\u0438\u0432\u0430\u0442\u043D\u0456\u0441\u0442\u044C",

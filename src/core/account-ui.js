@@ -10,6 +10,7 @@ import {
   signInWithGoogle, signOut, getProfile, saveProfile,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
+import { ICONS } from './icons.js';
 import { openSavedHub } from './saved-hub.js';
 import { SETTLEMENTS, OTHER_SETTLEMENT } from './settlements.js';
 import { escapeHtml, showToast } from './utils.js';
@@ -83,10 +84,10 @@ function openProfile() {
 }
 
 const NOTIF_KEYS = [
-  { k: 'buses', ic: '🚌', label: 'Автобуси',  def: true },
-  { k: 'power', ic: '💡', label: 'Світло',    def: true },
-  { k: 'news',  ic: '📰', label: 'Новини',    def: false },
-  { k: 'board', ic: '📌', label: 'Дошка',     def: true },
+  { k: 'buses', ic: ICONS.bus,       label: 'Автобуси',  def: true },
+  { k: 'power', ic: ICONS.bulb,      label: 'Світло',    def: true },
+  { k: 'news',  ic: ICONS.newspaper, label: 'Новини',    def: false },
+  { k: 'board', ic: ICONS.pin,       label: 'Дошка',     def: true },
 ];
 function loadNotifPrefs(uid) {
   try {
@@ -130,8 +131,8 @@ async function openAccount() {
   const today = new Date().toISOString().slice(0, 10);
   // Репутація Дошки (Захід 2): 5 схвалених оголошень → автопублікація надалі.
   const trustHtml = p.trusted
-    ? `<div class="acc-cab-trust acc-cab-trust--on">✅ Довірений автор — оголошення публікуються одразу</div>`
-    : `<div class="acc-cab-trust">⭐ ${p.approved_count || 0}/5 схвалень до автопублікації</div>`;
+    ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} Довірений автор — оголошення публікуються одразу</div>`
+    : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 схвалень до автопублікації</div>`;
 
   const cab = document.createElement('div');
   cab.id = 'acc-cab';
@@ -171,9 +172,9 @@ async function openAccount() {
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>Моє</h3>
-        <button class="acc-cab-row" data-go="myads" type="button"><span>📢</span> Мої оголошення <i>›</i></button>
-        <button class="acc-cab-row" data-go="saved" type="button"><span>🔖</span> Збережені <i>›</i></button>
-        <button class="acc-cab-row" data-go="msgs" type="button"><span>💬</span> Повідомлення <i>›</i></button>
+        <button class="acc-cab-row" data-go="myads" type="button"><span>${ICONS.megaphone}</span> Мої оголошення <i>›</i></button>
+        <button class="acc-cab-row" data-go="saved" type="button"><span>${ICONS.bookmark}</span> Збережені <i>›</i></button>
+        <button class="acc-cab-row" data-go="msgs" type="button"><span>${ICONS.message}</span> Повідомлення <i>›</i></button>
       </div>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
