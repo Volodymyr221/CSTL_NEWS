@@ -180,7 +180,7 @@ export function openBoardModal() {
       </div>
 
       <div class="bm-section">
-        <label class="bm-label">Фото <span class="bm-label-hint">(необов'язково, до 3)</span></label>
+        <label class="bm-label">Фото <span class="bm-label-hint">(необов'язково, до 5)</span></label>
         ${photoSlotsHtml()}
       </div>
 
@@ -228,7 +228,7 @@ export function openBoardModal() {
     bindPhotoSlots();
   }
 
-  function photoSlotsHtml(count = 3) {
+  function photoSlotsHtml(count = 5) {
     return `
       <div class="bm-photos" id="bm-photos">
         ${Array.from({length: count}, (_, i) => `

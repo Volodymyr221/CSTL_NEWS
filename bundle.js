@@ -1644,7 +1644,7 @@
       </div>
 
       <div class="bm-section">
-        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, \u0434\u043E 3)</span></label>
+        <label class="bm-label">\u0424\u043E\u0442\u043E <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E, \u0434\u043E 5)</span></label>
         ${photoSlotsHtml()}
       </div>
 
@@ -1685,7 +1685,7 @@
       });
       bindPhotoSlots();
     }
-    function photoSlotsHtml(count = 3) {
+    function photoSlotsHtml(count = 5) {
       return `
       <div class="bm-photos" id="bm-photos">
         ${Array.from({ length: count }, (_, i) => `
