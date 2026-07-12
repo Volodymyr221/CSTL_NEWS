@@ -538,13 +538,13 @@ export function openThreadsList() {
   requireAuth('переглянути повідомлення', async () => {
     const me = currentUserId();
     const api = buildScreen(`
-      <header class="pm-head pm-head--bar">
+      <header class="pm-head pm-head--list">
         <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
+        <div class="pm-head-titles"><div class="pm-head-name pm-head-name--ico"><span class="pm-head-ic">${ICONS.message}</span>Повідомлення</div></div>
       </header>
       <div class="pm-list pm-list--threads" id="pm-list">
-        <h1 class="pm-bigtitle">Повідомлення</h1>
         <div class="pm-search">
-          <span class="pm-search-ic" aria-hidden="true">🔍</span>
+          <span class="pm-search-ic" aria-hidden="true">${ICONS.search}</span>
           <input class="pm-search-input" id="pm-search" type="search"
                  placeholder="Пошук повідомлень" aria-label="Пошук повідомлень" autocomplete="off">
         </div>

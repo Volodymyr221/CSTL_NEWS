@@ -203,7 +203,9 @@
 .pm-search-ic {
   position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
   font-size: 15px; opacity: 0.6; pointer-events: none;
+  display: inline-flex; color: var(--ink-mute, #9C9080);
 }
+.pm-search-ic svg { width: 17px; height: 17px; display: block; }
 .pm-search-input {
   width: 100%; height: 48px; box-sizing: border-box;
   padding: 0 16px 0 40px;
@@ -226,9 +228,11 @@
   background: var(--card-cream, #FAF8EF); color: var(--ink-soft, #5F5448);
   font-size: 13.5px; font-weight: 600;
   padding: 8px 16px; border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(60, 40, 20, 0.10);
 }
 .pm-chip--active {
   background: var(--red, #722F37); color: #fff; border-color: var(--red, #722F37);
+  box-shadow: 0 2px 7px rgba(114, 47, 55, 0.30);
 }
 
 /* Картки-діалоги */
@@ -239,6 +243,9 @@
   margin: 0 16px 10px;
   border-radius: 18px;
   overflow: hidden;
+  /* Тінь на рядку (не на .pm-thread) — інакше overflow:hidden рядка її обрізав би.
+     Формат як у картках «Мої оголошення» (.pm-ad). */
+  box-shadow: 0 3px 10px rgba(60, 40, 20, 0.10), 0 1px 2px rgba(60, 40, 20, 0.06);
 }
 .pm-thread-actions {
   position: absolute; top: 0; right: 0; bottom: 0;
