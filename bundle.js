@@ -1510,7 +1510,7 @@
   }
 
   // src/core/icons.js
-  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
   var ICONS = {
     // Люди / учасники (дедуп: 2 копії зведено сюди — board.js, messages-ui.js.
     // admin.html тримає ВЛАСНУ ICO_USERS — то standalone-файл без бандлера, за
