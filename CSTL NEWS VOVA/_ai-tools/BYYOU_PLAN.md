@@ -20,9 +20,9 @@
 | # | Крок | Файли | Стан |
 |---|------|-------|------|
 | 1 | `src/core/icons.js` (новий) — спільні іконки (users/phone/pin/search/check/alert-triangle/calendar/clock/lock/settings/trash/pencil/x/chevron-right/arrow-right/eye/rocket/photo/file-text/robot), Tabler SVG (реальні path, той самий патерн що `board-categories.js` — `const A`, 1em) | `src/core/icons.js` (новий) | 🟢 |
-| 2 | Погода: завантажити Meteocons `line`-варіант (MIT) для clear-day/cloudy/partly-cloudy-day/overcast/fog/drizzle/rain/snow/sleet/thunderstorms — вшити як SVG-константи (не живий CDN, статично як Tabler) | `src/core/weather.js` (нова секція) | 🟢 |
-| 3 | `weather.js`: `weatherIcon(code)` → повертає SVG замість emoji (єдине джерело правди) | `src/core/weather.js` | 🟢 |
-| 4 | `community-blocks.js`: прибрати ДРУГУ копію `weatherIcon` (розійшлась з weather.js — забула снігову зливу), імпортувати з weather.js | `src/tabs/community-blocks.js` | 🟢 |
+| 2 | Погода: завантажити Meteocons `line`-варіант (MIT) для clear-day/cloudy/partly-cloudy-day/overcast/fog/drizzle/rain/snow/sleet/thunderstorms — вшити як SVG-константи (не живий CDN, статично як Tabler) | `src/core/weather.js` (нова секція) | ✅ `b07b0575` |
+| 3 | ~~`weather.js`: `weatherIcon(code)` → повертає SVG замість emoji (єдине джерело правди)~~ — **виправлено після читання коду:** `codeToIcon()` у `weather.js` виявився МЕРТВИМ кодом (елементи `#weather-*` прибрані з `index.html` ще 08.07, guard завжди рано виходить). Реальне єдине джерело — новий `src/core/weather-icons.js` (не `weather.js`) | `src/core/weather-icons.js` (новий) | ✅ `b07b0575` |
+| 4 | `community-blocks.js`: прибрати ДРУГУ копію `weatherCodeInfo` (це вона була живою, не weather.js — розійшлась із мертвою копією, мала снігову зливу яку та не мала), імпортувати з нового `weather-icons.js` | `src/tabs/community-blocks.js` | ✅ `b07b0575` |
 | 5 | Дедуп "users": `messages-ui.js` (`GR_SVG.users`) і `board.js` (`USERS_ICON_SVG`) → імпорт з `icons.js`. `admin.html` не чіпаю (без бандлера, свій мірор лишається) | `src/core/messages-ui.js`, `src/tabs/board.js` | 🟢 |
 | 6 | Дедуп "phone": `community-blocks.js` (`CONTACT_ICONS.default`) і `board.js` (`PHONE_ICON_SVG`) → імпорт з `icons.js` | `src/tabs/community-blocks.js`, `src/tabs/board.js` | 🟢 |
 | 7 | Дедуп "pencil": `community-modal.js` (`PENCIL_ICON_SVG`) і `board.js` (`EDIT_ICON_SVG`) → імпорт з `icons.js` | `src/tabs/community-modal.js`, `src/tabs/board.js` | 🟢 |

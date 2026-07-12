@@ -787,6 +787,12 @@
       }
     }, { passive: true });
   }
+  function scrollEdgeCatchersHtml() {
+    return `
+    <div class="scroll-edge-catch scroll-edge-catch--l" aria-hidden="true"></div>
+    <div class="scroll-edge-catch scroll-edge-catch--r" aria-hidden="true"></div>
+  `;
+  }
   async function sharePost({ title, text, url }) {
     const shareData = {
       title: title || "CSTL LIFE",
@@ -1496,8 +1502,53 @@
     return c ? c.short || c.label : id;
   }
 
+  // src/core/icons.js
+  var A2 = 'width="1em" height="1em" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="cat-ico"';
+  var ICONS = {
+    // Люди / учасники (дедуп: раніше 3 окремі копії — board.js, messages-ui.js, admin.html)
+    users: `<svg ${A2}><path d="M5 7a4 4 0 1 0 8 0a4 4 0 1 0 -8 0"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>`,
+    // Телефон / дзвінок (дедуп: раніше 2 байт-в-байт копії — board.js, community-blocks.js)
+    phone: `<svg ${A2}><path d="M5 4h4l2 5l-2.5 1.5a11 11 0 0 0 5 5l1.5 -2.5l5 2v4a2 2 0 0 1 -2 2a16 16 0 0 1 -15 -15a2 2 0 0 1 2 -2"/></svg>`,
+    // Локація / мітка на карті
+    pin: `<svg ${A2}><path d="M9 11a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/><path d="M17.657 16.657l-4.243 4.243a2 2 0 0 1 -2.827 0l-4.244 -4.243a8 8 0 1 1 11.314 0"/></svg>`,
+    // Пошук / лупа
+    search: `<svg ${A2}><path d="M3 10a7 7 0 1 0 14 0a7 7 0 1 0 -14 0"/><path d="M21 21l-6 -6"/></svg>`,
+    // Галочка / підтвердження
+    check: `<svg ${A2}><path d="M5 12l5 5l10 -10"/></svg>`,
+    // Попередження (трикутник — конвенційна форма для warning, не коло)
+    warning: `<svg ${A2}><path d="M12 9v4"/><path d="M10.363 3.591l-8.106 13.534a1.914 1.914 0 0 0 1.636 2.871h16.214a1.914 1.914 0 0 0 1.636 -2.87l-8.106 -13.536a1.914 1.914 0 0 0 -3.274 0"/><path d="M12 16h.01"/></svg>`,
+    // Календар / дата
+    calendar: `<svg ${A2}><path d="M4 7a2 2 0 0 1 2 -2h12a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12"/><path d="M16 3v4"/><path d="M8 3v4"/><path d="M4 11h16"/><path d="M11 15h1"/><path d="M12 15v3"/></svg>`,
+    // Годинник / час
+    clock: `<svg ${A2}><path d="M3 12a9 9 0 1 0 18 0a9 9 0 0 0 -18 0"/><path d="M12 7v5l3 3"/></svg>`,
+    // Замок / приватність
+    lock: `<svg ${A2}><path d="M5 13a2 2 0 0 1 2 -2h10a2 2 0 0 1 2 2v6a2 2 0 0 1 -2 2h-10a2 2 0 0 1 -2 -2v-6"/><path d="M11 16a1 1 0 1 0 2 0a1 1 0 0 0 -2 0"/><path d="M8 11v-4a4 4 0 1 1 8 0v4"/></svg>`,
+    // Налаштування / шестерня
+    settings: `<svg ${A2}><path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065"/><path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0"/></svg>`,
+    // Смітник / видалити
+    trash: `<svg ${A2}><path d="M4 7l16 0"/><path d="M10 11l0 6"/><path d="M14 11l0 6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7v-3a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>`,
+    // Олівець / редагувати (дедуп: раніше 2 копії — board.js EDIT_ICON_SVG, community-modal.js PENCIL_ICON_SVG)
+    pencil: `<svg ${A2}><path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>`,
+    // Хрестик / закрити
+    close: `<svg ${A2}><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>`,
+    // Шеврон вправо / розгорнути
+    chevronRight: `<svg ${A2}><path d="M9 6l6 6l-6 6"/></svg>`,
+    // Стрілка вправо / далі
+    arrowRight: `<svg ${A2}><path d="M5 12l14 0"/><path d="M13 18l6 -6"/><path d="M13 6l6 6"/></svg>`,
+    // Око / перегляд
+    eye: `<svg ${A2}><path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0"/><path d="M21 12c-2.4 4 -5.4 6 -9 6c-3.6 0 -6.6 -2 -9 -6c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6"/></svg>`,
+    // Ракета / опублікувати
+    rocket: `<svg ${A2}><path d="M4 13a8 8 0 0 1 7 7a6 6 0 0 0 3 -5a9 9 0 0 0 6 -8a3 3 0 0 0 -3 -3a9 9 0 0 0 -8 6a6 6 0 0 0 -5 3"/><path d="M7 14a6 6 0 0 0 -3 6a6 6 0 0 0 6 -3"/><path d="M14 9a1 1 0 1 0 2 0a1 1 0 1 0 -2 0"/></svg>`,
+    // Фото / зображення
+    photo: `<svg ${A2}><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>`,
+    // Документ / файл (стаття)
+    fileText: `<svg ${A2}><path d="M14 3v4a1 1 0 0 0 1 1h4"/><path d="M17 21h-10a2 2 0 0 1 -2 -2v-14a2 2 0 0 1 2 -2h7l5 5v11a2 2 0 0 1 -2 2"/><path d="M9 9l1 0"/><path d="M9 13l6 0"/><path d="M9 17l6 0"/></svg>`,
+    // Робот / AI-позначка
+    robot: `<svg ${A2}><path d="M6 6a2 2 0 0 1 2 -2h8a2 2 0 0 1 2 2v4a2 2 0 0 1 -2 2h-8a2 2 0 0 1 -2 -2l0 -4"/><path d="M12 2v2"/><path d="M9 12v9"/><path d="M15 12v9"/><path d="M5 16l4 -2"/><path d="M15 14l4 2"/><path d="M9 18h6"/><path d="M10 8v.01"/><path d="M14 8v.01"/></svg>`
+  };
+
   // src/tabs/community-modal.js
-  var PENCIL_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var PENCIL_ICON_SVG = ICONS.pencil;
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   function renderPreviewLoc(loc) {
     if (!loc)
@@ -3242,7 +3293,7 @@
         openRow.classList.remove("pm-ad-row--open");
         openRow = null;
       };
-      function render() {
+      function render2() {
         openRow = null;
         const list = posts.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
         if (!list.length) {
@@ -3256,14 +3307,14 @@
         }
         listEl.innerHTML = list.map(adCard).join("");
       }
-      render();
+      render2();
       api.screen.querySelectorAll(".pm-ad-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
           if (tab.dataset.filter === filter)
             return;
           filter = tab.dataset.filter;
           api.screen.querySelectorAll(".pm-ad-tab").forEach((t) => t.classList.toggle("active", t === tab));
-          render();
+          render2();
         });
       });
       api.screen.querySelector("[data-new-ad]")?.addEventListener("click", () => openBoardModal());
@@ -3357,7 +3408,7 @@
             if (p)
               p.bumped_at = r.bumped_at || (/* @__PURE__ */ new Date()).toISOString();
             showToast("\u{1F53C} \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u043E \u0432\u0433\u043E\u0440\u0443", 2500);
-            render();
+            render2();
           } else if (r.error === "cooldown") {
             const h = Math.floor((r.seconds_left || 0) / 3600);
             const m = Math.max(1, Math.ceil((r.seconds_left || 0) % 3600 / 60));
@@ -3365,7 +3416,7 @@
             const p = posts.find((x) => String(x.id) === bumpBtn.dataset.bump);
             if (p)
               p.bumped_at = new Date(Date.now() - (BUMP_COOLDOWN_MS - (r.seconds_left || 0) * 1e3)).toISOString();
-            render();
+            render2();
           } else {
             showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
             bumpBtn.disabled = false;
@@ -3388,7 +3439,7 @@
               if (p)
                 p.status = "closed";
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2014 \u0443 \u0410\u0440\u0445\u0456\u0432\u0456", 2800);
-              render();
+              render2();
               window.dispatchEvent(new Event("cstl-posts-changed"));
             } else
               showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
@@ -3399,7 +3450,7 @@
               if (p)
                 p.status = "published";
               showToast("\u21A9\uFE0F \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u043E \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456", 2800);
-              render();
+              render2();
               window.dispatchEvent(new Event("cstl-posts-changed"));
             } else if (r.error === "not_restorable") {
               showToast("\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u043B\u0438\u0448\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 3e3);
@@ -3412,7 +3463,7 @@
             if (r.ok) {
               posts = posts.filter((x) => x.id !== id);
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2500);
-              render();
+              render2();
             } else
               showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
           }
@@ -3624,14 +3675,14 @@
       return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
     return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
   }
-  var PHONE_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>';
+  var PHONE_ICON_SVG = ICONS.phone;
   var BOOKMARK_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var SHARE_ICON_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>';
   var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-  var USERS_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+  var USERS_ICON_SVG = ICONS.users;
   var DISC_TITLE_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><line x1="8" y1="9" x2="16" y2="9"/><line x1="8" y1="13" x2="13" y2="13"/></svg>';
   var HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
   var HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
@@ -3674,7 +3725,7 @@
     }
     return formatTime(postTime(p));
   }
-  var EDIT_ICON_SVG2 = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var EDIT_ICON_SVG2 = ICONS.pencil;
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var allPosts = [];
   var allAnnouncements = [];
@@ -8689,7 +8740,8 @@ ${ev.description || ""}`
     hospital: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 22h20"/><path d="M12 11v4M10 13h4"/></svg>',
     gromada: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg>',
     power: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
-    default: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>'
+    default: ICONS.phone
+    // дедуп — раніше байт-в-байт копія з board.js PHONE_ICON_SVG
   };
   async function renderContactsBlock() {
     const el = document.getElementById("cm-contacts-content");
@@ -8752,7 +8804,10 @@ ${ev.description || ""}`
   }
   function paintCmNews(el, arts) {
     const filtered = arts.filter(cmNewsMatch).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    el.innerHTML = `<div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>`;
+    el.innerHTML = `
+    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
+    ${scrollEdgeCatchersHtml()}
+  `;
     const controls = document.getElementById("cm-news-controls");
     if (controls) {
       controls.innerHTML = `
@@ -9497,6 +9552,14 @@ END:VEVENT`
   // src/core/saved-hub.js
   var _sheet = null;
   var _backdrop = null;
+  var _view = "categories";
+  var _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
+  var CATS = [
+    { key: "articles", icon: "\u{1F4F0}", label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
+    { key: "buses", icon: "\u{1F68C}", label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
+    { key: "chats", icon: "\u{1F4AC}", label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
+    { key: "boards", icon: "\u{1F4CC}", label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
+  ];
   function closeHub() {
     if (!_sheet)
       return;
@@ -9519,15 +9582,6 @@ END:VEVENT`
       <span class="shub-card-meta">${escapeHtml(when)}</span>
     </button>`;
   }
-  function sectionHtml(title, icon, items, type) {
-    if (!items.length)
-      return "";
-    return `
-    <div class="shub-section">
-      <div class="shub-section-title">${icon} ${title} <span class="shub-count">${items.length}</span></div>
-      ${items.map((p) => cardHtml2(p, type)).join("")}
-    </div>`;
-  }
   function busCardHtml(r) {
     return `
     <button class="shub-card" type="button" data-shub-type="bus"
@@ -9537,62 +9591,95 @@ END:VEVENT`
       <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? " \xB7 " + escapeHtml(r.timeStr) : ""}</span>
     </button>`;
   }
-  function busSectionHtml(items) {
-    if (!items.length)
-      return "";
-    return `
-    <div class="shub-section">
-      <div class="shub-section-title">\u{1F68C} \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u0418 <span class="shub-count">${items.length}</span></div>
-      ${items.map(busCardHtml).join("")}
-    </div>`;
-  }
-  async function loadInto(bodyEl) {
-    const sections = [];
+  async function loadData() {
+    const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
     try {
       const artIds = [...getSavedArticleIds()].reverse();
-      if (artIds.length) {
-        const arts = await getArticlesByIds(artIds);
-        sections.push(sectionHtml("\u0421\u0422\u0410\u0422\u0422\u0406", "\u{1F4F0}", arts, "article"));
-      }
+      if (artIds.length)
+        data.articles = await getArticlesByIds(artIds);
     } catch (e) {
       console.warn("[saved-hub] articles", e);
     }
     try {
-      const routes = getSavedRoutesForUI();
-      if (routes.length)
-        sections.push(busSectionHtml(routes));
+      data.buses = getSavedRoutesForUI();
     } catch (e) {
       console.warn("[saved-hub] buses", e);
     }
-    if (isLoggedIn()) {
+    if (data.loggedIn) {
       try {
         const ids = [...await fetchSavedPostIds(currentUserId())];
         if (ids.length) {
           const supa2 = getSupabase();
-          const { data, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
+          const { data: posts, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
           if (error)
             throw error;
-          const posts = data || [];
-          const chats = posts.filter((p) => p.type === "chat");
-          const boards = posts.filter((p) => p.type !== "chat");
-          sections.push(sectionHtml("\u041E\u0411\u0413\u041E\u0412\u041E\u0420\u0415\u041D\u041D\u042F", "\u{1F4AC}", chats, "chat"));
-          sections.push(sectionHtml("\u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F", "\u{1F4CC}", boards, "board"));
+          data.chats = (posts || []).filter((p) => p.type === "chat");
+          data.boards = (posts || []).filter((p) => p.type !== "chat");
         }
       } catch (e) {
         console.warn("[saved-hub] posts", e);
-        sections.push('<div class="shub-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F/\u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.</div>');
+        data.postsError = true;
       }
-    } else {
-      sections.push(`<div class="shub-hint-block">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.<br>
-      <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`);
     }
-    const html = sections.filter(Boolean).join("");
-    bodyEl.innerHTML = html || `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
-    <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
+    return data;
+  }
+  function categoriesScreenHtml() {
+    const rows = CATS.map((c) => {
+      const count = _data[c.key].length;
+      const locked = c.needsAuth && !_data.loggedIn;
+      if (!count && !locked)
+        return "";
+      return `
+      <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
+        <span class="shub-cat-ic">${c.icon}</span>
+        <span class="shub-cat-label">${c.label}</span>
+        ${locked ? '<span class="shub-cat-lock">\u{1F512}</span>' : `<span class="shub-count">${count}</span>`}
+        <span class="shub-cat-chev">\u203A</span>
+      </button>`;
+    }).filter(Boolean).join("");
+    if (!rows) {
+      return `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
+      <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C \u{1F516} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
+    }
+    return `<div class="shub-cats">${rows}</div>`;
+  }
+  function detailHead(cat) {
+    return `
+    <div class="shub-detail-head">
+      <button class="shub-back" type="button" data-shub-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <span class="shub-detail-title">${cat.icon} ${cat.label}</span>
+    </div>`;
+  }
+  var EMPTY_DETAIL = `<div class="shub-empty">\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
+  function categoryScreenHtml(key) {
+    const cat = CATS.find((c) => c.key === key);
+    if (!cat) {
+      _view = "categories";
+      return categoriesScreenHtml();
+    }
+    if (cat.needsAuth && !_data.loggedIn) {
+      return detailHead(cat) + `<div class="shub-hint-block">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.<br>
+      <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`;
+    }
+    if (key === "buses") {
+      return detailHead(cat) + (_data.buses.map(busCardHtml).join("") || EMPTY_DETAIL);
+    }
+    if (key === "articles") {
+      return detailHead(cat) + (_data.articles.map((p) => cardHtml2(p, "article")).join("") || EMPTY_DETAIL);
+    }
+    const type = key === "chats" ? "chat" : "board";
+    return detailHead(cat) + (_data[key].map((p) => cardHtml2(p, type)).join("") || EMPTY_DETAIL);
+  }
+  function render() {
+    const bodyEl = _sheet?.querySelector("#shub-body");
+    if (!bodyEl)
+      return;
+    bodyEl.innerHTML = _view === "categories" ? categoriesScreenHtml() : categoryScreenHtml(_view);
   }
   function openSavedHub() {
     if (_sheet)
       return;
+    _view = "categories";
     _backdrop = document.createElement("div");
     _backdrop.className = "board-backdrop shub-backdrop";
     _sheet = document.createElement("div");
@@ -9614,6 +9701,17 @@ END:VEVENT`
         closeHub();
         requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
         });
+        return;
+      }
+      if (e.target.closest("[data-shub-back]")) {
+        _view = "categories";
+        render();
+        return;
+      }
+      const catRow = e.target.closest("[data-shub-cat]");
+      if (catRow) {
+        _view = catRow.dataset.shubCat;
+        render();
         return;
       }
       const busCard = e.target.closest('[data-shub-type="bus"]');
@@ -9640,7 +9738,10 @@ END:VEVENT`
         setBoardActiveType("saved");
       }
     });
-    loadInto(_sheet.querySelector("#shub-body"));
+    loadData().then((data) => {
+      _data = data;
+      render();
+    });
   }
   function initSavedHub() {
     document.getElementById("saved-hub-btn")?.addEventListener("click", openSavedHub);
@@ -10006,7 +10107,7 @@ END:VEVENT`
 
   // src/core/sidebar.js
   var NAV = [
-    { id: "cabinet", label: "\u041A\u0430\u0431\u0456\u043D\u0435\u0442", icon: "\u{1F6E0}\uFE0F", kind: "cabinet", team: true },
+    { id: "cabinet", label: "\u0410\u0434\u043C\u0456\u043D\u043A\u0430", icon: "\u{1F6E0}\uFE0F", kind: "cabinet", team: true },
     { id: "account", label: "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0438\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442", icon: "\u{1F464}", kind: "account" },
     { divider: true },
     { id: "community", label: "\u0413\u0440\u043E\u043C\u0430\u0434\u0430", icon: "\u{1F3D8}\uFE0F", kind: "tab", tab: "community" },
@@ -10182,7 +10283,7 @@ END:VEVENT`
   var GR_SVG = {
     link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
     gear: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.09a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.09a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>',
-    users: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9.5" cy="7" r="3.5"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.5a3.5 3.5 0 0 1 0 6.8"/></svg>'
+    users: ICONS.users
   };
   function openGroupsList() {
     requireAuth("\u043F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0433\u0440\u0443\u043F\u0438", async () => {
@@ -10386,7 +10487,7 @@ END:VEVENT`
           prompt("\u0421\u043A\u043E\u043F\u0456\u044E\u0439 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F:", url);
         }
       };
-      const render = async () => {
+      const render2 = async () => {
         const members = await fetchGroupMembers(group.id);
         if (api._closed)
           return;
@@ -10434,7 +10535,7 @@ END:VEVENT`
         ${!isOwner ? `<button class="gr-leave" type="button" data-leave>\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438</button>` : active.length > 1 ? `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A. \u0429\u043E\u0431 \u0432\u0438\u0439\u0442\u0438 \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u043F\u0435\u0440\u0435\u0434\u0430\u0439\u0442\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043A\u043E\u043C\u0443\u0441\u044C \u0456\u0437 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0456\u0432 (\u043A\u043D\u043E\u043F\u043A\u0430 \xAB\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C\xBB).</p>` : `<p class="gr-hint" style="padding:0 4px">\u0412\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0454\u0434\u0438\u043D\u0438\u0439 \u0443 \u0433\u0440\u0443\u043F\u0456.</p>`}
       `;
       };
-      await render();
+      await render2();
       wrap.addEventListener("click", async (e) => {
         const inv = e.target.closest("[data-inv]");
         if (inv) {
@@ -10446,7 +10547,7 @@ END:VEVENT`
           const r = await approveMember(group.id, ap.dataset.approve);
           if (r.ok) {
             showToast("\u2705 \u0421\u0445\u0432\u0430\u043B\u0435\u043D\u043E", 2e3);
-            render();
+            render2();
           } else
             showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
           return;
@@ -10458,7 +10559,7 @@ END:VEVENT`
           const r = await rejectMember(group.id, rj.dataset.reject);
           if (r.ok) {
             showToast("\u0413\u043E\u0442\u043E\u0432\u043E", 2e3);
-            render();
+            render2();
           } else
             showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
           return;
@@ -10471,7 +10572,7 @@ END:VEVENT`
           if (r.ok) {
             group.owner_uid = mo.dataset.makeowner;
             showToast("\u2705 \u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E", 2500);
-            render();
+            render2();
           } else
             showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
           return;
@@ -10517,7 +10618,7 @@ END:VEVENT`
         const txt = m.deleted_at ? "\u{1F5D1} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E" : m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E";
         return `<div class="pm-group ${mine ? "pm-group--mine" : "pm-group--other"}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${escapeHtml(txt)}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
       };
-      const render = () => {
+      const render2 = () => {
         streamEl.innerHTML = messages.length ? messages.map(bubble).join("") : `<div class="pm-empty pm-empty--chat"><span class="pm-empty-ic">\u{1F44B}</span>\u041F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443 \u0432 \u0433\u0440\u0443\u043F\u0456.</div>`;
         streamEl.scrollTop = streamEl.scrollHeight;
       };
@@ -10533,7 +10634,7 @@ END:VEVENT`
       (await fetchGroupMessages(group.id)).forEach(addMsg);
       if (api._closed)
         return;
-      render();
+      render2();
       api.screen.querySelector("[data-gr-manage]")?.addEventListener("click", () => openGroupManage(group));
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
@@ -10544,7 +10645,7 @@ END:VEVENT`
         const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text });
         if (r.ok) {
           addMsg(r.message);
-          render();
+          render2();
         } else {
           showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438: " + (r.error || ""), 3e3, "error");
           input.value = text;
@@ -10553,12 +10654,12 @@ END:VEVENT`
       const unsub = subscribeGroupMessages(group.id, ({ type, row }) => {
         if (type === "INSERT" && row) {
           addMsg(row);
-          render();
+          render2();
         } else if (type === "UPDATE" && row) {
           const i = messages.findIndex((x) => x.id === row.id);
           if (i >= 0) {
             messages[i] = row;
-            render();
+            render2();
           }
         }
       });

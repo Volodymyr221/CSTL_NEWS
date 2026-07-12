@@ -6,11 +6,12 @@
 // Кожен блок завантажує свої дані самостійно через fetch.
 // Помилка одного блоку не ламає інші.
 
-import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
+import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe, scrollEdgeCatchersHtml } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
 import { setBoardActiveType, openAdModalStandalone, openChatById } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
 import { weatherCodeInfo } from '../core/weather-icons.js';
+import { ICONS } from '../core/icons.js';
 import { openShotamModal } from './events.js';
 import {
   nowMinutes,
@@ -1025,7 +1026,7 @@ const CONTACT_ICONS = {
   hospital:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 22V8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v14"/><path d="M2 22h20"/><path d="M12 11v4M10 13h4"/></svg>',
   gromada:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18M5 21V10l7-5 7 5v11"/><path d="M9 21v-6h6v6"/></svg>',
   power:     '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>',
-  default:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.61 3.4 2 2 0 0 1 3.6 1.22h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.91 8.82a16 16 0 0 0 6.29 6.29l.98-.98a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>',
+  default:   ICONS.phone, // дедуп — раніше байт-в-байт копія з board.js PHONE_ICON_SVG
 };
 
 const CONTACT_COLORS = {
@@ -1113,7 +1114,12 @@ function paintCmNews(el, arts) {
   const filtered = arts.filter(cmNewsMatch)
     .slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
   // Екран табло — лише новини (стрічка), від самого верху.
-  el.innerHTML = `<div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>`;
+  // scrollEdgeCatchersHtml() (утиль, core/utils.js): прозорі смужки над краями
+  // картки — звужують ЗОНУ ДОТИКУ внутрішнього скролу, не сам вигляд картки.
+  el.innerHTML = `
+    <div class="cm-news-feed">${newsCardsHtml(filtered, { compact: true })}</div>
+    ${scrollEdgeCatchersHtml()}
+  `;
   // Кнопки-фільтри — у нижню панель, інтегровану в раму табло.
   const controls = document.getElementById('cm-news-controls');
   if (controls) {

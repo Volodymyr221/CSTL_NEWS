@@ -1,6 +1,7 @@
 // src/core/saved-hub.js
 // Хаб «Збережені» — bottom-sheet з іконки 🔖 у шапці (рішення Роми 08.07).
-// Показує збережені картки користувача, розкладені по категоріях вкладок:
+// 12.07 (за проханням Роми): 2 екрани замість одного довгого списку — спершу
+// категорії з лічильником, тап відкриває список саме цієї категорії.
 //   📰 СТАТТІ       (localStorage cstl_saved_articles) → тап: модалка статті. Доступно й гостю.
 //   🚌 АВТОБУСИ    (trackedRoutes, buses.js)           → тап: вкладка Автобуси + скрол на рейс
 //   💬 ОБГОВОРЕННЯ (пости type='chat')  → тап по картці: вкладка Обговорення + модалка чату
@@ -17,6 +18,15 @@ import { getSavedRoutesForUI, openSavedRouteOnBuses } from '../tabs/buses.js';
 
 let _sheet = null;
 let _backdrop = null;
+let _view = 'categories';   // 'categories' | 'articles' | 'buses' | 'chats' | 'boards'
+let _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
+
+const CATS = [
+  { key: 'articles', icon: '📰', label: 'Статті',       needsAuth: false },
+  { key: 'buses',    icon: '🚌', label: 'Автобуси',     needsAuth: false },
+  { key: 'chats',    icon: '💬', label: 'Обговорення',  needsAuth: true },
+  { key: 'boards',   icon: '📌', label: 'Оголошення',   needsAuth: true },
+];
 
 function closeHub() {
   if (!_sheet) return;
@@ -38,15 +48,6 @@ function cardHtml(p, type) {
     </button>`;
 }
 
-function sectionHtml(title, icon, items, type) {
-  if (!items.length) return '';
-  return `
-    <div class="shub-section">
-      <div class="shub-section-title">${icon} ${title} <span class="shub-count">${items.length}</span></div>
-      ${items.map(p => cardHtml(p, type)).join('')}
-    </div>`;
-}
-
 // Б7.2: автобуси — власна ідентичність (routeId+дата+зупинки, не один числовий id).
 function busCardHtml(r) {
   return `
@@ -57,64 +58,99 @@ function busCardHtml(r) {
       <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? ' · ' + escapeHtml(r.timeStr) : ''}</span>
     </button>`;
 }
-function busSectionHtml(items) {
-  if (!items.length) return '';
-  return `
-    <div class="shub-section">
-      <div class="shub-section-title">🚌 АВТОБУСИ <span class="shub-count">${items.length}</span></div>
-      ${items.map(busCardHtml).join('')}
-    </div>`;
-}
 
-async function loadInto(bodyEl) {
-  const sections = [];
+async function loadData() {
+  const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
 
   // Статті — localStorage, доступно й гостю (Б5.4).
   try {
     const artIds = [...getSavedArticleIds()].reverse();   // найновіші збережені зверху
-    if (artIds.length) {
-      const arts = await getArticlesByIds(artIds);
-      sections.push(sectionHtml('СТАТТІ', '📰', arts, 'article'));
-    }
+    if (artIds.length) data.articles = await getArticlesByIds(artIds);
   } catch (e) { console.warn('[saved-hub] articles', e); }
 
   // Автобуси — trackedRoutes (buses.js), вже порожні для гостя на джерелі (loadTrackedRoute).
-  try {
-    const routes = getSavedRoutesForUI();
-    if (routes.length) sections.push(busSectionHtml(routes));
-  } catch (e) { console.warn('[saved-hub] buses', e); }
+  try { data.buses = getSavedRoutesForUI(); } catch (e) { console.warn('[saved-hub] buses', e); }
 
   // Обговорення/Оголошення — Supabase saved_posts, лише залогінені.
-  if (isLoggedIn()) {
+  if (data.loggedIn) {
     try {
       const ids = [...(await fetchSavedPostIds(currentUserId()))];
       if (ids.length) {
         const supa = getSupabase();
-        const { data, error } = await supa.from('posts').select('*').in('id', ids)
+        const { data: posts, error } = await supa.from('posts').select('*').in('id', ids)
           .order('created_at', { ascending: false });
         if (error) throw error;
-        const posts = data || [];
-        const chats = posts.filter(p => p.type === 'chat');
-        const boards = posts.filter(p => p.type !== 'chat');
-        sections.push(sectionHtml('ОБГОВОРЕННЯ', '💬', chats, 'chat'));
-        sections.push(sectionHtml('ОГОЛОШЕННЯ', '📌', boards, 'board'));
+        data.chats  = (posts || []).filter(p => p.type === 'chat');
+        data.boards = (posts || []).filter(p => p.type !== 'chat');
       }
     } catch (e) {
       console.warn('[saved-hub] posts', e);
-      sections.push('<div class="shub-empty">Не вдалося завантажити збережені оголошення/обговорення.</div>');
+      data.postsError = true;
     }
-  } else {
-    sections.push(`<div class="shub-hint-block">Увійдіть, щоб бачити збережені оголошення й обговорення.<br>
-      <button class="shub-login" type="button" id="shub-login">Увійти</button></div>`);
+  }
+  return data;
+}
+
+// ── Екран 1: список категорій ────────────────────────────────────────────
+function categoriesScreenHtml() {
+  const rows = CATS.map(c => {
+    const count = _data[c.key].length;
+    const locked = c.needsAuth && !_data.loggedIn;
+    if (!count && !locked) return '';   // порожня й доступна категорія — не показуємо
+    return `
+      <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
+        <span class="shub-cat-ic">${c.icon}</span>
+        <span class="shub-cat-label">${c.label}</span>
+        ${locked ? '<span class="shub-cat-lock">🔒</span>' : `<span class="shub-count">${count}</span>`}
+        <span class="shub-cat-chev">›</span>
+      </button>`;
+  }).filter(Boolean).join('');
+
+  if (!rows) {
+    return `<div class="shub-empty">Поки нічого не збережено.<br>
+      <span class="shub-hint">Тримайте прапорець 🔖 на картці оголошення, обговорення чи статті — і воно зʼявиться тут.</span></div>`;
+  }
+  return `<div class="shub-cats">${rows}</div>`;
+}
+
+// ── Екран 2: список конкретної категорії ─────────────────────────────────
+function detailHead(cat) {
+  return `
+    <div class="shub-detail-head">
+      <button class="shub-back" type="button" data-shub-back aria-label="Назад">←</button>
+      <span class="shub-detail-title">${cat.icon} ${cat.label}</span>
+    </div>`;
+}
+const EMPTY_DETAIL = `<div class="shub-empty">Тут поки порожньо.</div>`;
+
+function categoryScreenHtml(key) {
+  const cat = CATS.find(c => c.key === key);
+  if (!cat) { _view = 'categories'; return categoriesScreenHtml(); }
+
+  if (cat.needsAuth && !_data.loggedIn) {
+    return detailHead(cat) + `<div class="shub-hint-block">Увійдіть, щоб бачити збережені оголошення й обговорення.<br>
+      <button class="shub-login" type="button" id="shub-login">Увійти</button></div>`;
   }
 
-  const html = sections.filter(Boolean).join('');
-  bodyEl.innerHTML = html || `<div class="shub-empty">Поки нічого не збережено.<br>
-    <span class="shub-hint">Тримайте прапорець 🔖 на картці оголошення, обговорення чи статті — і воно зʼявиться тут.</span></div>`;
+  if (key === 'buses') {
+    return detailHead(cat) + (_data.buses.map(busCardHtml).join('') || EMPTY_DETAIL);
+  }
+  if (key === 'articles') {
+    return detailHead(cat) + (_data.articles.map(p => cardHtml(p, 'article')).join('') || EMPTY_DETAIL);
+  }
+  const type = key === 'chats' ? 'chat' : 'board';
+  return detailHead(cat) + (_data[key].map(p => cardHtml(p, type)).join('') || EMPTY_DETAIL);
+}
+
+function render() {
+  const bodyEl = _sheet?.querySelector('#shub-body');
+  if (!bodyEl) return;
+  bodyEl.innerHTML = _view === 'categories' ? categoriesScreenHtml() : categoryScreenHtml(_view);
 }
 
 export function openSavedHub() {
   if (_sheet) return;
+  _view = 'categories';
   _backdrop = document.createElement('div');
   _backdrop.className = 'board-backdrop shub-backdrop';
 
@@ -134,11 +170,22 @@ export function openSavedHub() {
   });
 
   _backdrop.addEventListener('click', closeHub);
-  // Делегація (не addEventListener одразу — #shub-login вставляється пізніше через loadInto)
+  // Делегація (не addEventListener одразу — #shub-login вставляється пізніше через render)
   _sheet.addEventListener('click', e => {
     if (e.target.closest('#shub-login')) {
       closeHub();
       requireAuth('бачити збережені', () => {});
+      return;
+    }
+    if (e.target.closest('[data-shub-back]')) {
+      _view = 'categories';
+      render();
+      return;
+    }
+    const catRow = e.target.closest('[data-shub-cat]');
+    if (catRow) {
+      _view = catRow.dataset.shubCat;
+      render();
       return;
     }
     const busCard = e.target.closest('[data-shub-type="bus"]');
@@ -165,7 +212,7 @@ export function openSavedHub() {
     }
   });
 
-  loadInto(_sheet.querySelector('#shub-body'));   // статті — і гостю; решта секцій — за isLoggedIn() всередині
+  loadData().then(data => { _data = data; render(); });
 }
 
 export function initSavedHub() {
