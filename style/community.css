@@ -1109,7 +1109,7 @@
   top: 22px;               /* липне одразу під баром рисочки (2px перекриття, без гапу) */
   z-index: 5;
   margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
-  padding: 0 46px 6px 18px;   /* правий 46px — місце під ✕; нижній 6px (підняли границю — фідбек Вови) */
+  padding: 0 46px 2px 18px;   /* правий 46px — місце під ✕; нижній 2px (границю піднято ще вище — фідбек Вови) */
   background: var(--bg-card, #fff);
   border-bottom: 1px solid transparent;  /* прихована при відкритті; місце зарезервоване (без стрибка) */
   transition: border-color 0.2s ease;
