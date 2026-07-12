@@ -1109,7 +1109,7 @@
   top: 22px;               /* липне одразу під баром рисочки (2px перекриття, без гапу) */
   z-index: 5;
   margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
-  padding: 0 46px 2px 18px;   /* правий 46px — місце під ✕; нижній 2px (границю піднято ще вище — фідбек Вови) */
+  padding: 0 46px 0 18px;   /* правий 46px — місце під ✕; нижній 0 (границю піднято максимально — фідбек Вови) */
   background: var(--bg-card, #fff);
   border-bottom: 1px solid transparent;  /* прихована при відкритті; місце зарезервоване (без стрибка) */
   transition: border-color 0.2s ease;
@@ -1138,7 +1138,8 @@
   font-size: 18px;
   font-weight: 800;
   color: var(--ink);
-  margin-bottom: 4px;
+  margin-bottom: 0;            /* підзаголовок ближче до заголовка (фідбек Вови) */
+  line-height: 1.15;
   text-transform: uppercase;   /* «НОВЕ ОГОЛОШЕННЯ» великими (розмір не змінено) */
   display: flex;
   align-items: center;
