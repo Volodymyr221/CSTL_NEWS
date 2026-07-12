@@ -2087,11 +2087,13 @@
   margin-top: 6px;
   font-size: 14px;
 }
-.cm-board-modal-note .cm-board-modal-foot .cm-board-call {
-  width: 36px;
-  height: 36px;
+.cm-board-modal-note .cm-board-modal-foot .cm-board-call,
+.cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn {
+  width: 42px;
+  height: 42px;
 }
-.cm-board-modal-note .cm-board-modal-foot .cm-board-call svg { width: 17px; height: 17px; }
+.cm-board-modal-note .cm-board-modal-foot .cm-board-call svg,
+.cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn svg { width: 21px; height: 21px; }
 /* Дата публікації в модалці — трохи більша за базові 9px (Вова 11.07). */
 .cm-board-modal-note .cm-board-modal-foot .cm-board-time { font-size: 11px; }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
@@ -2116,7 +2118,7 @@
   padding-top: 0;
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-foot::before { display: none; }
-.cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: left; }
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: center; }
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
   margin-top: 0;
   padding-top: 0;
