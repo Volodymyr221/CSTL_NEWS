@@ -864,8 +864,11 @@ export function openMyAds() {
         actionsRow = `<div class="pm-ad-actions">${badge}${bumpRow(p)}</div>`;
       }
 
-      // Меню дій: «Завершити» лише для published; «Повернути» лише для closed; «Видалити» завжди
+      // Меню дій: «Редагувати» для активних/на модерації (Д-3); «Завершити» лише для
+      // published; «Повернути» лише для closed; «Видалити» завжди
+      const canEdit = p.status === 'published' || p.status === 'pending';
       const menuItems = [
+        canEdit ? `<button class="pm-ad-mi" type="button" data-act="edit" data-id="${p.id}">✏️ Редагувати</button>` : '',
         isPublished ? `<button class="pm-ad-mi" type="button" data-act="close" data-id="${p.id}">✓ Завершити</button>` : '',
         p.status === 'closed' ? `<button class="pm-ad-mi" type="button" data-act="restore" data-id="${p.id}">↩️ Повернути в активні</button>` : '',
         `<button class="pm-ad-mi pm-ad-mi--danger" type="button" data-act="delete" data-id="${p.id}">🗑️ Видалити</button>`,
@@ -925,6 +928,12 @@ export function openMyAds() {
         render();
       });
     });
+
+    // Д-3: після збереження правок (editPost мутується на місці в модалці) — перемалювати.
+    // Якщо статус став pending, картка автоматично переїде в таб «На модерації».
+    const onPostUpdated = () => { if (!api._closed) render(); };
+    window.addEventListener('cstl-post-updated', onPostUpdated);
+    api._cleanup.push(() => window.removeEventListener('cstl-post-updated', onPostUpdated));
 
     // FAB → модалка нового оголошення (та сама що на Дошці)
     api.screen.querySelector('[data-new-ad]')?.addEventListener('click', () => openBoardModal());
@@ -1016,6 +1025,11 @@ export function openMyAds() {
       if (act) {
         closeMenus(null);
         const id = Number(act.dataset.id);
+        if (act.dataset.act === 'edit') {
+          const p = posts.find(x => x.id === id);
+          if (p) openBoardModal({ editPost: p });   // Д-3: редагування; список оновиться по cstl-post-updated
+          return;
+        }
         if (act.dataset.act === 'close') {
           const r = await closePost(id);
           if (r.ok) {

@@ -339,6 +339,24 @@ export async function restorePost(postId) {
   return data || { ok: false, error: 'no_data' };
 }
 
+// Д-3: редагувати власне оголошення через RPC update_board_post (SECURITY DEFINER,
+// перевірка owner_uid = auth.uid() на сервері — базова RLS дозволяє UPDATE лише
+// адмінам). Статус за довірою: trusted-published лишається published, звичайний
+// published → pending (повторна модерація). Потребує scripts/supabase_board_edit.sql.
+// Повертає { ok:true, status } або { ok:false, error }.
+export async function updateBoardPost(postId, payload) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.rpc('update_board_post', { p_id: postId, payload });
+  if (error) {
+    console.warn('[supabase] updateBoardPost error:', error);
+    return { ok: false, error: error.message };
+  }
+  if (data && data.ok === false) {
+    return { ok: false, error: data.error || 'не вдалось зберегти' };
+  }
+  return { ok: true, status: (data && data.status) || 'pending' };
+}
+
 // ── Приватні групові чати (Етап 2) ───────────────────────────────────────
 // Мої групи (RLS повертає лише ті, де я учасник/власник). Нові зверху за останнім повідомленням.
 export async function fetchMyGroups() {
