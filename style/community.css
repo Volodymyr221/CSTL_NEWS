@@ -801,8 +801,8 @@
   font-weight: 800;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  color: rgba(92, 33, 40, 0.72);   /* бордовий, трохи прозоріший (Вова) */
-  text-shadow: 0 1px 3px rgba(255, 248, 235, 0.5);   /* легкий світлий ореол для читабельності на корку */
+  color: rgba(245, 232, 210, 0.88);   /* кремовий — Д-21: фон тепер темний корок */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.55);   /* темний ореол для читабельності на темному корку */
 }
 /* Тонкі лінії ліворуч/праворуч від назви — йдуть від країв назви й затухають до країв. */
 .bd-group-title::before,
@@ -811,8 +811,8 @@
   flex: 1 1 auto;
   height: 1px;
 }
-.bd-group-title::before { background: linear-gradient(to left,  rgba(92, 33, 40, 0.5), rgba(92, 33, 40, 0)); }
-.bd-group-title::after  { background: linear-gradient(to right, rgba(92, 33, 40, 0.5), rgba(92, 33, 40, 0)); }
+.bd-group-title::before { background: linear-gradient(to left,  rgba(245, 232, 210, 0.45), rgba(245, 232, 210, 0)); }
+.bd-group-title::after  { background: linear-gradient(to right, rgba(245, 232, 210, 0.45), rgba(245, 232, 210, 0)); }
 .cm-board-corkboard {
   position: relative;
   background:
@@ -1372,12 +1372,14 @@
 .bm-preview-section {
   margin: 18px -18px 14px;
   padding: 14px 18px 18px;
-  /* Той самий корок що й на справжній Дошці (.board-bg) — прев'ю = реальний фон */
+  /* Той самий корок що й на справжній Дошці (.board-bg) — прев'ю = реальний фон.
+     Д-21: те саме темне затемнення, що й на .board-bg (темний корок). */
   background:
     radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.22) 100%),
+    linear-gradient(rgba(24,14,8,0.62), rgba(24,14,8,0.62)),
     url('../images/cork2.png') center center / cover no-repeat;
-  border-top: 3px solid #7A5C30;
-  border-bottom: 3px solid #7A5C30;
+  border-top: 3px solid #4a3a20;
+  border-bottom: 3px solid #4a3a20;
 }
 .bm-preview-label {
   font-size: 11px;
@@ -1625,14 +1627,20 @@
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
 
 /* Фіксований корковий фон — повний екран, статичний (не скролиться з картками).
-   Тіні зверху і знизу — фіксовані, завжди на краях екрану. */
+   Тіні зверху і знизу — фіксовані, завжди на краях екрану.
+   Д-21 (рішення Вови 12.07, «темний корок»): те саме фото корку, але під темним
+   затемненням + теплий радіальний відблиск згори (ніби дошку освітлює лампа) —
+   світлі картки-«папірці» і бордові піни контрастніше вистрілюють. */
 .board-bg {
   position: fixed;
   inset: 0;
-  background: url('../images/cork2.png') center center / cover no-repeat;
+  background:
+    radial-gradient(ellipse 120% 60% at 50% 12%, rgba(255,220,170,0.10), transparent 60%),
+    linear-gradient(rgba(24,14,8,0.62), rgba(24,14,8,0.62)),
+    url('../images/cork2.png') center center / cover no-repeat;
   box-shadow:
-    inset 0 40px 80px rgba(0,0,0,0.52),
-    inset 0 -40px 80px rgba(0,0,0,0.45);
+    inset 0 40px 90px rgba(0,0,0,0.6),
+    inset 0 -40px 90px rgba(0,0,0,0.55);
   pointer-events: none;
   z-index: 0;
 }
@@ -2822,7 +2830,8 @@
   z-index: 1;
   text-align: center;
   padding: 18px 24px 10px;
-  color: #4A3B22;
+  color: #F0E6D2;   /* кремовий — Д-21: фон тепер темний корок */
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
   font-size: 14px;
   font-weight: 700;
   line-height: 1.5;
@@ -2830,9 +2839,17 @@
 .bd-group-empty-hint {
   display: block;
   margin-top: 4px;
-  color: #6b5a3f;
+  color: rgba(240, 230, 210, 0.72);
   font-size: 13px;
   font-weight: 600;
+}
+
+/* Порожній стан САМЕ на Дошці (де є темний .board-bg) — світлий текст.
+   На Обговореннях/Збережених .board-bg відсутній (фон світлий) — там лишається
+   базовий var(--gray) з .bd-empty. */
+.board-bg ~ .bd-body .bd-empty {
+  color: #F0E6D2;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.55);
 }
 
 .bd-stream {
