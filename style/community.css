@@ -1109,7 +1109,7 @@
   top: 22px;               /* липне одразу під баром рисочки (2px перекриття, без гапу) */
   z-index: 5;
   margin: 0 -18px 0;       /* full-bleed смуга на всю ширину аркуша */
-  padding: 0 46px 10px 18px;  /* правий 46px — місце під ✕; нижній 10px відступ */
+  padding: 0 46px 6px 18px;   /* правий 46px — місце під ✕; нижній 6px (підняли границю — фідбек Вови) */
   background: var(--bg-card, #fff);
   border-bottom: 1px solid transparent;  /* прихована при відкритті; місце зарезервоване (без стрибка) */
   transition: border-color 0.2s ease;
@@ -1154,6 +1154,7 @@
   font-size: 13px;
   color: var(--ink-soft);
   margin-bottom: 0;   /* нижній відступ дає padding .cm-board-modal-head (підзаголовок у шапці) */
+  margin-left: 30px;  /* вирівняти під ТЕКСТ заголовка (олівець 22px + gap 8px), не під олівець */
 }
 .app-modal--board-compose .cm-board-input { margin-bottom: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); }   /* тінь — щоб поле не зливалось з фоном */
 .app-modal--board-compose .cm-board-input:last-of-type { margin-bottom: 14px; }
