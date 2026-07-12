@@ -3645,8 +3645,11 @@
 }
 .cm-news-feed::-webkit-scrollbar { display: none; }
 /* Табло — єдиний користувач .scroll-edge-catch (утиль, база стилю на початку
-   файлу) поки що (12.07): 0 8px = вирівняти з padding-bottom стрічки вище. */
-.cm-block--news .scroll-edge-catch { bottom: 8px; }
+   файлу) поки що (12.07): bottom 8px = вирівняти з padding-bottom стрічки вище.
+   --edge-w 10px = рівно бокове поле .cm-block-body (padding …10px): ловець сидить
+   у боковому gutter і БІЛЬШЕ НЕ залазить на картку (типове 18px залазило +8px за
+   z-index:2 → тап по краю заголовка не відкривав статтю; фікс 12.07). */
+.cm-block--news .scroll-edge-catch { bottom: 8px; --edge-w: 10px; }
 /* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */
 .cm-news-feed > * {
   flex-shrink: 0;
