@@ -547,6 +547,7 @@ async function saveArticle(a) {
   if (a.status) row.status = a.status;
   if (a.publish_at !== undefined) row.publish_at = a.publish_at;  // ISO-рядок або null
   if (a.event_date !== undefined) row.event_date = a.event_date;  // дата свята/події (Шо в селі)
+  if (a.source_article_id !== undefined) row.source_article_id = a.source_article_id;  // Потік 8: слід копії в Найближчі події
   if (a.id) {
     if (a.type) row.type = a.type;   // тип можна змінити й при редагуванні
     const { error } = await supa.from('cms_articles').update(row).eq('id', a.id);
@@ -775,6 +776,7 @@ function renderApp() {
   `;
   document.getElementById('back-to-grid').addEventListener('click', () => {
     activeTab = null;
+    artCategory = null;   // повторний вхід у «Статті» — з екрану вибору категорії
     renderApp();
   });
   renderTabContent();
@@ -983,25 +985,63 @@ const ART_TYPE_UK = { news: '📰 Новина', holiday: '🎉 Свято', eve
 
 let artQuery = '';
 let artFilter = 'all';   // all | draft | scheduled | ready | published
+let artCategory = null;  // null = екран вибору категорії; 'news'|'holiday'|'event' = список типу
+
+const typeOfArt = a => a.type || 'news';
+// 3 категорії статей = 3 типи. «Найближчі події» (event) — керована рубрика:
+// модератор копіює туди опубліковані статті/свята кнопкою «Скопіювати в Найближчі події».
+const ART_CATS = [
+  { type: 'news',    emoji: '📰', label: 'Новини' },
+  { type: 'holiday', emoji: '🎉', label: 'Свята' },
+  { type: 'event',   emoji: '📌', label: 'Найближчі події' },
+];
+const DRAFT_ART = () => ({ title: '', excerpt: '', content: '', category: '', geo: 'Громада', type: 'news', image: null, image_type: 'none', image_credit: null });
+
+// Екран вибору категорії — сітка 3 плиток (перевикористовує .tile/.tile-grid головного меню).
+function renderArtCategories(el) {
+  const canCreate = isAdmin || editorPerms.canCreate;
+  el.innerHTML = `
+    ${canCreate ? '<div class="art-head"><button class="btn btn--approve" id="art-new">+ Створити статтю</button></div>' : ''}
+    <div class="tile-grid">${ART_CATS.map(c => {
+      const n = articles.filter(a => typeOfArt(a) === c.type).length;
+      return `<button class="tile" data-artcat="${c.type}">
+        ${n ? `<span class="tile-badge">${n}</span>` : ''}
+        <span class="tile-ic" style="font-size:26px;line-height:1">${c.emoji}</span>
+        <span class="tile-label">${c.label}</span>
+      </button>`;
+    }).join('')}</div>
+  `;
+  el.querySelectorAll('[data-artcat]').forEach(b => b.addEventListener('click', () => {
+    artCategory = b.dataset.artcat; artFilter = 'all'; artQuery = ''; renderApp();
+  }));
+  document.getElementById('art-new')?.addEventListener('click', () => { articleDraft = DRAFT_ART(); renderApp(); });
+}
 
 function renderArticles(el) {
   if (articleDraft) return renderArticleForm(el);
+  if (artCategory === null) return renderArtCategories(el);
   const canPub = isAdmin || editorPerms.canPublish;
-  const draftN = articles.filter(a => (a.status || 'draft') === 'draft').length;
+  const inCat = articles.filter(a => typeOfArt(a) === artCategory);
+  const draftN = inCat.filter(a => (a.status || 'draft') === 'draft').length;
+  const catInfo = ART_CATS.find(c => c.type === artCategory) || ART_CATS[0];
   const FILTERS = [['all', 'Усі'], ['draft', 'Чернетки' + (draftN ? ' ' + draftN : '')],
                    ['scheduled', 'Заплановано'], ['ready', 'На публікації'], ['published', 'Опубліковано']];
   el.innerHTML = `
     <div class="art-head">
+      <button class="btn" id="art-back-cat">← Категорії</button>
       <button class="btn btn--approve" id="art-new">+ Створити статтю</button>
     </div>
+    <div style="font-weight:700;font-size:15px;margin:2px 0 8px">${catInfo.emoji} ${catInfo.label}</div>
     <input class="art-inp" id="art-search" placeholder="🔍 Пошук за заголовком…" value="${escapeHtml(artQuery)}" style="margin-bottom:8px">
     <div class="art-filters">${FILTERS.map(([v, l]) => `<button class="art-chip${artFilter === v ? ' active' : ''}" data-af="${v}">${l}</button>`).join('')}</div>
     <div id="art-list"></div>
   `;
   const listEl = el.querySelector('#art-list');
+  // Потік 8: id оригіналів, які ВЖЕ скопійовані в Найближчі події (щоб не плодити дублі).
+  const copiedFrom = new Set(articles.filter(a => a.source_article_id != null).map(a => Number(a.source_article_id)));
 
   const paint = () => {
-    let list = articles;
+    let list = articles.filter(a => typeOfArt(a) === artCategory);
     if (artFilter !== 'all') list = list.filter(a => (a.status || 'draft') === artFilter);
     const q = artQuery.trim().toLowerCase();
     if (q) list = list.filter(a => (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q));
@@ -1028,6 +1068,11 @@ function renderArticles(el) {
             <button class="btn" data-art-edit="${a.id}">✏️ Редагувати</button>
             ${a.status === 'draft' && canPub ? `<button class="btn btn--approve" data-art-pub="${a.id}">🚀 Опублікувати</button>` : ''}
             ${a.status === 'ready' ? `<button class="btn" data-art-unpub="${a.id}">↩︎ У чернетки</button>` : ''}
+            ${((a.status === 'ready' || a.status === 'published') && (typeOfArt(a) === 'news' || typeOfArt(a) === 'holiday'))
+              ? (copiedFrom.has(Number(a.id))
+                  ? '<span class="badge" style="background:#2e6b40;color:#fff">📌 у Найближчих подіях</span>'
+                  : `<button class="btn" data-art-copyev="${a.id}">📌 Скопіювати в Найближчі події</button>`)
+              : ''}
             <button class="btn btn--reject" data-art-del="${a.id}">🗑 Видалити</button>
           </div>
         </article>`;
@@ -1063,10 +1108,27 @@ function renderArticles(el) {
       if (!confirm('Видалити статтю?')) return;
       await deleteArticle(b.dataset.artDel); articles = await fetchArticles(); renderApp();
     }));
+    // Потік 8: «Скопіювати в Найближчі події» — відкриває форму НОВОГО запису type='event'
+    // з копією фото+тексту оригіналу; модератор ставить дату події й зберігає (INSERT).
+    // source_article_id = оригінал → не дублюємо (позначка «📌 у Найближчих подіях»).
+    listEl.querySelectorAll('[data-art-copyev]').forEach(b => b.addEventListener('click', () => {
+      const a = articles.find(x => String(x.id) === b.dataset.artCopyev);
+      if (!a) return;
+      articleDraft = {
+        title: a.title || '', excerpt: a.excerpt || '', content: a.content || '',
+        category: a.category || '', geo: a.geo || 'Громада',
+        image: a.image || null, image_type: a.image_type || (a.image ? 'source' : 'none'),
+        image_credit: a.image_credit || null,
+        type: 'event', status: 'draft', event_date: a.event_date || '',
+        source_article_id: a.id,   // слід оригіналу (нема id → буде INSERT нового рядка)
+      };
+      renderApp();
+    }));
   };
 
+  document.getElementById('art-back-cat').addEventListener('click', () => { artCategory = null; renderApp(); });
   document.getElementById('art-new')?.addEventListener('click', () => {
-    articleDraft = { title: '', excerpt: '', content: '', category: '', geo: 'Громада', type: 'news', image: null, image_type: 'none', image_credit: null };
+    articleDraft = { ...DRAFT_ART(), type: artCategory };   // нова стаття вже з типом обраної категорії
     renderApp();
   });
   el.querySelector('#art-search').addEventListener('input', e => { artQuery = e.target.value; paint(); });
