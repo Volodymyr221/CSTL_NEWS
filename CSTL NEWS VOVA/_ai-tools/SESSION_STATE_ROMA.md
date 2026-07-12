@@ -6,6 +6,23 @@
 
 ---
 
+## 📝 2026-07-12 (сесія C, гілка `claude/new-session-yeuv6m`) — звірка Push-розбіжності + іконки Потік 7 (таб-бар↔сайдбар) + 2 заголовки-емодзі
+
+Дві дії, обидві в одному `/finish` (Рома: «Іконки + doc-fix разом»).
+
+**1. Звірка розбіжності Push (doc-fix, коміт `4f0a4e75`).** BOARD (Вова→Рома) + AUDIT числили П-2/П-5/П-8/П-9 як відкриті 🔴, хоча PR #321 (10.07) їх зробив. Звірив з реальним кодом кожен: P-2 `send-chat-push:49,71` (photo_url+фолбек), P-5 `board-chat.js:71` (`ensureChatPush`), P-8 `sw.js:166` (банер), P-9 `sw.js:184`+`app.js:206`+`board-chat.js:1263` (`#/thread/<id>`). Виправив AUDIT (Push→ЗРОБЛЕНО з оригіналами) + BOARD (✅-нотатка, Вовин текст не чіпав). **⚠️ Відкрита реальна дія:** P-2 живий `supabase functions deploy send-chat-push` (код у репо — Edge Function передеплоїти; Supabase CLI недоступний із сесії).
+
+**2. Іконки Потік 7 — доробка (коміт `2aac3b20`).** Узгодив таб-бар із сайдбаром (стиль варіант-5, тонкий sw1) — закрито ⏳ з попередньої сесії.
+- Таб-бар (`index.html`): buses `pin→bus`, board `→clipboard`, discussions `bubble→message`, shotam `→fileText`; stroke-width 2/2.5→1. Громада (castle png) без змін. Шляхи з `icons.js` (Tabler sw1).
+- Сайдбар (`sidebar.js`): board `pin→clipboard`, shotam `calendar→fileText` — одна іконка на концепт на обох поверхнях (buses=bus, board=clipboard, discussions=message, shotam=fileText).
+- Заголовки-емодзі прибрано: 📰 біля «Шо в селі» (`index.html:69`) + іконка біля «Обговорення» (`board.js:1143`). Мертвий код зметено: const `DISC_TITLE_ICON_SVG` (board.js), CSS `.bd-disc-title svg` (community.css), `.shotam-head-ic` (events.css).
+- Тести: `node --check`+`node build.js` (потрібен був `npm install` — свіжий контейнер); Playwright-смоук: таб-бар 5×sw1, збіг із сайдбаром, 📰 зникло, «Обговорення» svgCount 0, **0 pageerror**. CACHE `cstl-20260712-1845`.
+- **⚠️ Watch-point:** sw1 на 22px таб-іконці досить тонка — перевірити наживо на iPhone; якщо хайрлайн, підняти до ~sw1.25.
+
+**⏳ Далі по іконках (Потік 7 хвіст):** рештки літеральних емодзі (кроки 8-12: news/events/buses/power/community-blocks тости-бейджі, index.html дрібне) — ще не почато.
+
+---
+
 ## 📝 2026-07-12 (велика сесія, гілка `claude/new-session-nvoaif`) — фікси A/C, табло-скрол #3, іконки Batch 1, аудит адмінки+пайплайну
 
 Довга ітеративна сесія зі скрінами Роми. Все задеплоєно (PR #379-#389). По черзі:
