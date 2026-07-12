@@ -775,6 +775,7 @@ function renderApp() {
   `;
   document.getElementById('back-to-grid').addEventListener('click', () => {
     activeTab = null;
+    artCategory = null;   // повторний вхід у «Статті» — з екрану вибору категорії
     renderApp();
   });
   renderTabContent();
@@ -983,17 +984,53 @@ const ART_TYPE_UK = { news: '📰 Новина', holiday: '🎉 Свято', eve
 
 let artQuery = '';
 let artFilter = 'all';   // all | draft | scheduled | ready | published
+let artCategory = null;  // null = екран вибору категорії; 'news'|'holiday'|'event' = список типу
+
+const typeOfArt = a => a.type || 'news';
+// 3 категорії статей = 3 типи. «Найближчі події» (event) — керована рубрика:
+// модератор копіює туди опубліковані статті/свята кнопкою «Скопіювати в Найближчі події».
+const ART_CATS = [
+  { type: 'news',    emoji: '📰', label: 'Новини' },
+  { type: 'holiday', emoji: '🎉', label: 'Свята' },
+  { type: 'event',   emoji: '📌', label: 'Найближчі події' },
+];
+const DRAFT_ART = () => ({ title: '', excerpt: '', content: '', category: '', geo: 'Громада', type: 'news', image: null, image_type: 'none', image_credit: null });
+
+// Екран вибору категорії — сітка 3 плиток (перевикористовує .tile/.tile-grid головного меню).
+function renderArtCategories(el) {
+  const canCreate = isAdmin || editorPerms.canCreate;
+  el.innerHTML = `
+    ${canCreate ? '<div class="art-head"><button class="btn btn--approve" id="art-new">+ Створити статтю</button></div>' : ''}
+    <div class="tile-grid">${ART_CATS.map(c => {
+      const n = articles.filter(a => typeOfArt(a) === c.type).length;
+      return `<button class="tile" data-artcat="${c.type}">
+        ${n ? `<span class="tile-badge">${n}</span>` : ''}
+        <span class="tile-ic" style="font-size:26px;line-height:1">${c.emoji}</span>
+        <span class="tile-label">${c.label}</span>
+      </button>`;
+    }).join('')}</div>
+  `;
+  el.querySelectorAll('[data-artcat]').forEach(b => b.addEventListener('click', () => {
+    artCategory = b.dataset.artcat; artFilter = 'all'; artQuery = ''; renderApp();
+  }));
+  document.getElementById('art-new')?.addEventListener('click', () => { articleDraft = DRAFT_ART(); renderApp(); });
+}
 
 function renderArticles(el) {
   if (articleDraft) return renderArticleForm(el);
+  if (artCategory === null) return renderArtCategories(el);
   const canPub = isAdmin || editorPerms.canPublish;
-  const draftN = articles.filter(a => (a.status || 'draft') === 'draft').length;
+  const inCat = articles.filter(a => typeOfArt(a) === artCategory);
+  const draftN = inCat.filter(a => (a.status || 'draft') === 'draft').length;
+  const catInfo = ART_CATS.find(c => c.type === artCategory) || ART_CATS[0];
   const FILTERS = [['all', 'Усі'], ['draft', 'Чернетки' + (draftN ? ' ' + draftN : '')],
                    ['scheduled', 'Заплановано'], ['ready', 'На публікації'], ['published', 'Опубліковано']];
   el.innerHTML = `
     <div class="art-head">
+      <button class="btn" id="art-back-cat">← Категорії</button>
       <button class="btn btn--approve" id="art-new">+ Створити статтю</button>
     </div>
+    <div style="font-weight:700;font-size:15px;margin:2px 0 8px">${catInfo.emoji} ${catInfo.label}</div>
     <input class="art-inp" id="art-search" placeholder="🔍 Пошук за заголовком…" value="${escapeHtml(artQuery)}" style="margin-bottom:8px">
     <div class="art-filters">${FILTERS.map(([v, l]) => `<button class="art-chip${artFilter === v ? ' active' : ''}" data-af="${v}">${l}</button>`).join('')}</div>
     <div id="art-list"></div>
@@ -1001,7 +1038,7 @@ function renderArticles(el) {
   const listEl = el.querySelector('#art-list');
 
   const paint = () => {
-    let list = articles;
+    let list = articles.filter(a => typeOfArt(a) === artCategory);
     if (artFilter !== 'all') list = list.filter(a => (a.status || 'draft') === artFilter);
     const q = artQuery.trim().toLowerCase();
     if (q) list = list.filter(a => (a.title || '').toLowerCase().includes(q) || (a.excerpt || '').toLowerCase().includes(q));
@@ -1065,8 +1102,9 @@ function renderArticles(el) {
     }));
   };
 
+  document.getElementById('art-back-cat').addEventListener('click', () => { artCategory = null; renderApp(); });
   document.getElementById('art-new')?.addEventListener('click', () => {
-    articleDraft = { title: '', excerpt: '', content: '', category: '', geo: 'Громада', type: 'news', image: null, image_type: 'none', image_credit: null };
+    articleDraft = { ...DRAFT_ART(), type: artCategory };   // нова стаття вже з типом обраної категорії
     renderApp();
   });
   el.querySelector('#art-search').addEventListener('input', e => { artQuery = e.target.value; paint(); });
