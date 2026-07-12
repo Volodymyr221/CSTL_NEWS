@@ -104,6 +104,22 @@ export function attachSwipe(el, onLeft, onRight) {
   }, { passive: true });
 }
 
+// Системний утиль (12.07): будь-який блок-«острівець» з власним внутрішнім
+// overflow-y:auto всередині набагато ширшої сторінки (напр. табло новин) має
+// одну й ту саму проблему — його hit-зона на дотик = вся видима картка, тому
+// палець не може влучити «повз» неї, щоб скролити сторінку. Ці дві прозорі
+// смужки (без overflow, тому самі не скролять) кладуться ПОВЕРХ країв картки —
+// дотик там падає крізь до не-scroll батька і скролить сторінку, а сама картка
+// візуально НЕ змінюється (смужки без фону/рамки). Підключення: додати
+// `scrollEdgeCatchersHtml()` як HTML-сусіда всередині position:relative
+// контейнера, і клас `.scroll-edge-catch` у CSS (ширина/якір задаються там).
+export function scrollEdgeCatchersHtml() {
+  return `
+    <div class="scroll-edge-catch scroll-edge-catch--l" aria-hidden="true"></div>
+    <div class="scroll-edge-catch scroll-edge-catch--r" aria-hidden="true"></div>
+  `;
+}
+
 // Web Share API — поділитись контентом через рідне меню iOS/Android.
 // iOS Safari відкриває меню з Viber/Telegram/Messenger/SMS одним тапом.
 // Fallback: copy URL у clipboard + toast «Скопійовано».

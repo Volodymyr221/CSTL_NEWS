@@ -10,7 +10,7 @@ import { openModal } from './modal.js';
 
 // Пункти меню. kind: 'tab' → switchTab; 'action' → своя дія; 'info' → модалка.
 const NAV = [
-  { id: 'cabinet',  label: 'Кабінет',            icon: '🛠️', kind: 'cabinet', team: true },
+  { id: 'cabinet',  label: 'Адмінка',            icon: '🛠️', kind: 'cabinet', team: true },
   { id: 'account',  label: 'Особистий кабінет',   icon: '👤', kind: 'account' },
   { divider: true },
   { id: 'community',   label: 'Громада',      icon: '🏘️', kind: 'tab', tab: 'community' },
