@@ -91,7 +91,10 @@ begin
 end;
 $$;
 
-grant execute on function public.update_board_post(bigint, jsonb) to authenticated;
+-- Лише залогінені: прибираємо дефолтний PUBLIC/anon-грант (аноніми й так блокуються
+-- перевіркою auth.uid(), але тримаємо доступ мінімальним).
+revoke execute on function public.update_board_post(bigint, jsonb) from public, anon;
+grant  execute on function public.update_board_post(bigint, jsonb) to authenticated;
 
 -- ============================================================================
 -- Перевірка після Run:
