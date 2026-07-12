@@ -7,6 +7,7 @@ import {
 import { getAnonId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
 import { isPushCapable, ensurePushSubscription } from '../core/push.js';
+import { ICONS } from '../core/icons.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
 const TRACK_KEY = 'bus_track_v2';
@@ -726,7 +727,7 @@ function buildDropdownListHtml(query) {
   const current  = activeField === 'from' ? fromStop : toStop;
 
   const clearHtml = current
-    ? `<button class="bs-dd-clear" id="bs-dd-clear">✕ Очистити вибір (${escapeHtml(current)})</button>`
+    ? `<button class="bs-dd-clear" id="bs-dd-clear">${ICONS.close} Очистити вибір (${escapeHtml(current)})</button>`
     : '';
 
   const itemsHtml = filtered.length
@@ -773,7 +774,7 @@ function renderDropdownItems(query) {
   dd.innerHTML = `
     <div class="bs-dd-head">
       <span class="bs-dd-title">${escapeHtml(title)}</span>
-      <button class="bs-dd-x" id="bs-dd-x">✕</button>
+      <button class="bs-dd-x" id="bs-dd-x">${ICONS.close}</button>
     </div>
     <div class="bs-dd-search">
       <input class="bs-dd-filter" id="bs-dd-filter"
@@ -1729,7 +1730,7 @@ function renderSearchPanel() {
                value="${escapeHtml(toStop)}" readonly>
       </div>
     </div>
-    ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">✕ СКИНУТИ ФІЛЬТР</button></div>` : ''}
+    ${hasFilter ? `<div class="bs-filter-clear-row"><button class="bs-filter-clear-btn" id="bs-reset-btn">${ICONS.close} СКИНУТИ ФІЛЬТР</button></div>` : ''}
   `;
 
   document.getElementById('bs-from-input').addEventListener('click', () => openDropdown('from'));
