@@ -8188,7 +8188,7 @@ ${ev.description || ""}`
   var _bwResume = null;
   var BW_STEP_MS = 5e3;
   var BW_RESUME_MS = 8e3;
-  var BW_MAX_CARDS = 10;
+  var BW_MAX_CARDS = 16;
   var _evItems = [];
   var _evIdx = 0;
   var _evTimer = null;
@@ -8627,19 +8627,31 @@ ${ev.description || ""}`
     const title = p.title && p.title.trim() || (p.text || "").trim().slice(0, 60) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
     const locLabel = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
     const ts = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime();
+    const color = catColor(p.category);
+    const cover = photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : "";
     return `
-    <article class="cmbw-card${photo ? "" : " cmbw-card--nophoto"}" data-bw-id="${p.id}">
-      <span class="cmbw-pin" aria-hidden="true"></span>
-      ${photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : ""}
-      <div class="cmbw-body">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
-        <div class="cmbw-name">${escapeHtml(title)}</div>
-        <div class="cmbw-meta">
-          ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
-          ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ""}
+    <article class="cmbw-card" data-bw-id="${p.id}">
+      <div class="cmbw-in">
+        <span class="cmbw-pin" aria-hidden="true"></span>
+        ${cover}
+        <div class="cmbw-body">
+          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
+          <div class="cmbw-name">${escapeHtml(title)}</div>
+          <div class="cmbw-meta">
+            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
+            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ""}
+          </div>
         </div>
       </div>
     </article>`;
+  }
+  function bwShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
   }
   async function renderBoardBlock() {
     const el = document.getElementById("cm-board-content");
@@ -8659,18 +8671,18 @@ ${ev.description || ""}`
         const boardRes = await fetch("./data/community-board.json");
         posts = (await boardRes.json()).posts || [];
       }
-      const rank = (x) => x.bumped_at && new Date(x.bumped_at).getTime() || x.ts || x.published_at && new Date(x.published_at).getTime() || 0;
-      const ads = posts.filter((p) => (p.type || "board") === "board").sort((a, b) => rank(b) - rank(a));
-      const cards = ads.slice(0, BW_MAX_CARDS).map(bwCardHtml).join("");
+      const ads = posts.filter((p) => (p.type || "board") === "board");
+      const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
+      const cards = shown.map(bwCardHtml).join("");
       const moreCard = `
       <div class="cmbw-more" data-bw-more role="button" aria-label="\u0412\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
-        ${BW_ARROW_SVG}<span>\u0412\u0441\u0456<br>\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
+        <div class="cmbw-more-in">${BW_ARROW_SVG}<span>\u0412\u0441\u0456<br>\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span></div>
       </div>`;
       el.innerHTML = `
       <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0414\u043E\u0448\u043A\u0443 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
         <span class="cmbw-title">\u0414\u041E\u0428\u041A\u0410 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u042C</span>
-        <span class="cmbw-count">${ads.length} ${pluralAdsBw(ads.length)}</span>
+        <span class="cmbw-dots" aria-hidden="true"></span>
         <span class="cmbw-arrow">${BW_ARROW_SVG}</span>
       </div>
       ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}${moreCard}</div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
@@ -8690,50 +8702,100 @@ ${ev.description || ""}`
         }
       });
       const strip = el.querySelector("#cmbw-strip");
-      if (strip && ads.length > 2) {
-        const pairW = () => {
-          const c = strip.querySelector(".cmbw-card");
-          return c ? (c.offsetWidth + 12) * 2 : 0;
+      if (strip) {
+        const snapTargets = () => {
+          const kids = [...strip.children];
+          if (!kids.length)
+            return [];
+          const base = kids[0].offsetLeft;
+          return kids.filter((_, i) => i % 2 === 0).map((c) => Math.max(0, c.offsetLeft - base - 12));
         };
-        const tick = () => {
-          if (!document.contains(strip)) {
-            bwStopAuto();
+        const targets0 = snapTargets();
+        const dotsWrap = el.querySelector(".cmbw-dots");
+        if (dotsWrap && targets0.length > 1) {
+          dotsWrap.innerHTML = targets0.map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join("");
+        }
+        const dotEls = dotsWrap ? [...dotsWrap.children] : [];
+        const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+        const updateFx = () => {
+          const kids = [...strip.children];
+          if (!kids.length)
             return;
+          const base = kids[0].offsetLeft;
+          const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
+          kids.forEach((c) => {
+            const l = c.offsetLeft - base + padL;
+            const vis = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
+            const frac = Math.min(1, vis / c.offsetWidth);
+            if (c.firstElementChild)
+              c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
+          });
+          if (dotEls.length) {
+            const targets = snapTargets();
+            let ai = 0, best = Infinity;
+            targets.forEach((t, i) => {
+              const d = Math.abs(t - strip.scrollLeft);
+              if (d < best) {
+                best = d;
+                ai = i;
+              }
+            });
+            dotEls.forEach((d, i) => d.classList.toggle("cmbw-dot--active", i === ai));
           }
-          if (document.hidden)
+        };
+        let fxRaf = 0;
+        strip.addEventListener("scroll", () => {
+          if (fxRaf)
             return;
-          const w = pairW();
-          if (!w)
-            return;
-          const max = strip.scrollWidth - strip.clientWidth;
-          const next = Math.round(strip.scrollLeft / w) * w + w;
-          strip.scrollTo({ left: next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
-        };
-        const startAuto = () => {
-          clearInterval(_bwTimer);
-          _bwTimer = setInterval(tick, BW_STEP_MS);
-        };
-        const pauseAuto = () => {
-          clearInterval(_bwTimer);
-          _bwTimer = null;
-          clearTimeout(_bwResume);
-          _bwResume = setTimeout(startAuto, BW_RESUME_MS);
-        };
-        strip.addEventListener("touchstart", pauseAuto, { passive: true });
-        strip.addEventListener("pointerdown", pauseAuto);
-        startAuto();
+          fxRaf = requestAnimationFrame(() => {
+            fxRaf = 0;
+            updateFx();
+          });
+        }, { passive: true });
+        updateFx();
+        if (targets0.length > 1) {
+          const tick = () => {
+            if (!document.contains(strip)) {
+              bwStopAuto();
+              return;
+            }
+            if (document.hidden)
+              return;
+            const targets = snapTargets();
+            if (!targets.length)
+              return;
+            const max = strip.scrollWidth - strip.clientWidth;
+            const next = targets.find((t) => t > strip.scrollLeft + 8);
+            strip.scrollTo({ left: next === void 0 || next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
+          };
+          const startAuto = () => {
+            clearInterval(_bwTimer);
+            _bwTimer = setInterval(tick, BW_STEP_MS);
+          };
+          const pauseAuto = () => {
+            clearInterval(_bwTimer);
+            _bwTimer = null;
+            clearTimeout(_bwResume);
+            _bwResume = setTimeout(startAuto, BW_RESUME_MS);
+          };
+          strip.addEventListener("touchstart", pauseAuto, { passive: true });
+          strip.addEventListener("pointerdown", pauseAuto);
+          if (dotsWrap)
+            dotsWrap.addEventListener("click", (e) => {
+              const d = e.target.closest("[data-bw-dot]");
+              if (!d)
+                return;
+              e.stopPropagation();
+              pauseAuto();
+              const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
+              strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
+            });
+          startAuto();
+        }
       }
     } catch {
       el.innerHTML = '<div class="cmbw-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
-  }
-  function pluralAdsBw(n) {
-    const d = n % 10, dd = n % 100;
-    if (d === 1 && dd !== 11)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14))
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
   }
   function pluralUA(n, one, few, many) {
     const m10 = n % 10, m100 = n % 100;
