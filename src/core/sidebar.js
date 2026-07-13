@@ -27,6 +27,16 @@ const NAV = [
   { id: 'policy',  label: 'Політика і приватність', icon: ICONS.lock, kind: 'info' },
 ];
 
+// Соцмережі проєкту Olyka Castle (головний бренд, не сам застосунок) — футер
+// сайдбару, лише іконки без підпису (рішення Вови 13.07). target=_blank +
+// rel=noopener: відкриється застосунок Instagram/Facebook (universal links iOS).
+const SOCIAL = [
+  { id: 'instagram', label: 'Instagram Olyka Castle', icon: ICONS.brandInstagram,
+    url: 'https://www.instagram.com/olyka_castle?igsh=a2pmOGN3N2cyenBs' },
+  { id: 'facebook', label: 'Facebook Olyka Castle', icon: ICONS.brandFacebook,
+    url: 'https://www.facebook.com/share/18mhw13NDu/?mibextid=wwXIfr' },
+];
+
 const INFO = {
   support: {
     title: 'Підтримка',
@@ -91,9 +101,20 @@ function itemHtml(item) {
 function renderNav() {
   const { nav } = els();
   if (!nav) return;
-  nav.innerHTML = NAV.map(itemHtml).join('');
+  // Футер соцмереж — притиснутий до низу меню (margin-top:auto у CSS),
+  // <a> зі справжнім href: iOS відкриє застосунок Instagram/Facebook.
+  const socialHtml = `
+    <div class="sb-social-foot">
+      ${SOCIAL.map(s => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">${s.icon}</a>`).join('')}
+    </div>`;
+  nav.innerHTML = NAV.map(itemHtml).join('') + socialHtml;
   nav.querySelectorAll('[data-nav]').forEach(btn => {
     btn.addEventListener('click', () => handleNav(btn.dataset.nav));
+  });
+  // Тап по соцмережі → закрити сайдбар (посилання відкривається у новій вкладці,
+  // меню не має лишатись висіти під ним після повернення).
+  nav.querySelectorAll('.sb-social-btn').forEach(a => {
+    a.addEventListener('click', () => closeSidebar());
   });
 }
 
