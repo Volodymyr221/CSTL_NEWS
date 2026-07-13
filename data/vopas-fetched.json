@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-14T00:08:54.926252+03:00",
+  "fetched_at": "2026-07-14T01:29:03.940068+03:00",
   "date": "14.07.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -57,8 +57,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -72,8 +72,8 @@
       "carrier": "ТДВ \"Ковельське АТП \"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
