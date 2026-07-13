@@ -949,11 +949,13 @@ export function buildHeroCard(route, timings, index, total, seg = null) {
         <div class="bhv4-topbar">
           <span class="bhv4-status">
             <svg class="bhv4-bus-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="2" y="4" width="20" height="13" rx="2"/>
-              <path d="M2 9h20"/>
-              <path d="M8 4v5M16 4v5"/>
-              <circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/>
-              <path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
+              <path d="M4 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+              <path d="M16 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/>
+              <path d="M4 17h-2v-11a1 1 0 0 1 1 -1h14a5 7 0 0 1 5 7v5h-2m-4 0h-8"/>
+              <path d="M16 5l1.5 7l4.5 0"/>
+              <path d="M2 10l15 0"/>
+              <path d="M7 5l0 5"/>
+              <path d="M12 5l0 5"/>
             </svg>
             <span class="bhv4-dyn"><span class="bhv4-status-text">${statusText}</span> <span class="bhv4-status-dot">${statusDot}</span></span>
           </span>
@@ -997,7 +999,7 @@ function buildEmptyHeroCard(msg) {
       <div class="bhv4-overlay"></div>
       <div class="bhv4-content bhv4-empty-content">
         <svg class="bhv4-empty-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="2" y="4" width="20" height="13" rx="2"/><path d="M2 9h20"/><path d="M8 4v5M16 4v5"/><circle cx="7" cy="20" r="1.5"/><circle cx="17" cy="20" r="1.5"/><path d="M5.5 17H2v2.5M18.5 17H22v2.5"/>
+          <path d="M4 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M16 17a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"/><path d="M4 17h-2v-11a1 1 0 0 1 1 -1h14a5 7 0 0 1 5 7v5h-2m-4 0h-8"/><path d="M16 5l1.5 7l4.5 0"/><path d="M2 10l15 0"/><path d="M7 5l0 5"/><path d="M12 5l0 5"/>
         </svg>
         <div class="bhv4-empty-msg">${escapeHtml(msg)}</div>
       </div>

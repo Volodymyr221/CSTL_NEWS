@@ -88,7 +88,32 @@
   display: flex;
   flex-direction: column;
   gap: 2px;
+  flex: 1;   /* займає вільну висоту → футер соцмереж (margin-top:auto) сідає до низу */
 }
+
+/* Соцмережі Olyka Castle — футер сайдбару: лише круглі іконки (без підпису). */
+.sb-social-foot {
+  margin-top: auto;              /* до низу меню, навіть коли пунктів мало */
+  padding: 14px 8px 2px;
+  border-top: 1px solid rgba(0, 0, 0, 0.08);
+  display: flex;
+  gap: 12px;
+}
+.sb-social-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;                   /* мінімальний зручний тач-розмір (Apple HIG) */
+  height: 44px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(114, 47, 55, 0.35);
+  background: rgba(114, 47, 55, 0.05);
+  color: var(--red, #722F37);
+  font-size: 22px;               /* іконки ICONS.* — 1em → 22px */
+  text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.sb-social-btn:active { background: rgba(114, 47, 55, 0.14); }
 .sidebar-item {
   display: flex;
   align-items: center;
