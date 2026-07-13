@@ -656,17 +656,23 @@ function bwStopAuto() {
 }
 
 // Одна картка стрічки — міні-версія реальної картки вкладки Дошка.
+// Без фото — обкладинка-плейсхолдер: заливка в колір категорії + велика іконка
+// (фікс Вови 13.07: раніше картка без фото мала порожнечу, дата «плавала»).
 function bwCardHtml(p) {
   const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
   const title = (p.title && p.title.trim()) || (p.text || '').trim().slice(0, 60) || 'Оголошення';
   const locLabel = p.location ? (p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location) : '';
   const ts = p.ts || (p.published_at && new Date(p.published_at).getTime()) || (p.created_at && new Date(p.created_at).getTime());
+  const color = catColor(p.category);
+  const cover = photo
+    ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
+    : `<div class="cmbw-ph cmbw-ph--${escapeHtml(color)}">${catIcon(p.category)}</div>`;
   return `
-    <article class="cmbw-card${photo ? '' : ' cmbw-card--nophoto'}" data-bw-id="${p.id}">
+    <article class="cmbw-card" data-bw-id="${p.id}">
       <span class="cmbw-pin" aria-hidden="true"></span>
-      ${photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : ''}
+      ${cover}
       <div class="cmbw-body">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
+        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
         <div class="cmbw-name">${escapeHtml(title)}</div>
         <div class="cmbw-meta">
           ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
@@ -674,6 +680,16 @@ function bwCardHtml(p) {
         </div>
       </div>
     </article>`;
+}
+
+// Fisher-Yates перемішування (чесний випадковий порядок, кожен елемент рівні шанси)
+function bwShuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 export async function renderBoardBlock() {
@@ -693,16 +709,14 @@ export async function renderBoardBlock() {
       posts = ((await boardRes.json()).posts) || [];
     }
 
-    // 2. Лише оголошення (type board), УСЯ громада без фільтра НП (рішення Вови 13.07).
-    //    Порядок як на вкладці: підняте (bumped_at) вгору, далі свіжіші.
-    const rank = x =>
-      (x.bumped_at && new Date(x.bumped_at).getTime()) ||
-      x.ts || (x.published_at && new Date(x.published_at).getTime()) || 0;
-    const ads = posts
-      .filter(p => (p.type || 'board') === 'board')
-      .sort((a, b) => rank(b) - rank(a));
+    // 2. Лише оголошення (type board), УСЯ громада без фільтра НП.
+    //    Порядок — ВИПАДКОВИЙ при кожному рендері (рішення Вови 13.07): віджет не
+    //    дублює «свіжі вгорі» вкладки, а дає рівний шанс УСІМ оголошенням, включно
+    //    зі старими — кожне відкриття Громади показує інший набір і порядок.
+    const ads = posts.filter(p => (p.type || 'board') === 'board');
+    const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
 
-    const cards = ads.slice(0, BW_MAX_CARDS).map(bwCardHtml).join('');
+    const cards = shown.map(bwCardHtml).join('');
     const moreCard = `
       <div class="cmbw-more" data-bw-more role="button" aria-label="Всі оголошення">
         ${BW_ARROW_SVG}<span>Всі<br>оголошення</span>
@@ -736,18 +750,26 @@ export async function renderBoardBlock() {
     //    в кінці — плавно на початок. Дотик пальцем → пауза, відновлення через
     //    BW_RESUME_MS. Згорнутий застосунок (document.hidden) — тик пропускається.
     const strip = el.querySelector('#cmbw-strip');
-    if (strip && ads.length > 2) {
-      const pairW = () => {
-        const c = strip.querySelector('.cmbw-card');
-        return c ? (c.offsetWidth + 12) * 2 : 0;   // 12 = gap стрічки
+    if (strip && shown.length > 2) {
+      // Снап-цілі = позиції початку кожної ПАРИ (непарні картки) у КООРДИНАТАХ
+      // СКРОЛУ: перша пара = 0 (картка «вліво»); наступні = зсув від першої мінус
+      // scroll-margin-left 12px (CSS дає його всім парам крім першої, щоб минула
+      // картка визирала зліва). offsetLeft беремо ЯК РІЗНИЦЮ з першою карткою —
+      // він рахується від offsetParent із власним зсувом, різниця його прибирає.
+      const snapTargets = () => {
+        const kids = [...strip.children];
+        if (!kids.length) return [];
+        const base = kids[0].offsetLeft;
+        return kids.filter((_, i) => i % 2 === 0)
+          .map(c => Math.max(0, c.offsetLeft - base - 12));
       };
       const tick = () => {
         if (!document.contains(strip)) { bwStopAuto(); return; }   // блок перемальовано/зник
         if (document.hidden) return;
-        const w = pairW(); if (!w) return;
+        const targets = snapTargets(); if (!targets.length) return;
         const max  = strip.scrollWidth - strip.clientWidth;
-        const next = Math.round(strip.scrollLeft / w) * w + w;
-        strip.scrollTo({ left: next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
+        const next = targets.find(t => t > strip.scrollLeft + 8);
+        strip.scrollTo({ left: next === undefined || next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
       };
       const startAuto = () => { clearInterval(_bwTimer); _bwTimer = setInterval(tick, BW_STEP_MS); };
       const pauseAuto = () => {
