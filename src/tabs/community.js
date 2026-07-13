@@ -175,11 +175,10 @@ function renderSkeleton() {
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
+    <!-- Віджет Дошки (повна переробка 13.07, рішення Вови): шапка тепер
+         усередині віджета (рендерить renderBoardBlock), стара «Дошка громади» прибрана. -->
     <section class="cm-block cm-block--board">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">Дошка громади</h3>
-      </header>
-      <div id="cm-board-content" class="cm-board-body cm-loading">Завантаження…</div>
+      <div id="cm-board-content" class="cm-loading">Завантаження…</div>
     </section>
 
     <section class="cm-block cm-block--event">
