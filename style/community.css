@@ -620,7 +620,17 @@
   white-space: nowrap;   /* шапка завжди одним рядком */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
-.cmbw-count { margin-left: auto; font-size: 11px; font-weight: 700; white-space: nowrap; color: rgba(242, 231, 208, 0.75); }
+/* Крапки-індикатори пар (замість лічильника) — стиль свайп-крапок віджета автобусів */
+.cmbw-dots { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.cmbw-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(242, 231, 208, 0.35);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.cmbw-dot--active { background: #F2E7D0; transform: scale(1.4); }
 .cmbw-arrow { display: inline-flex; color: rgba(242, 231, 208, 0.9); }
 .cmbw-strip {
   display: flex;
@@ -630,6 +640,7 @@
      на старті перша пара сідає на 16px (снап клампиться в 0), далі кожна пара
      стає на 28px → минула картка визирає зліва на 16px, наступна справа ~14px */
   padding: 8px 16px 18px;
+  align-items: flex-start;   /* картки різної висоти: без фото — нижчі, як на Дошці */
   scroll-snap-type: x mandatory;
   scroll-padding-left: 16px;   /* = padding-left; додатковий відступ пар — scroll-margin нижче */
   scrollbar-width: none;
@@ -642,12 +653,19 @@
 .cmbw-strip > :nth-child(odd):not(:first-child) { scroll-margin-left: 12px; }
 .cmbw-card {
   position: relative;
+  flex: 0 0 calc(50% - 17px);   /* пара вужча за видиму зону → peek сусідніх пар */
+}
+/* Внутрішня обгортка картки — саме ЇЇ масштабує карусель (JS): центральна пара
+   scale(1), обрізані бічні картки ~scale(0.87). Зовнішня .cmbw-card не
+   трансформується — снап-геометрія стрічки лишається стабільною. */
+.cmbw-in {
+  position: relative;
   display: flex;
   flex-direction: column;
-  flex: 0 0 calc(50% - 17px);   /* пара вужча за видиму зону → peek сусідніх пар */
   background: #FBFAF4;
   border-radius: 12px;
   box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  will-change: transform;
 }
 .cmbw-strip > :nth-child(odd) { scroll-snap-align: start; }   /* снап на початку кожної пари */
 .cmbw-pin {
@@ -666,22 +684,6 @@
   background-size: cover;
   background-position: center;
 }
-/* Обкладинка-плейсхолдер без фото: заливка в колір категорії + велика іконка.
-   Кольори = ті самі семантичні що теги (catColor: red/green/blue/amber/gray). */
-.cmbw-ph {
-  height: 92px;
-  border-radius: 12px 12px 0 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 38px;   /* іконки ICONS/catIcon — 1em */
-}
-.cmbw-ph svg { opacity: 0.55; }
-.cmbw-ph--red   { background: #F6E4E1; color: #C0392B; }
-.cmbw-ph--green { background: #E4EFE6; color: #2E7D4F; }
-.cmbw-ph--blue  { background: #E2EAF4; color: #2C63A8; }
-.cmbw-ph--amber { background: #F5EDDA; color: #B07D1E; }
-.cmbw-ph--gray  { background: #ECEAE6; color: #6b6b6b; }
 .cmbw-body { padding: 8px 10px 10px; display: flex; flex-direction: column; flex: 1; }
 .cmbw-body .cm-board-cat { margin-bottom: 5px; }
 .cmbw-name {
@@ -715,6 +717,13 @@
 }
 .cmbw-more {
   flex: 0 0 calc(50% - 17px);
+  align-self: stretch;   /* на всю висоту стрічки, навіть коли сусідні картки нижчі */
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmbw-more-in {
+  height: 100%;
+  min-height: 108px;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -727,8 +736,7 @@
   font-weight: 800;
   text-align: center;
   background: rgba(255, 255, 255, 0.05);
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
+  will-change: transform;
 }
 .cmbw-empty {
   padding: 24px 16px 28px;

@@ -53,7 +53,7 @@ let _bwTimer  = null;   // інтервал автопрокрутки пар
 let _bwResume = null;   // таймаут відновлення автопрокрутки після дотику
 const BW_STEP_MS   = 5000;  // період автозміни пари (мс)
 const BW_RESUME_MS = 8000;  // пауза після дотику пальцем (мс)
-const BW_MAX_CARDS = 10;    // скільки свіжих оголошень у стрічці (решта — картка «Всі»)
+const BW_MAX_CARDS = 16;    // максимум випадкових оголошень у стрічці (Вова 13.07)
 
 // Карусель подій громади (Г-2/Б2): авто-ротація 3-5 карток; порожньо → найближчі свята (Г-16 fallback)
 let _evItems = [];
@@ -656,8 +656,10 @@ function bwStopAuto() {
 }
 
 // Одна картка стрічки — міні-версія реальної картки вкладки Дошка.
-// Без фото — обкладинка-плейсхолдер: заливка в колір категорії + велика іконка
-// (фікс Вови 13.07: раніше картка без фото мала порожнечу, дата «плавала»).
+// Без фото обкладинки НЕМА — картка просто нижча, як на вкладці Дошка
+// (рішення Вови 13.07, замінило плейсхолдер-обкладинку).
+// Вміст загорнуто у .cmbw-in — саме її масштабує карусель (JS нижче),
+// щоб снап-геометрія зовнішньої картки лишалась незмінною.
 function bwCardHtml(p) {
   const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
   const title = (p.title && p.title.trim()) || (p.text || '').trim().slice(0, 60) || 'Оголошення';
@@ -666,17 +668,19 @@ function bwCardHtml(p) {
   const color = catColor(p.category);
   const cover = photo
     ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
-    : `<div class="cmbw-ph cmbw-ph--${escapeHtml(color)}">${catIcon(p.category)}</div>`;
+    : '';
   return `
     <article class="cmbw-card" data-bw-id="${p.id}">
-      <span class="cmbw-pin" aria-hidden="true"></span>
-      ${cover}
-      <div class="cmbw-body">
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
-        <div class="cmbw-name">${escapeHtml(title)}</div>
-        <div class="cmbw-meta">
-          ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
-          ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ''}
+      <div class="cmbw-in">
+        <span class="cmbw-pin" aria-hidden="true"></span>
+        ${cover}
+        <div class="cmbw-body">
+          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
+          <div class="cmbw-name">${escapeHtml(title)}</div>
+          <div class="cmbw-meta">
+            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
+            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ''}
+          </div>
         </div>
       </div>
     </article>`;
@@ -719,14 +723,14 @@ export async function renderBoardBlock() {
     const cards = shown.map(bwCardHtml).join('');
     const moreCard = `
       <div class="cmbw-more" data-bw-more role="button" aria-label="Всі оголошення">
-        ${BW_ARROW_SVG}<span>Всі<br>оголошення</span>
+        <div class="cmbw-more-in">${BW_ARROW_SVG}<span>Всі<br>оголошення</span></div>
       </div>`;
 
     el.innerHTML = `
       <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити Дошку оголошень">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
         <span class="cmbw-title">ДОШКА ОГОЛОШЕНЬ</span>
-        <span class="cmbw-count">${ads.length} ${pluralAdsBw(ads.length)}</span>
+        <span class="cmbw-dots" aria-hidden="true"></span>
         <span class="cmbw-arrow">${BW_ARROW_SVG}</span>
       </div>
       ${ads.length
@@ -746,11 +750,9 @@ export async function renderBoardBlock() {
       }
     });
 
-    // 4. Автопрокрутка: кожні BW_STEP_MS — наступна ПАРА (снап робить CSS),
-    //    в кінці — плавно на початок. Дотик пальцем → пауза, відновлення через
-    //    BW_RESUME_MS. Згорнутий застосунок (document.hidden) — тик пропускається.
+    // 4. Стрічка: карусель-масштаб карток, крапки-індикатори пар, автопрокрутка.
     const strip = el.querySelector('#cmbw-strip');
-    if (strip && shown.length > 2) {
+    if (strip) {
       // Снап-цілі = позиції початку кожної ПАРИ (непарні картки) у КООРДИНАТАХ
       // СКРОЛУ: перша пара = 0 (картка «вліво»); наступні = зсув від першої мінус
       // scroll-margin-left 12px (CSS дає його всім парам крім першої, щоб минула
@@ -763,35 +765,83 @@ export async function renderBoardBlock() {
         return kids.filter((_, i) => i % 2 === 0)
           .map(c => Math.max(0, c.offsetLeft - base - 12));
       };
-      const tick = () => {
-        if (!document.contains(strip)) { bwStopAuto(); return; }   // блок перемальовано/зник
-        if (document.hidden) return;
-        const targets = snapTargets(); if (!targets.length) return;
-        const max  = strip.scrollWidth - strip.clientWidth;
-        const next = targets.find(t => t > strip.scrollLeft + 8);
-        strip.scrollTo({ left: next === undefined || next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
+      const targets0 = snapTargets();
+
+      // Крапки-індикатори пар у шапці — як свайп-крапки віджета автобусів
+      // (рішення Вови 13.07, замінили лічильник «N оголошень»).
+      const dotsWrap = el.querySelector('.cmbw-dots');
+      if (dotsWrap && targets0.length > 1) {
+        dotsWrap.innerHTML = targets0
+          .map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join('');
+      }
+      const dotEls = dotsWrap ? [...dotsWrap.children] : [];
+
+      // Карусель: центральна пара — повний розмір, обрізані бічні картки менші.
+      // Масштаб = частка видимої ширини картки (плавно росте/спадає при гортанні).
+      // Скейлиться внутрішня .cmbw-in/.cmbw-more-in — зовнішня картка (снап) не рухається.
+      const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+      const updateFx = () => {
+        const kids = [...strip.children];
+        if (!kids.length) return;
+        const base  = kids[0].offsetLeft;
+        const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
+        kids.forEach(c => {
+          const l    = c.offsetLeft - base + padL;
+          const vis  = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
+          const frac = Math.min(1, vis / c.offsetWidth);
+          if (c.firstElementChild) c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
+        });
+        if (dotEls.length) {   // активна крапка = найближча снап-ціль
+          const targets = snapTargets();
+          let ai = 0, best = Infinity;
+          targets.forEach((t, i) => {
+            const d = Math.abs(t - strip.scrollLeft);
+            if (d < best) { best = d; ai = i; }
+          });
+          dotEls.forEach((d, i) => d.classList.toggle('cmbw-dot--active', i === ai));
+        }
       };
-      const startAuto = () => { clearInterval(_bwTimer); _bwTimer = setInterval(tick, BW_STEP_MS); };
-      const pauseAuto = () => {
-        clearInterval(_bwTimer); _bwTimer = null;
-        clearTimeout(_bwResume);
-        _bwResume = setTimeout(startAuto, BW_RESUME_MS);
-      };
-      strip.addEventListener('touchstart', pauseAuto, { passive: true });
-      strip.addEventListener('pointerdown', pauseAuto);
-      startAuto();
+      let fxRaf = 0;
+      strip.addEventListener('scroll', () => {
+        if (fxRaf) return;
+        fxRaf = requestAnimationFrame(() => { fxRaf = 0; updateFx(); });
+      }, { passive: true });
+      updateFx();
+
+      // Автопрокрутка: кожні BW_STEP_MS — наступна ПАРА (снап робить CSS),
+      // в кінці — плавно на початок. Дотик/крапка → пауза, відновлення через
+      // BW_RESUME_MS. Згорнутий застосунок (document.hidden) — тик пропускається.
+      if (targets0.length > 1) {
+        const tick = () => {
+          if (!document.contains(strip)) { bwStopAuto(); return; }   // блок перемальовано/зник
+          if (document.hidden) return;
+          const targets = snapTargets(); if (!targets.length) return;
+          const max  = strip.scrollWidth - strip.clientWidth;
+          const next = targets.find(t => t > strip.scrollLeft + 8);
+          strip.scrollTo({ left: next === undefined || next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
+        };
+        const startAuto = () => { clearInterval(_bwTimer); _bwTimer = setInterval(tick, BW_STEP_MS); };
+        const pauseAuto = () => {
+          clearInterval(_bwTimer); _bwTimer = null;
+          clearTimeout(_bwResume);
+          _bwResume = setTimeout(startAuto, BW_RESUME_MS);
+        };
+        strip.addEventListener('touchstart', pauseAuto, { passive: true });
+        strip.addEventListener('pointerdown', pauseAuto);
+        if (dotsWrap) dotsWrap.addEventListener('click', e => {
+          const d = e.target.closest('[data-bw-dot]');
+          if (!d) return;
+          e.stopPropagation();   // шапка теж клікабельна — крапка не має відкривати вкладку
+          pauseAuto();
+          const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
+          strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: 'smooth' });
+        });
+        startAuto();
+      }
     }
   } catch {
     el.innerHTML = '<div class="cmbw-empty">Дошка тимчасово недоступна</div>';
   }
-}
-
-// «оголошення/оголошень» для лічильника шапки віджета (та сама логіка що на вкладці)
-function pluralAdsBw(n) {
-  const d = n % 10, dd = n % 100;
-  if (d === 1 && dd !== 11) return 'оголошення';
-  if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return 'оголошення';
-  return 'оголошень';
 }
 
 
