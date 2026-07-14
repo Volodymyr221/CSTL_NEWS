@@ -8674,18 +8674,17 @@ ${ev.description || ""}`
       const ads = posts.filter((p) => (p.type || "board") === "board");
       const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
       const cards = shown.map(bwCardHtml).join("");
-      const moreCard = `
-      <div class="cmbw-more" data-bw-more role="button" aria-label="\u0412\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
-        <div class="cmbw-more-in">${BW_ARROW_SVG}<span>\u0412\u0441\u0456<br>\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span></div>
-      </div>`;
+      el.classList.remove("cm-loading");
       el.innerHTML = `
       <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0414\u043E\u0448\u043A\u0443 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
         <span class="cmbw-title">\u0414\u041E\u0428\u041A\u0410 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u042C</span>
         <span class="cmbw-dots" aria-hidden="true"></span>
-        <span class="cmbw-arrow">${BW_ARROW_SVG}</span>
       </div>
-      ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}${moreCard}</div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
+      ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-foot" data-bw-more role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
+             <span>\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>${BW_ARROW_SVG}
+           </div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
     `;
       el.addEventListener("click", (e) => {
         const card = e.target.closest("[data-bw-id]");
