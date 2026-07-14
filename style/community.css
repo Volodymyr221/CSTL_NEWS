@@ -637,19 +637,29 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cmbw-head-ic { display: inline-flex; font-size: 17px; }
+.cmbw-head-ic { display: inline-flex; font-size: 19px; }
 .cmbw-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 1.1px;
-  white-space: nowrap;   /* шапка завжди одним рядком */
+  letter-spacing: 0.6px;   /* вужчий інтервал — довша назва «...ГРОМАДИ» влазить одним рядком */
+  white-space: nowrap;     /* шапка завжди одним рядком */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
-/* Крапки-індикатори пар (замість лічильника) — стиль свайп-крапок віджета автобусів */
-.cmbw-dots { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+/* Крапки-індикатори пар (Вова 14.07: перенесені з правого верху ВНИЗ під картки,
+   по центру — класичний патерн каруселі). Стиль свайп-крапок віджета автобусів. */
+.cmbw-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 0 10px;
+  position: relative;
+  z-index: 2;   /* над затемненими краями */
+}
+.cmbw-dots:empty { display: none; }   /* коли пар <2 — не займати місце */
 .cmbw-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: rgba(242, 231, 208, 0.35);
   cursor: pointer;
@@ -735,10 +745,14 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  min-width: 0;   /* дозволяє локації стискатись/переноситись, не тиснучи дату */
   color: var(--red, #722F37);
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
+/* Дата публікації — СТРОГО в один рядок (Вова 14.07): не переноситься навіть коли
+   локація «ОЛИЦЬКА ГРОМАДА» довга; локація віддає їй місце (min-width:0 вище). */
+.cmbw-time { white-space: nowrap; flex: 0 0 auto; padding-left: 6px; }
 /* Нижня смуга-кнопка «Переглянути всі оголошення» — симетрична шапці: затемнена
    в тон віджета, прилягає до низу (кути обрізає .cm-block) + лінія-роздільник зверху. */
 .cmbw-foot {
