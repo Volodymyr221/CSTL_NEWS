@@ -726,9 +726,9 @@ export async function renderBoardBlock() {
     // блоку (їх кути обрізає .cm-block overflow:hidden + radius → заокруглені).
     el.classList.remove('cm-loading');
     el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити Дошку оголошень">
+      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити всі оголошення громади">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">ДОШКА ОГОЛОШЕНЬ</span>
+        <span class="cmbw-title">АКТУАЛЬНІ ОГОЛОШЕННЯ</span>
         <span class="cmbw-dots" aria-hidden="true"></span>
       </div>
       ${ads.length

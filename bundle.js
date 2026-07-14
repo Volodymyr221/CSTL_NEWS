@@ -8676,9 +8676,9 @@ ${ev.description || ""}`
       const cards = shown.map(bwCardHtml).join("");
       el.classList.remove("cm-loading");
       el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0414\u043E\u0448\u043A\u0443 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C">
+      <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0433\u0440\u043E\u043C\u0430\u0434\u0438">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">\u0414\u041E\u0428\u041A\u0410 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u042C</span>
+        <span class="cmbw-title">\u0410\u041A\u0422\u0423\u0410\u041B\u042C\u041D\u0406 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u041D\u042F</span>
         <span class="cmbw-dots" aria-hidden="true"></span>
       </div>
       ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
