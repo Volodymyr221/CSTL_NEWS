@@ -7,13 +7,14 @@
 
 import {
   isLoggedIn, currentUser, onAuthChange,
-  signInWithGoogle, signOut, getProfile, saveProfile,
+  signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
 } from './auth.js';
 import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { ICONS } from './icons.js';
 import { openSavedHub } from './saved-hub.js';
 import { SETTLEMENTS, OTHER_SETTLEMENT } from './settlements.js';
-import { escapeHtml, showToast } from './utils.js';
+import { escapeHtml, showToast, avatarCircle, squareImageBlob } from './utils.js';
+import { uploadPhotoToStorage } from './supabase.js';
 import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } from './modal.js';
 
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
@@ -22,7 +23,14 @@ let _newUserChecked = false;  // чи вже перевіряли профіль
 function updateHeaderBtn() {
   const btn = document.getElementById('account-btn');
   if (!btn) return;
+  if (!btn.dataset.defaultHtml) btn.dataset.defaultHtml = btn.innerHTML;   // зберегти дефолтну SVG-іконку
+  const av = isLoggedIn() ? currentAvatarUrl() : '';
+  // Є фото профілю → мініатюра-кружечок; інакше — дефолтна іконка користувача.
+  btn.innerHTML = av
+    ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>`
+    : btn.dataset.defaultHtml;
   btn.classList.toggle('account-btn--in', isLoggedIn());
+  btn.classList.toggle('account-btn--av', !!av);
   btn.setAttribute('aria-label', isLoggedIn() ? 'Кабінет жителя' : 'Увійти');
 }
 
@@ -124,6 +132,7 @@ async function openAccount() {
     settlement: p.settlement || '',
     street: p.street || '',
     bio: p.bio || '',
+    avatar_url: p.avatar_url || '',
   };
   const fullName = [val.name, val.surname].filter(Boolean).join(' ') || 'Житель';
   const place = val.settlement || 'Учасник спільноти';
@@ -144,7 +153,11 @@ async function openAccount() {
     </div>
     <div class="acc-cab-scroll">
       <div class="acc-cab-hero">
-        <div class="acc-cab-av">👤</div>
+        <div class="acc-cab-avwrap">
+          <div class="acc-cab-av" id="acc-hero-av">${avatarCircle({ name: fullName, url: val.avatar_url, cls: 'acc-av' })}</div>
+          <button class="acc-cab-avcam" type="button" id="acc-av-btn" aria-label="Змінити фото">${ICONS.photo}</button>
+          <input type="file" id="acc-av-file" accept="image/*" hidden>
+        </div>
         <div class="acc-cab-hi">
           <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
           <div class="acc-cab-email">${escapeHtml(email)}</div>
@@ -193,6 +206,34 @@ async function openAccount() {
   requestAnimationFrame(() => cab.classList.add('open'));
 
   cab.querySelector('.acc-cab-back').addEventListener('click', closeCabinet);
+
+  // ── Аватар: вибір фото → квадрат-ресайз → upload → зберегти avatar_url ──
+  const avBtn = cab.querySelector('#acc-av-btn');
+  const avFile = cab.querySelector('#acc-av-file');
+  const avBox = cab.querySelector('#acc-hero-av');
+  avBtn.addEventListener('click', () => avFile.click());
+  avFile.addEventListener('change', async () => {
+    const file = avFile.files && avFile.files[0];
+    avFile.value = '';                         // дозволити повторний вибір того ж файлу
+    if (!file) return;
+    avBtn.disabled = true; avBox.classList.add('acc-av--loading');
+    try {
+      const blob = await squareImageBlob(file, 256);
+      const { url, error } = await uploadPhotoToStorage(blob, 'avatars/');
+      if (!url) throw new Error(error || 'upload');
+      const res = await saveProfile({ avatar_url: url });
+      if (!res.ok) throw new Error(res.error || 'save');
+      val.avatar_url = url;
+      avBox.innerHTML = avatarCircle({ name: cab.querySelector('#acc-hero-name').textContent, url, cls: 'acc-av' });
+      updateHeaderBtn();                        // мініатюра в шапці одразу
+      showToast('✅ Фото оновлено', 2200);
+    } catch (err) {
+      showToast('Не вдалося завантажити фото: ' + err.message, 4000, 'error');
+    } finally {
+      avBtn.disabled = false; avBox.classList.remove('acc-av--loading');
+    }
+  });
+
   // Збереження анкети
   cab.querySelector('#cf-save').addEventListener('click', async (e) => {
     const btn = e.currentTarget; btn.disabled = true; btn.textContent = 'Зберігаємо…';

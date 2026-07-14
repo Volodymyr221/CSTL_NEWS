@@ -186,14 +186,14 @@
       return { ok: false, error: e.message };
     }
   }
-  async function uploadPhotoToStorage(blob) {
+  async function uploadPhotoToStorage(blob, folder = "") {
     if (!supa)
       return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!blob)
       return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
     const ext = blob.type && blob.type.split("/")[1] || "jpg";
     const rand = Math.random().toString(36).slice(2, 10);
-    const path = `${getAnonId()}/${Date.now()}-${rand}.${ext}`;
+    const path = `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
     const { error: uploadError } = await supa.storage.from("community-photos").upload(path, blob, {
       contentType: blob.type || "image/jpeg",
       cacheControl: "31536000",
@@ -743,6 +743,39 @@
   function escapeHtml(s) {
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
+  function avatarCircle({ name, url, cls = "pm-avatar" } = {}) {
+    const safeUrl = url ? String(url).trim() : "";
+    if (safeUrl) {
+      return `<span class="${cls} ${cls}--img"><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
+    }
+    const a = String(name || "").trim();
+    if (!a)
+      return `<span class="${cls} ${cls}--anon">\u{1F464}</span>`;
+    const letter = a.charAt(0).toUpperCase();
+    const hue = a.charCodeAt(0) * 47 % 360;
+    return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)">${escapeHtml(letter)}</span>`;
+  }
+  function squareImageBlob(file, size = 256) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const side = Math.min(img.width, img.height);
+          const sx = (img.width - side) / 2;
+          const sy = (img.height - side) / 2;
+          const canvas = document.createElement("canvas");
+          canvas.width = canvas.height = size;
+          canvas.getContext("2d").drawImage(img, sx, sy, side, side, 0, 0, size, size);
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error("toBlob failed")), "image/jpeg", 0.82);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
   function pad(n) {
     return String(n).padStart(2, "0");
   }
@@ -1069,6 +1102,7 @@
   // src/core/auth.js
   var _user = null;
   var _profileName = null;
+  var _profileAvatar = null;
   var _listeners = [];
   function currentUser() {
     return _user;
@@ -1078,6 +1112,9 @@
   }
   function isLoggedIn() {
     return !!_user;
+  }
+  function currentAvatarUrl() {
+    return _profileAvatar || "";
   }
   function currentUserName() {
     if (_profileName)
@@ -1147,6 +1184,7 @@
     await supa2.auth.signOut();
     _user = null;
     _profileName = null;
+    _profileAvatar = null;
     emitAuthChange();
   }
   function requireAuth(actionLabel, fn) {
@@ -1169,6 +1207,8 @@
     }
     if (data && data.name)
       _profileName = data.name;
+    if (data && "avatar_url" in data)
+      _profileAvatar = data.avatar_url || null;
     return data;
   }
   var PROFILE_FIELDS = ["name", "birth_date", "surname", "phone", "settlement", "street", "bio", "avatar_url"];
@@ -1196,6 +1236,8 @@
       return { ok: false, error: error.message };
     if (row.name)
       _profileName = row.name;
+    if (!partial && "avatar_url" in row)
+      _profileAvatar = row.avatar_url || null;
     return { ok: true, partial };
   }
 
@@ -10045,7 +10087,12 @@ END:VEVENT`
     const btn = document.getElementById("account-btn");
     if (!btn)
       return;
+    if (!btn.dataset.defaultHtml)
+      btn.dataset.defaultHtml = btn.innerHTML;
+    const av = isLoggedIn() ? currentAvatarUrl() : "";
+    btn.innerHTML = av ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>` : btn.dataset.defaultHtml;
     btn.classList.toggle("account-btn--in", isLoggedIn());
+    btn.classList.toggle("account-btn--av", !!av);
     btn.setAttribute("aria-label", isLoggedIn() ? "\u041A\u0430\u0431\u0456\u043D\u0435\u0442 \u0436\u0438\u0442\u0435\u043B\u044F" : "\u0423\u0432\u0456\u0439\u0442\u0438");
   }
   function closeModal2() {
@@ -10144,7 +10191,8 @@ END:VEVENT`
       phone: p.phone || "",
       settlement: p.settlement || "",
       street: p.street || "",
-      bio: p.bio || ""
+      bio: p.bio || "",
+      avatar_url: p.avatar_url || ""
     };
     const fullName = [val.name, val.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
     const place = val.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
@@ -10161,7 +10209,11 @@ END:VEVENT`
     </div>
     <div class="acc-cab-scroll">
       <div class="acc-cab-hero">
-        <div class="acc-cab-av">\u{1F464}</div>
+        <div class="acc-cab-avwrap">
+          <div class="acc-cab-av" id="acc-hero-av">${avatarCircle({ name: fullName, url: val.avatar_url, cls: "acc-av" })}</div>
+          <button class="acc-cab-avcam" type="button" id="acc-av-btn" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E">${ICONS.photo}</button>
+          <input type="file" id="acc-av-file" accept="image/*" hidden>
+        </div>
         <div class="acc-cab-hi">
           <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
           <div class="acc-cab-email">${escapeHtml(email)}</div>
@@ -10209,6 +10261,36 @@ END:VEVENT`
     document.body.classList.add("modal-open");
     requestAnimationFrame(() => cab.classList.add("open"));
     cab.querySelector(".acc-cab-back").addEventListener("click", closeCabinet);
+    const avBtn = cab.querySelector("#acc-av-btn");
+    const avFile = cab.querySelector("#acc-av-file");
+    const avBox = cab.querySelector("#acc-hero-av");
+    avBtn.addEventListener("click", () => avFile.click());
+    avFile.addEventListener("change", async () => {
+      const file = avFile.files && avFile.files[0];
+      avFile.value = "";
+      if (!file)
+        return;
+      avBtn.disabled = true;
+      avBox.classList.add("acc-av--loading");
+      try {
+        const blob = await squareImageBlob(file, 256);
+        const { url, error } = await uploadPhotoToStorage(blob, "avatars/");
+        if (!url)
+          throw new Error(error || "upload");
+        const res = await saveProfile({ avatar_url: url });
+        if (!res.ok)
+          throw new Error(res.error || "save");
+        val.avatar_url = url;
+        avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url, cls: "acc-av" });
+        updateHeaderBtn();
+        showToast("\u2705 \u0424\u043E\u0442\u043E \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E", 2200);
+      } catch (err) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
+      } finally {
+        avBtn.disabled = false;
+        avBox.classList.remove("acc-av--loading");
+      }
+    });
     cab.querySelector("#cf-save").addEventListener("click", async (e) => {
       const btn = e.currentTarget;
       btn.disabled = true;
