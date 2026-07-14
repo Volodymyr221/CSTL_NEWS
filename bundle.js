@@ -4394,29 +4394,44 @@ ${post.text}
     vv?.addEventListener("scroll", _chatViewportHandler);
     input?.addEventListener("focus", _chatViewportHandler);
     input?.addEventListener("blur", _chatViewportHandler);
-    let startY = 0, curY = 0, dragging = false;
+    let startY = 0, curY = 0, dragging = false, rafId = 0;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
+    const applyDrag = () => {
+      rafId = 0;
+      modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
+    };
     dragZone.addEventListener("touchstart", (e) => {
       startY = e.touches[0].clientY;
+      curY = 0;
       dragging = true;
+      modal.style.transition = "none";
+      modal.style.willChange = "transform";
     }, { passive: true });
     dragZone.addEventListener("touchmove", (e) => {
       if (!dragging)
         return;
-      curY = e.touches[0].clientY - startY;
-      if (curY > 0)
-        modal.style.transform = `translateX(-50%) translateY(${curY}px)`;
+      curY = Math.max(0, e.touches[0].clientY - startY);
+      if (!rafId)
+        rafId = requestAnimationFrame(applyDrag);
     }, { passive: true });
-    dragZone.addEventListener("touchend", () => {
+    const endDrag = () => {
       if (!dragging)
         return;
       dragging = false;
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = 0;
+      }
+      modal.style.transition = "";
+      modal.style.willChange = "";
       if (curY > 90)
         closeChatModal();
       else
         modal.style.transform = "";
       curY = 0;
-    });
+    };
+    dragZone.addEventListener("touchend", endDrag);
+    dragZone.addEventListener("touchcancel", endDrag);
   }
   function closeChatModal() {
     if (!_chatModalEl)

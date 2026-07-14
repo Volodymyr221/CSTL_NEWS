@@ -566,22 +566,40 @@ export function openChatModal(post) {
   input?.addEventListener('focus', _chatViewportHandler);
   input?.addEventListener('blur',  _chatViewportHandler);
 
-  // Свайп вниз по шапці/ручці → закрити
-  let startY = 0, curY = 0, dragging = false;
+  // Свайп вниз по шапці/ручці → закрити. Модалка МУСИТЬ їхати рівно за пальцем.
+  // Дьоргання (Вова 14.07): у .bd-chat-modal є transition:transform 0.26s, тому
+  // кожен touchmove анімувався із затримкою → модалка «наздоганяла» палець ривками.
+  // Фікс: на час drag transition:none + оновлення transform у requestAnimationFrame
+  // (translate3d = GPU, без layout-thrash); на відпусканні transition повертаємо,
+  // тож пружний повернення/закриття лишаються плавними.
+  let startY = 0, curY = 0, dragging = false, rafId = 0;
   const dragZone = modal.querySelector('.bd-chat-modal-head');
-  dragZone.addEventListener('touchstart', e => { startY = e.touches[0].clientY; dragging = true; }, { passive: true });
+  const applyDrag = () => {
+    rafId = 0;
+    modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
+  };
+  dragZone.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY; curY = 0; dragging = true;
+    modal.style.transition = 'none';      // рух — миттєвий за пальцем, без анімації
+    modal.style.willChange = 'transform';
+  }, { passive: true });
   dragZone.addEventListener('touchmove', e => {
     if (!dragging) return;
-    curY = e.touches[0].clientY - startY;
-    if (curY > 0) modal.style.transform = `translateX(-50%) translateY(${curY}px)`;
+    curY = Math.max(0, e.touches[0].clientY - startY);   // лише вниз
+    if (!rafId) rafId = requestAnimationFrame(applyDrag);
   }, { passive: true });
-  dragZone.addEventListener('touchend', () => {
+  const endDrag = () => {
     if (!dragging) return;
     dragging = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    modal.style.transition = '';          // повертаємо CSS-плавність (снап-назад / закриття)
+    modal.style.willChange = '';
     if (curY > 90) closeChatModal();
-    else modal.style.transform = '';
+    else modal.style.transform = '';      // пружний повернення на місце
     curY = 0;
-  });
+  };
+  dragZone.addEventListener('touchend', endDrag);
+  dragZone.addEventListener('touchcancel', endDrag);
 }
 
 export function closeChatModal() {
