@@ -1352,12 +1352,13 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             text = title + " " + excerpt
             geo = detect_geo(text, source["geo"])
 
-            if source["geo"] == "Україна" and geo == "Україна":
-                if not is_nationally_relevant(text):
-                    continue
-            if source["geo"] == "Світ" and geo == "Світ":
-                if not is_world_relevant(text):
-                    continue
+            # Фільтри ваги — за ФІНАЛЬНИМ geo новини, не geo джерела (Потік 11):
+            # перекинуті з «Волині» національні мусять пройти той самий фільтр
+            # ваги, що й новини УП; дрібниці інших регіонів — відсіюються.
+            if geo == "Україна" and not is_nationally_relevant(text):
+                continue
+            if geo == "Світ" and not is_world_relevant(text):
+                continue
 
             # Розумний парсер Олики (Крок 3b): Google News → лишаємо тільки релевантне;
             # джерелом показуємо реального видавця (не «Google News»)
