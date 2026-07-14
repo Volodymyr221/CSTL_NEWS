@@ -629,6 +629,7 @@
   z-index: 2;
   display: flex;
   align-items: center;
+  justify-content: center;   /* назву з іконкою — по центру шапки (Вова 14.07) */
   gap: 8px;
   padding: 12px 16px 11px;
   background: rgba(0, 0, 0, 0.22);
@@ -641,7 +642,7 @@
 .cmbw-title {
   font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 0.6px;   /* вужчий інтервал — довша назва «...ГРОМАДИ» влазить одним рядком */
+  letter-spacing: 1.5px;   /* ширший інтервал між буквами (Вова 14.07); ще влазить одним рядком */
   white-space: nowrap;     /* шапка завжди одним рядком */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
