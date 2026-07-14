@@ -149,7 +149,7 @@
   width: 32px;
   height: 32px;
   font-size: 14px;
-  color: var(--ink-soft, #888);   /* ✕ м'який сірий як у модалці «Подати оголошення» (.app-modal-close), не iOS-синій (Вова 14.07) */
+  color: var(--red, #722F37);   /* ✕ бордовий як у модалці «Подати оголошення» (.app-modal--board-compose), не iOS-синій (Вова 14.07) */
   cursor: pointer;
   z-index: 1;
   display: flex;
