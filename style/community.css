@@ -639,17 +639,27 @@
 }
 .cmbw-head-ic { display: inline-flex; font-size: 19px; }
 .cmbw-title {
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 1.1px;
-  white-space: nowrap;   /* шапка завжди одним рядком */
+  letter-spacing: 0.6px;   /* вужчий інтервал — довша назва «...ГРОМАДИ» влазить одним рядком */
+  white-space: nowrap;     /* шапка завжди одним рядком */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
-/* Крапки-індикатори пар (замість лічильника) — стиль свайп-крапок віджета автобусів */
-.cmbw-dots { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+/* Крапки-індикатори пар (Вова 14.07: перенесені з правого верху ВНИЗ під картки,
+   по центру — класичний патерн каруселі). Стиль свайп-крапок віджета автобусів. */
+.cmbw-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 0 10px;
+  position: relative;
+  z-index: 2;   /* над затемненими краями */
+}
+.cmbw-dots:empty { display: none; }   /* коли пар <2 — не займати місце */
 .cmbw-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: rgba(242, 231, 208, 0.35);
   cursor: pointer;
