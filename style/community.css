@@ -2294,7 +2294,7 @@
 .cm-board-foot-actions .cm-board-call,
 .cm-board-foot-actions .cm-board-msg-btn { width: 34px; height: 34px; }
 .cm-board-foot-actions .cm-board-call svg,
-.cm-board-foot-actions .cm-board-msg-btn svg { width: 16px; height: 16px; }
+.cm-board-foot-actions .cm-board-msg-btn svg { width: 19px; height: 19px; }   /* іконки трохи більші, кнопки лишаються 34px (Вова 14.07) */
 .cm-board-foot-who {
   min-width: 0;
   text-align: right;
