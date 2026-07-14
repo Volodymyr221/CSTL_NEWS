@@ -30,6 +30,23 @@ export function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+// Аватар-кружечок — СПІЛЬНИЙ хелпер (Потік 12). Є фото → <img>; немає → перша
+// літера імені на кольоровому фоні (колір детермінований від імені), або 👤 для
+// аноніма. Викликають: кабінет/шапка (свій), приватний чат `avatar()`,
+// обговорення `authorAvatar()`. cls — базовий клас місця (pm-avatar / bd-avatar…),
+// щоб успадкувати розмір/позицію з наявного CSS.
+export function avatarCircle({ name, url, cls = 'pm-avatar' } = {}) {
+  const safeUrl = url ? String(url).trim() : '';
+  if (safeUrl) {
+    return `<span class="${cls} ${cls}--img"><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
+  }
+  const a = String(name || '').trim();
+  if (!a) return `<span class="${cls} ${cls}--anon">👤</span>`;
+  const letter = a.charAt(0).toUpperCase();
+  const hue = (a.charCodeAt(0) * 47) % 360;
+  return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)">${escapeHtml(letter)}</span>`;
+}
+
 // Форматування дати події: "12 квітня, субота"
 export function formatEventDate(dateStr) {
   const d = new Date(dateStr);
