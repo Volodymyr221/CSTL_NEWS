@@ -637,9 +637,9 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cmbw-head-ic { display: inline-flex; font-size: 17px; }
+.cmbw-head-ic { display: inline-flex; font-size: 19px; }
 .cmbw-title {
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: 1.1px;
   white-space: nowrap;   /* шапка завжди одним рядком */
@@ -735,10 +735,14 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  min-width: 0;   /* дозволяє локації стискатись/переноситись, не тиснучи дату */
   color: var(--red, #722F37);
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
+/* Дата публікації — СТРОГО в один рядок (Вова 14.07): не переноситься навіть коли
+   локація «ОЛИЦЬКА ГРОМАДА» довга; локація віддає їй місце (min-width:0 вище). */
+.cmbw-time { white-space: nowrap; flex: 0 0 auto; padding-left: 6px; }
 /* Нижня смуга-кнопка «Переглянути всі оголошення» — симетрична шапці: затемнена
    в тон віджета, прилягає до низу (кути обрізає .cm-block) + лінія-роздільник зверху. */
 .cmbw-foot {
