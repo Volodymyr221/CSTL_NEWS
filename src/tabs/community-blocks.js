@@ -733,6 +733,8 @@ export async function renderBoardBlock() {
       </div>
       ${ads.length
         ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
+           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
            <div class="cmbw-foot" data-bw-more role="button" aria-label="Переглянути всі оголошення">
              <span>Переглянути всі оголошення</span>${BW_ARROW_SVG}
            </div>`

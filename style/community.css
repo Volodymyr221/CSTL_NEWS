@@ -603,9 +603,30 @@
     url('../images/cork2.png') center center / cover no-repeat;
   box-shadow: var(--card-shadow), inset 0 12px 26px rgba(0,0,0,0.32), inset 0 -12px 26px rgba(0,0,0,0.28);
 }
+/* Контейнер = контекст для затемнених країв-рамки (позиціонуються absolute). */
+#cm-board-content { position: relative; }
+
+/* Затемнені ліві/праві краї стрічки (Вова 14.07): суцільна «рамка телевізора»
+   разом із шапкою/низом. Градієнт темний з краю → прозорий до центру: бічні
+   картки заходять за рамку, центральна пара яскрава й «виступає». z-1 під
+   шапкою/низом (z-2), pointer-events:none — не заважає тапам/свайпу. */
+.cmbw-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  z-index: 1;
+  pointer-events: none;
+}
+.cmbw-edge--l { left: 0;  background: linear-gradient(to right, rgba(0,0,0,0.34), rgba(0,0,0,0)); }
+.cmbw-edge--r { right: 0; background: linear-gradient(to left,  rgba(0,0,0,0.34), rgba(0,0,0,0)); }
+
 /* Шапка = затемнена смуга в тон віджета, прилягає до верху (кути обрізає
-   .cm-block overflow:hidden + radius) + кремова лінія-роздільник знизу. */
+   .cm-block overflow:hidden + radius) + кремова лінія-роздільник знизу.
+   z-2 — над затемненими краями (щоб градієнт не ліз на текст шапки). */
 .cmbw-head {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -721,6 +742,8 @@
 /* Нижня смуга-кнопка «Переглянути всі оголошення» — симетрична шапці: затемнена
    в тон віджета, прилягає до низу (кути обрізає .cm-block) + лінія-роздільник зверху. */
 .cmbw-foot {
+  position: relative;
+  z-index: 2;   /* над затемненими краями (як шапка) */
   display: flex;
   align-items: center;
   justify-content: center;
