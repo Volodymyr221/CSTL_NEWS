@@ -27,12 +27,12 @@
 ### Кроки (13) — 2 інкременти
 | # | Крок | Файли | Стан |
 |---|------|-------|------|
-| 1 | 🔴 SQL: підтвердити `avatar_url` (extended) + новий RPC `get_avatars(uids)` (public name+avatar). Вова застосовує | scripts/*.sql | 🔴 |
-| 2 | `uploadAvatar(blob)` (реюз storage, шлях `avatars/`) + `fetchAvatars(uids)` (rpc, кеш) | supabase.js | 🟢 |
-| 3 | Спільний `renderAvatar({name,url,size})` — img або літера/emoji | chat-core.js (спільне) | 🟢 |
-| 4 | Кабінет hero: кнопка камери → пікер → квадрат-ресайз → upload → `saveProfile({avatar_url})` → показ фото | account-ui.js, account.css | 🟢 |
-| 5 | Кнопка акаунту в шапці: мініатюра фото коли є | account-ui.js, account.css | 🟢 |
-| 6 | Смоук інкремента А (свій аватар: пікер→upload→показ у кабінеті/шапці) | — | 🟡 |
+| 1 | 🔴 SQL: `supabase_profiles_extended.sql` (avatar_url + анкета). Вова застосовує | scripts/*.sql | 🔴 дано, чекаю |
+| 2 | `uploadPhotoToStorage(blob, 'avatars/')` — реюз, опційний префікс | supabase.js | ✅ `05b345df` |
+| 3 | Спільний `avatarCircle({name,url,cls})` + `squareImageBlob` у utils | utils.js | ✅ `212be76c` |
+| 4 | Кабінет hero: кнопка камери → пікер → квадрат-ресайз → upload → save → показ | account-ui.js, account.css | ✅ `23a935df` |
+| 5 | Шапка: мініатюра фото (кеш `currentAvatarUrl` в auth) | auth.js, account-ui.js, account.css | ✅ `23a935df` |
+| 6 | Смоук А: helper img/літера, квадрат 256², заміна в кружечку, 0 pageerror | — | ✅ зелений |
 | 7 | Обговорення: `authorAvatar` по `sender_uid` + префетч аватарів треду | board-discussions.js | 🟢 |
 | 8 | Приватний чат: `avatar` по `author_uid`/`buyer_uid` | board-chat.js, chat-core.js | 🟢 |
 | 9 | CSS img-аватар (object-fit:cover, коло) для `.bd-avatar`/`.pm-avatar` + бейдж камери | community.css, messages.css | 🟢 |
@@ -41,8 +41,8 @@
 | 12 | Реліз-нотатки | BYYOU_PLAN.md | 🟢 |
 | 13 | Брама деплою → «деплой» | — | 🟡 |
 
-**Оцінка:** ~6 файлів + 1 SQL, 13 кроків ≈ 55-65% вікна. **Рекомендую розбити:** Інкремент А (кроки 1-6, «свій аватар» — завантаження+показ у кабінеті/шапці, вже деплоїться й дає користь) → потім Інкремент Б (7-13, крос-юзер відображення). Так менше ризику й є проміжний деплой.
+**РІШЕННЯ ВОВИ 14.07: розбити на А+Б.** Інкремент А = кроки 1-6 (свій аватар, деплоїться окремо). Інкремент Б = 7-13 (крос-юзер) — окремий /byyou після деплою А.
 
-**🔴 Потрібно від Вови (крок 1):** застосувати SQL — (а) колонка `avatar_url` (якщо ще нема), (б) RPC `get_avatars` для публічного читання name+avatar. Блок SQL дам у кроці 1. Без цього: аватар не збережеться (а) / інші не побачать (б).
+**🔴 SQL Інкремента А (крок 1):** застосувати `scripts/supabase_profiles_extended.sql` (додає `avatar_url` + surname/phone/settlement/street/bio — ідемпотентно; заодно лікує «partial»-збереження анкети). RPC `get_avatars` — SQL для Інкремента Б, дам пізніше.
 
-**Де зупинились:** Брама старту — чекаю «ок» (і рішення: одним потоком чи розбити А+Б).
+**Де зупинились:** Інкремент А активний. Крок 1 — SQL дано Вові, чекаю підтвердження застосування; паралельно пишу код кроків 2-5 (безпечно — не ламає без SQL).
