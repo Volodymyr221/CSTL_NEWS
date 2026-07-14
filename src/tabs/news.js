@@ -1,4 +1,5 @@
 import { formatTime, escapeHtml, sharePost, showToast } from '../core/utils.js';
+import { ICONS } from '../core/icons.js';
 
 let allArticles = [];
 
@@ -218,6 +219,10 @@ export function openArticle(id) {
   const shareBtn  = document.getElementById('modal-share-btn');
   const remindBtn = document.getElementById('modal-remind-btn');
   const saveBtn   = document.getElementById('modal-save-btn');
+  // Векторні іконки замість емодзі (Вова 14.07) — з ICONS, у стилі додатку.
+  if (shareBtn)  shareBtn.innerHTML  = ICONS.share;
+  if (remindBtn) remindBtn.innerHTML = ICONS.bell;
+  if (saveBtn)   saveBtn.innerHTML   = ICONS.bookmark;
   if (shareBtn) shareBtn.onclick = () => sharePost({
     title: article.title,
     text:  article.excerpt || '',
