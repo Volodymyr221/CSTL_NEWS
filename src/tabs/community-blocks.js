@@ -721,20 +721,21 @@ export async function renderBoardBlock() {
     const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
 
     const cards = shown.map(bwCardHtml).join('');
-    const moreCard = `
-      <div class="cmbw-more" data-bw-more role="button" aria-label="Всі оголошення">
-        <div class="cmbw-more-in">${BW_ARROW_SVG}<span>Всі<br>оголошення</span></div>
-      </div>`;
 
+    // .cm-loading знято → padding контейнера зникає, шапка/низ дістають країв
+    // блоку (їх кути обрізає .cm-block overflow:hidden + radius → заокруглені).
+    el.classList.remove('cm-loading');
     el.innerHTML = `
       <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити Дошку оголошень">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
         <span class="cmbw-title">ДОШКА ОГОЛОШЕНЬ</span>
         <span class="cmbw-dots" aria-hidden="true"></span>
-        <span class="cmbw-arrow">${BW_ARROW_SVG}</span>
       </div>
       ${ads.length
-        ? `<div class="cmbw-strip" id="cmbw-strip">${cards}${moreCard}</div>`
+        ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-foot" data-bw-more role="button" aria-label="Переглянути всі оголошення">
+             <span>Переглянути всі оголошення</span>${BW_ARROW_SVG}
+           </div>`
         : '<div class="cmbw-empty">На дошці поки порожньо — подайте перше оголошення!</div>'}
     `;
 
@@ -778,7 +779,7 @@ export async function renderBoardBlock() {
 
       // Карусель: центральна пара — повний розмір, обрізані бічні картки менші.
       // Масштаб = частка видимої ширини картки (плавно росте/спадає при гортанні).
-      // Скейлиться внутрішня .cmbw-in/.cmbw-more-in — зовнішня картка (снап) не рухається.
+      // Скейлиться внутрішня .cmbw-in — зовнішня картка (снап) не рухається.
       const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
       const updateFx = () => {
         const kids = [...strip.children];
