@@ -1097,7 +1097,10 @@ export async function openChatById(postId) {
 const BOARD_BODY_GAP = 12;   // зазор між нижнім краєм шапки і верхом коркової панелі
 function syncBoardBodyOffset() {
   const root = getBoardRoot();
-  if (!root || activeType !== 'board') return;   // тільки board (у нього шапка з заголовком+чіпами)
+  // Рахуємо для БУДЬ-ЯКОГО типу (board/chat/saved) — міряємо реальну висоту .bd-controls.
+  // Раніше було тільки board → у Обговореннях лишався запасний CSS-відступ 140px, хоча
+  // їхня шапка нижча (нема titlebar+чіпів) → картки сиділи задалеко від пошуку (Вова 14.07).
+  if (!root) return;
   const controls = root.querySelector('.bd-controls');
   const body = root.querySelector('.bd-body');
   if (!controls || !body) return;

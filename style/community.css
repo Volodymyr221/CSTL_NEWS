@@ -2420,6 +2420,8 @@
 .bd-disc-title {
   font-size: 18px; font-weight: 800;
   color: var(--ink);
+  text-transform: uppercase;   /* «ОБГОВОРЕННЯ» — усі великі (Вова 14.07) */
+  letter-spacing: 0.8px;
 }
 /* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
    картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
@@ -2979,7 +2981,7 @@
   background: transparent;
   border-radius: 8px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;   /* лічильник трохи більший разом із сердечком (Вова 14.07) */
   font-weight: 600;
   color: var(--gray);
   cursor: pointer;
