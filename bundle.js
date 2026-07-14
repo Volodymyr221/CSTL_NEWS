@@ -8142,6 +8142,12 @@ ${ev.description || ""}`
     const remindBtn = document.getElementById("modal-remind-btn");
     const saveBtn = document.getElementById("modal-save-btn");
     if (shareBtn)
+      shareBtn.innerHTML = ICONS.share;
+    if (remindBtn)
+      remindBtn.innerHTML = ICONS.bell;
+    if (saveBtn)
+      saveBtn.innerHTML = ICONS.bookmark;
+    if (shareBtn)
       shareBtn.onclick = () => sharePost({
         title: article.title,
         text: article.excerpt || "",

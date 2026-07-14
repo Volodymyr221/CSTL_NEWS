@@ -149,6 +149,7 @@
   width: 32px;
   height: 32px;
   font-size: 14px;
+  color: var(--red, #722F37);   /* ✕ бордовий як у модалці «Подати оголошення» (.app-modal--board-compose), не iOS-синій (Вова 14.07) */
   cursor: pointer;
   z-index: 1;
   display: flex;
@@ -170,14 +171,16 @@
   border-radius: 50%;
   width: 32px;
   height: 32px;
-  font-size: 14px;
+  font-size: 18px;   /* 1em-іконки ICONS масштабуються від цього */
+  color: var(--red, #722F37);   /* векторні іконки в акцентному кольорі додатку (Вова 14.07) */
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .modal-icon-btn[hidden] { display: none; }
-.modal-icon-btn--active { background: var(--red, #722F37); }
+.modal-icon-btn svg { width: 1em; height: 1em; display: block; }
+.modal-icon-btn--active { background: var(--red, #722F37); color: #fff; }   /* збережено: бордова заливка + світла іконка */
 .article-modal-content { padding: 16px; }
 .article-modal-header { margin-bottom: 16px; }
 .article-title { font-size: 22px; font-weight: 800; line-height: 1.3; margin: 8px 0; color: var(--black); }
