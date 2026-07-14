@@ -591,37 +591,160 @@
 /* Контакти — кремовий папір (плитки/рядки мають власні фони) */
 .cm-block--contacts { background: var(--card-cream); }
 
-/* Дошка — кремовий папір (внутрішня коркова дошка лишається своя) */
-/* Дошка громади — весь блок виглядає як справжня коркова дошка,
-   без кремових секцій (16.05.2026). Шапка і CTA — частина дошки. */
+/* ── Віджет Дошки (переробка 13.07, Вова): «шматочок живої Дошки» ─────────────
+   Темний корок = той самий що вкладка Дошка (Д-21). Стрічка ПАР карток:
+   бокові відступи 30px + gap 12px → пара рівно у видимій зоні, сусідні пари
+   визирають по ~18px з обох боків. Снап на кожній непарній картці = зупинка
+   рівно на парах (і пальцем, і автопрокруткою). */
 .cm-block--board {
   background:
-    radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.18) 100%),
-    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.07) 1px, transparent 2px),
-    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
-  background-size: 100% 100%, 12px 12px, 12px 12px, 100% 100%;
+    radial-gradient(ellipse 120% 80% at 50% 0%, rgba(255,220,170,0.10), transparent 60%),
+    linear-gradient(rgba(24,14,8,0.62), rgba(24,14,8,0.62)),
+    url('../images/cork2.png') center center / cover no-repeat;
+  box-shadow: var(--card-shadow), inset 0 12px 26px rgba(0,0,0,0.32), inset 0 -12px 26px rgba(0,0,0,0.28);
 }
-/* Шапка «Дошка громади» — темно-коричневий текст на корці */
-.cm-block--board .cm-block-title {
-  color: #2A1B0E;
-  letter-spacing: 0.3px;
+/* Шапка = затемнена смуга в тон віджета, прилягає до верху (кути обрізає
+   .cm-block overflow:hidden + radius) + кремова лінія-роздільник знизу. */
+.cmbw-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px 11px;
+  background: rgba(0, 0, 0, 0.22);
+  border-bottom: 1px solid rgba(242, 231, 208, 0.16);
+  color: #F2E7D0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-/* Лінк «Відкрити →» — кремовий, контрастує з корком */
-.cm-block--board .cm-block-link {
-  color: #FFF4D6;
+.cmbw-head-ic { display: inline-flex; font-size: 17px; }
+.cmbw-title {
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 1.1px;
+  white-space: nowrap;   /* шапка завжди одним рядком */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+}
+/* Крапки-індикатори пар (замість лічильника) — стиль свайп-крапок віджета автобусів */
+.cmbw-dots { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+.cmbw-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(242, 231, 208, 0.35);
+  cursor: pointer;
+  transition: background 0.2s, transform 0.2s;
+}
+.cmbw-dot--active { background: #F2E7D0; transform: scale(1.4); }
+.cmbw-strip {
+  display: flex;
+  gap: 12px;
+  overflow-x: auto;
+  /* 16px краї (перша картка «вліво», фікс Вови 13.07) + снап-зупинки на 28px:
+     на старті перша пара сідає на 16px (снап клампиться в 0), далі кожна пара
+     стає на 28px → минула картка визирає зліва на 16px, наступна справа ~14px */
+  padding: 12px 16px 14px;
+  align-items: flex-start;   /* картки різної висоти: без фото — нижчі, як на Дошці */
+  scroll-snap-type: x mandatory;
+  scroll-padding-left: 16px;   /* = padding-left; додатковий відступ пар — scroll-margin нижче */
+  scrollbar-width: none;
+  -webkit-overflow-scrolling: touch;
+}
+.cmbw-strip::-webkit-scrollbar { display: none; }
+/* Снап-відступ 12px на початку кожної пари КРІМ першої: перша пара сідає рівно
+   на 0 (картка «вліво», 16px від краю — ціль досяжна, mandatory-снап її не
+   викидає), наступні пари стають так, що минула картка визирає зліва на 16px. */
+.cmbw-strip > :nth-child(odd):not(:first-child) { scroll-margin-left: 12px; }
+.cmbw-card {
+  position: relative;
+  flex: 0 0 calc(50% - 17px);   /* пара вужча за видиму зону → peek сусідніх пар */
+}
+/* Внутрішня обгортка картки — саме ЇЇ масштабує карусель (JS): центральна пара
+   scale(1), обрізані бічні картки ~scale(0.87). Зовнішня .cmbw-card не
+   трансформується — снап-геометрія стрічки лишається стабільною. */
+.cmbw-in {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: #FBFAF4;
+  border-radius: 12px;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  will-change: transform;
+}
+.cmbw-strip > :nth-child(odd) { scroll-snap-align: start; }   /* снап на початку кожної пари */
+.cmbw-pin {
+  position: absolute;
+  top: -7px; left: 50%;
+  transform: translateX(-50%);
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #c9556b, #7e2334);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.45);
+  z-index: 2;
+}
+.cmbw-photo {
+  height: 92px;
+  border-radius: 12px 12px 0 0;
+  background-size: cover;
+  background-position: center;
+}
+.cmbw-body { padding: 8px 10px 10px; display: flex; flex-direction: column; flex: 1; }
+.cmbw-body .cm-board-cat { margin-bottom: 5px; }
+.cmbw-name {
+  font-size: 13px;
   font-weight: 700;
-  text-shadow: 0 1px 2px rgba(0,0,0,0.30);
+  color: #2b2b2b;
+  line-height: 1.25;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  min-height: 33px;
 }
-/* Внутрішня міні-корка тепер прозора — фон уже на блоку */
-.cm-block--board .cm-board-corkboard--mini {
-  background: none;
-  border-top: none;
-  border-bottom: none;
-  padding: 4px 14px 16px;
+.cmbw-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: auto;   /* завжди до низу картки — дата не «плаває» */
+  padding-top: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  color: #8a7f70;
 }
-/* CTA «Перейти на …» прибрано з віджета Дошки (рішення Роми 03.07) —
-   місце звільнено під майбутній скрол оголошень */
+.cmbw-loc {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: var(--red, #722F37);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+/* Нижня смуга-кнопка «Переглянути всі оголошення» — симетрична шапці: затемнена
+   в тон віджета, прилягає до низу (кути обрізає .cm-block) + лінія-роздільник зверху. */
+.cmbw-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px 13px;
+  background: rgba(0, 0, 0, 0.22);
+  border-top: 1px solid rgba(242, 231, 208, 0.16);
+  color: #F2E7D0;
+  font-size: 12.5px;
+  font-weight: 800;
+  letter-spacing: 0.6px;
+  text-transform: uppercase;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.45);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.cmbw-foot svg { width: 16px; height: 16px; flex: none; }
+.cmbw-empty {
+  padding: 24px 16px 28px;
+  color: #F0E6D2;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+  font-weight: 700;
+  text-align: center;
+}
 
 /* Block link — на кольорових фонах має бути контрастним до тону блоку */
 .cm-block--power .cm-block-link,
@@ -1399,229 +1522,6 @@
 .bm-preview-canvas .cm-board-note {
   width: min(80%, 240px);
   pointer-events: none;
-}
-
-/* ===== BOARD MINI-PREVIEW (16.05.2026) =====
-   Міні-коркова дошка на Громаді — 2 стікера в стилі повної Дошки + CTA.
-   Тап на стікер або на CTA → switchTab('board'). */
-.cm-board-preview {
-  padding: 0;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s;
-}
-.cm-board-preview:active { opacity: 0.82; }
-
-/* Swipe-варіант — без opacity на active бо це блокує сприйняття свайпу */
-.cm-board-preview--swipe { touch-action: pan-y; }
-.cm-board-preview--swipe:active { opacity: 1; }
-
-/* Заголовок з типом і точками-індикаторами */
-.cm-board-mini-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 14px 10px;
-  font-size: 13px;
-}
-.cm-board-mini-emoji { font-size: 15px; }
-.cm-board-mini-name {
-  font-weight: 600;
-  color: var(--black);
-}
-.cm-board-mini-dots {
-  margin-left: auto;
-  display: flex;
-  gap: 5px;
-}
-.cm-board-mini-dot {
-  width: 6px; height: 6px;
-  border-radius: 50%;
-  background: rgba(0,0,0,0.18);
-  cursor: pointer;
-  transition: background 0.15s, transform 0.15s;
-}
-.cm-board-mini-dot.active {
-  background: var(--red);
-  transform: scale(1.3);
-}
-
-.cm-board-mini-content {
-  min-height: 130px;
-  animation: bd-mini-slide-in 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes bd-mini-slide-in {
-  0%   { opacity: 0;   transform: translateX(40px) scale(0.96); }
-  30%  { opacity: 0.5; }
-  60%  { opacity: 0.9; }
-  100% { opacity: 1;   transform: translateX(0)    scale(1); }
-}
-.cm-board-mini-content.bd-mini-slide-back {
-  animation: bd-mini-slide-back 0.6s cubic-bezier(0.22, 1, 0.36, 1);
-}
-@keyframes bd-mini-slide-back {
-  0%   { opacity: 0;   transform: translateX(-40px) scale(0.96); }
-  30%  { opacity: 0.5; }
-  60%  { opacity: 0.9; }
-  100% { opacity: 1;   transform: translateX(0)     scale(1); }
-}
-
-.cm-board-mini-empty {
-  padding: 40px 18px;
-  text-align: center;
-  color: var(--gray);
-  font-size: 13px;
-}
-
-/* Стрічка для chat/greeting у міні-блоці */
-.cm-board-mini-stream {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 4px 14px 14px;
-}
-
-/* Mini-картка розмови */
-.cm-mini-chat {
-  display: flex;
-  gap: 10px;
-  background: var(--card-cream);
-  border-radius: 12px;
-  padding: 10px 12px;
-  border: 1px solid var(--paper-deep);
-}
-.cm-mini-chat-avatar {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  flex-shrink: 0;
-}
-.cm-mini-chat-body { flex: 1; min-width: 0; }
-.cm-mini-chat-author {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--red);
-  margin-bottom: 2px;
-}
-.cm-mini-chat-text {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--black);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Mini-картка вітання */
-.cm-mini-greet {
-  display: flex;
-  gap: 10px;
-  background: white;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
-}
-.cm-mini-greet-cover {
-  width: 70px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.cm-mini-greet-emoji {
-  font-size: 32px;
-  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.15));
-}
-.cm-mini-greet-body {
-  flex: 1;
-  min-width: 0;
-  padding: 10px 12px 10px 0;
-}
-.cm-mini-greet-to {
-  font-size: 11px;
-  color: var(--gray);
-  text-transform: uppercase;
-  letter-spacing: 0.6px;
-  font-weight: 600;
-  margin-bottom: 3px;
-}
-.cm-mini-greet-text {
-  font-size: 13px;
-  line-height: 1.4;
-  color: var(--black);
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.cm-board-preview-empty {
-  padding: 18px;
-  color: var(--gray);
-  font-size: 13.5px;
-  text-align: center;
-}
-
-/* Міні-варіант коркової дошки — компактніша, без overflow scroll. */
-.cm-board-corkboard--mini {
-  max-height: none;
-  padding: 16px 14px 18px;
-  border-top: 4px solid #7A5C30;
-  border-bottom: 4px solid #7A5C30;
-  box-shadow: inset 0 3px 10px rgba(0,0,0,0.15), inset 0 -3px 10px rgba(0,0,0,0.10);
-  background:
-    radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.16) 100%),
-    radial-gradient(circle at 22% 22%, rgba(0,0,0,0.07) 1px, transparent 2px),
-    radial-gradient(circle at 78% 78%, rgba(0,0,0,0.06) 1px, transparent 2px),
-    linear-gradient(145deg, #D4AE82 0%, #B88A58 50%, #A67842 100%);
-  background-size: 100% 100%, 12px 12px, 12px 12px, 100% 100%;
-}
-
-/* Міні-стікер — менші розміри + обрізаний текст */
-.cm-board-note.cm-board-mini {
-  width: 100%;
-  min-height: 92px;
-  padding: 12px 10px 10px;
-}
-.cm-board-note.cm-board-mini .cm-board-cat {
-  font-size: 10.5px;
-  margin-bottom: 4px;
-}
-.cm-board-note.cm-board-mini .cm-board-text {
-  font-size: 12.5px;
-  line-height: 1.35;
-  margin-bottom: 0;
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-/* Стікер з фото на міні-дошці — фото менше, текст на 2 рядки */
-.cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-photo-wrap {
-  margin: -12px -10px 8px;
-  border-top-left-radius: 18px;
-  border-top-right-radius: 18px;
-}
-.cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-photo {
-  aspect-ratio: 4 / 3;
-}
-.cm-board-note.cm-board-mini.cm-board-note--has-photo .cm-board-text {
-  -webkit-line-clamp: 2;
-}
-/* Офіційний міні-стікер — повна ширина, як у Дошці */
-.cm-board-note.cm-board-mini.cm-board-note--official {
-  width: 100%;
-  min-height: 0;
-  padding: 12px 12px 10px;
-}
-.cm-board-note.cm-board-mini.cm-board-note--official .cm-board-text {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: #1a1a1a;
 }
 
 /* ===== BOARD FULL PAGE (вкладка Дошка) ===== */
@@ -2550,7 +2450,7 @@
 .bd-title {
   font-size: 18px;
   font-weight: 800;
-  color: #5C2128;   /* бордовий трішки світліший за #4C1C22 (Вова), але темніший за бренд #722F37 */
+  color: #F2E7D0;   /* кремовий як заголовок віджета Дошки на Громаді (Вова 13.07; був бордовий #5C2128) */
   line-height: 1.15;
   margin: 0;
   text-align: center;
@@ -2561,7 +2461,7 @@
      1.08 — стягнуто назад від 1.14 (Вова), але не до 1.0 як на старті. */
   transform: scaleY(1.08);
   transform-origin: center;
-  text-shadow: 0 1px 4px rgba(30, 8, 11, 0.35);   /* трохи сильніша м'яка тінь */
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);   /* темна тінь як у віджета — відділяє світлий текст */
 }
 /* Легенька бордова лінія під заголовком, що затухає по краях (Вова 10.07).
    Той самий бордовий #5C2128 = rgba(92,33,40) що й текст заголовка й лінії груп НП.

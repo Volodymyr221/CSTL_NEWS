@@ -1,6 +1,58 @@
 {
   "runs": [
     {
+      "ts": 1783936563875,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 512,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0092,
+      "note": ""
+    },
+    {
+      "ts": 1783936552027,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 490,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0086,
+      "note": ""
+    },
+    {
+      "ts": 1783936538595,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 436,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0078,
+      "note": ""
+    },
+    {
+      "ts": 1783936527924,
+      "mission": "holiday:🇺🇦 День Української Державно",
+      "model": "claude-sonnet-5",
+      "input_tokens": 453,
+      "output_tokens": 590,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0102,
+      "note": ""
+    },
+    {
       "ts": 1783845599541,
       "mission": "holiday:🇺🇦 День Української Державно",
       "model": "claude-sonnet-5",
@@ -327,16 +379,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 4.61,
-    "runs": 25,
+    "cost_usd": 4.6458,
+    "runs": 29,
     "web_searches": 63
   },
   "months": {
     "2026-07": {
-      "cost_usd": 4.61,
-      "runs": 25,
+      "cost_usd": 4.6458,
+      "runs": 29,
       "web_searches": 63
     }
   },
-  "updated_ts": 1783845599541
+  "updated_ts": 1783936563875
 }

@@ -780,26 +780,6 @@
       return "\u041E\u043B\u0438\u043A\u0430";
     }
   }
-  function attachSwipe(el, onLeft, onRight) {
-    let startX = null, startY = null;
-    el.addEventListener("touchstart", (e) => {
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-    }, { passive: true });
-    el.addEventListener("touchend", (e) => {
-      if (startX == null)
-        return;
-      const dx = e.changedTouches[0].clientX - startX;
-      const dy = e.changedTouches[0].clientY - startY;
-      startX = null;
-      if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) {
-        if (dx < 0 && onLeft)
-          onLeft();
-        if (dx > 0 && onRight)
-          onRight();
-      }
-    }, { passive: true });
-  }
   async function sharePost({ title, text, url }) {
     const shareData = {
       title: title || "CSTL LIFE",
@@ -2481,7 +2461,7 @@
 
   // src/tabs/board-chat.js
   var BUMP_COOLDOWN_MS = 3 * 60 * 60 * 1e3;
-  var EDIT_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+  var EDIT_ICON_SVG = ICONS.pencil;
   var BOOKMARK_FILLED_SVG = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_OUTLINE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   function otherName(thread) {
@@ -8204,13 +8184,11 @@ ${ev.description || ""}`
   onAuthChange(() => {
     renderBusBlock();
   });
-  var BOARD_MINI_TYPES = [
-    { id: "board", label: "\u0414\u043E\u0448\u043A\u0430", emoji: "\u{1F6D2}" },
-    { id: "chat", label: "\u0420\u043E\u0437\u043C\u043E\u0432\u0438", emoji: "\u{1F4AC}" }
-  ];
-  var _boardMiniTypeIdx = 0;
-  var _boardMiniData = { userPosts: [] };
-  var _boardMiniDir = 1;
+  var _bwTimer = null;
+  var _bwResume = null;
+  var BW_STEP_MS = 5e3;
+  var BW_RESUME_MS = 8e3;
+  var BW_MAX_CARDS = 16;
   var _evItems = [];
   var _evIdx = 0;
   var _evTimer = null;
@@ -8636,156 +8614,187 @@ ${ev.description || ""}`
       }
     }, 80);
   }
+  var BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+  var BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
+  function bwStopAuto() {
+    clearInterval(_bwTimer);
+    _bwTimer = null;
+    clearTimeout(_bwResume);
+    _bwResume = null;
+  }
+  function bwCardHtml(p) {
+    const photo = Array.isArray(p.photos) && p.photos.find((x) => x) || p.photo;
+    const title = p.title && p.title.trim() || (p.text || "").trim().slice(0, 60) || "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    const locLabel = p.location ? p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location : "";
+    const ts = p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime();
+    const color = catColor(p.category);
+    const cover = photo ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>` : "";
+    return `
+    <article class="cmbw-card" data-bw-id="${p.id}">
+      <div class="cmbw-in">
+        <span class="cmbw-pin" aria-hidden="true"></span>
+        ${cover}
+        <div class="cmbw-body">
+          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ""))}</span>
+          <div class="cmbw-name">${escapeHtml(title)}</div>
+          <div class="cmbw-meta">
+            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : "<span></span>"}
+            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ""}
+          </div>
+        </div>
+      </div>
+    </article>`;
+  }
+  function bwShuffle(arr) {
+    const a = arr.slice();
+    for (let i = a.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  }
   async function renderBoardBlock() {
     const el = document.getElementById("cm-board-content");
     if (!el)
       return;
+    bwStopAuto();
     try {
-      let userPosts = [], usedSupabase = false;
+      let posts = [], usedSupabase = false;
       if (isSupabaseReady()) {
-        const posts = await fetchPublishedPosts();
-        if (posts !== null) {
-          userPosts = posts.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        const p = await fetchPublishedPosts();
+        if (p !== null) {
+          posts = p;
           usedSupabase = true;
         }
       }
       if (!usedSupabase) {
         const boardRes = await fetch("./data/community-board.json");
-        const boardData = await boardRes.json();
-        userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
+        posts = (await boardRes.json()).posts || [];
       }
-      _boardMiniData = { userPosts };
-      renderBoardMiniSlide(el);
-    } catch {
-      el.innerHTML = '<div class="cm-block-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
-    }
-  }
-  function renderBoardMiniSlide(el) {
-    const cfg = BOARD_MINI_TYPES[_boardMiniTypeIdx];
-    const { userPosts } = _boardMiniData;
-    const items = userPosts.filter((p) => (p.type || "board") === cfg.id).slice(0, 2).map((p) => ({
-      kind: cfg.id,
-      id: p.id,
-      ts: p.ts || p.created_at && new Date(p.created_at).getTime(),
-      category: p.category,
-      text: p.text,
-      color: p.color,
-      photo: Array.isArray(p.photos) && p.photos[0] || p.photo,
-      author: p.author
-    }));
-    const dotsHtml = BOARD_MINI_TYPES.map(
-      (t, i) => `<span class="cm-board-mini-dot${i === _boardMiniTypeIdx ? " active" : ""}" data-mini-idx="${i}"></span>`
-    ).join("");
-    const labelHtml = `
-    <div class="cm-board-mini-label">
-      <span class="cm-board-mini-emoji">${cfg.emoji}</span>
-      <span class="cm-board-mini-name">${escapeHtml(cfg.label)}</span>
-      <span class="cm-board-mini-dots">${dotsHtml}</span>
-    </div>
-  `;
-    const emptyHtml = `<div class="cm-board-mini-empty">\u0423 \xAB${escapeHtml(cfg.label)}\xBB \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>`;
-    const isCorkType = cfg.id === "board";
-    let innerHtml;
-    if (isCorkType) {
-      if (items.length) {
-        const leftHtml = items.filter((_, i) => i % 2 === 0).map((item) => renderMiniCard(item, cfg.id)).join("");
-        const rightHtml = items.filter((_, i) => i % 2 === 1).map((item) => renderMiniCard(item, cfg.id)).join("");
-        innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">
-        <div class="cm-board-col">${leftHtml}</div>
-        <div class="cm-board-col">${rightHtml}</div>
-      </div>`;
-      } else {
-        innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">${emptyHtml}</div>`;
-      }
-    } else {
-      innerHtml = `<div class="cm-board-mini-stream">${items.length ? items.map((item) => renderMiniCard(item, cfg.id)).join("") : emptyHtml}</div>`;
-    }
-    const slideClass = _boardMiniDir < 0 ? " bd-mini-slide-back" : "";
-    el.innerHTML = `
-    <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
-      ${labelHtml}
-      <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
-    </div>
-  `;
-    const wrap = document.getElementById("cm-board-preview");
-    if (wrap) {
-      attachSwipe(
-        wrap,
-        () => {
-          _boardMiniDir = 1;
-          _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length;
-          renderBoardMiniSlide(el);
-        },
-        () => {
-          _boardMiniDir = -1;
-          _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length;
-          renderBoardMiniSlide(el);
-        }
-      );
-      wrap.querySelectorAll(".cm-board-mini-dot").forEach((dot) => {
-        dot.addEventListener("click", (e) => {
-          e.stopPropagation();
-          const newIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
-          _boardMiniDir = newIdx > _boardMiniTypeIdx ? 1 : -1;
-          _boardMiniTypeIdx = newIdx;
-          renderBoardMiniSlide(el);
-        });
-      });
-      const content = wrap.querySelector(".cm-board-mini-content");
-      if (content) {
-        content.addEventListener("click", (e) => {
-          const card = e.target.closest("[data-item-id]");
-          const itemId = card ? Number(card.dataset.itemId) : null;
-          if (itemId != null && Number.isFinite(itemId)) {
-            const item = _boardMiniData.userPosts.find((p) => p.id === itemId);
-            if (item) {
-              if (cfg.id === "chat")
-                openChatById(itemId);
-              else
-                openAdModalStandalone(item);
-              return;
-            }
-          }
-          if (cfg.id === "chat") {
-            if (typeof window.switchTab === "function")
-              window.switchTab("discussions");
+      const ads = posts.filter((p) => (p.type || "board") === "board");
+      const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
+      const cards = shown.map(bwCardHtml).join("");
+      el.classList.remove("cm-loading");
+      el.innerHTML = `
+      <div class="cmbw-head" data-bw-head role="button" aria-label="\u0412\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0414\u043E\u0448\u043A\u0443 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C">
+        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
+        <span class="cmbw-title">\u0414\u041E\u0428\u041A\u0410 \u041E\u0413\u041E\u041B\u041E\u0428\u0415\u041D\u042C</span>
+        <span class="cmbw-dots" aria-hidden="true"></span>
+      </div>
+      ${ads.length ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-foot" data-bw-more role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
+             <span>\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u0432\u0441\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>${BW_ARROW_SVG}
+           </div>` : '<div class="cmbw-empty">\u041D\u0430 \u0434\u043E\u0448\u0446\u0456 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u043F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F!</div>'}
+    `;
+      el.addEventListener("click", (e) => {
+        const card = e.target.closest("[data-bw-id]");
+        if (card) {
+          const post = ads.find((p) => p.id === Number(card.dataset.bwId));
+          if (post) {
+            openAdModalStandalone(post);
             return;
           }
-          setBoardActiveType(cfg.id);
+        }
+        if (e.target.closest("[data-bw-more]") || e.target.closest("[data-bw-head]")) {
           if (typeof window.switchTab === "function")
             window.switchTab("board");
-        });
+        }
+      });
+      const strip = el.querySelector("#cmbw-strip");
+      if (strip) {
+        const snapTargets = () => {
+          const kids = [...strip.children];
+          if (!kids.length)
+            return [];
+          const base = kids[0].offsetLeft;
+          return kids.filter((_, i) => i % 2 === 0).map((c) => Math.max(0, c.offsetLeft - base - 12));
+        };
+        const targets0 = snapTargets();
+        const dotsWrap = el.querySelector(".cmbw-dots");
+        if (dotsWrap && targets0.length > 1) {
+          dotsWrap.innerHTML = targets0.map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join("");
+        }
+        const dotEls = dotsWrap ? [...dotsWrap.children] : [];
+        const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+        const updateFx = () => {
+          const kids = [...strip.children];
+          if (!kids.length)
+            return;
+          const base = kids[0].offsetLeft;
+          const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
+          kids.forEach((c) => {
+            const l = c.offsetLeft - base + padL;
+            const vis = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
+            const frac = Math.min(1, vis / c.offsetWidth);
+            if (c.firstElementChild)
+              c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
+          });
+          if (dotEls.length) {
+            const targets = snapTargets();
+            let ai = 0, best = Infinity;
+            targets.forEach((t, i) => {
+              const d = Math.abs(t - strip.scrollLeft);
+              if (d < best) {
+                best = d;
+                ai = i;
+              }
+            });
+            dotEls.forEach((d, i) => d.classList.toggle("cmbw-dot--active", i === ai));
+          }
+        };
+        let fxRaf = 0;
+        strip.addEventListener("scroll", () => {
+          if (fxRaf)
+            return;
+          fxRaf = requestAnimationFrame(() => {
+            fxRaf = 0;
+            updateFx();
+          });
+        }, { passive: true });
+        updateFx();
+        if (targets0.length > 1) {
+          const tick = () => {
+            if (!document.contains(strip)) {
+              bwStopAuto();
+              return;
+            }
+            if (document.hidden)
+              return;
+            const targets = snapTargets();
+            if (!targets.length)
+              return;
+            const max = strip.scrollWidth - strip.clientWidth;
+            const next = targets.find((t) => t > strip.scrollLeft + 8);
+            strip.scrollTo({ left: next === void 0 || next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
+          };
+          const startAuto = () => {
+            clearInterval(_bwTimer);
+            _bwTimer = setInterval(tick, BW_STEP_MS);
+          };
+          const pauseAuto = () => {
+            clearInterval(_bwTimer);
+            _bwTimer = null;
+            clearTimeout(_bwResume);
+            _bwResume = setTimeout(startAuto, BW_RESUME_MS);
+          };
+          strip.addEventListener("touchstart", pauseAuto, { passive: true });
+          strip.addEventListener("pointerdown", pauseAuto);
+          if (dotsWrap)
+            dotsWrap.addEventListener("click", (e) => {
+              const d = e.target.closest("[data-bw-dot]");
+              if (!d)
+                return;
+              e.stopPropagation();
+              pauseAuto();
+              const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
+              strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
+            });
+          startAuto();
+        }
       }
+    } catch {
+      el.innerHTML = '<div class="cmbw-empty">\u0414\u043E\u0448\u043A\u0430 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0430</div>';
     }
-  }
-  function renderMiniCard(item, type) {
-    const tilt = item.id * 7 % 5 - 2;
-    if (type === "board") {
-      const photoHtml = item.photo ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>` : "";
-      return `
-      <article class="cm-board-note cm-board-mini${item.photo ? " cm-board-note--has-photo" : ""}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
-        <span class="cm-board-pin"></span>
-        ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${catIcon(item.category)} ${escapeHtml(catShort(item.category || ""))}</span>
-        <p class="cm-board-text">${escapeHtml(item.text)}</p>
-      </article>
-    `;
-    }
-    if (type === "chat") {
-      const initial = item.author ? item.author.charAt(0).toUpperCase() : "\u{1F464}";
-      const hue = item.author ? item.author.charCodeAt(0) * 47 % 360 : 0;
-      const avatarStyle = item.author ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600` : "background:#f5f5f5;color:#666;font-size:18px";
-      return `
-      <article class="cm-mini-chat" data-item-id="${item.id}">
-        <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-        <div class="cm-mini-chat-body">
-          <div class="cm-mini-chat-author">${escapeHtml(item.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</div>
-          <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
-        </div>
-      </article>
-    `;
-    }
-    return "";
   }
   function pluralUA(n, one, few, many) {
     const m10 = n % 10, m100 = n % 100;
@@ -9240,11 +9249,10 @@ ${ev.description || ""}`
       <div id="cm-news-controls" class="cm-news-controls"></div>
     </section>
 
+    <!-- \u0412\u0456\u0434\u0436\u0435\u0442 \u0414\u043E\u0448\u043A\u0438 (\u043F\u043E\u0432\u043D\u0430 \u043F\u0435\u0440\u0435\u0440\u043E\u0431\u043A\u0430 13.07, \u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438): \u0448\u0430\u043F\u043A\u0430 \u0442\u0435\u043F\u0435\u0440
+         \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0432\u0456\u0434\u0436\u0435\u0442\u0430 (\u0440\u0435\u043D\u0434\u0435\u0440\u0438\u0442\u044C renderBoardBlock), \u0441\u0442\u0430\u0440\u0430 \xAB\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438\xBB \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u0430. -->
     <section class="cm-block cm-block--board">
-      <header class="cm-block-header">
-        <h3 class="cm-block-title">\u0414\u043E\u0448\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h3>
-      </header>
-      <div id="cm-board-content" class="cm-board-body cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
+      <div id="cm-board-content" class="cm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </section>
 
     <section class="cm-block cm-block--event">

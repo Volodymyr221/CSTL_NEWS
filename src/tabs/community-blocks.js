@@ -8,8 +8,9 @@
 
 import { escapeHtml, formatTime, getCoords, getCityName, pad, todayKey, attachSwipe } from '../core/utils.js';
 import { fetchPublishedPosts, isSupabaseReady } from '../core/supabase.js';
-import { setBoardActiveType, openAdModalStandalone, openChatById } from './board.js';
+import { openAdModalStandalone } from './board.js';
 import { catColor, catIcon, catShort } from '../core/board-categories.js';
+import { COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { weatherCodeInfo } from '../core/weather-icons.js';
 import { ICONS } from '../core/icons.js';
 import { openShotamModal } from './events.js';
@@ -46,16 +47,13 @@ window.addEventListener('cstl-bus-track-changed', () => { renderBusBlock(); });
 // Вхід/вихід → теж оновити віджет (персональні відстеження з'являються/зникають).
 onAuthChange(() => { renderBusBlock(); });
 
-// Типи у міні-блоці Дошки — свайп циклічно.
-// «Офіційні» прибрано з віджета (рішення Роми 03.07) — вони живуть на повній
-// Дошці; віджет розчищено під майбутній скрол оголошень.
-const BOARD_MINI_TYPES = [
-  { id: 'board',    label: 'Дошка',    emoji: '🛒' },
-  { id: 'chat',     label: 'Розмови',  emoji: '💬' },
-];
-let _boardMiniTypeIdx = 0;   // індекс активного типу
-let _boardMiniData    = { userPosts: [] };   // кеш даних щоб не запитувати при свайпі
-let _boardMiniDir     = 1;   // 1 = свайп вліво (наступний), -1 = свайп вправо (попередній)
+// Віджет Дошки (повна переробка 13.07, рішення Вови): стрічка ПАР карток з
+// автопрокруткою. Слайд «Розмови» видалено — Обговорення мають власну вкладку.
+let _bwTimer  = null;   // інтервал автопрокрутки пар
+let _bwResume = null;   // таймаут відновлення автопрокрутки після дотику
+const BW_STEP_MS   = 5000;  // період автозміни пари (мс)
+const BW_RESUME_MS = 8000;  // пауза після дотику пальцем (мс)
+const BW_MAX_CARDS = 16;    // максимум випадкових оголошень у стрічці (Вова 13.07)
 
 // Карусель подій громади (Г-2/Б2): авто-ротація 3-5 карток; порожньо → найближчі свята (Г-16 fallback)
 let _evItems = [];
@@ -644,182 +642,209 @@ function switchCmBusCard(el) {
   }, 80);
 }
 
-// ── Блок 4: Дошка громади (мешканці + офіційні в одному блоці) ───────────────
+// ── Блок 4: Віджет Дошки — «шматочок живої Дошки» (переробка 13.07, Вова) ────
+// Темний корок (як вкладка Дошка, Д-21), горизонтальна стрічка ПАР карток-стікерів
+// (фото · тег категорії · заголовок · локація · дата) + автопрокрутка по 2 картки.
+// Тап по картці → зум оголошення; шапка / «Всі оголошення» → вкладка Дошка.
 
-// Міні-блок Дошки — свайпом перемикається тип: Офіційні → Дошка → Розмови.
-// Повна Дошка відкривається тапом на CTA внизу.
+const BW_PIN_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
+const BW_ARROW_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M13 6l6 6-6 6"/></svg>';
+
+function bwStopAuto() {
+  clearInterval(_bwTimer);  _bwTimer  = null;
+  clearTimeout(_bwResume);  _bwResume = null;
+}
+
+// Одна картка стрічки — міні-версія реальної картки вкладки Дошка.
+// Без фото обкладинки НЕМА — картка просто нижча, як на вкладці Дошка
+// (рішення Вови 13.07, замінило плейсхолдер-обкладинку).
+// Вміст загорнуто у .cmbw-in — саме її масштабує карусель (JS нижче),
+// щоб снап-геометрія зовнішньої картки лишалась незмінною.
+function bwCardHtml(p) {
+  const photo = (Array.isArray(p.photos) && p.photos.find(x => x)) || p.photo;
+  const title = (p.title && p.title.trim()) || (p.text || '').trim().slice(0, 60) || 'Оголошення';
+  const locLabel = p.location ? (p.location === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : p.location) : '';
+  const ts = p.ts || (p.published_at && new Date(p.published_at).getTime()) || (p.created_at && new Date(p.created_at).getTime());
+  const color = catColor(p.category);
+  const cover = photo
+    ? `<div class="cmbw-photo" style="background-image:url('${escapeHtml(photo)}')"></div>`
+    : '';
+  return `
+    <article class="cmbw-card" data-bw-id="${p.id}">
+      <div class="cmbw-in">
+        <span class="cmbw-pin" aria-hidden="true"></span>
+        ${cover}
+        <div class="cmbw-body">
+          <span class="cm-board-cat cm-board-cat--${escapeHtml(color)}">${catIcon(p.category)} ${escapeHtml(catShort(p.category || ''))}</span>
+          <div class="cmbw-name">${escapeHtml(title)}</div>
+          <div class="cmbw-meta">
+            ${locLabel ? `<span class="cmbw-loc">${BW_PIN_SVG}${escapeHtml(locLabel)}</span>` : '<span></span>'}
+            ${ts ? `<span class="cmbw-time">${formatTime(ts)}</span>` : ''}
+          </div>
+        </div>
+      </div>
+    </article>`;
+}
+
+// Fisher-Yates перемішування (чесний випадковий порядок, кожен елемент рівні шанси)
+function bwShuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 export async function renderBoardBlock() {
   const el = document.getElementById('cm-board-content');
   if (!el) return;
+  bwStopAuto();   // перерендер — старий інтервал більше не тримаємо
 
   try {
-    // 1. Завантажуємо дані — Supabase спочатку, JSON якщо не вийшло
-    // («Офіційні» з віджета прибрано — оголошення ради більше не тягнемо)
-    let userPosts = [], usedSupabase = false;
-
+    // 1. Дані: Supabase спочатку, JSON-fallback якщо не вийшло
+    let posts = [], usedSupabase = false;
     if (isSupabaseReady()) {
-      const posts = await fetchPublishedPosts();
-      if (posts !== null) {
-        userPosts = posts.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-        usedSupabase = true;
+      const p = await fetchPublishedPosts();
+      if (p !== null) { posts = p; usedSupabase = true; }
+    }
+    if (!usedSupabase) {
+      const boardRes = await fetch('./data/community-board.json');
+      posts = ((await boardRes.json()).posts) || [];
+    }
+
+    // 2. Лише оголошення (type board), УСЯ громада без фільтра НП.
+    //    Порядок — ВИПАДКОВИЙ при кожному рендері (рішення Вови 13.07): віджет не
+    //    дублює «свіжі вгорі» вкладки, а дає рівний шанс УСІМ оголошенням, включно
+    //    зі старими — кожне відкриття Громади показує інший набір і порядок.
+    const ads = posts.filter(p => (p.type || 'board') === 'board');
+    const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
+
+    const cards = shown.map(bwCardHtml).join('');
+
+    // .cm-loading знято → padding контейнера зникає, шапка/низ дістають країв
+    // блоку (їх кути обрізає .cm-block overflow:hidden + radius → заокруглені).
+    el.classList.remove('cm-loading');
+    el.innerHTML = `
+      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити Дошку оголошень">
+        <span class="cmbw-head-ic">${ICONS.clipboard}</span>
+        <span class="cmbw-title">ДОШКА ОГОЛОШЕНЬ</span>
+        <span class="cmbw-dots" aria-hidden="true"></span>
+      </div>
+      ${ads.length
+        ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-foot" data-bw-more role="button" aria-label="Переглянути всі оголошення">
+             <span>Переглянути всі оголошення</span>${BW_ARROW_SVG}
+           </div>`
+        : '<div class="cmbw-empty">На дошці поки порожньо — подайте перше оголошення!</div>'}
+    `;
+
+    // 3. Тапи: картка → зум САМЕ цього оголошення; шапка / «Всі» → вкладка Дошка.
+    el.addEventListener('click', e => {
+      const card = e.target.closest('[data-bw-id]');
+      if (card) {
+        const post = ads.find(p => p.id === Number(card.dataset.bwId));
+        if (post) { openAdModalStandalone(post); return; }
+      }
+      if (e.target.closest('[data-bw-more]') || e.target.closest('[data-bw-head]')) {
+        if (typeof window.switchTab === 'function') window.switchTab('board');
+      }
+    });
+
+    // 4. Стрічка: карусель-масштаб карток, крапки-індикатори пар, автопрокрутка.
+    const strip = el.querySelector('#cmbw-strip');
+    if (strip) {
+      // Снап-цілі = позиції початку кожної ПАРИ (непарні картки) у КООРДИНАТАХ
+      // СКРОЛУ: перша пара = 0 (картка «вліво»); наступні = зсув від першої мінус
+      // scroll-margin-left 12px (CSS дає його всім парам крім першої, щоб минула
+      // картка визирала зліва). offsetLeft беремо ЯК РІЗНИЦЮ з першою карткою —
+      // він рахується від offsetParent із власним зсувом, різниця його прибирає.
+      const snapTargets = () => {
+        const kids = [...strip.children];
+        if (!kids.length) return [];
+        const base = kids[0].offsetLeft;
+        return kids.filter((_, i) => i % 2 === 0)
+          .map(c => Math.max(0, c.offsetLeft - base - 12));
+      };
+      const targets0 = snapTargets();
+
+      // Крапки-індикатори пар у шапці — як свайп-крапки віджета автобусів
+      // (рішення Вови 13.07, замінили лічильник «N оголошень»).
+      const dotsWrap = el.querySelector('.cmbw-dots');
+      if (dotsWrap && targets0.length > 1) {
+        dotsWrap.innerHTML = targets0
+          .map((_, i) => `<span class="cmbw-dot" data-bw-dot="${i}"></span>`).join('');
+      }
+      const dotEls = dotsWrap ? [...dotsWrap.children] : [];
+
+      // Карусель: центральна пара — повний розмір, обрізані бічні картки менші.
+      // Масштаб = частка видимої ширини картки (плавно росте/спадає при гортанні).
+      // Скейлиться внутрішня .cmbw-in — зовнішня картка (снап) не рухається.
+      const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
+      const updateFx = () => {
+        const kids = [...strip.children];
+        if (!kids.length) return;
+        const base  = kids[0].offsetLeft;
+        const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
+        kids.forEach(c => {
+          const l    = c.offsetLeft - base + padL;
+          const vis  = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
+          const frac = Math.min(1, vis / c.offsetWidth);
+          if (c.firstElementChild) c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
+        });
+        if (dotEls.length) {   // активна крапка = найближча снап-ціль
+          const targets = snapTargets();
+          let ai = 0, best = Infinity;
+          targets.forEach((t, i) => {
+            const d = Math.abs(t - strip.scrollLeft);
+            if (d < best) { best = d; ai = i; }
+          });
+          dotEls.forEach((d, i) => d.classList.toggle('cmbw-dot--active', i === ai));
+        }
+      };
+      let fxRaf = 0;
+      strip.addEventListener('scroll', () => {
+        if (fxRaf) return;
+        fxRaf = requestAnimationFrame(() => { fxRaf = 0; updateFx(); });
+      }, { passive: true });
+      updateFx();
+
+      // Автопрокрутка: кожні BW_STEP_MS — наступна ПАРА (снап робить CSS),
+      // в кінці — плавно на початок. Дотик/крапка → пауза, відновлення через
+      // BW_RESUME_MS. Згорнутий застосунок (document.hidden) — тик пропускається.
+      if (targets0.length > 1) {
+        const tick = () => {
+          if (!document.contains(strip)) { bwStopAuto(); return; }   // блок перемальовано/зник
+          if (document.hidden) return;
+          const targets = snapTargets(); if (!targets.length) return;
+          const max  = strip.scrollWidth - strip.clientWidth;
+          const next = targets.find(t => t > strip.scrollLeft + 8);
+          strip.scrollTo({ left: next === undefined || next > max + 8 ? 0 : Math.min(next, max), behavior: 'smooth' });
+        };
+        const startAuto = () => { clearInterval(_bwTimer); _bwTimer = setInterval(tick, BW_STEP_MS); };
+        const pauseAuto = () => {
+          clearInterval(_bwTimer); _bwTimer = null;
+          clearTimeout(_bwResume);
+          _bwResume = setTimeout(startAuto, BW_RESUME_MS);
+        };
+        strip.addEventListener('touchstart', pauseAuto, { passive: true });
+        strip.addEventListener('pointerdown', pauseAuto);
+        if (dotsWrap) dotsWrap.addEventListener('click', e => {
+          const d = e.target.closest('[data-bw-dot]');
+          if (!d) return;
+          e.stopPropagation();   // шапка теж клікабельна — крапка не має відкривати вкладку
+          pauseAuto();
+          const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
+          strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: 'smooth' });
+        });
+        startAuto();
       }
     }
-
-    if (!usedSupabase) {
-      const boardRes  = await fetch('./data/community-board.json');
-      const boardData = await boardRes.json();
-      userPosts = (boardData.posts || []).slice().sort((a, b) => (b.ts || 0) - (a.ts || 0));
-    }
-
-    _boardMiniData = { userPosts };
-    renderBoardMiniSlide(el);
   } catch {
-    el.innerHTML = '<div class="cm-block-empty">Дошка тимчасово недоступна</div>';
+    el.innerHTML = '<div class="cmbw-empty">Дошка тимчасово недоступна</div>';
   }
 }
 
-// Рендеримо ОДИН слайд міні-блоку (для активного типу). Свайп змінює _boardMiniTypeIdx.
-function renderBoardMiniSlide(el) {
-  const cfg     = BOARD_MINI_TYPES[_boardMiniTypeIdx];
-  const { userPosts } = _boardMiniData;
-
-  // Беремо до 2 пости активного типу
-  const items = userPosts
-    .filter(p => (p.type || 'board') === cfg.id)
-    .slice(0, 2)
-    .map(p => ({
-      kind: cfg.id, id: p.id, ts: p.ts || (p.created_at && new Date(p.created_at).getTime()),
-      category: p.category, text: p.text, color: p.color,
-      photo: (Array.isArray(p.photos) && p.photos[0]) || p.photo,
-      author: p.author,
-    }));
-
-  const dotsHtml = BOARD_MINI_TYPES.map((t, i) =>
-    `<span class="cm-board-mini-dot${i === _boardMiniTypeIdx ? ' active' : ''}" data-mini-idx="${i}"></span>`
-  ).join('');
-
-  const labelHtml = `
-    <div class="cm-board-mini-label">
-      <span class="cm-board-mini-emoji">${cfg.emoji}</span>
-      <span class="cm-board-mini-name">${escapeHtml(cfg.label)}</span>
-      <span class="cm-board-mini-dots">${dotsHtml}</span>
-    </div>
-  `;
-
-  const emptyHtml = `<div class="cm-board-mini-empty">У «${escapeHtml(cfg.label)}» поки порожньо</div>`;
-
-  // BOARD — корок зі стікерами (з нахилами і шпильками)
-  // CHAT — простіший лейаут без корки
-  const isCorkType = cfg.id === 'board';
-  let innerHtml;
-  if (isCorkType) {
-    if (items.length) {
-      const leftHtml  = items.filter((_, i) => i % 2 === 0).map(item => renderMiniCard(item, cfg.id)).join('');
-      const rightHtml = items.filter((_, i) => i % 2 === 1).map(item => renderMiniCard(item, cfg.id)).join('');
-      innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">
-        <div class="cm-board-col">${leftHtml}</div>
-        <div class="cm-board-col">${rightHtml}</div>
-      </div>`;
-    } else {
-      innerHtml = `<div class="cm-board-corkboard cm-board-corkboard--mini">${emptyHtml}</div>`;
-    }
-  } else {
-    innerHtml = `<div class="cm-board-mini-stream">${items.length ? items.map(item => renderMiniCard(item, cfg.id)).join('') : emptyHtml}</div>`;
-  }
-
-  // Напрям анімації залежить від свайпу: вліво (наступний) = новий слайд
-  // приходить справа, вправо (попередній) = слайд приходить зліва
-  const slideClass = _boardMiniDir < 0 ? ' bd-mini-slide-back' : '';
-
-  // CTA «Перейти на …» прибрано (рішення Роми 03.07) — місце звільнено під
-  // майбутній скрол оголошень. Входи лишаються: таб-бар «Дошка», хаб «Чати».
-  el.innerHTML = `
-    <div class="cm-board-preview cm-board-preview--swipe" id="cm-board-preview">
-      ${labelHtml}
-      <div class="cm-board-mini-content${slideClass}">${innerHtml}</div>
-    </div>
-  `;
-
-  // Свайп
-  const wrap = document.getElementById('cm-board-preview');
-  if (wrap) {
-    attachSwipe(wrap,
-      () => { _boardMiniDir = 1;  _boardMiniTypeIdx = (_boardMiniTypeIdx + 1) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); },
-      () => { _boardMiniDir = -1; _boardMiniTypeIdx = (_boardMiniTypeIdx - 1 + BOARD_MINI_TYPES.length) % BOARD_MINI_TYPES.length; renderBoardMiniSlide(el); }
-    );
-    // Клік на dot — перехід на відповідний тип з напрямком
-    wrap.querySelectorAll('.cm-board-mini-dot').forEach(dot => {
-      dot.addEventListener('click', e => {
-        e.stopPropagation();
-        const newIdx = parseInt(dot.dataset.miniIdx, 10) || 0;
-        _boardMiniDir = newIdx > _boardMiniTypeIdx ? 1 : -1;
-        _boardMiniTypeIdx = newIdx;
-        renderBoardMiniSlide(el);
-      });
-    });
-    // Тап по конкретній картці → САМЕ цей пост (замість глухого переходу на вкладку,
-    // знайдено аудитом перенаправлень): «Дошка» → zoom-модалка оголошення,
-    // «Розмови» → модалка обговорення. Тап повз картку (порожньо/відступи) — fallback
-    // на вкладку, як було раніше.
-    const content = wrap.querySelector('.cm-board-mini-content');
-    if (content) {
-      content.addEventListener('click', e => {
-        const card = e.target.closest('[data-item-id]');
-        const itemId = card ? Number(card.dataset.itemId) : null;
-        if (itemId != null && Number.isFinite(itemId)) {
-          const item = _boardMiniData.userPosts.find(p => p.id === itemId);
-          if (item) {
-            if (cfg.id === 'chat') openChatById(itemId);
-            else openAdModalStandalone(item);
-            return;
-          }
-        }
-        if (cfg.id === 'chat') { if (typeof window.switchTab === 'function') window.switchTab('discussions'); return; }
-        setBoardActiveType(cfg.id);
-        if (typeof window.switchTab === 'function') window.switchTab('board');
-      });
-    }
-  }
-}
-
-// Рендер однієї карточки в міні-блоці. Стиль залежить від типу.
-// («official» більше не рендериться — прибрано з віджета 03.07)
-function renderMiniCard(item, type) {
-  const tilt = ((item.id * 7) % 5) - 2;
-
-  if (type === 'board') {
-    const photoHtml = item.photo
-      ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${escapeHtml(item.photo)}" alt="" loading="lazy" onerror="this.parentNode.style.display='none'"></div>`
-      : '';
-    return `
-      <article class="cm-board-note cm-board-mini${item.photo ? ' cm-board-note--has-photo' : ''}" style="--tilt:${tilt}deg" data-item-id="${item.id}">
-        <span class="cm-board-pin"></span>
-        ${photoHtml}
-        <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(item.category))}">${catIcon(item.category)} ${escapeHtml(catShort(item.category || ''))}</span>
-        <p class="cm-board-text">${escapeHtml(item.text)}</p>
-      </article>
-    `;
-  }
-
-  if (type === 'chat') {
-    const initial = item.author ? item.author.charAt(0).toUpperCase() : '👤';
-    const hue = item.author ? (item.author.charCodeAt(0) * 47) % 360 : 0;
-    const avatarStyle = item.author
-      ? `background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600`
-      : 'background:#f5f5f5;color:#666;font-size:18px';
-    return `
-      <article class="cm-mini-chat" data-item-id="${item.id}">
-        <span class="cm-mini-chat-avatar" style="${avatarStyle}">${escapeHtml(initial)}</span>
-        <div class="cm-mini-chat-body">
-          <div class="cm-mini-chat-author">${escapeHtml(item.author || 'анонімно')}</div>
-          <p class="cm-mini-chat-text">${escapeHtml(item.text)}</p>
-        </div>
-      </article>
-    `;
-  }
-
-  return '';
-}
 
 // ── Блок 5: Найближча подія громади ───────────────────────────────────────────
 // Раніше тут був фільтр isLocalEvent() по списку OTG_VILLAGES — він шукав
