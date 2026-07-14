@@ -1084,6 +1084,11 @@ export async function renderContactsBlock() {
     // тепер звичайна плитка серед екстрених — без великої картки.
     const local     = list.filter(c => c.group === 'local');
     const emergency = list.filter(c => c.group === 'emergency' || c.group === 'hero' || c.priority === 'critical');
+    // Порядок екстрених (Вова 14.07): 101 → 102 → 103 → 104 → 112, далі решта
+    // (Волиньобленерго) у порядку даних. Сортуємо в коді — не залежить від даних.
+    const EMERG_ORDER = ['101', '102', '103', '104', '112'];
+    const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
+    emergency.sort((a, b) => emergRank(a) - emergRank(b));
 
     // ── МІСЦЕВІ (вгорі) — компактні рядки на всю ширину ────────────────────────
     const localHtml = local.length ? `
