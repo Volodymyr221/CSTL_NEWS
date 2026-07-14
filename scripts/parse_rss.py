@@ -545,7 +545,9 @@ def detect_geo(text: str, default_geo: str) -> str:
     geo джерела. Фільтри ваги застосовуються далі за ФІНАЛЬНИМ geo.
     """
     low = text.lower()
-    if any(kw in low for kw in OLYKA_KEYWORDS):
+    # OLYKA_RE замість підрядків OLYKA_KEYWORDS: ловить відмінки («в Олиці»)
+    # і села громади (Дідичі/Дерно/…) — знайдено юніт-тестом Потоку 11.
+    if is_olyka_relevant(low):
         return "Громада"          # згадка про Олику/села → розділ «Громада» (перейм. 05.07)
     if mentions_volyn(low):
         return "Волинь"
