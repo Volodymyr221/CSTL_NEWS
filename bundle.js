@@ -8997,6 +8997,12 @@ ${ev.description || ""}`
       const telOf = (p) => p.replace(/[^\d+]/g, "");
       const local = list.filter((c) => c.group === "local");
       const emergency = list.filter((c) => c.group === "emergency" || c.group === "hero" || c.priority === "critical");
+      const EMERG_ORDER = ["101", "102", "103", "104", "112"];
+      const emergRank = (c) => {
+        const i = EMERG_ORDER.indexOf(String(c.phone || "").trim());
+        return i === -1 ? 99 : i;
+      };
+      emergency.sort((a, b) => emergRank(a) - emergRank(b));
       const localHtml = local.length ? `
       <div class="cm-contact-group cm-contact-group--local">
         <div class="cm-contact-group-title">\u041C\u0456\u0441\u0446\u0435\u0432\u0456</div>
