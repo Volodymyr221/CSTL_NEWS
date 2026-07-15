@@ -19,20 +19,24 @@ import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } fr
 
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
 
-// ── Іконка в шапці ──────────────────────────────────────────────
-function updateHeaderBtn() {
-  const btn = document.getElementById('account-btn');
-  if (!btn) return;
-  if (!btn.dataset.defaultHtml) btn.dataset.defaultHtml = btn.innerHTML;   // зберегти дефолтну SVG-іконку
+// ── Кнопки входу в кабінет ([data-account-btn]) ─────────────────
+// Раніше була одна #account-btn у шапці; тепер кнопка живе біля привітання на
+// Громаді (рішення Вови 15.07), а механізм узагальнено: оновлюємо ВСІ кнопки
+// з атрибутом data-account-btn (кожна тримає свою дефолтну іконку в dataset).
+export function refreshAccountButtons() {
   const av = isLoggedIn() ? currentAvatarUrl() : '';
-  // Є фото профілю → мініатюра-кружечок; інакше — дефолтна іконка користувача.
-  btn.innerHTML = av
-    ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>`
-    : btn.dataset.defaultHtml;
-  btn.classList.toggle('account-btn--in', isLoggedIn());
-  btn.classList.toggle('account-btn--av', !!av);
-  btn.setAttribute('aria-label', isLoggedIn() ? 'Кабінет жителя' : 'Увійти');
+  document.querySelectorAll('[data-account-btn]').forEach(btn => {
+    if (!btn.dataset.defaultHtml) btn.dataset.defaultHtml = btn.innerHTML;   // зберегти дефолтну SVG-іконку
+    // Є фото профілю → мініатюра-кружечок; інакше — дефолтна іконка користувача.
+    btn.innerHTML = av
+      ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>`
+      : btn.dataset.defaultHtml;
+    btn.classList.toggle('account-btn--in', isLoggedIn());
+    btn.classList.toggle('account-btn--av', !!av);
+    btn.setAttribute('aria-label', isLoggedIn() ? 'Кабінет жителя' : 'Увійти');
+  });
 }
+const updateHeaderBtn = refreshAccountButtons;   // внутрішні виклики нижче — як були
 
 // ── Базова модалка (центрована картка) — тонка обгортка над спільним примітивом
 // core/modal.js (Потік C1). Власна сигнатура openModal(innerHtml) → DOM-елемент
@@ -334,11 +338,11 @@ function onHeaderClick() {
 
 // ── Ініціалізація (викликається з app.js) ────────────────────────
 export function initAccountUI() {
-  const btn = document.getElementById('account-btn');
-  if (btn && !btn.dataset.wired) {
-    btn.dataset.wired = '1';
-    btn.addEventListener('click', onHeaderClick);
-  }
+  // Делегований клік: будь-яка кнопка [data-account-btn] (зараз — біля привітання
+  // на Громаді; рендериться в community.js ПІСЛЯ цього init, делегування це покриває).
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-account-btn]')) onHeaderClick();
+  });
   updateHeaderBtn();
 
   // Контекстний гейт: requireAuth() для гостя кидає цю подію → відкриваємо вхід.

@@ -9,6 +9,7 @@
 
 import { escapeHtml, sunTimes } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
+import { refreshAccountButtons } from '../core/account-ui.js';
 import {
   renderWeatherBlock,
   renderPowerBlock,
@@ -115,6 +116,23 @@ function getGreeting() {
 function updateGreetingName() {
   const el = document.querySelector('.cm-greeting-text');
   if (el) el.textContent = getGreeting().text;
+  fitGreeting();
+}
+
+// Привітання — ОДИН рядок (рішення Вови 15.07): міряємо реальну ширину тексту
+// і зменшуємо шрифт від базового до мінімуму, поки не влізе (nowrap у CSS).
+// Мінімум 19px — «щоб не здавалось маленьким»; довші імена все одно влазять.
+const GREET_FONT_MAX = 27, GREET_FONT_MIN = 19;
+function fitGreeting() {
+  const el = document.querySelector('.cm-greeting-text');
+  if (!el) return;
+  let size = GREET_FONT_MAX;
+  el.style.fontSize = size + 'px';
+  // scrollWidth > clientWidth = текст обрізається → крок униз на 1px.
+  while (size > GREET_FONT_MIN && el.scrollWidth > el.clientWidth) {
+    size -= 1;
+    el.style.fontSize = size + 'px';
+  }
 }
 
 function formatTodayHeader() {
@@ -140,8 +158,15 @@ function renderSkeleton() {
          дозникає (проскролили padding-bottom) — вітання відпускається й їде вгору. -->
     <div class="cm-greeting-stick">
       <section class="cm-greeting">
-        <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-        <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+        <div class="cm-greeting-col">
+          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+        </div>
+        <!-- Вхід у кабінет (рішення Вови 15.07: іконку з шапки перенесено сюди).
+             data-account-btn — оновлює/клікає account-ui.js (фото профілю або іконка). -->
+        <button class="cm-greet-account" type="button" data-account-btn aria-label="Кабінет">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </button>
       </section>
       <!-- Розпірка запасу «залипання»: РЕАЛЬНИЙ блок (не padding!) — інакше
            sticky у Chromium не тримає (padding контейнера не рахується у діапазон
@@ -161,6 +186,14 @@ function renderSkeleton() {
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
+
+    <!-- Заголовок секції блоків (рішення Вови 15.07): дає сенс віджетам нижче.
+         Збіг назви зі вкладкою таб-бару «ШО В СЕЛІ» — свідомий, перейменування
+         вкладки — відкрите питання. -->
+    <header class="cm-sec-head">
+      <h2>ШО В СЕЛІ?</h2>
+      <p>Ось що головне у нас сьогодні</p>
+    </header>
 
     <!-- Порядок блоків (рішення Роми 08.07):
          Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
@@ -272,11 +305,58 @@ function wireHeroBlur() {
   main.addEventListener('scroll', onScroll, { passive: true });
 }
 
+// ── Фокус-скрол «ШО В СЕЛІ?» (Вова 15.07) ────────────────────────────────────
+// Блок, чий центр ближче до центру екрана, — повний розмір + глибша тінь;
+// сусіди делікатно менші (−5%) і трохи прозоріші. Безперервне відображення від
+// відстані до центру (не перемикач) → блоки плавно «дихають» при скролі.
+// Лише transform+opacity (композитор, нуль reflow); рахунок — один кадр на скрол
+// (rAF-guard, passive). Вимикається при prefers-reduced-motion (доступність).
+let _focusWired = false;
+function initCenterFocus() {
+  if (_focusWired) return;
+  const main = document.querySelector('.app-main');
+  if (!main) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  _focusWired = true;
+
+  let raf = null;
+  const apply = () => {
+    raf = null;
+    if (main.dataset.tab !== 'community') return;   // ефект лише на Громаді
+    const vh = main.clientHeight;
+    const viewCenter = vh / 2;
+    let best = null, bestDist = Infinity;
+    document.querySelectorAll('#cm-content .cm-block').forEach(b => {
+      const r = b.getBoundingClientRect();
+      // Блок повністю поза екраном — скидаємо стилі й не рахуємо далі.
+      if (r.bottom < -80 || r.top > vh + 80) {
+        if (b.dataset.cf) { b.style.transform = ''; b.style.opacity = ''; b.classList.remove('cm-block--focus'); delete b.dataset.cf; }
+        return;
+      }
+      const dist = Math.abs((r.top + r.bottom) / 2 - viewCenter);
+      const t = Math.min(1, dist / (vh * 0.55));    // 0 у центрі → 1 далеко
+      b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
+      b.style.opacity = (1 - 0.22 * t).toFixed(3);
+      b.dataset.cf = '1';
+      if (dist < bestDist) { bestDist = dist; best = b; }
+    });
+    document.querySelectorAll('#cm-content .cm-block--focus').forEach(b => { if (b !== best) b.classList.remove('cm-block--focus'); });
+    if (best) best.classList.add('cm-block--focus');
+  };
+  const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
+  main.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  window.addEventListener('cstl-tab-changed', onScroll);   // повернулись на Громаду → перерахунок
+  onScroll();   // початковий стан одразу після рендеру
+}
+
 export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   startHeroRotator();
   wireHeroBlur();
+  initCenterFocus();          // фокус-скрол блоків «ШО В СЕЛІ?» (Вова 15.07)
+  refreshAccountButtons();    // кнопка кабінету біля привітання: фото/іконка
   // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
   if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
   updateGreetingName();
