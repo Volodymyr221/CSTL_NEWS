@@ -16,7 +16,13 @@
   - `style/account.css` — hero (аватар 72→88, badge статусу зі скло-блюром), `.acc-cab-sec` (r20, більше повітря), `.acc-f*` (flex-рядки, плитка 36px, роздільник під текст), `.acc-cab-save` (h52/r16), `.acc-cab-row*` (плитка+назва+опис). Нативний глиф date-пікера прибрано.
   - `sw.js` CACHE → `cstl-20260715-1336`.
 - **Перевірено:** `node build.js` чисто (31 файл), bundle з новими класами; Playwright-смоук ізольованого прев'ю (реальний CSS+icons, 390px) — 0 pageerror, вигляд = ціль.
-- **⏳ НЕ задеплоєно** — на робочій гілці `claude/startup-uem-ty2znc`. У main через `/finish` коли Вова скаже «готово». Ручний тест на iPhone — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
+- **✅ ЗАДЕПЛОЄНО** — PR #419 → main → деплой #2822 success. CACHE `cstl-20260715-1336`.
+
+### Далі (той самий день) — 3 фікси зі скріна Вови:
+1. Заголовок **«МІЙ КАБІНЕТ» великими** (`account.css` `.acc-cab-top b` text-transform:uppercase).
+2. **🔴 Фото/анкета не зберігались («permission denied for table profiles») — фікс у БАЗІ.** Корінь: hardening репутації (08.07) revoke UPDATE + грант лише на 4 колонки; розширені (surname/phone/settlement/street/bio/avatar_url) не додали. Застосував `grant update (…6 колонок…) on profiles to authenticated, anon` через MCP (project `uabyfecseqnemvcqhdem`). `trusted/approved_count` НЕ чіпав — захист цілий. Запис: `scripts/supabase_profiles_grant_extended.sql`. Клієнт не мінявся.
+3. **Тости ховались під сторінками** — `base.css` `.toast` z-index 3000→4000 (кабінет=3100 перекривав).
+- CACHE → `cstl-20260715-1431`. Ручний тест на iPhone (фото+анкета тепер зберігаються, тост видно на кабінеті) — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
 
 ---
 

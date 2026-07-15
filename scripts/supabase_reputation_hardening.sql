@@ -28,6 +28,8 @@ revoke update on public.profiles from authenticated, anon;
 -- редаговані поля кабінету (auth.js saveProfile). Коли розширені поля
 -- профілю (surname/phone/settlement/street/bio/avatar_url,
 -- supabase_profiles_extended.sql) буде застосовано в БД — додати їх сюди ж.
+-- ✅ [15.07.2026] ДОДАНО окремою міграцією scripts/supabase_profiles_grant_extended.sql
+--    (цей крок був пропущений → аватар/анкета падали «permission denied»).
 grant update (uid, name, email, birth_date) on public.profiles to authenticated, anon;
 
 

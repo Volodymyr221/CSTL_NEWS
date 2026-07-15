@@ -175,7 +175,7 @@
   padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
 }
 .acc-cab-back { background: none; border: 0; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
-.acc-cab-top b { font-size: 17px; font-weight: 800; }
+.acc-cab-top b { font-size: 17px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
 .acc-cab-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 
 .acc-cab-hero {
