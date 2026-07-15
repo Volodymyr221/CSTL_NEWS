@@ -10359,11 +10359,8 @@ END:VEVENT`
       }
       const menu = openModal({
         variant: "sheet",
-<<<<<<< HEAD
         className: "app-modal--top",
         // поверх екрана кабінету (3100), інакше ховається під ним
-=======
->>>>>>> origin/main
         bodyHtml: `
         <div class="acc-avmenu">
           <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
@@ -11208,11 +11205,8 @@ END:VEVENT`
     const p = await fetchPublicProfile(uid);
     openModal({
       variant: "sheet",
-<<<<<<< HEAD
       className: "app-modal--top",
       // поверх кабінету/чату (інакше ховається під ними)
-=======
->>>>>>> origin/main
       bodyHtml: cardHtml3(p || { uid }),
       onMount: (wrap) => {
         const avwrap = wrap.querySelector(".pcard-avwrap");
@@ -11233,11 +11227,8 @@ END:VEVENT`
       const av = e.target.closest("[data-av-uid]");
       if (!av)
         return;
-<<<<<<< HEAD
       if (e.target.closest("[data-thread]"))
         return;
-=======
->>>>>>> origin/main
       const uid = av.dataset.avUid;
       if (uid)
         openProfileCard(uid);
