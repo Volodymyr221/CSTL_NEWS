@@ -89,7 +89,7 @@ export async function openChat(thread, post) {
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
       ${avatar(partner, otherUid(thread))}
-      <div class="pm-head-titles">
+      <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
         <div class="pm-head-name">${escapeHtml(partner)}</div>
       </div>
     </header>

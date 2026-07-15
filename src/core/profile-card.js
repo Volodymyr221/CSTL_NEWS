@@ -40,6 +40,7 @@ export async function openProfileCard(uid) {
   const p = await fetchPublicProfile(uid);   // fail-soft → null
   openModal({
     variant: 'sheet',
+    className: 'app-modal--top',   // поверх кабінету/чату (інакше ховається під ними)
     bodyHtml: cardHtml(p || { uid }),
     onMount: (wrap) => {
       // Тап по фото → на весь екран (лише коли фото реально є).
@@ -62,6 +63,8 @@ export function initProfileCardTaps() {
   document.addEventListener('click', (e) => {
     const av = e.target.closest('[data-av-uid]');
     if (!av) return;
+    // У списку розмов рядок сам відкриває розмову — там картку не чіпаємо.
+    if (e.target.closest('[data-thread]')) return;
     const uid = av.dataset.avUid;
     if (uid) openProfileCard(uid);
   });

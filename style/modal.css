@@ -10,6 +10,9 @@
   transition: opacity 0.2s ease;
 }
 .app-modal.open { opacity: 1; pointer-events: auto; }
+/* Модалка поверх повноекранних сторінок (кабінет 3100, чат .pm-screen 2401):
+   картка профілю + меню камери. Без цього sheet ховався під ними. */
+.app-modal--top { z-index: 3500; }
 .app-modal-backdrop {
   position: absolute;
   inset: 0;
