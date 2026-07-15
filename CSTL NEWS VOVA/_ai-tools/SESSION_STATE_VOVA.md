@@ -28,7 +28,15 @@
 - **Новий `src/core/profile-card.js`:** `openProfileCard(uid)` → sheet з фото/ім'ям/📍громадою/badge «Довірений автор»/«у громаді з рік»; тап фото → спільний lightbox. `initProfileCardTaps()` — ОДИН делегований слухач на document по `[data-av-uid]` (обговорення+чати; Дошка — автор текстом, аватара нема). Імпорт+init у `app.js`.
 - **RPC `get_public_profile(p_uid)`** (SECURITY DEFINER, РІВНО 6 несекретних полів; НІКОЛИ phone/email/birth_date). 🤝 **Ромі — спільна БД:** новий публічний RPC. `scripts/supabase_public_profile.sql`. **Застосовано власником вручну** (MCP-write у сесії просив апрув).
 - `supabase.js` `fetchPublicProfile` (fail-soft), `utils.js` спільний `openPhotoLightbox` (винесено з board-chat), `account-ui.js` меню камери «Змінити/Видалити фото» (delete=`saveProfile({avatar_url:null})`), `account.css` `.pcard*`+`.acc-avmenu*`.
-- CACHE `cstl-20260715-1502`. Ручний тест на 2 акаунтах — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
+- CACHE `cstl-20260715-1502`. ✅ PR #421, деплой #2830.
+
+### Задача 4 — 2 фікси картки (z-index, PR #422 деплой #2831):
+- Меню камери/картка ховались під кабінетом(3100)/чатом(2401) — примітив `.app-modal` був z-index 1250. Новий модифікатор `.app-modal--top{z-index:3500}` (modal.css) на картці+меню; `.pm-lightbox` 2600→3600. Ім'я в шапці чату тепер тапабельне (`data-av-uid` на `.pm-head-titles`); делегований слухач пропускає `[data-thread]` (список розмов).
+
+### Задача 5 — контент картки (вік + «Про себе» + «Учасник CSTL LIFE з <місяць рік>»):
+- RPC `get_public_profile` розширено: +`bio` +`age` (лише число `extract(year from age(birth_date))`, birth_date НЕ віддається). 🤝 **Ромі — спільна БД, застосовано власником вручну.**
+- `profile-card.js`: мета-лінія `📍громада · N років`, bio-блок «Про себе» (ЛИШЕ коли непорожнє), футер місяць+рік; хелпери `pluralYears`/`joinDate` (реюз `MONTHS_GEN`). `account.css` `.pcard-meta`/`.pcard-bio*`.
+- CACHE `cstl-20260715-2114`. Живий тест — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
 
 ---
 
