@@ -219,7 +219,7 @@ body.cm-zoom-open .app-main { overflow: hidden; }
   transition: opacity 0.2s, transform 0.2s;
   pointer-events: none;
   white-space: nowrap;
-  z-index: 3000;   /* вище за все: чат-модалка 2401, меню дій 2500, лайтбокс 2600 */
+  z-index: 4000;   /* вище за ВСІ повноекранні сторінки/оверлеї: кабінет 3100, лайтбокс 2600, меню дій 2500, чат 2401 (тост 3000 ховався під кабінетом) */
   max-width: calc(100vw - 32px);
 }
 .toast.visible { opacity: 1; transform: translateX(-50%) translateY(0); }
