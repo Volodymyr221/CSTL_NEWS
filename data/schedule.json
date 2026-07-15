@@ -1,8 +1,8 @@
 {
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
-  "updatedAt": "15.07.2026",
-  "updatedTime": "23:34",
+  "updatedAt": "16.07.2026",
+  "updatedTime": "02:30",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -6631,8 +6631,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=16.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "23:34"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "02:30"
     },
     "2026-07-17": {
       "routes": [
@@ -8237,8 +8237,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=17.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "02:30"
     },
     "2026-07-18": {
       "routes": [
@@ -9843,8 +9843,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=18.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-19": {
       "routes": [
@@ -11449,8 +11449,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=19.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-20": {
       "routes": [
@@ -13055,8 +13055,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=20.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-21": {
       "routes": [
@@ -14661,8 +14661,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=21.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-22": {
       "routes": [
@@ -16267,8 +16267,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=22.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-23": {
       "routes": [
@@ -17873,8 +17873,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=23.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-24": {
       "routes": [
@@ -19479,13 +19479,1614 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=24.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-25": {
-      "routes": [],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "routes": [
+        {
+          "id": "vopas_1962888",
+          "vopas_id": "1962888",
+          "name": "Ківерці Олика",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.24",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "06:50",
+          "arrival_time": "07:49",
+          "duration_min": 59,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Ківерці",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Піддубці",
+              "km": 12.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Струмівка",
+              "km": 19.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 21.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Звірів",
+              "km": 29.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Арматнів",
+              "km": 33.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Пальче",
+              "km": 36.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Котів пов.",
+              "km": 46.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Дерно",
+              "km": 50.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Одеради АЗ",
+              "km": 54.1,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Дідичі",
+              "km": 57.1,
+              "price_from_start": 152.9
+            },
+            {
+              "name": "Олика",
+              "km": 59.6,
+              "price_from_start": 157.3
+            },
+            {
+              "name": "Чемерин",
+              "km": 63.1,
+              "price_from_start": 173.8
+            },
+            {
+              "name": "Жорнище",
+              "km": 67.0,
+              "price_from_start": 181.5
+            },
+            {
+              "name": "Носовичі",
+              "km": 69.7,
+              "price_from_start": 188.1
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962698",
+          "vopas_id": "1962698",
+          "name": "Луцьк- Личани",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "07:05",
+          "arrival_time": "08:30",
+          "duration_min": 85,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Хорлупи",
+              "km": 29.3,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Покащів",
+              "km": 31.8,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Одеради АЗ",
+              "km": 36.1,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Хромяків",
+              "km": 38.1,
+              "price_from_start": 152.9
+            },
+            {
+              "name": "Дідичі",
+              "km": 40.6,
+              "price_from_start": 159.5
+            },
+            {
+              "name": "Олика",
+              "km": 43.1,
+              "price_from_start": 173.8
+            },
+            {
+              "name": "Мительно",
+              "km": 47.1,
+              "price_from_start": 181.5
+            },
+            {
+              "name": "Личани",
+              "km": 50.8,
+              "price_from_start": 188.1
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962748",
+          "vopas_id": "1962748",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "АТАМАН А-09216",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "07:50",
+          "arrival_time": "09:00",
+          "duration_min": 70,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962749",
+          "vopas_id": "1962749",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "Баз  А 091",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "09:10",
+          "arrival_time": "10:50",
+          "duration_min": 100,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962800",
+          "vopas_id": "1962800",
+          "name": "Луцьк Олика",
+          "carrier": "черняк_п_к_43018_волинська_обл",
+          "bus": "БОГДАН А0902",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "09:20",
+          "arrival_time": "10:15",
+          "duration_min": 55,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 33.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 44.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 55.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 60.5
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 66.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 82.5
+            },
+            {
+              "name": "Котів пов.",
+              "km": 34.4,
+              "price_from_start": 77.0
+            },
+            {
+              "name": "Дерно",
+              "km": 38.4,
+              "price_from_start": 88.0
+            },
+            {
+              "name": "Хромяків",
+              "km": 42.6,
+              "price_from_start": 104.5
+            },
+            {
+              "name": "Одеради",
+              "km": 44.6,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Хромяків пов.",
+              "km": 46.6,
+              "price_from_start": 115.5
+            },
+            {
+              "name": "Дідичі",
+              "km": 49.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Олика",
+              "km": 51.6,
+              "price_from_start": 132.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962763",
+          "vopas_id": "1962763",
+          "name": "Луцьк Жорнище",
+          "carrier": "черняк_п_к_43018_волинська_обл",
+          "bus": "БАЗ 079-23",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "10:06",
+          "arrival_time": "12:05",
+          "duration_min": 119,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 33.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 44.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 55.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 60.5
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 66.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 77.0
+            },
+            {
+              "name": "Хорлупи",
+              "km": 29.3,
+              "price_from_start": 88.0
+            },
+            {
+              "name": "Покащів",
+              "km": 31.8,
+              "price_from_start": 99.0
+            },
+            {
+              "name": "Одеради",
+              "km": 36.1,
+              "price_from_start": 104.5
+            },
+            {
+              "name": "Хромяків",
+              "km": 38.1,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Дідичі",
+              "km": 40.6,
+              "price_from_start": 126.5
+            },
+            {
+              "name": "Олика",
+              "km": 43.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Чемерин",
+              "km": 46.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Носовичі",
+              "km": 49.7,
+              "price_from_start": 154.0
+            },
+            {
+              "name": "Жорнище",
+              "km": 52.4,
+              "price_from_start": 165.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962750",
+          "vopas_id": "1962750",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "10:10",
+          "arrival_time": "11:45",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962751",
+          "vopas_id": "1962751",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "11:30",
+          "arrival_time": "13:10",
+          "duration_min": 100,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962752",
+          "vopas_id": "1962752",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "12:25",
+          "arrival_time": "14:10",
+          "duration_min": 105,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962695",
+          "vopas_id": "1962695",
+          "name": "Луцьк- Личани ч/з Покащів",
+          "carrier": "під_яцишин_м_м",
+          "bus": "Баз  А  079.17",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "12:40",
+          "arrival_time": "14:10",
+          "duration_min": 90,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Хорлупи",
+              "km": 29.3,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Покащів",
+              "km": 31.8,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Одеради АЗ",
+              "km": 36.1,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Хромяків",
+              "km": 38.1,
+              "price_from_start": 152.9
+            },
+            {
+              "name": "Дідичі",
+              "km": 40.6,
+              "price_from_start": 159.5
+            },
+            {
+              "name": "Олика",
+              "km": 43.1,
+              "price_from_start": 173.8
+            },
+            {
+              "name": "Мительно",
+              "km": 47.1,
+              "price_from_start": 181.5
+            },
+            {
+              "name": "Личани",
+              "km": 50.8,
+              "price_from_start": 188.1
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962753",
+          "vopas_id": "1962753",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "АТАМАН А-09216",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "13:05",
+          "arrival_time": "14:30",
+          "duration_min": 85,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962801",
+          "vopas_id": "1962801",
+          "name": "Луцьк Олика",
+          "carrier": "черняк_п_к_43018_волинська_обл",
+          "bus": "БОГДАН А0902",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "13:30",
+          "arrival_time": "14:42",
+          "duration_min": 72,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 33.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 44.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 55.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 60.5
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 66.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 82.5
+            },
+            {
+              "name": "Котів пов.",
+              "km": 34.4,
+              "price_from_start": 77.0
+            },
+            {
+              "name": "Дерно",
+              "km": 38.4,
+              "price_from_start": 88.0
+            },
+            {
+              "name": "Хромяків",
+              "km": 42.6,
+              "price_from_start": 104.5
+            },
+            {
+              "name": "Одеради",
+              "km": 44.6,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Хромяків пов.",
+              "km": 46.6,
+              "price_from_start": 115.5
+            },
+            {
+              "name": "Дідичі",
+              "km": 49.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Олика",
+              "km": 51.6,
+              "price_from_start": 132.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962754",
+          "vopas_id": "1962754",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.24",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "14:00",
+          "arrival_time": "15:35",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962755",
+          "vopas_id": "1962755",
+          "name": "Луцьк Рівне",
+          "carrier": "санрайз_л_т_д",
+          "bus": "",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "14:25",
+          "arrival_time": "16:05",
+          "duration_min": 100,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962756",
+          "vopas_id": "1962756",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.24",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "14:55",
+          "arrival_time": "16:35",
+          "duration_min": 100,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962764",
+          "vopas_id": "1962764",
+          "name": "Луцьк Жорнище",
+          "carrier": "черняк_п_к_43018_волинська_обл",
+          "bus": "",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "15:30",
+          "arrival_time": "17:15",
+          "duration_min": 105,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 33.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 44.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 55.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 60.5
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 66.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 77.0
+            },
+            {
+              "name": "Хорлупи",
+              "km": 29.3,
+              "price_from_start": 88.0
+            },
+            {
+              "name": "Покащів",
+              "km": 31.8,
+              "price_from_start": 99.0
+            },
+            {
+              "name": "Одеради",
+              "km": 36.1,
+              "price_from_start": 104.5
+            },
+            {
+              "name": "Хромяків",
+              "km": 38.1,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Дідичі",
+              "km": 40.6,
+              "price_from_start": 126.5
+            },
+            {
+              "name": "Олика",
+              "km": 43.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Чемерин",
+              "km": 46.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Носовичі",
+              "km": 49.7,
+              "price_from_start": 154.0
+            },
+            {
+              "name": "Жорнище",
+              "km": 52.4,
+              "price_from_start": 165.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962757",
+          "vopas_id": "1962757",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БОГДАН А0921",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "15:40",
+          "arrival_time": "17:20",
+          "duration_min": 100,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962758",
+          "vopas_id": "1962758",
+          "name": "Луцьк Рівне",
+          "carrier": "мохнюк_т_с_волинська_обл",
+          "bus": "БОГДАН А0902",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "16:40",
+          "arrival_time": "18:30",
+          "duration_min": 110,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962889",
+          "vopas_id": "1962889",
+          "name": "Ківерці Олика",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.24",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "16:50",
+          "arrival_time": "18:00",
+          "duration_min": 70,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Ківерці",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Піддубці",
+              "km": 12.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Струмівка",
+              "km": 19.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 21.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Звірів",
+              "km": 29.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Арматнів",
+              "km": 33.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Пальче",
+              "km": 36.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Котів пов.",
+              "km": 46.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Дерно",
+              "km": 50.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Одеради АЗ",
+              "km": 54.1,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Дідичі",
+              "km": 57.1,
+              "price_from_start": 152.9
+            },
+            {
+              "name": "Олика",
+              "km": 59.6,
+              "price_from_start": 157.3
+            },
+            {
+              "name": "Чемерин",
+              "km": 63.1,
+              "price_from_start": 173.8
+            },
+            {
+              "name": "Жорнище",
+              "km": 67.0,
+              "price_from_start": 181.5
+            },
+            {
+              "name": "Носовичі",
+              "km": 69.7,
+              "price_from_start": 188.1
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962759",
+          "vopas_id": "1962759",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "Баз  А 091",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": false,
+          "departure_time": "17:15",
+          "arrival_time": "18:55",
+          "duration_min": 100,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962760",
+          "vopas_id": "1962760",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ-А079.19",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "17:30",
+          "arrival_time": "19:05",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962696",
+          "vopas_id": "1962696",
+          "name": "Луцьк- Личани ч/з Покащів",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ-А 0 79",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "18:00",
+          "arrival_time": "19:20",
+          "duration_min": 80,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Хорлупи",
+              "km": 29.3,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Покащів",
+              "km": 31.8,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Одеради АЗ",
+              "km": 36.1,
+              "price_from_start": 145.2
+            },
+            {
+              "name": "Хромяків",
+              "km": 38.1,
+              "price_from_start": 152.9
+            },
+            {
+              "name": "Дідичі",
+              "km": 40.6,
+              "price_from_start": 159.5
+            },
+            {
+              "name": "Олика",
+              "km": 43.1,
+              "price_from_start": 173.8
+            },
+            {
+              "name": "Мительно",
+              "km": 47.1,
+              "price_from_start": 181.5
+            },
+            {
+              "name": "Личани",
+              "km": 50.8,
+              "price_from_start": 188.1
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&to=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962802",
+          "vopas_id": "1962802",
+          "name": "Луцьк Олика",
+          "carrier": "черняк_п_к_43018_волинська_обл",
+          "bus": "БОГДАН А0902",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "18:30",
+          "arrival_time": "19:42",
+          "duration_min": 72,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 33.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 44.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 55.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 60.5
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 66.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 82.5
+            },
+            {
+              "name": "Котів пов.",
+              "km": 34.4,
+              "price_from_start": 77.0
+            },
+            {
+              "name": "Дерно",
+              "km": 38.4,
+              "price_from_start": 88.0
+            },
+            {
+              "name": "Хромяків",
+              "km": 42.6,
+              "price_from_start": 104.5
+            },
+            {
+              "name": "Одеради",
+              "km": 44.6,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Хромяків пов.",
+              "km": 46.6,
+              "price_from_start": 115.5
+            },
+            {
+              "name": "Дідичі",
+              "km": 49.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Олика",
+              "km": 51.6,
+              "price_from_start": 132.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962761",
+          "vopas_id": "1962761",
+          "name": "Луцьк Рівне",
+          "carrier": "під_яцишин_м_м",
+          "bus": "БАЗ А 079.25",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "19:35",
+          "arrival_time": "21:10",
+          "duration_min": 95,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0,
+              "price_from_start": null
+            },
+            {
+              "name": "Дерно",
+              "km": 32,
+              "price_from_start": 165.0
+            },
+            {
+              "name": "Клевань",
+              "km": 49,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Зоря",
+              "km": 55,
+              "price_from_start": 231.0
+            },
+            {
+              "name": "Рівне",
+              "km": 74,
+              "price_from_start": 297.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        },
+        {
+          "id": "vopas_1962765",
+          "vopas_id": "1962765",
+          "name": "Луцьк Жорнище",
+          "carrier": "черняк_п_к_43018_волинська_обл",
+          "bus": "БАЗ-А 0 79",
+          "days": "щодня",
+          "status": "scheduled",
+          "sale_active": true,
+          "departure_time": "20:05",
+          "arrival_time": "21:30",
+          "duration_min": 85,
+          "auto_generated": false,
+          "stops": [
+            {
+              "name": "Луцьк",
+              "km": 0.0,
+              "price_from_start": null
+            },
+            {
+              "name": "Струмівка",
+              "km": 7.5,
+              "price_from_start": 33.0
+            },
+            {
+              "name": "Гаразджа",
+              "km": 10.0,
+              "price_from_start": 44.0
+            },
+            {
+              "name": "Піддубці",
+              "km": 13.5,
+              "price_from_start": 55.0
+            },
+            {
+              "name": "Звірів",
+              "km": 18.0,
+              "price_from_start": 60.5
+            },
+            {
+              "name": "Арматнів",
+              "km": 22.0,
+              "price_from_start": 66.0
+            },
+            {
+              "name": "Пальче",
+              "km": 24.5,
+              "price_from_start": 77.0
+            },
+            {
+              "name": "Хорлупи",
+              "km": 29.3,
+              "price_from_start": 88.0
+            },
+            {
+              "name": "Покащів",
+              "km": 31.8,
+              "price_from_start": 99.0
+            },
+            {
+              "name": "Одеради",
+              "km": 36.1,
+              "price_from_start": 104.5
+            },
+            {
+              "name": "Хромяків",
+              "km": 38.1,
+              "price_from_start": 110.0
+            },
+            {
+              "name": "Дідичі",
+              "km": 40.6,
+              "price_from_start": 126.5
+            },
+            {
+              "name": "Олика",
+              "km": 43.1,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Чемерин",
+              "km": 46.6,
+              "price_from_start": 132.0
+            },
+            {
+              "name": "Носовичі",
+              "km": 49.7,
+              "price_from_start": 154.0
+            },
+            {
+              "name": "Жорнище",
+              "km": 52.4,
+              "price_from_start": 165.0
+            }
+          ],
+          "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=25.07.2026&time=00+%3A+00"
+        }
+      ],
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-26": {
       "routes": [
@@ -21090,8 +22691,8 @@
           "vopas_url": "https://vopas.com.ua/search/?from=%D0%9B%D0%B8%D1%87%D0%B0%D0%BD%D0%B8&to=%D0%9B%D1%83%D1%86%D1%8C%D0%BA&date=26.07.2026&time=00+%3A+00"
         }
       ],
-      "fetchedAt": "15.07.2026",
-      "fetchedTime": "01:01"
+      "fetchedAt": "16.07.2026",
+      "fetchedTime": "01:04"
     },
     "2026-07-27": {
       "routes": [
