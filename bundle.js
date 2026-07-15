@@ -11180,23 +11180,43 @@ END:VEVENT`
   }
 
   // src/core/profile-card.js
+  function pluralYears(n) {
+    const d = n % 10, h = n % 100;
+    if (h >= 11 && h <= 14)
+      return "\u0440\u043E\u043A\u0456\u0432";
+    if (d === 1)
+      return "\u0440\u0456\u043A";
+    if (d >= 2 && d <= 4)
+      return "\u0440\u043E\u043A\u0438";
+    return "\u0440\u043E\u043A\u0456\u0432";
+  }
+  function joinDate(iso) {
+    const dt = new Date(iso);
+    const y = dt.getFullYear();
+    if (isNaN(dt.getTime()) || y <= 2e3)
+      return "";
+    return `${MONTHS_GEN[dt.getMonth()]} ${y}`;
+  }
   function cardHtml3(p) {
     const name = p && p.name && p.name.trim() ? p.name.trim() : "\u0416\u0438\u0442\u0435\u043B\u044C \u0433\u0440\u043E\u043C\u0430\u0434\u0438";
     const url = p && p.avatar_url || cachedAvatar(p && p.uid) || "";
     const av = avatarCircle({ name, url, cls: "pcard-av" });
-    const loc = p && p.settlement ? `<div class="pcard-loc">${ICONS.pin}<span>${escapeHtml(p.settlement)}</span></div>` : "";
+    const bits = [];
+    if (p && p.settlement)
+      bits.push(`${ICONS.pin}<span>${escapeHtml(p.settlement)}</span>`);
+    if (p && Number.isFinite(p.age) && p.age > 0)
+      bits.push(`<span>${p.age} ${pluralYears(p.age)}</span>`);
+    const meta = bits.length ? `<div class="pcard-meta">${bits.join('<span class="pcard-dot">\xB7</span>')}</div>` : "";
     const badge = p && p.trusted ? `<div class="pcard-badge">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440</div>` : "";
-    let since = "";
-    if (p && p.created_at) {
-      const y = new Date(p.created_at).getFullYear();
-      if (y > 2e3)
-        since = `<div class="pcard-since">\u0423 \u0433\u0440\u043E\u043C\u0430\u0434\u0456 \u0437 ${y}</div>`;
-    }
+    const bioText = p && p.bio && p.bio.trim() ? p.bio.trim() : "";
+    const bio = bioText ? `<div class="pcard-bio"><span class="pcard-bio-h">\u041F\u0440\u043E \u0441\u0435\u0431\u0435</span><p>${escapeHtml(bioText)}</p></div>` : "";
+    const jd = p && p.created_at ? joinDate(p.created_at) : "";
+    const since = jd ? `<div class="pcard-since">\u0423\u0447\u0430\u0441\u043D\u0438\u043A CSTL LIFE \u0437 ${jd}</div>` : "";
     return `
     <div class="pcard">
       <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ""}">${av}</div>
       <div class="pcard-name">${escapeHtml(name)}</div>
-      ${loc}${badge}${since}
+      ${meta}${badge}${bio}${since}
     </div>`;
   }
   async function openProfileCard(uid) {
