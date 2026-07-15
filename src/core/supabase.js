@@ -261,15 +261,17 @@ export async function deleteComment(commentId) {
 // URL (короткі рядки). Bucket створено у scripts/supabase_schema.sql.
 //
 // Аргумент: Blob (зазвичай 50-200KB після canvas-стиснення).
-// Шлях у бакеті: <anonId>/<timestamp>-<random>.jpg (анонімні юзери розділяються).
+// folder — необовʼязковий префікс у бакеті (напр. 'avatars/' для фото профілю,
+// Потік 12) — тримає аватари окремо від фото оголошень. Дефолт '' = як раніше.
+// Шлях у бакеті: [folder]<anonId>/<timestamp>-<random>.jpg (анонімні юзери розділяються).
 // Повертає: { url, error }. url — публічний URL для <img src>.
-export async function uploadPhotoToStorage(blob) {
+export async function uploadPhotoToStorage(blob, folder = '') {
   if (!supa) return { url: null, error: 'Supabase не підключений' };
   if (!blob) return { url: null, error: 'Порожній blob' };
 
   const ext  = (blob.type && blob.type.split('/')[1]) || 'jpg';
   const rand = Math.random().toString(36).slice(2, 10);
-  const path = `${getAnonId()}/${Date.now()}-${rand}.${ext}`;
+  const path = `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
 
   const { error: uploadError } = await supa.storage
     .from('community-photos')

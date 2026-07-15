@@ -30,6 +30,48 @@ export function escapeHtml(s) {
     .replace(/'/g, '&#39;');
 }
 
+// Аватар-кружечок — СПІЛЬНИЙ хелпер (Потік 12). Є фото → <img>; немає → перша
+// літера імені на кольоровому фоні (колір детермінований від імені), або 👤 для
+// аноніма. Викликають: кабінет/шапка (свій), приватний чат `avatar()`,
+// обговорення `authorAvatar()`. cls — базовий клас місця (pm-avatar / bd-avatar…),
+// щоб успадкувати розмір/позицію з наявного CSS.
+export function avatarCircle({ name, url, cls = 'pm-avatar' } = {}) {
+  const safeUrl = url ? String(url).trim() : '';
+  if (safeUrl) {
+    return `<span class="${cls} ${cls}--img"><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
+  }
+  const a = String(name || '').trim();
+  if (!a) return `<span class="${cls} ${cls}--anon">👤</span>`;
+  const letter = a.charAt(0).toUpperCase();
+  const hue = (a.charCodeAt(0) * 47) % 360;
+  return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)">${escapeHtml(letter)}</span>`;
+}
+
+// Фото → квадратний аватар (Потік 12): центр-кроп у квадрат + ресайз до size px,
+// повертає JPEG-Blob (~15-40КБ). Окремо від compressImage (та прямокутна, для
+// оголошень) — аватар мусить бути квадратним для кружечка. Promise<Blob>.
+export function squareImageBlob(file, size = 256) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        const side = Math.min(img.width, img.height);        // сторона квадрата = менша
+        const sx = (img.width  - side) / 2;                  // центрування кропу
+        const sy = (img.height - side) / 2;
+        const canvas = document.createElement('canvas');
+        canvas.width = canvas.height = size;
+        canvas.getContext('2d').drawImage(img, sx, sy, side, side, 0, 0, size, size);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', 0.82);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // Форматування дати події: "12 квітня, субота"
 export function formatEventDate(dateStr) {
   const d = new Date(dateStr);

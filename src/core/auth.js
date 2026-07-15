@@ -14,11 +14,14 @@ import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
 let _profileName = null; // кеш імені з профілю (для підпису коментарів) — без зайвих запитів
+let _profileAvatar = null; // кеш URL аватара (Потік 12) — для мініатюри в шапці синхронно
 const _listeners = [];   // підписники на зміну стану входу
 
 export function currentUser()   { return _user; }
 export function currentUserId() { return _user ? _user.id : null; }
 export function isLoggedIn()     { return !!_user; }
+// URL аватара поточного користувача (з кешу профілю) або '' якщо фото нема
+export function currentAvatarUrl() { return _profileAvatar || ''; }
 
 // Ім'я для відображення (коментарі тощо): профіль → Google-метадані → дефолт.
 // Синхронно (без запиту в БД): кеш _profileName заповнюється у getProfile/saveProfile.
@@ -82,6 +85,7 @@ export async function signOut() {
   await supa.auth.signOut();
   _user = null;
   _profileName = null;
+  _profileAvatar = null;
   emitAuthChange();
 }
 
@@ -102,6 +106,7 @@ export async function getProfile() {
   const { data, error } = await supa.from('profiles').select('*').eq('uid', _user.id).maybeSingle();
   if (error) { console.warn('[auth] getProfile:', error.message); return null; }
   if (data && data.name) _profileName = data.name;   // кеш для currentUserName()
+  if (data && 'avatar_url' in data) _profileAvatar = data.avatar_url || null;   // кеш аватара
   return data;
 }
 // Приймає будь-які поля анкети. Стійкий до відсутніх колонок: якщо міграція
@@ -125,5 +130,6 @@ export async function saveProfile(fields = {}) {
   }
   if (error) return { ok: false, error: error.message };
   if (row.name) _profileName = row.name;   // кеш для currentUserName()
+  if (!partial && 'avatar_url' in row) _profileAvatar = row.avatar_url || null;   // кеш аватара
   return { ok: true, partial };
 }
