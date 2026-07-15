@@ -16,17 +16,19 @@
   - `style/account.css` — hero (аватар 72→88, badge статусу зі скло-блюром), `.acc-cab-sec` (r20, більше повітря), `.acc-f*` (flex-рядки, плитка 36px, роздільник під текст), `.acc-cab-save` (h52/r16), `.acc-cab-row*` (плитка+назва+опис). Нативний глиф date-пікера прибрано.
   - `sw.js` CACHE → `cstl-20260715-1336`.
 - **Перевірено:** `node build.js` чисто (31 файл), bundle з новими класами; Playwright-смоук ізольованого прев'ю (реальний CSS+icons, 390px) — 0 pageerror, вигляд = ціль.
-<<<<<<< HEAD
 - **✅ ЗАДЕПЛОЄНО** — PR #419 → main → деплой #2822 success. CACHE `cstl-20260715-1336`.
 
-### Далі (той самий день) — 3 фікси зі скріна Вови:
+### Далі (той самий день) — 3 фікси зі скріна Вови (✅ PR #420, деплой #2823):
 1. Заголовок **«МІЙ КАБІНЕТ» великими** (`account.css` `.acc-cab-top b` text-transform:uppercase).
 2. **🔴 Фото/анкета не зберігались («permission denied for table profiles») — фікс у БАЗІ.** Корінь: hardening репутації (08.07) revoke UPDATE + грант лише на 4 колонки; розширені (surname/phone/settlement/street/bio/avatar_url) не додали. Застосував `grant update (…6 колонок…) on profiles to authenticated, anon` через MCP (project `uabyfecseqnemvcqhdem`). `trusted/approved_count` НЕ чіпав — захист цілий. Запис: `scripts/supabase_profiles_grant_extended.sql`. Клієнт не мінявся.
 3. **Тости ховались під сторінками** — `base.css` `.toast` z-index 3000→4000 (кабінет=3100 перекривав).
-- CACHE → `cstl-20260715-1431`. Ручний тест на iPhone (фото+анкета тепер зберігаються, тост видно на кабінеті) — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
-=======
-- **⏳ НЕ задеплоєно** — на робочій гілці `claude/startup-uem-ty2znc`. У main через `/finish` коли Вова скаже «готово». Ручний тест на iPhone — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
->>>>>>> origin/main
+- CACHE `cstl-20260715-1431`.
+
+### Задача 3 — Картка профілю (тап по аватару) + перегляд/видалення фото (цим `/finish`):
+- **Новий `src/core/profile-card.js`:** `openProfileCard(uid)` → sheet з фото/ім'ям/📍громадою/badge «Довірений автор»/«у громаді з рік»; тап фото → спільний lightbox. `initProfileCardTaps()` — ОДИН делегований слухач на document по `[data-av-uid]` (обговорення+чати; Дошка — автор текстом, аватара нема). Імпорт+init у `app.js`.
+- **RPC `get_public_profile(p_uid)`** (SECURITY DEFINER, РІВНО 6 несекретних полів; НІКОЛИ phone/email/birth_date). 🤝 **Ромі — спільна БД:** новий публічний RPC. `scripts/supabase_public_profile.sql`. **Застосовано власником вручну** (MCP-write у сесії просив апрув).
+- `supabase.js` `fetchPublicProfile` (fail-soft), `utils.js` спільний `openPhotoLightbox` (винесено з board-chat), `account-ui.js` меню камери «Змінити/Видалити фото» (delete=`saveProfile({avatar_url:null})`), `account.css` `.pcard*`+`.acc-avmenu*`.
+- CACHE `cstl-20260715-1502`. Ручний тест на 2 акаунтах — за Вовою. Журнал: `_session-log/vova-2026-07-15.md`.
 
 ---
 

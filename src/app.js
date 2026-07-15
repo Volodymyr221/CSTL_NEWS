@@ -14,6 +14,7 @@ import { initConsent } from './core/consent.js';
 import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui.js';
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
+import { initProfileCardTaps } from './core/profile-card.js';   // картка профілю по тапу на аватар
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -235,6 +236,7 @@ function init() {
   });
   initBoard();
   initChatsHub();
+  initProfileCardTaps();   // тап по аватару → картка профілю
   initAdminShortcut();
   handleInviteHash();                              // вступ за посиланням при відкритті
   window.addEventListener('hashchange', handleInviteHash);

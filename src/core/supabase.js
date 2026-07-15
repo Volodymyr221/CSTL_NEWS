@@ -338,6 +338,19 @@ export async function hydrateAvatars(root) {
   });
 }
 
+// Публічний профіль для картки (тап по аватару). Окремий вузький RPC
+// get_public_profile — SECURITY DEFINER, віддає РІВНО 6 несекретних полів
+// (uid, name, avatar_url, settlement, trusted, created_at). НІКОЛИ phone/email/
+// birth_date/bio. Fail-soft: RPC ще нема / помилка / нема профілю → null.
+export async function fetchPublicProfile(uid) {
+  if (!supa || !uid) return null;
+  try {
+    const { data, error } = await supa.rpc('get_public_profile', { p_uid: uid });
+    if (error) return null;
+    return (Array.isArray(data) ? data[0] : data) || null;
+  } catch (_) { return null; }
+}
+
 // ── ПРИВАТНИЙ ЧАТ (Фаза Б, Етап 4) ───────────────────────────────────────
 // Усі функції приймають uid аргументом (не імпортуємо auth.js — циклічна
 // залежність). RLS у БД все одно перевіряє auth.uid() на сервері.
