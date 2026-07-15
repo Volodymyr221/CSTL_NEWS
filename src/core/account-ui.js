@@ -226,7 +226,36 @@ async function openAccount() {
   const avBtn = cab.querySelector('#acc-av-btn');
   const avFile = cab.querySelector('#acc-av-file');
   const avBox = cab.querySelector('#acc-hero-av');
-  avBtn.addEventListener('click', () => avFile.click());
+  // Видалити своє фото → avatar_url:null, показати літеру-fallback скрізь.
+  const removeAvatar = async () => {
+    avBtn.disabled = true; avBox.classList.add('acc-av--loading');
+    try {
+      const res = await saveProfile({ avatar_url: null });
+      if (!res.ok) throw new Error(res.error || 'save');
+      val.avatar_url = '';
+      avBox.innerHTML = avatarCircle({ name: cab.querySelector('#acc-hero-name').textContent, url: '', cls: 'acc-av' });
+      updateHeaderBtn();                        // шапка → назад на дефолтну іконку
+      showToast('Фото видалено', 2200);
+    } catch (err) {
+      showToast('Не вдалося видалити фото: ' + err.message, 4000, 'error');
+    } finally {
+      avBtn.disabled = false; avBox.classList.remove('acc-av--loading');
+    }
+  };
+  // Меню камери: нема фото → одразу вибір файлу; є фото → «Змінити / Видалити».
+  avBtn.addEventListener('click', () => {
+    if (!val.avatar_url) { avFile.click(); return; }
+    const menu = openModalPrimitive({
+      variant: 'sheet',
+      bodyHtml: `
+        <div class="acc-avmenu">
+          <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} Змінити фото</button>
+          <button type="button" class="acc-avmenu-item acc-avmenu-item--danger" data-av-act="remove">${ICONS.trash} Видалити фото</button>
+        </div>`,
+    });
+    menu.el.querySelector('[data-av-act="change"]').addEventListener('click', () => { closeModalPrimitive(); avFile.click(); });
+    menu.el.querySelector('[data-av-act="remove"]').addEventListener('click', () => { closeModalPrimitive(); removeAvatar(); });
+  });
   avFile.addEventListener('change', async () => {
     const file = avFile.files && avFile.files[0];
     avFile.value = '';                         // дозволити повторний вибір того ж файлу

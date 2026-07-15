@@ -198,6 +198,18 @@ export function showToast(msg, duration = 3000, type = '') {
   toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), duration);
 }
 
+// Перегляд фото на весь екран (спільний lightbox — переюз `.pm-lightbox`).
+// Раніше локальна копія жила в board-chat.js (openPhoto); винесено сюди, бо
+// картку профілю (тап по аватару) теж треба вміти збільшувати.
+export function openPhotoLightbox(url) {
+  if (!url) return;
+  const ov = document.createElement('div');
+  ov.className = 'pm-lightbox';
+  ov.innerHTML = `<img src="${escapeHtml(url)}" alt="фото">`;
+  ov.addEventListener('click', () => ov.remove());
+  document.body.appendChild(ov);
+}
+
 // ── Фільтр матюків / образливих слів / спаму (клієнтський) ───────────────────
 // Бувабельний (до Фази Б — серверний тригер). Мета: відсікати очевидні образи
 // і флуд ще до публікації у чаті/постах. Списки легко доповнювати.

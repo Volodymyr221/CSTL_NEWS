@@ -132,6 +132,15 @@
     clearTimeout(toast._hideTimer);
     toast._hideTimer = setTimeout(() => toast.classList.remove("visible"), duration);
   }
+  function openPhotoLightbox(url) {
+    if (!url)
+      return;
+    const ov = document.createElement("div");
+    ov.className = "pm-lightbox";
+    ov.innerHTML = `<img src="${escapeHtml(url)}" alt="\u0444\u043E\u0442\u043E">`;
+    ov.addEventListener("click", () => ov.remove());
+    document.body.appendChild(ov);
+  }
   var FILTER_HOMOGLYPHS = { a: "\u0430", e: "\u0435", o: "\u043E", c: "\u0441", x: "\u0445", p: "\u0440", y: "\u0443", k: "\u043A", i: "\u0456", b: "\u0431", m: "\u043C", h: "\u043D", t: "\u0442" };
   var FILTER_LEET = { "0": "o", "3": "e", "4": "a", "5": "s", "6": "g", "7": "t", "8": "b", "9": "g", "@": "a", "$": "s", "!": "i", "|": "l", "+": "t" };
   function deleet(s) {
@@ -631,6 +640,18 @@
       el.style.background = "none";
       el.innerHTML = `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
     });
+  }
+  async function fetchPublicProfile(uid) {
+    if (!supa || !uid)
+      return null;
+    try {
+      const { data, error } = await supa.rpc("get_public_profile", { p_uid: uid });
+      if (error)
+        return null;
+      return (Array.isArray(data) ? data[0] : data) || null;
+    } catch (_) {
+      return null;
+    }
   }
   async function fetchMyPosts(uid) {
     if (!supa || !uid)
@@ -2653,13 +2674,7 @@
       input.value = m.text || "";
       input.focus();
     };
-    const openPhoto = (url) => {
-      const ov = document.createElement("div");
-      ov.className = "pm-lightbox";
-      ov.innerHTML = `<img src="${escapeHtml(url)}" alt="\u0444\u043E\u0442\u043E">`;
-      ov.addEventListener("click", () => ov.remove());
-      document.body.appendChild(ov);
-    };
+    const openPhoto = openPhotoLightbox;
     const renderBubble = (m) => {
       const enter = seen.has(msgKey(m)) ? "" : " pm-bubble--enter";
       const tagAttr = ` data-tag="${m.client_tag || ""}"`;
@@ -5037,7 +5052,7 @@ ${post.text}
     </div>
   `;
   }
-  function openPhotoLightbox(photos, startIdx) {
+  function openPhotoLightbox2(photos, startIdx) {
     if (!photos || !photos.length)
       return;
     const wrap = document.createElement("div");
@@ -5518,7 +5533,7 @@ ${post.text}
       gallery.querySelectorAll("img[data-photo-idx]").forEach((im) => {
         im.addEventListener("click", (e) => {
           e.stopPropagation();
-          openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0);
+          openPhotoLightbox2(photoUrls, Number(im.dataset.photoIdx) || 0);
         });
       });
       const dots = modal.querySelectorAll(".cm-board-modal-dot");
@@ -5607,7 +5622,7 @@ ${post.text}
         gallery.querySelectorAll("img[data-photo-idx]").forEach((im) => {
           im.addEventListener("click", (e) => {
             e.stopPropagation();
-            openPhotoLightbox(photoUrls, Number(im.dataset.photoIdx) || 0);
+            openPhotoLightbox2(photoUrls, Number(im.dataset.photoIdx) || 0);
           });
         });
         const dots = modal.querySelectorAll(".cm-board-modal-dot");
@@ -10319,7 +10334,46 @@ END:VEVENT`
     const avBtn = cab.querySelector("#acc-av-btn");
     const avFile = cab.querySelector("#acc-av-file");
     const avBox = cab.querySelector("#acc-hero-av");
-    avBtn.addEventListener("click", () => avFile.click());
+    const removeAvatar = async () => {
+      avBtn.disabled = true;
+      avBox.classList.add("acc-av--loading");
+      try {
+        const res = await saveProfile({ avatar_url: null });
+        if (!res.ok)
+          throw new Error(res.error || "save");
+        val.avatar_url = "";
+        avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url: "", cls: "acc-av" });
+        updateHeaderBtn();
+        showToast("\u0424\u043E\u0442\u043E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2200);
+      } catch (err) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
+      } finally {
+        avBtn.disabled = false;
+        avBox.classList.remove("acc-av--loading");
+      }
+    };
+    avBtn.addEventListener("click", () => {
+      if (!val.avatar_url) {
+        avFile.click();
+        return;
+      }
+      const menu = openModal({
+        variant: "sheet",
+        bodyHtml: `
+        <div class="acc-avmenu">
+          <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
+          <button type="button" class="acc-avmenu-item acc-avmenu-item--danger" data-av-act="remove">${ICONS.trash} \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
+        </div>`
+      });
+      menu.el.querySelector('[data-av-act="change"]').addEventListener("click", () => {
+        closeModal();
+        avFile.click();
+      });
+      menu.el.querySelector('[data-av-act="remove"]').addEventListener("click", () => {
+        closeModal();
+        removeAvatar();
+      });
+    });
     avFile.addEventListener("change", async () => {
       const file = avFile.files && avFile.files[0];
       avFile.value = "";
@@ -11123,6 +11177,58 @@ END:VEVENT`
     });
   }
 
+  // src/core/profile-card.js
+  function cardHtml3(p) {
+    const name = p && p.name && p.name.trim() ? p.name.trim() : "\u0416\u0438\u0442\u0435\u043B\u044C \u0433\u0440\u043E\u043C\u0430\u0434\u0438";
+    const url = p && p.avatar_url || cachedAvatar(p && p.uid) || "";
+    const av = avatarCircle({ name, url, cls: "pcard-av" });
+    const loc = p && p.settlement ? `<div class="pcard-loc">${ICONS.pin}<span>${escapeHtml(p.settlement)}</span></div>` : "";
+    const badge = p && p.trusted ? `<div class="pcard-badge">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440</div>` : "";
+    let since = "";
+    if (p && p.created_at) {
+      const y = new Date(p.created_at).getFullYear();
+      if (y > 2e3)
+        since = `<div class="pcard-since">\u0423 \u0433\u0440\u043E\u043C\u0430\u0434\u0456 \u0437 ${y}</div>`;
+    }
+    return `
+    <div class="pcard">
+      <div class="pcard-avwrap" data-pcard-photo="${url ? escapeHtml(url) : ""}">${av}</div>
+      <div class="pcard-name">${escapeHtml(name)}</div>
+      ${loc}${badge}${since}
+    </div>`;
+  }
+  async function openProfileCard(uid) {
+    if (!uid)
+      return;
+    const p = await fetchPublicProfile(uid);
+    openModal({
+      variant: "sheet",
+      bodyHtml: cardHtml3(p || { uid }),
+      onMount: (wrap) => {
+        const avwrap = wrap.querySelector(".pcard-avwrap");
+        const url = avwrap && avwrap.dataset.pcardPhoto;
+        if (url) {
+          avwrap.style.cursor = "zoom-in";
+          avwrap.addEventListener("click", () => openPhotoLightbox(url));
+        }
+      }
+    });
+  }
+  var _wired = false;
+  function initProfileCardTaps() {
+    if (_wired)
+      return;
+    _wired = true;
+    document.addEventListener("click", (e) => {
+      const av = e.target.closest("[data-av-uid]");
+      if (!av)
+        return;
+      const uid = av.dataset.avUid;
+      if (uid)
+        openProfileCard(uid);
+    });
+  }
+
   // src/app.js
   var currentTab = "community";
   var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
@@ -11329,6 +11435,7 @@ END:VEVENT`
     });
     initBoard();
     initChatsHub();
+    initProfileCardTaps();
     initAdminShortcut();
     handleInviteHash();
     window.addEventListener("hashchange", handleInviteHash);
