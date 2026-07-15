@@ -5984,193 +5984,83 @@ ${post.text}
     });
   }
 
-  // src/tabs/events.js
+  // src/tabs/news.js
+  var allArticles = [];
+  var SAVED_KEY = "cstl_saved_articles";
+  function getSavedArticleIds() {
+    try {
+      return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]");
+    } catch {
+      return [];
+    }
+  }
+  function toggleSavedArticle(id) {
+    const ids = getSavedArticleIds();
+    const idx = ids.indexOf(id);
+    if (idx === -1)
+      ids.push(id);
+    else
+      ids.splice(idx, 1);
+    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
+    return idx === -1;
+  }
   var CATEGORY_COLORS = {
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
-    "Kino_Castle": "#722F37",
+    "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
+    // темно-сірий (новинний)
+    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
+    // navy
+    "\u0412\u0456\u0439\u043D\u0430": "#722F37",
+    // бордо
+    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F",
+    // зелений (гроші)
+    "\u0411\u0456\u0437\u043D\u0435\u0441": "#2E5E1F",
+    // зелений
     "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
-    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
-    // коричневий — нейтральний для свят (державних і релігійних)
+    // синій
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#B45309",
+    // теракот
+    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "#455a64",
+    // сіро-синій
+    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#C2185B",
+    // медичний
+    "\u041E\u0441\u0432\u0456\u0442\u0430": "#6a1b9a",
+    // фіолетовий
+    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "#2e7d32",
+    // природний зелений
+    "\u0406\u0441\u0442\u043E\u0440\u0456\u044F": "#6d4c41"
+    // сепія-коричневий (історичні «історії Олики»)
   };
-  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
-  var allEvents = [];
-  function formatFullDate(dateStr) {
-    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
-    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
+  var GEO_COLORS = {
+    "\u0413\u0440\u043E\u043C\u0430\u0434\u0430": "#722F37",
+    // бордо — наш бренд (Олика + села громади)
+    "\u041E\u043B\u0438\u043A\u0430": "#722F37",
+    // стара назва — лишаємо для сумісності
+    "\u0412\u043E\u043B\u0438\u043D\u044C": "#9e7508",
+    // золотий
+    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
+    // синій
+    "\u0421\u0432\u0456\u0442": "#546e7a",
+    // нейтрально-сірий
+    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
+    // синій — злитий розділ (на випадок майбутнього geo)
+  };
+  function catColor2(c) {
+    return CATEGORY_COLORS[c] || "#546e7a";
   }
-  function catColor2(category) {
-    return CATEGORY_COLORS[category] || "#722F37";
+  function geoColor(g) {
+    return GEO_COLORS[g] || "#546e7a";
   }
-  function buildIcsContent(ev) {
-    const pad2 = (n) => String(n).padStart(2, "0");
-    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
-    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
-    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
-    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
-    return [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//CSTL LIFE//UA",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
-      `DTSTART:${fmt(start)}`,
-      `DTEND:${fmt(end)}`,
-      `SUMMARY:${esc(ev.title)}`,
-      `DESCRIPTION:${esc(ev.description)}`,
-      `LOCATION:${esc(ev.location)}`,
-      "BEGIN:VALARM",
-      "TRIGGER:-PT1H",
-      "ACTION:DISPLAY",
-      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
-      "END:VALARM",
-      "END:VEVENT",
-      "END:VCALENDAR"
-    ].join("\r\n");
+  async function initNews() {
+    await ensureNewsLoaded();
+    attachNewsListeners();
   }
-  function downloadIcs(ev) {
-    const ics = buildIcsContent(ev);
-    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
-  }
-  function renderSkeleton(el) {
-    el.innerHTML = Array(3).fill(`
-    <div class="ev-skeleton">
-      <div class="ev-skel-img"></div>
-      <div class="ev-skel-body">
-        <div class="ev-skel-line w60"></div>
-        <div class="ev-skel-line w100"></div>
-        <div class="ev-skel-line w80"></div>
-        <div class="ev-skel-line w40"></div>
-      </div>
-    </div>
-  `).join("");
-  }
-  function cardHtml(ev) {
-    const catC = catColor2(ev.category);
-    let cover;
-    if (ev.image) {
-      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
-    }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    return `
-    <article class="shotam-card" data-id="${ev.id}">
-      ${cover}
-      <div class="shotam-card-body">
-        <div class="news-card-meta">
-          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
-        </div>
-        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
-        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
-        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
-      </div>
-    </article>`;
-  }
-  function openShotamModal(id) {
-    const ev = allEvents.find((e) => e.id === id);
-    if (!ev)
-      return;
+  function attachNewsListeners() {
     const modal = document.getElementById("article-modal");
-    const modalContent = document.getElementById("article-modal-content");
-    const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
-    const catC = catColor2(ev.category);
-    if (modalMetaTags) {
-      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
+    if (modal) {
+      modal.addEventListener("error", handleImgError, true);
     }
-    let cover;
-    if (ev.image) {
-      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
-    }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
-    modalContent.innerHTML = `
-    <div class="article-modal-header">
-      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
-      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
-    </div>
-    ${cover}
-    <div class="article-body">${bodyHtml}</div>`;
-    const shareBtn = document.getElementById("modal-share-btn");
-    const remindBtn = document.getElementById("modal-remind-btn");
-    const saveBtn = document.getElementById("modal-save-btn");
-    if (shareBtn)
-      shareBtn.onclick = () => sharePost({
-        title: ev.title,
-        text: `\u{1F4C5} ${ev.title}
-${when}${ev.location ? " \xB7 " + ev.location : ""}
-
-${ev.description || ""}`
-      });
-    if (remindBtn) {
-      remindBtn.hidden = false;
-      remindBtn.onclick = () => {
-        if (!isLoggedIn()) {
-          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
-          });
-          return;
-        }
-        downloadIcs(ev);
-      };
-    }
-    if (saveBtn)
-      saveBtn.hidden = true;
-    modal.classList.add("open");
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("modal-open");
   }
-  function getFiltered() {
-    const now = /* @__PURE__ */ new Date();
-    now.setHours(0, 0, 0, 0);
-    return allEvents.filter((e) => {
-      if (e.auto)
-        return false;
-      const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
-      return d >= now;
-    }).sort((a, b) => {
-      const byDate = new Date(a.date) - new Date(b.date);
-      if (byDate !== 0)
-        return byDate;
-      return (a.time || "").localeCompare(b.time || "");
-    });
-  }
-  function renderList() {
-    const el = document.getElementById("events-list");
-    if (!el)
-      return;
-    const list = getFiltered();
-    if (!list.length) {
-      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
-      return;
-    }
-    el.innerHTML = list.map(cardHtml).join("");
-    el.querySelectorAll(".shotam-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const id = Number(card.dataset.id);
-        if (Number.isFinite(id))
-          openShotamModal(id);
-      });
-    });
-  }
-  function handleEvImgError(e) {
+  function handleImgError(e) {
     const img = e.target;
     if (!img || img.tagName !== "IMG")
       return;
@@ -6179,25 +6069,150 @@ ${ev.description || ""}`
     ph.textContent = "\u{1F3F0}";
     img.replaceWith(ph);
   }
-  async function initEvents() {
-    const el = document.getElementById("events-list");
-    if (el) {
-      renderSkeleton(el);
-      el.addEventListener("error", handleEvImgError, true);
+  function newsCardsHtml(articles, opts = {}) {
+    if (!articles || articles.length === 0) {
+      return '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     }
-    try {
-      const [evRes, holRes] = await Promise.all([
-        fetch("./data/events.json"),
-        fetch("./data/holidays.json")
-      ]);
-      const events = await evRes.json();
-      const holData = await holRes.json();
-      const holidays = (holData.holidays || []).map((h) => ({ ...h, time: null, location: null }));
-      allEvents = [...events, ...holidays];
-    } catch {
-      allEvents = [];
+    if (opts.compact)
+      return articles.map(renderRow).join("");
+    return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
+  }
+  async function ensureNewsLoaded() {
+    if (!allArticles.length) {
+      try {
+        const res = await fetch("./data/articles.json");
+        allArticles = await res.json();
+      } catch (e) {
+        allArticles = [];
+      }
     }
-    renderList();
+    return allArticles;
+  }
+  async function getArticlesByIds(ids) {
+    await ensureNewsLoaded();
+    return ids.map((id) => allArticles.find((a) => a.id === id)).filter(Boolean);
+  }
+  function badgesHtml(a) {
+    return `
+    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(a.category)}</span>
+    ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
+  `;
+  }
+  function renderFeatured(a) {
+    const hasImage = !!a.image;
+    return `
+    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
+      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      <div class="news-card-featured-overlay">
+        <div class="news-card-meta">${badgesHtml(a)}</div>
+        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
+        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
+        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
+  }
+  function renderRow(a) {
+    return `
+    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" data-article-id="${a.id}">
+      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      <div class="news-card-row-body">
+        <div class="news-card-meta">${badgesHtml(a)}</div>
+        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
+        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
+        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+      </div>
+    </article>
+  `;
+  }
+  function decodeEntities(str) {
+    const ta = document.createElement("textarea");
+    ta.innerHTML = str || "";
+    return ta.value;
+  }
+  function renderArticleBody(content) {
+    const text = decodeEntities(content || "");
+    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
+    if (!paragraphs.length)
+      return "";
+    return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
+  }
+  function openArticle(id) {
+    const article = allArticles.find((a) => a.id === id);
+    if (!article)
+      return;
+    const modal = document.getElementById("article-modal");
+    const modalContent = document.getElementById("article-modal-content");
+    const modalMetaTags = document.getElementById("modalMetaTags");
+    if (!modal || !modalContent)
+      return;
+    const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
+    const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
+    const bodyHtml = renderArticleBody(rawText);
+    if (modalMetaTags) {
+      modalMetaTags.innerHTML = `
+      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
+      <span class="modal-meta-sep">\u2022</span>
+      <span class="news-card-category">${escapeHtml(article.category)}</span>
+      ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    `;
+    }
+    modalContent.innerHTML = `
+    <div class="article-modal-header">
+      <h1 class="article-title">${escapeHtml(article.title)}</h1>
+      <div class="article-byline">
+        ${sourceHtml}
+        <span>${formatTime(article.ts)}</span>
+      </div>
+    </div>
+    ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
+    ${article.image && (article.imageType === "illustration" || article.imageCredit) ? `
+      <div class="article-img-caption">
+        ${article.imageType === "illustration" ? "<strong>\u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F.</strong> " : ""}${article.imageCredit ? "\u0424\u043E\u0442\u043E: " + escapeHtml(article.imageCredit) : ""}
+      </div>` : ""}
+    <div class="article-body">${bodyHtml}</div>
+    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
+      <div class="article-short-note">
+        \u0414\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS \u2014 \u043F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u0432\u0438\u0434\u0430\u043D\u043D\u044F.
+        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u2192</a>
+      </div>
+    ` : ""}
+    <div class="article-source-row">
+      <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
+      ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
+    </div>
+  `;
+    const shareBtn = document.getElementById("modal-share-btn");
+    const remindBtn = document.getElementById("modal-remind-btn");
+    const saveBtn = document.getElementById("modal-save-btn");
+    if (shareBtn)
+      shareBtn.innerHTML = ICONS.share;
+    if (remindBtn)
+      remindBtn.innerHTML = ICONS.bell;
+    if (saveBtn)
+      saveBtn.innerHTML = ICONS.bookmark;
+    if (shareBtn)
+      shareBtn.onclick = () => sharePost({
+        title: article.title,
+        text: article.excerpt || "",
+        url: article.sourceUrl || location.href
+      });
+    if (remindBtn)
+      remindBtn.hidden = true;
+    if (saveBtn) {
+      saveBtn.hidden = false;
+      saveBtn.classList.toggle("modal-icon-btn--active", getSavedArticleIds().includes(article.id));
+      saveBtn.onclick = () => {
+        const nowSaved = toggleSavedArticle(article.id);
+        saveBtn.classList.toggle("modal-icon-btn--active", nowSaved);
+        showToast(nowSaved ? "\u0421\u0442\u0430\u0442\u0442\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E" : "\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445");
+      };
+    }
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("modal-open");
   }
 
   // src/core/bus-schedule.js
@@ -8054,83 +8069,731 @@ ${ev.description || ""}`
     }, 6e4);
   }
 
-  // src/tabs/news.js
-  var allArticles = [];
-  var SAVED_KEY = "cstl_saved_articles";
-  function getSavedArticleIds() {
+  // src/core/saved-hub.js
+  var _sheet = null;
+  var _backdrop = null;
+  var _view = "categories";
+  var _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
+  var CATS = [
+    { key: "articles", icon: ICONS.newspaper, label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
+    { key: "buses", icon: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
+    { key: "chats", icon: ICONS.message, label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
+    { key: "boards", icon: ICONS.pin, label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
+  ];
+  function closeHub() {
+    if (!_sheet)
+      return;
+    const s = _sheet, b = _backdrop;
+    _sheet = null;
+    _backdrop = null;
+    s.classList.remove("visible");
+    b?.classList.remove("visible");
+    document.body.classList.remove("modal-open");
+    setTimeout(() => {
+      s.remove();
+      b?.remove();
+    }, 240);
+  }
+  function cardHtml(p, type) {
+    const when = new Date(p.created_at || p.ts || Date.now()).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
+    return `
+    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
+      <span class="shub-card-text">${escapeHtml(p.title || p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
+      <span class="shub-card-meta">${escapeHtml(when)}</span>
+    </button>`;
+  }
+  function busCardHtml(r) {
+    return `
+    <button class="shub-card" type="button" data-shub-type="bus"
+            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
+            data-shub-from="${escapeHtml(r.from || "")}" data-shub-to="${escapeHtml(r.to || "")}">
+      <span class="shub-card-text">${escapeHtml(r.title)}</span>
+      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? " \xB7 " + escapeHtml(r.timeStr) : ""}</span>
+    </button>`;
+  }
+  async function loadData() {
+    const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
     try {
-      return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]");
+      const artIds = [...getSavedArticleIds()].reverse();
+      if (artIds.length)
+        data.articles = await getArticlesByIds(artIds);
+    } catch (e) {
+      console.warn("[saved-hub] articles", e);
+    }
+    try {
+      data.buses = getSavedRoutesForUI();
+    } catch (e) {
+      console.warn("[saved-hub] buses", e);
+    }
+    if (data.loggedIn) {
+      try {
+        const ids = [...await fetchSavedPostIds(currentUserId())];
+        if (ids.length) {
+          const supa2 = getSupabase();
+          const { data: posts, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
+          if (error)
+            throw error;
+          data.chats = (posts || []).filter((p) => p.type === "chat");
+          data.boards = (posts || []).filter((p) => p.type !== "chat");
+        }
+      } catch (e) {
+        console.warn("[saved-hub] posts", e);
+        data.postsError = true;
+      }
+    }
+    return data;
+  }
+  function categoriesScreenHtml() {
+    const rows = CATS.map((c) => {
+      const count = _data[c.key].length;
+      const locked = c.needsAuth && !_data.loggedIn;
+      if (!count && !locked)
+        return "";
+      return `
+      <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
+        <span class="shub-cat-ic">${c.icon}</span>
+        <span class="shub-cat-label">${c.label}</span>
+        ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
+        <span class="shub-cat-chev">\u203A</span>
+      </button>`;
+    }).filter(Boolean).join("");
+    if (!rows) {
+      return `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
+      <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C ${ICONS.bookmark} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
+    }
+    return `<div class="shub-cats">${rows}</div>`;
+  }
+  function detailHead(cat) {
+    return `
+    <div class="shub-detail-head">
+      <button class="shub-back" type="button" data-shub-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <span class="shub-detail-title">${cat.icon} ${cat.label}</span>
+    </div>`;
+  }
+  var EMPTY_DETAIL = `<div class="shub-empty">\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
+  function categoryScreenHtml(key) {
+    const cat = CATS.find((c) => c.key === key);
+    if (!cat) {
+      _view = "categories";
+      return categoriesScreenHtml();
+    }
+    if (cat.needsAuth && !_data.loggedIn) {
+      return detailHead(cat) + `<div class="shub-hint-block">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.<br>
+      <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`;
+    }
+    if (key === "buses") {
+      return detailHead(cat) + (_data.buses.map(busCardHtml).join("") || EMPTY_DETAIL);
+    }
+    if (key === "articles") {
+      return detailHead(cat) + (_data.articles.map((p) => cardHtml(p, "article")).join("") || EMPTY_DETAIL);
+    }
+    const type = key === "chats" ? "chat" : "board";
+    return detailHead(cat) + (_data[key].map((p) => cardHtml(p, type)).join("") || EMPTY_DETAIL);
+  }
+  function render() {
+    const bodyEl = _sheet?.querySelector("#shub-body");
+    if (!bodyEl)
+      return;
+    bodyEl.innerHTML = _view === "categories" ? categoriesScreenHtml() : categoryScreenHtml(_view);
+  }
+  function openSavedHub() {
+    if (_sheet)
+      return;
+    _view = "categories";
+    _backdrop = document.createElement("div");
+    _backdrop.className = "board-backdrop shub-backdrop";
+    _sheet = document.createElement("div");
+    _sheet.className = "shub-sheet";
+    _sheet.innerHTML = `
+    <div class="shub-handle"></div>
+    <div class="shub-title">${ICONS.bookmark} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
+    <div class="shub-body" id="shub-body"><div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>`;
+    document.body.appendChild(_backdrop);
+    document.body.appendChild(_sheet);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => {
+      _backdrop.classList.add("visible");
+      _sheet.classList.add("visible");
+    });
+    _backdrop.addEventListener("click", closeHub);
+    _sheet.addEventListener("click", (e) => {
+      if (e.target.closest("#shub-login")) {
+        closeHub();
+        requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
+        });
+        return;
+      }
+      if (e.target.closest("[data-shub-back]")) {
+        _view = "categories";
+        render();
+        return;
+      }
+      const catRow = e.target.closest("[data-shub-cat]");
+      if (catRow) {
+        _view = catRow.dataset.shubCat;
+        render();
+        return;
+      }
+      const busCard = e.target.closest('[data-shub-type="bus"]');
+      if (busCard) {
+        const { shubRid, shubDate, shubFrom, shubTo } = busCard.dataset;
+        closeHub();
+        window.switchTab && window.switchTab("buses");
+        openSavedRouteOnBuses(shubRid, shubDate, shubFrom || null, shubTo || null);
+        return;
+      }
+      const card = e.target.closest("[data-shub-open]");
+      if (!card)
+        return;
+      const id = Number(card.dataset.shubOpen);
+      const type = card.dataset.shubType;
+      closeHub();
+      if (type === "article") {
+        openArticle(id);
+      } else if (type === "chat") {
+        window.switchTab && window.switchTab("discussions");
+        openChatById(id);
+      } else {
+        window.switchTab && window.switchTab("board");
+        setBoardActiveType("saved");
+      }
+    });
+    loadData().then((data) => {
+      _data = data;
+      render();
+    });
+  }
+  function initSavedHub() {
+    document.getElementById("saved-hub-btn")?.addEventListener("click", openSavedHub);
+  }
+
+  // src/core/account-ui.js
+  var _newUserChecked = false;
+  function refreshAccountButtons() {
+    const av = isLoggedIn() ? currentAvatarUrl() : "";
+    document.querySelectorAll("[data-account-btn]").forEach((btn) => {
+      if (!btn.dataset.defaultHtml)
+        btn.dataset.defaultHtml = btn.innerHTML;
+      btn.innerHTML = av ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>` : btn.dataset.defaultHtml;
+      btn.classList.toggle("account-btn--in", isLoggedIn());
+      btn.classList.toggle("account-btn--av", !!av);
+      btn.setAttribute("aria-label", isLoggedIn() ? "\u041A\u0430\u0431\u0456\u043D\u0435\u0442 \u0436\u0438\u0442\u0435\u043B\u044F" : "\u0423\u0432\u0456\u0439\u0442\u0438");
+    });
+  }
+  var updateHeaderBtn = refreshAccountButtons;
+  function closeModal2() {
+    closeModal();
+  }
+  function openModal2(innerHtml) {
+    const { el } = openModal({ bodyHtml: innerHtml, variant: "center" });
+    return el;
+  }
+  function openJoin(reason) {
+    const sub = reason ? `\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 ${escapeHtml(reason)}.` : "\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u0438\u0441\u0430\u0442\u0438 \u0439 \u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438.";
+    const wrap = openModal2(`
+    <div class="acc-emoji">\u{1F464}</div>
+    <h2 class="acc-title">\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0434\u043E \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
+    <p class="acc-sub">${sub}</p>
+    <button class="acc-google" type="button">
+      <span class="acc-g">G</span> \u0423\u0432\u0456\u0439\u0442\u0438 \u0437 Gmail
+    </button>
+    <button class="acc-skip" type="button">\u041F\u043E\u043A\u0438 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438</button>`);
+    wrap.querySelector(".acc-google").addEventListener("click", () => signInWithGoogle());
+    wrap.querySelector(".acc-skip").addEventListener("click", closeModal2);
+  }
+  function openProfile() {
+    const u = currentUser();
+    if (!u)
+      return;
+    const defaultName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
+    const wrap = openModal2(`
+    <h2 class="acc-title">\u0420\u0430\u0434\u0456 \u0432\u0430\u0441 \u0431\u0430\u0447\u0438\u0442\u0438!</h2>
+    <label class="acc-label">\u0406\u043C'\u044F</label>
+    <input class="acc-input" id="acc-name" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(defaultName)}">
+    <label class="acc-label">\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</label>
+    <input class="acc-input" id="acc-bdate" type="date" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}">
+    <button class="acc-primary" type="button" id="acc-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+    <button class="acc-skip" type="button" id="acc-later">\u041F\u0456\u0437\u043D\u0456\u0448\u0435</button>`);
+    const finish = async (withDate) => {
+      const name = wrap.querySelector("#acc-name").value.trim();
+      const bd = wrap.querySelector("#acc-bdate").value;
+      const res = await saveProfile({ name, birth_date: withDate ? bd : null });
+      if (!res.ok) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
+        return;
+      }
+      closeModal2();
+      if (withDate)
+        showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
+    };
+    wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
+    wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
+  }
+  var NOTIF_KEYS = [
+    { k: "buses", ic: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
+    { k: "power", ic: ICONS.bulb, label: "\u0421\u0432\u0456\u0442\u043B\u043E", def: true },
+    { k: "news", ic: ICONS.newspaper, label: "\u041D\u043E\u0432\u0438\u043D\u0438", def: false },
+    { k: "board", ic: ICONS.pin, label: "\u0414\u043E\u0448\u043A\u0430", def: true }
+  ];
+  function loadNotifPrefs(uid) {
+    try {
+      const raw = JSON.parse(localStorage.getItem("notif_prefs:" + uid) || "{}");
+      const out = {};
+      NOTIF_KEYS.forEach((n) => {
+        out[n.k] = n.k in raw ? !!raw[n.k] : n.def;
+      });
+      return out;
     } catch {
-      return [];
+      const o = {};
+      NOTIF_KEYS.forEach((n) => o[n.k] = n.def);
+      return o;
     }
   }
-  function toggleSavedArticle(id) {
-    const ids = getSavedArticleIds();
-    const idx = ids.indexOf(id);
-    if (idx === -1)
-      ids.push(id);
+  function saveNotifPrefs(uid, prefs) {
+    try {
+      localStorage.setItem("notif_prefs:" + uid, JSON.stringify(prefs));
+    } catch {
+    }
+  }
+  function closeCabinet() {
+    const c = document.getElementById("acc-cab");
+    if (!c)
+      return;
+    c.classList.remove("open");
+    document.body.classList.remove("modal-open");
+    setTimeout(() => c.remove(), 240);
+  }
+  async function openAccount() {
+    const u = currentUser();
+    if (!u)
+      return;
+    const p = await getProfile() || {};
+    const email = u.email || "";
+    const gName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
+    const val = {
+      name: p.name || gName || "",
+      surname: p.surname || "",
+      birth_date: p.birth_date || "",
+      phone: p.phone || "",
+      settlement: p.settlement || "",
+      street: p.street || "",
+      bio: p.bio || "",
+      avatar_url: p.avatar_url || ""
+    };
+    const fullName = [val.name, val.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
+    const place = val.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
+    const prefs = loadNotifPrefs(u.id);
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    const trustHtml = p.trusted ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440 \u2014 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443</div>` : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u044C \u0434\u043E \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457</div>`;
+    const field = (ic, label, control) => `
+    <label class="acc-f">
+      <span class="acc-f-ic">${ic}</span>
+      <span class="acc-f-body"><span class="acc-f-lbl">${label}</span>${control}</span>
+      <i class="acc-f-chev">${ICONS.chevronRight}</i>
+    </label>`;
+    const navRow = (go, ic, name, desc) => `
+    <button class="acc-cab-row" data-go="${go}" type="button">
+      <span class="acc-cab-row-ic">${ic}</span>
+      <span class="acc-cab-row-body"><span class="acc-cab-row-name">${name}</span><span class="acc-cab-row-desc">${desc}</span></span>
+      <i>${ICONS.chevronRight}</i>
+    </button>`;
+    const cab = document.createElement("div");
+    cab.id = "acc-cab";
+    cab.className = "acc-cab";
+    cab.innerHTML = `
+    <div class="acc-cab-top">
+      <button class="acc-cab-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
+      <b>\u041C\u0456\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442</b>
+    </div>
+    <div class="acc-cab-scroll">
+      <div class="acc-cab-hero">
+        <div class="acc-cab-avwrap">
+          <div class="acc-cab-av" id="acc-hero-av">${avatarCircle({ name: fullName, url: val.avatar_url, cls: "acc-av" })}</div>
+          <button class="acc-cab-avcam" type="button" id="acc-av-btn" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E">${ICONS.photo}</button>
+          <input type="file" id="acc-av-file" accept="image/*" hidden>
+        </div>
+        <div class="acc-cab-hi">
+          <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
+          <div class="acc-cab-email">${escapeHtml(email)}</div>
+          <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
+          ${trustHtml}
+        </div>
+      </div>
+
+      <div class="acc-cab-sec">
+        <h3>\u041C\u043E\u0457 \u0434\u0430\u043D\u0456</h3>
+        ${field(ICONS.user, "\u0406\u043C'\u044F", `<input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F">`)}
+        ${field(ICONS.clipboard, "\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435", `<input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435">`)}
+        ${field(ICONS.calendar, "\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F", `<input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}">`)}
+        ${field(ICONS.phone, "\u0422\u0435\u043B\u0435\u0444\u043E\u043D (\u0434\u043B\u044F \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C)", `<input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380\u2026">`)}
+        ${field(ICONS.pin, "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442", `<select id="cf-settlement">
+            <option value="">\u2014 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u2014</option>
+            ${[...SETTLEMENTS, OTHER_SETTLEMENT].map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select>`)}
+        ${field(ICONS.home, "\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)", `<input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430">`)}
+        ${field(ICONS.fileText, "\u041F\u0440\u043E \u0441\u0435\u0431\u0435", `<textarea id="cf-bio" rows="2" placeholder="\u041A\u0456\u043B\u044C\u043A\u0430 \u0441\u043B\u0456\u0432\u2026">${escapeHtml(val.bio)}</textarea>`)}
+      </div>
+      <button class="acc-cab-save" type="button" id="cf-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443</button>
+
+      <div class="acc-cab-sec acc-cab-sec--rows">
+        <h3>\u041C\u043E\u0454</h3>
+        ${navRow("myads", ICONS.megaphone, "\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u0434 \u0456 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0430\u0448\u0438\u043C\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\u043C\u0438")}
+        ${navRow("saved", ICONS.bookmark, "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u0441\u0442\u0430\u0442\u0442\u0456, \u044F\u043A\u0456 \u0432\u0438 \u0437\u0431\u0435\u0440\u0435\u0433\u043B\u0438")}
+        ${navRow("msgs", ICONS.message, "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0456 \u0447\u0430\u0442\u0438 \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 \u0436\u0438\u0442\u0435\u043B\u044F\u043C\u0438")}
+      </div>
+
+      <div class="acc-cab-sec acc-cab-sec--rows">
+        <h3>\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F</h3>
+        ${NOTIF_KEYS.map((n) => `
+          <div class="acc-cab-row acc-cab-row--tog">
+            <span class="acc-cab-row-ic">${n.ic}</span>
+            <span class="acc-cab-row-body"><span class="acc-cab-row-name">${n.label}</span></span>
+            <button class="acc-tog${prefs[n.k] ? "" : " off"}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
+          </div>`).join("")}
+      </div>
+
+      <button class="acc-cab-logout" type="button" id="cf-logout">\u0412\u0438\u0439\u0442\u0438</button>
+    </div>`;
+    document.body.appendChild(cab);
+    document.body.classList.add("modal-open");
+    requestAnimationFrame(() => cab.classList.add("open"));
+    cab.querySelector(".acc-cab-back").addEventListener("click", closeCabinet);
+    const avBtn = cab.querySelector("#acc-av-btn");
+    const avFile = cab.querySelector("#acc-av-file");
+    const avBox = cab.querySelector("#acc-hero-av");
+    const removeAvatar = async () => {
+      avBtn.disabled = true;
+      avBox.classList.add("acc-av--loading");
+      try {
+        const res = await saveProfile({ avatar_url: null });
+        if (!res.ok)
+          throw new Error(res.error || "save");
+        val.avatar_url = "";
+        avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url: "", cls: "acc-av" });
+        updateHeaderBtn();
+        showToast("\u0424\u043E\u0442\u043E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2200);
+      } catch (err) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
+      } finally {
+        avBtn.disabled = false;
+        avBox.classList.remove("acc-av--loading");
+      }
+    };
+    avBtn.addEventListener("click", () => {
+      if (!val.avatar_url) {
+        avFile.click();
+        return;
+      }
+      const menu = openModal({
+        variant: "sheet",
+        className: "app-modal--top",
+        // поверх екрана кабінету (3100), інакше ховається під ним
+        bodyHtml: `
+        <div class="acc-avmenu">
+          <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
+          <button type="button" class="acc-avmenu-item acc-avmenu-item--danger" data-av-act="remove">${ICONS.trash} \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
+        </div>`
+      });
+      menu.el.querySelector('[data-av-act="change"]').addEventListener("click", () => {
+        closeModal();
+        avFile.click();
+      });
+      menu.el.querySelector('[data-av-act="remove"]').addEventListener("click", () => {
+        closeModal();
+        removeAvatar();
+      });
+    });
+    avFile.addEventListener("change", async () => {
+      const file = avFile.files && avFile.files[0];
+      avFile.value = "";
+      if (!file)
+        return;
+      avBtn.disabled = true;
+      avBox.classList.add("acc-av--loading");
+      try {
+        const blob = await squareImageBlob(file, 256);
+        const { url, error } = await uploadPhotoToStorage(blob, "avatars/");
+        if (!url)
+          throw new Error(error || "upload");
+        const res = await saveProfile({ avatar_url: url });
+        if (!res.ok)
+          throw new Error(res.error || "save");
+        val.avatar_url = url;
+        avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url, cls: "acc-av" });
+        updateHeaderBtn();
+        showToast("\u2705 \u0424\u043E\u0442\u043E \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E", 2200);
+      } catch (err) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
+      } finally {
+        avBtn.disabled = false;
+        avBox.classList.remove("acc-av--loading");
+      }
+    });
+    cab.querySelector("#cf-save").addEventListener("click", async (e) => {
+      const btn = e.currentTarget;
+      btn.disabled = true;
+      btn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u043C\u043E\u2026";
+      const fields = {
+        name: cab.querySelector("#cf-name").value.trim(),
+        surname: cab.querySelector("#cf-surname").value.trim(),
+        birth_date: cab.querySelector("#cf-bdate").value || null,
+        phone: cab.querySelector("#cf-phone").value.trim(),
+        settlement: cab.querySelector("#cf-settlement").value,
+        street: cab.querySelector("#cf-street").value.trim(),
+        bio: cab.querySelector("#cf-bio").value.trim()
+      };
+      const res = await saveProfile(fields);
+      btn.disabled = false;
+      btn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443";
+      if (!res.ok) {
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
+        return;
+      }
+      cab.querySelector("#acc-hero-name").textContent = [fields.name, fields.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
+      cab.querySelector("#acc-hero-place").textContent = fields.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
+      if (res.partial) {
+        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0456\u043C\u02BC\u044F \u0456 \u0434\u0430\u0442\u0443. \u0421\u0435\u043B\u043E/\u0442\u0435\u043B\u0435\u0444\u043E\u043D \u043F\u043E\u043A\u0438 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u2014 \u0431\u0430\u0437\u0443 \u043E\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u043C \u0447\u0430\u0441\u043E\u043C", 5e3, "error");
+      } else {
+        showToast("\u2705 \u0410\u043D\u043A\u0435\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
+      }
+    });
+    cab.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
+      const go = b.dataset.go;
+      closeCabinet();
+      if (go === "myads")
+        openMyAds();
+      else if (go === "msgs")
+        openThreadsList();
+      else if (go === "saved")
+        openSavedHub();
+    }));
+    cab.querySelectorAll("[data-notif]").forEach((t) => t.addEventListener("click", () => {
+      const k = t.dataset.notif;
+      prefs[k] = !prefs[k];
+      t.classList.toggle("off", !prefs[k]);
+      saveNotifPrefs(u.id, prefs);
+    }));
+    cab.querySelector("#cf-logout").addEventListener("click", async () => {
+      await signOut();
+      closeCabinet();
+      showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438", 2200);
+    });
+  }
+  function onHeaderClick() {
+    if (isLoggedIn())
+      openAccount();
     else
-      ids.splice(idx, 1);
-    localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
-    return idx === -1;
+      openJoin();
   }
+  function initAccountUI() {
+    document.addEventListener("click", (e) => {
+      if (e.target.closest("[data-account-btn]"))
+        onHeaderClick();
+    });
+    updateHeaderBtn();
+    document.addEventListener("cstl-need-login", (e) => {
+      if (isLoggedIn())
+        return;
+      openJoin(e.detail && e.detail.actionLabel);
+    });
+    onAuthChange(async (user) => {
+      updateHeaderBtn();
+      if (!user || _newUserChecked)
+        return;
+      _newUserChecked = true;
+      const profile = await getProfile();
+      if (!profile)
+        openProfile();
+    });
+  }
+
+  // src/tabs/events.js
   var CATEGORY_COLORS2 = {
-    "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
-    // темно-сірий (новинний)
-    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
-    // navy
-    "\u0412\u0456\u0439\u043D\u0430": "#722F37",
-    // бордо
-    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F",
-    // зелений (гроші)
-    "\u0411\u0456\u0437\u043D\u0435\u0441": "#2E5E1F",
-    // зелений
+    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#722F37",
+    "Kino_Castle": "#722F37",
     "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    // синій
-    "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#B45309",
-    // теракот
-    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "#455a64",
-    // сіро-синій
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#C2185B",
-    // медичний
-    "\u041E\u0441\u0432\u0456\u0442\u0430": "#6a1b9a",
-    // фіолетовий
-    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "#2e7d32",
-    // природний зелений
-    "\u0406\u0441\u0442\u043E\u0440\u0456\u044F": "#6d4c41"
-    // сепія-коричневий (історичні «історії Олики»)
+    "\u0411\u043B\u0430\u0433\u043E\u0434\u0456\u0439\u043D\u0456\u0441\u0442\u044C": "#B45309",
+    "\u0421\u0432\u044F\u0442\u043E": "#8B6F47"
+    // коричневий — нейтральний для свят (державних і релігійних)
   };
-  var GEO_COLORS = {
-    "\u0413\u0440\u043E\u043C\u0430\u0434\u0430": "#722F37",
-    // бордо — наш бренд (Олика + села громади)
-    "\u041E\u043B\u0438\u043A\u0430": "#722F37",
-    // стара назва — лишаємо для сумісності
-    "\u0412\u043E\u043B\u0438\u043D\u044C": "#9e7508",
-    // золотий
-    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
-    // синій
-    "\u0421\u0432\u0456\u0442": "#546e7a",
-    // нейтрально-сірий
-    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
-    // синій — злитий розділ (на випадок майбутнього geo)
-  };
-  function catColor3(c) {
-    return CATEGORY_COLORS2[c] || "#546e7a";
+  var MONTHS_FULL = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"];
+  var allEvents = [];
+  function formatFullDate(dateStr) {
+    const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
+    return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
-  function geoColor(g) {
-    return GEO_COLORS[g] || "#546e7a";
+  function catColor3(category) {
+    return CATEGORY_COLORS2[category] || "#722F37";
   }
-  async function initNews() {
-    await ensureNewsLoaded();
-    attachNewsListeners();
+  function buildIcsContent(ev) {
+    const pad2 = (n) => String(n).padStart(2, "0");
+    const start = /* @__PURE__ */ new Date(ev.date + "T" + (ev.time || "09:00") + ":00");
+    const end = new Date(start.getTime() + 2 * 60 * 60 * 1e3);
+    const fmt = (d) => `${d.getFullYear()}${pad2(d.getMonth() + 1)}${pad2(d.getDate())}T${pad2(d.getHours())}${pad2(d.getMinutes())}00`;
+    const esc = (s) => (s || "").replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+    return [
+      "BEGIN:VCALENDAR",
+      "VERSION:2.0",
+      "PRODID:-//CSTL LIFE//UA",
+      "CALSCALE:GREGORIAN",
+      "METHOD:PUBLISH",
+      "BEGIN:VEVENT",
+      `UID:cstlnews-${ev.id}-${ev.date}@cstlnews`,
+      `DTSTART:${fmt(start)}`,
+      `DTEND:${fmt(end)}`,
+      `SUMMARY:${esc(ev.title)}`,
+      `DESCRIPTION:${esc(ev.description)}`,
+      `LOCATION:${esc(ev.location)}`,
+      "BEGIN:VALARM",
+      "TRIGGER:-PT1H",
+      "ACTION:DISPLAY",
+      `DESCRIPTION:\u041D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F: ${esc(ev.title)}`,
+      "END:VALARM",
+      "END:VEVENT",
+      "END:VCALENDAR"
+    ].join("\r\n");
   }
-  function attachNewsListeners() {
-    const modal = document.getElementById("article-modal");
-    if (modal) {
-      modal.addEventListener("error", handleImgError, true);
+  function downloadIcs(ev) {
+    const ics = buildIcsContent(ev);
+    const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ev.title.replace(/[^\wА-ЯҐЄІЇа-яґєії\d ]/g, "_") + ".ics";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+  }
+  function renderSkeleton(el) {
+    el.innerHTML = Array(3).fill(`
+    <div class="ev-skeleton">
+      <div class="ev-skel-img"></div>
+      <div class="ev-skel-body">
+        <div class="ev-skel-line w60"></div>
+        <div class="ev-skel-line w100"></div>
+        <div class="ev-skel-line w80"></div>
+        <div class="ev-skel-line w40"></div>
+      </div>
+    </div>
+  `).join("");
+  }
+  function cardHtml2(ev) {
+    const catC = catColor3(ev.category);
+    let cover;
+    if (ev.image) {
+      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
+    } else {
+      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
+      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
     }
+    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
+    return `
+    <article class="shotam-card" data-id="${ev.id}">
+      ${cover}
+      <div class="shotam-card-body">
+        <div class="news-card-meta">
+          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
+        </div>
+        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
+        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
+        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
+      </div>
+    </article>`;
   }
-  function handleImgError(e) {
+  function openShotamModal(id) {
+    const ev = allEvents.find((e) => e.id === id);
+    if (!ev)
+      return;
+    const modal = document.getElementById("article-modal");
+    const modalContent = document.getElementById("article-modal-content");
+    const modalMetaTags = document.getElementById("modalMetaTags");
+    if (!modal || !modalContent)
+      return;
+    const catC = catColor3(ev.category);
+    if (modalMetaTags) {
+      modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
+    }
+    let cover;
+    if (ev.image) {
+      cover = `<img class="article-img" src="${escapeHtml(ev.image)}" alt="">`;
+    } else {
+      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
+      cover = `<div class="shotam-modal-cover" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
+    }
+    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
+    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
+    const bodyHtml = (ev.description || "").split(/\n\n+/).map((p) => p.trim()).filter(Boolean).map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
+    modalContent.innerHTML = `
+    <div class="article-modal-header">
+      <h1 class="article-title">${escapeHtml(ev.title)}</h1>
+      <div class="article-byline"><span>${escapeHtml(when)}${loc}</span></div>
+    </div>
+    ${cover}
+    <div class="article-body">${bodyHtml}</div>`;
+    const shareBtn = document.getElementById("modal-share-btn");
+    const remindBtn = document.getElementById("modal-remind-btn");
+    const saveBtn = document.getElementById("modal-save-btn");
+    if (shareBtn)
+      shareBtn.onclick = () => sharePost({
+        title: ev.title,
+        text: `\u{1F4C5} ${ev.title}
+${when}${ev.location ? " \xB7 " + ev.location : ""}
+
+${ev.description || ""}`
+      });
+    if (remindBtn) {
+      remindBtn.hidden = false;
+      remindBtn.onclick = () => {
+        if (!isLoggedIn()) {
+          requireAuth("\u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F", () => {
+          });
+          return;
+        }
+        downloadIcs(ev);
+      };
+    }
+    if (saveBtn)
+      saveBtn.hidden = true;
+    modal.classList.add("open");
+    document.body.style.overflow = "hidden";
+    document.body.classList.add("modal-open");
+  }
+  function getFiltered() {
+    const now = /* @__PURE__ */ new Date();
+    now.setHours(0, 0, 0, 0);
+    return allEvents.filter((e) => {
+      if (e.auto)
+        return false;
+      const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
+      return d >= now;
+    }).sort((a, b) => {
+      const byDate = new Date(a.date) - new Date(b.date);
+      if (byDate !== 0)
+        return byDate;
+      return (a.time || "").localeCompare(b.time || "");
+    });
+  }
+  function renderList() {
+    const el = document.getElementById("events-list");
+    if (!el)
+      return;
+    const list = getFiltered();
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
+      return;
+    }
+    el.innerHTML = list.map(cardHtml2).join("");
+    el.querySelectorAll(".shotam-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const id = Number(card.dataset.id);
+        if (Number.isFinite(id))
+          openShotamModal(id);
+      });
+    });
+  }
+  function handleEvImgError(e) {
     const img = e.target;
     if (!img || img.tagName !== "IMG")
       return;
@@ -8139,150 +8802,25 @@ ${ev.description || ""}`
     ph.textContent = "\u{1F3F0}";
     img.replaceWith(ph);
   }
-  function newsCardsHtml(articles, opts = {}) {
-    if (!articles || articles.length === 0) {
-      return '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
+  async function initEvents() {
+    const el = document.getElementById("events-list");
+    if (el) {
+      renderSkeleton(el);
+      el.addEventListener("error", handleEvImgError, true);
     }
-    if (opts.compact)
-      return articles.map(renderRow).join("");
-    return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
-  }
-  async function ensureNewsLoaded() {
-    if (!allArticles.length) {
-      try {
-        const res = await fetch("./data/articles.json");
-        allArticles = await res.json();
-      } catch (e) {
-        allArticles = [];
-      }
+    try {
+      const [evRes, holRes] = await Promise.all([
+        fetch("./data/events.json"),
+        fetch("./data/holidays.json")
+      ]);
+      const events = await evRes.json();
+      const holData = await holRes.json();
+      const holidays = (holData.holidays || []).map((h) => ({ ...h, time: null, location: null }));
+      allEvents = [...events, ...holidays];
+    } catch {
+      allEvents = [];
     }
-    return allArticles;
-  }
-  async function getArticlesByIds(ids) {
-    await ensureNewsLoaded();
-    return ids.map((id) => allArticles.find((a) => a.id === id)).filter(Boolean);
-  }
-  function badgesHtml(a) {
-    return `
-    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor3(a.category)}">${escapeHtml(a.category)}</span>
-    ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-    ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
-  `;
-  }
-  function renderFeatured(a) {
-    const hasImage = !!a.image;
-    return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
-      <div class="news-card-featured-overlay">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
-        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function renderRow(a) {
-    return `
-    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" data-article-id="${a.id}">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
-      <div class="news-card-row-body">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
-        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function decodeEntities(str) {
-    const ta = document.createElement("textarea");
-    ta.innerHTML = str || "";
-    return ta.value;
-  }
-  function renderArticleBody(content) {
-    const text = decodeEntities(content || "");
-    const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-    if (!paragraphs.length)
-      return "";
-    return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
-  }
-  function openArticle(id) {
-    const article = allArticles.find((a) => a.id === id);
-    if (!article)
-      return;
-    const modal = document.getElementById("article-modal");
-    const modalContent = document.getElementById("article-modal-content");
-    const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
-    const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
-    const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
-    const bodyHtml = renderArticleBody(rawText);
-    if (modalMetaTags) {
-      modalMetaTags.innerHTML = `
-      <span class="news-card-geo">${escapeHtml(article.geo)}</span>
-      <span class="modal-meta-sep">\u2022</span>
-      <span class="news-card-category">${escapeHtml(article.category)}</span>
-      ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-    `;
-    }
-    modalContent.innerHTML = `
-    <div class="article-modal-header">
-      <h1 class="article-title">${escapeHtml(article.title)}</h1>
-      <div class="article-byline">
-        ${sourceHtml}
-        <span>${formatTime(article.ts)}</span>
-      </div>
-    </div>
-    ${article.image ? `<img class="article-img" src="${escapeHtml(article.image)}" alt="">` : ""}
-    ${article.image && (article.imageType === "illustration" || article.imageCredit) ? `
-      <div class="article-img-caption">
-        ${article.imageType === "illustration" ? "<strong>\u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F.</strong> " : ""}${article.imageCredit ? "\u0424\u043E\u0442\u043E: " + escapeHtml(article.imageCredit) : ""}
-      </div>` : ""}
-    <div class="article-body">${bodyHtml}</div>
-    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
-      <div class="article-short-note">
-        \u0414\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS \u2014 \u043F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u0432\u0438\u0434\u0430\u043D\u043D\u044F.
-        <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u2192</a>
-      </div>
-    ` : ""}
-    <div class="article-source-row">
-      <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
-      ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
-    </div>
-  `;
-    const shareBtn = document.getElementById("modal-share-btn");
-    const remindBtn = document.getElementById("modal-remind-btn");
-    const saveBtn = document.getElementById("modal-save-btn");
-    if (shareBtn)
-      shareBtn.innerHTML = ICONS.share;
-    if (remindBtn)
-      remindBtn.innerHTML = ICONS.bell;
-    if (saveBtn)
-      saveBtn.innerHTML = ICONS.bookmark;
-    if (shareBtn)
-      shareBtn.onclick = () => sharePost({
-        title: article.title,
-        text: article.excerpt || "",
-        url: article.sourceUrl || location.href
-      });
-    if (remindBtn)
-      remindBtn.hidden = true;
-    if (saveBtn) {
-      saveBtn.hidden = false;
-      saveBtn.classList.toggle("modal-icon-btn--active", getSavedArticleIds().includes(article.id));
-      saveBtn.onclick = () => {
-        const nowSaved = toggleSavedArticle(article.id);
-        saveBtn.classList.toggle("modal-icon-btn--active", nowSaved);
-        showToast(nowSaved ? "\u0421\u0442\u0430\u0442\u0442\u044E \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E" : "\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E \u0437\u0456 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0438\u0445");
-      };
-    }
-    modal.classList.add("open");
-    document.body.style.overflow = "hidden";
-    document.body.classList.add("modal-open");
+    renderList();
   }
 
   // src/tabs/community-blocks.js
@@ -9324,6 +9862,20 @@ ${ev.description || ""}`
     const el = document.querySelector(".cm-greeting-text");
     if (el)
       el.textContent = getGreeting().text;
+    fitGreeting();
+  }
+  var GREET_FONT_MAX = 27;
+  var GREET_FONT_MIN = 19;
+  function fitGreeting() {
+    const el = document.querySelector(".cm-greeting-text");
+    if (!el)
+      return;
+    let size = GREET_FONT_MAX;
+    el.style.fontSize = size + "px";
+    while (size > GREET_FONT_MIN && el.scrollWidth > el.clientWidth) {
+      size -= 1;
+      el.style.fontSize = size + "px";
+    }
   }
   function formatTodayHeader() {
     const d = /* @__PURE__ */ new Date();
@@ -9344,8 +9896,15 @@ ${ev.description || ""}`
          \u0434\u043E\u0437\u043D\u0438\u043A\u0430\u0454 (\u043F\u0440\u043E\u0441\u043A\u0440\u043E\u043B\u0438\u043B\u0438 padding-bottom) \u2014 \u0432\u0456\u0442\u0430\u043D\u043D\u044F \u0432\u0456\u0434\u043F\u0443\u0441\u043A\u0430\u0454\u0442\u044C\u0441\u044F \u0439 \u0457\u0434\u0435 \u0432\u0433\u043E\u0440\u0443. -->
     <div class="cm-greeting-stick">
       <section class="cm-greeting">
-        <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-        <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+        <div class="cm-greeting-col">
+          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+        </div>
+        <!-- \u0412\u0445\u0456\u0434 \u0443 \u043A\u0430\u0431\u0456\u043D\u0435\u0442 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438 15.07: \u0456\u043A\u043E\u043D\u043A\u0443 \u0437 \u0448\u0430\u043F\u043A\u0438 \u043F\u0435\u0440\u0435\u043D\u0435\u0441\u0435\u043D\u043E \u0441\u044E\u0434\u0438).
+             data-account-btn \u2014 \u043E\u043D\u043E\u0432\u043B\u044E\u0454/\u043A\u043B\u0456\u043A\u0430\u0454 account-ui.js (\u0444\u043E\u0442\u043E \u043F\u0440\u043E\u0444\u0456\u043B\u044E \u0430\u0431\u043E \u0456\u043A\u043E\u043D\u043A\u0430). -->
+        <button class="cm-greet-account" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+        </button>
       </section>
       <!-- \u0420\u043E\u0437\u043F\u0456\u0440\u043A\u0430 \u0437\u0430\u043F\u0430\u0441\u0443 \xAB\u0437\u0430\u043B\u0438\u043F\u0430\u043D\u043D\u044F\xBB: \u0420\u0415\u0410\u041B\u042C\u041D\u0418\u0419 \u0431\u043B\u043E\u043A (\u043D\u0435 padding!) \u2014 \u0456\u043D\u0430\u043A\u0448\u0435
            sticky \u0443 Chromium \u043D\u0435 \u0442\u0440\u0438\u043C\u0430\u0454 (padding \u043A\u043E\u043D\u0442\u0435\u0439\u043D\u0435\u0440\u0430 \u043D\u0435 \u0440\u0430\u0445\u0443\u0454\u0442\u044C\u0441\u044F \u0443 \u0434\u0456\u0430\u043F\u0430\u0437\u043E\u043D
@@ -9365,6 +9924,14 @@ ${ev.description || ""}`
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
+
+    <!-- \u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0441\u0435\u043A\u0446\u0456\u0457 \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438 15.07): \u0434\u0430\u0454 \u0441\u0435\u043D\u0441 \u0432\u0456\u0434\u0436\u0435\u0442\u0430\u043C \u043D\u0438\u0436\u0447\u0435.
+         \u0417\u0431\u0456\u0433 \u043D\u0430\u0437\u0432\u0438 \u0437\u0456 \u0432\u043A\u043B\u0430\u0434\u043A\u043E\u044E \u0442\u0430\u0431-\u0431\u0430\u0440\u0443 \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406\xBB \u2014 \u0441\u0432\u0456\u0434\u043E\u043C\u0438\u0439, \u043F\u0435\u0440\u0435\u0439\u043C\u0435\u043D\u0443\u0432\u0430\u043D\u043D\u044F
+         \u0432\u043A\u043B\u0430\u0434\u043A\u0438 \u2014 \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0435 \u043F\u0438\u0442\u0430\u043D\u043D\u044F. -->
+    <header class="cm-sec-head">
+      <h2>\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
+      <p>\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
+    </header>
 
     <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
          \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
@@ -9466,11 +10033,68 @@ ${ev.description || ""}`
     cache();
     main.addEventListener("scroll", onScroll, { passive: true });
   }
+  var _focusWired = false;
+  function initCenterFocus() {
+    if (_focusWired)
+      return;
+    const main = document.querySelector(".app-main");
+    if (!main)
+      return;
+    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
+      return;
+    _focusWired = true;
+    let raf = null;
+    const apply = () => {
+      raf = null;
+      if (main.dataset.tab !== "community")
+        return;
+      const vh = main.clientHeight;
+      const viewCenter = vh / 2;
+      let best = null, bestDist = Infinity;
+      document.querySelectorAll("#cm-content .cm-block").forEach((b) => {
+        const r = b.getBoundingClientRect();
+        if (r.bottom < -80 || r.top > vh + 80) {
+          if (b.dataset.cf) {
+            b.style.transform = "";
+            b.style.opacity = "";
+            b.classList.remove("cm-block--focus");
+            delete b.dataset.cf;
+          }
+          return;
+        }
+        const dist = Math.abs((r.top + r.bottom) / 2 - viewCenter);
+        const t = Math.min(1, dist / (vh * 0.55));
+        b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
+        b.style.opacity = (1 - 0.22 * t).toFixed(3);
+        b.dataset.cf = "1";
+        if (dist < bestDist) {
+          bestDist = dist;
+          best = b;
+        }
+      });
+      document.querySelectorAll("#cm-content .cm-block--focus").forEach((b) => {
+        if (b !== best)
+          b.classList.remove("cm-block--focus");
+      });
+      if (best)
+        best.classList.add("cm-block--focus");
+    };
+    const onScroll = () => {
+      if (!raf)
+        raf = requestAnimationFrame(apply);
+    };
+    main.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    window.addEventListener("cstl-tab-changed", onScroll);
+    onScroll();
+  }
   function initCommunity() {
     renderSkeleton2();
     attachSwitchTabDelegation();
     startHeroRotator();
     wireHeroBlur();
+    initCenterFocus();
+    refreshAccountButtons();
     if (!_greetingWired) {
       onAuthChange(updateGreetingName);
       _greetingWired = true;
@@ -9939,545 +10563,6 @@ END:VEVENT`
     window.addEventListener("offline", () => {
       if (powerData)
         renderPowerPage();
-    });
-  }
-
-  // src/core/saved-hub.js
-  var _sheet = null;
-  var _backdrop = null;
-  var _view = "categories";
-  var _data = { articles: [], buses: [], chats: [], boards: [], loggedIn: false };
-  var CATS = [
-    { key: "articles", icon: ICONS.newspaper, label: "\u0421\u0442\u0430\u0442\u0442\u0456", needsAuth: false },
-    { key: "buses", icon: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", needsAuth: false },
-    { key: "chats", icon: ICONS.message, label: "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F", needsAuth: true },
-    { key: "boards", icon: ICONS.pin, label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
-  ];
-  function closeHub() {
-    if (!_sheet)
-      return;
-    const s = _sheet, b = _backdrop;
-    _sheet = null;
-    _backdrop = null;
-    s.classList.remove("visible");
-    b?.classList.remove("visible");
-    document.body.classList.remove("modal-open");
-    setTimeout(() => {
-      s.remove();
-      b?.remove();
-    }, 240);
-  }
-  function cardHtml2(p, type) {
-    const when = new Date(p.created_at || p.ts || Date.now()).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
-    return `
-    <button class="shub-card" type="button" data-shub-open="${p.id}" data-shub-type="${type}">
-      <span class="shub-card-text">${escapeHtml(p.title || p.text || "(\u0431\u0435\u0437 \u0442\u0435\u043A\u0441\u0442\u0443)")}</span>
-      <span class="shub-card-meta">${escapeHtml(when)}</span>
-    </button>`;
-  }
-  function busCardHtml(r) {
-    return `
-    <button class="shub-card" type="button" data-shub-type="bus"
-            data-shub-rid="${escapeHtml(r.routeId)}" data-shub-date="${escapeHtml(r.trackDate)}"
-            data-shub-from="${escapeHtml(r.from || "")}" data-shub-to="${escapeHtml(r.to || "")}">
-      <span class="shub-card-text">${escapeHtml(r.title)}</span>
-      <span class="shub-card-meta">${escapeHtml(r.dayLabel || r.trackDate)}${r.timeStr ? " \xB7 " + escapeHtml(r.timeStr) : ""}</span>
-    </button>`;
-  }
-  async function loadData() {
-    const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
-    try {
-      const artIds = [...getSavedArticleIds()].reverse();
-      if (artIds.length)
-        data.articles = await getArticlesByIds(artIds);
-    } catch (e) {
-      console.warn("[saved-hub] articles", e);
-    }
-    try {
-      data.buses = getSavedRoutesForUI();
-    } catch (e) {
-      console.warn("[saved-hub] buses", e);
-    }
-    if (data.loggedIn) {
-      try {
-        const ids = [...await fetchSavedPostIds(currentUserId())];
-        if (ids.length) {
-          const supa2 = getSupabase();
-          const { data: posts, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
-          if (error)
-            throw error;
-          data.chats = (posts || []).filter((p) => p.type === "chat");
-          data.boards = (posts || []).filter((p) => p.type !== "chat");
-        }
-      } catch (e) {
-        console.warn("[saved-hub] posts", e);
-        data.postsError = true;
-      }
-    }
-    return data;
-  }
-  function categoriesScreenHtml() {
-    const rows = CATS.map((c) => {
-      const count = _data[c.key].length;
-      const locked = c.needsAuth && !_data.loggedIn;
-      if (!count && !locked)
-        return "";
-      return `
-      <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
-        <span class="shub-cat-ic">${c.icon}</span>
-        <span class="shub-cat-label">${c.label}</span>
-        ${locked ? `<span class="shub-cat-lock">${ICONS.lock}</span>` : `<span class="shub-count">${count}</span>`}
-        <span class="shub-cat-chev">\u203A</span>
-      </button>`;
-    }).filter(Boolean).join("");
-    if (!rows) {
-      return `<div class="shub-empty">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E.<br>
-      <span class="shub-hint">\u0422\u0440\u0438\u043C\u0430\u0439\u0442\u0435 \u043F\u0440\u0430\u043F\u043E\u0440\u0435\u0446\u044C ${ICONS.bookmark} \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0447\u0438 \u0441\u0442\u0430\u0442\u0442\u0456 \u2014 \u0456 \u0432\u043E\u043D\u043E \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442.</span></div>`;
-    }
-    return `<div class="shub-cats">${rows}</div>`;
-  }
-  function detailHead(cat) {
-    return `
-    <div class="shub-detail-head">
-      <button class="shub-back" type="button" data-shub-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-      <span class="shub-detail-title">${cat.icon} ${cat.label}</span>
-    </div>`;
-  }
-  var EMPTY_DETAIL = `<div class="shub-empty">\u0422\u0443\u0442 \u043F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.</div>`;
-  function categoryScreenHtml(key) {
-    const cat = CATS.find((c) => c.key === key);
-    if (!cat) {
-      _view = "categories";
-      return categoriesScreenHtml();
-    }
-    if (cat.needsAuth && !_data.loggedIn) {
-      return detailHead(cat) + `<div class="shub-hint-block">\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F.<br>
-      <button class="shub-login" type="button" id="shub-login">\u0423\u0432\u0456\u0439\u0442\u0438</button></div>`;
-    }
-    if (key === "buses") {
-      return detailHead(cat) + (_data.buses.map(busCardHtml).join("") || EMPTY_DETAIL);
-    }
-    if (key === "articles") {
-      return detailHead(cat) + (_data.articles.map((p) => cardHtml2(p, "article")).join("") || EMPTY_DETAIL);
-    }
-    const type = key === "chats" ? "chat" : "board";
-    return detailHead(cat) + (_data[key].map((p) => cardHtml2(p, type)).join("") || EMPTY_DETAIL);
-  }
-  function render() {
-    const bodyEl = _sheet?.querySelector("#shub-body");
-    if (!bodyEl)
-      return;
-    bodyEl.innerHTML = _view === "categories" ? categoriesScreenHtml() : categoryScreenHtml(_view);
-  }
-  function openSavedHub() {
-    if (_sheet)
-      return;
-    _view = "categories";
-    _backdrop = document.createElement("div");
-    _backdrop.className = "board-backdrop shub-backdrop";
-    _sheet = document.createElement("div");
-    _sheet.className = "shub-sheet";
-    _sheet.innerHTML = `
-    <div class="shub-handle"></div>
-    <div class="shub-title">${ICONS.bookmark} \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</div>
-    <div class="shub-body" id="shub-body"><div class="shub-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>`;
-    document.body.appendChild(_backdrop);
-    document.body.appendChild(_sheet);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => {
-      _backdrop.classList.add("visible");
-      _sheet.classList.add("visible");
-    });
-    _backdrop.addEventListener("click", closeHub);
-    _sheet.addEventListener("click", (e) => {
-      if (e.target.closest("#shub-login")) {
-        closeHub();
-        requireAuth("\u0431\u0430\u0447\u0438\u0442\u0438 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", () => {
-        });
-        return;
-      }
-      if (e.target.closest("[data-shub-back]")) {
-        _view = "categories";
-        render();
-        return;
-      }
-      const catRow = e.target.closest("[data-shub-cat]");
-      if (catRow) {
-        _view = catRow.dataset.shubCat;
-        render();
-        return;
-      }
-      const busCard = e.target.closest('[data-shub-type="bus"]');
-      if (busCard) {
-        const { shubRid, shubDate, shubFrom, shubTo } = busCard.dataset;
-        closeHub();
-        window.switchTab && window.switchTab("buses");
-        openSavedRouteOnBuses(shubRid, shubDate, shubFrom || null, shubTo || null);
-        return;
-      }
-      const card = e.target.closest("[data-shub-open]");
-      if (!card)
-        return;
-      const id = Number(card.dataset.shubOpen);
-      const type = card.dataset.shubType;
-      closeHub();
-      if (type === "article") {
-        openArticle(id);
-      } else if (type === "chat") {
-        window.switchTab && window.switchTab("discussions");
-        openChatById(id);
-      } else {
-        window.switchTab && window.switchTab("board");
-        setBoardActiveType("saved");
-      }
-    });
-    loadData().then((data) => {
-      _data = data;
-      render();
-    });
-  }
-  function initSavedHub() {
-    document.getElementById("saved-hub-btn")?.addEventListener("click", openSavedHub);
-  }
-
-  // src/core/account-ui.js
-  var _newUserChecked = false;
-  function updateHeaderBtn() {
-    const btn = document.getElementById("account-btn");
-    if (!btn)
-      return;
-    if (!btn.dataset.defaultHtml)
-      btn.dataset.defaultHtml = btn.innerHTML;
-    const av = isLoggedIn() ? currentAvatarUrl() : "";
-    btn.innerHTML = av ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>` : btn.dataset.defaultHtml;
-    btn.classList.toggle("account-btn--in", isLoggedIn());
-    btn.classList.toggle("account-btn--av", !!av);
-    btn.setAttribute("aria-label", isLoggedIn() ? "\u041A\u0430\u0431\u0456\u043D\u0435\u0442 \u0436\u0438\u0442\u0435\u043B\u044F" : "\u0423\u0432\u0456\u0439\u0442\u0438");
-  }
-  function closeModal2() {
-    closeModal();
-  }
-  function openModal2(innerHtml) {
-    const { el } = openModal({ bodyHtml: innerHtml, variant: "center" });
-    return el;
-  }
-  function openJoin(reason) {
-    const sub = reason ? `\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 ${escapeHtml(reason)}.` : "\u0423\u0432\u0456\u0439\u0434\u0456\u0442\u044C, \u0449\u043E\u0431 \u043F\u043E\u0434\u0430\u0432\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F, \u043F\u0438\u0441\u0430\u0442\u0438 \u0439 \u0440\u0435\u0430\u0433\u0443\u0432\u0430\u0442\u0438.";
-    const wrap = openModal2(`
-    <div class="acc-emoji">\u{1F464}</div>
-    <h2 class="acc-title">\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0434\u043E \u0433\u0440\u043E\u043C\u0430\u0434\u0438</h2>
-    <p class="acc-sub">${sub}</p>
-    <button class="acc-google" type="button">
-      <span class="acc-g">G</span> \u0423\u0432\u0456\u0439\u0442\u0438 \u0437 Gmail
-    </button>
-    <button class="acc-skip" type="button">\u041F\u043E\u043A\u0438 \u043F\u0440\u043E\u043F\u0443\u0441\u0442\u0438\u0442\u0438</button>`);
-    wrap.querySelector(".acc-google").addEventListener("click", () => signInWithGoogle());
-    wrap.querySelector(".acc-skip").addEventListener("click", closeModal2);
-  }
-  function openProfile() {
-    const u = currentUser();
-    if (!u)
-      return;
-    const defaultName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
-    const wrap = openModal2(`
-    <h2 class="acc-title">\u0420\u0430\u0434\u0456 \u0432\u0430\u0441 \u0431\u0430\u0447\u0438\u0442\u0438!</h2>
-    <label class="acc-label">\u0406\u043C'\u044F</label>
-    <input class="acc-input" id="acc-name" type="text" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F" value="${escapeHtml(defaultName)}">
-    <label class="acc-label">\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</label>
-    <input class="acc-input" id="acc-bdate" type="date" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}">
-    <button class="acc-primary" type="button" id="acc-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
-    <button class="acc-skip" type="button" id="acc-later">\u041F\u0456\u0437\u043D\u0456\u0448\u0435</button>`);
-    const finish = async (withDate) => {
-      const name = wrap.querySelector("#acc-name").value.trim();
-      const bd = wrap.querySelector("#acc-bdate").value;
-      const res = await saveProfile({ name, birth_date: withDate ? bd : null });
-      if (!res.ok) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
-        return;
-      }
-      closeModal2();
-      if (withDate)
-        showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
-    };
-    wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
-    wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
-  }
-  var NOTIF_KEYS = [
-    { k: "buses", ic: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
-    { k: "power", ic: ICONS.bulb, label: "\u0421\u0432\u0456\u0442\u043B\u043E", def: true },
-    { k: "news", ic: ICONS.newspaper, label: "\u041D\u043E\u0432\u0438\u043D\u0438", def: false },
-    { k: "board", ic: ICONS.pin, label: "\u0414\u043E\u0448\u043A\u0430", def: true }
-  ];
-  function loadNotifPrefs(uid) {
-    try {
-      const raw = JSON.parse(localStorage.getItem("notif_prefs:" + uid) || "{}");
-      const out = {};
-      NOTIF_KEYS.forEach((n) => {
-        out[n.k] = n.k in raw ? !!raw[n.k] : n.def;
-      });
-      return out;
-    } catch {
-      const o = {};
-      NOTIF_KEYS.forEach((n) => o[n.k] = n.def);
-      return o;
-    }
-  }
-  function saveNotifPrefs(uid, prefs) {
-    try {
-      localStorage.setItem("notif_prefs:" + uid, JSON.stringify(prefs));
-    } catch {
-    }
-  }
-  function closeCabinet() {
-    const c = document.getElementById("acc-cab");
-    if (!c)
-      return;
-    c.classList.remove("open");
-    document.body.classList.remove("modal-open");
-    setTimeout(() => c.remove(), 240);
-  }
-  async function openAccount() {
-    const u = currentUser();
-    if (!u)
-      return;
-    const p = await getProfile() || {};
-    const email = u.email || "";
-    const gName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
-    const val = {
-      name: p.name || gName || "",
-      surname: p.surname || "",
-      birth_date: p.birth_date || "",
-      phone: p.phone || "",
-      settlement: p.settlement || "",
-      street: p.street || "",
-      bio: p.bio || "",
-      avatar_url: p.avatar_url || ""
-    };
-    const fullName = [val.name, val.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
-    const place = val.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
-    const prefs = loadNotifPrefs(u.id);
-    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
-    const trustHtml = p.trusted ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440 \u2014 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443</div>` : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u044C \u0434\u043E \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457</div>`;
-    const field = (ic, label, control) => `
-    <label class="acc-f">
-      <span class="acc-f-ic">${ic}</span>
-      <span class="acc-f-body"><span class="acc-f-lbl">${label}</span>${control}</span>
-      <i class="acc-f-chev">${ICONS.chevronRight}</i>
-    </label>`;
-    const navRow = (go, ic, name, desc) => `
-    <button class="acc-cab-row" data-go="${go}" type="button">
-      <span class="acc-cab-row-ic">${ic}</span>
-      <span class="acc-cab-row-body"><span class="acc-cab-row-name">${name}</span><span class="acc-cab-row-desc">${desc}</span></span>
-      <i>${ICONS.chevronRight}</i>
-    </button>`;
-    const cab = document.createElement("div");
-    cab.id = "acc-cab";
-    cab.className = "acc-cab";
-    cab.innerHTML = `
-    <div class="acc-cab-top">
-      <button class="acc-cab-back" type="button" aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-      <b>\u041C\u0456\u0439 \u043A\u0430\u0431\u0456\u043D\u0435\u0442</b>
-    </div>
-    <div class="acc-cab-scroll">
-      <div class="acc-cab-hero">
-        <div class="acc-cab-avwrap">
-          <div class="acc-cab-av" id="acc-hero-av">${avatarCircle({ name: fullName, url: val.avatar_url, cls: "acc-av" })}</div>
-          <button class="acc-cab-avcam" type="button" id="acc-av-btn" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E">${ICONS.photo}</button>
-          <input type="file" id="acc-av-file" accept="image/*" hidden>
-        </div>
-        <div class="acc-cab-hi">
-          <div class="acc-cab-name" id="acc-hero-name">${escapeHtml(fullName)}</div>
-          <div class="acc-cab-email">${escapeHtml(email)}</div>
-          <div class="acc-cab-place" id="acc-hero-place">${escapeHtml(place)}</div>
-          ${trustHtml}
-        </div>
-      </div>
-
-      <div class="acc-cab-sec">
-        <h3>\u041C\u043E\u0457 \u0434\u0430\u043D\u0456</h3>
-        ${field(ICONS.user, "\u0406\u043C'\u044F", `<input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F">`)}
-        ${field(ICONS.clipboard, "\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435", `<input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435">`)}
-        ${field(ICONS.calendar, "\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F", `<input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}">`)}
-        ${field(ICONS.phone, "\u0422\u0435\u043B\u0435\u0444\u043E\u043D (\u0434\u043B\u044F \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C)", `<input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380\u2026">`)}
-        ${field(ICONS.pin, "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442", `<select id="cf-settlement">
-            <option value="">\u2014 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u2014</option>
-            ${[...SETTLEMENTS, OTHER_SETTLEMENT].map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
-          </select>`)}
-        ${field(ICONS.home, "\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)", `<input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430">`)}
-        ${field(ICONS.fileText, "\u041F\u0440\u043E \u0441\u0435\u0431\u0435", `<textarea id="cf-bio" rows="2" placeholder="\u041A\u0456\u043B\u044C\u043A\u0430 \u0441\u043B\u0456\u0432\u2026">${escapeHtml(val.bio)}</textarea>`)}
-      </div>
-      <button class="acc-cab-save" type="button" id="cf-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443</button>
-
-      <div class="acc-cab-sec acc-cab-sec--rows">
-        <h3>\u041C\u043E\u0454</h3>
-        ${navRow("myads", ICONS.megaphone, "\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u0434 \u0456 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0430\u0448\u0438\u043C\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\u043C\u0438")}
-        ${navRow("saved", ICONS.bookmark, "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u0441\u0442\u0430\u0442\u0442\u0456, \u044F\u043A\u0456 \u0432\u0438 \u0437\u0431\u0435\u0440\u0435\u0433\u043B\u0438")}
-        ${navRow("msgs", ICONS.message, "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0456 \u0447\u0430\u0442\u0438 \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 \u0436\u0438\u0442\u0435\u043B\u044F\u043C\u0438")}
-      </div>
-
-      <div class="acc-cab-sec acc-cab-sec--rows">
-        <h3>\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F</h3>
-        ${NOTIF_KEYS.map((n) => `
-          <div class="acc-cab-row acc-cab-row--tog">
-            <span class="acc-cab-row-ic">${n.ic}</span>
-            <span class="acc-cab-row-body"><span class="acc-cab-row-name">${n.label}</span></span>
-            <button class="acc-tog${prefs[n.k] ? "" : " off"}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
-          </div>`).join("")}
-      </div>
-
-      <button class="acc-cab-logout" type="button" id="cf-logout">\u0412\u0438\u0439\u0442\u0438</button>
-    </div>`;
-    document.body.appendChild(cab);
-    document.body.classList.add("modal-open");
-    requestAnimationFrame(() => cab.classList.add("open"));
-    cab.querySelector(".acc-cab-back").addEventListener("click", closeCabinet);
-    const avBtn = cab.querySelector("#acc-av-btn");
-    const avFile = cab.querySelector("#acc-av-file");
-    const avBox = cab.querySelector("#acc-hero-av");
-    const removeAvatar = async () => {
-      avBtn.disabled = true;
-      avBox.classList.add("acc-av--loading");
-      try {
-        const res = await saveProfile({ avatar_url: null });
-        if (!res.ok)
-          throw new Error(res.error || "save");
-        val.avatar_url = "";
-        avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url: "", cls: "acc-av" });
-        updateHeaderBtn();
-        showToast("\u0424\u043E\u0442\u043E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2200);
-      } catch (err) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
-      } finally {
-        avBtn.disabled = false;
-        avBox.classList.remove("acc-av--loading");
-      }
-    };
-    avBtn.addEventListener("click", () => {
-      if (!val.avatar_url) {
-        avFile.click();
-        return;
-      }
-      const menu = openModal({
-        variant: "sheet",
-        className: "app-modal--top",
-        // поверх екрана кабінету (3100), інакше ховається під ним
-        bodyHtml: `
-        <div class="acc-avmenu">
-          <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
-          <button type="button" class="acc-avmenu-item acc-avmenu-item--danger" data-av-act="remove">${ICONS.trash} \u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
-        </div>`
-      });
-      menu.el.querySelector('[data-av-act="change"]').addEventListener("click", () => {
-        closeModal();
-        avFile.click();
-      });
-      menu.el.querySelector('[data-av-act="remove"]').addEventListener("click", () => {
-        closeModal();
-        removeAvatar();
-      });
-    });
-    avFile.addEventListener("change", async () => {
-      const file = avFile.files && avFile.files[0];
-      avFile.value = "";
-      if (!file)
-        return;
-      avBtn.disabled = true;
-      avBox.classList.add("acc-av--loading");
-      try {
-        const blob = await squareImageBlob(file, 256);
-        const { url, error } = await uploadPhotoToStorage(blob, "avatars/");
-        if (!url)
-          throw new Error(error || "upload");
-        const res = await saveProfile({ avatar_url: url });
-        if (!res.ok)
-          throw new Error(res.error || "save");
-        val.avatar_url = url;
-        avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url, cls: "acc-av" });
-        updateHeaderBtn();
-        showToast("\u2705 \u0424\u043E\u0442\u043E \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E", 2200);
-      } catch (err) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
-      } finally {
-        avBtn.disabled = false;
-        avBox.classList.remove("acc-av--loading");
-      }
-    });
-    cab.querySelector("#cf-save").addEventListener("click", async (e) => {
-      const btn = e.currentTarget;
-      btn.disabled = true;
-      btn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u0454\u043C\u043E\u2026";
-      const fields = {
-        name: cab.querySelector("#cf-name").value.trim(),
-        surname: cab.querySelector("#cf-surname").value.trim(),
-        birth_date: cab.querySelector("#cf-bdate").value || null,
-        phone: cab.querySelector("#cf-phone").value.trim(),
-        settlement: cab.querySelector("#cf-settlement").value,
-        street: cab.querySelector("#cf-street").value.trim(),
-        bio: cab.querySelector("#cf-bio").value.trim()
-      };
-      const res = await saveProfile(fields);
-      btn.disabled = false;
-      btn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443";
-      if (!res.ok) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
-        return;
-      }
-      cab.querySelector("#acc-hero-name").textContent = [fields.name, fields.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      cab.querySelector("#acc-hero-place").textContent = fields.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
-      if (res.partial) {
-        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0456\u043C\u02BC\u044F \u0456 \u0434\u0430\u0442\u0443. \u0421\u0435\u043B\u043E/\u0442\u0435\u043B\u0435\u0444\u043E\u043D \u043F\u043E\u043A\u0438 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u2014 \u0431\u0430\u0437\u0443 \u043E\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u043C \u0447\u0430\u0441\u043E\u043C", 5e3, "error");
-      } else {
-        showToast("\u2705 \u0410\u043D\u043A\u0435\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
-      }
-    });
-    cab.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
-      const go = b.dataset.go;
-      closeCabinet();
-      if (go === "myads")
-        openMyAds();
-      else if (go === "msgs")
-        openThreadsList();
-      else if (go === "saved")
-        openSavedHub();
-    }));
-    cab.querySelectorAll("[data-notif]").forEach((t) => t.addEventListener("click", () => {
-      const k = t.dataset.notif;
-      prefs[k] = !prefs[k];
-      t.classList.toggle("off", !prefs[k]);
-      saveNotifPrefs(u.id, prefs);
-    }));
-    cab.querySelector("#cf-logout").addEventListener("click", async () => {
-      await signOut();
-      closeCabinet();
-      showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438", 2200);
-    });
-  }
-  function onHeaderClick() {
-    if (isLoggedIn())
-      openAccount();
-    else
-      openJoin();
-  }
-  function initAccountUI() {
-    const btn = document.getElementById("account-btn");
-    if (btn && !btn.dataset.wired) {
-      btn.dataset.wired = "1";
-      btn.addEventListener("click", onHeaderClick);
-    }
-    updateHeaderBtn();
-    document.addEventListener("cstl-need-login", (e) => {
-      if (isLoggedIn())
-        return;
-      openJoin(e.detail && e.detail.actionLabel);
-    });
-    onAuthChange(async (user) => {
-      updateHeaderBtn();
-      if (!user || _newUserChecked)
-        return;
-      _newUserChecked = true;
-      const profile = await getProfile();
-      if (!profile)
-        openProfile();
     });
   }
 
