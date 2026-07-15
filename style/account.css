@@ -428,17 +428,32 @@
 }
 .pcard-av--img img, .pcard-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pcard-name { font-size: 20px; font-weight: 800; color: var(--ink, #2b2b2b); }
-.pcard-loc {
-  display: inline-flex; align-items: center; gap: 5px;
+/* Мета-лінія: 📍громада · N років */
+.pcard-meta {
+  display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center;
   font-size: 14px; color: var(--ink-soft, #8a8a8a);
 }
-.pcard-loc svg { font-size: 16px; color: var(--red, #722F37); }
+.pcard-meta svg { font-size: 16px; color: var(--red, #722F37); }
+.pcard-dot { opacity: 0.5; }
 .pcard-badge {
   display: inline-flex; align-items: center; gap: 5px;
   font-size: 12.5px; font-weight: 700; color: #2E7D46;
   background: rgba(76,175,80,0.14); padding: 5px 12px; border-radius: 20px;
 }
-.pcard-since { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); }
+/* «Про себе» — м'який блок (лише коли є текст) */
+.pcard-bio {
+  align-self: stretch; text-align: left;
+  background: rgba(0,0,0,0.03); border-radius: 12px; padding: 12px 14px; margin-top: 2px;
+}
+.pcard-bio-h {
+  display: block; font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--ink-soft, #8a8a8a); margin-bottom: 5px;
+}
+.pcard-bio p {
+  margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink, #2b2b2b);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.pcard-since { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); margin-top: 2px; }
 
 /* Меню камери (Кабінет): «Змінити фото / Видалити фото» */
 .acc-avmenu { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; }
