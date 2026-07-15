@@ -15,14 +15,14 @@
 // board.js імпортує ЗВІДСИ (один напрямок): renderChatCard, openChatModal,
 // FAB-дії, handleLikeClick, attach*-ініціалізатори, handleDiscussionsAuthChange.
 
-import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
+import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle } from '../core/utils.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
 import {
   isSupabaseReady,
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion,
+  submitDiscussion, cachedAvatar, hydrateAvatars,
 } from '../core/supabase.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -39,8 +39,8 @@ export function initDiscussionsEngine({ getPosts }) {
 const COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
 // Векторні іконки Обговорень (заміна емодзі 💬/👥/📢) — той самий лінійний стиль.
 const USERS_ICON_SVG = ICONS.users; // дедуп — раніше локальна копія (розійшлась товщиною лінії з messages-ui.js/admin.html)
-const HEART_OUTLINE_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
-const HEART_FILLED_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+const HEART_OUTLINE_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
+const HEART_FILLED_SVG = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.6l-1-1a5.5 5.5 0 0 0-7.8 7.8l1 1L12 21l7.8-7.6 1-1a5.5 5.5 0 0 0 0-7.8z"/></svg>';
 
 // ── Стан (зберігається в межах сесії) ────────────────────────────────────────
 
@@ -174,13 +174,11 @@ function msgWord(n) {
 
 // ── Утиліти ──────────────────────────────────────────────────────────────────
 
-// Аватарка для chat — перша буква імені у кружечку, або emoji 👤 для аноніма
-function authorAvatar(author) {
-  const a = String(author || '').trim();
-  if (!a) return '<span class="bd-avatar bd-avatar--anon">👤</span>';
-  const letter = a.charAt(0).toUpperCase();
-  const hue = (a.charCodeAt(0) * 47) % 360;
-  return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
+// Аватарка автора в обговоренні: фото профілю (крос-юзер, по uid) або перша
+// літера імені / 👤 для аноніма. Потік 12 Б: делегуємо у спільний avatarCircle;
+// uid → data-av-uid, hydrateAvatars підмінить літеру на фото коли підтягнеться.
+function authorAvatar(author, uid) {
+  return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || '', cls: 'bd-avatar' });
 }
 
 // Стрічка повідомлень чату (бульбашки) — рендериться у повноекранній модалці-чаті.
@@ -219,7 +217,7 @@ function chatMessagesHtml(post) {
     if (group.mine) {
       html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join('')}</div>`;
     } else {
-      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join('')}</div></div>`;
+      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join('')}</div></div>`;
     }
     group = null;
   };
@@ -238,7 +236,7 @@ function chatMessagesHtml(post) {
     const author = c.author || 'Житель';
     const key = mine ? '__me' : author;
     if (group && group.key === key) group.bubbles.push(renderDiscBubble(c));
-    else { flush(); group = { key, mine, author, bubbles: [renderDiscBubble(c)] }; }
+    else { flush(); group = { key, mine, author, uid: c.sender_uid || '', bubbles: [renderDiscBubble(c)] }; }
   });
   flush();
   return `<div class="bd-chat-stream" data-comments-for="${post.id}">${html}</div>`;
@@ -484,6 +482,7 @@ export function openChatModal(post) {
   document.body.appendChild(modal);
   document.body.classList.add('modal-open');
   _chatModalEl = modal;
+  hydrateAvatars(modal.querySelector('[data-comments-for]'));   // Потік 12 Б: підтягнути чужі фото
 
   requestAnimationFrame(() => {
     backdrop.classList.add('visible');
@@ -566,22 +565,40 @@ export function openChatModal(post) {
   input?.addEventListener('focus', _chatViewportHandler);
   input?.addEventListener('blur',  _chatViewportHandler);
 
-  // Свайп вниз по шапці/ручці → закрити
-  let startY = 0, curY = 0, dragging = false;
+  // Свайп вниз по шапці/ручці → закрити. Модалка МУСИТЬ їхати рівно за пальцем.
+  // Дьоргання (Вова 14.07): у .bd-chat-modal є transition:transform 0.26s, тому
+  // кожен touchmove анімувався із затримкою → модалка «наздоганяла» палець ривками.
+  // Фікс: на час drag transition:none + оновлення transform у requestAnimationFrame
+  // (translate3d = GPU, без layout-thrash); на відпусканні transition повертаємо,
+  // тож пружний повернення/закриття лишаються плавними.
+  let startY = 0, curY = 0, dragging = false, rafId = 0;
   const dragZone = modal.querySelector('.bd-chat-modal-head');
-  dragZone.addEventListener('touchstart', e => { startY = e.touches[0].clientY; dragging = true; }, { passive: true });
+  const applyDrag = () => {
+    rafId = 0;
+    modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
+  };
+  dragZone.addEventListener('touchstart', e => {
+    startY = e.touches[0].clientY; curY = 0; dragging = true;
+    modal.style.transition = 'none';      // рух — миттєвий за пальцем, без анімації
+    modal.style.willChange = 'transform';
+  }, { passive: true });
   dragZone.addEventListener('touchmove', e => {
     if (!dragging) return;
-    curY = e.touches[0].clientY - startY;
-    if (curY > 0) modal.style.transform = `translateX(-50%) translateY(${curY}px)`;
+    curY = Math.max(0, e.touches[0].clientY - startY);   // лише вниз
+    if (!rafId) rafId = requestAnimationFrame(applyDrag);
   }, { passive: true });
-  dragZone.addEventListener('touchend', () => {
+  const endDrag = () => {
     if (!dragging) return;
     dragging = false;
+    if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
+    modal.style.transition = '';          // повертаємо CSS-плавність (снап-назад / закриття)
+    modal.style.willChange = '';
     if (curY > 90) closeChatModal();
-    else modal.style.transform = '';
+    else modal.style.transform = '';      // пружний повернення на місце
     curY = 0;
-  });
+  };
+  dragZone.addEventListener('touchend', endDrag);
+  dragZone.addEventListener('touchcancel', endDrag);
 }
 
 export function closeChatModal() {
@@ -628,6 +645,7 @@ function rerenderCommentsBlock(postId) {
   const post = _getPosts().find(p => p.id === postId);
   if (!post) return;
   wrap.outerHTML = chatMessagesHtml(post);
+  hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
   scrollChatToBottom();
   _chatUnseen = 0; hideChatPill();
   updateChatHeaderCount(postId);
@@ -900,6 +918,7 @@ function onCommentRealtimeEvent(payload) {
         const near = chatBodyNearBottom();
         const prevTop = body ? body.scrollTop : 0;
         wrap.outerHTML = chatMessagesHtml(post);
+        hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
         if (near) {
           scrollChatToBottom();   // користувач унизу — лишаємо його внизу
         } else {

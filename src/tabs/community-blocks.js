@@ -726,13 +726,15 @@ export async function renderBoardBlock() {
     // блоку (їх кути обрізає .cm-block overflow:hidden + radius → заокруглені).
     el.classList.remove('cm-loading');
     el.innerHTML = `
-      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити Дошку оголошень">
+      <div class="cmbw-head" data-bw-head role="button" aria-label="Відкрити всі оголошення громади">
         <span class="cmbw-head-ic">${ICONS.clipboard}</span>
-        <span class="cmbw-title">ДОШКА ОГОЛОШЕНЬ</span>
-        <span class="cmbw-dots" aria-hidden="true"></span>
+        <span class="cmbw-title">АКТУАЛЬНІ ОГОЛОШЕННЯ ГРОМАДИ</span>
       </div>
       ${ads.length
         ? `<div class="cmbw-strip" id="cmbw-strip">${cards}</div>
+           <div class="cmbw-edge cmbw-edge--l" aria-hidden="true"></div>
+           <div class="cmbw-edge cmbw-edge--r" aria-hidden="true"></div>
+           <span class="cmbw-dots" aria-hidden="true"></span>
            <div class="cmbw-foot" data-bw-more role="button" aria-label="Переглянути всі оголошення">
              <span>Переглянути всі оголошення</span>${BW_ARROW_SVG}
            </div>`
@@ -1082,6 +1084,11 @@ export async function renderContactsBlock() {
     // тепер звичайна плитка серед екстрених — без великої картки.
     const local     = list.filter(c => c.group === 'local');
     const emergency = list.filter(c => c.group === 'emergency' || c.group === 'hero' || c.priority === 'critical');
+    // Порядок екстрених (Вова 14.07): 101 → 102 → 103 → 104 → 112, далі решта
+    // (Волиньобленерго) у порядку даних. Сортуємо в коді — не залежить від даних.
+    const EMERG_ORDER = ['101', '102', '103', '104', '112'];
+    const emergRank = c => { const i = EMERG_ORDER.indexOf(String(c.phone || '').trim()); return i === -1 ? 99 : i; };
+    emergency.sort((a, b) => emergRank(a) - emergRank(b));
 
     // ── МІСЦЕВІ (вгорі) — компактні рядки на всю ширину ────────────────────────
     const localHtml = local.length ? `

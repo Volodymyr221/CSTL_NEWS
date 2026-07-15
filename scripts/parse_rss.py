@@ -154,6 +154,51 @@ def is_olyka_relevant(text: str) -> bool:
     return bool(OLYKA_RE.search(text or ""))
 
 
+# Волинські маркери (Потік 11, Вова 14.07): «Волинь» = ЛИШЕ новини що реально
+# згадують Волинь/область/її міста-села. Той самий патерн цілих слів що
+# _OLYKA_TERMS. Покриття: корінь «волин*» (Волинь/волинський/волиняни) ловить
+# і назви районів/громад («Ківерцівський район Волинської області»), тому
+# перелік міст — головні + впізнавані містечка області.
+# ⚠️ Пастка: «Володимир» ОКРЕМО — НЕ маркер (це ім'я: «Володимир Зеленський»
+# тримало б національну новину у «Волині») — лише «Володимир-Волинський».
+_VOLYN_TERMS = [
+    r"волин\w*",                      # Волинь / волинський / волиняни / Волиньрада
+    r"луцьк\w*", r"лучан\w*",         # Луцьк / лучани
+    r"ковел\w*",                      # Ковель / ковельський / ковельчани
+    r"нововолинськ\w*",
+    r"володимир[-‐]волинськ\w*",      # стара офіційна назва міста Володимир
+    r"ківерц\w*",                     # Ківерці / ківерцівський
+    r"маневи[чц]\w*",                 # Маневичі / маневицький
+    r"ратн\w*",                       # Ратне / ратнівський
+    r"любомл\w*",                     # Любомль / любомльський
+    r"кам[іе]н[ья][-‐\s]каширськ\w*", # Камінь-Каширський
+    r"горохів\w*",                    # Горохів / горохівський
+    r"локач\w*",                      # Локачі / локачинський
+    r"рожищ\w*",                      # Рожище / рожищенський
+    r"турійськ\w*",                   # Турійськ
+    r"шацьк\w*",                      # Шацьк / шацькі озера
+    r"любешів\w*",                    # Любешів
+    r"іванич\w*",                     # Іваничі / іваничівський
+    r"вижівк\w*", r"вижівськ\w*",     # Стара Вижівка / старовижівський
+    r"устилуг\w*",
+    r"берестечк\w*",                  # Берестечко
+    r"цуман\w*",                      # Цумань
+]
+VOLYN_RE = re.compile(r"\b(" + "|".join(_VOLYN_TERMS) + r")\b", re.IGNORECASE)
+
+# Згадки самих волинських видань у тексті («як повідомляє ВолиньPost») — НЕ
+# ознака волинської новини; зачищаємо перед перевіркою VOLYN_RE.
+_VOLYN_MEDIA_RE = re.compile(
+    r"(волинь\s*post|волиньpost|волиньпост|volynpost|волинські\s+новини)",
+    re.IGNORECASE,
+)
+
+
+def mentions_volyn(text: str) -> bool:
+    """True якщо текст реально про Волинь (ціле слово; підписи видань не рахуються)."""
+    return bool(VOLYN_RE.search(_VOLYN_MEDIA_RE.sub(" ", text or "")))
+
+
 def gnews_clean_title(title: str, entry) -> str:
     """Прибирає суфікс « - Назва видання» з заголовка Google News.
 
@@ -202,6 +247,9 @@ NATIONAL_KEYWORDS = [
     # Влада, закони, рішення
     "закон", "законопроект", "постанова", "указ", "кабмін",
     "верховна рада", "президент", "зеленськ", "уряд вирішив", "уряд затвердив",
+    "прем'єр", "премʼєр", "мзс",
+    # Ворог/загрози (національний вимір війни) — Потік 11
+    "кремл", "путін", "ядерн",
     # Мобілізація та армія
     "мобілізац", "призов", "збройні сили", "зсу", "воєнний стан",
     "бойові дії", "фронт", "атак", "обстріл", "ракет",
@@ -492,9 +540,22 @@ def drip_story(existing_articles: list, next_id: int):
 
 
 def detect_geo(text: str, default_geo: str) -> str:
+    """Гео новини за ЗМІСТОМ, не лише за джерелом (Потік 11, Вова 14.07).
+
+    Пріоритет: Олика → «Громада»; згадка Волині (з БУДЬ-ЯКОГО джерела, включно
+    УП) → «Волинь»; волинське джерело БЕЗ згадки Волині → «Україна» (рішення
+    Вови: нац. новини від Волинь Post — тег «Україна», не «Волинь»); інакше —
+    geo джерела. Фільтри ваги застосовуються далі за ФІНАЛЬНИМ geo.
+    """
     low = text.lower()
-    if any(kw in low for kw in OLYKA_KEYWORDS):
+    # OLYKA_RE замість підрядків OLYKA_KEYWORDS: ловить відмінки («в Олиці»)
+    # і села громади (Дідичі/Дерно/…) — знайдено юніт-тестом Потоку 11.
+    if is_olyka_relevant(low):
         return "Громада"          # згадка про Олику/села → розділ «Громада» (перейм. 05.07)
+    if mentions_volyn(low):
+        return "Волинь"
+    if default_geo == "Волинь":
+        return "Україна"          # волинське видання пише не про Волинь → національна
     return default_geo
 
 
@@ -749,13 +810,18 @@ _LEAD_NAV_RE = re.compile(
 )
 
 
-def clean_article_text(text: str) -> str:
+def clean_article_text(text: str, title: str = "") -> str:
     """Прибирає обгортку сайту зі скрапленого тексту.
 
     Баг 06.07: у тіло статті затягувало навігацію на початку
     («Правила Реклама Контакти Розділи») + теги/футер/«Вибір редактора»/
     промо-заклик у Telegram/«Ctrl+Enter» у кінці. Зрізаємо хвіст від першого
     службового маркера і провідні крихти-меню.
+
+    Баг 14.07 (Вова, скрін Волинь Post): сторінка видавця повторює <h1>-заголовок
+    і час публікації всередині контейнера статті → опис починався з дубля
+    заголовка + «Сьогодні, 13:45». Передаємо title і зрізаємо перший абзац,
+    якщо він = заголовок (для ВСІХ джерел); час після нього зріже наявний regex.
     """
     if not text:
         return text
@@ -766,12 +832,63 @@ def clean_article_text(text: str) -> str:
     while prev != text:          # навігація може йти кількома рядками
         prev = text
         text = _LEAD_NAV_RE.sub("", text, count=1).lstrip()
+    # Дубль заголовка статті першим абзацом тіла — зрізаємо (порівняння без
+    # пунктуації/регістру; допускаємо короткий «хвіст» типу « - ВолиньPost»).
+    if title:
+        _norm = lambda s: re.sub(r"\W+", "", s.lower())
+        first, _sep, rest = text.partition("\n\n")
+        nt, nf = _norm(title), _norm(first)
+        if nt and nf and (nf == nt or (nf.startswith(nt) and len(nf) - len(nt) <= 20)):
+            text = rest.lstrip()
     # Провідний часовий штамп-сміття на початку тіла: «Сьогодні, 15:09»,
     # «Вчора, 9:20», «08.07.2026, 14:00», голий «15:09» (Волинь Post та ін.).
     text = re.sub(
         r"^\s*(?:Сьогодні|Вчора|Позавчора|\d{1,2}[.:]\d{2}(?:[.:]\d{2,4})?)"
         r"[,\s]*\d{0,2}[:.]?\d{0,2}\s*", "", text, count=1).lstrip()
     return re.sub(r"\n{3,}", "\n\n", text).strip()
+
+
+# Inline-теги (посилання/жирний/курсив тощо) — НЕ межа абзацу: їхній текст
+# лишається всередині абзацу, як в оригінальній статті. Фікс Вови 14.07:
+# el.get_text('\n\n') рвав абзац на КОЖНОМУ вкладеному елементі — «РБК-Україна»
+# (посилання) і «Володимир Зеленський» (жирний) випадали окремими абзацами.
+_INLINE_TAGS = {"a", "b", "strong", "i", "em", "u", "s", "span", "sup", "sub",
+                "small", "mark", "abbr", "code", "time", "font", "nobr", "q", "cite"}
+
+
+def _paragraphs_fallback(el) -> str:
+    """Запасний збирач тексту: абзаци рвуться ЛИШЕ на блокових елементах.
+
+    Обходить DOM: текст і inline-теги накопичуються в поточний абзац; блоковий
+    елемент (div/p/h*/li/br…) — межа абзацу. Заміна старого
+    el.get_text(separator='\\n\\n'), який вважав межею БУДЬ-ЯКИЙ вузол.
+    """
+    from bs4 import NavigableString, Tag
+    parts, buf = [], []
+
+    def flush():
+        t = re.sub(r"\s+", " ", "".join(buf)).strip()
+        buf.clear()
+        if t:
+            parts.append(t)
+
+    def walk(node):
+        for child in node.children:
+            if isinstance(child, NavigableString):
+                buf.append(str(child))
+            elif isinstance(child, Tag):
+                if child.name in _INLINE_TAGS:
+                    buf.append(child.get_text(" "))   # у поточний абзац
+                elif child.name in ("br", "hr"):
+                    flush()
+                else:                                  # блоковий = межа абзацу
+                    flush()
+                    walk(child)
+                    flush()
+
+    walk(el)
+    flush()
+    return "\n\n".join(parts)
 
 
 def _blocks_to_text(el) -> str:
@@ -793,14 +910,16 @@ def _blocks_to_text(el) -> str:
             parts.append(t)
     text = "\n\n".join(parts)
     if len(text) < 300:      # блоків нема (текст у голих div) — запасний варіант
-        text = el.get_text(separator="\n\n", strip=True)
+        text = _paragraphs_fallback(el)
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
-def fetch_full_article(url: str) -> str | None:
+def fetch_full_article(url: str, title: str = "") -> str | None:
     """Завантажує повний текст статті зі сторінки статті.
 
     Викликається коли RSS дає лише анонс (<600 символів).
+    title — заголовок з RSS: clean_article_text зрізає його дубль на початку
+    тіла (сторінки видавців повторюють <h1>+час у контейнері — Вова 14.07).
     Повертає текст або None якщо не вдалося.
     """
     # Анти-SSRF: тягнемо лише з публічних адрес (внутрішні заблоковано).
@@ -843,7 +962,7 @@ def fetch_full_article(url: str) -> str | None:
         el = soup.select_one(sel)
         if el:
             text = _blocks_to_text(el)          # абзаци через \n\n (не «цеглина»)
-            text = clean_article_text(text)
+            text = clean_article_text(text, title)
             if len(text) > 300:
                 return text[:8000]
 
@@ -857,7 +976,7 @@ def fetch_full_article(url: str) -> str | None:
         if len(t) > len(best_text):
             best_text = t
     if len(best_text) > 500:
-        cleaned = clean_article_text(best_text)
+        cleaned = clean_article_text(best_text, title)
         if len(cleaned) > 300:
             return cleaned[:8000]
 
@@ -1005,7 +1124,7 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
                 ts = parsed_ts
 
         # Повний текст статті
-        content = fetch_full_article(href) or excerpt
+        content = fetch_full_article(href, title) or excerpt
         if not excerpt:
             excerpt = content[:400]
 
@@ -1135,7 +1254,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
 
         # Повний текст — завантажуємо статтю також через Worker
         article_path = href.replace(GROMADA_BASE, "") or "/"
-        content = fetch_full_article(gromada_url(article_path)) or excerpt
+        content = fetch_full_article(gromada_url(article_path), title) or excerpt
         if not excerpt:
             excerpt = content[:400]
 
@@ -1219,10 +1338,12 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             continue
 
         try:
-            content = get_full_content(entry)
+            # clean і для RSS-контенту: дубль заголовка/часу і футерні маркери
+            # трапляються у content:encoded теж (Вова 14.07 — «усі джерела»)
+            content = clean_article_text(get_full_content(entry), title)
             # Якщо RSS дає лише анонс — дотягуємо повний текст зі сторінки статті
             if len(content) < 600 and link:
-                full = fetch_full_article(link)
+                full = fetch_full_article(link, title)
                 if full and len(full) > len(content):
                     content = full
 
@@ -1236,12 +1357,13 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             text = title + " " + excerpt
             geo = detect_geo(text, source["geo"])
 
-            if source["geo"] == "Україна" and geo == "Україна":
-                if not is_nationally_relevant(text):
-                    continue
-            if source["geo"] == "Світ" and geo == "Світ":
-                if not is_world_relevant(text):
-                    continue
+            # Фільтри ваги — за ФІНАЛЬНИМ geo новини, не geo джерела (Потік 11):
+            # перекинуті з «Волині» національні мусять пройти той самий фільтр
+            # ваги, що й новини УП; дрібниці інших регіонів — відсіюються.
+            if geo == "Україна" and not is_nationally_relevant(text):
+                continue
+            if geo == "Світ" and not is_world_relevant(text):
+                continue
 
             # Розумний парсер Олики (Крок 3b): Google News → лишаємо тільки релевантне;
             # джерелом показуємо реального видавця (не «Google News»)

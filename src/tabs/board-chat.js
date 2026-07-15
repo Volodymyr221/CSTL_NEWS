@@ -28,6 +28,7 @@ import {
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
   bumpPost, closePost, deleteMyPost, restorePost, removeSavedPost,
+  hydrateAvatars,
 } from '../core/supabase.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
@@ -56,6 +57,11 @@ function otherName(thread) {
   if (me && me === thread.author_uid) return thread.buyer_name || 'Покупець';
   return thread.author_name || 'Продавець';
 }
+// uid співрозмовника (Потік 12 Б: для його фото-аватара у кружечку)
+function otherUid(thread) {
+  const me = currentUserId();
+  return (me && me === thread.author_uid) ? (thread.buyer_uid || '') : (thread.author_uid || '');
+}
 
 // Короткий заголовок оголошення треда
 function threadPostTitle(thread) {
@@ -82,7 +88,7 @@ export async function openChat(thread, post) {
   const api = buildScreen(`
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-      ${avatar(partner)}
+      ${avatar(partner, otherUid(thread))}
       <div class="pm-head-titles">
         <div class="pm-head-name">${escapeHtml(partner)}</div>
       </div>
@@ -127,6 +133,7 @@ export async function openChat(thread, post) {
   const input    = api.screen.querySelector('#pm-input');
   const fileEl   = api.screen.querySelector('#pm-file');
   const barEl    = api.screen.querySelector('#pm-composebar');
+  hydrateAvatars(api.screen);   // Потік 12 Б: фото співрозмовника у шапці чату
 
   let messages = [];
   let msgById  = new Map();
@@ -625,7 +632,7 @@ export function openThreadsList() {
               <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${t.id}" aria-label="Видалити">${ICON_TRASH}</button>
             </div>
             <button class="pm-thread ${n > 0 ? 'pm-thread--unread' : ''}" type="button" data-thread="${t.id}">
-              ${avatar(name)}
+              ${avatar(name, otherUid(t))}
               <div class="pm-thread-body">
                 <div class="pm-thread-top">
                   <span class="pm-thread-name">${escapeHtml(name)}</span>
@@ -638,6 +645,7 @@ export function openThreadsList() {
             </button>
           </div>`;
       }).join('');
+      hydrateAvatars(threadsEl);   // Потік 12 Б: фото співрозмовників у списку розмов
     };
 
     // F5: архівована розмова з новим НЕПРОЧИТАНИМ — авто-розархівувати. Інакше

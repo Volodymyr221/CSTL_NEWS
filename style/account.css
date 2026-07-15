@@ -186,12 +186,34 @@
   gap: 14px;
   padding: 22px 16px 20px;
 }
+/* Аватар кабінету (Потік 12): обгортка з кнопкою камери в кутку */
+.acc-cab-avwrap { position: relative; flex-shrink: 0; }
 .acc-cab-av {
-  width: 66px; height: 66px; border-radius: 50%;
+  width: 72px; height: 72px; border-radius: 50%;
   background: rgba(255,255,255,0.15);
   display: flex; align-items: center; justify-content: center;
-  font-size: 30px; flex-shrink: 0;
+  font-size: 30px; flex-shrink: 0; overflow: hidden;
 }
+/* Спільний кружечок-аватар (utils.avatarCircle, cls=acc-av) — фото на всю площу */
+.acc-av { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center;
+  justify-content: center; color: #fff; font-weight: 700; font-size: 30px; overflow: hidden; }
+.acc-av--img img, .acc-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.acc-cab-av.acc-av--loading { opacity: 0.5; }
+.acc-cab-avcam {
+  position: absolute; right: -2px; bottom: -2px;
+  width: 28px; height: 28px; border-radius: 50%;
+  background: #fff; color: var(--red, #722F37);
+  border: 2px solid #5c252c;
+  display: inline-flex; align-items: center; justify-content: center;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.acc-cab-avcam svg { width: 15px; height: 15px; }
+.acc-cab-avcam:disabled { opacity: 0.6; }
+/* Мініатюра аватара в кнопці шапки */
+.account-btn--av { padding: 0; }
+.account-btn-av { display: inline-flex; width: 28px; height: 28px; border-radius: 50%;
+  overflow: hidden; border: 1.5px solid var(--red, #722F37); }
+.account-btn-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .acc-cab-name { font-size: 21px; font-weight: 800; }
 .acc-cab-email { font-size: 13px; opacity: 0.85; }
 .acc-cab-place { font-size: 12px; opacity: 0.72; margin-top: 3px; }

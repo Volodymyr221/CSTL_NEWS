@@ -603,11 +603,33 @@
     url('../images/cork2.png') center center / cover no-repeat;
   box-shadow: var(--card-shadow), inset 0 12px 26px rgba(0,0,0,0.32), inset 0 -12px 26px rgba(0,0,0,0.28);
 }
+/* Контейнер = контекст для затемнених країв-рамки (позиціонуються absolute). */
+#cm-board-content { position: relative; }
+
+/* Затемнені ліві/праві краї стрічки (Вова 14.07): суцільна «рамка телевізора»
+   разом із шапкою/низом. Градієнт темний з краю → прозорий до центру: бічні
+   картки заходять за рамку, центральна пара яскрава й «виступає». z-1 під
+   шапкою/низом (z-2), pointer-events:none — не заважає тапам/свайпу. */
+.cmbw-edge {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 32px;
+  z-index: 1;
+  pointer-events: none;
+}
+.cmbw-edge--l { left: 0;  background: linear-gradient(to right, rgba(0,0,0,0.34), rgba(0,0,0,0)); }
+.cmbw-edge--r { right: 0; background: linear-gradient(to left,  rgba(0,0,0,0.34), rgba(0,0,0,0)); }
+
 /* Шапка = затемнена смуга в тон віджета, прилягає до верху (кути обрізає
-   .cm-block overflow:hidden + radius) + кремова лінія-роздільник знизу. */
+   .cm-block overflow:hidden + radius) + кремова лінія-роздільник знизу.
+   z-2 — над затемненими краями (щоб градієнт не ліз на текст шапки). */
 .cmbw-head {
+  position: relative;
+  z-index: 2;
   display: flex;
   align-items: center;
+  justify-content: center;   /* назву з іконкою — по центру шапки (Вова 14.07) */
   gap: 8px;
   padding: 12px 16px 11px;
   background: rgba(0, 0, 0, 0.22);
@@ -616,19 +638,29 @@
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-.cmbw-head-ic { display: inline-flex; font-size: 17px; }
+.cmbw-head-ic { display: inline-flex; font-size: 19px; }
 .cmbw-title {
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 800;
-  letter-spacing: 1.1px;
-  white-space: nowrap;   /* шапка завжди одним рядком */
+  letter-spacing: 1.5px;   /* ширший інтервал між буквами (Вова 14.07); ще влазить одним рядком */
+  white-space: nowrap;     /* шапка завжди одним рядком */
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
 }
-/* Крапки-індикатори пар (замість лічильника) — стиль свайп-крапок віджета автобусів */
-.cmbw-dots { margin-left: auto; display: flex; align-items: center; gap: 4px; }
+/* Крапки-індикатори пар (Вова 14.07: перенесені з правого верху ВНИЗ під картки,
+   по центру — класичний патерн каруселі). Стиль свайп-крапок віджета автобусів. */
+.cmbw-dots {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 4px 0 10px;
+  position: relative;
+  z-index: 2;   /* над затемненими краями */
+}
+.cmbw-dots:empty { display: none; }   /* коли пар <2 — не займати місце */
 .cmbw-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   background: rgba(242, 231, 208, 0.35);
   cursor: pointer;
@@ -714,13 +746,19 @@
   display: inline-flex;
   align-items: center;
   gap: 3px;
+  min-width: 0;   /* дозволяє локації стискатись/переноситись, не тиснучи дату */
   color: var(--red, #722F37);
   letter-spacing: 0.3px;
   text-transform: uppercase;
 }
+/* Дата публікації — СТРОГО в один рядок (Вова 14.07): не переноситься навіть коли
+   локація «ОЛИЦЬКА ГРОМАДА» довга; локація віддає їй місце (min-width:0 вище). */
+.cmbw-time { white-space: nowrap; flex: 0 0 auto; padding-left: 6px; }
 /* Нижня смуга-кнопка «Переглянути всі оголошення» — симетрична шапці: затемнена
    в тон віджета, прилягає до низу (кути обрізає .cm-block) + лінія-роздільник зверху. */
 .cmbw-foot {
+  position: relative;
+  z-index: 2;   /* над затемненими краями (як шапка) */
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2256,7 +2294,7 @@
 .cm-board-foot-actions .cm-board-call,
 .cm-board-foot-actions .cm-board-msg-btn { width: 34px; height: 34px; }
 .cm-board-foot-actions .cm-board-call svg,
-.cm-board-foot-actions .cm-board-msg-btn svg { width: 16px; height: 16px; }
+.cm-board-foot-actions .cm-board-msg-btn svg { width: 19px; height: 19px; }   /* іконки трохи більші, кнопки лишаються 34px (Вова 14.07) */
 .cm-board-foot-who {
   min-width: 0;
   text-align: right;
@@ -2382,6 +2420,8 @@
 .bd-disc-title {
   font-size: 18px; font-weight: 800;
   color: var(--ink);
+  text-transform: uppercase;   /* «ОБГОВОРЕННЯ» — усі великі (Вова 14.07) */
+  letter-spacing: 0.8px;
 }
 /* Маску-градієнт прибрано: вона створювала мертву смугу, крізь яку не було видно
    картки при скролі. Матове скло (.bd-controls backdrop-filter) робить це чистіше. */
@@ -2450,7 +2490,7 @@
 .bd-title {
   font-size: 18px;
   font-weight: 800;
-  color: #F2E7D0;   /* кремовий як заголовок віджета Дошки на Громаді (Вова 13.07; був бордовий #5C2128) */
+  color: #4E3820;   /* темний корок як шапка віджета (Вова 14.07: кремовий/вохра зливались зі світлою шапкою) */
   line-height: 1.15;
   margin: 0;
   text-align: center;
@@ -2461,10 +2501,10 @@
      1.08 — стягнуто назад від 1.14 (Вова), але не до 1.0 як на старті. */
   transform: scaleY(1.08);
   transform-origin: center;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);   /* темна тінь як у віджета — відділяє світлий текст */
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.25);   /* м'якша тінь — темний текст на світлій шапці */
 }
-/* Легенька бордова лінія під заголовком, що затухає по краях (Вова 10.07).
-   Той самий бордовий #5C2128 = rgba(92,33,40) що й текст заголовка й лінії груп НП.
+/* Легенька лінія під заголовком, що затухає по краях (Вова 10.07). Колір = той самий
+   темний корок #4E3820 що й текст заголовка (Вова 14.07, був бордовий rgba(92,33,40)).
    ::after всередині .bd-title → ховається разом із заголовком при згортанні шапки. */
 .bd-title::after {
   content: "";
@@ -2474,9 +2514,9 @@
   margin: 6px auto 0;   /* відступ від тексту + центрування */
   border-radius: 1px;
   background: linear-gradient(to right,
-    rgba(92, 33, 40, 0),
-    rgba(92, 33, 40, 0.35),
-    rgba(92, 33, 40, 0));
+    rgba(78, 56, 32, 0),
+    rgba(78, 56, 32, 0.4),
+    rgba(78, 56, 32, 0));
 }
 .bd-subrow {
   display: flex;
@@ -2941,7 +2981,7 @@
   background: transparent;
   border-radius: 8px;
   font-family: inherit;
-  font-size: 12px;
+  font-size: 13px;   /* лічильник трохи більший разом із сердечком (Вова 14.07) */
   font-weight: 600;
   color: var(--gray);
   cursor: pointer;
@@ -3059,7 +3099,11 @@
   padding: 4px 8px 10px;
   flex-shrink: 0;
   background: #F3EFE3;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.12);  /* мʼяка тінь на чат (внутрішній край) */
+  /* Тінь ТІЛЬКИ донизу (відділяє шапку від повідомлень — Вова: «знизу добре»).
+     Було 0 4px 12px — blur 12 бив ~8px і ВГОРУ, даючи темну смугу над заголовком
+     (виглядало накладеним). Тепер відʼємний spread -4 прибирає верхнє розпливання:
+     верх модалки суцільний до заокруглених кутів (Вова 14.07). */
+  box-shadow: 0 6px 8px -4px rgba(0,0,0,0.12);
   z-index: 1;
 }
 .bd-chat-modal-back,
@@ -3213,6 +3257,9 @@
   color: var(--gray);
   font-size: 18px;
 }
+/* Потік 12 Б: фото профілю у кружечку обговорення (крос-юзер) */
+.bd-avatar--img { overflow: hidden; }
+.bd-avatar--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .bd-chat-meta {
   display: flex;
   flex-direction: column;
