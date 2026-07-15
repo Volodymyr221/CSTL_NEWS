@@ -23,3 +23,6 @@ graphify-out/
 .claude/hooks/.byyou-handoff-warned
 .claude/hooks/.byyou-warn-35
 .claude/hooks/.byyou-warn-55
+
+# токен-запобіжник — прапорець паузи сесії (не комітити)
+.claude/.token-halt
