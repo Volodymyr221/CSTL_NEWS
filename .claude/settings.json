@@ -70,9 +70,27 @@
             "command": "node /home/user/CSTL_NEWS/.claude/hooks/byyou-push-lock.js"
           }
         ]
+      },
+      {
+        "matcher": "*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/user/CSTL_NEWS/.claude/hooks/token-guard.js pre"
+          }
+        ]
       }
     ],
     "PostToolUse": [
+      {
+        "matcher": "Agent|Task",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node /home/user/CSTL_NEWS/.claude/hooks/token-guard.js post"
+          }
+        ]
+      },
       {
         "matcher": "Edit|Write",
         "hooks": [
