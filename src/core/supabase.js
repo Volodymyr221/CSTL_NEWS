@@ -8,6 +8,8 @@
 // створиться, але виклики будуть фейлитись. Тому є fallback на JSON у тих
 // модулях що читають дошку.
 
+import { escapeHtml } from './utils.js';   // для hydrateAvatars (безпечний <img src>)
+
 // ⚙️ КОНФІГ — ті самі що в admin.html (Project Settings → API):
 const SUPABASE_URL      = 'https://uabyfecseqnemvcqhdem.supabase.co';
 const SUPABASE_ANON_KEY = 'sb_publishable_sbV0XNktCiTK0iA4659P9g_Y3sT0mDv';
@@ -288,6 +290,52 @@ export async function uploadPhotoToStorage(blob, folder = '') {
 
   const { data } = supa.storage.from('community-photos').getPublicUrl(path);
   return { url: data?.publicUrl || null, error: null };
+}
+
+// ── АВАТАРИ КОРИСТУВАЧІВ, крос-юзер (Потік 12 Інкремент Б) ────────────────
+// Показ ЧУЖОГО фото профілю у кружечках (обговорення, приватні чати).
+// RLS профілю — «own read» (кожен читає лише свій рядок) → чужий avatar_url
+// напряму не видно. Тому публічний SECURITY DEFINER RPC get_avatars(uids)
+// повертає ЛИШЕ (uid, name, avatar_url) — безпечно, без phone/birth_date.
+// Батч-кеш Map<uid,url>: '' = фото нема / ще не знаємо (негативи теж кешуємо,
+// щоб не бити RPC повторно). Fail-soft: якщо RPC ще нема (SQL не застосовано)
+// або помилка — усе лишається на літері-fallback, як було до Потоку 12.
+const _avatarCache = new Map();   // uid -> url ('' = нема фото)
+
+// Синхронний доступ до кешу — для рендеру «зараз» (порожньо → літера-fallback).
+export function cachedAvatar(uid) {
+  return uid ? (_avatarCache.get(uid) || '') : '';
+}
+
+// Батч-підвантаження аватарів за списком uid. Тягне лише ще невідомі, заповнює кеш.
+export async function fetchAvatars(uids) {
+  const need = [...new Set(uids)].filter(u => u && !_avatarCache.has(u));
+  if (!supa || !need.length) return;
+  try {
+    const { data, error } = await supa.rpc('get_avatars', { uids: need });
+    if (error) { need.forEach(u => _avatarCache.set(u, '')); return; }  // RPC нема / помилка → fallback
+    (data || []).forEach(r => { if (r && r.uid) _avatarCache.set(r.uid, r.avatar_url || ''); });
+    need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); });  // негативи (нема профілю)
+  } catch (_) { need.forEach(u => _avatarCache.set(u, '')); }
+}
+
+// Прогресивна гідрація: після вставки HTML знаходить кружечки з data-av-uid,
+// підтягує їхні фото і замінює літеру на <img> для тих, у кого фото є.
+// Літера-first → фото-коли-готове (не блокує рендер; data-av-done проти повтору).
+export async function hydrateAvatars(root) {
+  if (!root || !root.querySelectorAll) return;
+  const els = [...root.querySelectorAll('[data-av-uid]')].filter(e => !e.dataset.avDone);
+  if (!els.length) return;
+  await fetchAvatars(els.map(e => e.dataset.avUid));
+  els.forEach(el => {
+    el.dataset.avDone = '1';
+    const url = cachedAvatar(el.dataset.avUid);
+    if (!url) return;                       // фото нема → лишаємо літеру
+    const base = el.classList[0];           // базовий клас місця (bd-avatar / pm-avatar)
+    el.classList.add(base + '--img');
+    el.style.background = 'none';
+    el.innerHTML = `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
+  });
 }
 
 // ── ПРИВАТНИЙ ЧАТ (Фаза Б, Етап 4) ───────────────────────────────────────

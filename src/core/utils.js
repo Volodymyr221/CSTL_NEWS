@@ -35,16 +35,19 @@ export function escapeHtml(s) {
 // аноніма. Викликають: кабінет/шапка (свій), приватний чат `avatar()`,
 // обговорення `authorAvatar()`. cls — базовий клас місця (pm-avatar / bd-avatar…),
 // щоб успадкувати розмір/позицію з наявного CSS.
-export function avatarCircle({ name, url, cls = 'pm-avatar' } = {}) {
+export function avatarCircle({ name, url, cls = 'pm-avatar', uid = '' } = {}) {
+  // Потік 12 Б: data-av-uid — якір для прогресивної заміни літери на фото
+  // (hydrateAvatars у supabase.js підтягне чуже фото по uid і замінить innerHTML).
+  const idAttr = uid ? ` data-av-uid="${escapeHtml(String(uid))}"` : '';
   const safeUrl = url ? String(url).trim() : '';
   if (safeUrl) {
-    return `<span class="${cls} ${cls}--img"><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
+    return `<span class="${cls} ${cls}--img"${idAttr}><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
   }
   const a = String(name || '').trim();
-  if (!a) return `<span class="${cls} ${cls}--anon">👤</span>`;
+  if (!a) return `<span class="${cls} ${cls}--anon"${idAttr}>👤</span>`;
   const letter = a.charAt(0).toUpperCase();
   const hue = (a.charCodeAt(0) * 47) % 360;
-  return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)">${escapeHtml(letter)}</span>`;
+  return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)"${idAttr}>${escapeHtml(letter)}</span>`;
 }
 
 // Фото → квадратний аватар (Потік 12): центр-кроп у квадрат + ресайз до size px,

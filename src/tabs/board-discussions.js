@@ -15,14 +15,14 @@
 // board.js імпортує ЗВІДСИ (один напрямок): renderChatCard, openChatModal,
 // FAB-дії, handleLikeClick, attach*-ініціалізатори, handleDiscussionsAuthChange.
 
-import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam } from '../core/utils.js';
+import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle } from '../core/utils.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
 import {
   isSupabaseReady,
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion,
+  submitDiscussion, cachedAvatar, hydrateAvatars,
 } from '../core/supabase.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -174,13 +174,11 @@ function msgWord(n) {
 
 // ── Утиліти ──────────────────────────────────────────────────────────────────
 
-// Аватарка для chat — перша буква імені у кружечку, або emoji 👤 для аноніма
-function authorAvatar(author) {
-  const a = String(author || '').trim();
-  if (!a) return '<span class="bd-avatar bd-avatar--anon">👤</span>';
-  const letter = a.charAt(0).toUpperCase();
-  const hue = (a.charCodeAt(0) * 47) % 360;
-  return `<span class="bd-avatar" style="background:hsl(${hue}deg 65% 78%);color:#fff;font-weight:600">${escapeHtml(letter)}</span>`;
+// Аватарка автора в обговоренні: фото профілю (крос-юзер, по uid) або перша
+// літера імені / 👤 для аноніма. Потік 12 Б: делегуємо у спільний avatarCircle;
+// uid → data-av-uid, hydrateAvatars підмінить літеру на фото коли підтягнеться.
+function authorAvatar(author, uid) {
+  return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || '', cls: 'bd-avatar' });
 }
 
 // Стрічка повідомлень чату (бульбашки) — рендериться у повноекранній модалці-чаті.
@@ -219,7 +217,7 @@ function chatMessagesHtml(post) {
     if (group.mine) {
       html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join('')}</div>`;
     } else {
-      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join('')}</div></div>`;
+      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join('')}</div></div>`;
     }
     group = null;
   };
@@ -238,7 +236,7 @@ function chatMessagesHtml(post) {
     const author = c.author || 'Житель';
     const key = mine ? '__me' : author;
     if (group && group.key === key) group.bubbles.push(renderDiscBubble(c));
-    else { flush(); group = { key, mine, author, bubbles: [renderDiscBubble(c)] }; }
+    else { flush(); group = { key, mine, author, uid: c.sender_uid || '', bubbles: [renderDiscBubble(c)] }; }
   });
   flush();
   return `<div class="bd-chat-stream" data-comments-for="${post.id}">${html}</div>`;
@@ -484,6 +482,7 @@ export function openChatModal(post) {
   document.body.appendChild(modal);
   document.body.classList.add('modal-open');
   _chatModalEl = modal;
+  hydrateAvatars(modal.querySelector('[data-comments-for]'));   // Потік 12 Б: підтягнути чужі фото
 
   requestAnimationFrame(() => {
     backdrop.classList.add('visible');
@@ -646,6 +645,7 @@ function rerenderCommentsBlock(postId) {
   const post = _getPosts().find(p => p.id === postId);
   if (!post) return;
   wrap.outerHTML = chatMessagesHtml(post);
+  hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
   scrollChatToBottom();
   _chatUnseen = 0; hideChatPill();
   updateChatHeaderCount(postId);
@@ -918,6 +918,7 @@ function onCommentRealtimeEvent(payload) {
         const near = chatBodyNearBottom();
         const prevTop = body ? body.scrollTop : 0;
         wrap.outerHTML = chatMessagesHtml(post);
+        hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
         if (near) {
           scrollChatToBottom();   // користувач унизу — лишаємо його внизу
         } else {
