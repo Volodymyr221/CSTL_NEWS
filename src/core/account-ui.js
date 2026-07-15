@@ -247,6 +247,7 @@ async function openAccount() {
     if (!val.avatar_url) { avFile.click(); return; }
     const menu = openModalPrimitive({
       variant: 'sheet',
+      className: 'app-modal--top',   // поверх екрана кабінету (3100), інакше ховається під ним
       bodyHtml: `
         <div class="acc-avmenu">
           <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} Змінити фото</button>

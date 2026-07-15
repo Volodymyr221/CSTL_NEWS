@@ -2602,7 +2602,7 @@
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
       ${avatar(partner, otherUid(thread))}
-      <div class="pm-head-titles">
+      <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
         <div class="pm-head-name">${escapeHtml(partner)}</div>
       </div>
     </header>
@@ -10359,6 +10359,8 @@ END:VEVENT`
       }
       const menu = openModal({
         variant: "sheet",
+        className: "app-modal--top",
+        // поверх екрана кабінету (3100), інакше ховається під ним
         bodyHtml: `
         <div class="acc-avmenu">
           <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} \u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0444\u043E\u0442\u043E</button>
@@ -11203,6 +11205,8 @@ END:VEVENT`
     const p = await fetchPublicProfile(uid);
     openModal({
       variant: "sheet",
+      className: "app-modal--top",
+      // поверх кабінету/чату (інакше ховається під ними)
       bodyHtml: cardHtml3(p || { uid }),
       onMount: (wrap) => {
         const avwrap = wrap.querySelector(".pcard-avwrap");
@@ -11222,6 +11226,8 @@ END:VEVENT`
     document.addEventListener("click", (e) => {
       const av = e.target.closest("[data-av-uid]");
       if (!av)
+        return;
+      if (e.target.closest("[data-thread]"))
         return;
       const uid = av.dataset.avUid;
       if (uid)
