@@ -15,7 +15,8 @@
 //   clockTime(ts) / dayLabel(ts) / MONTHS_GEN — час/дата у стрічці
 //   ACT_ICONS                  — іконки дій над повідомленням
 
-import { escapeHtml } from './utils.js';
+import { escapeHtml, avatarCircle } from './utils.js';
+import { cachedAvatar } from './supabase.js';   // Потік 12 Б: чуже фото по uid (кеш)
 
 // Лінійні іконки для меню дій над повідомленням (монохром, у стилі чату)
 export const ACT_ICONS = {
@@ -106,13 +107,11 @@ function closeScreen(api) {
   setTimeout(() => { api.screen.remove(); api.backdrop.remove(); }, 240);
 }
 
-// Аватарка-кружечок з першою літерою імені
-export function avatar(name) {
-  const a = String(name || '').trim();
-  if (!a) return '<span class="pm-avatar pm-avatar--anon">👤</span>';
-  const letter = a.charAt(0).toUpperCase();
-  const hue = (a.charCodeAt(0) * 47) % 360;
-  return `<span class="pm-avatar" style="background:hsl(${hue}deg 60% 72%)">${escapeHtml(letter)}</span>`;
+// Аватарка-кружечок: фото профілю (крос-юзер, по uid) або перша літера імені /
+// 👤 для аноніма. Потік 12 Б: делегуємо у спільний avatarCircle; uid необовʼязковий
+// (без нього — літера, як було). hydrateAvatars підмінить літеру на фото по data-av-uid.
+export function avatar(name, uid) {
+  return avatarCircle({ name, url: cachedAvatar(uid), uid: uid || '', cls: 'pm-avatar' });
 }
 
 // Час повідомлення для бульбашки: год:хв (напр. 14:30)

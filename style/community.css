@@ -3257,6 +3257,9 @@
   color: var(--gray);
   font-size: 18px;
 }
+/* Потік 12 Б: фото профілю у кружечку обговорення (крос-юзер) */
+.bd-avatar--img { overflow: hidden; }
+.bd-avatar--img img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .bd-chat-meta {
   display: flex;
   flex-direction: column;
