@@ -143,6 +143,22 @@ async function openAccount() {
     ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} Довірений автор — оголошення публікуються одразу</div>`
     : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 схвалень до автопублікації</div>`;
 
+  // Рядок анкети (iOS-Settings): плитка-іконка · підпис+поле (inline-редагування)
+  // · декоративна вектор-стрілка. Обгортка — <label>, тож тап у рядок фокусує поле.
+  const field = (ic, label, control) => `
+    <label class="acc-f">
+      <span class="acc-f-ic">${ic}</span>
+      <span class="acc-f-body"><span class="acc-f-lbl">${label}</span>${control}</span>
+      <i class="acc-f-chev">${ICONS.chevronRight}</i>
+    </label>`;
+  // Рядок-навігація блоку «Моє»: іконка-плитка · назва+опис · стрілка.
+  const navRow = (go, ic, name, desc) => `
+    <button class="acc-cab-row" data-go="${go}" type="button">
+      <span class="acc-cab-row-ic">${ic}</span>
+      <span class="acc-cab-row-body"><span class="acc-cab-row-name">${name}</span><span class="acc-cab-row-desc">${desc}</span></span>
+      <i>${ICONS.chevronRight}</i>
+    </button>`;
+
   const cab = document.createElement('div');
   cab.id = 'acc-cab';
   cab.className = 'acc-cab';
@@ -168,33 +184,32 @@ async function openAccount() {
 
       <div class="acc-cab-sec">
         <h3>Мої дані</h3>
-        <label class="acc-f"><span>Ім'я</span><input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="Ваше ім'я"></label>
-        <label class="acc-f"><span>Прізвище</span><input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="Прізвище"></label>
-        <label class="acc-f"><span>Дата народження</span><input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}"></label>
-        <label class="acc-f"><span>Телефон (для оголошень)</span><input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380…"></label>
-        <label class="acc-f"><span>Населений пункт</span>
-          <select id="cf-settlement">
+        ${field(ICONS.user, "Ім'я", `<input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="Ваше ім'я">`)}
+        ${field(ICONS.clipboard, 'Прізвище', `<input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="Прізвище">`)}
+        ${field(ICONS.calendar, 'Дата народження', `<input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}">`)}
+        ${field(ICONS.phone, 'Телефон (для оголошень)', `<input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380…">`)}
+        ${field(ICONS.pin, 'Населений пункт', `<select id="cf-settlement">
             <option value="">— оберіть —</option>
             ${[...SETTLEMENTS, OTHER_SETTLEMENT].map(s => `<option ${val.settlement === s ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
-        </label>
-        <label class="acc-f"><span>Вулиця (необов'язково)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="напр. вул. Замкова"></label>
-        <label class="acc-f"><span>Про себе</span><textarea id="cf-bio" rows="2" placeholder="Кілька слів…">${escapeHtml(val.bio)}</textarea></label>
+          </select>`)}
+        ${field(ICONS.home, "Вулиця (необов'язково)", `<input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="напр. вул. Замкова">`)}
+        ${field(ICONS.fileText, 'Про себе', `<textarea id="cf-bio" rows="2" placeholder="Кілька слів…">${escapeHtml(val.bio)}</textarea>`)}
       </div>
       <button class="acc-cab-save" type="button" id="cf-save">Зберегти анкету</button>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>Моє</h3>
-        <button class="acc-cab-row" data-go="myads" type="button"><span>${ICONS.megaphone}</span> Мої оголошення <i>›</i></button>
-        <button class="acc-cab-row" data-go="saved" type="button"><span>${ICONS.bookmark}</span> Збережені <i>›</i></button>
-        <button class="acc-cab-row" data-go="msgs" type="button"><span>${ICONS.message}</span> Повідомлення <i>›</i></button>
+        ${navRow('myads', ICONS.megaphone, 'Мої оголошення', 'Перегляд і керування вашими оголошеннями')}
+        ${navRow('saved', ICONS.bookmark, 'Збережені', 'Оголошення й статті, які ви зберегли')}
+        ${navRow('msgs', ICONS.message, 'Повідомлення', 'Особисті чати з іншими жителями')}
       </div>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>Сповіщення</h3>
         ${NOTIF_KEYS.map(n => `
           <div class="acc-cab-row acc-cab-row--tog">
-            <span>${n.ic}</span> ${n.label}
+            <span class="acc-cab-row-ic">${n.ic}</span>
+            <span class="acc-cab-row-body"><span class="acc-cab-row-name">${n.label}</span></span>
             <button class="acc-tog${prefs[n.k] ? '' : ' off'}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
           </div>`).join('')}
       </div>

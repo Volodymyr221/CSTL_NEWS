@@ -10243,6 +10243,18 @@ END:VEVENT`
     const prefs = loadNotifPrefs(u.id);
     const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const trustHtml = p.trusted ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440 \u2014 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u0442\u044C\u0441\u044F \u043E\u0434\u0440\u0430\u0437\u0443</div>` : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u044C \u0434\u043E \u0430\u0432\u0442\u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457</div>`;
+    const field = (ic, label, control) => `
+    <label class="acc-f">
+      <span class="acc-f-ic">${ic}</span>
+      <span class="acc-f-body"><span class="acc-f-lbl">${label}</span>${control}</span>
+      <i class="acc-f-chev">${ICONS.chevronRight}</i>
+    </label>`;
+    const navRow = (go, ic, name, desc) => `
+    <button class="acc-cab-row" data-go="${go}" type="button">
+      <span class="acc-cab-row-ic">${ic}</span>
+      <span class="acc-cab-row-body"><span class="acc-cab-row-name">${name}</span><span class="acc-cab-row-desc">${desc}</span></span>
+      <i>${ICONS.chevronRight}</i>
+    </button>`;
     const cab = document.createElement("div");
     cab.id = "acc-cab";
     cab.className = "acc-cab";
@@ -10268,33 +10280,32 @@ END:VEVENT`
 
       <div class="acc-cab-sec">
         <h3>\u041C\u043E\u0457 \u0434\u0430\u043D\u0456</h3>
-        <label class="acc-f"><span>\u0406\u043C'\u044F</span><input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F"></label>
-        <label class="acc-f"><span>\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435</span><input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435"></label>
-        <label class="acc-f"><span>\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F</span><input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}"></label>
-        <label class="acc-f"><span>\u0422\u0435\u043B\u0435\u0444\u043E\u043D (\u0434\u043B\u044F \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C)</span><input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380\u2026"></label>
-        <label class="acc-f"><span>\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442</span>
-          <select id="cf-settlement">
+        ${field(ICONS.user, "\u0406\u043C'\u044F", `<input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="\u0412\u0430\u0448\u0435 \u0456\u043C'\u044F">`)}
+        ${field(ICONS.clipboard, "\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435", `<input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="\u041F\u0440\u0456\u0437\u0432\u0438\u0449\u0435">`)}
+        ${field(ICONS.calendar, "\u0414\u0430\u0442\u0430 \u043D\u0430\u0440\u043E\u0434\u0436\u0435\u043D\u043D\u044F", `<input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}">`)}
+        ${field(ICONS.phone, "\u0422\u0435\u043B\u0435\u0444\u043E\u043D (\u0434\u043B\u044F \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C)", `<input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380\u2026">`)}
+        ${field(ICONS.pin, "\u041D\u0430\u0441\u0435\u043B\u0435\u043D\u0438\u0439 \u043F\u0443\u043D\u043A\u0442", `<select id="cf-settlement">
             <option value="">\u2014 \u043E\u0431\u0435\u0440\u0456\u0442\u044C \u2014</option>
             ${[...SETTLEMENTS, OTHER_SETTLEMENT].map((s) => `<option ${val.settlement === s ? "selected" : ""}>${s}</option>`).join("")}
-          </select>
-        </label>
-        <label class="acc-f"><span>\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430"></label>
-        <label class="acc-f"><span>\u041F\u0440\u043E \u0441\u0435\u0431\u0435</span><textarea id="cf-bio" rows="2" placeholder="\u041A\u0456\u043B\u044C\u043A\u0430 \u0441\u043B\u0456\u0432\u2026">${escapeHtml(val.bio)}</textarea></label>
+          </select>`)}
+        ${field(ICONS.home, "\u0412\u0443\u043B\u0438\u0446\u044F (\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)", `<input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="\u043D\u0430\u043F\u0440. \u0432\u0443\u043B. \u0417\u0430\u043C\u043A\u043E\u0432\u0430">`)}
+        ${field(ICONS.fileText, "\u041F\u0440\u043E \u0441\u0435\u0431\u0435", `<textarea id="cf-bio" rows="2" placeholder="\u041A\u0456\u043B\u044C\u043A\u0430 \u0441\u043B\u0456\u0432\u2026">${escapeHtml(val.bio)}</textarea>`)}
       </div>
       <button class="acc-cab-save" type="button" id="cf-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443</button>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>\u041C\u043E\u0454</h3>
-        <button class="acc-cab-row" data-go="myads" type="button"><span>${ICONS.megaphone}</span> \u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F <i>\u203A</i></button>
-        <button class="acc-cab-row" data-go="saved" type="button"><span>${ICONS.bookmark}</span> \u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456 <i>\u203A</i></button>
-        <button class="acc-cab-row" data-go="msgs" type="button"><span>${ICONS.message}</span> \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F <i>\u203A</i></button>
+        ${navRow("myads", ICONS.megaphone, "\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", "\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u0434 \u0456 \u043A\u0435\u0440\u0443\u0432\u0430\u043D\u043D\u044F \u0432\u0430\u0448\u0438\u043C\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F\u043C\u0438")}
+        ${navRow("saved", ICONS.bookmark, "\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456", "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0439 \u0441\u0442\u0430\u0442\u0442\u0456, \u044F\u043A\u0456 \u0432\u0438 \u0437\u0431\u0435\u0440\u0435\u0433\u043B\u0438")}
+        ${navRow("msgs", ICONS.message, "\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F", "\u041E\u0441\u043E\u0431\u0438\u0441\u0442\u0456 \u0447\u0430\u0442\u0438 \u0437 \u0456\u043D\u0448\u0438\u043C\u0438 \u0436\u0438\u0442\u0435\u043B\u044F\u043C\u0438")}
       </div>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F</h3>
         ${NOTIF_KEYS.map((n) => `
           <div class="acc-cab-row acc-cab-row--tog">
-            <span>${n.ic}</span> ${n.label}
+            <span class="acc-cab-row-ic">${n.ic}</span>
+            <span class="acc-cab-row-body"><span class="acc-cab-row-name">${n.label}</span></span>
             <button class="acc-tog${prefs[n.k] ? "" : " off"}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
           </div>`).join("")}
       </div>
