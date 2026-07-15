@@ -33,6 +33,7 @@
 | 4 | Кабінет hero: кнопка камери → пікер → квадрат-ресайз → upload → save → показ | account-ui.js, account.css | ✅ `23a935df` |
 | 5 | Шапка: мініатюра фото (кеш `currentAvatarUrl` в auth) | auth.js, account-ui.js, account.css | ✅ `23a935df` |
 | 6 | Смоук А: helper img/літера, квадрат 256², заміна в кружечку, 0 pageerror | — | ✅ зелений |
+| — | **ДЕПЛОЙ А** | — | ✅ PR #416, деплой #2810 |
 | 7 | Обговорення: `authorAvatar` по `sender_uid` + префетч аватарів треду | board-discussions.js | 🟢 |
 | 8 | Приватний чат: `avatar` по `author_uid`/`buyer_uid` | board-chat.js, chat-core.js | 🟢 |
 | 9 | CSS img-аватар (object-fit:cover, коло) для `.bd-avatar`/`.pm-avatar` + бейдж камери | community.css, messages.css | 🟢 |
@@ -42,6 +43,8 @@
 | 13 | Брама деплою → «деплой» | — | 🟡 |
 
 **РІШЕННЯ ВОВИ 14.07: розбити на А+Б.** Інкремент А = кроки 1-6 (свій аватар, деплоїться окремо). Інкремент Б = 7-13 (крос-юзер) — окремий /byyou після деплою А.
+
+**✅ ІНКРЕМЕНТ А ЗАДЕПЛОЄНО (15.07):** PR #416 → squash-merge → деплой #2810 (success). Свій аватар працює: кнопка камери в кабінеті, квадрат-ресайз 256², мініатюра в шапці. SQL profiles_extended застосовано власником. Чекаю Вову для старту Інкремента Б (крос-юзер, кроки 7-13, окремий /byyou).
 
 **🔴 SQL Інкремента А (крок 1):** застосувати `scripts/supabase_profiles_extended.sql` (додає `avatar_url` + surname/phone/settlement/street/bio — ідемпотентно; заодно лікує «partial»-збереження анкети). RPC `get_avatars` — SQL для Інкремента Б, дам пізніше.
 
