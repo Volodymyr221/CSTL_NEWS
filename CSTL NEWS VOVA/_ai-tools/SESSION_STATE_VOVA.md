@@ -24,7 +24,7 @@
 3. **Тости ховались під сторінками** — `base.css` `.toast` z-index 3000→4000 (кабінет=3100 перекривав).
 - CACHE `cstl-20260715-1431`.
 
-### Задача 3 — Картка профілю (тап по аватару) + перегляд/видалення фото:
+### Задача 3 — Картка профілю (тап по аватару) + перегляд/видалення фото (цим `/finish`):
 - **Новий `src/core/profile-card.js`:** `openProfileCard(uid)` → sheet з фото/ім'ям/📍громадою/badge «Довірений автор»/«у громаді з рік»; тап фото → спільний lightbox. `initProfileCardTaps()` — ОДИН делегований слухач на document по `[data-av-uid]` (обговорення+чати; Дошка — автор текстом, аватара нема). Імпорт+init у `app.js`.
 - **RPC `get_public_profile(p_uid)`** (SECURITY DEFINER, РІВНО 6 несекретних полів; НІКОЛИ phone/email/birth_date). 🤝 **Ромі — спільна БД:** новий публічний RPC. `scripts/supabase_public_profile.sql`. **Застосовано власником вручну** (MCP-write у сесії просив апрув).
 - `supabase.js` `fetchPublicProfile` (fail-soft), `utils.js` спільний `openPhotoLightbox` (винесено з board-chat), `account-ui.js` меню камери «Змінити/Видалити фото» (delete=`saveProfile({avatar_url:null})`), `account.css` `.pcard*`+`.acc-avmenu*`.
