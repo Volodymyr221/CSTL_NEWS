@@ -9925,8 +9925,21 @@ ${ev.description || ""}`
     </section>
     <div class="cm-hero-spacer"></div>
 
-    <!-- \u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0441\u0435\u043A\u0446\u0456\u0457 \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u041F\u0420\u0418\u0411\u0420\u0410\u041D\u041E 16.07 (\u0432\u0438\u043F\u0440\u0430\u0432\u043B\u0435\u043D\u043D\u044F \u0412\u043E\u0432\u0438: \u043C\u0456\u0441\u0446\u0435
-         \u0440\u043E\u0437\u0442\u0430\u0448\u0443\u0432\u0430\u043D\u043D\u044F \u043D\u0435\u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u0435, \u0440\u043E\u0437\u043C\u0456\u0449\u0435\u043D\u043D\u044F \u043F\u0435\u0440\u0435\u0434\u0443\u043C\u0430\u0454\u043C\u043E \u043E\u043A\u0440\u0435\u043C\u043E). -->
+    <!-- \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u2014 \u043B\u0438\u043F\u043A\u0438\u0439 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u0441\u0435\u043A\u0446\u0456\u0457 \u0431\u043B\u043E\u043A\u0456\u0432 (\u0445\u043E\u0440\u0435\u043E\u0433\u0440\u0430\u0444\u0456\u044F \u0412\u043E\u0432\u0438 16.07):
+         \u0443 \u043F\u043E\u0442\u043E\u0446\u0456 \u2014 \u0432\u0435\u043B\u0438\u043A\u0438\u0439 \u043F\u043E \u0446\u0435\u043D\u0442\u0440\u0443 \u0437 \u043F\u0456\u0434\u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043A\u043E\u043C \u043F\u043E\u0432\u0435\u0440\u0445 \u0444\u043E\u0442\u043E; \u0434\u043E\u0457\u0445\u0430\u0432 \u0434\u043E \u0432\u0435\u0440\u0445\u0443 \u2192
+         \u043F\u0440\u0438\u043B\u0438\u043F\u0430\u0454 (sticky) \u043A\u043E\u043C\u043F\u0430\u043A\u0442\u043D\u043E\u044E \u0441\u043A\u043B\u044F\u043D\u043E\u044E \u043F\u0430\u043D\u0435\u043B\u043B\u044E, \u0431\u043B\u043E\u043A\u0438 \u043F\u0456\u0440\u043D\u0430\u044E\u0442\u044C \u041F\u0406\u0414 \u043D\u0435\u0457,
+         \u0441\u043F\u0440\u0430\u0432\u0430 \u043F\u0440\u043E\u044F\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u043A\u043D\u043E\u043F\u043A\u0430 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 (\u0434\u0440\u0443\u0433\u0430 data-account-btn \u2014 \u043C\u0435\u0445\u0430\u043D\u0456\u0437\u043C
+         refreshAccountButtons \u043E\u043D\u043E\u0432\u043B\u044E\u0454 \u0432\u0441\u0456). \u041A\u043B\u0430\u0441 --stuck \u0441\u0442\u0430\u0432\u0438\u0442\u044C initCenterFocus. -->
+    <div id="cm-sec-sentinel" aria-hidden="true"></div>
+    <header class="cm-sec-head" id="cm-sec-head">
+      <div class="cm-sec-head-in">
+        <h2>\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?</h2>
+        <p>\u041E\u0441\u044C \u0449\u043E \u0433\u043E\u043B\u043E\u0432\u043D\u0435 \u0443 \u043D\u0430\u0441 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456</p>
+      </div>
+      <button class="cm-sec-account" type="button" data-account-btn aria-label="\u041A\u0430\u0431\u0456\u043D\u0435\u0442">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </button>
+    </header>
 
     <!-- \u041F\u043E\u0440\u044F\u0434\u043E\u043A \u0431\u043B\u043E\u043A\u0456\u0432 (\u0440\u0456\u0448\u0435\u043D\u043D\u044F \u0420\u043E\u043C\u0438 08.07):
          \u0422\u0430\u0431\u043B\u043E \u043D\u043E\u0432\u0438\u043D \u2192 \u0414\u043E\u0448\u043A\u0430 \u2192 \u041D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0430 \u043F\u043E\u0434\u0456\u044F \u2192 \u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438 \u2192 \u041F\u043E\u0433\u043E\u0434\u0430 \u2192 \u041A\u043E\u043D\u0442\u0430\u043A\u0442\u0438. -->
@@ -10035,8 +10048,7 @@ ${ev.description || ""}`
     const main = document.querySelector(".app-main");
     if (!main)
       return;
-    if (window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches)
-      return;
+    const allowMotion = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     _focusWired = true;
     let raf = null;
     const apply = () => {
@@ -10045,6 +10057,15 @@ ${ev.description || ""}`
         return;
       const vh = main.clientHeight;
       const viewCenter = vh / 2;
+      const sec = document.getElementById("cm-sec-head");
+      const sent = document.getElementById("cm-sec-sentinel");
+      if (sec && sent) {
+        const flexGap = parseFloat(getComputedStyle(sent.parentElement).rowGap) || 0;
+        const gap = sec.getBoundingClientRect().top - sent.getBoundingClientRect().bottom;
+        sec.classList.toggle("cm-sec-head--stuck", gap > flexGap + 2);
+      }
+      if (!allowMotion)
+        return;
       let best = null, bestDist = Infinity;
       document.querySelectorAll("#cm-content .cm-block").forEach((b) => {
         const r = b.getBoundingClientRect();

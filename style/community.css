@@ -922,8 +922,70 @@
 .cm-block,
 .cm-hero-spacer { position: relative; z-index: 1; }
 
-/* Заголовок секції «ШО В СЕЛІ?» прибрано 16.07 (Вова: місце неправильне,
-   передумаємо розташування окремо). */
+/* ── «ШО В СЕЛІ?» — липкий заголовок секції блоків (хореографія Вови 16.07) ──
+   У потоці: великий по центру + підзаголовок, білий поверх фото (прозорий фон).
+   Прилип (--stuck, ставить initCenterFocus): компактна панель на матовому
+   бордовому склі, підзаголовок згортається, справа проявляється кнопка кабінету.
+   position:sticky — тримає композитор браузера (нуль дьоргання на iOS). */
+.cm-sec-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;                       /* над блоками (z-index:1) — вони пірнають ПІД панель */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 6px 60px 14px;           /* бічні 60px — резерв під кнопку кабінету справа */
+  text-align: center;
+  transition: background 0.25s ease, box-shadow 0.25s ease, padding 0.25s ease;
+}
+.cm-sec-head-in { min-width: 0; }
+.cm-sec-head h2 {
+  font-size: 21px; font-weight: 800;
+  letter-spacing: 2.2px; text-transform: uppercase;
+  transform: scaleY(1.12);          /* той самий прийом що .bd-title Дошки */
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  margin: 0 0 4px;
+  transition: font-size 0.25s ease, margin 0.25s ease;
+  white-space: nowrap;
+}
+.cm-sec-head p {
+  font-size: 13.5px; font-weight: 600;
+  color: rgba(255,255,255,0.85);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+  margin: 0;
+  max-height: 22px; overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.25s ease;
+}
+/* Кнопка кабінету в панелі — те саме скло що біля привітання, менша (38px).
+   Невидима поки не прилипло (щоб не дублювалась із кнопкою привітання). */
+.cm-sec-account {
+  position: absolute; right: 12px; top: 50%;
+  transform: translateY(-50%);
+  width: 38px; height: 38px; border-radius: 50%;
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  background: rgba(255,255,255,0.13);
+  border: 1.5px solid rgba(255,255,255,0.55);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  overflow: hidden; padding: 0;
+  opacity: 0; pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+.cm-sec-account .account-btn-av { width: 100%; height: 100%; border: 0; }
+.cm-sec-account .account-btn-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Прилипла панель: матове бордове скло, компактно, кнопка проявляється */
+.cm-sec-head--stuck {
+  background: rgba(92, 37, 44, 0.82);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.22);
+  padding: 11px 60px;
+}
+.cm-sec-head--stuck h2 { font-size: 17px; margin: 0; }
+.cm-sec-head--stuck p { max-height: 0; opacity: 0; }
+.cm-sec-head--stuck .cm-sec-account { opacity: 1; pointer-events: auto; }
 
 /* ── Фокус-скрол блоків (Вова 15.07; 16.07 — без прозорості): scale ставить JS
    (initCenterFocus, безперервні значення), тут — лише база й тінь фокуса. */

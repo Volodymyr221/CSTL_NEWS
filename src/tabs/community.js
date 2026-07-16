@@ -187,8 +187,21 @@ function renderSkeleton() {
     </section>
     <div class="cm-hero-spacer"></div>
 
-    <!-- Заголовок секції «ШО В СЕЛІ?» ПРИБРАНО 16.07 (виправлення Вови: місце
-         розташування неправильне, розміщення передумаємо окремо). -->
+    <!-- «ШО В СЕЛІ?» — липкий заголовок секції блоків (хореографія Вови 16.07):
+         у потоці — великий по центру з підзаголовком поверх фото; доїхав до верху →
+         прилипає (sticky) компактною скляною панеллю, блоки пірнають ПІД неї,
+         справа проявляється кнопка кабінету (друга data-account-btn — механізм
+         refreshAccountButtons оновлює всі). Клас --stuck ставить initCenterFocus. -->
+    <div id="cm-sec-sentinel" aria-hidden="true"></div>
+    <header class="cm-sec-head" id="cm-sec-head">
+      <div class="cm-sec-head-in">
+        <h2>ШО В СЕЛІ?</h2>
+        <p>Ось що головне у нас сьогодні</p>
+      </div>
+      <button class="cm-sec-account" type="button" data-account-btn aria-label="Кабінет">
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </button>
+    </header>
 
     <!-- Порядок блоків (рішення Роми 08.07):
          Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
@@ -311,7 +324,9 @@ function initCenterFocus() {
   if (_focusWired) return;
   const main = document.querySelector('.app-main');
   if (!main) return;
-  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  // Фокус-масштаб — це РУХ (вимикаємо при reduced-motion); прилипання заголовка
+  // «ШО В СЕЛІ?» — стан розмітки (скляний фон = читабельність) — працює завжди.
+  const allowMotion = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
   _focusWired = true;
 
   let raf = null;
@@ -320,6 +335,19 @@ function initCenterFocus() {
     if (main.dataset.tab !== 'community') return;   // ефект лише на Громаді
     const vh = main.clientHeight;
     const viewCenter = vh / 2;
+
+    // «ШО В СЕЛІ?» прилип? Детект через вартового (сусідній маркер у потоці):
+    // у спокої розрив = flex-gap контейнера (між УСІМА дітьми #cm-content);
+    // sticky відірвав панель — розрив стає більшим за gap → --stuck.
+    // Порівнюємо з живим значенням gap (не магічне число: зміниться дизайн — переживе).
+    const sec = document.getElementById('cm-sec-head');
+    const sent = document.getElementById('cm-sec-sentinel');
+    if (sec && sent) {
+      const flexGap = parseFloat(getComputedStyle(sent.parentElement).rowGap) || 0;
+      const gap = sec.getBoundingClientRect().top - sent.getBoundingClientRect().bottom;
+      sec.classList.toggle('cm-sec-head--stuck', gap > flexGap + 2);
+    }
+    if (!allowMotion) return;
     let best = null, bestDist = Infinity;
     document.querySelectorAll('#cm-content .cm-block').forEach(b => {
       const r = b.getBoundingClientRect();
