@@ -984,12 +984,27 @@
   backdrop-filter: blur(9px);
   -webkit-backdrop-filter: blur(9px);
   background: rgba(30, 16, 18, 0.30);
+  /* padding-top 8→18: центр фрази опускається рівно на центр прибитої іконки
+     (іконка: top 6 + 12 + 46/2 = 41px; фраза при 18 центрується на ~41px) — Вова 16.07. */
+  padding-top: 18px;
   padding-bottom: 26px;
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
-.cm-sec-head--stuck h2 { color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
-.cm-sec-head--stuck p { color: rgba(255,255,255,0.88); text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+/* Ті самі 3 шари глибини й у білому стані (Вова 16.07): на білих літерах світла
+   грань не читається, тому верхня грань — тонка ТЕМНА (карбований край), плюс
+   близька і дальня тіні — 3D-об'єм зберігається як у бордовому стані. */
+.cm-sec-head--stuck h2 {
+  color: #fff;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.55),
+    0 7px 18px rgba(0, 0, 0, 0.42);
+}
+.cm-sec-head--stuck p {
+  color: rgba(255,255,255,0.88);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.45);
+}
 
 /* Блок новин піднято на 18px назад угору (Вова 16.07): hero-spacer опустив фразу
    на 18px, а цей margin компенсує зсув блоків — фраза сідає впритул над блоками,
