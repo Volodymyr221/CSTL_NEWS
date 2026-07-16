@@ -94,7 +94,12 @@
 
 ### Задача 16 (16.07) — 3-шарова тінь верхній зоні + іконка кабінету більша/замінена:
 - **Вова:** «трьохшарову тінь привітанню/даті/іконці; іконку кабінету трохи більшу + замінити іконку людини».
-- `community.css`: `.cm-greeting-text`+`.cm-greeting-date` → 3-шарова тінь; `.cm-greet-account` 46→50px + 3-шаровий box-shadow, `.cm-acc-pin` top 12→10 (центр лишився 41px). `community.js`: SVG → filled-user 26px. Rebuild+bundle. CACHE `cstl-20260716-0808`.
+- `community.css`: `.cm-greeting-text`+`.cm-greeting-date` → 3-шарова тінь; `.cm-greet-account` 46→50px + 3-шаровий box-shadow, `.cm-acc-pin` top 12→10 (центр лишився 41px). `community.js`: SVG → filled-user 26px. Rebuild+bundle. CACHE `cstl-20260716-0808`. ✅ PR #434 → main.
+
+### Задача 17 (16.07) — сайдбар справа + легкий блюр фону:
+- **Вова:** «відкриття сайдбару на сторону бургера [справа]; фон легенько заблюрений».
+- `sidebar.css` (CSS-only): `.sidebar` right:0 + translateX(102%) + shadow -6px (виїжджає справа); `.sidebar-overlay` + backdrop blur(3px), затемнення .42→.32. CACHE `cstl-20260716-0941`.
+- Відкрите: хрестик ✕ — запропонував перенести вліво (до внутрішнього краю), чекаю Вову.
 
 ---
 
