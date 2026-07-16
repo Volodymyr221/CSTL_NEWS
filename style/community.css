@@ -887,9 +887,9 @@
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
-  bottom: 0;                  /* ФОТО НА ВЕСЬ ЕКРАН (Вова 16.07): заднє тло — лист
-                                 завжди налягає на фото на будь-якій висоті екрана,
-                                 тінь листа читається (раніше 560px обривалось вище). */
+  height: 560px;             /* вітальний банер: показуємо БІЛЬШЕ костелу (Рома 08.07).
+                                Повноекранне фото (bottom:0) увімкну РАЗОМ з новими
+                                фото — Вова просив поточне не чіпати (16.07). */
   overflow: hidden;
   z-index: 0;                 /* позаду контенту (блоки — z-index:1) */
   background: var(--paper-deep);
@@ -918,9 +918,12 @@
   margin: 0 -14px;                 /* на всю ширину екрана (гасить бічний padding #cm-content) */
   background: var(--paper);
   border-radius: 24px 24px 0 0;
-  /* Помірна двошарова тінь угору на фото (Вова 16.07: «щоб налягав, але не перебор»). */
-  box-shadow: 0 -5px 12px rgba(15, 5, 7, 0.30), 0 -18px 40px rgba(15, 5, 7, 0.26);
-  padding: 8px 14px 4px;           /* верхні 8px — паперова зона, у яку сідає низ язичка (шов ховається) */
+  /* ОДНЕ ТІЛО (Вова 16.07): горбик (::before) + блок під однією тінню. drop-shadow
+     обводить РЕАЛЬНИЙ силует (плечі + горбик) як одну фігуру, без внутрішніх швів.
+     Лист непрозорий → тінь лише по зовнішньому контуру (картки/текст усередині
+     власних тіней не дають). */
+  filter: drop-shadow(0 -4px 9px rgba(15, 5, 7, 0.34)) drop-shadow(0 -12px 26px rgba(15, 5, 7, 0.26));
+  padding: 8px 14px 4px;
   display: flex;
   flex-direction: column;
   gap: 14px;                       /* той самий ритм між блоками, що був у #cm-content */
@@ -963,11 +966,13 @@
    тінню на фото — випуклий виступ листа (низ плаский, зливається з листом). */
 .cm-sec-head-in {
   min-width: 0;
+  /* ГОРБИК = ця пігулка (той самий папір), АЛЕ БЕЗ власної тіні: спільна тінь дає
+     drop-shadow листа, який обводить лист+пігулку як ОДИН силует (пігулка всередині
+     листа входить у його контур). Тому шва/окремого ободка немає — одне тіло (Вова 16.07).
+     padding-top 22 центрує фразу на іконці при пришпилюванні (без стрибка). */
   background: var(--paper);
   border-radius: 20px 20px 0 0;
-  padding: 9px 22px 6px;
-  box-shadow: 0 -5px 12px rgba(15, 5, 7, 0.34), 0 -14px 30px rgba(15, 5, 7, 0.30);
-  transition: background 0.3s ease, box-shadow 0.3s ease, border-radius 0.3s ease, padding 0.3s ease;
+  padding: 22px 22px 6px;
 }
 /* Колір адаптивний: у потоці напис на тілесному язичку → бордовий/темний;
    призупинився на темному блюрі → білий (плавний перехід кольору). */
@@ -999,18 +1004,18 @@
   backdrop-filter: blur(9px);
   -webkit-backdrop-filter: blur(9px);
   background: rgba(30, 16, 18, 0.30);
-  /* padding-top 18: центр фрази = центр прибитої іконки (6+10+50/2 = 41px) — Вова 16.07. */
-  padding-top: 18px;
+  /* padding-top НЕ чіпаємо (лишається 0) — центрування тексту на іконці тепер дає
+     padding-top:18 самої пігулки, ОДНАКОВИЙ в обох станах → без стрибка. */
   padding-bottom: 26px;
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
-/* У залипанні язичок «розчиняється» в блюр-панелі: пігулка без фону/тіні. */
+/* У залипанні пігулка-горбик розчиняється (папір→прозоро), лишається лише текст
+   на блюр-панелі; padding-top 22 незмінний → текст не стрибає. */
 .cm-sec-head--stuck .cm-sec-head-in {
   background: transparent;
-  box-shadow: none;
   border-radius: 0;
-  padding: 0;
+  padding: 22px 0 0;
 }
 /* Ті самі 3 шари глибини й у білому стані (Вова 16.07): на білих літерах світла
    грань не читається, тому верхня грань — тонка ТЕМНА (карбований край), плюс
@@ -1047,7 +1052,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 28%;   /* об'єкт (костел) ВГОРІ кадру (Вова 16.07, повноекранне фото) */
+  object-position: center 55%;   /* зсув донизу (Рома 09.07): показати НИЗ костелу до верху картки, менше зрізати знизу */
   display: block;
   opacity: 0;
   transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
@@ -1059,12 +1064,12 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start;
-  /* Повноекранне фото (Вова 16.07): «Олика» сидить на фіксованій висоті ~430px —
-     трохи вище місця, де лист налягає на фото (лист стартує ~570px від верху). */
-  padding: 430px 16px 0;
-  /* Затемнення: угорі під вітання (0-18%), смуга під «Олика» (~54%); решта чиста. */
-  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0px, transparent 130px, transparent 380px, rgba(0,0,0,0.42) 470px, transparent 560px);
+  justify-content: flex-end;
+  /* «Олика»+підпис і затемнення підняті вище (Вова 16.07, редизайн «лист»):
+     низ фото чистий — на ньому читається тінь листа, що налягає. */
+  padding: 14px 16px 100px;
+  /* Затемнення зверху (під вітання) і смуга під «Олика»; низ фото — без затемнення. */
+  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 24%, transparent 46%, rgba(0,0,0,0.5) 66%, rgba(0,0,0,0.08) 80%, transparent 88%);
   color: white;
   z-index: 3;
   pointer-events: none;
