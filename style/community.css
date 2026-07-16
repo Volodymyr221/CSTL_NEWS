@@ -949,7 +949,7 @@
   align-items: center;
   justify-content: center;
   margin: 0;
-  padding: 8px 60px 12px;           /* компактно (Вова 16.07): фраза ближче до верху блока, блоки ближче до фрази */
+  padding: 8px 60px 4px;            /* блоки ще ближче до фрази (Вова 16.07): низ 12→4px */
   text-align: center;
   transition: background 0.3s ease, padding 0.3s ease;
 }
