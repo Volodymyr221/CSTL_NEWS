@@ -181,10 +181,8 @@ function renderSkeleton() {
 
     <section class="cm-hero">
       ${heroImgsHtml()}
-      <!-- Смуга блюру: прикріплена до НИЗУ героя, росте вгору разом із верхом
-           верхньої картки при скролі (community.js). Низ мутніє, верх лишається
-           чіткий — блюр «слідкує» за карткою (рішення Роми 08.07). -->
-      <div class="cm-hero-blurband" aria-hidden="true"></div>
+      <!-- Фрост-смугу (.cm-hero-blurband) прибрано 16.07 (Вова, редизайн «лист»):
+           непрозорий тілесний лист налягає на фото і повністю її закриває. -->
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
         <!-- Підпис фото повернено 16.07 (Вова) — оформлений як підпис фотографії
@@ -194,11 +192,13 @@ function renderSkeleton() {
     </section>
     <div class="cm-hero-spacer"></div>
 
-    <!-- «ШО В СЕЛІ?» (хореографія Вови 16.07, друга ітерація): стоїть на місці
-         підпису фото (під «Олика»), скролиться з контентом БЕЗ зміни розміру;
-         доїхав до місця привітання → призупиняється (sticky), під ним з'являється
-         м'який повноширинний блюр (--stuck), блоки ховаються під нього.
+    <!-- ЛИСТ (Вова 16.07, редизайн «як сучасний iOS-додаток»): тілесна картка
+         на всю ширину, що НАЛЯГАЄ на фото (заокруглені верхні кути + глибока тінь
+         угору). Усередині — язичок «ШО В СЕЛІ?» (випуклий виступ листа на фото)
+         і всі блоки. Хореографія збережена: sec-head sticky → доїжджає до шапки,
+         залипає і стає блюр-панеллю (--stuck), блоки пірнають під неї.
          Кнопки кабінету тут НЕМА — вона окремо прибита (.cm-acc-pin). -->
+    <div class="cm-sheet">
     <div id="cm-sec-sentinel" aria-hidden="true"></div>
     <header class="cm-sec-head" id="cm-sec-head">
       <div class="cm-sec-head-in">
@@ -266,58 +266,16 @@ function renderSkeleton() {
       </header>
       <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">Завантаження…</div>
     </section>
+    </div><!-- /.cm-sheet -->
   `;
 }
 
 // ── Точка входу ──────────────────────────────────────────────────────────────
 
 let _greetingWired = false;
-let _heroBlurWired = false;
-// Блюр = ФРОСТ-ПІДКЛАДКА ПІД карткою (рішення Роми 08.07): площина розмиття на всю
-// ширину, що лежить НИЖЧИМ шаром за Табло (герой z0 < картка z1). Її ВЕРХ приклеєний
-// до верху верхньої картки, а сама площина тягнеться ВНИЗ до низу героя. Верх фото
-// (над карткою) лишається чіткий; усе від верху картки і нижче — розмите. Картка
-// «левітує» над матовою підкладкою, і та їде за карткою при скролі.
-// Вітання НЕ рухаємо з JS — «залипання» тримає CSS position:sticky
-// (.cm-greeting-stick), тому воно на композиторі й не дьоргається на iOS.
-function wireHeroBlur() {
-  if (_heroBlurWired) return;
-  const main = document.querySelector('.app-main');
-  if (!main) return;
-  _heroBlurWired = true;
-  let ticking = false;
-  // Кеш елементів (щоб не шукати щоразу — стабільніше й швидше).
-  let hero, band, block;
-  const cache = () => {
-    hero = document.querySelector('.cm-hero');
-    band = hero && hero.querySelector('.cm-hero-blurband');
-    // Верх фрост-площини = верх першої картки (Табло новин). Фрост піднімається
-    // РАЗОМ з блоками, як було завжди (Вова 16.07: не чіпляти за «ШО В СЕЛІ?»).
-    block = document.getElementById('cm-news-board');
-  };
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      ticking = false;
-      if (!hero || !band || !block) cache();
-      if (!hero || !band || !block) return;
-      // Усе в локальних координатах героя (він fixed): C — де зараз верх картки.
-      const heroTop = hero.getBoundingClientRect().top;
-      const heroH   = hero.offsetHeight;
-      const C = block.getBoundingClientRect().top - heroTop;   // верх картки в системі героя
-      // ВЕРХ підкладки = верх картки; тягнеться ВНИЗ до низу героя. Картка (z1) зверху
-      // перекриває підкладку (герой z0) — блюр видно навколо/під карткою.
-      const top = Math.max(0, Math.min(heroH, C));
-      const h = heroH - top;
-      band.style.top = top + 'px';
-      band.style.height = h + 'px';
-      band.style.opacity = h > 2 ? '1' : '0';
-    });
-  };
-  cache();
-  main.addEventListener('scroll', onScroll, { passive: true });
-}
+// Фрост-підкладку (wireHeroBlur, рішення Роми 08.07) видалено 16.07 (Вова,
+// редизайн «лист»): непрозорий тілесний лист налягає на фото і повністю закривав
+// би площину блюру — backdrop-filter працював би даремно (батарея/GPU).
 
 // ── Фокус-скрол «ШО В СЕЛІ?» (Вова 15.07) ────────────────────────────────────
 // Блок, чий центр ближче до центру екрана, — повний розмір + глибша тінь;
@@ -391,7 +349,6 @@ export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   startHeroRotator();
-  wireHeroBlur();
   initCenterFocus();          // фокус-скрол блоків «ШО В СЕЛІ?» (Вова 15.07)
   refreshAccountButtons();    // кнопка кабінету біля привітання: фото/іконка
   // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
