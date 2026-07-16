@@ -187,18 +187,8 @@ function renderSkeleton() {
     </section>
     <div class="cm-hero-spacer"></div>
 
-<<<<<<< HEAD
     <!-- Заголовок секції «ШО В СЕЛІ?» ПРИБРАНО 16.07 (виправлення Вови: місце
          розташування неправильне, розміщення передумаємо окремо). -->
-=======
-    <!-- Заголовок секції блоків (рішення Вови 15.07): дає сенс віджетам нижче.
-         Збіг назви зі вкладкою таб-бару «ШО В СЕЛІ» — свідомий, перейменування
-         вкладки — відкрите питання. -->
-    <header class="cm-sec-head">
-      <h2>ШО В СЕЛІ?</h2>
-      <p>Ось що головне у нас сьогодні</p>
-    </header>
->>>>>>> origin/main
 
     <!-- Порядок блоків (рішення Роми 08.07):
          Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
@@ -335,23 +325,14 @@ function initCenterFocus() {
       const r = b.getBoundingClientRect();
       // Блок повністю поза екраном — скидаємо стилі й не рахуємо далі.
       if (r.bottom < -80 || r.top > vh + 80) {
-<<<<<<< HEAD
         if (b.dataset.cf) { b.style.transform = ''; b.classList.remove('cm-block--focus'); delete b.dataset.cf; }
-=======
-        if (b.dataset.cf) { b.style.transform = ''; b.style.opacity = ''; b.classList.remove('cm-block--focus'); delete b.dataset.cf; }
->>>>>>> origin/main
         return;
       }
       const dist = Math.abs((r.top + r.bottom) / 2 - viewCenter);
       const t = Math.min(1, dist / (vh * 0.55));    // 0 у центрі → 1 далеко
-<<<<<<< HEAD
       // Лише масштаб + тінь фокуса. БЕЗ прозорості (виправлення Вови 16.07 —
       // блоки лишаються такими як є, не «вицвітають»).
       b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
-=======
-      b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
-      b.style.opacity = (1 - 0.22 * t).toFixed(3);
->>>>>>> origin/main
       b.dataset.cf = '1';
       if (dist < bestDist) { bestDist = dist; best = b; }
     });
