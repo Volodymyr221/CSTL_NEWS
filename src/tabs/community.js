@@ -300,16 +300,16 @@ function initCenterFocus() {
     const vh = main.clientHeight;
     const viewCenter = vh / 2;
 
-    // «ШО В СЕЛІ?» прилип? Детект через вартового (сусідній маркер у потоці):
-    // у спокої розрив = flex-gap контейнера (між УСІМА дітьми #cm-content);
-    // sticky відірвав панель — розрив стає більшим за gap → --stuck.
-    // Порівнюємо з живим значенням gap (не магічне число: зміниться дизайн — переживе).
+    // «ШО В СЕЛІ?» прилипає? Блюр вмикаємо трохи РАНІШЕ за повне пришпилювання
+    // (Вова 16.07): коли верх секції підходить до низу шапки (у межах ~50px) — тоді
+    // язичок якраз починає заїжджати під шапку. Плавність дає CSS-transition блюру.
     const sec = document.getElementById('cm-sec-head');
-    const sent = document.getElementById('cm-sec-sentinel');
-    if (sec && sent) {
-      const flexGap = parseFloat(getComputedStyle(sent.parentElement).rowGap) || 0;
-      const gap = sec.getBoundingClientRect().top - sent.getBoundingClientRect().bottom;
-      sec.classList.toggle('cm-sec-head--stuck', gap > flexGap + 2);
+    const hdr = document.querySelector('.app-header');
+    if (sec) {
+      // Фраза пришпилюється під шапкою; блюр вмикаємо за ~50px ДО того (раніше).
+      const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
+      const secTop = sec.getBoundingClientRect().top;
+      sec.classList.toggle('cm-sec-head--stuck', secTop <= pinY + 50);
     }
     if (!allowMotion) return;
     let best = null, bestDist = Infinity;
