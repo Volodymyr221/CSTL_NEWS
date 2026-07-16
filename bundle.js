@@ -10025,11 +10025,11 @@ ${ev.description || ""}`
       const vh = main.clientHeight;
       const viewCenter = vh / 2;
       const sec = document.getElementById("cm-sec-head");
-      const sent = document.getElementById("cm-sec-sentinel");
-      if (sec && sent) {
-        const flexGap = parseFloat(getComputedStyle(sent.parentElement).rowGap) || 0;
-        const gap = sec.getBoundingClientRect().top - sent.getBoundingClientRect().bottom;
-        sec.classList.toggle("cm-sec-head--stuck", gap > flexGap + 2);
+      const hdr = document.querySelector(".app-header");
+      if (sec) {
+        const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
+        const secTop = sec.getBoundingClientRect().top;
+        sec.classList.toggle("cm-sec-head--stuck", secTop <= pinY + 50);
       }
       if (!allowMotion)
         return;

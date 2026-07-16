@@ -981,10 +981,13 @@
   /* Язичок виступає НАД листом на фото (Вова 16.07): від'ємний верхній відступ
      витягує його вгору; низ пігулки сідає в паперову зону листа (padding-top 8) —
      той самий колір → шва/ободка знизу немає, одне тіло. */
-  margin: -73px 0 0;
+  margin: -73px -14px 0;             /* -14 з боків: блюр-панель на ВСЮ ширину екрана (Вова 16.07) */
   padding: 0;
   text-align: center;
-  transition: background 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+  /* Блюр з'являється ПЛАВНО (Вова 16.07): base blur(0) → --stuck blur(9), transition. */
+  -webkit-backdrop-filter: blur(0px);
+          backdrop-filter: blur(0px);
+  transition: background 0.35s ease, backdrop-filter 0.35s ease, -webkit-backdrop-filter 0.35s ease;
 }
 /* Внутрішній контейнер = ЯЗИЧОК: тілесна пігулка, заокруглена лише ЗВЕРХУ, з
    тінню на фото — випуклий виступ листа (низ плаский, зливається з листом). */
