@@ -24,7 +24,7 @@
     return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
   }
   function avatarCircle({ name, url, cls = "pm-avatar", uid = "" } = {}) {
-    const idAttr = uid ? ` data-av-uid="${escapeHtml(String(uid))}"` : "";
+    const idAttr = uid ? ` data-av-uid="${escapeHtml(String(uid))}" data-av-circle=""` : "";
     const safeUrl = url ? String(url).trim() : "";
     if (safeUrl) {
       return `<span class="${cls} ${cls}--img"${idAttr}><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
@@ -626,7 +626,7 @@
   async function hydrateAvatars(root) {
     if (!root || !root.querySelectorAll)
       return;
-    const els2 = [...root.querySelectorAll("[data-av-uid]")].filter((e) => !e.dataset.avDone);
+    const els2 = [...root.querySelectorAll("[data-av-circle][data-av-uid]")].filter((e) => !e.dataset.avDone);
     if (!els2.length)
       return;
     await fetchAvatars(els2.map((e) => e.dataset.avUid));

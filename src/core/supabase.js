@@ -319,12 +319,17 @@ export async function fetchAvatars(uids) {
   } catch (_) { need.forEach(u => _avatarCache.set(u, '')); }
 }
 
-// Прогресивна гідрація: після вставки HTML знаходить кружечки з data-av-uid,
-// підтягує їхні фото і замінює літеру на <img> для тих, у кого фото є.
-// Літера-first → фото-коли-готове (не блокує рендер; data-av-done проти повтору).
+// Прогресивна гідрація: після вставки HTML знаходить АВАТАР-КРУЖЕЧКИ (маркер
+// data-av-circle від avatarCircle), підтягує їхні фото і замінює літеру на <img>
+// для тих, у кого фото є. Літера-first → фото-коли-готове (не блокує рендер;
+// data-av-done проти повтору).
+// ВАЖЛИВО: фільтр саме по [data-av-circle], а НЕ по [data-av-uid]. Останній мають
+// також не-аватарні таргети тапу (напр. `.pm-head-titles` — ім'я в шапці чату для
+// відкриття картки профілю); вставка <img> у них давала «квадратне фото» на весь
+// екран, бо в них немає фіксованого розміру/overflow (баг, Вова 17.07).
 export async function hydrateAvatars(root) {
   if (!root || !root.querySelectorAll) return;
-  const els = [...root.querySelectorAll('[data-av-uid]')].filter(e => !e.dataset.avDone);
+  const els = [...root.querySelectorAll('[data-av-circle][data-av-uid]')].filter(e => !e.dataset.avDone);
   if (!els.length) return;
   await fetchAvatars(els.map(e => e.dataset.avUid));
   els.forEach(el => {

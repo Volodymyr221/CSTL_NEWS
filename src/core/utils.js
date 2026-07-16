@@ -38,7 +38,12 @@ export function escapeHtml(s) {
 export function avatarCircle({ name, url, cls = 'pm-avatar', uid = '' } = {}) {
   // Потік 12 Б: data-av-uid — якір для прогресивної заміни літери на фото
   // (hydrateAvatars у supabase.js підтягне чуже фото по uid і замінить innerHTML).
-  const idAttr = uid ? ` data-av-uid="${escapeHtml(String(uid))}"` : '';
+  // data-av-circle — маркер що це СПРАВЖНІЙ аватар-кружечок (фіксованого розміру,
+  // overflow:hidden). Гідрація фото йде ЛИШЕ по ньому: інші елементи-таргети тапу
+  // (напр. контейнер імені `.pm-head-titles`) теж мають data-av-uid для відкриття
+  // картки профілю, але фото в них вставляти НЕ можна — вони без розмірів, тому
+  // <img> розтягувався б на весь екран (баг «квадратне фото», Вова 17.07).
+  const idAttr = uid ? ` data-av-uid="${escapeHtml(String(uid))}" data-av-circle=""` : '';
   const safeUrl = url ? String(url).trim() : '';
   if (safeUrl) {
     return `<span class="${cls} ${cls}--img"${idAttr}><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
