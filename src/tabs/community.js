@@ -362,8 +362,15 @@ function initCenterFocus() {
         if (b.dataset.cf) { b.style.transform = ''; b.classList.remove('cm-block--focus'); delete b.dataset.cf; }
         return;
       }
-      const dist = Math.abs((r.top + r.bottom) / 2 - viewCenter);
-      const t = Math.min(1, dist / (vh * 0.55));    // 0 у центрі → 1 далеко
+      const blockCenter = (r.top + r.bottom) / 2;
+      const dist = Math.abs(blockCenter - viewCenter);
+      // Табло новин (перший блок): піднімаючись ЗНИЗУ до центру — не звужується
+      // (одразу звичайний розмір, Вова 16.07); звужується лише коли пройшло центр
+      // угору (ховається під шапку). Решта блоків — симетрично, як було.
+      // scaleDist керує ЛИШЕ масштабом; справжня dist лишається для детекту фокуса,
+      // щоб табло не «хапало» підсвітку сидячи внизу.
+      const scaleDist = (b.id === 'cm-news-board' && blockCenter > viewCenter) ? 0 : dist;
+      const t = Math.min(1, scaleDist / (vh * 0.55));    // 0 у центрі → 1 далеко
       // Лише масштаб + тінь фокуса. БЕЗ прозорості (виправлення Вови 16.07 —
       // блоки лишаються такими як є, не «вицвітають»).
       b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
