@@ -802,11 +802,16 @@
 .cm-greeting-stickpad { height: 280px; }   /* запас «затримки» перед відпусканням (+33%, Рома 08.07) */
 .cm-greeting {
   /* sticky тримає браузер (композитор), не JS — тому нуль дьоргання на iOS.
-     top:0 = приклеюється до верху скролпорту (одразу під шапкою). */
+     top:0 = приклеюється до верху скролпорту (одразу під шапкою).
+     Flex-рядок (Вова 15.07): текст зліва + кнопка кабінету справа. */
   position: sticky;
   top: 0;
-  padding: 10px 8px 14px;
+  padding: 10px 64px 14px 8px;   /* справа 64px — під ПРИБИТУ кнопку кабінету (.cm-acc-pin) */
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
+.cm-greeting-col { flex: 1; min-width: 0; }   /* min-width:0 — щоб текст міг стискатись */
 .cm-greeting-date {
   font-size: 13px;   /* +17% (було 11px) — рішення Роми 08.07 */
   font-weight: 700;
@@ -814,16 +819,47 @@
   text-transform: uppercase;
   letter-spacing: 1.2px;
   margin-bottom: 4px;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  /* Трьохшарова тінь (Вова 16.07) — глибина/3D як у «ШО В СЕЛІ?». */
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.35),
+    0 2px 5px rgba(0,0,0,0.5),
+    0 6px 16px rgba(0,0,0,0.38);
 }
 .cm-greeting-text {
   font-family: Georgia, 'Times New Roman', serif;
-  font-size: 28px;
+  font-size: 27px;                 /* база; fitGreeting() зменшує до 19px щоб влізло в рядок */
   font-weight: 700;
   line-height: 1.1;
   color: #fff;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  /* Трьохшарова тінь (Вова 16.07) — глибина/3D. */
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.35),
+    0 2px 6px rgba(0,0,0,0.5),
+    0 7px 18px rgba(0,0,0,0.4);
+  white-space: nowrap;             /* ОДИН рядок (Вова 15.07) */
+  overflow: hidden;
 }
+/* Кнопка кабінету біля привітання — скляне коло (як на фото-прикладі Вови) */
+.cm-greet-account {
+  flex-shrink: 0;
+  width: 50px; height: 50px; border-radius: 50%;   /* трохи більша (46→50, Вова 16.07) */
+  display: inline-flex; align-items: center; justify-content: center;
+  color: #fff;
+  background: rgba(255,255,255,0.13);
+  border: 1.5px solid rgba(255,255,255,0.55);
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+  /* Трьохшарова тінь (Вова 16.07) — коло «плаває» над фото з глибиною. */
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.20),
+    0 3px 10px rgba(0,0,0,0.30),
+    0 8px 22px rgba(0,0,0,0.22);
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+  overflow: hidden; padding: 0;
+}
+.cm-greet-account:active { transform: scale(0.94); }
+/* Є фото профілю — мініатюра на всю площу кола (account-ui refreshAccountButtons) */
+.cm-greet-account .account-btn-av { width: 100%; height: 100%; border: 0; }
+.cm-greet-account .account-btn-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* .cm-greeting-sub видалено 08.07 — підзаголовок привітання прибрано (рішення Роми) */
 
 /* Tab-bar — м'якша pill для активного айтема */
@@ -851,52 +887,159 @@
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0;
   right: 0;
-  height: 560px;             /* вітальний банер: показуємо БІЛЬШЕ костелу (Рома 08.07) */
+  bottom: 0;                  /* ФОТО НА ВЕСЬ ЕКРАН (Вова 16.07): заднє тло — лист
+                                 завжди налягає на фото на будь-якій висоті екрана,
+                                 тінь листа читається (раніше 560px обривалось вище). */
   overflow: hidden;
   z-index: 0;                 /* позаду контенту (блоки — z-index:1) */
   background: var(--paper-deep);
   /* Блюр керується інлайн зі скролу (прогресивний, community.js) — без CSS-transition,
      інакше він лагав би за пальцем при пофреймовому оновленні. */
 }
-/* Фрост-підкладка ПІД карткою: площина на всю ширину, ВЕРХ приклеєний до верху
-   верхньої картки, тягнеться вниз до низу героя (top+height задає скрол у
-   community.js). z-index:2 — над картинками (z1/z2), але ПІД оверлеєм «Олика» (z3)
-   і ПІД карткою Табло (герой z0 < картка z1). backdrop-filter розмиває фото під
-   собою; мʼякий ВЕРХНІЙ край (mask) — фрост плавно наростає донизу від краю картки.
-   Рішення Роми 08.07. */
-.cm-hero-blurband {
-  position: absolute;
-  left: 0; right: 0;
-  top: 0;
-  height: 0;
-  opacity: 0;
-  z-index: 2;
-  pointer-events: none;
-  -webkit-backdrop-filter: blur(14px);   /* щільніший фрост (Рома 09.07): 9→14px */
-          backdrop-filter: blur(14px);
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 6%, #000 100%);   /* різкіший верхній край (14%→6%) = смуга виглядає щільнішою */
-          mask-image: linear-gradient(to bottom, transparent 0%, #000 6%, #000 100%);
-}
-/* Низ картинки м'яко переходить у бежевий (колір сторінки) — без різкого краю. */
-.cm-hero::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0; bottom: 0;
-  height: 30px;   /* беж-перехід 90→30 (Рома 09.07): менше «з'їдає» низ фото — костел відкритий майже до верху картки */
-  background: linear-gradient(to bottom, transparent, var(--paper));
-  z-index: 3;
-  pointer-events: none;
-}
+/* Фрост-підкладку (.cm-hero-blurband) і беж-перехід (.cm-hero::after) видалено
+   16.07 (Вова, редизайн «лист»): непрозорий тілесний лист налягає на фото і
+   повністю їх закривав би — фото тепер чисте аж до краю листа. */
 /* Легкий блюр фону при скролі (контент «наїжджає» — картинка стає фоновою). */
 .cm-hero.cm-blur { filter: blur(4px); }
-/* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою.
-   Зменшено з 460 до 180 — бо стик-зона вітання додала 280px у потік (280+180≈460):
-   картки лишаються на тій самій висоті, лише «залипання» вітання подовшало. */
-.cm-hero-spacer { height: 180px; }
+/* Спейсер у потоці: тримає місце під фон, щоб лист стартував під картинкою. */
+.cm-hero-spacer { height: 168px; }
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
 .cm-greeting-stick,
 .cm-block,
 .cm-hero-spacer { position: relative; z-index: 1; }
+
+/* ── ЛИСТ (Вова 16.07, стиль iOS): тілесна картка на всю ширину, що НАЛЯГАЄ
+   на фото — заокруглені верхні кути + двошарова тінь угору (контактний шар +
+   м'який ореол). Містить язичок «ШО В СЕЛІ?» і всі блоки; нижче зливається
+   з бежевим фоном сторінки (той самий колір). ── */
+.cm-sheet {
+  position: relative;
+  z-index: 1;
+  margin: 0 -14px;                 /* на всю ширину екрана (гасить бічний padding #cm-content) */
+  background: var(--paper);
+  border-radius: 24px 24px 0 0;
+  /* Помірна двошарова тінь угору на фото (Вова 16.07: «щоб налягав, але не перебор»). */
+  box-shadow: 0 -5px 12px rgba(15, 5, 7, 0.30), 0 -18px 40px rgba(15, 5, 7, 0.26);
+  padding: 8px 14px 4px;           /* верхні 8px — паперова зона, у яку сідає низ язичка (шов ховається) */
+  display: flex;
+  flex-direction: column;
+  gap: 14px;                       /* той самий ритм між блоками, що був у #cm-content */
+}
+
+/* ── Прибита кнопка кабінету (Вова 16.07: «іконка нікуди не дівається») ──
+   Sticky-обгортка нульової висоти: кнопка висить у правому верхньому куті
+   контенту Громади від старту до кінця скролу. margin-bottom:-14px гасить
+   flex-gap контейнера, щоб нульовий елемент не зсував привітання. */
+.cm-acc-pin {
+  position: sticky;
+  top: 6px;                         /* = стартовій позиції в потоці → кнопка НЕ пливе ні на піксель */
+  z-index: 3;                       /* над «ШО В СЕЛІ?» (2) і блоками (1) */
+  height: 0;
+  margin-bottom: -14px;
+}
+.cm-acc-pin .cm-greet-account { position: absolute; top: 10px; right: 8px; }   /* 12→10: іконка 50px, центр лишається 41px (= центр stuck-фрази) */
+
+/* ── «ШО В СЕЛІ?» (хореографія Вови 16.07, друга ітерація) ──
+   Стоїть на місці підпису фото (під «Олика»), скролиться з контентом БЕЗ зміни
+   розміру; доїхав до місця привітання → sticky призупиняє. --stuck вмикає лише
+   м'який повноширинний блюр під написом (без різких країв — низ розчиняється
+   маскою-градієнтом), блоки ховаються під нього. */
+.cm-sec-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;                       /* над блоками (z-index:1) — вони пірнають ПІД напис */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* Язичок виступає НАД листом на фото (Вова 16.07): від'ємний верхній відступ
+     витягує його вгору; низ пігулки сідає в паперову зону листа (padding-top 8) —
+     той самий колір → шва/ободка знизу немає, одне тіло. */
+  margin: -52px 0 0;
+  padding: 0;
+  text-align: center;
+  transition: background 0.3s ease, padding 0.3s ease, margin 0.3s ease;
+}
+/* Внутрішній контейнер = ЯЗИЧОК: тілесна пігулка, заокруглена лише ЗВЕРХУ, з
+   тінню на фото — випуклий виступ листа (низ плаский, зливається з листом). */
+.cm-sec-head-in {
+  min-width: 0;
+  background: var(--paper);
+  border-radius: 20px 20px 0 0;
+  padding: 9px 22px 6px;
+  box-shadow: 0 -5px 12px rgba(15, 5, 7, 0.34), 0 -14px 30px rgba(15, 5, 7, 0.30);
+  transition: background 0.3s ease, box-shadow 0.3s ease, border-radius 0.3s ease, padding 0.3s ease;
+}
+/* Колір адаптивний: у потоці напис на тілесному язичку → бордовий/темний;
+   призупинився на темному блюрі → білий (плавний перехід кольору). */
+.cm-sec-head h2 {
+  font-size: 19px; font-weight: 800;
+  letter-spacing: 2.2px; text-transform: uppercase;
+  transform: scaleY(1.12);          /* той самий прийом що .bd-title Дошки */
+  color: var(--red, #722F37);
+  /* 3D-emboss (Вова 16.07): світла верхня грань + глибока падаюча тінь — літери
+     «підіймаються» над фоном і не зливаються з ним (замість простого розмиття). */
+  text-shadow:
+    0 1px 0 rgba(255, 250, 245, 0.55),
+    0 2px 4px rgba(35, 12, 16, 0.52),
+    0 7px 18px rgba(35, 12, 16, 0.34);
+  margin: 0 0 4px;
+  white-space: nowrap;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+.cm-sec-head p {
+  font-size: 12.5px; font-weight: 600;
+  color: var(--ink-soft, #8a8a8a);
+  text-shadow: 0 1px 0 rgba(255, 250, 245, 0.4), 0 2px 5px rgba(35, 12, 16, 0.34);
+  margin: 0;
+  transition: color 0.3s ease, text-shadow 0.3s ease;
+}
+/* Призупинилось: легкий блюр на всю ширину, низ м'яко розчиняється (маска).
+   padding-bottom росте, щоб зона розчинення НЕ зачіпала текст. */
+.cm-sec-head--stuck {
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+  background: rgba(30, 16, 18, 0.30);
+  /* padding-top 18: центр фрази = центр прибитої іконки (6+10+50/2 = 41px) — Вова 16.07. */
+  padding-top: 18px;
+  padding-bottom: 26px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+}
+/* У залипанні язичок «розчиняється» в блюр-панелі: пігулка без фону/тіні. */
+.cm-sec-head--stuck .cm-sec-head-in {
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+  padding: 0;
+}
+/* Ті самі 3 шари глибини й у білому стані (Вова 16.07): на білих літерах світла
+   грань не читається, тому верхня грань — тонка ТЕМНА (карбований край), плюс
+   близька і дальня тіні — 3D-об'єм зберігається як у бордовому стані. */
+.cm-sec-head--stuck h2 {
+  color: #fff;
+  text-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.28),
+    0 2px 6px rgba(0, 0, 0, 0.55),
+    0 7px 18px rgba(0, 0, 0, 0.42);
+}
+.cm-sec-head--stuck p {
+  color: rgba(255,255,255,0.88);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.45);
+}
+
+/* Відступ блоків від язичка тепер задає flex-gap листа (.cm-sheet) —
+   окремий margin для #cm-news-board більше не потрібен (16.07, редизайн «лист»). */
+
+/* ── Фокус-скрол блоків (Вова 15.07; 16.07 — без прозорості): scale ставить JS
+   (initCenterFocus, безперервні значення), тут — лише база й тінь фокуса. */
+#cm-content .cm-block {
+  will-change: transform;               /* композитор: scale без reflow */
+  transform-origin: center center;
+  transition: box-shadow 0.25s ease;
+}
+#cm-content .cm-block--focus {
+  box-shadow: 0 10px 30px rgba(40, 25, 10, 0.22);   /* глибша тінь центрального */
+}
 /* Ротатор: 3 фото layered поверх одне одного. Активне opacity:1, інші 0. */
 .cm-hero-img {
   position: absolute;
@@ -904,7 +1047,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center 55%;   /* зсув донизу (Рома 09.07): показати НИЗ костелу до верху картки, менше зрізати знизу */
+  object-position: center 28%;   /* об'єкт (костел) ВГОРІ кадру (Вова 16.07, повноекранне фото) */
   display: block;
   opacity: 0;
   transition: opacity 0.55s cubic-bezier(0.4, 0, 0.2, 1);
@@ -916,11 +1059,12 @@
   inset: 0;
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  /* «Олика»+підпис піднято над бежевим низом (щоб не тонули у бежевому переході). */
-  padding: 14px 16px 70px;   /* верхній текст у кут, «Олика» нижче над картками (Рома 08.07) */
-  /* Затемнення зверху (під вітання) і смуга під «Олика»; низ прозорий — там бежевий перехід. */
-  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0%, transparent 24%, transparent 50%, rgba(0,0,0,0.55) 72%, rgba(0,0,0,0.12) 82%, transparent 90%);
+  justify-content: flex-start;
+  /* Повноекранне фото (Вова 16.07): «Олика» сидить на фіксованій висоті ~430px —
+     трохи вище місця, де лист налягає на фото (лист стартує ~570px від верху). */
+  padding: 430px 16px 0;
+  /* Затемнення: угорі під вітання (0-18%), смуга під «Олика» (~54%); решта чиста. */
+  background: linear-gradient(to bottom, rgba(0,0,0,0.42) 0px, transparent 130px, transparent 380px, rgba(0,0,0,0.42) 470px, transparent 560px);
   color: white;
   z-index: 3;
   pointer-events: none;
@@ -933,10 +1077,15 @@
   margin: 0;
   text-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
+/* Підпис фотографії (Вова 16.07): оформлений САМЕ як підпис — дрібний курсив
+   тим самим serif-шрифтом що заголовок, приглушений. */
 .cm-hero-sub {
-  font-size: 13px;
-  margin-top: 4px;
-  opacity: 0.9;
+  font-size: 12.5px;
+  font-family: Georgia, 'Times New Roman', serif;
+  font-style: italic;
+  letter-spacing: 0.3px;
+  margin-top: 3px;
+  opacity: 0.85;
   text-shadow: 0 1px 3px rgba(0,0,0,0.5);
 }
 /* Точки-індикатори hero прибрано 08.07 (рішення Роми): лише авто-слайдшоу,

@@ -672,7 +672,7 @@
 
 /* Лайтбокс фото (поверх чату) */
 .pm-lightbox {
-  position: fixed; inset: 0; z-index: 2600;
+  position: fixed; inset: 0; z-index: 3600;   /* фото на весь екран — вище картки профілю (3500) і всіх сторінок */
   background: rgba(0,0,0,0.92);
   display: flex; align-items: center; justify-content: center;
   animation: pm-fade-in 0.18s ease;

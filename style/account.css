@@ -175,7 +175,7 @@
   padding: calc(12px + env(safe-area-inset-top, 0px)) 16px 12px;
 }
 .acc-cab-back { background: none; border: 0; color: #fff; font-size: 24px; line-height: 1; cursor: pointer; padding: 0 4px; }
-.acc-cab-top b { font-size: 17px; font-weight: 800; }
+.acc-cab-top b { font-size: 17px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px; }
 .acc-cab-scroll { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding-bottom: calc(30px + env(safe-area-inset-bottom, 0px)); }
 
 .acc-cab-hero {
@@ -183,88 +183,127 @@
   color: #fff;
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 22px 16px 20px;
+  gap: 18px;
+  padding: 26px 20px 26px;
 }
 /* Аватар кабінету (Потік 12): обгортка з кнопкою камери в кутку */
 .acc-cab-avwrap { position: relative; flex-shrink: 0; }
 .acc-cab-av {
-  width: 72px; height: 72px; border-radius: 50%;
+  width: 88px; height: 88px; border-radius: 50%;
   background: rgba(255,255,255,0.15);
   display: flex; align-items: center; justify-content: center;
-  font-size: 30px; flex-shrink: 0; overflow: hidden;
+  font-size: 36px; flex-shrink: 0; overflow: hidden;
+  box-shadow: 0 6px 18px rgba(0,0,0,0.22);
 }
 /* Спільний кружечок-аватар (utils.avatarCircle, cls=acc-av) — фото на всю площу */
 .acc-av { width: 100%; height: 100%; border-radius: 50%; display: flex; align-items: center;
-  justify-content: center; color: #fff; font-weight: 700; font-size: 30px; overflow: hidden; }
+  justify-content: center; color: #fff; font-weight: 700; font-size: 36px; overflow: hidden; }
 .acc-av--img img, .acc-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .acc-cab-av.acc-av--loading { opacity: 0.5; }
 .acc-cab-avcam {
-  position: absolute; right: -2px; bottom: -2px;
-  width: 28px; height: 28px; border-radius: 50%;
+  position: absolute; right: 0; bottom: 0;
+  width: 30px; height: 30px; border-radius: 50%;
   background: #fff; color: var(--red, #722F37);
-  border: 2px solid #5c252c;
+  border: 2.5px solid #5c252c;
   display: inline-flex; align-items: center; justify-content: center;
   cursor: pointer; -webkit-tap-highlight-color: transparent;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
-.acc-cab-avcam svg { width: 15px; height: 15px; }
+.acc-cab-avcam svg { width: 16px; height: 16px; }
 .acc-cab-avcam:disabled { opacity: 0.6; }
 /* Мініатюра аватара в кнопці шапки */
 .account-btn--av { padding: 0; }
 .account-btn-av { display: inline-flex; width: 28px; height: 28px; border-radius: 50%;
   overflow: hidden; border: 1.5px solid var(--red, #722F37); }
 .account-btn-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.acc-cab-name { font-size: 21px; font-weight: 800; }
-.acc-cab-email { font-size: 13px; opacity: 0.85; }
-.acc-cab-place { font-size: 12px; opacity: 0.72; margin-top: 3px; }
+.acc-cab-hi { min-width: 0; }
+.acc-cab-name { font-size: 24px; font-weight: 800; letter-spacing: -0.2px; line-height: 1.15; }
+.acc-cab-email { font-size: 14px; opacity: 0.82; margin-top: 3px; word-break: break-all; }
+.acc-cab-place { font-size: 12.5px; opacity: 0.68; margin-top: 2px; }
 .acc-cab-trust {
-  display: inline-block;
-  margin-top: 8px;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 11px;
-  font-weight: 600;
-  background: rgba(255,255,255,0.15);
+  display: inline-flex; align-items: center; gap: 5px;
+  margin-top: 11px;
+  padding: 6px 12px;
+  border-radius: 22px;
+  font-size: 12px;
+  font-weight: 600; line-height: 1.3;
+  background: rgba(255,255,255,0.16);
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
 }
-.acc-cab-trust--on { background: rgba(76,175,80,0.35); }
+.acc-cab-trust svg { flex-shrink: 0; }
+.acc-cab-trust--on { background: rgba(76,175,80,0.32); }
 
 .acc-cab-sec {
-  margin: 14px 12px;
+  margin: 16px 14px;
   background: var(--card-cream, #FAF8EF);
-  border-radius: 16px;
-  padding: 4px 4px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+  border-radius: 20px;
+  padding: 6px 0;
+  box-shadow: 0 2px 14px rgba(0,0,0,0.05);
 }
 .acc-cab-sec h3 {
-  font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.6px;
-  color: var(--ink-soft, #6b6b6b); padding: 12px 14px 6px;
+  font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.7px;
+  color: var(--ink-soft, #8a8a8a); padding: 12px 18px 8px;
 }
-.acc-f { display: flex; flex-direction: column; gap: 4px; padding: 9px 14px; border-bottom: 1px solid rgba(0,0,0,0.05); }
-.acc-f:last-child { border-bottom: 0; }
-.acc-f span { font-size: 11.5px; color: var(--ink-soft, #6b6b6b); font-weight: 600; }
+/* Рядок анкети (iOS-Settings): плитка-іконка · підпис+поле · декоративна стрілка.
+   Роздільник — тонка лінія з відступом під текст (left=padding16+icon36+gap13). */
+.acc-f {
+  position: relative;
+  display: flex; align-items: center; gap: 13px;
+  padding: 13px 16px;
+}
+.acc-f:not(:last-child)::after {
+  content: ''; position: absolute; left: 65px; right: 16px; bottom: 0;
+  height: 1px; background: rgba(0,0,0,0.06);
+}
+.acc-f-ic {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(114,47,55,0.08); color: var(--red, #722F37);
+  font-size: 19px;
+}
+.acc-f-body { display: flex; flex-direction: column; gap: 1px; min-width: 0; flex: 1; }
+.acc-f-lbl { font-size: 12px; color: var(--ink-soft, #8a8a8a); font-weight: 600; }
 .acc-f input, .acc-f select, .acc-f textarea {
-  font: inherit; font-size: 15.5px; color: var(--ink, #2b2b2b);
-  border: 0; background: transparent; outline: none; padding: 2px 0; width: 100%;
+  font: inherit; font-size: 16px; color: var(--ink, #2b2b2b);
+  border: 0; background: transparent; outline: none; padding: 1px 0; width: 100%;
   -webkit-appearance: none; appearance: none;
 }
 .acc-f textarea { resize: none; line-height: 1.4; }
-.acc-cab-save {
-  display: block; margin: 4px 12px 8px; width: calc(100% - 24px);
-  background: var(--red, #722F37); color: #fff; border: 0;
-  padding: 14px; border-radius: 14px; font-weight: 800; font-size: 15px; cursor: pointer;
-}
-.acc-cab-save:disabled { opacity: 0.6; }
+/* Нативний глиф пікера дати ховаємо (стрілка ›=акцент); клік-зона лишається — пікер відкривається */
+.acc-f input[type="date"]::-webkit-calendar-picker-indicator { opacity: 0; }
+.acc-f-chev { flex-shrink: 0; color: #c4bdb2; font-size: 18px; display: inline-flex; align-items: center; }
 
-.acc-cab-sec--rows { padding: 4px 0; }
-.acc-cab-row {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  padding: 14px; border: 0; background: transparent;
-  font: inherit; font-size: 15.5px; font-weight: 600; color: var(--ink, #2b2b2b);
-  text-align: left; cursor: pointer; border-bottom: 1px solid rgba(0,0,0,0.05);
+.acc-cab-save {
+  display: block; margin: 10px 14px 12px; width: calc(100% - 28px);
+  background: var(--red, #722F37); color: #fff; border: 0;
+  height: 52px; padding: 0; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer;
+  box-shadow: 0 4px 14px rgba(114,47,55,0.26);
 }
-.acc-cab-row:last-child { border-bottom: 0; }
-.acc-cab-row > span:first-child { font-size: 19px; width: 24px; text-align: center; flex-shrink: 0; }
-.acc-cab-row i { margin-left: auto; color: #bbb; font-style: normal; font-size: 20px; }
+.acc-cab-save:active { opacity: 0.92; }
+.acc-cab-save:disabled { opacity: 0.6; box-shadow: none; }
+
+.acc-cab-sec--rows { padding: 6px 0; }
+.acc-cab-row {
+  position: relative;
+  display: flex; align-items: center; gap: 13px; width: 100%;
+  padding: 13px 16px; border: 0; background: transparent;
+  font: inherit; color: var(--ink, #2b2b2b);
+  text-align: left; cursor: pointer;
+}
+.acc-cab-row:not(:last-child)::after {
+  content: ''; position: absolute; left: 65px; right: 16px; bottom: 0;
+  height: 1px; background: rgba(0,0,0,0.06);
+}
+.acc-cab-row-ic {
+  flex-shrink: 0; width: 36px; height: 36px; border-radius: 10px;
+  display: inline-flex; align-items: center; justify-content: center;
+  background: rgba(114,47,55,0.08); color: var(--red, #722F37);
+  font-size: 19px;
+}
+.acc-cab-row-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; flex: 1; }
+.acc-cab-row-name { font-size: 16px; font-weight: 600; color: var(--ink, #2b2b2b); }
+.acc-cab-row-desc { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); line-height: 1.3; }
+.acc-cab-row i { flex-shrink: 0; color: #c4bdb2; font-style: normal; font-size: 18px; display: inline-flex; align-items: center; }
 .acc-cab-row--tog { cursor: default; }
 .acc-tog {
   margin-left: auto; width: 42px; height: 26px; border-radius: 20px;
@@ -372,3 +411,59 @@
   text-align: center; color: var(--gray, #777); padding: 18px 8px;
   font-size: 13px; line-height: 1.5; border-top: 1px solid var(--border, #eee); margin-top: 8px;
 }
+
+/* =============================================================
+   КАРТКА ПРОФІЛЮ (тап по аватару) + меню камери в Кабінеті
+   ============================================================= */
+.pcard {
+  display: flex; flex-direction: column; align-items: center; gap: 9px;
+  text-align: center; padding: 6px 20px 8px;
+}
+.pcard-avwrap { border-radius: 50%; line-height: 0; }
+.pcard-av {
+  width: 120px; height: 120px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 48px; font-weight: 700; color: #fff; overflow: hidden;
+  box-shadow: 0 6px 20px rgba(0,0,0,0.16);
+}
+.pcard-av--img img, .pcard-av img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pcard-name { font-size: 20px; font-weight: 800; color: var(--ink, #2b2b2b); }
+/* Мета-лінія: 📍громада · N років */
+.pcard-meta {
+  display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center;
+  font-size: 14px; color: var(--ink-soft, #8a8a8a);
+}
+.pcard-meta svg { font-size: 16px; color: var(--red, #722F37); }
+.pcard-dot { opacity: 0.5; }
+.pcard-badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12.5px; font-weight: 700; color: #2E7D46;
+  background: rgba(76,175,80,0.14); padding: 5px 12px; border-radius: 20px;
+}
+/* «Про себе» — м'який блок (лише коли є текст) */
+.pcard-bio {
+  align-self: stretch; text-align: left;
+  background: rgba(0,0,0,0.03); border-radius: 12px; padding: 12px 14px; margin-top: 2px;
+}
+.pcard-bio-h {
+  display: block; font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.6px; color: var(--ink-soft, #8a8a8a); margin-bottom: 5px;
+}
+.pcard-bio p {
+  margin: 0; font-size: 14px; line-height: 1.5; color: var(--ink, #2b2b2b);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.pcard-since { font-size: 12.5px; color: var(--ink-soft, #8a8a8a); margin-top: 2px; }
+
+/* Меню камери (Кабінет): «Змінити фото / Видалити фото» */
+.acc-avmenu { display: flex; flex-direction: column; gap: 2px; padding: 2px 0; }
+.acc-avmenu-item {
+  display: flex; align-items: center; gap: 12px; width: 100%;
+  padding: 15px 16px; border: 0; background: transparent;
+  font: inherit; font-size: 16px; font-weight: 600; color: var(--ink, #2b2b2b);
+  text-align: left; cursor: pointer; border-radius: 12px;
+  -webkit-tap-highlight-color: transparent;
+}
+.acc-avmenu-item svg { font-size: 20px; color: var(--red, #722F37); }
+.acc-avmenu-item:active { background: rgba(0,0,0,0.05); }
+.acc-avmenu-item--danger, .acc-avmenu-item--danger svg { color: #C0392B; }

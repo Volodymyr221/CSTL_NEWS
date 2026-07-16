@@ -32,7 +32,7 @@ import {
 } from '../core/supabase.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
-import { escapeHtml, showToast, postTime, containsProfanity } from '../core/utils.js';
+import { escapeHtml, showToast, postTime, containsProfanity, openPhotoLightbox } from '../core/utils.js';
 import {
   ACT_ICONS, buildScreen, avatar, clockTime, dayLabel, threadListTime,
   setupKeyboardResize, setupBubbleGestures,
@@ -89,7 +89,7 @@ export async function openChat(thread, post) {
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
       ${avatar(partner, otherUid(thread))}
-      <div class="pm-head-titles">
+      <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
         <div class="pm-head-name">${escapeHtml(partner)}</div>
       </div>
     </header>
@@ -156,14 +156,8 @@ export async function openChat(thread, post) {
   const startReply = (m) => { editing = null; replyTo = m; showCompose('reply', m); input.focus(); };
   const startEdit  = (m) => { replyTo = null; editing = m; showCompose('edit', m); input.value = m.text || ''; input.focus(); };
 
-  // Перегляд фото на повний екран (локальний лайтбокс — поверх чату)
-  const openPhoto = (url) => {
-    const ov = document.createElement('div');
-    ov.className = 'pm-lightbox';
-    ov.innerHTML = `<img src="${escapeHtml(url)}" alt="фото">`;
-    ov.addEventListener('click', () => ov.remove());
-    document.body.appendChild(ov);
-  };
+  // Перегляд фото на повний екран — спільний lightbox (utils.openPhotoLightbox).
+  const openPhoto = openPhotoLightbox;
 
   // Рендер однієї бульбашки (цитата відповіді + фото + текст + час; видалене/редаговане)
   const renderBubble = (m) => {

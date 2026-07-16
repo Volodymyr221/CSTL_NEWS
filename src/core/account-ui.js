@@ -19,20 +19,24 @@ import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } fr
 
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
 
-// ── Іконка в шапці ──────────────────────────────────────────────
-function updateHeaderBtn() {
-  const btn = document.getElementById('account-btn');
-  if (!btn) return;
-  if (!btn.dataset.defaultHtml) btn.dataset.defaultHtml = btn.innerHTML;   // зберегти дефолтну SVG-іконку
+// ── Кнопки входу в кабінет ([data-account-btn]) ─────────────────
+// Раніше була одна #account-btn у шапці; тепер кнопка живе біля привітання на
+// Громаді (рішення Вови 15.07), а механізм узагальнено: оновлюємо ВСІ кнопки
+// з атрибутом data-account-btn (кожна тримає свою дефолтну іконку в dataset).
+export function refreshAccountButtons() {
   const av = isLoggedIn() ? currentAvatarUrl() : '';
-  // Є фото профілю → мініатюра-кружечок; інакше — дефолтна іконка користувача.
-  btn.innerHTML = av
-    ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>`
-    : btn.dataset.defaultHtml;
-  btn.classList.toggle('account-btn--in', isLoggedIn());
-  btn.classList.toggle('account-btn--av', !!av);
-  btn.setAttribute('aria-label', isLoggedIn() ? 'Кабінет жителя' : 'Увійти');
+  document.querySelectorAll('[data-account-btn]').forEach(btn => {
+    if (!btn.dataset.defaultHtml) btn.dataset.defaultHtml = btn.innerHTML;   // зберегти дефолтну SVG-іконку
+    // Є фото профілю → мініатюра-кружечок; інакше — дефолтна іконка користувача.
+    btn.innerHTML = av
+      ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>`
+      : btn.dataset.defaultHtml;
+    btn.classList.toggle('account-btn--in', isLoggedIn());
+    btn.classList.toggle('account-btn--av', !!av);
+    btn.setAttribute('aria-label', isLoggedIn() ? 'Кабінет жителя' : 'Увійти');
+  });
 }
+const updateHeaderBtn = refreshAccountButtons;   // внутрішні виклики нижче — як були
 
 // ── Базова модалка (центрована картка) — тонка обгортка над спільним примітивом
 // core/modal.js (Потік C1). Власна сигнатура openModal(innerHtml) → DOM-елемент
@@ -143,6 +147,22 @@ async function openAccount() {
     ? `<div class="acc-cab-trust acc-cab-trust--on">${ICONS.check} Довірений автор — оголошення публікуються одразу</div>`
     : `<div class="acc-cab-trust">${ICONS.star} ${p.approved_count || 0}/5 схвалень до автопублікації</div>`;
 
+  // Рядок анкети (iOS-Settings): плитка-іконка · підпис+поле (inline-редагування)
+  // · декоративна вектор-стрілка. Обгортка — <label>, тож тап у рядок фокусує поле.
+  const field = (ic, label, control) => `
+    <label class="acc-f">
+      <span class="acc-f-ic">${ic}</span>
+      <span class="acc-f-body"><span class="acc-f-lbl">${label}</span>${control}</span>
+      <i class="acc-f-chev">${ICONS.chevronRight}</i>
+    </label>`;
+  // Рядок-навігація блоку «Моє»: іконка-плитка · назва+опис · стрілка.
+  const navRow = (go, ic, name, desc) => `
+    <button class="acc-cab-row" data-go="${go}" type="button">
+      <span class="acc-cab-row-ic">${ic}</span>
+      <span class="acc-cab-row-body"><span class="acc-cab-row-name">${name}</span><span class="acc-cab-row-desc">${desc}</span></span>
+      <i>${ICONS.chevronRight}</i>
+    </button>`;
+
   const cab = document.createElement('div');
   cab.id = 'acc-cab';
   cab.className = 'acc-cab';
@@ -168,33 +188,32 @@ async function openAccount() {
 
       <div class="acc-cab-sec">
         <h3>Мої дані</h3>
-        <label class="acc-f"><span>Ім'я</span><input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="Ваше ім'я"></label>
-        <label class="acc-f"><span>Прізвище</span><input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="Прізвище"></label>
-        <label class="acc-f"><span>Дата народження</span><input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}"></label>
-        <label class="acc-f"><span>Телефон (для оголошень)</span><input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380…"></label>
-        <label class="acc-f"><span>Населений пункт</span>
-          <select id="cf-settlement">
+        ${field(ICONS.user, "Ім'я", `<input id="cf-name" type="text" value="${escapeHtml(val.name)}" placeholder="Ваше ім'я">`)}
+        ${field(ICONS.clipboard, 'Прізвище', `<input id="cf-surname" type="text" value="${escapeHtml(val.surname)}" placeholder="Прізвище">`)}
+        ${field(ICONS.calendar, 'Дата народження', `<input id="cf-bdate" type="date" max="${today}" value="${escapeHtml(val.birth_date)}">`)}
+        ${field(ICONS.phone, 'Телефон (для оголошень)', `<input id="cf-phone" type="tel" value="${escapeHtml(val.phone)}" placeholder="+380…">`)}
+        ${field(ICONS.pin, 'Населений пункт', `<select id="cf-settlement">
             <option value="">— оберіть —</option>
             ${[...SETTLEMENTS, OTHER_SETTLEMENT].map(s => `<option ${val.settlement === s ? 'selected' : ''}>${s}</option>`).join('')}
-          </select>
-        </label>
-        <label class="acc-f"><span>Вулиця (необов'язково)</span><input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="напр. вул. Замкова"></label>
-        <label class="acc-f"><span>Про себе</span><textarea id="cf-bio" rows="2" placeholder="Кілька слів…">${escapeHtml(val.bio)}</textarea></label>
+          </select>`)}
+        ${field(ICONS.home, "Вулиця (необов'язково)", `<input id="cf-street" type="text" value="${escapeHtml(val.street)}" placeholder="напр. вул. Замкова">`)}
+        ${field(ICONS.fileText, 'Про себе', `<textarea id="cf-bio" rows="2" placeholder="Кілька слів…">${escapeHtml(val.bio)}</textarea>`)}
       </div>
       <button class="acc-cab-save" type="button" id="cf-save">Зберегти анкету</button>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>Моє</h3>
-        <button class="acc-cab-row" data-go="myads" type="button"><span>${ICONS.megaphone}</span> Мої оголошення <i>›</i></button>
-        <button class="acc-cab-row" data-go="saved" type="button"><span>${ICONS.bookmark}</span> Збережені <i>›</i></button>
-        <button class="acc-cab-row" data-go="msgs" type="button"><span>${ICONS.message}</span> Повідомлення <i>›</i></button>
+        ${navRow('myads', ICONS.megaphone, 'Мої оголошення', 'Перегляд і керування вашими оголошеннями')}
+        ${navRow('saved', ICONS.bookmark, 'Збережені', 'Оголошення й статті, які ви зберегли')}
+        ${navRow('msgs', ICONS.message, 'Повідомлення', 'Особисті чати з іншими жителями')}
       </div>
 
       <div class="acc-cab-sec acc-cab-sec--rows">
         <h3>Сповіщення</h3>
         ${NOTIF_KEYS.map(n => `
           <div class="acc-cab-row acc-cab-row--tog">
-            <span>${n.ic}</span> ${n.label}
+            <span class="acc-cab-row-ic">${n.ic}</span>
+            <span class="acc-cab-row-body"><span class="acc-cab-row-name">${n.label}</span></span>
             <button class="acc-tog${prefs[n.k] ? '' : ' off'}" data-notif="${n.k}" type="button" aria-label="${n.label}"></button>
           </div>`).join('')}
       </div>
@@ -211,7 +230,37 @@ async function openAccount() {
   const avBtn = cab.querySelector('#acc-av-btn');
   const avFile = cab.querySelector('#acc-av-file');
   const avBox = cab.querySelector('#acc-hero-av');
-  avBtn.addEventListener('click', () => avFile.click());
+  // Видалити своє фото → avatar_url:null, показати літеру-fallback скрізь.
+  const removeAvatar = async () => {
+    avBtn.disabled = true; avBox.classList.add('acc-av--loading');
+    try {
+      const res = await saveProfile({ avatar_url: null });
+      if (!res.ok) throw new Error(res.error || 'save');
+      val.avatar_url = '';
+      avBox.innerHTML = avatarCircle({ name: cab.querySelector('#acc-hero-name').textContent, url: '', cls: 'acc-av' });
+      updateHeaderBtn();                        // шапка → назад на дефолтну іконку
+      showToast('Фото видалено', 2200);
+    } catch (err) {
+      showToast('Не вдалося видалити фото: ' + err.message, 4000, 'error');
+    } finally {
+      avBtn.disabled = false; avBox.classList.remove('acc-av--loading');
+    }
+  };
+  // Меню камери: нема фото → одразу вибір файлу; є фото → «Змінити / Видалити».
+  avBtn.addEventListener('click', () => {
+    if (!val.avatar_url) { avFile.click(); return; }
+    const menu = openModalPrimitive({
+      variant: 'sheet',
+      className: 'app-modal--top',   // поверх екрана кабінету (3100), інакше ховається під ним
+      bodyHtml: `
+        <div class="acc-avmenu">
+          <button type="button" class="acc-avmenu-item" data-av-act="change">${ICONS.photo} Змінити фото</button>
+          <button type="button" class="acc-avmenu-item acc-avmenu-item--danger" data-av-act="remove">${ICONS.trash} Видалити фото</button>
+        </div>`,
+    });
+    menu.el.querySelector('[data-av-act="change"]').addEventListener('click', () => { closeModalPrimitive(); avFile.click(); });
+    menu.el.querySelector('[data-av-act="remove"]').addEventListener('click', () => { closeModalPrimitive(); removeAvatar(); });
+  });
   avFile.addEventListener('change', async () => {
     const file = avFile.files && avFile.files[0];
     avFile.value = '';                         // дозволити повторний вибір того ж файлу
@@ -289,11 +338,11 @@ function onHeaderClick() {
 
 // ── Ініціалізація (викликається з app.js) ────────────────────────
 export function initAccountUI() {
-  const btn = document.getElementById('account-btn');
-  if (btn && !btn.dataset.wired) {
-    btn.dataset.wired = '1';
-    btn.addEventListener('click', onHeaderClick);
-  }
+  // Делегований клік: будь-яка кнопка [data-account-btn] (зараз — біля привітання
+  // на Громаді; рендериться в community.js ПІСЛЯ цього init, делегування це покриває).
+  document.addEventListener('click', (e) => {
+    if (e.target.closest('[data-account-btn]')) onHeaderClick();
+  });
   updateHeaderBtn();
 
   // Контекстний гейт: requireAuth() для гостя кидає цю подію → відкриваємо вхід.

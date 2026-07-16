@@ -9,6 +9,7 @@
 
 import { escapeHtml, sunTimes } from '../core/utils.js';
 import { isLoggedIn, currentUserName, onAuthChange } from '../core/auth.js';
+import { refreshAccountButtons } from '../core/account-ui.js';
 import {
   renderWeatherBlock,
   renderPowerBlock,
@@ -115,6 +116,23 @@ function getGreeting() {
 function updateGreetingName() {
   const el = document.querySelector('.cm-greeting-text');
   if (el) el.textContent = getGreeting().text;
+  fitGreeting();
+}
+
+// Привітання — ОДИН рядок (рішення Вови 15.07): міряємо реальну ширину тексту
+// і зменшуємо шрифт від базового до мінімуму, поки не влізе (nowrap у CSS).
+// Мінімум 19px — «щоб не здавалось маленьким»; довші імена все одно влазять.
+const GREET_FONT_MAX = 27, GREET_FONT_MIN = 19;
+function fitGreeting() {
+  const el = document.querySelector('.cm-greeting-text');
+  if (!el) return;
+  let size = GREET_FONT_MAX;
+  el.style.fontSize = size + 'px';
+  // scrollWidth > clientWidth = текст обрізається → крок униз на 1px.
+  while (size > GREET_FONT_MIN && el.scrollWidth > el.clientWidth) {
+    size -= 1;
+    el.style.fontSize = size + 'px';
+  }
 }
 
 function formatTodayHeader() {
@@ -134,14 +152,26 @@ function renderSkeleton() {
   const todayStr = formatTodayHeader();
 
   el.innerHTML = `
+    <!-- Кнопка кабінету — ПРИБИТА (хореографія Вови 16.07: «іконка нікуди не
+         дівається»). Окремий sticky-елемент нульової висоти: кнопка стоїть у
+         правому верхньому куті контенту від старту до кінця скролу — привітання
+         їде геть, «ШО В СЕЛІ?» приїжджає, а вона на місці. -->
+    <div class="cm-acc-pin">
+      <button class="cm-greet-account" type="button" data-account-btn aria-label="Кабінет">
+        <svg viewBox="0 0 24 24" width="26" height="26" fill="currentColor" aria-hidden="true"><circle cx="12" cy="7.6" r="4.2"/><path d="M12 13.6c-4.5 0-8.2 2.9-8.2 6.6 0 .9.7 1.6 1.6 1.6h13.2c.9 0 1.6-.7 1.6-1.6 0-3.7-3.7-6.6-8.2-6.6z"/></svg>
+      </button>
+    </div>
+
     <!-- Стик-зона вітання: висота = вітання + запас «залипання» (padding-bottom).
          .cm-greeting всередині — position:sticky, тому браузер тримає його
          на КОМПОЗИТОРІ (без JS-скролу) → нуль дьоргання на iOS. Коли зона
          дозникає (проскролили padding-bottom) — вітання відпускається й їде вгору. -->
     <div class="cm-greeting-stick">
       <section class="cm-greeting">
-        <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
-        <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+        <div class="cm-greeting-col">
+          <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
+          <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
+        </div>
       </section>
       <!-- Розпірка запасу «залипання»: РЕАЛЬНИЙ блок (не padding!) — інакше
            sticky у Chromium не тримає (padding контейнера не рахується у діапазон
@@ -151,16 +181,31 @@ function renderSkeleton() {
 
     <section class="cm-hero">
       ${heroImgsHtml()}
-      <!-- Смуга блюру: прикріплена до НИЗУ героя, росте вгору разом із верхом
-           верхньої картки при скролі (community.js). Низ мутніє, верх лишається
-           чіткий — блюр «слідкує» за карткою (рішення Роми 08.07). -->
-      <div class="cm-hero-blurband" aria-hidden="true"></div>
+      <!-- Фрост-смугу (.cm-hero-blurband) прибрано 16.07 (Вова, редизайн «лист»):
+           непрозорий тілесний лист налягає на фото і повністю її закриває. -->
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
+        <!-- Підпис фото повернено 16.07 (Вова) — оформлений як підпис фотографії
+             (курсив, дрібний). «ШО В СЕЛІ?» живе окремо нижче (cm-sec-head). -->
         <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
+
+    <!-- ЛИСТ (Вова 16.07, редизайн «як сучасний iOS-додаток»): тілесна картка
+         на всю ширину, що НАЛЯГАЄ на фото (заокруглені верхні кути + глибока тінь
+         угору). Усередині — язичок «ШО В СЕЛІ?» (випуклий виступ листа на фото)
+         і всі блоки. Хореографія збережена: sec-head sticky → доїжджає до шапки,
+         залипає і стає блюр-панеллю (--stuck), блоки пірнають під неї.
+         Кнопки кабінету тут НЕМА — вона окремо прибита (.cm-acc-pin). -->
+    <div class="cm-sheet">
+    <div id="cm-sec-sentinel" aria-hidden="true"></div>
+    <header class="cm-sec-head" id="cm-sec-head">
+      <div class="cm-sec-head-in">
+        <h2>ШО В СЕЛІ?</h2>
+        <p>Ось що головне у нас сьогодні</p>
+      </div>
+    </header>
 
     <!-- Порядок блоків (рішення Роми 08.07):
          Табло новин → Дошка → Найближча подія → Автобуси → Погода → Контакти. -->
@@ -221,62 +266,91 @@ function renderSkeleton() {
       </header>
       <div id="cm-contacts-content" class="cm-block-body cm-contacts-body cm-loading">Завантаження…</div>
     </section>
+    </div><!-- /.cm-sheet -->
   `;
 }
 
 // ── Точка входу ──────────────────────────────────────────────────────────────
 
 let _greetingWired = false;
-let _heroBlurWired = false;
-// Блюр = ФРОСТ-ПІДКЛАДКА ПІД карткою (рішення Роми 08.07): площина розмиття на всю
-// ширину, що лежить НИЖЧИМ шаром за Табло (герой z0 < картка z1). Її ВЕРХ приклеєний
-// до верху верхньої картки, а сама площина тягнеться ВНИЗ до низу героя. Верх фото
-// (над карткою) лишається чіткий; усе від верху картки і нижче — розмите. Картка
-// «левітує» над матовою підкладкою, і та їде за карткою при скролі.
-// Вітання НЕ рухаємо з JS — «залипання» тримає CSS position:sticky
-// (.cm-greeting-stick), тому воно на композиторі й не дьоргається на iOS.
-function wireHeroBlur() {
-  if (_heroBlurWired) return;
+// Фрост-підкладку (wireHeroBlur, рішення Роми 08.07) видалено 16.07 (Вова,
+// редизайн «лист»): непрозорий тілесний лист налягає на фото і повністю закривав
+// би площину блюру — backdrop-filter працював би даремно (батарея/GPU).
+
+// ── Фокус-скрол «ШО В СЕЛІ?» (Вова 15.07) ────────────────────────────────────
+// Блок, чий центр ближче до центру екрана, — повний розмір + глибша тінь;
+// сусіди делікатно менші (−5%) і трохи прозоріші. Безперервне відображення від
+// відстані до центру (не перемикач) → блоки плавно «дихають» при скролі.
+// Лише transform+opacity (композитор, нуль reflow); рахунок — один кадр на скрол
+// (rAF-guard, passive). Вимикається при prefers-reduced-motion (доступність).
+let _focusWired = false;
+function initCenterFocus() {
+  if (_focusWired) return;
   const main = document.querySelector('.app-main');
   if (!main) return;
-  _heroBlurWired = true;
-  let ticking = false;
-  // Кеш елементів (щоб не шукати щоразу — стабільніше й швидше).
-  let hero, band, block;
-  const cache = () => {
-    hero = document.querySelector('.cm-hero');
-    band = hero && hero.querySelector('.cm-hero-blurband');
-    block = document.getElementById('cm-news-board');
-  };
-  const onScroll = () => {
-    if (ticking) return;
-    ticking = true;
-    requestAnimationFrame(() => {
-      ticking = false;
-      if (!hero || !band || !block) cache();
-      if (!hero || !band || !block) return;
-      // Усе в локальних координатах героя (він fixed): C — де зараз верх картки.
-      const heroTop = hero.getBoundingClientRect().top;
-      const heroH   = hero.offsetHeight;
-      const C = block.getBoundingClientRect().top - heroTop;   // верх картки в системі героя
-      // ВЕРХ підкладки = верх картки; тягнеться ВНИЗ до низу героя. Картка (z1) зверху
-      // перекриває підкладку (герой z0) — блюр видно навколо/під карткою.
-      const top = Math.max(0, Math.min(heroH, C));
-      const h = heroH - top;
-      band.style.top = top + 'px';
-      band.style.height = h + 'px';
-      band.style.opacity = h > 2 ? '1' : '0';
+  // Фокус-масштаб — це РУХ (вимикаємо при reduced-motion); прилипання заголовка
+  // «ШО В СЕЛІ?» — стан розмітки (скляний фон = читабельність) — працює завжди.
+  const allowMotion = !(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  _focusWired = true;
+
+  let raf = null;
+  const apply = () => {
+    raf = null;
+    if (main.dataset.tab !== 'community') return;   // ефект лише на Громаді
+    const vh = main.clientHeight;
+    const viewCenter = vh / 2;
+
+    // «ШО В СЕЛІ?» прилип? Детект через вартового (сусідній маркер у потоці):
+    // у спокої розрив = flex-gap контейнера (між УСІМА дітьми #cm-content);
+    // sticky відірвав панель — розрив стає більшим за gap → --stuck.
+    // Порівнюємо з живим значенням gap (не магічне число: зміниться дизайн — переживе).
+    const sec = document.getElementById('cm-sec-head');
+    const sent = document.getElementById('cm-sec-sentinel');
+    if (sec && sent) {
+      const flexGap = parseFloat(getComputedStyle(sent.parentElement).rowGap) || 0;
+      const gap = sec.getBoundingClientRect().top - sent.getBoundingClientRect().bottom;
+      sec.classList.toggle('cm-sec-head--stuck', gap > flexGap + 2);
+    }
+    if (!allowMotion) return;
+    let best = null, bestDist = Infinity;
+    document.querySelectorAll('#cm-content .cm-block').forEach(b => {
+      const r = b.getBoundingClientRect();
+      // Блок повністю поза екраном — скидаємо стилі й не рахуємо далі.
+      if (r.bottom < -80 || r.top > vh + 80) {
+        if (b.dataset.cf) { b.style.transform = ''; b.classList.remove('cm-block--focus'); delete b.dataset.cf; }
+        return;
+      }
+      const blockCenter = (r.top + r.bottom) / 2;
+      const dist = Math.abs(blockCenter - viewCenter);
+      // Табло новин (перший блок): піднімаючись ЗНИЗУ до центру — не звужується
+      // (одразу звичайний розмір, Вова 16.07); звужується лише коли пройшло центр
+      // угору (ховається під шапку). Решта блоків — симетрично, як було.
+      // scaleDist керує ЛИШЕ масштабом; справжня dist лишається для детекту фокуса,
+      // щоб табло не «хапало» підсвітку сидячи внизу.
+      const scaleDist = (b.id === 'cm-news-board' && blockCenter > viewCenter) ? 0 : dist;
+      const t = Math.min(1, scaleDist / (vh * 0.55));    // 0 у центрі → 1 далеко
+      // Лише масштаб + тінь фокуса. БЕЗ прозорості (виправлення Вови 16.07 —
+      // блоки лишаються такими як є, не «вицвітають»).
+      b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
+      b.dataset.cf = '1';
+      if (dist < bestDist) { bestDist = dist; best = b; }
     });
+    document.querySelectorAll('#cm-content .cm-block--focus').forEach(b => { if (b !== best) b.classList.remove('cm-block--focus'); });
+    if (best) best.classList.add('cm-block--focus');
   };
-  cache();
+  const onScroll = () => { if (!raf) raf = requestAnimationFrame(apply); };
   main.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('resize', onScroll);
+  window.addEventListener('cstl-tab-changed', onScroll);   // повернулись на Громаду → перерахунок
+  onScroll();   // початковий стан одразу після рендеру
 }
 
 export function initCommunity() {
   renderSkeleton();
   attachSwitchTabDelegation();
   startHeroRotator();
-  wireHeroBlur();
+  initCenterFocus();          // фокус-скрол блоків «ШО В СЕЛІ?» (Вова 15.07)
+  refreshAccountButtons();    // кнопка кабінету біля привітання: фото/іконка
   // Вітання персоналізується, коли профіль/ім'я підвантажились (вхід/зміна).
   if (!_greetingWired) { onAuthChange(updateGreetingName); _greetingWired = true; }
   updateGreetingName();
