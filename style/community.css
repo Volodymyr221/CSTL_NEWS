@@ -1023,7 +1023,10 @@
   letter-spacing: 1px; text-transform: uppercase;
   color: var(--ink-soft, #8a8a8a);
   text-align: center;
-  margin: 2px 0 0;
+  /* Притиснуто ближче до заголовка (Вова 16.07, вечір): підзаголовок сидить одразу
+     під «ШО В СЕЛІ?», обидва як один блок. */
+  margin: 4px 0 0;
+  transition: color 0.3s ease;
 }
 /* Призупинилось: легкий блюр на всю ширину, низ м'яко розчиняється (маска).
    padding-bottom росте, щоб зона розчинення НЕ зачіпала текст. */
@@ -1032,12 +1035,16 @@
   -webkit-backdrop-filter: blur(9px);
   /* Темний блюр — як було (Вова 16.07: «блюр поверни назад»). */
   background: rgba(30, 16, 18, 0.30);
-  padding-bottom: 26px;
-  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  /* Панель вища — щоб під заголовком вмістився і підзаголовок (Вова 16.07, вечір);
+     фейд знизу зсунуто нижче (74%), щоб «ОСЬ ЩО ГОЛОВНЕ...» не танув. */
+  padding-bottom: 32px;
+  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
 }
 /* На темному блюрі «ШО В СЕЛІ?» — біле (як було). */
 .cm-sec-head--stuck h2 { color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
+/* Підзаголовок на блюрі — світлий, лишається читабельним разом із заголовком. */
+.cm-sec-head--stuck .cm-sheet-sub { color: rgba(255, 255, 255, 0.82); text-shadow: 0 1px 4px rgba(0,0,0,0.5); }
 /* У залипанні пігулка-горбик розчиняється (папір→прозоро), лишається лише текст
    на блюр-панелі; padding-top 22 незмінний → текст не стрибає. */
 .cm-sec-head--stuck .cm-sec-head-in {
