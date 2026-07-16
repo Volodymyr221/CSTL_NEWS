@@ -947,7 +947,7 @@
   left: 50%;
   transform: translateX(-50%);
   top: -38px;
-  width: 220px;
+  width: 226px;
   height: 58px;
   background: var(--paper);
   border-radius: 20px 20px 0 0;
@@ -964,7 +964,7 @@
   height: 0;
   margin-bottom: -14px;
 }
-.cm-acc-pin .cm-greet-account { position: absolute; top: 10px; right: 8px; }   /* 12→10: іконка 50px, центр лишається 41px (= центр stuck-фрази) */
+.cm-acc-pin .cm-greet-account { position: absolute; top: 10px; right: 4px; }   /* right 8→4: іконку трохи правіше (Вова 16.07) */
 
 /* ── «ШО В СЕЛІ?» (хореографія Вови 16.07, друга ітерація) ──
    Стоїть на місці підпису фото (під «Олика»), скролиться з контентом БЕЗ зміни
@@ -984,7 +984,9 @@
   margin: -73px -14px 0;             /* -14 з боків: блюр-панель на ВСЮ ширину екрана (Вова 16.07) */
   padding: 0;
   text-align: center;
-  /* Блюр з'являється ПЛАВНО (Вова 16.07): base blur(0) → --stuck blur(9), transition. */
+  /* Блюр з'являється І ПРОПАДАЄ ПЛАВНО, симетрично (Вова 16.07): base blur(0)+прозорий
+     фон → --stuck blur(9)+морозний папір; transition однаковий в обидва боки. */
+  background: transparent;
   -webkit-backdrop-filter: blur(0px);
           backdrop-filter: blur(0px);
   transition: background 0.35s ease, backdrop-filter 0.35s ease, -webkit-backdrop-filter 0.35s ease;
@@ -1001,9 +1003,10 @@
 /* Колір адаптивний: у потоці напис на тілесному язичку → бордовий/темний;
    призупинився на темному блюрі → білий (плавний перехід кольору). */
 .cm-sec-head h2 {
-  font-size: 19px; font-weight: 800;
-  letter-spacing: 2.2px; text-transform: uppercase;
-  transform: scaleY(1.12);          /* той самий прийом що .bd-title Дошки */
+  /* Georgia serif — під бренд (логотип CSTL LIFE + «Олика») (Вова 16.07). */
+  font-family: Georgia, 'Times New Roman', serif;
+  font-size: 21px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
   color: var(--red, #722F37);
   /* 3D-emboss (Вова 16.07): світла верхня грань + глибока падаюча тінь — літери
      «підіймаються» над фоном і не зливаються з ним (замість простого розмиття). */
@@ -1016,20 +1019,20 @@
   transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 .cm-sec-head p {
-  font-size: 12.5px; font-weight: 600;
+  font-size: 10.5px; font-weight: 700;
+  letter-spacing: 0.6px; text-transform: uppercase;   /* підзаголовок ВЕЛИКИМИ (Вова 16.07) */
   color: var(--ink-soft, #8a8a8a);
   text-shadow: 0 1px 0 rgba(255, 250, 245, 0.4), 0 2px 5px rgba(35, 12, 16, 0.34);
   margin: 0;
-  transition: color 0.3s ease, text-shadow 0.3s ease;
 }
 /* Призупинилось: легкий блюр на всю ширину, низ м'яко розчиняється (маска).
    padding-bottom росте, щоб зона розчинення НЕ зачіпала текст. */
 .cm-sec-head--stuck {
   backdrop-filter: blur(9px);
   -webkit-backdrop-filter: blur(9px);
-  background: rgba(30, 16, 18, 0.30);
-  /* padding-top НЕ чіпаємо (лишається 0) — центрування тексту на іконці тепер дає
-     padding-top:18 самої пігулки, ОДНАКОВИЙ в обох станах → без стрибка. */
+  /* СВІТЛИЙ морозний папір (Вова 16.07): текст лишається бордовим/сірим — колір
+     не міняється при появі блюру (раніше був темний фон + білий текст). */
+  background: rgba(244, 241, 230, 0.62);
   padding-bottom: 26px;
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
@@ -1041,20 +1044,8 @@
   border-radius: 0;
   padding: 22px 0 0;
 }
-/* Ті самі 3 шари глибини й у білому стані (Вова 16.07): на білих літерах світла
-   грань не читається, тому верхня грань — тонка ТЕМНА (карбований край), плюс
-   близька і дальня тіні — 3D-об'єм зберігається як у бордовому стані. */
-.cm-sec-head--stuck h2 {
-  color: #fff;
-  text-shadow:
-    0 1px 0 rgba(0, 0, 0, 0.28),
-    0 2px 6px rgba(0, 0, 0, 0.55),
-    0 7px 18px rgba(0, 0, 0, 0.42);
-}
-.cm-sec-head--stuck p {
-  color: rgba(255,255,255,0.88);
-  text-shadow: 0 1px 0 rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.45);
-}
+/* Колір тексту при блюрі НЕ міняємо (Вова 16.07) — h2 лишається бордовим,
+   підзаголовок сірим (як на горбику). Тому окремих --stuck-правил кольору немає. */
 
 /* Відступ блоків від язичка тепер задає flex-gap листа (.cm-sheet) —
    окремий margin для #cm-news-board більше не потрібен (16.07, редизайн «лист»). */
