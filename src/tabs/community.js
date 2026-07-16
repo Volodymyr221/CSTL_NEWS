@@ -291,9 +291,9 @@ function wireHeroBlur() {
   const cache = () => {
     hero = document.querySelector('.cm-hero');
     band = hero && hero.querySelector('.cm-hero-blurband');
-    // Верх фрост-площини = верх «ШО В СЕЛІ?» (Вова 16.07: фраза сидить на верхівці
-    // «білого блока»); fallback — перша картка (якщо sec-head колись приберуть).
-    block = document.getElementById('cm-sec-head') || document.getElementById('cm-news-board');
+    // Верх фрост-площини = верх першої картки (Табло новин). Фрост піднімається
+    // РАЗОМ з блоками, як було завжди (Вова 16.07: не чіпляти за «ШО В СЕЛІ?»).
+    block = document.getElementById('cm-news-board');
   };
   const onScroll = () => {
     if (ticking) return;

@@ -896,12 +896,11 @@
   opacity: 0;
   z-index: 2;
   pointer-events: none;
-  border-radius: 26px 26px 0 0;          /* «білий блок» із заокругленими верхніми кутами (Вова 16.07) */
   -webkit-backdrop-filter: blur(14px);   /* щільніший фрост (Рома 09.07): 9→14px */
           backdrop-filter: blur(14px);
-  /* Верхній край різкіший (6%→3%), щоб заокруглені кути читались */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 3%, #000 100%);
-          mask-image: linear-gradient(to bottom, transparent 0%, #000 3%, #000 100%);
+  /* Повноширинна смуга без заокруглень (Вова 16.07: фрост іде з блоками, не «білий блок»). */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 6%, #000 100%);   /* різкіший верхній край = смуга виглядає щільнішою */
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 6%, #000 100%);
 }
 /* Низ картинки м'яко переходить у бежевий (колір сторінки) — без різкого краю. */
 .cm-hero::after {
