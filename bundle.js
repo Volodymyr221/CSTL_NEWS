@@ -10032,7 +10032,7 @@ ${ev.description || ""}`
       if (sec) {
         const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
         const secTop = sec.getBoundingClientRect().top;
-        sec.classList.toggle("cm-sec-head--stuck", secTop <= pinY + 50);
+        sec.classList.toggle("cm-sec-head--stuck", secTop <= pinY + 2);
       }
       if (!allowMotion)
         return;

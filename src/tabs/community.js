@@ -303,16 +303,16 @@ function initCenterFocus() {
     const vh = main.clientHeight;
     const viewCenter = vh / 2;
 
-    // «ШО В СЕЛІ?» прилипає? Блюр вмикаємо трохи РАНІШЕ за повне пришпилювання
-    // (Вова 16.07): коли верх секції підходить до низу шапки (у межах ~50px) — тоді
-    // язичок якраз починає заїжджати під шапку. Плавність дає CSS-transition блюру.
+    // «ШО В СЕЛІ?» прилипло? Блюр вмикаємо РІВНО коли шапка зафіксувалась під
+    // app-header (Вова 17.07): не раніше (+2px допуск на округлення). Раніше був
+    // тригер +50px → блюр з'являвся поки шапка ще їхала → смуга «пливла» нижче
+    // шапки. Тепер смуга (::before, absolute) з'являється одразу приклеєна.
     const sec = document.getElementById('cm-sec-head');
     const hdr = document.querySelector('.app-header');
     if (sec) {
-      // Фраза пришпилюється під шапкою; блюр вмикаємо за ~50px ДО того (раніше).
       const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
       const secTop = sec.getBoundingClientRect().top;
-      sec.classList.toggle('cm-sec-head--stuck', secTop <= pinY + 50);
+      sec.classList.toggle('cm-sec-head--stuck', secTop <= pinY + 2);
     }
     if (!allowMotion) return;
     let best = null, bestDist = Infinity;
