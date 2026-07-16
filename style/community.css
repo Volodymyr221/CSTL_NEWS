@@ -819,7 +819,11 @@
   text-transform: uppercase;
   letter-spacing: 1.2px;
   margin-bottom: 4px;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.55);
+  /* Трьохшарова тінь (Вова 16.07) — глибина/3D як у «ШО В СЕЛІ?». */
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.35),
+    0 2px 5px rgba(0,0,0,0.5),
+    0 6px 16px rgba(0,0,0,0.38);
 }
 .cm-greeting-text {
   font-family: Georgia, 'Times New Roman', serif;
@@ -827,20 +831,28 @@
   font-weight: 700;
   line-height: 1.1;
   color: #fff;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.55);
+  /* Трьохшарова тінь (Вова 16.07) — глибина/3D. */
+  text-shadow:
+    0 1px 0 rgba(0,0,0,0.35),
+    0 2px 6px rgba(0,0,0,0.5),
+    0 7px 18px rgba(0,0,0,0.4);
   white-space: nowrap;             /* ОДИН рядок (Вова 15.07) */
   overflow: hidden;
 }
 /* Кнопка кабінету біля привітання — скляне коло (як на фото-прикладі Вови) */
 .cm-greet-account {
   flex-shrink: 0;
-  width: 46px; height: 46px; border-radius: 50%;
+  width: 50px; height: 50px; border-radius: 50%;   /* трохи більша (46→50, Вова 16.07) */
   display: inline-flex; align-items: center; justify-content: center;
   color: #fff;
   background: rgba(255,255,255,0.13);
   border: 1.5px solid rgba(255,255,255,0.55);
   backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
-  box-shadow: 0 2px 10px rgba(0,0,0,0.25);
+  /* Трьохшарова тінь (Вова 16.07) — коло «плаває» над фото з глибиною. */
+  box-shadow:
+    0 1px 1px rgba(0,0,0,0.20),
+    0 3px 10px rgba(0,0,0,0.30),
+    0 8px 22px rgba(0,0,0,0.22);
   cursor: pointer; -webkit-tap-highlight-color: transparent;
   overflow: hidden; padding: 0;
 }
@@ -934,7 +946,7 @@
   height: 0;
   margin-bottom: -14px;
 }
-.cm-acc-pin .cm-greet-account { position: absolute; top: 12px; right: 8px; }
+.cm-acc-pin .cm-greet-account { position: absolute; top: 10px; right: 8px; }   /* 12→10: іконка 50px, центр лишається 41px (= центр stuck-фрази) */
 
 /* ── «ШО В СЕЛІ?» (хореографія Вови 16.07, друга ітерація) ──
    Стоїть на місці підпису фото (під «Олика»), скролиться з контентом БЕЗ зміни
