@@ -10020,7 +10020,7 @@ ${ev.description || ""}`
     const cache = () => {
       hero = document.querySelector(".cm-hero");
       band = hero && hero.querySelector(".cm-hero-blurband");
-      block = document.getElementById("cm-sec-head") || document.getElementById("cm-news-board");
+      block = document.getElementById("cm-news-board");
     };
     const onScroll = () => {
       if (ticking)
