@@ -50,6 +50,7 @@
   max-width: 320px;
   background: var(--paper, #F4F1E6);
   box-shadow: -6px 0 26px rgba(0, 0, 0, 0.24);   /* тінь на лівому краю панелі */
+  border-radius: 0 18px 18px 0;                   /* заокруглені праві кути (Вова 16.07): верх+низ */
   transform: translateX(102%);                    /* виїжджає з правого краю */
   transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
   display: flex;
