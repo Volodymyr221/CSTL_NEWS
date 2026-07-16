@@ -965,7 +965,10 @@
   min-width: 0;
   background: var(--paper);
   border-radius: 20px 20px 0 0;
-  padding: 9px 22px 6px;
+  /* padding-top 18 — ОДНАКОВЕ в обох станах (Вова 16.07): текст стоїть на 18px від
+     верху і в пігулці, і в блюр-панелі → при пришпилюванні фраза плавно доїжджає
+     рівно до центру іконки (≈41px) БЕЗ стрибка (раніше 9→18 у --stuck давало ривок). */
+  padding: 22px 22px 6px;
   box-shadow: 0 -5px 12px rgba(15, 5, 7, 0.34), 0 -14px 30px rgba(15, 5, 7, 0.30);
   transition: background 0.3s ease, box-shadow 0.3s ease, border-radius 0.3s ease, padding 0.3s ease;
 }
@@ -999,18 +1002,19 @@
   backdrop-filter: blur(9px);
   -webkit-backdrop-filter: blur(9px);
   background: rgba(30, 16, 18, 0.30);
-  /* padding-top 18: центр фрази = центр прибитої іконки (6+10+50/2 = 41px) — Вова 16.07. */
-  padding-top: 18px;
+  /* padding-top НЕ чіпаємо (лишається 0) — центрування тексту на іконці тепер дає
+     padding-top:18 самої пігулки, ОДНАКОВИЙ в обох станах → без стрибка. */
   padding-bottom: 26px;
   -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
   mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
-/* У залипанні язичок «розчиняється» в блюр-панелі: пігулка без фону/тіні. */
+/* У залипанні язичок «розчиняється» в блюр-панелі: пігулка без фону/тіні/боків,
+   але padding-top 18 ЗБЕРІГАЄТЬСЯ — текст не рухається (нуль ривка). */
 .cm-sec-head--stuck .cm-sec-head-in {
   background: transparent;
   box-shadow: none;
   border-radius: 0;
-  padding: 0;
+  padding: 22px 0 0;
 }
 /* Ті самі 3 шари глибини й у білому стані (Вова 16.07): на білих літерах світла
    грань не читається, тому верхня грань — тонка ТЕМНА (карбований край), плюс
