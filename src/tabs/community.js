@@ -311,8 +311,11 @@ function initCenterFocus() {
     const hdr = document.querySelector('.app-header');
     if (sec) {
       const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
+      // Лінія пінінгу = низ шапки + sticky-top секції (top:-16 → фіксується вище).
+      // Читаємо top з CSS, щоб тригер завжди збігався з реальною точкою фіксації.
+      const stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
       const secTop = sec.getBoundingClientRect().top;
-      sec.classList.toggle('cm-sec-head--stuck', secTop <= pinY + 2);
+      sec.classList.toggle('cm-sec-head--stuck', secTop <= pinY + stickyTop + 2);
     }
     if (!allowMotion) return;
     let best = null, bestDist = Infinity;

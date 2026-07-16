@@ -10031,8 +10031,9 @@ ${ev.description || ""}`
       const hdr = document.querySelector(".app-header");
       if (sec) {
         const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
+        const stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
         const secTop = sec.getBoundingClientRect().top;
-        sec.classList.toggle("cm-sec-head--stuck", secTop <= pinY + 2);
+        sec.classList.toggle("cm-sec-head--stuck", secTop <= pinY + stickyTop + 2);
       }
       if (!allowMotion)
         return;
