@@ -297,25 +297,32 @@ function initCenterFocus() {
   _focusWired = true;
 
   let raf = null;
+  let _stickyTop = null;   // кеш sticky-top секції (top:-16); читаємо раз, не щокадру
   const apply = () => {
     raf = null;
     if (main.dataset.tab !== 'community') return;   // ефект лише на Громаді
     const vh = main.clientHeight;
     const viewCenter = vh / 2;
 
-    // «ШО В СЕЛІ?» прилипло? Блюр вмикаємо РІВНО коли шапка зафіксувалась під
-    // app-header (Вова 17.07): не раніше (+2px допуск на округлення). Раніше був
-    // тригер +50px → блюр з'являвся поки шапка ще їхала → смуга «пливла» нижче
-    // шапки. Тепер смуга (::before, absolute) з'являється одразу приклеєна.
+    // Блюр СКРАБИТЬСЯ пропорційно тому, наскільки заголовок «ШО В СЕЛІ?» близько
+    // до шапки (Вова 17.07): за FADE px до фіксації починає плавно з'являтись, на
+    // фіксації — вже повністю; при скролі донизу — плавно затухає. Рахунок щокадру
+    // (rAF) прив'язаний до позиції скролу → плавно, без ривків, симетрично.
     const sec = document.getElementById('cm-sec-head');
     const hdr = document.querySelector('.app-header');
     if (sec) {
       const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
       // Лінія пінінгу = низ шапки + sticky-top секції (top:-16 → фіксується вище).
-      // Читаємо top з CSS, щоб тригер завжди збігався з реальною точкою фіксації.
-      const stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
+      // Кешуємо top раз (getComputedStyle щокадру = зайвий reflow).
+      if (_stickyTop === null) _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
+      const pinLine = pinY + _stickyTop;
       const secTop = sec.getBoundingClientRect().top;
-      sec.classList.toggle('cm-sec-head--stuck', secTop <= pinY + stickyTop + 2);
+      const FADE = 70;                              // px, дистанція плавного проявлення блюру
+      const dist = secTop - pinLine;               // >0 підходить до шапки, <=0 зафіксовано
+      const prog = Math.max(0, Math.min(1, 1 - dist / FADE));   // 0 (нема) → 1 (повний)
+      sec.style.setProperty('--blur-o', prog.toFixed(3));
+      // Білий колір тексту вмикаємо коли блюр уже помітний (>50%), плавно (CSS color-transition).
+      sec.classList.toggle('cm-sec-head--stuck', prog >= 0.5);
     }
     if (!allowMotion) return;
     let best = null, bestDist = Infinity;

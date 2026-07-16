@@ -10021,6 +10021,7 @@ ${ev.description || ""}`
     const allowMotion = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     _focusWired = true;
     let raf = null;
+    let _stickyTop = null;
     const apply = () => {
       raf = null;
       if (main.dataset.tab !== "community")
@@ -10031,9 +10032,15 @@ ${ev.description || ""}`
       const hdr = document.querySelector(".app-header");
       if (sec) {
         const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
-        const stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
+        if (_stickyTop === null)
+          _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
+        const pinLine = pinY + _stickyTop;
         const secTop = sec.getBoundingClientRect().top;
-        sec.classList.toggle("cm-sec-head--stuck", secTop <= pinY + stickyTop + 2);
+        const FADE = 70;
+        const dist = secTop - pinLine;
+        const prog = Math.max(0, Math.min(1, 1 - dist / FADE));
+        sec.style.setProperty("--blur-o", prog.toFixed(3));
+        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
       }
       if (!allowMotion)
         return;
