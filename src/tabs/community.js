@@ -187,9 +187,9 @@ function renderSkeleton() {
       <div class="cm-hero-blurband" aria-hidden="true"></div>
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
-        <!-- Підпис фото ТИМЧАСОВО прибрано (Вова 16.07) — його місце займає
-             «ШО В СЕЛІ?» (cm-sec-head нижче в потоці). Повернути: розкоментувати.
-        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p> -->
+        <!-- Підпис фото повернено 16.07 (Вова) — оформлений як підпис фотографії
+             (курсив, дрібний). «ШО В СЕЛІ?» живе окремо нижче (cm-sec-head). -->
+        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
@@ -291,7 +291,9 @@ function wireHeroBlur() {
   const cache = () => {
     hero = document.querySelector('.cm-hero');
     band = hero && hero.querySelector('.cm-hero-blurband');
-    block = document.getElementById('cm-news-board');
+    // Верх фрост-площини = верх «ШО В СЕЛІ?» (Вова 16.07: фраза сидить на верхівці
+    // «білого блока»); fallback — перша картка (якщо sec-head колись приберуть).
+    block = document.getElementById('cm-sec-head') || document.getElementById('cm-news-board');
   };
   const onScroll = () => {
     if (ticking) return;

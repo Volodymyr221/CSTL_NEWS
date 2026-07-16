@@ -9925,9 +9925,9 @@ ${ev.description || ""}`
       <div class="cm-hero-blurband" aria-hidden="true"></div>
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">\u041E\u043B\u0438\u043A\u0430</h2>
-        <!-- \u041F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E \u0422\u0418\u041C\u0427\u0410\u0421\u041E\u0412\u041E \u043F\u0440\u0438\u0431\u0440\u0430\u043D\u043E (\u0412\u043E\u0432\u0430 16.07) \u2014 \u0439\u043E\u0433\u043E \u043C\u0456\u0441\u0446\u0435 \u0437\u0430\u0439\u043C\u0430\u0454
-             \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB (cm-sec-head \u043D\u0438\u0436\u0447\u0435 \u0432 \u043F\u043E\u0442\u043E\u0446\u0456). \u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438: \u0440\u043E\u0437\u043A\u043E\u043C\u0435\u043D\u0442\u0443\u0432\u0430\u0442\u0438.
-        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p> -->
+        <!-- \u041F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E \u043F\u043E\u0432\u0435\u0440\u043D\u0435\u043D\u043E 16.07 (\u0412\u043E\u0432\u0430) \u2014 \u043E\u0444\u043E\u0440\u043C\u043B\u0435\u043D\u0438\u0439 \u044F\u043A \u043F\u0456\u0434\u043F\u0438\u0441 \u0444\u043E\u0442\u043E\u0433\u0440\u0430\u0444\u0456\u0457
+             (\u043A\u0443\u0440\u0441\u0438\u0432, \u0434\u0440\u0456\u0431\u043D\u0438\u0439). \xAB\u0428\u041E \u0412 \u0421\u0415\u041B\u0406?\xBB \u0436\u0438\u0432\u0435 \u043E\u043A\u0440\u0435\u043C\u043E \u043D\u0438\u0436\u0447\u0435 (cm-sec-head). -->
+        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
@@ -10020,7 +10020,7 @@ ${ev.description || ""}`
     const cache = () => {
       hero = document.querySelector(".cm-hero");
       band = hero && hero.querySelector(".cm-hero-blurband");
-      block = document.getElementById("cm-news-board");
+      block = document.getElementById("cm-sec-head") || document.getElementById("cm-news-board");
     };
     const onScroll = () => {
       if (ticking)
