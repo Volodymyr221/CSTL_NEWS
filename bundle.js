@@ -10081,8 +10081,10 @@ ${ev.description || ""}`
           }
           return;
         }
-        const dist = Math.abs((r.top + r.bottom) / 2 - viewCenter);
-        const t = Math.min(1, dist / (vh * 0.55));
+        const blockCenter = (r.top + r.bottom) / 2;
+        const dist = Math.abs(blockCenter - viewCenter);
+        const scaleDist = b.id === "cm-news-board" && blockCenter > viewCenter ? 0 : dist;
+        const t = Math.min(1, scaleDist / (vh * 0.55));
         b.style.transform = `scale(${(1 - 0.05 * t).toFixed(4)})`;
         b.dataset.cf = "1";
         if (dist < bestDist) {
