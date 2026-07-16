@@ -1,6 +1,71 @@
 {
   "runs": [
     {
+      "ts": 1784191396392,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 534,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0092,
+      "note": ""
+    },
+    {
+      "ts": 1784191380467,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 466,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0083,
+      "note": ""
+    },
+    {
+      "ts": 1784191366283,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 466,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0085,
+      "note": ""
+    },
+    {
+      "ts": 1784191353318,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 530,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0092,
+      "note": ""
+    },
+    {
+      "ts": 1784191339971,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 562,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0097,
+      "note": ""
+    },
+    {
       "ts": 1784105844532,
       "mission": "holiday:⛪ Успіння Пресвятої Богороди",
       "model": "claude-sonnet-5",
@@ -496,16 +561,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 4.7387,
-    "runs": 38,
+    "cost_usd": 4.7836,
+    "runs": 43,
     "web_searches": 63
   },
   "months": {
     "2026-07": {
-      "cost_usd": 4.7387,
-      "runs": 38,
+      "cost_usd": 4.7836,
+      "runs": 43,
       "web_searches": 63
     }
   },
-  "updated_ts": 1784105844532
+  "updated_ts": 1784191396392
 }
