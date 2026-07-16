@@ -917,7 +917,7 @@
 /* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою.
    Зменшено з 460 до 180 — бо стик-зона вітання додала 280px у потік (280+180≈460):
    картки лишаються на тій самій висоті, лише «залипання» вітання подовшало. */
-.cm-hero-spacer { height: 180px; }
+.cm-hero-spacer { height: 150px; }   /* 180→150 (Вова 16.07): фраза «ШО В СЕЛІ?» + блоки піднялись на 30px вище */
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
 .cm-greeting-stick,
 .cm-block,
@@ -961,8 +961,8 @@
   letter-spacing: 2.2px; text-transform: uppercase;
   transform: scaleY(1.12);          /* той самий прийом що .bd-title Дошки */
   color: var(--red, #722F37);
-  /* Делікатна глибока тінь — легкий 3D-об'єм (Вова 16.07: «не переборщи») */
-  text-shadow: 0 1px 2px rgba(60, 25, 30, 0.18), 0 3px 8px rgba(60, 25, 30, 0.12);
+  /* Глибша тінь (Вова 16.07): фраза піднялась ближче до фото — щоб не зливалась з фоном. */
+  text-shadow: 0 2px 3px rgba(40, 15, 20, 0.42), 0 5px 16px rgba(40, 15, 20, 0.28);
   margin: 0 0 4px;
   white-space: nowrap;
   transition: color 0.3s ease, text-shadow 0.3s ease;
@@ -970,7 +970,7 @@
 .cm-sec-head p {
   font-size: 13.5px; font-weight: 600;
   color: var(--ink-soft, #8a8a8a);
-  text-shadow: 0 1px 3px rgba(60, 25, 30, 0.10);
+  text-shadow: 0 1px 3px rgba(40, 15, 20, 0.30);
   margin: 0;
   transition: color 0.3s ease, text-shadow 0.3s ease;
 }
