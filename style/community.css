@@ -920,31 +920,15 @@
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
 .cm-greeting-stick,
 .cm-block,
-.cm-sec-head,
 .cm-hero-spacer { position: relative; z-index: 1; }
 
-/* ── Заголовок секції блоків «ШО В СЕЛІ?» (Вова 15.07) ─────────────────────
-   Сидить над фіксованим hero-фото → білий текст із тінню (як заголовок «Олика»). */
-.cm-sec-head { text-align: center; margin: 0 16px 14px; }
-.cm-sec-head h2 {
-  font-size: 21px; font-weight: 800;
-  letter-spacing: 2.2px; text-transform: uppercase;
-  transform: scaleY(1.12);              /* той самий прийом що .bd-title Дошки */
-  color: #fff;
-  text-shadow: 0 2px 8px rgba(0,0,0,0.55);
-  margin: 0 0 4px;
-}
-.cm-sec-head p {
-  font-size: 13.5px; font-weight: 600;
-  color: rgba(255,255,255,0.85);
-  text-shadow: 0 1px 4px rgba(0,0,0,0.5);
-  margin: 0;
-}
+/* Заголовок секції «ШО В СЕЛІ?» прибрано 16.07 (Вова: місце неправильне,
+   передумаємо розташування окремо). */
 
-/* ── Фокус-скрол блоків (Вова 15.07): transform/opacity ставить JS
+/* ── Фокус-скрол блоків (Вова 15.07; 16.07 — без прозорості): scale ставить JS
    (initCenterFocus, безперервні значення), тут — лише база й тінь фокуса. */
 #cm-content .cm-block {
-  will-change: transform, opacity;      /* композитор: scale без reflow */
+  will-change: transform;               /* композитор: scale без reflow */
   transform-origin: center center;
   transition: box-shadow 0.25s ease;
 }
