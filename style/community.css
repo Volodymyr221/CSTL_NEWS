@@ -917,7 +917,7 @@
 /* Спейсер у потоці: тримає місце під фон, щоб блоки стартували під картинкою.
    Зменшено з 460 до 180 — бо стик-зона вітання додала 280px у потік (280+180≈460):
    картки лишаються на тій самій висоті, лише «залипання» вітання подовшало. */
-.cm-hero-spacer { height: 150px; }   /* 180→150 (Вова 16.07): фраза «ШО В СЕЛІ?» + блоки піднялись на 30px вище */
+.cm-hero-spacer { height: 168px; }   /* 150→168 (Вова 16.07): фразу опущено на 18px (блоки повертає margin нижче) */
 /* Контент Громади — над обоями (інакше fixed-hero перекрив би). */
 .cm-greeting-stick,
 .cm-block,
@@ -961,8 +961,12 @@
   letter-spacing: 2.2px; text-transform: uppercase;
   transform: scaleY(1.12);          /* той самий прийом що .bd-title Дошки */
   color: var(--red, #722F37);
-  /* Глибша тінь (Вова 16.07): фраза піднялась ближче до фото — щоб не зливалась з фоном. */
-  text-shadow: 0 2px 3px rgba(40, 15, 20, 0.42), 0 5px 16px rgba(40, 15, 20, 0.28);
+  /* 3D-emboss (Вова 16.07): світла верхня грань + глибока падаюча тінь — літери
+     «підіймаються» над фоном і не зливаються з ним (замість простого розмиття). */
+  text-shadow:
+    0 1px 0 rgba(255, 250, 245, 0.55),
+    0 2px 4px rgba(35, 12, 16, 0.52),
+    0 7px 18px rgba(35, 12, 16, 0.34);
   margin: 0 0 4px;
   white-space: nowrap;
   transition: color 0.3s ease, text-shadow 0.3s ease;
@@ -970,7 +974,7 @@
 .cm-sec-head p {
   font-size: 13.5px; font-weight: 600;
   color: var(--ink-soft, #8a8a8a);
-  text-shadow: 0 1px 3px rgba(40, 15, 20, 0.30);
+  text-shadow: 0 1px 0 rgba(255, 250, 245, 0.4), 0 2px 5px rgba(35, 12, 16, 0.34);
   margin: 0;
   transition: color 0.3s ease, text-shadow 0.3s ease;
 }
@@ -986,6 +990,11 @@
 }
 .cm-sec-head--stuck h2 { color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,0.55); }
 .cm-sec-head--stuck p { color: rgba(255,255,255,0.88); text-shadow: 0 1px 4px rgba(0,0,0,0.4); }
+
+/* Блок новин піднято на 18px назад угору (Вова 16.07): hero-spacer опустив фразу
+   на 18px, а цей margin компенсує зсув блоків — фраза сідає впритул над блоками,
+   самі блоки лишаються на місці. */
+#cm-content #cm-news-board { margin-top: -18px; }
 
 /* ── Фокус-скрол блоків (Вова 15.07; 16.07 — без прозорості): scale ставить JS
    (initCenterFocus, безперервні значення), тут — лише база й тінь фокуса. */
