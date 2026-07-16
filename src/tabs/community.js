@@ -152,6 +152,16 @@ function renderSkeleton() {
   const todayStr = formatTodayHeader();
 
   el.innerHTML = `
+    <!-- Кнопка кабінету — ПРИБИТА (хореографія Вови 16.07: «іконка нікуди не
+         дівається»). Окремий sticky-елемент нульової висоти: кнопка стоїть у
+         правому верхньому куті контенту від старту до кінця скролу — привітання
+         їде геть, «ШО В СЕЛІ?» приїжджає, а вона на місці. -->
+    <div class="cm-acc-pin">
+      <button class="cm-greet-account" type="button" data-account-btn aria-label="Кабінет">
+        <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+      </button>
+    </div>
+
     <!-- Стик-зона вітання: висота = вітання + запас «залипання» (padding-bottom).
          .cm-greeting всередині — position:sticky, тому браузер тримає його
          на КОМПОЗИТОРІ (без JS-скролу) → нуль дьоргання на iOS. Коли зона
@@ -162,11 +172,6 @@ function renderSkeleton() {
           <div class="cm-greeting-date">${escapeHtml(todayStr)}</div>
           <div class="cm-greeting-text">${escapeHtml(greeting.text)}</div>
         </div>
-        <!-- Вхід у кабінет (рішення Вови 15.07: іконку з шапки перенесено сюди).
-             data-account-btn — оновлює/клікає account-ui.js (фото профілю або іконка). -->
-        <button class="cm-greet-account" type="button" data-account-btn aria-label="Кабінет">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-        </button>
       </section>
       <!-- Розпірка запасу «залипання»: РЕАЛЬНИЙ блок (не padding!) — інакше
            sticky у Chromium не тримає (padding контейнера не рахується у діапазон
@@ -182,25 +187,24 @@ function renderSkeleton() {
       <div class="cm-hero-blurband" aria-hidden="true"></div>
       <div class="cm-hero-overlay">
         <h2 class="cm-hero-title">Олика</h2>
-        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
+        <!-- Підпис фото ТИМЧАСОВО прибрано (Вова 16.07) — його місце займає
+             «ШО В СЕЛІ?» (cm-sec-head нижче в потоці). Повернути: розкоментувати.
+        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p> -->
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
 
-    <!-- «ШО В СЕЛІ?» — липкий заголовок секції блоків (хореографія Вови 16.07):
-         у потоці — великий по центру з підзаголовком поверх фото; доїхав до верху →
-         прилипає (sticky) компактною скляною панеллю, блоки пірнають ПІД неї,
-         справа проявляється кнопка кабінету (друга data-account-btn — механізм
-         refreshAccountButtons оновлює всі). Клас --stuck ставить initCenterFocus. -->
+    <!-- «ШО В СЕЛІ?» (хореографія Вови 16.07, друга ітерація): стоїть на місці
+         підпису фото (під «Олика»), скролиться з контентом БЕЗ зміни розміру;
+         доїхав до місця привітання → призупиняється (sticky), під ним з'являється
+         м'який повноширинний блюр (--stuck), блоки ховаються під нього.
+         Кнопки кабінету тут НЕМА — вона окремо прибита (.cm-acc-pin). -->
     <div id="cm-sec-sentinel" aria-hidden="true"></div>
     <header class="cm-sec-head" id="cm-sec-head">
       <div class="cm-sec-head-in">
         <h2>ШО В СЕЛІ?</h2>
         <p>Ось що головне у нас сьогодні</p>
       </div>
-      <button class="cm-sec-account" type="button" data-account-btn aria-label="Кабінет">
-        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
-      </button>
     </header>
 
     <!-- Порядок блоків (рішення Роми 08.07):
