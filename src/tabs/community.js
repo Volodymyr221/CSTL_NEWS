@@ -321,6 +321,10 @@ function initCenterFocus() {
       const dist = secTop - pinLine;               // >0 підходить до шапки, <=0 зафіксовано
       const prog = Math.max(0, Math.min(1, 1 - dist / FADE));   // 0 (нема) → 1 (повний)
       sec.style.setProperty('--blur-o', prog.toFixed(3));
+      // Той самий prog керує згасанням тіла листа + наростанням backdrop-blur (Вова 17.07):
+      // беж рівномірно зникає, задня картинка рівномірно блюриться → віджети на розмитому фото.
+      const sheet = document.querySelector('.cm-sheet');
+      if (sheet) sheet.style.setProperty('--sheet-fade', prog.toFixed(3));
       // Білий колір тексту вмикаємо коли блюр уже помітний (>50%), плавно (CSS color-transition).
       sec.classList.toggle('cm-sec-head--stuck', prog >= 0.5);
     }
