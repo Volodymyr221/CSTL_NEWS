@@ -10040,6 +10040,9 @@ ${ev.description || ""}`
         const dist = secTop - pinLine;
         const prog = Math.max(0, Math.min(1, 1 - dist / FADE));
         sec.style.setProperty("--blur-o", prog.toFixed(3));
+        const sheet = document.querySelector(".cm-sheet");
+        if (sheet)
+          sheet.style.setProperty("--sheet-fade", prog.toFixed(3));
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
       }
       if (!allowMotion)
