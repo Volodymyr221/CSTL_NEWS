@@ -936,13 +936,13 @@
      відірвати від низу (беж заповнює весь низ). Останній віджет лишається над
      таб-баром завдяки padding-bottom (=висота таб-бару + safe + запас). */
   margin: 0 -14px calc(-1 * (var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 24px));
-  background: var(--paper);
+  background: rgba(244, 241, 230, 0.8);   /* Варіант B (Вова 17.07): беж на 80% — трохи просвічує задню картинку (де лист налягає), щоб не так «кітався». Було var(--paper) непрозоре. */
   border-radius: 24px 24px 0 0;
   /* ОДНЕ ТІЛО (Вова 16.07): горбик (::before) + блок під однією тінню. drop-shadow
      обводить РЕАЛЬНИЙ силует (плечі + горбик) як одну фігуру, без внутрішніх швів.
      Лист непрозорий → тінь лише по зовнішньому контуру (картки/текст усередині
      власних тіней не дають). */
-  filter: drop-shadow(0 -4px 9px rgba(15, 5, 7, 0.34)) drop-shadow(0 -12px 26px rgba(15, 5, 7, 0.26));
+  filter: drop-shadow(0 -4px 9px rgba(15, 5, 7, 0.24)) drop-shadow(0 -12px 26px rgba(15, 5, 7, 0.18));   /* м'якша (Вова 17.07): лист напівпрозорий → тінь легша, менше «тисне» */
   padding: 8px 14px calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 40px);
   display: flex;
   flex-direction: column;
@@ -959,7 +959,7 @@
   top: -17px;
   width: 175px;
   height: 46px;
-  background: var(--paper);
+  background: rgba(244, 241, 230, 0.8);   /* горбик = той самий 80% беж, що й лист (Вова 17.07, Варіант B) */
   border-radius: 20px 20px 0 0;
 }
 
