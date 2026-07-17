@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "17.07.2026",
-  "updatedTime": "00:35",
+  "updatedTime": "07:42",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -6644,7 +6644,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -6736,7 +6736,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:05",
           "arrival_time": "08:30",
           "duration_min": 85,
@@ -8238,7 +8238,7 @@
         }
       ],
       "fetchedAt": "17.07.2026",
-      "fetchedTime": "00:35"
+      "fetchedTime": "07:42"
     },
     "2026-07-18": {
       "routes": [
@@ -9844,7 +9844,7 @@
         }
       ],
       "fetchedAt": "17.07.2026",
-      "fetchedTime": "00:35"
+      "fetchedTime": "07:42"
     },
     "2026-07-19": {
       "routes": [
