@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-18T02:25:24.754893+03:00",
+  "fetched_at": "2026-07-18T03:56:51.606609+03:00",
   "date": "18.07.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -102,8 +102,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
