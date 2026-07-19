@@ -15,6 +15,21 @@
 </head>
 <body>
 
+  <!-- Жива SVG-маска скло-шару Громади (Вова 19.07): силует «тіло+язичок» з дисипацією
+       верхнього контуру через feGaussianBlur. JS (community.js) міняє лише `d` шляху і
+       `stdDeviation` фільтра щоскрол — без перебудови ресурсу → без миготіння.
+       Референс маски — .cm-sheet::after у style/community.css. -->
+  <svg width="0" height="0" aria-hidden="true" focusable="false" style="position:absolute;width:0;height:0;overflow:hidden">
+    <defs>
+      <filter id="cmFeather" x="-4%" y="-3%" width="108%" height="106%" color-interpolation-filters="sRGB">
+        <feGaussianBlur id="cmFeatherBlur" stdDeviation="0 0.4"></feGaussianBlur>
+      </filter>
+      <mask id="cmSheetMask" maskUnits="userSpaceOnUse" x="-40" y="-40" width="2000" height="6200">
+        <path id="cmSheetMaskPath" fill="#fff" filter="url(#cmFeather)" d="M0 0Z"></path>
+      </mask>
+    </defs>
+  </svg>
+
   <!-- Splash screen (заставка при завантаженні) -->
   <div id="splash">
     <img src="logo.png" class="splash-icon" alt="Olyka Castle">
