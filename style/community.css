@@ -943,8 +943,9 @@
      • backdrop-blur ЗАВЖДИ ≥10px (10 у спокої → 16 на фіксації): задня картинка
        м'яка навіть у спокої, крізь лист НЕ читаються чіткі слова («Олика» тощо). */
   background: rgba(244, 241, 230, calc(0.8 - 0.65 * var(--sheet-fade, 0)));
-  -webkit-backdrop-filter: blur(calc(10px + 6px * var(--sheet-fade, 0)));
-          backdrop-filter: blur(calc(10px + 6px * var(--sheet-fade, 0)));
+  /* Сам backdrop-blur винесено на окремий шар .cm-sheet::after (Вова 19.07): щоб
+     ВЕРХНІЙ край блюру плавно зливався з картинкою (маска-градієнт зверху), без
+     різкої лінії блюр↔фон. Тут лишається лише беж-тінт + тінь; блюр — на ::after. */
   border-radius: 24px 24px 0 0;
   /* ОДНЕ ТІЛО (Вова 16.07): горбик (::before) + блок під однією тінню. drop-shadow
      обводить РЕАЛЬНИЙ силует (плечі + горбик) як одну фігуру, без внутрішніх швів.
@@ -969,10 +970,32 @@
   top: -17px;
   width: 175px;
   height: 17px;   /* 46→17 (Вова 17.07): горбик = ЛИШЕ випуклість НАД листом; низ чітко прилягає до початку блоку, не залазить углиб (інакше подвійний шар 80% бежу = видима «сходинка»). Розмір видимої частини над блоком не змінено. */
-  background: rgba(244, 241, 230, calc(0.8 - 0.65 * var(--sheet-fade, 0)));   /* горбик = той самий беж+блюр, що й лист (Вова 17.07: під шапочку+язичок теж блюр, щоб за ними не просвічувало) */
+  background: rgba(244, 241, 230, calc(0.8 - 0.65 * var(--sheet-fade, 0)));   /* горбик = той самий беж+блюр, що й лист */
   -webkit-backdrop-filter: blur(calc(10px + 6px * var(--sheet-fade, 0)));
           backdrop-filter: blur(calc(10px + 6px * var(--sheet-fade, 0)));
+  /* Верхній край язичка згасає в картинку (Вова 19.07): не різка лінія блюр↔фон. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 14px);
   border-radius: 20px 20px 0 0;
+}
+/* ── БЛЮР-ШАР ЛИСТА (Вова 19.07) ── окремий псевдоелемент ПІД контентом (z-index:0;
+   блоки z-index:1, sec-head z-index:2 — над ним). Тримає backdrop-blur усього листа
+   (задня картинка сторінки під віджетами), а ВЕРХНІЙ край згасає маскою-градієнтом:
+   блюр плавно зливається з незамутненою картинкою над листом — без різкого переходу. */
+.cm-sheet::after {
+  content: '';
+  position: absolute;
+  left: 0; right: 0;
+  top: 0;                          /* від верху листа (язичок вище має власний блюр+маску) */
+  bottom: 0;
+  z-index: 0;
+  border-radius: 24px 24px 0 0;
+  -webkit-backdrop-filter: blur(calc(10px + 6px * var(--sheet-fade, 0)));
+          backdrop-filter: blur(calc(10px + 6px * var(--sheet-fade, 0)));
+  /* Плавне згасання блюру зверху (верхні ~26px) → м'який перехід у картинку. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
+          mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
+  pointer-events: none;
 }
 
 /* ── Прибита кнопка кабінету (Вова 16.07: «іконка нікуди не дівається») ──
