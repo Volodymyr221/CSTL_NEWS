@@ -298,6 +298,7 @@ function initCenterFocus() {
 
   let raf = null;
   let _stickyTop = null;   // кеш sticky-top секції (top:-16); читаємо раз, не щокадру
+  let _secRestTop = null;  // позиція заголовка «ШО В СЕЛІ?» у спокої (scrollTop≈0) — база для згасання кольору на весь скрол
   const apply = () => {
     raf = null;
     if (main.dataset.tab !== 'community') return;   // ефект лише на Громаді
@@ -321,10 +322,16 @@ function initCenterFocus() {
       const dist = secTop - pinLine;               // >0 підходить до шапки, <=0 зафіксовано
       const prog = Math.max(0, Math.min(1, 1 - dist / FADE));   // 0 (нема) → 1 (повний)
       sec.style.setProperty('--blur-o', prog.toFixed(3));
-      // Той самий prog керує згасанням тіла листа + наростанням backdrop-blur (Вова 17.07):
-      // беж рівномірно зникає, задня картинка рівномірно блюриться → віджети на розмитому фото.
+      // Згасання КОЛЬОРУ листа (--sheet-fade) розтягнуте на ВЕСЬ скрол (Вова 19.07):
+      // від спокою (лист на місці) до фіксації заголовка під шапкою. Блюр при цьому
+      // ПОСТІЙНИЙ (CSS blur(11px)) — блюрить фото прямо під листом одразу, щойно він
+      // рушив; а колір поступово зникає, і на фіксації лишається сам блюр.
+      // База — позиція заголовка у спокої (перезчитуємо щоразу, коли ми вгорі).
+      if (main.scrollTop < 4) _secRestTop = secTop;
+      const startY = _secRestTop != null ? _secRestTop : secTop;
+      const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
       const sheet = document.querySelector('.cm-sheet');
-      if (sheet) sheet.style.setProperty('--sheet-fade', prog.toFixed(3));
+      if (sheet) sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
       // Білий колір тексту вмикаємо коли блюр уже помітний (>50%), плавно (CSS color-transition).
       sec.classList.toggle('cm-sec-head--stuck', prog >= 0.5);
     }
