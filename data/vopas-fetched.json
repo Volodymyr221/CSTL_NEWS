@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-19T20:01:28.385066+03:00",
+  "fetched_at": "2026-07-19T21:28:29.159370+03:00",
   "date": "19.07.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -5982,8 +5982,8 @@
       "carrier": "Завадович Р.Л.-",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -5997,8 +5997,8 @@
       "carrier": "Черняк П.К.-43018 Волинська об",
       "bus": "БАЗ-А 0 79",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6012,8 +6012,8 @@
       "carrier": "Палько В.А.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6027,8 +6027,8 @@
       "carrier": "Потапчук В. В.",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6042,8 +6042,8 @@
       "carrier": "Палько В.А.",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6057,8 +6057,8 @@
       "carrier": "Скрипцов Р.В.",
       "bus": "Фольксваген LT",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6072,8 +6072,8 @@
       "carrier": "Володимир-Транс ТзОВ 43000",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6087,8 +6087,8 @@
       "carrier": "ТОВ \"Волиньекспрес\"",
       "bus": "Неоплан",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6117,9 +6117,9 @@
       "carrier": "ТОВ РОЛАНД-ТРАНС",
       "bus": "Іveko Daіly",
       "price": null,
-      "status": "Рейс зірваний",
+      "status": "продаж припинено",
       "sale_active": false,
-      "cancelled": true,
+      "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
     },
@@ -6132,8 +6132,8 @@
       "carrier": "Володимир-Транс ТзОВ 43000",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6147,8 +6147,8 @@
       "carrier": "КОВЕЛЬ АТП 10706",
       "bus": "БАЗ А 079.25",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
