@@ -10026,13 +10026,10 @@ ${ev.description || ""}`
     let _stickyTop = null;
     let _secRestTop = null;
     let _maskW = 0;
-    const buildSheetMask = (w, d) => {
+    const buildSheetPath = (w) => {
       const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17;
       const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-      const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
-      const sd = Math.max(0.1, d / 2);
-      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
-      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
+      return `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
     };
     const apply = () => {
       raf = null;
@@ -10058,13 +10055,19 @@ ${ev.description || ""}`
         const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
         const sheet = document.querySelector(".cm-sheet");
         if (sheet) {
-          sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
           sheet.style.setProperty("--topbar-o", prog.toFixed(3));
-          sheet.style.setProperty("--sheet-blur", Math.min(11, progColor * 55).toFixed(1) + "px");
+          const progFx = Math.max(0, Math.min(1, (progColor - 0.45) / 0.55));
+          sheet.style.setProperty("--sheet-fade", progFx.toFixed(3));
+          sheet.style.setProperty("--sheet-blur", Math.min(11, progFx * 22).toFixed(1) + "px");
+          const fb = document.getElementById("cmFeatherBlur");
+          if (fb)
+            fb.setAttribute("stdDeviation", "0 " + (0.4 + progFx * 7).toFixed(2));
           const w = sheet.clientWidth;
           if (w && w !== _maskW) {
             _maskW = w;
-            sheet.style.setProperty("--sheet-mask", buildSheetMask(w, 14));
+            const p = document.getElementById("cmSheetMaskPath");
+            if (p)
+              p.setAttribute("d", buildSheetPath(w));
           }
         }
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
