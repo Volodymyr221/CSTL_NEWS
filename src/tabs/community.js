@@ -341,18 +341,19 @@ function initCenterFocus() {
       if (main.scrollTop < 4) _secRestTop = secTop;
       const startY = _secRestTop != null ? _secRestTop : secTop;
       const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
-      // ЗАТРИМКА СТАРТУ ефекту (Вова 19.07): ефект «мовчить» поки заголовок не підніметься
-      // на START частку шляху до шапки — раніше стартував одразу зі скролу («зарано»). Тепер
-      // блюр/колір/біління вмикаються лише коли надпис уже трохи вище, і плавно наростають
-      // від тієї точки до фіксації під шапкою. prog: 0 до START → 0; далі 0→1.
+      // ДВА РІЗНІ ТЕМПИ (Вова 19.07):
+      // • БЛЮР+КОЛІР ЛИСТА (скло під блоком) — наростають ОДРАЗУ щойно блок рушив угору
+      //   (на progColor): блок піднімається → фон під ним плавно блюриться з першого пікселя.
+      // • БІЛІННЯ НАЗВИ + блюр-рядок під шапкою — ПІЗНІШЕ (мертва зона START): вмикаються лише
+      //   коли надпис уже трохи вище, щоб «зарано» не змінювались. prog: 0 до START → 0; далі 0→1.
       const START = 0.4;
       const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
       const sheet = document.querySelector('.cm-sheet');
       if (sheet) {
-        sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // блюр-рядок під шапкою: 0 поки надпис не піднявся вище, далі → 1 на фіксації
-        // ПЛАВНО від точки старту до фіксації: колір листа згасає 0.8→0, блюр 0→11px.
-        sheet.style.setProperty('--sheet-fade', prog.toFixed(3));
-        sheet.style.setProperty('--sheet-blur', (11 * prog).toFixed(1) + 'px');
+        sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // блюр-рядок під шапкою: пізніше (мертва зона), 0 поки надпис не піднявся вище
+        // Скло листа — З ПОЧАТКУ РУХУ (progColor): колір беж 0.8→0, блюр фону 0→11px плавно.
+        sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
+        sheet.style.setProperty('--sheet-blur', (11 * progColor).toFixed(1) + 'px');
         // Маска-силует — будуємо ОДИН раз на ширину (фіксований м'який край) → без миготіння.
         const w = sheet.clientWidth;
         if (w && w !== _maskW) {
@@ -360,7 +361,7 @@ function initCenterFocus() {
           sheet.style.setProperty('--sheet-mask', buildSheetMask(w));
         }
       }
-      // Білий колір тексту — теж від точки старту (prog, поріг 0.4): поки надпис не піднявся
+      // Білий колір тексту НАЗВИ — пізніше (prog, мертва зона START): поки надпис не піднявся
       // вище START — не білий; далі біліє плавно до фіксації (Вова 19.07).
       sec.classList.toggle('cm-sec-head--stuck', prog >= 0.4);
     }
