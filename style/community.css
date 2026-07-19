@@ -985,12 +985,14 @@
      Значення px рахує JS у --sheet-blur (безпечніше за min()/calc у фільтрі на iOS). */
   -webkit-backdrop-filter: blur(var(--sheet-blur, 11px));
           backdrop-filter: blur(var(--sheet-blur, 11px));
-  /* Форма «тіло+язичок» + РІВНОМІРНО дисипуючий верхній край — ЖИВА inline-SVG маска
-     (Вова 19.07): #cmSheetMask з feGaussianBlur по Y на контурі. JS міняє лише stdDeviation
-     фільтра щоскрол (без перебудови ресурсу) → край дисипує рівномірно і НЕ блимає.
-     Референс маски (не data-URI) — жодних перезавантажень під час скролу. */
-  -webkit-mask-image: url(#cmSheetMask);
-          mask-image: url(#cmSheetMask);
+  /* Форма «тіло+язичок» + рівномірно м'який верхній край — data-URI маска-силует
+     (buildSheetMask, feGaussianBlur по Y). Будується ОДИН раз на ширину → без миготіння.
+     Надійно рендериться на iOS (референс url(#id) на iOS не спрацював). */
+  -webkit-mask-image: var(--sheet-mask, none);
+          mask-image: var(--sheet-mask, none);
+  -webkit-mask-repeat: no-repeat;  mask-repeat: no-repeat;
+  -webkit-mask-position: left top; mask-position: left top;
+  -webkit-mask-size: auto;         mask-size: auto;
   pointer-events: none;
 }
 
