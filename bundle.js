@@ -10066,7 +10066,7 @@ ${ev.description || ""}`
             sheet.style.setProperty("--sheet-mask", buildSheetMask(w));
           }
         }
-        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
+        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
       }
       if (!allowMotion)
         return;
