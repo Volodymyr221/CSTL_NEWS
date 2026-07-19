@@ -972,8 +972,8 @@
   height: 17px;   /* 46→17 (Вова 17.07): горбик = ЛИШЕ випуклість НАД листом; низ чітко прилягає до початку блоку, не залазить углиб (інакше подвійний шар 80% бежу = видима «сходинка»). Розмір видимої частини над блоком не змінено. */
   background: rgba(244, 241, 230, calc(0.8 - 0.8 * var(--sheet-fade, 0)));   /* горбик: беж 0.8 у спокої → 0 на фіксації (колір повністю зникає при пінінгу) */
   /* Верх язичка ПОВЕРНЕНО суцільним (Вова 19.07: «поверни верх язичка назад») — маску прибрано. */
-  -webkit-backdrop-filter: blur(calc(7px * var(--sheet-fade, 0)));
-          backdrop-filter: blur(calc(7px * var(--sheet-fade, 0)));
+  -webkit-backdrop-filter: blur(calc(11px * var(--sheet-fade, 0)));
+          backdrop-filter: blur(calc(11px * var(--sheet-fade, 0)));
   border-radius: 20px 20px 0 0;
 }
 /* ── БЛЮР-ШАР ЛИСТА (Вова 19.07) ── окремий псевдоелемент ПІД контентом (z-index:0;
@@ -990,8 +990,8 @@
   border-radius: 24px 24px 0 0;
   /* Легесенький блюр (Вова 19.07): 0 у спокої → 7px на фіксації. З'являється коли
      колір згасає — ховає надписи, але картинка плюс-мінус просвічує (не сильне розмиття). */
-  -webkit-backdrop-filter: blur(calc(7px * var(--sheet-fade, 0)));
-          backdrop-filter: blur(calc(7px * var(--sheet-fade, 0)));
+  -webkit-backdrop-filter: blur(calc(11px * var(--sheet-fade, 0)));
+          backdrop-filter: blur(calc(11px * var(--sheet-fade, 0)));
   /* Плавне згасання блюру зверху (верхні ~26px) → м'який перехід у картинку. */
   -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
           mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
