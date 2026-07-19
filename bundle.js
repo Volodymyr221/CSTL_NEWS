@@ -10023,6 +10023,12 @@ ${ev.description || ""}`
     let raf = null;
     let _stickyTop = null;
     let _secRestTop = null;
+    let _sheetClipW = 0;
+    const buildSheetClip = (w) => {
+      const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17;
+      const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
+      return `path("M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z")`;
+    };
     const apply = () => {
       raf = null;
       if (main.dataset.tab !== "community")
@@ -10046,8 +10052,14 @@ ${ev.description || ""}`
         const startY = _secRestTop != null ? _secRestTop : secTop;
         const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
         const sheet = document.querySelector(".cm-sheet");
-        if (sheet)
+        if (sheet) {
           sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
+          const w = sheet.clientWidth;
+          if (w && w !== _sheetClipW) {
+            _sheetClipW = w;
+            sheet.style.setProperty("--sheet-clip", buildSheetClip(w));
+          }
+        }
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
       }
       if (!allowMotion)
