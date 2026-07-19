@@ -10025,7 +10025,7 @@ ${ev.description || ""}`
     let raf = null;
     let _stickyTop = null;
     let _secRestTop = null;
-    let _maskW = 0, _maskD = -1;
+    let _maskW = 0;
     const buildSheetMask = (w, d) => {
       const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17;
       const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
@@ -10062,11 +10062,9 @@ ${ev.description || ""}`
           sheet.style.setProperty("--topbar-o", prog.toFixed(3));
           sheet.style.setProperty("--sheet-blur", Math.min(11, progColor * 55).toFixed(1) + "px");
           const w = sheet.clientWidth;
-          const d = Math.round(2 + 24 * progColor);
-          if (w && (w !== _maskW || Math.abs(d - _maskD) >= 2)) {
+          if (w && w !== _maskW) {
             _maskW = w;
-            _maskD = d;
-            sheet.style.setProperty("--sheet-mask", buildSheetMask(w, d));
+            sheet.style.setProperty("--sheet-mask", buildSheetMask(w, 14));
           }
         }
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
