@@ -301,15 +301,17 @@ function initCenterFocus() {
   let raf = null;
   let _stickyTop = null;   // кеш sticky-top секції (top:-16); читаємо раз, не щокадру
   let _secRestTop = null;  // позиція заголовка «ШО В СЕЛІ?» у спокої (scrollTop≈0) — база для згасання кольору на весь скрол
-  let _maskW = 0;   // ширина, для якої вже задано шлях силуету (оновлюємо ЛИШЕ при зміні ширини)
-  // Контур силуету «тіло+язичок» ОДНИМ шляхом (Вова 19.07). Задається у ЖИВИЙ inline-SVG
-  // <mask> (#cmSheetMaskPath), а верхній край дисипує через feGaussianBlur 0 sd (#cmFeatherBlur),
-  // якому щоскрол міняємо ЛИШЕ stdDeviation (не перебудова data-URI → БЕЗ миготіння).
+  let _maskW = 0;   // ширина, для якої вже збудовано маску (ОДИН раз на ширину — не щоскрол → без миготіння)
+  // Маска-СИЛУЕТ «тіло+язичок» ОДНИМ шляхом (data-URI, надійно рендериться на iOS) з м'яким
+  // верхнім краєм (feGaussianBlur по Y, фіксована легка глибина sd — язичок суцільний у спокої,
+  // край рівномірно м'який на язичку і по боках). Будуємо ЛИШЕ при зміні ширини → без миготіння.
   // y=0 — верх язичка, y=17 — верх тіла листа. Плечі r24, язичок 175/r17.
-  const buildSheetPath = (w) => {
-    const H = 6000, rB = 24, pw = 175, ph = 17, r = 17;
+  const buildSheetMask = (w) => {
+    const H = 6000, rB = 24, pw = 175, ph = 17, r = 17, sd = 2.5;
     const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-    return `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
+    const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   };
   const apply = () => {
     raf = null;
@@ -348,20 +350,15 @@ function initCenterFocus() {
       const sheet = document.querySelector('.cm-sheet');
       if (sheet) {
         sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // прикріплений блюр-рядок проявляється як заголовок підходить до шапки
-        // Ефект «просвітлювання» починається НЕ одразу, а ~з середини скролу (Вова 19.07).
-        const progFx = Math.max(0, Math.min(1, (progColor - 0.45) / 0.55));
-        sheet.style.setProperty('--sheet-fade', progFx.toFixed(3));
-        sheet.style.setProperty('--sheet-blur', Math.min(11, progFx * 22).toFixed(1) + 'px');
-        // Верхній край силуету дисипує РІВНОМІРНО (feGaussianBlur по Y) — росте від ~середини.
-        // Міняємо stdDeviation ЖИВОГО SVG-фільтра у DOM (НЕ перебудова data-URI) → без миготіння.
-        const fb = document.getElementById('cmFeatherBlur');
-        if (fb) fb.setAttribute('stdDeviation', '0 ' + (0.4 + progFx * 7).toFixed(2));
-        // Шлях силуету — лише при зміні ширини.
+        // ПЛАВНО і ПОВІЛЬНО на ВЕСЬ скрол (Вова 19.07): колір згасає 0.8→0, блюр 0→11px
+        // рівномірно від спокою до фіксації. Без порогів і стрибків.
+        sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
+        sheet.style.setProperty('--sheet-blur', (11 * progColor).toFixed(1) + 'px');
+        // Маска-силует — будуємо ОДИН раз на ширину (фіксований м'який край) → без миготіння.
         const w = sheet.clientWidth;
         if (w && w !== _maskW) {
           _maskW = w;
-          const p = document.getElementById('cmSheetMaskPath');
-          if (p) p.setAttribute('d', buildSheetPath(w));
+          sheet.style.setProperty('--sheet-mask', buildSheetMask(w));
         }
       }
       // Білий колір тексту вмикаємо коли блюр уже помітний (>50%), плавно (CSS color-transition).
