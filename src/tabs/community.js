@@ -361,8 +361,8 @@ function initCenterFocus() {
           sheet.style.setProperty('--sheet-mask', buildSheetMask(w));
         }
       }
-      // Білий колір тексту вмикаємо коли блюр уже помітний (>50%), плавно (CSS color-transition).
-      sec.classList.toggle('cm-sec-head--stuck', prog >= 0.5);
+      // Білий колір тексту вмикаємо коли блюр уже помітний (>40%, Вова 19.07 — трохи раніше), плавно (CSS color-transition).
+      sec.classList.toggle('cm-sec-head--stuck', prog >= 0.4);
     }
     if (!allowMotion) return;
     let best = null, bestDist = Infinity;
