@@ -9937,6 +9937,8 @@ ${ev.description || ""}`
          \u0437\u0430\u043B\u0438\u043F\u0430\u0454 \u0456 \u0441\u0442\u0430\u0454 \u0431\u043B\u044E\u0440-\u043F\u0430\u043D\u0435\u043B\u043B\u044E (--stuck), \u0431\u043B\u043E\u043A\u0438 \u043F\u0456\u0440\u043D\u0430\u044E\u0442\u044C \u043F\u0456\u0434 \u043D\u0435\u0457.
          \u041A\u043D\u043E\u043F\u043A\u0438 \u043A\u0430\u0431\u0456\u043D\u0435\u0442\u0443 \u0442\u0443\u0442 \u041D\u0415\u041C\u0410 \u2014 \u0432\u043E\u043D\u0430 \u043E\u043A\u0440\u0435\u043C\u043E \u043F\u0440\u0438\u0431\u0438\u0442\u0430 (.cm-acc-pin). -->
     <div class="cm-sheet">
+    <!-- \u041F\u0440\u0438\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u0438\u0439 \u0434\u043E \u0448\u0430\u043F\u043A\u0438 \u0431\u043B\u044E\u0440-\u0440\u044F\u0434\u043E\u043A (\u041F\u0440\u0430\u0432\u043A\u0430 1): fixed, \u043D\u0435 \u0457\u0434\u0435 \u0437\u0456 \u0441\u043A\u0440\u043E\u043B\u043E\u043C; opacity \u0441\u043A\u0440\u0430\u0431\u0438\u0442\u044C\u0441\u044F. -->
+    <div class="cm-topbar-blur" aria-hidden="true"></div>
     <div id="cm-sec-sentinel" aria-hidden="true"></div>
     <header class="cm-sec-head" id="cm-sec-head">
       <div class="cm-sec-head-in">
@@ -10054,6 +10056,7 @@ ${ev.description || ""}`
         const sheet = document.querySelector(".cm-sheet");
         if (sheet) {
           sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
+          sheet.style.setProperty("--topbar-o", prog.toFixed(3));
           const w = sheet.clientWidth;
           if (w && w !== _sheetClipW) {
             _sheetClipW = w;

@@ -199,6 +199,8 @@ function renderSkeleton() {
          залипає і стає блюр-панеллю (--stuck), блоки пірнають під неї.
          Кнопки кабінету тут НЕМА — вона окремо прибита (.cm-acc-pin). -->
     <div class="cm-sheet">
+    <!-- Прикріплений до шапки блюр-рядок (Правка 1): fixed, не їде зі скролом; opacity скрабиться. -->
+    <div class="cm-topbar-blur" aria-hidden="true"></div>
     <div id="cm-sec-sentinel" aria-hidden="true"></div>
     <header class="cm-sec-head" id="cm-sec-head">
       <div class="cm-sec-head-in">
@@ -330,6 +332,9 @@ function initCenterFocus() {
       const FADE = 140;                             // px, дистанція плавного проявлення блюру (110→140, Вова 19.07: перехід беж→блюр починається ще трохи раніше; колір повністю зникає рівно на фіксації)
       const dist = secTop - pinLine;               // >0 підходить до шапки, <=0 зафіксовано
       const prog = Math.max(0, Math.min(1, 1 - dist / FADE));   // 0 (нема) → 1 (повний)
+      // Прикріплений блюр-рядок під шапкою (Правка 1): він position:fixed → НЕ їде;
+      // тут лише проявляємо його (opacity) як заголовок підходить до шапки. Ставимо на
+      // .cm-sheet (успадковується у .cm-topbar-blur). --blur-o лишаємо для сумісності.
       sec.style.setProperty('--blur-o', prog.toFixed(3));
       // Згасання КОЛЬОРУ листа (--sheet-fade) розтягнуте на ВЕСЬ скрол (Вова 19.07):
       // від спокою (лист на місці) до фіксації заголовка під шапкою. Блюр при цьому
@@ -342,6 +347,7 @@ function initCenterFocus() {
       const sheet = document.querySelector('.cm-sheet');
       if (sheet) {
         sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
+        sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // прикріплений блюр-рядок проявляється як заголовок підходить до шапки
         // Силует «тіло+язичок» для єдиного скло-шару (::after) — перерахунок лише при зміні ширини.
         const w = sheet.clientWidth;
         if (w && w !== _sheetClipW) {
