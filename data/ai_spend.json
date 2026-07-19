@@ -1,6 +1,136 @@
 {
   "runs": [
     {
+      "ts": 1784451422428,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 470,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
+      "ts": 1784451411045,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 436,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0078,
+      "note": ""
+    },
+    {
+      "ts": 1784451399980,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 645,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0112,
+      "note": ""
+    },
+    {
+      "ts": 1784451386502,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 568,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0098,
+      "note": ""
+    },
+    {
+      "ts": 1784451372364,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 375,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0069,
+      "note": ""
+    },
+    {
+      "ts": 1784362975991,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 432,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0077,
+      "note": ""
+    },
+    {
+      "ts": 1784362962735,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 539,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0094,
+      "note": ""
+    },
+    {
+      "ts": 1784362947032,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 480,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0087,
+      "note": ""
+    },
+    {
+      "ts": 1784362935570,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 482,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0085,
+      "note": ""
+    },
+    {
+      "ts": 1784362922576,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 505,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0088,
+      "note": ""
+    },
+    {
       "ts": 1784277487841,
       "mission": "holiday:🌰 Горіховий Спас",
       "model": "claude-sonnet-5",
@@ -626,16 +756,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 4.8317,
-    "runs": 48,
+    "cost_usd": 4.9187,
+    "runs": 58,
     "web_searches": 63
   },
   "months": {
     "2026-07": {
-      "cost_usd": 4.8317,
-      "runs": 48,
+      "cost_usd": 4.9187,
+      "runs": 58,
       "web_searches": 63
     }
   },
-  "updated_ts": 1784277487841
+  "updated_ts": 1784451422428
 }
