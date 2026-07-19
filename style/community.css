@@ -988,7 +988,7 @@
   content: '';
   position: absolute;
   left: 0; right: 0;
-  top: 0;                          /* від верху листа (язичок вище має власний блюр+маску) */
+  top: 0;                          /* від верху листа; язичок (::before) сидить рівно на цьому краї → разом як одне ціле */
   bottom: 0;
   z-index: 0;
   border-radius: 24px 24px 0 0;
@@ -997,9 +997,8 @@
      плюс-мінус просвічує. Колір (беж) згасає окремо, на весь скрол → на фіксації сам блюр. */
   -webkit-backdrop-filter: blur(11px);
           backdrop-filter: blur(11px);
-  /* Плавне згасання блюру зверху (верхні ~26px) → м'який перехід у картинку. */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
-          mask-image: linear-gradient(to bottom, transparent 0, #000 26px);
+  /* Маску верхнього краю ПРИБРАНО (Вова 19.07): лист і язичок мають ОДНАКОВИЙ суцільний
+     блюр+колір зверху → одне ціле, без сходинки/шва між блоком і язичком. */
   pointer-events: none;
 }
 
