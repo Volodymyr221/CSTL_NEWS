@@ -10047,17 +10047,13 @@ ${ev.description || ""}`
           _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
         const pinLine = pinY + _stickyTop;
         const secTop = sec.getBoundingClientRect().top;
-        const FADE = 140;
-        const dist = secTop - pinLine;
-        const prog = Math.max(0, Math.min(1, 1 - dist / FADE));
-        sec.style.setProperty("--blur-o", prog.toFixed(3));
         if (main.scrollTop < 4)
           _secRestTop = secTop;
         const startY = _secRestTop != null ? _secRestTop : secTop;
         const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
         const sheet = document.querySelector(".cm-sheet");
         if (sheet) {
-          sheet.style.setProperty("--topbar-o", prog.toFixed(3));
+          sheet.style.setProperty("--topbar-o", progColor.toFixed(3));
           sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
           sheet.style.setProperty("--sheet-blur", (11 * progColor).toFixed(1) + "px");
           const w = sheet.clientWidth;
@@ -10066,7 +10062,7 @@ ${ev.description || ""}`
             sheet.style.setProperty("--sheet-mask", buildSheetMask(w));
           }
         }
-        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
+        sec.classList.toggle("cm-sec-head--stuck", progColor >= 0.4);
       }
       if (!allowMotion)
         return;
