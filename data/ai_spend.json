@@ -1,6 +1,71 @@
 {
   "runs": [
     {
+      "ts": 1784451422428,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 470,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0082,
+      "note": ""
+    },
+    {
+      "ts": 1784451411045,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 436,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0078,
+      "note": ""
+    },
+    {
+      "ts": 1784451399980,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 645,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0112,
+      "note": ""
+    },
+    {
+      "ts": 1784451386502,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 568,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0098,
+      "note": ""
+    },
+    {
+      "ts": 1784451372364,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 375,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0069,
+      "note": ""
+    },
+    {
       "ts": 1784362975991,
       "mission": "holiday:🌰 Горіховий Спас",
       "model": "claude-sonnet-5",
@@ -691,16 +756,16 @@
     }
   ],
   "totals": {
-    "cost_usd": 4.8748,
-    "runs": 53,
+    "cost_usd": 4.9187,
+    "runs": 58,
     "web_searches": 63
   },
   "months": {
     "2026-07": {
-      "cost_usd": 4.8748,
-      "runs": 53,
+      "cost_usd": 4.9187,
+      "runs": 58,
       "web_searches": 63
     }
   },
-  "updated_ts": 1784362975991
+  "updated_ts": 1784451422428
 }
