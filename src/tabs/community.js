@@ -352,6 +352,8 @@ function initCenterFocus() {
       if (sheet) {
         sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
         sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // прикріплений блюр-рядок проявляється як заголовок підходить до шапки
+        // Блюр наростає 0→11px і стає повним ~коли блок на заданій висоті (progColor≈0.2), далі постійний.
+        sheet.style.setProperty('--sheet-blur', Math.min(11, progColor * 55).toFixed(1) + 'px');
         // Маска-силует скло-шару (::after): форма + м'який верхній край, глибина росте зі скролом.
         // Перерахунок лише при зміні ширини або помітній зміні глибини (не щокадру).
         const w = sheet.clientWidth;

@@ -10060,6 +10060,7 @@ ${ev.description || ""}`
         if (sheet) {
           sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
           sheet.style.setProperty("--topbar-o", prog.toFixed(3));
+          sheet.style.setProperty("--sheet-blur", Math.min(11, progColor * 55).toFixed(1) + "px");
           const w = sheet.clientWidth;
           const d = Math.round(2 + 24 * progColor);
           if (w && (w !== _maskW || Math.abs(d - _maskD) >= 2)) {
