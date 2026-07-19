@@ -984,15 +984,16 @@
      Ховає надписи, картинка плюс-мінус просвічує; на фіксації лишається сам блюр. */
   -webkit-backdrop-filter: blur(11px);
           backdrop-filter: blur(11px);
-  /* Силует «тіло+язичок» (fallback без JS — просто прямокутник тіла без язичка). */
-  -webkit-clip-path: var(--sheet-clip, inset(17px 0 0 0 round 24px 24px 0 0));
-          clip-path: var(--sheet-clip, inset(17px 0 0 0 round 24px 24px 0 0));
-  /* Верхній край силуету ПРОГРЕСИВНО розсіюється зі скролом (Вова 19.07): у спокої
-     майже чіткий (~2px), а коли колір фону зникає і блюру більшає (--sheet-fade росте) —
-     верх плавно згасає (до ~26px, менше й вище ніж було) → нема різкої лінії блюр↔фон.
-     Проміжна зупинка 0.5 робить перехід плавнішим (не лінійно-різким). */
-  -webkit-mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(1px + 13px * var(--sheet-fade, 0)), #000 calc(2px + 26px * var(--sheet-fade, 0)));
-          mask-image: linear-gradient(to bottom, transparent 0, rgba(0,0,0,0.5) calc(1px + 13px * var(--sheet-fade, 0)), #000 calc(2px + 26px * var(--sheet-fade, 0)));
+  /* Форма «тіло+язичок» + РІВНОМІРНО м'який верхній край — ОДНА маска-силует (Вова 19.07):
+     SVG будує JS (buildSheetMask) з вертикальним розмиттям ТІЛЬКИ верхнього контуру
+     (feGaussianBlur 0 d) → верх тане однаково вздовж усього контуру (і язичок, і плечі),
+     боки чіткі. Глибина d росте зі скролом (--sheet-fade). Маска задає і форму, тому
+     clip-path більше не потрібен. Без JS (--sheet-mask нема) — шар прямокутний (fallback). */
+  -webkit-mask-image: var(--sheet-mask, none);
+          mask-image: var(--sheet-mask, none);
+  -webkit-mask-repeat: no-repeat;  mask-repeat: no-repeat;
+  -webkit-mask-position: left top; mask-position: left top;
+  -webkit-mask-size: auto;         mask-size: auto;
   pointer-events: none;
 }
 

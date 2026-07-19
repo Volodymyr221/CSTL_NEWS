@@ -301,14 +301,18 @@ function initCenterFocus() {
   let raf = null;
   let _stickyTop = null;   // кеш sticky-top секції (top:-16); читаємо раз, не щокадру
   let _secRestTop = null;  // позиція заголовка «ШО В СЕЛІ?» у спокої (scrollTop≈0) — база для згасання кольору на весь скрол
-  let _sheetClipW = 0;     // ширина, для якої вже збудовано clip-path силуету (перерахунок лише при resize)
-  // Контур «тіло+язичок» ОДНИМ шляхом (Вова 19.07: одне ціле, без шва двох шарів).
-  // Координати у просторі .cm-sheet::after: y=0 — верх язичка, y=17 — верх тіла листа.
-  // Тіло: плечі радіус 24. Язичок: 175px по центру, верхні кути радіус 17 (кламп 20→17 при висоті 17).
-  const buildSheetClip = (w) => {
+  let _maskW = 0, _maskD = -1;   // ширина/глибина, для яких уже збудовано SVG-маску (перерахунок лише при зміні)
+  // Маска-СИЛУЕТ «тіло+язичок» ОДНИМ шляхом (Вова 19.07) з ВЕРТИКАЛЬНИМ розмиттям
+  // верхнього контуру (feGaussianBlur 0 sd) → верх тане РІВНОМІРНО вздовж усього контуру
+  // (і язичок, і плечі однаково), боки лишаються чіткими (Y-блюр не чіпає вертикальні краї).
+  // Глибина d росте зі скролом. y=0 — верх язичка, y=17 — верх тіла листа. Плечі r24, язичок 175/r17.
+  const buildSheetMask = (w, d) => {
     const H = 6000, rB = 24, pw = 175, ph = 17, r = 17;
     const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-    return `path("M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z")`;
+    const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
+    const sd = Math.max(0.1, d / 2);
+    const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
+    return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
   };
   const apply = () => {
     raf = null;
@@ -348,11 +352,13 @@ function initCenterFocus() {
       if (sheet) {
         sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
         sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // прикріплений блюр-рядок проявляється як заголовок підходить до шапки
-        // Силует «тіло+язичок» для єдиного скло-шару (::after) — перерахунок лише при зміні ширини.
+        // Маска-силует скло-шару (::after): форма + м'який верхній край, глибина росте зі скролом.
+        // Перерахунок лише при зміні ширини або помітній зміні глибини (не щокадру).
         const w = sheet.clientWidth;
-        if (w && w !== _sheetClipW) {
-          _sheetClipW = w;
-          sheet.style.setProperty('--sheet-clip', buildSheetClip(w));
+        const d = Math.round(2 + 24 * progColor);
+        if (w && (w !== _maskW || Math.abs(d - _maskD) >= 2)) {
+          _maskW = w; _maskD = d;
+          sheet.style.setProperty('--sheet-mask', buildSheetMask(w, d));
         }
       }
       // Білий колір тексту вмикаємо коли блюр уже помітний (>50%), плавно (CSS color-transition).
