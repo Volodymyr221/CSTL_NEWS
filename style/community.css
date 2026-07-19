@@ -985,16 +985,12 @@
      Значення px рахує JS у --sheet-blur (безпечніше за min()/calc у фільтрі на iOS). */
   -webkit-backdrop-filter: blur(var(--sheet-blur, 11px));
           backdrop-filter: blur(var(--sheet-blur, 11px));
-  /* Форма «тіло+язичок» + РІВНОМІРНО м'який верхній край — ОДНА маска-силует (Вова 19.07):
-     SVG будує JS (buildSheetMask) з вертикальним розмиттям ТІЛЬКИ верхнього контуру
-     (feGaussianBlur 0 d) → верх тане однаково вздовж усього контуру (і язичок, і плечі),
-     боки чіткі. Глибина d росте зі скролом (--sheet-fade). Маска задає і форму, тому
-     clip-path більше не потрібен. Без JS (--sheet-mask нема) — шар прямокутний (fallback). */
-  -webkit-mask-image: var(--sheet-mask, none);
-          mask-image: var(--sheet-mask, none);
-  -webkit-mask-repeat: no-repeat;  mask-repeat: no-repeat;
-  -webkit-mask-position: left top; mask-position: left top;
-  -webkit-mask-size: auto;         mask-size: auto;
+  /* Форма «тіло+язичок» + РІВНОМІРНО дисипуючий верхній край — ЖИВА inline-SVG маска
+     (Вова 19.07): #cmSheetMask з feGaussianBlur по Y на контурі. JS міняє лише stdDeviation
+     фільтра щоскрол (без перебудови ресурсу) → край дисипує рівномірно і НЕ блимає.
+     Референс маски (не data-URI) — жодних перезавантажень під час скролу. */
+  -webkit-mask-image: url(#cmSheetMask);
+          mask-image: url(#cmSheetMask);
   pointer-events: none;
 }
 
