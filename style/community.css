@@ -987,6 +987,11 @@
   /* Силует «тіло+язичок» (fallback без JS — просто прямокутник тіла без язичка). */
   -webkit-clip-path: var(--sheet-clip, inset(17px 0 0 0 round 24px 24px 0 0));
           clip-path: var(--sheet-clip, inset(17px 0 0 0 round 24px 24px 0 0));
+  /* Верхній край силуету ПРОГРЕСИВНО розсіюється зі скролом (Вова 19.07): у спокої
+     майже чіткий (~2px), а коли колір фону зникає і блюру більшає (--sheet-fade росте) —
+     верх дедалі більше згасає (до ~50px) → нема різкої лінії блюр↔фон, поки лист не зайде під шапку. */
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0, #000 calc(2px + 48px * var(--sheet-fade, 0)));
+          mask-image: linear-gradient(to bottom, transparent 0, #000 calc(2px + 48px * var(--sheet-fade, 0)));
   pointer-events: none;
 }
 
