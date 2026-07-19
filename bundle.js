@@ -10022,6 +10022,7 @@ ${ev.description || ""}`
     _focusWired = true;
     let raf = null;
     let _stickyTop = null;
+    let _secRestTop = null;
     const apply = () => {
       raf = null;
       if (main.dataset.tab !== "community")
@@ -10040,9 +10041,13 @@ ${ev.description || ""}`
         const dist = secTop - pinLine;
         const prog = Math.max(0, Math.min(1, 1 - dist / FADE));
         sec.style.setProperty("--blur-o", prog.toFixed(3));
+        if (main.scrollTop < 4)
+          _secRestTop = secTop;
+        const startY = _secRestTop != null ? _secRestTop : secTop;
+        const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
         const sheet = document.querySelector(".cm-sheet");
         if (sheet)
-          sheet.style.setProperty("--sheet-fade", prog.toFixed(3));
+          sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
       }
       if (!allowMotion)
