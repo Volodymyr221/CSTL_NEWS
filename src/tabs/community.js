@@ -341,13 +341,18 @@ function initCenterFocus() {
       if (main.scrollTop < 4) _secRestTop = secTop;
       const startY = _secRestTop != null ? _secRestTop : secTop;
       const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
+      // ЗАТРИМКА СТАРТУ ефекту (Вова 19.07): ефект «мовчить» поки заголовок не підніметься
+      // на START частку шляху до шапки — раніше стартував одразу зі скролу («зарано»). Тепер
+      // блюр/колір/біління вмикаються лише коли надпис уже трохи вище, і плавно наростають
+      // від тієї точки до фіксації під шапкою. prog: 0 до START → 0; далі 0→1.
+      const START = 0.4;
+      const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
       const sheet = document.querySelector('.cm-sheet');
       if (sheet) {
-        sheet.style.setProperty('--topbar-o', progColor.toFixed(3));   // блюр-рядок під шапкою: 0 у спокої → 1 на фіксації (Вова 19.07: більше не висить у спокої)
-        // ПЛАВНО і ПОВІЛЬНО на ВЕСЬ скрол: колір листа згасає 0.8→0, блюр 0→11px рівномірно
-        // від спокою до фіксації. Без порогів і стрибків.
-        sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
-        sheet.style.setProperty('--sheet-blur', (11 * progColor).toFixed(1) + 'px');
+        sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // блюр-рядок під шапкою: 0 поки надпис не піднявся вище, далі → 1 на фіксації
+        // ПЛАВНО від точки старту до фіксації: колір листа згасає 0.8→0, блюр 0→11px.
+        sheet.style.setProperty('--sheet-fade', prog.toFixed(3));
+        sheet.style.setProperty('--sheet-blur', (11 * prog).toFixed(1) + 'px');
         // Маска-силует — будуємо ОДИН раз на ширину (фіксований м'який край) → без миготіння.
         const w = sheet.clientWidth;
         if (w && w !== _maskW) {
@@ -355,9 +360,9 @@ function initCenterFocus() {
           sheet.style.setProperty('--sheet-mask', buildSheetMask(w));
         }
       }
-      // Білий колір тексту — теж зі скролу (progColor, поріг 0.4): у спокої progColor=0 → НЕ білий,
-      // біліє плавно як заголовок підходить до шапки (Вова 19.07).
-      sec.classList.toggle('cm-sec-head--stuck', progColor >= 0.4);
+      // Білий колір тексту — теж від точки старту (prog, поріг 0.4): поки надпис не піднявся
+      // вище START — не білий; далі біліє плавно до фіксації (Вова 19.07).
+      sec.classList.toggle('cm-sec-head--stuck', prog >= 0.4);
     }
     if (!allowMotion) return;
     let best = null, bestDist = Infinity;
