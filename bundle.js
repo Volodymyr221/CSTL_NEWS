@@ -10036,7 +10036,7 @@ ${ev.description || ""}`
           _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
         const pinLine = pinY + _stickyTop;
         const secTop = sec.getBoundingClientRect().top;
-        const FADE = 110;
+        const FADE = 140;
         const dist = secTop - pinLine;
         const prog = Math.max(0, Math.min(1, 1 - dist / FADE));
         sec.style.setProperty("--blur-o", prog.toFixed(3));

@@ -317,7 +317,7 @@ function initCenterFocus() {
       if (_stickyTop === null) _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
       const pinLine = pinY + _stickyTop;
       const secTop = sec.getBoundingClientRect().top;
-      const FADE = 110;                             // px, дистанція плавного проявлення блюру (70→110, Вова 19.07: перехід беж→блюр починається трохи раніше)
+      const FADE = 140;                             // px, дистанція плавного проявлення блюру (110→140, Вова 19.07: перехід беж→блюр починається ще трохи раніше; колір повністю зникає рівно на фіксації)
       const dist = secTop - pinLine;               // >0 підходить до шапки, <=0 зафіксовано
       const prog = Math.max(0, Math.min(1, 1 - dist / FADE));   // 0 (нема) → 1 (повний)
       sec.style.setProperty('--blur-o', prog.toFixed(3));
