@@ -10025,11 +10025,14 @@ ${ev.description || ""}`
     let raf = null;
     let _stickyTop = null;
     let _secRestTop = null;
-    let _sheetClipW = 0;
-    const buildSheetClip = (w) => {
+    let _maskW = 0, _maskD = -1;
+    const buildSheetMask = (w, d) => {
       const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17;
       const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
-      return `path("M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z")`;
+      const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
+      const sd = Math.max(0.1, d / 2);
+      const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
+      return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
     };
     const apply = () => {
       raf = null;
@@ -10058,9 +10061,11 @@ ${ev.description || ""}`
           sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
           sheet.style.setProperty("--topbar-o", prog.toFixed(3));
           const w = sheet.clientWidth;
-          if (w && w !== _sheetClipW) {
-            _sheetClipW = w;
-            sheet.style.setProperty("--sheet-clip", buildSheetClip(w));
+          const d = Math.round(2 + 24 * progColor);
+          if (w && (w !== _maskW || Math.abs(d - _maskD) >= 2)) {
+            _maskW = w;
+            _maskD = d;
+            sheet.style.setProperty("--sheet-mask", buildSheetMask(w, d));
           }
         }
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.5);
