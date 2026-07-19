@@ -10051,18 +10051,20 @@ ${ev.description || ""}`
           _secRestTop = secTop;
         const startY = _secRestTop != null ? _secRestTop : secTop;
         const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
+        const START = 0.4;
+        const prog = progColor <= START ? 0 : (progColor - START) / (1 - START);
         const sheet = document.querySelector(".cm-sheet");
         if (sheet) {
-          sheet.style.setProperty("--topbar-o", progColor.toFixed(3));
-          sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
-          sheet.style.setProperty("--sheet-blur", (11 * progColor).toFixed(1) + "px");
+          sheet.style.setProperty("--topbar-o", prog.toFixed(3));
+          sheet.style.setProperty("--sheet-fade", prog.toFixed(3));
+          sheet.style.setProperty("--sheet-blur", (11 * prog).toFixed(1) + "px");
           const w = sheet.clientWidth;
           if (w && w !== _maskW) {
             _maskW = w;
             sheet.style.setProperty("--sheet-mask", buildSheetMask(w));
           }
         }
-        sec.classList.toggle("cm-sec-head--stuck", progColor >= 0.4);
+        sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
       }
       if (!allowMotion)
         return;
