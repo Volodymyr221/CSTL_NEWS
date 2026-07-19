@@ -1040,16 +1040,16 @@
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   left: 0; right: 0;
-  height: 62px;
+  height: 88px;                     /* 62→88 (Вова 19.07): накриває і заголовок, і підзаголовок «ось що головне…» */
   z-index: 2;
   opacity: var(--topbar-o, 0);
   background: rgba(30, 16, 18, 0.30);
   -webkit-backdrop-filter: blur(9px);
           backdrop-filter: blur(9px);
   border-radius: 0 0 18px 18px;
-  /* низ плавно розсіюється — без різкої нижньої лінії */
-  -webkit-mask-image: linear-gradient(to bottom, #000 66%, transparent 100%);
-          mask-image: linear-gradient(to bottom, #000 66%, transparent 100%);
+  /* низ плавно розсіюється — без різкої нижньої лінії (суцільна зона довша, щоб підзаголовок був на блюрі) */
+  -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
+          mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
   pointer-events: none;
 }
 /* Внутрішній контейнер = ЯЗИЧОК: тілесна пігулка, заокруглена лише ЗВЕРХУ, з
