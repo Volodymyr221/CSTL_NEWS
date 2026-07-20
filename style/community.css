@@ -3327,7 +3327,7 @@
   z-index: 1100;                        /* вище таб-бару — меню не перекриває */
   display: flex;
   flex-direction: column;
-  background: #F3EFE3;                  /* тепле паперове тло (трохи темніше за бульбашки) */
+  background: #FCFAF4;                  /* Вова 20.07: у колір картки обговорення */
   border-radius: 22px;
   overflow: hidden;
   box-shadow: 0 18px 48px rgba(0,0,0,0.40), 0 6px 18px rgba(0,0,0,0.22);
@@ -3358,7 +3358,7 @@
   display: flex; align-items: center; gap: 8px;
   padding: 4px 8px 10px;
   flex-shrink: 0;
-  background: #F3EFE3;
+  background: #FCFAF4;                  /* Вова 20.07: у колір картки/тіла чату (суцільно) */
   /* Тінь ТІЛЬКИ донизу (відділяє шапку від повідомлень — Вова: «знизу добре»).
      Було 0 4px 12px — blur 12 бив ~8px і ВГОРУ, даючи темну смугу над заголовком
      (виглядало накладеним). Тепер відʼємний spread -4 прибирає верхнє розпливання:
@@ -3417,9 +3417,12 @@
 .bd-msg-bubble {
   background: #fff; border-radius: 16px;
   padding: 7px 12px 5px;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.10);
   max-width: 100%;
 }
+/* Чужі (білі) бульбашки — тонка рамка, щоб не зникали на світлому тлі чату #FCFAF4
+   (Вова 20.07 зробив фон модалки в колір картки). Мої (червоні) — без рамки. */
+.bd-msg-group--other .bd-msg-bubble { border: 1px solid rgba(0,0,0,0.06); }
 .bd-msg-group--mine .bd-msg-bubble { background: var(--red); }
 /* «хвостик» — гострішій кут у крайньої бульбашки групи */
 .bd-msg-group--other .bd-msg-bubble:last-child { border-bottom-left-radius: 5px; }
@@ -3490,9 +3493,10 @@
 
 /* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
 .bd-card--chat {
-  /* Вова 20.07: білі картки на глибшому беж-фоні (#E7E1D2) — чіткий контраст «аркуш
-     на столі». Раніше картка #FAF8EF на фоні #F4F1E6 = різниця ~4 одиниці → зливалось. */
-  background: #FFFFFF;
+  /* Вова 20.07: картки на глибшому беж-фоні (#E7E1D2) — контраст «аркуш на столі».
+     Не чисто білі, а трохи теплі (#FCFAF4) — Вова: «трохи насиченіші, але не такі
+     кремові як були раніше (#FAF8EF), трішки». */
+  background: #FCFAF4;
   border: 1px solid rgba(0,0,0,0.05);
   border-radius: 16px;
   padding: 14px 16px;
