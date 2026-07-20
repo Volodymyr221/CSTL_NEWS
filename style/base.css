@@ -190,7 +190,10 @@ html, body {
   padding-top: calc(var(--header-h) + env(safe-area-inset-top, 0px));
   padding-bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px));
   background: var(--bg-page);
+  scrollbar-width: none;       /* Firefox: додаток, не сайт — без смужки скролу (Вова 20.07) */
+  -ms-overflow-style: none;    /* старий Edge/IE */
 }
+.app-main::-webkit-scrollbar { display: none; width: 0; height: 0; }
 /* Фон скролера відповідає активній вкладці — щоб overscroll-bounce (iOS) не показував body */
 .app-main[data-tab="buses"] { background: #F0F2F5; }
 /* Блокування фону при відкритій модалці — головний скролер не скролиться (усі дії в модалці).
