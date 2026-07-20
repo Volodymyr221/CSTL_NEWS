@@ -184,10 +184,15 @@ function renderSkeleton() {
       <!-- Фрост-смугу (.cm-hero-blurband) прибрано 16.07 (Вова, редизайн «лист»):
            непрозорий тілесний лист налягає на фото і повністю її закриває. -->
       <div class="cm-hero-overlay">
-        <h2 class="cm-hero-title">Олика</h2>
-        <!-- Підпис фото повернено 16.07 (Вова) — оформлений як підпис фотографії
-             (курсив, дрібний). «ШО В СЕЛІ?» живе окремо нижче (cm-sec-head). -->
-        <p class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</p>
+        <!-- Підпис фото (Вова 20.07, варіант А): один рядок у скляній пігулці —
+             «Олика · Колегіальний костел…». Делікатний підпис, не назва блоку;
+             пігулка зі склом читається і на світлому денному, і на темному нічному
+             фото. «ШО В СЕЛІ?» живе окремо нижче (cm-sec-head). -->
+        <div class="cm-hero-caption">
+          <span class="cm-hero-title">Олика</span>
+          <span class="cm-hero-dot" aria-hidden="true">·</span>
+          <span class="cm-hero-sub">${escapeHtml(heroSet()[0].caption)}</span>
+        </div>
       </div>
     </section>
     <div class="cm-hero-spacer"></div>
