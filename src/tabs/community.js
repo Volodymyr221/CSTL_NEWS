@@ -351,9 +351,11 @@ function initCenterFocus() {
       const sheet = document.querySelector('.cm-sheet');
       if (sheet) {
         sheet.style.setProperty('--topbar-o', prog.toFixed(3));   // блюр-рядок під шапкою: пізніше (мертва зона), 0 поки надпис не піднявся вище
-        // Скло листа — З ПОЧАТКУ РУХУ (progColor): колір беж 0.8→0, блюр фону 0→11px плавно.
+        // Скло листа (progColor): колір беж 0.82→0 (згасає з руху); блюр фону — БАЗА 6px
+        // уже В СПОКОЇ (Вова 19.07: «додати блюр у спокої + зменшити насиченість кольору»),
+        // наростає до 11px на фіксації. 6 + 5*progColor.
         sheet.style.setProperty('--sheet-fade', progColor.toFixed(3));
-        sheet.style.setProperty('--sheet-blur', (11 * progColor).toFixed(1) + 'px');
+        sheet.style.setProperty('--sheet-blur', (6 + 5 * progColor).toFixed(1) + 'px');
         // Маска-силует — будуємо ОДИН раз на ширину (фіксований м'який край) → без миготіння.
         const w = sheet.clientWidth;
         if (w && w !== _maskW) {

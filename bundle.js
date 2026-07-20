@@ -10057,7 +10057,7 @@ ${ev.description || ""}`
         if (sheet) {
           sheet.style.setProperty("--topbar-o", prog.toFixed(3));
           sheet.style.setProperty("--sheet-fade", progColor.toFixed(3));
-          sheet.style.setProperty("--sheet-blur", (11 * progColor).toFixed(1) + "px");
+          sheet.style.setProperty("--sheet-blur", (6 + 5 * progColor).toFixed(1) + "px");
           const w = sheet.clientWidth;
           if (w && w !== _maskW) {
             _maskW = w;
