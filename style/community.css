@@ -3418,7 +3418,8 @@
 .bd-msg-bubble {
   background: #fff; border-radius: 16px;
   padding: 7px 12px 5px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.10);
+  /* Вова 20.07: трохи глибша тінь (2 шари) — бульбашки не зливаються з фоном чату. */
+  box-shadow: 0 1px 3px rgba(0,0,0,0.10), 0 3px 8px rgba(0,0,0,0.10);
   max-width: 100%;
 }
 /* Чужі (білі) бульбашки — тонка рамка, щоб не зникали на світлому тлі чату #FCFAF4
