@@ -2684,6 +2684,17 @@
    (раніше це число «пливло» щоразу — Д-11 його зламав). */
 .bd-body { padding-top: 100px; }
 .bd-controls:has(.bd-search-row) ~ .bd-body { padding-top: 140px; }
+/* Обговорення (Вова 20.07, фікс «баху» при відкритті): їхня шапка (тільки заголовок
+   + пошук, без titlebar/чіпів Дошки) ≈82px, а успадкований від Дошки запас 140px був
+   ЗАВЕЛИКИЙ → syncBoardBodyOffset() у наступному кадрі стягував тіло на ~94px, картки
+   стрибали вгору («бах»). Даємо одразу правильний запас = реальній висоті → нема стрибка
+   (id перекриває :has-правило Дошки). */
+#disc-content .bd-body { padding-top: 94px; }
+/* Обговорення (Вова 20.07): пошук БІЛИЙ (був #FAF8EF = колір карток) — на глибшому
+   фоні відділяється; scoped під #disc-content, Дошки не чіпає. */
+#disc-content .bd-search { background: #FFFFFF; }
+/* Розширити картки: бічний відступ стрічки 14→10px (картки ширші на 8px сумарно). */
+#disc-content .bd-stream { padding-left: 10px; padding-right: 10px; }
 
 /* Обговорення тепер справжня .page у .app-main (не overlay) — .disc-screen прибрано.
    #disc-content поводиться як .board-content на Дошці; шапку/таб-бар/скрол дає .app-main. */
@@ -3479,11 +3490,13 @@
 
 /* ── CHAT — горизонтальна картка з аватаркою ────────────────────────────── */
 .bd-card--chat {
-  background: var(--card-cream);
-  border: 1px solid var(--paper-deep);
+  /* Вова 20.07: білі картки на глибшому беж-фоні (#E7E1D2) — чіткий контраст «аркуш
+     на столі». Раніше картка #FAF8EF на фоні #F4F1E6 = різниця ~4 одиниці → зливалось. */
+  background: #FFFFFF;
+  border: 1px solid rgba(0,0,0,0.05);
   border-radius: 16px;
   padding: 14px 16px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.10), 0 6px 16px rgba(0,0,0,0.08);
+  box-shadow: 0 1px 3px rgba(60,45,20,0.10), 0 8px 22px rgba(60,45,20,0.12);
 }
 .bd-chat-head {
   display: flex;
