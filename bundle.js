@@ -10027,7 +10027,7 @@ ${ev.description || ""}`
     let _secRestTop = null;
     let _maskW = 0;
     const buildSheetMask = (w) => {
-      const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17, sd = 2.5;
+      const H = 6e3, rB = 24, pw = 175, ph = 17, r = 17, sd = 1.5;
       const x1 = (w - pw) / 2, x2 = (w + pw) / 2;
       const path = `M 0 ${H} L 0 ${ph + rB} Q 0 ${ph} ${rB} ${ph} L ${x1} ${ph} A ${r} ${r} 0 0 1 ${x1 + r} 0 L ${x2 - r} 0 A ${r} ${r} 0 0 1 ${x2} ${ph} L ${w - rB} ${ph} Q ${w} ${ph} ${w} ${ph + rB} L ${w} ${H} Z`;
       const svg = `<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${H}'><filter id='b' x='-5%' y='-4%' width='110%' height='108%'><feGaussianBlur stdDeviation='0 ${sd}'/></filter><path d='${path}' fill='#fff' filter='url(#b)'/></svg>`;
