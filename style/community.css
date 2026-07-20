@@ -1149,21 +1149,26 @@
   pointer-events: none;
 }
 /* Підпис фото (Вова 20.07, варіант Б) — два дрібні рядки в стилі підпису журналу:
-   «ОЛИКА» капітелями + назва пам'ятки курсивом під нею. Легка розмита підкладка
-   У ФОРМІ НАПИСУ (fit-content — ширина = найдовший рядок, не на весь екран): чуть-чуть
-   блюру + ледь помітний тон під текстом → підпис виділяється на будь-якому фото (Вова 20.07). */
+   «ОЛИКА» капітелями + назва пам'ятки курсивом під нею. Розмита підкладка ПО КОЖНОМУ
+   РЯДКУ ОКРЕМО (Вова 20.07): кожен рядок несе власний блюр по своїй ширині → форма
+   йде рівно за текстом, без порожнього блюру справа від короткого «ОЛИКА». */
 .cm-hero-caption {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 1px;
+  gap: 3px;
+}
+/* Спільна підкладка кожного рядка — блюр+тон рівно під текстом (width за вмістом). */
+.cm-hero-title,
+.cm-hero-sub {
   width: fit-content;
   max-width: 100%;
-  padding: 4px 10px;
-  border-radius: 10px;
+  padding: 3px 9px;
+  border-radius: 8px;
   background: rgba(15, 10, 10, 0.18);
   -webkit-backdrop-filter: blur(4px);
           backdrop-filter: blur(4px);
+  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
 .cm-hero-title {
   font-size: 14px;               /* 28→14 (Вова 20.07): підпис, а не назва блоку */
@@ -1172,16 +1177,15 @@
   text-transform: uppercase;
   letter-spacing: 2px;           /* розріджені капітелі — «журнальний» підпис */
   margin: 0;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
 }
-/* Назва пам'ятки — дрібний курсив тим самим serif, приглушений. */
+/* Назва пам'ятки — дрібний курсив тим самим serif, трохи приглушена (колір, не opacity,
+   щоб не послаблювати власну підкладку). */
 .cm-hero-sub {
   font-size: 11px;
   font-family: Georgia, 'Times New Roman', serif;
   font-style: italic;
   letter-spacing: 0.3px;
-  opacity: 0.85;
-  text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+  color: rgba(255, 255, 255, 0.9);
 }
 /* Точки-індикатори hero прибрано 08.07 (рішення Роми): лише авто-слайдшоу,
    без ручного гортання і індикаторів. */
