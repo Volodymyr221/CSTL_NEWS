@@ -1048,7 +1048,7 @@
   background: rgba(30, 16, 18, 0.30);
   -webkit-backdrop-filter: blur(9px);
           backdrop-filter: blur(9px);
-  border-radius: 0 0 18px 18px;
+  border-radius: 0;                 /* нижні кути прямі/гострі (Вова 20.07): заокруглення інколи кидалось в очі при тінях */
   /* низ плавно розсіюється — без різкої нижньої лінії (суцільна зона довша, щоб підзаголовок був на блюрі) */
   -webkit-mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
           mask-image: linear-gradient(to bottom, #000 74%, transparent 100%);
