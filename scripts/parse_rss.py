@@ -1359,7 +1359,7 @@ def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
     # Прибираємо все НЕ-тілесне: метадані (автор/дата/перегляди/«Зберегти»),
     # заголовок, зображення+підписи, теги, поділитись, хлібні крихти, скрипти.
     for sel in (".articleContentInfo", "h1", "figure", "figcaption", "picture", "img",
-                "[class*=caption]", "[class*=gallery]", "[class*=tags]", "[class*=tag-]",
+                "[class*=caption]", "[class*=gallery]", "[class*=tag]",
                 "[class*=share]", "[class*=social]", "[class*=related]", "[class*=breadcrumb]",
                 "[class*=views]", "[class*=save]", "script", "style", "nav"):
         for el in art.select(sel):
