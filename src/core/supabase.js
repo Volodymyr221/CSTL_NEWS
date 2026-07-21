@@ -301,10 +301,27 @@ export async function uploadPhotoToStorage(blob, folder = '') {
 // щоб не бити RPC повторно). Fail-soft: якщо RPC ще нема (SQL не застосовано)
 // або помилка — усе лишається на літері-fallback, як було до Потоку 12.
 const _avatarCache = new Map();   // uid -> url ('' = нема фото)
+const _nameCache   = new Map();   // uid -> живе імʼя профілю (той самий RPC get_avatars)
 
 // Синхронний доступ до кешу — для рендеру «зараз» (порожньо → літера-fallback).
 export function cachedAvatar(uid) {
   return uid ? (_avatarCache.get(uid) || '') : '';
+}
+
+// Живе імʼя профілю за uid (порожньо → лишаємо вморожене імʼя з рядка).
+export function cachedName(uid) {
+  return uid ? (_nameCache.get(uid) || '') : '';
+}
+
+// Спільні хелпери гідрації імен (для board / board-discussions — щоб не дублювати).
+// nameUid → атрибут-маркер, який hydrateNames знайде і підмінить на живе імʼя.
+// liveName → одразу підставляє вже кешоване живе імʼя (щоб не мигало), інакше
+// вморожений текст, інакше fallback ('Житель' в обговореннях / 'анонімно' на дошці).
+export function nameUid(uid) {
+  return uid ? ` data-name-uid="${escapeHtml(uid)}"` : '';
+}
+export function liveName(name, uid, fallback = 'Житель') {
+  return escapeHtml(cachedName(uid) || name || fallback);
 }
 
 // Батч-підвантаження аватарів за списком uid. Тягне лише ще невідомі, заповнює кеш.
@@ -314,7 +331,7 @@ export async function fetchAvatars(uids) {
   try {
     const { data, error } = await supa.rpc('get_avatars', { uids: need });
     if (error) { need.forEach(u => _avatarCache.set(u, '')); return; }  // RPC нема / помилка → fallback
-    (data || []).forEach(r => { if (r && r.uid) _avatarCache.set(r.uid, r.avatar_url || ''); });
+    (data || []).forEach(r => { if (r && r.uid) { _avatarCache.set(r.uid, r.avatar_url || ''); if (r.name) _nameCache.set(r.uid, r.name); } });
     need.forEach(u => { if (!_avatarCache.has(u)) _avatarCache.set(u, ''); });  // негативи (нема профілю)
   } catch (_) { need.forEach(u => _avatarCache.set(u, '')); }
 }
@@ -340,6 +357,24 @@ export async function hydrateAvatars(root) {
     el.classList.add(base + '--img');
     el.style.background = 'none';
     el.innerHTML = `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
+  });
+}
+
+// Прогресивна гідрація ІМЕН (близнюк hydrateAvatars): знаходить елементи з
+// data-name-uid і підмінює вморожене імʼя (денормалізоване в рядок повідомлення)
+// на ЖИВЕ імʼя з профілю за uid. Так перейменування акаунту відображається і на
+// старих повідомленнях — усі репліки одного uid показують одне поточне імʼя.
+// Той самий батч-RPC що аватари (get_avatars повертає name). Fail-soft: імені
+// нема в кеші → лишаємо текст як був. data-name-done проти повтору.
+export async function hydrateNames(root) {
+  if (!root || !root.querySelectorAll) return;
+  const els = [...root.querySelectorAll('[data-name-uid]')].filter(e => !e.dataset.nameDone);
+  if (!els.length) return;
+  await fetchAvatars(els.map(e => e.dataset.nameUid));
+  els.forEach(el => {
+    el.dataset.nameDone = '1';
+    const nm = cachedName(el.dataset.nameUid);
+    if (nm) el.textContent = nm;            // жива назва профілю перекриває вморожену
   });
 }
 

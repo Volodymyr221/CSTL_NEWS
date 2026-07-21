@@ -21,7 +21,7 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   fetchAllComments,
   fetchAllReactions, getAnonId,
-  fetchSavedPostIds,
+  fetchSavedPostIds, hydrateNames, nameUid, liveName,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { ICONS } from '../core/icons.js';
@@ -80,7 +80,7 @@ function renderCardFoot(p) {
           <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
         </div>
         <div class="cm-board-foot-who">
-          <span class="cm-board-author cm-board-author--card">— ${escapeHtml(p.author || 'анонімно')}</span>
+          <span class="cm-board-author cm-board-author--card">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       </div>`;
@@ -588,6 +588,8 @@ function renderAll() {
     ${renderFab()}
   `;
 
+  hydrateNames(el);   // синк живих імен профілю (за uid) у картках обговорень
+
   el.style.backgroundImage = '';
   el.style.backgroundSize  = '';
   el.style.backgroundPosition = '';
@@ -745,6 +747,7 @@ export function openAdModalStandalone(post) {
   document.body.appendChild(backdrop);
   document.body.appendChild(modal);
   document.body.classList.add('cm-zoom-open');
+  hydrateNames(modal);   // живе імʼя автора оголошення за uid
 
   let closed = false;
   const close = () => {
@@ -828,6 +831,7 @@ function initBoardNoteExpand(root) {
       : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
     document.body.appendChild(modal);
     document.body.classList.add('cm-zoom-open');   // блокуємо скрол фону (.app-main)
+    hydrateNames(modal);   // живе імʼя автора оголошення за uid
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });
