@@ -55,7 +55,7 @@ SOURCES = [
         "url": "https://kivertsi.rayon.in.ua/tags/olika",
         "name": "Район.Ківерці",
         "geo": "Громада",
-        "type": "html",   # тег-сторінка без RSS — HTML-парсер
+        "type": "rayon",   # тег-сторінка rayon.in.ua — спеціальний парсер (.galleryCard)
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/news/",
@@ -152,6 +152,26 @@ OLYKA_RE = re.compile(r"\b(" + "|".join(_OLYKA_TERMS) + r")\b", re.IGNORECASE)
 def is_olyka_relevant(text: str) -> bool:
     """True якщо текст справді згадує Олику / села громади / замок (ціле слово)."""
     return bool(OLYKA_RE.search(text or ""))
+
+
+# ПОВНИЙ список громади — ЛИШЕ для фільтра rayon (пул уже курований «тегом Олика»,
+# тож ширший список безпечний). Спільний OLYKA_RE вище НЕ чіпаємо: додати сюди
+# «котів/ставок» у нього → хибно тягнуло б у Громаду новини про котів/ставки з
+# усієї стрічки (гео-реклас). Джерело сіл: hromada_config.json → hromada.villages.
+_HROMADA_TERMS = [
+    r"олик\w*", r"олиц\w*", r"радзивіл\w*",                # Олика / Олицька громада / Радзивілли
+    r"горянівк\w*", r"дерно", r"дерна", r"дідич\w*",       # села громади
+    r"жорнищ\w*", r"залісоч\w*", r"котів", r"личан\w*",
+    r"метельн\w*", r"мощаниц\w*", r"носович\w*", r"одерад\w*",
+    r"покащ\w*", r"путилівк\w*", r"ставок", r"хром[\W]?яків", r"чемерин\w*",
+]
+_HROMADA_RE = re.compile(r"\b(" + "|".join(_HROMADA_TERMS) + r")\b", re.IGNORECASE)
+
+
+def is_hromada_relevant(text: str) -> bool:
+    """True якщо текст згадує Олику або будь-яке село Олицької громади (ціле слово).
+    Ширший за is_olyka_relevant — для фільтра rayon-тегу (див. коментар вище)."""
+    return bool(_HROMADA_RE.search(text or ""))
 
 
 # Волинські маркери (Потік 11, Вова 14.07): «Волинь» = ЛИШЕ новини що реально
@@ -571,14 +591,42 @@ def is_world_relevant(text: str) -> bool:
     return any(kw in low for kw in WORLD_KEYWORDS)
 
 
-def detect_category(text: str) -> str:
-    low = text.lower()
-    if any(kw in low for kw in ["культур", "мистецтв", "музей", "замок", "театр", "кіно", "виставк"]):
-        return "Культура"
-    if any(kw in low for kw in ["спорт", "футбол", "волейбол", "чемпіон", "змаган", "матч"]):
-        return "Спорт"
-    if any(kw in low for kw in ["бізнес", "економік", "бюджет", "гроші", "кошти", "фінанс", "інвест"]):
-        return "Бізнес"
+# Правила категорій: (назва, корені-ключі). Порядок = пріоритет. Назви категорій
+# ТОЧНО як ключі CATEGORY_COLORS у src/tabs/news.js (інакше бейдж без кольору).
+# Освіта навмисно БЕЗ кореня «школяр» (щоб «17-річний школяр» в аварії не тягнув
+# новину в Освіту — вона має лишитись «Суспільством»).
+_CATEGORY_RULES = [
+    ("Війна",     r"військ|захисник|загин|загиб|полегл|фронт|окупант|мобіліз|обстріл|полонен|безвіст|ветеран|бійц|боєць|воїн|зсу"),
+    ("Спорт",     r"спорт|футбол|волейбол|баскетбол|чемпіон|змаган|турнір|матч|олімпіад|спортсмен|атлет|кубок|першіст"),
+    ("Культура",  r"культур|мистецтв|музей|замок|театр|кіно|виставк|концерт|фестивал|оркестр|музик|художн|бібліотек|ансамбл|творчіст"),
+    ("Освіта",    r"школа|школи|школі|школу|шкільн|навчанн|навчальн|гімназі|ліце[йю]|вчител|викладач|освіт|педагог|дитсадок|дошкільн|першокласник|випускник"),
+    ("Здоровʼя",  r"лікар|медиц|медич|амбулатор|здоров|хвороб|вакцин|лікуванн|пацієнт|фап"),
+    ("Природа",   r"ліс|заказник|заповідн|екологі|довкілл|тварин|птах|врожай"),
+    ("Політика",  r"сесі|депутат|старост|бюджет|податок|подат|вибор|субвенц|субсиді|рада|ради|міськрад|сільрад"),
+    ("Економіка", r"бізнес|економік|підприєм|фінанс|інвест|тариф|ярмарок|торгівл|аграрі|фермер"),
+    ("Історія",   r"істори|столітт|спадщин|краєзнав|археолог|архівн|радзивіл|давнин"),
+]
+_CATEGORY_RE = [(cat, re.compile(r"\b(?:" + pat + r")", re.IGNORECASE)) for cat, pat in _CATEGORY_RULES]
+
+
+def detect_category(title: str, body: str = "") -> str:
+    """Тематична категорія новини за ЗАГОЛОВКОМ (ЦІЛІ слова, \\b).
+
+    Два рішення (Вова 21.07):
+    1) Межі слова (\\b) — раніше підрядок давав баги: «спорт» усередині «тран-СПОРТ-ні»
+       → аварія ставала «Спортом».
+    2) Тільки ЗАГОЛОВОК — тіло статті шумить: назви закладів («Центр культури та
+       спорту» → концерт ставав Спортом), підписи джерел («...на сторінці міської
+       ради» → усе ставало Політикою). Заголовок — найчистіший тематичний сигнал.
+       `body` лишено в сигнатурі на майбутнє (зараз не використовується).
+    Порядок правил = пріоритет (перший збіг). Назви категорій = ключі CATEGORY_COLORS
+    у src/tabs/news.js (щоб бейдж мав колір). Аварії/ДТП/пожежі свідомо БЕЗ власної
+    категорії → «Суспільство».
+    """
+    low = title or ""
+    for cat, rx in _CATEGORY_RE:
+        if rx.search(low):
+            return cat
     return "Суспільство"
 
 
@@ -1136,7 +1184,7 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
             if src and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
                 image = src if src.startswith("http") else base + src
 
-        category = detect_category(title + " " + excerpt)
+        category = detect_category(title, excerpt)
         entry_type = classify_entry(title, excerpt + " " + content)
 
         articles.append({
@@ -1156,6 +1204,170 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
         remember_title(tokens, section, seen_by_section)
 
     return articles
+
+
+def _parse_rayon_date(text: str) -> int | None:
+    """Дата rayon.in.ua: «21.07.2026 14:58» (київський час) → Unix ms (UTC).
+
+    На сайті час київський (UTC+3 влітку). Інші джерела зберігають UTC, тож
+    приводимо і цей до UTC (−3 год), щоб порядок стрічки не збивався.
+    """
+    m = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})\s+(\d{1,2}):(\d{2})", text)
+    if not m:
+        return _parse_date_uk(text)   # лише дата без часу → загальний парсер
+    d, mo, y, hh, mm = (int(g) for g in m.groups())
+    try:
+        dt = datetime.datetime(y, mo, d, hh, mm) - datetime.timedelta(hours=3)  # Київ→UTC
+        # timegm через календар: трактуємо як UTC (не локаль раннера)
+        import calendar
+        return int(calendar.timegm(dt.timetuple()) * 1000)
+    except ValueError:
+        return None
+
+
+def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
+    """Парсить тег-сторінку rayon.in.ua (напр. kivertsi.rayon.in.ua/tags/olika).
+
+    Сайт — SPA, але сторінка server-rendered: картки = <a class="galleryCard">.
+    Заголовок беремо з alt зображення (надійно), дата — <time class="galleryCard__time">
+    у форматі ДД.ММ.РРРР ГГ:ХВ (реальний час публікації), фото — <img src>.
+    Усі статті тегу → geo джерела («Громада»).
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        req = urllib.request.Request(source["url"], headers={
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "uk-UA,uk;q=0.9",
+            "Referer": "https://www.google.com/",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+    except Exception as e:
+        raise ValueError(f"Не вдалось завантажити {source['url']}: {e}")
+
+    base = "https://" + urllib.parse.urlparse(source["url"]).netloc
+    soup = BeautifulSoup(raw, "html.parser")
+
+    articles = []
+    for card in soup.select("a.galleryCard[href]"):
+        href = card["href"]
+        if not href.startswith("http"):
+            href = base + href
+        if "/news/" not in href or href in seen_urls:
+            continue
+
+        # Заголовок: alt зображення картки → fallback .galleryCard__title
+        img = card.select_one("img[alt]")
+        title = (img.get("alt") or "").strip() if img else ""
+        if not title:
+            t_el = card.select_one(".galleryCard__title, h2, h3")
+            title = t_el.get_text(strip=True) if t_el else ""
+        title = strip_html(title).strip()
+        if not title:
+            continue
+
+        section = section_of(source["geo"])
+        tokens = title_tokens(title)
+        if is_dup_title(tokens, section, seen_by_section):
+            continue
+
+        # Дата публікації (реальна, київський час → UTC)
+        ts = int(time.time() * 1000)
+        tm = card.select_one("time.galleryCard__time, time")
+        if tm:
+            parsed = _parse_rayon_date(tm.get_text(strip=True))
+            if parsed:
+                ts = parsed
+
+        # Фото картки (оригінал, не conversions-мініатюра якщо є)
+        image = None
+        im = card.select_one("img[src]")
+        if im and im.get("src"):
+            src = im["src"]
+            image = src if src.startswith("http") else base + src
+
+        # Повний текст статті + автор (окремий fetch зі сторінки статті rayon)
+        content, author = fetch_rayon_article(href, title)
+        excerpt = content[:400]
+
+        # Фільтр релевантності громаді (Вова 21.07): тег «Олика» на rayon інколи
+        # містить чисто районні новини (Ківерці/Луцьк). Пускаємо ЛИШЕ ті, що
+        # згадують Олику/село громади в ЗАГОЛОВКУ чи ТЕКСТІ (напр. «Кадище-Олика»
+        # у тілі статті про аварію). Не про громаду — пропускаємо.
+        if not is_hromada_relevant(title + " " + content):
+            continue
+
+        category = detect_category(title, excerpt)
+        entry_type = classify_entry(title, excerpt + " " + content)
+
+        articles.append({
+            "title": title,
+            "excerpt": excerpt,
+            "content": content,
+            "category": category,
+            "geo": source["geo"],   # «Громада» — усі новини тегу Олика
+            "image": image,
+            "source": source["name"],
+            "author": author,           # справжній автор публікації (Наталка Марчук)
+            "fullText": bool(content),  # текст повний (не анонс) → не показувати «Читати повністю»
+            "sourceUrl": href,
+            "exclusive": False,
+            "ts": ts,
+            "_type": entry_type,
+        })
+        seen_urls.add(href)
+        remember_title(tokens, section, seen_by_section)
+        if len(articles) >= MAX_PER_SOURCE:
+            break
+
+    return articles
+
+
+def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
+    """Тіло статті rayon.in.ua + автор — за структурою сторінки статті.
+
+    Розмітка (зонд 21.07): картки/стаття в <article class="article">, метадані
+    (автор/дата/перегляди/«Зберегти») — у блоці .articleContentInfo, автор саме в
+    .articleContentInfo__name. Тіло = <article> БЕЗ метаданих/зображень/підписів/
+    тегів. Повертає (тіло, автор). Обидва можуть бути '' (fail-soft).
+    """
+    author = ""
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": BROWSER_UA,
+            "Accept-Language": "uk-UA,uk;q=0.9",
+            "Referer": "https://www.google.com/",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+    except Exception:
+        return "", ""
+
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(raw, "html.parser")
+
+    an = soup.select_one(".articleContentInfo__name")
+    if an:
+        author = an.get_text(strip=True)
+
+    art = soup.select_one("article.article") or soup.select_one("[class*=article]")
+    if not art:
+        return "", author
+
+    # Прибираємо все НЕ-тілесне: метадані (автор/дата/перегляди/«Зберегти»),
+    # заголовок, зображення+підписи, теги, поділитись, хлібні крихти, скрипти.
+    for sel in (".articleContentInfo", "h1", "figure", "figcaption", "picture", "img",
+                "[class*=caption]", "[class*=gallery]", "[class*=tags]", "[class*=tag-]",
+                "[class*=share]", "[class*=social]", "[class*=related]", "[class*=breadcrumb]",
+                "[class*=views]", "[class*=save]", "script", "style", "nav"):
+        for el in art.select(sel):
+            el.decompose()
+
+    text = _blocks_to_text(art)
+    text = clean_article_text(text, title)
+    return (text[:8000] if len(text) > 60 else ""), author
 
 
 def gromada_url(path: str) -> str:
@@ -1266,7 +1478,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
             if src and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
                 image = src if src.startswith("http") else GROMADA_BASE + src
 
-        category = detect_category(title + " " + excerpt)
+        category = detect_category(title, excerpt)
         entry_type = classify_entry(title, excerpt + " " + content)
 
         articles.append({
@@ -1277,6 +1489,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
             "geo": "Олика",
             "image": image,
             "source": "Олицька громада",
+            "fullText": bool(content),   # gov.ua дає повний текст → без «Читати повністю»
             "sourceUrl": href,  # оригінальний URL (без Worker) для дедуплікації
             "exclusive": False,
             "ts": ts,
@@ -1292,6 +1505,10 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     # Сайт Олицької громади через Cloudflare Worker
     if source.get("type") == "gromada":
         return parse_gromada_source(source, seen_urls, seen_by_section)
+
+    # rayon.in.ua — тег-сторінка з картками .galleryCard (спец-парсер)
+    if source.get("type") == "rayon":
+        return parse_rayon_source(source, seen_urls, seen_by_section)
 
     # HTML-джерела (тег-сторінки без RSS) — окремий парсер
     if source.get("type") == "html":
@@ -1346,6 +1563,10 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 full = fetch_full_article(link, title)
                 if full and len(full) > len(content):
                     content = full
+            # Текст «повний» якщо RSS дав велике content:encoded АБО ми дотягли повний
+            # зі сторінки. Якщо лишився короткий анонс — fullText=False (тоді клієнт
+            # покаже «Читати повністю»). Прибирає хибний редирект на повних коротких.
+            full_text = len(content) >= 600
 
             excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
             if not excerpt:
@@ -1383,7 +1604,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             if is_dup_title(tokens, section, seen_by_section):
                 continue  # схожа новина вже є в цьому розділі
 
-            category = detect_category(text)
+            category = detect_category(title, excerpt)
             image = extract_image(entry)
             entry_type = classify_entry(title, excerpt + " " + content)
 
@@ -1395,6 +1616,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 "geo": geo,
                 "image": image,
                 "source": src_name,
+                "fullText": full_text,   # чи текст повний (не анонс) — для «Читати повністю»
                 "sourceUrl": link,
                 "exclusive": False,
                 "ts": ts,
