@@ -22,7 +22,7 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion, cachedAvatar, hydrateAvatars,
+  submitDiscussion, cachedAvatar, hydrateAvatars, cachedName, hydrateNames,
 } from '../core/supabase.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -181,6 +181,16 @@ function authorAvatar(author, uid) {
   return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || '', cls: 'bd-avatar' });
 }
 
+// Атрибут-маркер для гідрації імені: hydrateNames підмінить вморожений текст на
+// живе імʼя профілю за uid. Без uid (анонім) — маркера нема, лишається як є.
+// Одразу підставляємо кешоване живе імʼя (якщо вже підвантажене) — щоб не мигало.
+function nameUid(uid) {
+  return uid ? ` data-name-uid="${escapeHtml(uid)}"` : '';
+}
+function liveName(author, uid) {
+  return escapeHtml(cachedName(uid) || author || 'Житель');
+}
+
 // Стрічка повідомлень чату (бульбашки) — рендериться у повноекранній модалці-чаті.
 // Контейнер має data-comments-for щоб realtime/optimistic оновлення його перемальовували.
 // Поле вводу — окремо у модалці (поза стрічкою), тому переживає перемальовування.
@@ -217,7 +227,7 @@ function chatMessagesHtml(post) {
     if (group.mine) {
       html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join('')}</div>`;
     } else {
-      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join('')}</div></div>`;
+      html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name"${nameUid(group.uid)}>${liveName(group.author, group.uid)}</span>${group.bubbles.join('')}</div></div>`;
     }
     group = null;
   };
@@ -234,7 +244,9 @@ function chatMessagesHtml(post) {
     }
     const mine = isMyComment(c);
     const author = c.author || 'Житель';
-    const key = mine ? '__me' : author;
+    // Групуємо за uid (не за іменем) — той самий акаунт зі зміненим іменем не
+    // розривається на дві групи; анонім (без uid) — за іменем як раніше.
+    const key = mine ? '__me' : (c.sender_uid || author);
     if (group && group.key === key) group.bubbles.push(renderDiscBubble(c));
     else { flush(); group = { key, mine, author, uid: c.sender_uid || '', bubbles: [renderDiscBubble(c)] }; }
   });
@@ -483,6 +495,7 @@ export function openChatModal(post) {
   document.body.classList.add('modal-open');
   _chatModalEl = modal;
   hydrateAvatars(modal.querySelector('[data-comments-for]'));   // Потік 12 Б: підтягнути чужі фото
+  hydrateNames(modal.querySelector('[data-comments-for]'));     // синк живих імен профілю за uid
 
   requestAnimationFrame(() => {
     backdrop.classList.add('visible');
@@ -646,6 +659,7 @@ function rerenderCommentsBlock(postId) {
   if (!post) return;
   wrap.outerHTML = chatMessagesHtml(post);
   hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
+  hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));     // синк живих імен
   scrollChatToBottom();
   _chatUnseen = 0; hideChatPill();
   updateChatHeaderCount(postId);
@@ -738,12 +752,13 @@ export function renderChatCard(p) {
   const comments = getComments(p.id);
   const count = comments.length;
   const recent = comments.slice(-2);   // два останніх повідомлення у прев'ю картки
-  // Унікальні учасники чату — за іменами авторів повідомлень (анонімні «Житель» зіллються)
-  const participants = new Set(comments.map(c => c.author || 'Житель')).size;
+  // Унікальні учасники чату — за uid акаунту (той самий юзер зі зміненим іменем
+  // рахується РАЗ; анонімів без uid зводимо за іменем як раніше).
+  const participants = new Set(comments.map(c => c.sender_uid || ('nm:' + (c.author || 'Житель')))).size;
   const lastHtml = recent.length
     ? `<div class="bd-chat-last">${recent.map(m => `
          <div class="bd-chat-last-row">
-           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || 'Житель')}:</span> ${escapeHtml(m.text)}</span>
+           <span class="bd-chat-last-msg"><span class="bd-chat-last-author"><span${nameUid(m.sender_uid)}>${liveName(m.author, m.sender_uid)}</span>:</span> ${escapeHtml(m.text)}</span>
            <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
          </div>`).join('')}</div>`
     : '<div class="bd-chat-last bd-chat-last--empty">Ще немає повідомлень — почніть розмову</div>';
@@ -764,7 +779,7 @@ export function renderChatCard(p) {
           ${likeBtnInner(p.id)}
         </button>
         <div class="bd-chat-by">
-          <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> ${escapeHtml(p.author || 'Житель')}</div>
+          <div class="bd-chat-by-author"><span class="bd-chat-by-label">Автор:</span> <span class="bd-chat-by-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span></div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
         </div>
         ${saveBtnHtml(p)}
@@ -919,6 +934,7 @@ function onCommentRealtimeEvent(payload) {
         const prevTop = body ? body.scrollTop : 0;
         wrap.outerHTML = chatMessagesHtml(post);
         hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));   // Потік 12 Б
+        hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));     // синк живих імен
         if (near) {
           scrollChatToBottom();   // користувач унизу — лишаємо його внизу
         } else {

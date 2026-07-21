@@ -21,7 +21,7 @@ import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
   fetchAllComments,
   fetchAllReactions, getAnonId,
-  fetchSavedPostIds,
+  fetchSavedPostIds, hydrateNames,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { ICONS } from '../core/icons.js';
@@ -587,6 +587,8 @@ function renderAll() {
     <div class="bd-body" id="bd-body">${renderBody()}</div>
     ${renderFab()}
   `;
+
+  hydrateNames(el);   // синк живих імен профілю (за uid) у картках обговорень
 
   el.style.backgroundImage = '';
   el.style.backgroundSize  = '';

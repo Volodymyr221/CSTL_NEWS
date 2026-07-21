@@ -598,8 +598,12 @@
     return { url: data?.publicUrl || null, error: null };
   }
   var _avatarCache = /* @__PURE__ */ new Map();
+  var _nameCache = /* @__PURE__ */ new Map();
   function cachedAvatar(uid) {
     return uid ? _avatarCache.get(uid) || "" : "";
+  }
+  function cachedName(uid) {
+    return uid ? _nameCache.get(uid) || "" : "";
   }
   async function fetchAvatars(uids) {
     const need = [...new Set(uids)].filter((u) => u && !_avatarCache.has(u));
@@ -612,8 +616,11 @@
         return;
       }
       (data || []).forEach((r) => {
-        if (r && r.uid)
+        if (r && r.uid) {
           _avatarCache.set(r.uid, r.avatar_url || "");
+          if (r.name)
+            _nameCache.set(r.uid, r.name);
+        }
       });
       need.forEach((u) => {
         if (!_avatarCache.has(u))
@@ -639,6 +646,20 @@
       el.classList.add(base + "--img");
       el.style.background = "none";
       el.innerHTML = `<img src="${escapeHtml(url)}" alt="" loading="lazy">`;
+    });
+  }
+  async function hydrateNames(root) {
+    if (!root || !root.querySelectorAll)
+      return;
+    const els2 = [...root.querySelectorAll("[data-name-uid]")].filter((e) => !e.dataset.nameDone);
+    if (!els2.length)
+      return;
+    await fetchAvatars(els2.map((e) => e.dataset.nameUid));
+    els2.forEach((el) => {
+      el.dataset.nameDone = "1";
+      const nm = cachedName(el.dataset.nameUid);
+      if (nm)
+        el.textContent = nm;
     });
   }
   async function fetchPublicProfile(uid) {
@@ -4122,6 +4143,12 @@ ${post.text}
   function authorAvatar(author, uid) {
     return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || "", cls: "bd-avatar" });
   }
+  function nameUid(uid) {
+    return uid ? ` data-name-uid="${escapeHtml(uid)}"` : "";
+  }
+  function liveName(author, uid) {
+    return escapeHtml(cachedName(uid) || author || "\u0416\u0438\u0442\u0435\u043B\u044C");
+  }
   function chatMessagesHtml(post) {
     const items = getComments(post.id);
     if (!items.length) {
@@ -4149,7 +4176,7 @@ ${post.text}
       if (group.mine) {
         html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join("")}</div>`;
       } else {
-        html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name">${escapeHtml(group.author)}</span>${group.bubbles.join("")}</div></div>`;
+        html += `<div class="pm-group pm-group--other pm-group--disc">${authorAvatar(group.author, group.uid)}<div class="pm-disc-col"><span class="pm-disc-name"${nameUid(group.uid)}>${liveName(group.author, group.uid)}</span>${group.bubbles.join("")}</div></div>`;
       }
       group = null;
     };
@@ -4171,7 +4198,7 @@ ${post.text}
       }
       const mine = isMyComment(c);
       const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
-      const key = mine ? "__me" : author;
+      const key = mine ? "__me" : c.sender_uid || author;
       if (group && group.key === key)
         group.bubbles.push(renderDiscBubble(c));
       else {
@@ -4408,6 +4435,7 @@ ${post.text}
     document.body.classList.add("modal-open");
     _chatModalEl = modal;
     hydrateAvatars(modal.querySelector("[data-comments-for]"));
+    hydrateNames(modal.querySelector("[data-comments-for]"));
     requestAnimationFrame(() => {
       backdrop.classList.add("visible");
       modal.classList.add("visible");
@@ -4582,6 +4610,7 @@ ${post.text}
       return;
     wrap.outerHTML = chatMessagesHtml(post);
     hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));
+    hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));
     scrollChatToBottom();
     _chatUnseen = 0;
     hideChatPill();
@@ -4705,10 +4734,10 @@ ${post.text}
     const comments = getComments(p.id);
     const count = comments.length;
     const recent = comments.slice(-2);
-    const participants = new Set(comments.map((c) => c.author || "\u0416\u0438\u0442\u0435\u043B\u044C")).size;
+    const participants = new Set(comments.map((c) => c.sender_uid || "nm:" + (c.author || "\u0416\u0438\u0442\u0435\u043B\u044C"))).size;
     const lastHtml = recent.length ? `<div class="bd-chat-last">${recent.map((m) => `
          <div class="bd-chat-last-row">
-           <span class="bd-chat-last-msg"><span class="bd-chat-last-author">${escapeHtml(m.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}:</span> ${escapeHtml(m.text)}</span>
+           <span class="bd-chat-last-msg"><span class="bd-chat-last-author"><span${nameUid(m.sender_uid)}>${liveName(m.author, m.sender_uid)}</span>:</span> ${escapeHtml(m.text)}</span>
            <span class="bd-chat-last-time">${formatTime(postTime(m))}</span>
          </div>`).join("")}</div>` : '<div class="bd-chat-last bd-chat-last--empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C \u2014 \u043F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443</div>';
     const liked = isLikedByMe(p.id);
@@ -4728,7 +4757,7 @@ ${post.text}
           ${likeBtnInner(p.id)}
         </button>
         <div class="bd-chat-by">
-          <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> ${escapeHtml(p.author || "\u0416\u0438\u0442\u0435\u043B\u044C")}</div>
+          <div class="bd-chat-by-author"><span class="bd-chat-by-label">\u0410\u0432\u0442\u043E\u0440:</span> <span class="bd-chat-by-name"${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid)}</span></div>
           <div class="bd-chat-by-date">${formatTime(postTime(p))}</div>
         </div>
         ${saveBtnHtml(p)}
@@ -4887,6 +4916,7 @@ ${post.text}
           const prevTop = body ? body.scrollTop : 0;
           wrap.outerHTML = chatMessagesHtml(post);
           hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));
+          hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));
           if (near) {
             scrollChatToBottom();
           } else {
@@ -5345,6 +5375,7 @@ ${post.text}
     <div class="bd-body" id="bd-body">${renderBody()}</div>
     ${renderFab()}
   `;
+    hydrateNames(el);
     el.style.backgroundImage = "";
     el.style.backgroundSize = "";
     el.style.backgroundPosition = "";
