@@ -1,6 +1,71 @@
 {
   "runs": [
     {
+      "ts": 1784625162625,
+      "mission": "holiday:🌰 Горіховий Спас",
+      "model": "claude-sonnet-5",
+      "input_tokens": 398,
+      "output_tokens": 515,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0089,
+      "note": ""
+    },
+    {
+      "ts": 1784625146442,
+      "mission": "holiday:⛪ Успіння Пресвятої Богороди",
+      "model": "claude-sonnet-5",
+      "input_tokens": 435,
+      "output_tokens": 394,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0072,
+      "note": ""
+    },
+    {
+      "ts": 1784625134520,
+      "mission": "holiday:⛪ Преображення Господнє (Ябл",
+      "model": "claude-sonnet-5",
+      "input_tokens": 506,
+      "output_tokens": 573,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0101,
+      "note": ""
+    },
+    {
+      "ts": 1784625119500,
+      "mission": "holiday:🍯 Медовий Спас (Маковія)",
+      "model": "claude-sonnet-5",
+      "input_tokens": 430,
+      "output_tokens": 515,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.009,
+      "note": ""
+    },
+    {
+      "ts": 1784625098074,
+      "mission": "holiday:🇺🇦 День Хрещення Київської Р",
+      "model": "claude-sonnet-5",
+      "input_tokens": 424,
+      "output_tokens": 549,
+      "cache_read": 0,
+      "cache_write": 0,
+      "web_searches": 0,
+      "found": 1,
+      "cost_usd": 0.0095,
+      "note": ""
+    },
+    {
       "ts": 1784540626464,
       "mission": "holiday:🌰 Горіховий Спас",
       "model": "claude-sonnet-5",
@@ -714,84 +779,19 @@
       "found": 0,
       "cost_usd": 0.0,
       "note": "агент нічого не повернув"
-    },
-    {
-      "ts": 1783455527344,
-      "mission": "Громада (повтор)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10,
-      "output_tokens": 5820,
-      "cache_read": 116861,
-      "cache_write": 56842,
-      "web_searches": 6,
-      "found": 0,
-      "cost_usd": 0.3955,
-      "note": ""
-    },
-    {
-      "ts": 1783455419489,
-      "mission": "Громада",
-      "model": "claude-sonnet-5",
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0,
-      "note": "агент нічого не повернув"
-    },
-    {
-      "ts": 1783455012225,
-      "mission": "Громада:dedup",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10478,
-      "output_tokens": 12,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0316,
-      "note": ""
-    },
-    {
-      "ts": 1783455008962,
-      "mission": "Громада (повтор)",
-      "model": "claude-sonnet-5",
-      "input_tokens": 10,
-      "output_tokens": 5292,
-      "cache_read": 103596,
-      "cache_write": 49467,
-      "web_searches": 6,
-      "found": 3,
-      "cost_usd": 0.356,
-      "note": ""
-    },
-    {
-      "ts": 1783454908755,
-      "mission": "Громада",
-      "model": "claude-sonnet-5",
-      "input_tokens": 0,
-      "output_tokens": 0,
-      "cache_read": 0,
-      "cache_write": 0,
-      "web_searches": 0,
-      "found": 0,
-      "cost_usd": 0.0,
-      "note": "агент нічого не повернув"
     }
   ],
   "totals": {
-    "cost_usd": 4.9658,
-    "runs": 63,
+    "cost_usd": 5.0105,
+    "runs": 68,
     "web_searches": 63
   },
   "months": {
     "2026-07": {
-      "cost_usd": 4.9658,
-      "runs": 63,
+      "cost_usd": 5.0105,
+      "runs": 68,
       "web_searches": 63
     }
   },
-  "updated_ts": 1784540626464
+  "updated_ts": 1784625162625
 }
