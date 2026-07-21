@@ -200,15 +200,18 @@ export function openArticle(id) {
       <div class="article-img-caption">
         ${article.imageType === 'illustration' ? '<strong>Ілюстрація.</strong> ' : ''}${article.imageCredit ? 'Фото: ' + escapeHtml(article.imageCredit) : ''}
       </div>` : ''}
+    ${article.author ? `
+      <div class="article-author"><span class="article-author-ic">${ICONS.user}</span><strong>Автор:</strong> ${escapeHtml(article.author)}</div>
+    ` : ''}
     <div class="article-body">${bodyHtml}</div>
-    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
+    ${!article.exclusive && article.sourceUrl && !article.fullText && rawText.trim().length < 600 ? `
       <div class="article-short-note">
         Джерело надає лише анонс через RSS — повний текст на сайті видання.
         <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати повністю →</a>
       </div>
     ` : ''}
     <div class="article-source-row">
-      <span class="article-source-author"><strong>Автор публікації:</strong><br>${escapeHtml(article.source)}</span>
+      <span class="article-source-author"><strong>Джерело:</strong><br>${escapeHtml(article.source)}</span>
       ${article.sourceUrl
         ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">Читати оригінал →</a>`
         : ''}

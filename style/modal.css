@@ -194,6 +194,15 @@
 .article-body p { margin-bottom: 14px; }
 .article-body p:last-child { margin-bottom: 0; }
 
+/* Блок автора публікації (окремо від тіла, з іконкою) — лише коли автор є */
+.article-author {
+  display: flex; align-items: center; gap: 7px;
+  font-size: 14px; color: var(--ink, #2b2b2b);
+  margin: 0 0 14px;
+}
+.article-author-ic { display: inline-flex; color: var(--red); font-size: 17px; flex: none; }
+.article-author strong { font-weight: 600; }
+
 /* Блок «анонс від RSS» — з'являється коли текст короткий */
 .article-short-note {
   margin-top: 20px;
