@@ -6165,7 +6165,10 @@ ${post.text}
     return ta.value;
   }
   function renderArticleBody(content) {
-    const text = decodeEntities(content || "");
+    const raw = content || "";
+    if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br)\b/i.test(raw))
+      return raw;
+    const text = decodeEntities(raw);
     const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
     if (!paragraphs.length)
       return "";

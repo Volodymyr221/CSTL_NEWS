@@ -193,6 +193,21 @@
 .article-body { font-size: 16px; line-height: 1.7; color: var(--black); }
 .article-body p { margin-bottom: 14px; }
 .article-body p:last-child { margin-bottom: 0; }
+/* Багатий HTML (варіант A): підзаголовки жирним, списки крапочками, цитати */
+.article-body h2,
+.article-body h3 { font-size: 18px; font-weight: 800; line-height: 1.3; margin: 20px 0 8px; color: var(--black); }
+.article-body ul,
+.article-body ol { margin: 8px 0 14px; padding-left: 22px; }
+.article-body li { margin-bottom: 6px; }
+.article-body ul li { list-style: disc; }
+.article-body ol li { list-style: decimal; }
+.article-body strong, .article-body b { font-weight: 700; }
+.article-body em, .article-body i { font-style: italic; }
+.article-body blockquote {
+  margin: 12px 0; padding: 6px 14px;
+  border-left: 3px solid var(--red);
+  color: var(--gray); font-style: italic;
+}
 
 /* Блок автора публікації (окремо від тіла, з іконкою) — лише коли автор є */
 .article-author {
