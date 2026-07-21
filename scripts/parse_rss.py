@@ -591,14 +591,42 @@ def is_world_relevant(text: str) -> bool:
     return any(kw in low for kw in WORLD_KEYWORDS)
 
 
-def detect_category(text: str) -> str:
-    low = text.lower()
-    if any(kw in low for kw in ["культур", "мистецтв", "музей", "замок", "театр", "кіно", "виставк"]):
-        return "Культура"
-    if any(kw in low for kw in ["спорт", "футбол", "волейбол", "чемпіон", "змаган", "матч"]):
-        return "Спорт"
-    if any(kw in low for kw in ["бізнес", "економік", "бюджет", "гроші", "кошти", "фінанс", "інвест"]):
-        return "Бізнес"
+# Правила категорій: (назва, корені-ключі). Порядок = пріоритет. Назви категорій
+# ТОЧНО як ключі CATEGORY_COLORS у src/tabs/news.js (інакше бейдж без кольору).
+# Освіта навмисно БЕЗ кореня «школяр» (щоб «17-річний школяр» в аварії не тягнув
+# новину в Освіту — вона має лишитись «Суспільством»).
+_CATEGORY_RULES = [
+    ("Війна",     r"військ|захисник|загин|загиб|полегл|фронт|окупант|мобіліз|обстріл|полонен|безвіст|ветеран|бійц|боєць|воїн|зсу"),
+    ("Спорт",     r"спорт|футбол|волейбол|баскетбол|чемпіон|змаган|турнір|матч|олімпіад|спортсмен|атлет|кубок|першіст"),
+    ("Культура",  r"культур|мистецтв|музей|замок|театр|кіно|виставк|концерт|фестивал|оркестр|музик|художн|бібліотек|ансамбл|творчіст"),
+    ("Освіта",    r"школа|школи|школі|школу|шкільн|навчанн|навчальн|гімназі|ліце[йю]|вчител|викладач|освіт|педагог|дитсадок|дошкільн|першокласник|випускник"),
+    ("Здоровʼя",  r"лікар|медиц|медич|амбулатор|здоров|хвороб|вакцин|лікуванн|пацієнт|фап"),
+    ("Природа",   r"ліс|заказник|заповідн|екологі|довкілл|тварин|птах|врожай"),
+    ("Політика",  r"сесі|депутат|старост|бюджет|податок|подат|вибор|субвенц|субсиді|рада|ради|міськрад|сільрад"),
+    ("Економіка", r"бізнес|економік|підприєм|фінанс|інвест|тариф|ярмарок|торгівл|аграрі|фермер"),
+    ("Історія",   r"істори|столітт|спадщин|краєзнав|археолог|архівн|радзивіл|давнин"),
+]
+_CATEGORY_RE = [(cat, re.compile(r"\b(?:" + pat + r")", re.IGNORECASE)) for cat, pat in _CATEGORY_RULES]
+
+
+def detect_category(title: str, body: str = "") -> str:
+    """Тематична категорія новини за ЗАГОЛОВКОМ (ЦІЛІ слова, \\b).
+
+    Два рішення (Вова 21.07):
+    1) Межі слова (\\b) — раніше підрядок давав баги: «спорт» усередині «тран-СПОРТ-ні»
+       → аварія ставала «Спортом».
+    2) Тільки ЗАГОЛОВОК — тіло статті шумить: назви закладів («Центр культури та
+       спорту» → концерт ставав Спортом), підписи джерел («...на сторінці міської
+       ради» → усе ставало Політикою). Заголовок — найчистіший тематичний сигнал.
+       `body` лишено в сигнатурі на майбутнє (зараз не використовується).
+    Порядок правил = пріоритет (перший збіг). Назви категорій = ключі CATEGORY_COLORS
+    у src/tabs/news.js (щоб бейдж мав колір). Аварії/ДТП/пожежі свідомо БЕЗ власної
+    категорії → «Суспільство».
+    """
+    low = title or ""
+    for cat, rx in _CATEGORY_RE:
+        if rx.search(low):
+            return cat
     return "Суспільство"
 
 
@@ -1156,7 +1184,7 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
             if src and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
                 image = src if src.startswith("http") else base + src
 
-        category = detect_category(title + " " + excerpt)
+        category = detect_category(title, excerpt)
         entry_type = classify_entry(title, excerpt + " " + content)
 
         articles.append({
@@ -1271,7 +1299,7 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
         if not is_hromada_relevant(title + " " + content):
             continue
 
-        category = detect_category(title + " " + excerpt)
+        category = detect_category(title, excerpt)
         entry_type = classify_entry(title, excerpt + " " + content)
 
         articles.append({
@@ -1403,7 +1431,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
             if src and any(ext in src.lower() for ext in [".jpg", ".jpeg", ".png", ".webp"]):
                 image = src if src.startswith("http") else GROMADA_BASE + src
 
-        category = detect_category(title + " " + excerpt)
+        category = detect_category(title, excerpt)
         entry_type = classify_entry(title, excerpt + " " + content)
 
         articles.append({
@@ -1524,7 +1552,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             if is_dup_title(tokens, section, seen_by_section):
                 continue  # схожа новина вже є в цьому розділі
 
-            category = detect_category(text)
+            category = detect_category(title, excerpt)
             image = extract_image(entry)
             entry_type = classify_entry(title, excerpt + " " + content)
 
