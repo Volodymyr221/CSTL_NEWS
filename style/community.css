@@ -3858,7 +3858,7 @@
 /* Стрічка карток — КОМПАКТНИЙ блок із ВНУТРІШНІМ скролом (як інші віджети Громади),
    БЕЗ зайвих відступів зверху/знизу. Блок не розтягується на всі пости. */
 .cm-news-feed {
-  max-height: 430px;
+  max-height: 465px;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
   overscroll-behavior: contain;
