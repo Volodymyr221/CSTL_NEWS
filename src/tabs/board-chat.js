@@ -164,7 +164,7 @@ export async function openChat(thread, post) {
     const enter = seen.has(msgKey(m)) ? '' : ' pm-bubble--enter';
     const tagAttr = ` data-tag="${m.client_tag || ''}"`;   // для пошуку optimistic-бульбашки
     if (m.deleted_at) {
-      return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"${tagAttr}><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
+      return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"${tagAttr}><span class="pm-bubble-text">${ICONS.trash} Повідомлення видалено</span></div>`;
     }
     const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
     const replyHtml = reply

@@ -199,7 +199,7 @@ function chatMessagesHtml(post) {
   // плейсхолдери видаленого/редагованого. data-msg/data-tag — для жестів/меню (UI-B).
   const renderDiscBubble = (c) => {
     if (c.deleted_at) {
-      return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ''}"><span class="pm-bubble-text">🗑 Повідомлення видалено</span></div>`;
+      return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ''}"><span class="pm-bubble-text">${ICONS.trash} Повідомлення видалено</span></div>`;
     }
     const reply = c.reply_to_id ? byId.get(c.reply_to_id) : null;
     const replyHtml = reply

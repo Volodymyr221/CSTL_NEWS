@@ -301,8 +301,8 @@ export function openGroupChat(group) {
     const bubble = (m) => {
       const mine = m.sender_uid === me;
       const who = mine ? '' : `<span class="gr-sender">${escapeHtml(names.get(m.sender_uid) || 'Житель')}</span>`;
-      const txt = m.deleted_at ? '🗑 видалено' : (m.text || '📷 Фото');
-      return `<div class="pm-group ${mine ? 'pm-group--mine' : 'pm-group--other'}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${escapeHtml(txt)}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
+      const txtHtml = m.deleted_at ? `${ICONS.trash} видалено` : escapeHtml(m.text || '📷 Фото');
+      return `<div class="pm-group ${mine ? 'pm-group--mine' : 'pm-group--other'}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${txtHtml}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
     };
     const render = () => {
       streamEl.innerHTML = messages.length
