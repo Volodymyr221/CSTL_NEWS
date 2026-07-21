@@ -5220,9 +5220,7 @@ ${post.text}
     return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
   }
   function renderHeader() {
-    const discHead = activeType === "chat" ? `<div class="bd-disc-head">
-         <span class="bd-disc-title">\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
-       </div>` : "";
+    const discHead = "";
     const showCategories = activeType === "board";
     const activeIcon = activeCategory === "all" ? ALL_ICON : catIcon(activeCategory);
     const activeColorCls = activeCategory === "all" ? "" : "cat-c-" + catColor(activeCategory);
