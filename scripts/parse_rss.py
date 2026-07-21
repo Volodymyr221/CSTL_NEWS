@@ -965,6 +965,9 @@ def _blocks_to_html(el, title: str = "") -> str:
             continue
         if _TAIL_RE.search(raw):          # службовий хвіст (теги/«читайте також»/промо) — стоп
             break
+        # Рекламні слоти-сміття (volynpost: «op13-Volynpost.com_650x60 У новині #3 650*60»)
+        if re.search(r"\d{3}\s*[x×*]\s*\d{2,3}|У\s+новині\s*#|\.com_\d", raw, re.I):
+            continue
         inner = _inline_html(b).strip()
         if not inner:
             continue
@@ -982,7 +985,12 @@ def _blocks_to_html(el, title: str = "") -> str:
             # перший абзац: пропустити дубль заголовка / провідний час-штамп
             if not parts and tnorm and norm.startswith(tnorm) and len(norm) - len(tnorm) <= 20:
                 continue
-            if not parts and re.match(r"^\s*(?:Сьогодні|Вчора|Позавчора|\d{1,2}[.:]\d{2})", raw):
+            # Провідний короткий блок-дата/час («21 липня, 22:42», «Сьогодні, 15:09»,
+            # «08.07.2026, 14:00», голий «15:09») — службове сміття, не тіло.
+            if (not parts and len(raw) < 40 and re.search(
+                    r"\d{1,2}[:.]\d{2}\b"
+                    r"|\d{1,2}\s+(?:січн|лют|берез|квітн|травн|черв|липн|серпн|вересн|жовтн|листопад|грудн)"
+                    r"|^\s*(?:Сьогодні|Вчора|Позавчора)\b", raw, re.I)):
                 continue
             block = f"<p>{inner}</p>"
         parts.append(block); total += len(block)
