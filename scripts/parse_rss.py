@@ -1666,6 +1666,63 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     return articles
 
 
+def rehydrate_short_articles(existing_articles: list) -> int:
+    """Самолікування: доганяємо ПОВНИЙ текст для вже збережених статей, що мають
+    лише короткий анонс (fullText≠True, тіло <500 символів).
+
+    Навіщо: парсер дедуплікує за URL (вже бачені посилання пропускаються), тому
+    статті, спаршені ДО того як з'явилась логіка «дотягування» повного тексту,
+    лишались «анонсом» назавжди — клієнт показував на них плашку «Читати
+    повністю → анонс через RSS». Тепер на КОЖНОМУ прогоні проходимось по таких
+    статтях і доповнюємо їх повним текстом на місці (той самий шлях
+    fetch_full_article, що й для нових). Так плашка зникає, а статті лишаються.
+
+    Бюджет і лічильник спроб (_fullTries) захищають від нескінченних
+    повторів для джерел, з яких повний текст дістати не вдається.
+    """
+    MAX_TRIES_PER_ART = 3      # скільки прогонів пробуємо, поки не здамось
+    FETCH_BUDGET      = 40     # стеля мережевих запитів на один прогін
+    upgraded = fetched = 0
+    for a in existing_articles:
+        if a.get("exclusive") or a.get("fullText"):
+            continue
+        plain = strip_html(a.get("content") or "")
+        # Уже фактично повний текст (≥500) — лише виставляємо прапорець (без мережі)
+        if len(plain) >= 500:
+            a["fullText"] = True
+            upgraded += 1
+            continue
+        url = a.get("sourceUrl")
+        if not url or int(a.get("_fullTries", 0)) >= MAX_TRIES_PER_ART:
+            continue
+        if fetched >= FETCH_BUDGET:
+            continue
+        fetched += 1
+        new_html = None
+        try:
+            domain = re.sub(r"^www\.", "", urllib.parse.urlparse(url).netloc)
+            if domain.endswith("rayon.in.ua"):
+                new_html, author = fetch_rayon_article(url, a.get("title", ""))
+                if author and not a.get("author"):
+                    a["author"] = author
+            else:
+                new_html = fetch_full_article(url, a.get("title", ""))
+        except Exception:
+            new_html = None
+        new_plain = strip_html(new_html or "")
+        if new_html and len(new_plain) > len(plain) and len(new_plain) >= 500:
+            a["content"]  = new_html          # excerpt лишаємо плоским (для картки)
+            a["fullText"] = True
+            a.pop("_fullTries", None)
+            upgraded += 1
+        else:
+            a["_fullTries"] = int(a.get("_fullTries", 0)) + 1
+    if upgraded or fetched:
+        print(f"↻ Re-hydrate: доповнено {upgraded} статей повним текстом "
+              f"(мережевих спроб: {fetched})")
+    return upgraded
+
+
 # ── Головна функція ────────────────────────────────────────────────────────────
 
 def main():
@@ -1768,8 +1825,12 @@ def main():
         new_articles.append(_story)
         print(f"✓ Історія Олики: +1 («{_story['title'][:40]}…»)")
 
+    # Самолікування збережених статей: доганяємо повний текст для старих «анонсів»
+    # (модифікує existing_articles на місці — прибирає плашку «Читати повністю»).
+    rehydrated = rehydrate_short_articles(existing_articles)
+
     # Зберегти articles.json
-    if new_articles:
+    if new_articles or rehydrated:
         all_articles = new_articles + existing_articles
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
         all_articles = prune_by_age(all_articles)     # зберігання за віком (тиждень/місяць)
