@@ -361,18 +361,23 @@ def strip_html(text: str) -> str:
     return text
 
 
-def get_full_content(entry) -> str:
-    """Повний текст статті: спочатку content:encoded, потім summary як fallback."""
+def get_full_content(entry, title: str = "") -> str:
+    """Повний текст статті → БАГАТИЙ HTML (варіант A): з content:encoded зберігаємо
+    структуру (_blocks_to_html), інакше summary → абзаци. Повертає безпечний HTML."""
     content_list = getattr(entry, "content", None)
     if content_list:
         valid = [c for c in content_list if isinstance(c, dict)]
         if valid:
             best = max(valid, key=lambda c: len(c.get("value") or ""), default=None)
             if best:
-                text = strip_html(best.get("value") or "")
-                if len(text) > 150:
-                    return text[:8000]
-    return strip_html(entry.get("summary") or entry.get("description") or "")
+                raw = best.get("value") or ""
+                if len(strip_html(raw)) > 150:
+                    from bs4 import BeautifulSoup
+                    rich = _blocks_to_html(BeautifulSoup(raw, "html.parser"), title)
+                    if len(rich) > 60:
+                        return rich[:8000]
+    summ = strip_html(entry.get("summary") or entry.get("description") or "")
+    return "".join(f"<p>{html.escape(p)}</p>" for p in summ.split("\n\n") if p.strip())
 
 
 def normalize_title(title: str) -> str:
@@ -913,6 +918,82 @@ def _blocks_to_text(el) -> str:
     return re.sub(r"\n{3,}", "\n\n", text).strip()
 
 
+def _inline_html(node) -> str:
+    """Вміст блоку → HTML лише з <strong>/<em>/<br> (решта тегів — розгортаємо в
+    текст). Текст ЕКРАНУЄТЬСЯ. Аллоулист за побудовою → жодних атрибутів/скриптів."""
+    from bs4 import NavigableString, Tag
+    out = []
+    for ch in node.children:
+        if isinstance(ch, NavigableString):
+            out.append(html.escape(str(ch)))
+        elif isinstance(ch, Tag):
+            if ch.name in ("strong", "b"):
+                out.append("<strong>" + _inline_html(ch) + "</strong>")
+            elif ch.name in ("em", "i"):
+                out.append("<em>" + _inline_html(ch) + "</em>")
+            elif ch.name == "br":
+                out.append("<br>")
+            else:
+                out.append(_inline_html(ch))   # a/span/… — розгортаємо (лишається текст)
+    return "".join(out)
+
+
+def _blocks_to_html(el, title: str = "") -> str:
+    """Тіло статті → БЕЗПЕЧНИЙ HTML зі збереженням структури (підзаголовки, списки
+    •, абзаци, жирний/курсив) — як в оригіналі (варіант A, БЕЗ фото). Аллоулист
+    тегів: <p>/<h3>/<ul>/<li>/<strong>/<em>/<br>/<blockquote>, жодних атрибутів →
+    безпечно для innerHTML на клієнті. Ріже службовий хвіст (_TAIL_RE), дубль
+    заголовка й провідний часовий штамп. Запобіжна довжина ~7500."""
+    tnorm = re.sub(r"\W+", "", title.lower()) if title else ""
+    parts, li_buf, total = [], [], 0
+
+    def flush_li():
+        nonlocal total
+        if li_buf:
+            block = "<ul>" + "".join(f"<li>{x}</li>" for x in li_buf) + "</ul>"
+            parts.append(block); total += len(block); li_buf.clear()
+
+    for b in el.find_all(["p", "h2", "h3", "h4", "li", "blockquote"]):
+        if total > 7500:
+            break
+        if b.name != "li" and b.find_parent(["p", "h2", "h3", "h4", "blockquote"]):
+            continue                      # вкладений блок — не дублюємо
+        if b.name == "li" and b.find(["p"]):
+            continue
+        raw = b.get_text(" ", strip=True)
+        if not raw:
+            continue
+        if _TAIL_RE.search(raw):          # службовий хвіст (теги/«читайте також»/промо) — стоп
+            break
+        inner = _inline_html(b).strip()
+        if not inner:
+            continue
+        if b.name == "li":
+            li_buf.append(inner); continue
+        flush_li()
+        norm = re.sub(r"\W+", "", raw.lower())
+        if b.name in ("h2", "h3", "h4"):
+            if tnorm and norm == tnorm:
+                continue                  # дубль заголовка статті
+            block = f"<h3>{inner}</h3>"
+        elif b.name == "blockquote":
+            block = f"<blockquote>{inner}</blockquote>"
+        else:
+            # перший абзац: пропустити дубль заголовка / провідний час-штамп
+            if not parts and tnorm and norm.startswith(tnorm) and len(norm) - len(tnorm) <= 20:
+                continue
+            if not parts and re.match(r"^\s*(?:Сьогодні|Вчора|Позавчора|\d{1,2}[.:]\d{2})", raw):
+                continue
+            block = f"<p>{inner}</p>"
+        parts.append(block); total += len(block)
+    flush_li()
+
+    if not parts:                          # блоків нема (голі div) — запасний плоский варіант
+        fb = clean_article_text(_paragraphs_fallback(el), title)
+        return "".join(f"<p>{html.escape(p)}</p>" for p in fb.split("\n\n") if p.strip())
+    return "".join(parts)
+
+
 def fetch_full_article(url: str, title: str = "") -> str | None:
     """Завантажує повний текст статті зі сторінки статті.
 
@@ -960,24 +1041,22 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
     for sel in selectors:
         el = soup.select_one(sel)
         if el:
-            text = _blocks_to_text(el)          # абзаци через \n\n (не «цеглина»)
-            text = clean_article_text(text, title)
-            if len(text) > 300:
-                return text[:8000]
+            # Плоский текст — лише для порогу довжини; віддаємо БАГАТИЙ HTML (варіант A).
+            if len(clean_article_text(_blocks_to_text(el), title)) > 300:
+                return _blocks_to_html(el, title)[:8000]
 
-    # Fallback: беремо блок з найбільшою кількістю тексту на сторінці
-    best_text = ""
+    # Fallback: контейнер з найбільшою кількістю тексту → теж багатий HTML
+    best_el, best_len = None, 0
     for tag in soup.find_all(["div", "section", "article"]):
-        # Пропускаємо вкладені блоки (беремо тільки верхні контейнери)
         if tag.find_parent(["div", "section", "article"]):
             continue
-        t = _blocks_to_text(tag)                 # теж абзаци через \n\n
-        if len(t) > len(best_text):
-            best_text = t
-    if len(best_text) > 500:
-        cleaned = clean_article_text(best_text, title)
-        if len(cleaned) > 300:
-            return cleaned[:8000]
+        n = len(_blocks_to_text(tag))
+        if n > best_len:
+            best_el, best_len = tag, n
+    if best_el is not None and best_len > 500:
+        rich = _blocks_to_html(best_el, title)
+        if len(rich) > 300:
+            return rich[:8000]
 
     return None
 
@@ -1125,7 +1204,7 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
         # Повний текст статті
         content = fetch_full_article(href, title) or excerpt
         if not excerpt:
-            excerpt = content[:400]
+            excerpt = strip_html(content)[:400]
 
         # Зображення — перший <img> у контейнері
         image = None
@@ -1241,7 +1320,7 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
 
         # Повний текст статті + автор (окремий fetch зі сторінки статті rayon)
         content, author = fetch_rayon_article(href, title)
-        excerpt = content[:400]
+        excerpt = strip_html(content)[:400]
 
         # Фільтр релевантності громаді (Вова 21.07): тег «Олика» на rayon інколи
         # містить чисто районні новини (Ківерці/Луцьк). Пускаємо ЛИШЕ ті, що
@@ -1316,9 +1395,8 @@ def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
         for el in art.select(sel):
             el.decompose()
 
-    text = _blocks_to_text(art)
-    text = clean_article_text(text, title)
-    return (text[:8000] if len(text) > 60 else ""), author
+    text = _blocks_to_html(art, title)          # багатий HTML (варіант A)
+    return (text[:8000] if len(text) > 40 else ""), author
 
 
 def gromada_url(path: str) -> str:
@@ -1419,7 +1497,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
         article_path = href.replace(GROMADA_BASE, "") or "/"
         content = fetch_full_article(gromada_url(article_path), title) or excerpt
         if not excerpt:
-            excerpt = content[:400]
+            excerpt = strip_html(content)[:400]
 
         # Зображення
         image = None
@@ -1506,22 +1584,21 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
             continue
 
         try:
-            # clean і для RSS-контенту: дубль заголовка/часу і футерні маркери
-            # трапляються у content:encoded теж (Вова 14.07 — «усі джерела»)
-            content = clean_article_text(get_full_content(entry), title)
+            # content — БАГАТИЙ HTML (get_full_content зберігає структуру + чистить)
+            content = get_full_content(entry, title)
             # Якщо RSS дає лише анонс — дотягуємо повний текст зі сторінки статті
-            if len(content) < 600 and link:
+            if len(strip_html(content)) < 500 and link:
                 full = fetch_full_article(link, title)
                 if full and len(full) > len(content):
                     content = full
-            # Текст «повний» якщо RSS дав велике content:encoded АБО ми дотягли повний
-            # зі сторінки. Якщо лишився короткий анонс — fullText=False (тоді клієнт
-            # покаже «Читати повністю»). Прибирає хибний редирект на повних коротких.
-            full_text = len(content) >= 600
+            # «Повний» за ПЛОСКОЮ довжиною (HTML-теги не рахуємо). Короткий анонс →
+            # fullText=False (клієнт покаже «Читати повністю»).
+            full_text = len(strip_html(content)) >= 500
 
+            # excerpt — ЗАВЖДИ плоский (для карток): summary або текст без тегів
             excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
             if not excerpt:
-                excerpt = content[:400]
+                excerpt = strip_html(content)[:400]
 
             published = entry.get("published_parsed") or entry.get("updated_parsed")
             ts = int(time.mktime(published) * 1000) if published else int(time.time() * 1000)
