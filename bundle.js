@@ -6039,30 +6039,29 @@ ${post.text}
   }
   var CATEGORY_COLORS = {
     "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E": "#37474f",
-    // темно-сірий (новинний)
-    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "#1a237e",
-    // navy
-    "\u0412\u0456\u0439\u043D\u0430": "#722F37",
-    // бордо
-    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F",
-    // зелений (гроші)
-    "\u0411\u0456\u0437\u043D\u0435\u0441": "#2E5E1F",
-    // зелений
-    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
-    // синій
+    // темно-сірий (новинний) — дефолт
     "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430": "#B45309",
     // теракот
-    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "#455a64",
-    // сіро-синій
-    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "#C2185B",
-    // медичний
-    "\u041E\u0441\u0432\u0456\u0442\u0430": "#6a1b9a",
-    // фіолетовий
-    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "#2e7d32",
-    // природний зелений
-    "\u0406\u0441\u0442\u043E\u0440\u0456\u044F": "#6d4c41"
-    // сепія-коричневий (історичні «історії Олики»)
+    "\u0421\u043F\u043E\u0440\u0442": "#1565C0",
+    // синій
+    "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430": "#2E5E1F"
+    // зелений (гроші)
   };
+  var CATEGORY_ALIAS = {
+    "\u041F\u043E\u043B\u0456\u0442\u0438\u043A\u0430": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u0412\u043B\u0430\u0434\u0430": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u0412\u0456\u0439\u043D\u0430": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u0422\u0435\u0445\u043D\u043E\u043B\u043E\u0433\u0456\u0457": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u041F\u0440\u0438\u0440\u043E\u0434\u0430": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u041E\u0441\u0432\u0456\u0442\u0430": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u0417\u0434\u043E\u0440\u043E\u0432\u02BC\u044F": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u0417\u0434\u043E\u0440\u043E\u0432'\u044F": "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E",
+    "\u0406\u0441\u0442\u043E\u0440\u0456\u044F": "\u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430",
+    "\u0411\u0456\u0437\u043D\u0435\u0441": "\u0415\u043A\u043E\u043D\u043E\u043C\u0456\u043A\u0430"
+  };
+  function normCategory(c) {
+    return CATEGORY_ALIAS[c] || (CATEGORY_COLORS[c] ? c : "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E");
+  }
   var GEO_COLORS = {
     "\u0413\u0440\u043E\u043C\u0430\u0434\u0430": "#722F37",
     // бордо — наш бренд (Олика + села громади)
@@ -6078,7 +6077,7 @@ ${post.text}
     // синій — злитий розділ (на випадок майбутнього geo)
   };
   function catColor2(c) {
-    return CATEGORY_COLORS[c] || "#546e7a";
+    return CATEGORY_COLORS[normCategory(c)] || "#546e7a";
   }
   function geoColor(g) {
     return GEO_COLORS[g] || "#546e7a";
@@ -6128,7 +6127,7 @@ ${post.text}
   function badgesHtml(a) {
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(a.category)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor2(a.category)}">${escapeHtml(normCategory(a.category))}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
@@ -6188,7 +6187,7 @@ ${post.text}
       modalMetaTags.innerHTML = `
       <span class="news-card-geo">${escapeHtml(article.geo)}</span>
       <span class="modal-meta-sep">\u2022</span>
-      <span class="news-card-category">${escapeHtml(article.category)}</span>
+      <span class="news-card-category">${escapeHtml(normCategory(article.category))}</span>
       ${article.exclusive ? '<span class="exclusive-badge">\u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
     `;
     }
