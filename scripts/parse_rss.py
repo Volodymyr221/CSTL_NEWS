@@ -254,9 +254,16 @@ def resolve_gnews_url(link: str) -> str:
     return link
 
 
-MAX_ARTICLES     = 150
+MAX_ARTICLES     = 400  # запобіжна стеля (реальний обсяг тримає зберігання за віком)
 MAX_PER_SOURCE   = 15   # не більше 15 статей з одного джерела за раз
 MAX_EVENTS       = 50
+
+# Зберігання за ВІКОМ (рішення Вови 21.07): статті НЕ витісняються протягом дня —
+# живуть N днів від моменту додавання (added_ts), потім самі відпадають. Так кнопки
+# «зберегти/поділитися» мають сенс. Волинь/Україна/Світ = 7 днів (там новин багато),
+# Громада = 30 (там новин менше — тримаємо довше). Ексклюзиви не обрізаємо взагалі.
+RETENTION_DAYS = {"Громада": 30, "Волинь": 7, "Україна та Світ": 7}
+DEFAULT_RETENTION_DAYS = 30
 DATA_PATH    = Path("data/articles.json")
 EVENTS_PATH  = Path("data/events.json")
 STORIES_PATH = Path("data/olyka-stories.json")   # пул історичних «історій Олики»
@@ -427,32 +434,27 @@ def remember_title(tokens: set, section: str, seen_by_section: dict) -> None:
         seen_by_section.setdefault(section, []).append(tokens)
 
 
-def balance_ua_world(articles: list, ua_ratio: float = 0.6) -> list:
-    """Баланс розділу «Україна та Світ»: 60% Україна / 40% Світ (рішення Роби 01.07).
-
-    Не дає національним новинам витісняти світові й навпаки. Меншість задає
-    загальний обсяг розділу (тримаємо точну пропорцію). `articles` має бути вже
-    відсортований за часом (новіші зверху) — беремо найсвіжіші. Інші розділи
-    (Волинь / Громада) не чіпаємо; порядок за часом зберігається.
+def prune_by_age(articles: list) -> list:
+    """Зберігання за ВІКОМ (рішення Вови 21.07): лишаємо статті, МОЛОДШІ за
+    RETENTION_DAYS свого розділу (від added_ts). Ніяких внутрішньоденних витіснень —
+    додане живе тиждень (Волинь/Україна/Світ) або місяць (Громада), тому кнопки
+    «зберегти/поділитися» мають сенс. Ексклюзиви (курований Олика) і легасі без
+    added_ts не чіпаємо взагалі.
     """
-    ua    = [a for a in articles if a.get("geo") == "Україна"]
-    world = [a for a in articles if a.get("geo") == "Світ"]
-    if not ua or not world:
-        return articles  # нема двох сторін — балансувати нічого
-    total   = int(min(len(ua) / ua_ratio, len(world) / (1 - ua_ratio)))
-    n_ua    = round(total * ua_ratio)
-    n_world = total - n_ua
-    keep = {id(a) for a in ua[:n_ua]} | {id(a) for a in world[:n_world]}
-    return [a for a in articles
-            if a.get("geo") not in ("Україна", "Світ") or id(a) in keep]
-
-
-# Денні ліміти НОВИХ статей на розділ — щоб стрічка не була кашею (рішення Роби 01.07).
-# Громада/Олика — БЕЗ ліміту (найцінніший локальний контент, його й так мало).
-DAILY_LIMIT_PER_SECTION = {
-    "Україна та Світ": 6,
-    "Волинь": 6,
-}
+    now = int(time.time() * 1000)
+    out = []
+    for a in articles:
+        if a.get("exclusive"):
+            out.append(a)
+            continue
+        added = a.get("added_ts")
+        if not added:
+            out.append(a)              # легасі без added_ts — не чіпаємо
+            continue
+        days = RETENTION_DAYS.get(section_of(a.get("geo", "")), DEFAULT_RETENTION_DAYS)
+        if (now - added) <= days * 86400 * 1000:
+            out.append(a)
+    return out
 
 
 def _added_date(a: dict):
@@ -464,52 +466,6 @@ def _added_date(a: dict):
         return datetime.date.fromtimestamp(ts / 1000)
     except Exception:
         return None
-
-
-def apply_daily_limits(new_articles: list, existing_articles: list):
-    """Тримає не більше DAILY_LIMIT_PER_SECTION НАЙСВІЖІШИХ статей на розділ за добу.
-
-    «Найсвіжіші перемагають» (рішення Роми 05.07 — фікс замерзлої стрічки):
-    ліміт більше не «перші N і стоп», а «N найсвіжіших за сьогодні». Коли розділ
-    уже повний, свіжіша (за ts публікації) стаття ВИТІСНЯЄ найстарішу СЬОГОДНІШНЮ —
-    так стрічка завжди показує свіже, але денний притік лишається обмеженим (каші
-    нема). Статті попередніх днів не чіпаємо (вони згасають самі через MAX_ARTICLES).
-
-    Рахунок «сьогоднішніх» — за added_ts (коли ДОДАЛИ). Громада/Олика — без ліміту.
-    Повертає (kept_new, evict_ids): нові що лишаємо + id сьогоднішніх що витіснили.
-    """
-    today = datetime.date.today()
-    # Сьогоднішні наявні по розділах, найстаріші (за ts публікації) спереду — для витіснення.
-    todays: dict = {}
-    for a in existing_articles:
-        if _added_date(a) == today:
-            s = section_of(a.get("geo", ""))
-            todays.setdefault(s, []).append(a)
-    for s in todays:
-        todays[s].sort(key=lambda a: a.get("ts", 0))   # найстаріша першою
-
-    kept, evict_ids = [], set()
-    for a in sorted(new_articles, key=lambda a: a.get("ts", 0), reverse=True):
-        s = section_of(a.get("geo", ""))
-        lim = DAILY_LIMIT_PER_SECTION.get(s)           # None = без ліміту (Громада/Олика)
-        if lim is None:
-            kept.append(a)
-            continue
-        cur = todays.setdefault(s, [])
-        if len(cur) < lim:                             # є вільне місце сьогодні
-            kept.append(a)
-            cur.append(a)
-            cur.sort(key=lambda x: x.get("ts", 0))
-        else:                                          # повно — витісняємо найстарішу, якщо ця свіжіша
-            oldest = cur[0]
-            if a.get("ts", 0) > oldest.get("ts", 0):
-                evict_ids.add(oldest.get("id"))
-                cur.pop(0)
-                kept.append(a)
-                cur.append(a)
-                cur.sort(key=lambda x: x.get("ts", 0))
-            # інакше — стаття старіша за все сьогоднішнє, пропускаємо
-    return kept, evict_ids
 
 
 def drip_story(existing_articles: list, next_id: int):
@@ -1717,11 +1673,9 @@ def main():
             print(f"✗ {source['name']}: {e}")
             traceback.print_exc()
 
-    # Денні ліміти на розділ — N найсвіжіших/добу; свіжіші витісняють старіші сьогоднішні
-    new_articles, evict_ids = apply_daily_limits(new_articles, existing_articles)
-    if evict_ids:
-        existing_articles = [a for a in existing_articles if a.get("id") not in evict_ids]
-        print(f"↻ витіснено застарілих сьогоднішніх: {len(evict_ids)} (замінено свіжішими)")
+    # Денних лімітів/витіснення БІЛЬШЕ НЕМА (рішення Вови 21.07): додаємо ВСІ нові
+    # (уже відфільтровані за релевантністю/дедупом), а обсяг тримає зберігання за
+    # віком (prune_by_age) — тиждень/місяць. Так збережені статті не зникають.
 
     # Крапельна історична «історія Олики» (одна на день) — щоб стрічка жила в тишу
     _story, next_art_id = drip_story(existing_articles, next_art_id)
@@ -1733,9 +1687,8 @@ def main():
     if new_articles:
         all_articles = new_articles + existing_articles
         all_articles.sort(key=lambda a: a.get("ts", 0), reverse=True)
-        # Баланс розділу «Україна та Світ» — 60% Україна / 40% Світ (рішення Роби 01.07)
-        all_articles = balance_ua_world(all_articles)
-        all_articles = all_articles[:MAX_ARTICLES]
+        all_articles = prune_by_age(all_articles)     # зберігання за віком (тиждень/місяць)
+        all_articles = all_articles[:MAX_ARTICLES]    # запобіжна стеля
         DATA_PATH.write_text(
             json.dumps(all_articles, ensure_ascii=False, indent=2),
             encoding="utf-8",
