@@ -2689,10 +2689,24 @@
    ЗАВЕЛИКИЙ → syncBoardBodyOffset() у наступному кадрі стягував тіло на ~94px, картки
    стрибали вгору («бах»). Даємо одразу правильний запас = реальній висоті → нема стрибка
    (id перекриває :has-правило Дошки). */
-#disc-content .bd-body { padding-top: 94px; }
+/* Варіант C (Вова 21.07): заголовок «ОБГОВОРЕННЯ» прибрано → шапка нижча
+   (лише пошук ≈54px + зазор 12 = 66). Раніше 94 (з заголовком) → без нього був би
+   стрибок вниз доки JS не зміряє. syncBoardBodyOffset уточнює в рантаймі. */
+#disc-content .bd-body { padding-top: 66px; }
 /* Обговорення (Вова 20.07): пошук БІЛИЙ (був #FAF8EF = колір карток) — на глибшому
    фоні відділяється; scoped під #disc-content, Дошки не чіпає. */
 #disc-content .bd-search { background: #FFFFFF; }
+/* Варіант C (Вова 21.07): шапка Обговорень — ГОСТРІ кути + БЕЗ важкої тіні
+   (заокруглені кути+тінь виглядали як груба «полиця»). Замість тіні — тонка
+   лінія-розділювач знизу. Scoped під #disc-content → Дошки НЕ чіпає. */
+#disc-content .bd-controls {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  box-shadow: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.10);
+}
+/* Пошук-пігулку теж менш заокруглюємо (14→6px) під гострий вигляд шапки. */
+#disc-content .bd-search { border-radius: 6px; }
 /* Розширити картки: бічний відступ стрічки 14→10px (картки ширші на 8px сумарно). */
 #disc-content .bd-stream { padding-left: 10px; padding-right: 10px; }
 
