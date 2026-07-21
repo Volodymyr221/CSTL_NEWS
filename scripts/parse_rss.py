@@ -1288,8 +1288,8 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
             src = im["src"]
             image = src if src.startswith("http") else base + src
 
-        # Повний текст статті
-        content = fetch_full_article(href, title) or ""
+        # Повний текст статті + автор (окремий fetch зі сторінки статті rayon)
+        content, author = fetch_rayon_article(href, title)
         excerpt = content[:400]
 
         # Фільтр релевантності громаді (Вова 21.07): тег «Олика» на rayon інколи
@@ -1310,6 +1310,8 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
             "geo": source["geo"],   # «Громада» — усі новини тегу Олика
             "image": image,
             "source": source["name"],
+            "author": author,           # справжній автор публікації (Наталка Марчук)
+            "fullText": bool(content),  # текст повний (не анонс) → не показувати «Читати повністю»
             "sourceUrl": href,
             "exclusive": False,
             "ts": ts,
@@ -1320,41 +1322,52 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
         if len(articles) >= MAX_PER_SOURCE:
             break
 
-    # ── ТИМЧАСОВИЙ зонд СТОРІНКИ СТАТТІ rayon (структура тіла/автора/метаданих) ──
-    # Прибрати після налаштування. Дивимось де тіло статті, автор, і звідки сміття
-    # (дата/перегляди/«Зберегти»/підпис фото), щоб fetch_full_article брав ЛИШЕ тіло.
-    try:
-        _aurl = "https://kivertsi.rayon.in.ua/news/1088477-nicni-avariyi-na-kivercivshhini-u-dtp-na-motociklax-travmuvalisia-nepovnolitni"
-        _rq = urllib.request.Request(_aurl, headers={"User-Agent": BROWSER_UA, "Accept-Language": "uk-UA,uk;q=0.9", "Referer": "https://www.google.com/"})
-        with urllib.request.urlopen(_rq, timeout=15) as _rr:
-            _araw = _rr.read()
-        _as = BeautifulSoup(_araw, "html.parser")
-        print("🔎 ART probe url:", _aurl)
-        # автор (byline)
-        for _kw in ("автор", "Наталка", "Марчук"):
-            _n = _as.find(string=re.compile(_kw, re.I))
-            if _n and _n.parent:
-                _p = _n.parent
-                _gp = _p.parent
-                print(f"🔎 ART author[{_kw}]: <{_p.name} class={_p.get('class')}> gp=<{_gp.name if _gp else None} class={_gp.get('class') if _gp else None}> txt={_n.strip()[:40]!r}")
-                break
-        # кандидати контейнера тіла
-        for _sel in ("[itemprop='articleBody']", "[class*=article]", "[class*=material]",
-                     "[class*=publication]", "[class*=content]", "[class*=news-text]", "[class*=post]"):
-            _el = _as.select_one(_sel)
-            if _el:
-                _t = _el.get_text(" ", strip=True)
-                print(f"🔎 ART body {_sel}: <{_el.name} class={_el.get('class')}> len={len(_t)} :: {_t[:70]!r}")
-        # метадані (звідки сміття)
-        for _kw in ("перегляд", "Зберегти"):
-            _n = _as.find(string=re.compile(_kw, re.I))
-            if _n and _n.parent:
-                print(f"🔎 ART meta[{_kw}]: <{_n.parent.name} class={_n.parent.get('class')}>")
-    except Exception as _e:
-        print("🔎 ART probe err:", _e)
-    # ── кінець зонда ──
-
     return articles
+
+
+def fetch_rayon_article(url: str, title: str = "") -> tuple[str, str]:
+    """Тіло статті rayon.in.ua + автор — за структурою сторінки статті.
+
+    Розмітка (зонд 21.07): картки/стаття в <article class="article">, метадані
+    (автор/дата/перегляди/«Зберегти») — у блоці .articleContentInfo, автор саме в
+    .articleContentInfo__name. Тіло = <article> БЕЗ метаданих/зображень/підписів/
+    тегів. Повертає (тіло, автор). Обидва можуть бути '' (fail-soft).
+    """
+    author = ""
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": BROWSER_UA,
+            "Accept-Language": "uk-UA,uk;q=0.9",
+            "Referer": "https://www.google.com/",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+    except Exception:
+        return "", ""
+
+    from bs4 import BeautifulSoup
+    soup = BeautifulSoup(raw, "html.parser")
+
+    an = soup.select_one(".articleContentInfo__name")
+    if an:
+        author = an.get_text(strip=True)
+
+    art = soup.select_one("article.article") or soup.select_one("[class*=article]")
+    if not art:
+        return "", author
+
+    # Прибираємо все НЕ-тілесне: метадані (автор/дата/перегляди/«Зберегти»),
+    # заголовок, зображення+підписи, теги, поділитись, хлібні крихти, скрипти.
+    for sel in (".articleContentInfo", "h1", "figure", "figcaption", "picture", "img",
+                "[class*=caption]", "[class*=gallery]", "[class*=tags]", "[class*=tag-]",
+                "[class*=share]", "[class*=social]", "[class*=related]", "[class*=breadcrumb]",
+                "[class*=views]", "[class*=save]", "script", "style", "nav"):
+        for el in art.select(sel):
+            el.decompose()
+
+    text = _blocks_to_text(art)
+    text = clean_article_text(text, title)
+    return (text[:8000] if len(text) > 60 else ""), author
 
 
 def gromada_url(path: str) -> str:
@@ -1476,6 +1489,7 @@ def parse_gromada_source(source: dict, seen_urls: set, seen_by_section: dict) ->
             "geo": "Олика",
             "image": image,
             "source": "Олицька громада",
+            "fullText": bool(content),   # gov.ua дає повний текст → без «Читати повністю»
             "sourceUrl": href,  # оригінальний URL (без Worker) для дедуплікації
             "exclusive": False,
             "ts": ts,
@@ -1549,6 +1563,10 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 full = fetch_full_article(link, title)
                 if full and len(full) > len(content):
                     content = full
+            # Текст «повний» якщо RSS дав велике content:encoded АБО ми дотягли повний
+            # зі сторінки. Якщо лишився короткий анонс — fullText=False (тоді клієнт
+            # покаже «Читати повністю»). Прибирає хибний редирект на повних коротких.
+            full_text = len(content) >= 600
 
             excerpt = strip_html(entry.get("summary") or entry.get("description") or "")[:400]
             if not excerpt:
@@ -1598,6 +1616,7 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
                 "geo": geo,
                 "image": image,
                 "source": src_name,
+                "fullText": full_text,   # чи текст повний (не анонс) — для «Читати повністю»
                 "sourceUrl": link,
                 "exclusive": False,
                 "ts": ts,
