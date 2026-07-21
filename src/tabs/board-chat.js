@@ -28,7 +28,7 @@ import {
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage, uploadPhotoToStorage,
   bumpPost, closePost, deleteMyPost, restorePost, removeSavedPost,
-  hydrateAvatars,
+  hydrateAvatars, hydrateNames, nameUid,
 } from '../core/supabase.js';
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
@@ -90,7 +90,7 @@ export async function openChat(thread, post) {
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
       ${avatar(partner, otherUid(thread))}
       <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
-        <div class="pm-head-name">${escapeHtml(partner)}</div>
+        <div class="pm-head-name"${nameUid(otherUid(thread))}>${escapeHtml(partner)}</div>
       </div>
     </header>
     <div class="pm-ctx" data-pm-ctx role="button" aria-label="Переглянути оголошення">
@@ -134,6 +134,7 @@ export async function openChat(thread, post) {
   const fileEl   = api.screen.querySelector('#pm-file');
   const barEl    = api.screen.querySelector('#pm-composebar');
   hydrateAvatars(api.screen);   // Потік 12 Б: фото співрозмовника у шапці чату
+  hydrateNames(api.screen);     // живе імʼя співрозмовника за uid
 
   let messages = [];
   let msgById  = new Map();
@@ -629,7 +630,7 @@ export function openThreadsList() {
               ${avatar(name, otherUid(t))}
               <div class="pm-thread-body">
                 <div class="pm-thread-top">
-                  <span class="pm-thread-name">${escapeHtml(name)}</span>
+                  <span class="pm-thread-name"${nameUid(otherUid(t))}>${escapeHtml(name)}</span>
                   <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
                 </div>
                 <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
@@ -640,6 +641,7 @@ export function openThreadsList() {
           </div>`;
       }).join('');
       hydrateAvatars(threadsEl);   // Потік 12 Б: фото співрозмовників у списку розмов
+      hydrateNames(threadsEl);     // живе імʼя співрозмовників за uid
     };
 
     // F5: архівована розмова з новим НЕПРОЧИТАНИМ — авто-розархівувати. Інакше

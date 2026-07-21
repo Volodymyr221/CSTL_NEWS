@@ -313,6 +313,17 @@ export function cachedName(uid) {
   return uid ? (_nameCache.get(uid) || '') : '';
 }
 
+// Спільні хелпери гідрації імен (для board / board-discussions — щоб не дублювати).
+// nameUid → атрибут-маркер, який hydrateNames знайде і підмінить на живе імʼя.
+// liveName → одразу підставляє вже кешоване живе імʼя (щоб не мигало), інакше
+// вморожений текст, інакше fallback ('Житель' в обговореннях / 'анонімно' на дошці).
+export function nameUid(uid) {
+  return uid ? ` data-name-uid="${escapeHtml(uid)}"` : '';
+}
+export function liveName(name, uid, fallback = 'Житель') {
+  return escapeHtml(cachedName(uid) || name || fallback);
+}
+
 // Батч-підвантаження аватарів за списком uid. Тягне лише ще невідомі, заповнює кеш.
 export async function fetchAvatars(uids) {
   const need = [...new Set(uids)].filter(u => u && !_avatarCache.has(u));

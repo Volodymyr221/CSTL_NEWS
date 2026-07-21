@@ -605,6 +605,12 @@
   function cachedName(uid) {
     return uid ? _nameCache.get(uid) || "" : "";
   }
+  function nameUid(uid) {
+    return uid ? ` data-name-uid="${escapeHtml(uid)}"` : "";
+  }
+  function liveName(name, uid, fallback = "\u0416\u0438\u0442\u0435\u043B\u044C") {
+    return escapeHtml(cachedName(uid) || name || fallback);
+  }
   async function fetchAvatars(uids) {
     const need = [...new Set(uids)].filter((u) => u && !_avatarCache.has(u));
     if (!supa || !need.length)
@@ -2624,7 +2630,7 @@
       <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
       ${avatar(partner, otherUid(thread))}
       <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
-        <div class="pm-head-name">${escapeHtml(partner)}</div>
+        <div class="pm-head-name"${nameUid(otherUid(thread))}>${escapeHtml(partner)}</div>
       </div>
     </header>
     <div class="pm-ctx" data-pm-ctx role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
@@ -2665,6 +2671,7 @@
     const fileEl = api.screen.querySelector("#pm-file");
     const barEl = api.screen.querySelector("#pm-composebar");
     hydrateAvatars(api.screen);
+    hydrateNames(api.screen);
     let messages = [];
     let msgById = /* @__PURE__ */ new Map();
     let replyTo = null;
@@ -3206,7 +3213,7 @@
               ${avatar(name, otherUid(t))}
               <div class="pm-thread-body">
                 <div class="pm-thread-top">
-                  <span class="pm-thread-name">${escapeHtml(name)}</span>
+                  <span class="pm-thread-name"${nameUid(otherUid(t))}>${escapeHtml(name)}</span>
                   <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
                 </div>
                 <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
@@ -3217,6 +3224,7 @@
           </div>`;
         }).join("");
         hydrateAvatars(threadsEl);
+        hydrateNames(threadsEl);
       };
       const autoUnarchiveUnread = async () => {
         const toFix = threads.filter((t) => unread.get(t.id) > 0 && stOf(t.id).archived);
@@ -4143,12 +4151,6 @@ ${post.text}
   function authorAvatar(author, uid) {
     return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || "", cls: "bd-avatar" });
   }
-  function nameUid(uid) {
-    return uid ? ` data-name-uid="${escapeHtml(uid)}"` : "";
-  }
-  function liveName(author, uid) {
-    return escapeHtml(cachedName(uid) || author || "\u0416\u0438\u0442\u0435\u043B\u044C");
-  }
   function chatMessagesHtml(post) {
     const items = getComments(post.id);
     if (!items.length) {
@@ -4993,7 +4995,7 @@ ${post.text}
           <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
         </div>
         <div class="cm-board-foot-who">
-          <span class="cm-board-author cm-board-author--card">\u2014 ${escapeHtml(p.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span>
+          <span class="cm-board-author cm-board-author--card">\u2014 <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       </div>`;
@@ -5544,6 +5546,7 @@ ${post.text}
     document.body.appendChild(backdrop);
     document.body.appendChild(modal);
     document.body.classList.add("cm-zoom-open");
+    hydrateNames(modal);
     let closed = false;
     const close = () => {
       if (closed)
@@ -5642,6 +5645,7 @@ ${post.text}
       modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
+      hydrateNames(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();

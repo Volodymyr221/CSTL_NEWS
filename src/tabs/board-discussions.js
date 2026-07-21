@@ -22,7 +22,7 @@ import {
   fetchAllComments, addComment, editComment, deleteComment,
   subscribeComments,
   fetchAllReactions, setReaction, subscribeReactions, getAnonId,
-  submitDiscussion, cachedAvatar, hydrateAvatars, cachedName, hydrateNames,
+  submitDiscussion, cachedAvatar, hydrateAvatars, hydrateNames, nameUid, liveName,
 } from '../core/supabase.js';
 import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
@@ -179,16 +179,6 @@ function msgWord(n) {
 // uid → data-av-uid, hydrateAvatars підмінить літеру на фото коли підтягнеться.
 function authorAvatar(author, uid) {
   return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || '', cls: 'bd-avatar' });
-}
-
-// Атрибут-маркер для гідрації імені: hydrateNames підмінить вморожений текст на
-// живе імʼя профілю за uid. Без uid (анонім) — маркера нема, лишається як є.
-// Одразу підставляємо кешоване живе імʼя (якщо вже підвантажене) — щоб не мигало.
-function nameUid(uid) {
-  return uid ? ` data-name-uid="${escapeHtml(uid)}"` : '';
-}
-function liveName(author, uid) {
-  return escapeHtml(cachedName(uid) || author || 'Житель');
 }
 
 // Стрічка повідомлень чату (бульбашки) — рендериться у повноекранній модалці-чаті.
