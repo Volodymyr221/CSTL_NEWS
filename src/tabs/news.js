@@ -249,4 +249,12 @@ export function openArticle(id) {
   modal.classList.add('open');
   document.body.style.overflow = 'hidden';
   document.body.classList.add('modal-open');
+
+  // Кожна стаття відкривається СПОЧАТКУ: контейнер скролу тримав позицію попередньої
+  // (замінюємо лише вміст, scrollTop контейнера лишався) → скидаємо на 0 (Вова 21.07).
+  const scrollBox = modal.querySelector('.article-modal-inner');
+  if (scrollBox) {
+    scrollBox.scrollTop = 0;
+    requestAnimationFrame(() => { scrollBox.scrollTop = 0; });   // iOS: після layout
+  }
 };

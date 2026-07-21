@@ -6248,6 +6248,13 @@ ${post.text}
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
+    const scrollBox = modal.querySelector(".article-modal-inner");
+    if (scrollBox) {
+      scrollBox.scrollTop = 0;
+      requestAnimationFrame(() => {
+        scrollBox.scrollTop = 0;
+      });
+    }
   }
 
   // src/core/bus-schedule.js
