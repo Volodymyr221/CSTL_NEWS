@@ -155,9 +155,13 @@ function decodeEntities(str) {
   return ta.value;
 }
 
-// Рендерить текст статті: розбиває по \n\n → окремі <p> теги
+// Рендер тіла статті. Новий формат — БАГАТИЙ HTML (санітизований парсером:
+// лише p/h3/ul/li/strong/em/br/blockquote, без атрибутів/скриптів) → рендеримо як
+// є. Легасі-плоский текст (старі статті) → розбиваємо по \n\n на <p> з escapeHtml.
 function renderArticleBody(content) {
-  const text = decodeEntities(content || '');
+  const raw = content || '';
+  if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br)\b/i.test(raw)) return raw;
+  const text = decodeEntities(raw);
   const paragraphs = text.split(/\n\n+/).map(p => p.trim()).filter(Boolean);
   if (!paragraphs.length) return '';
   return paragraphs.map(p => `<p class="article-p">${escapeHtml(p)}</p>`).join('');
