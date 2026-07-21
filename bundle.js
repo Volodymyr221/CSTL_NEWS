@@ -2679,7 +2679,7 @@
       const enter = seen.has(msgKey(m)) ? "" : " pm-bubble--enter";
       const tagAttr = ` data-tag="${m.client_tag || ""}"`;
       if (m.deleted_at) {
-        return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"${tagAttr}><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
+        return `<div class="pm-bubble pm-bubble--deleted${enter}" data-msg="${m.id}"${tagAttr}><span class="pm-bubble-text">${ICONS.trash} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
       const reply = m.reply_to_id ? msgById.get(m.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "\u{1F4F7} \u0424\u043E\u0442\u043E").slice(0, 90))}</span>` : "";
@@ -4134,7 +4134,7 @@ ${post.text}
     let hadOld = false, dividerPlaced = false, lastDay = null;
     const renderDiscBubble = (c) => {
       if (c.deleted_at) {
-        return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ""}"><span class="pm-bubble-text">\u{1F5D1} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
+        return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ""}"><span class="pm-bubble-text">${ICONS.trash} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
       }
       const reply = c.reply_to_id ? byId2.get(c.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "").slice(0, 90))}</span>` : "";
@@ -11227,8 +11227,8 @@ END:VEVENT`
       const bubble = (m) => {
         const mine = m.sender_uid === me;
         const who = mine ? "" : `<span class="gr-sender">${escapeHtml(names.get(m.sender_uid) || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>`;
-        const txt = m.deleted_at ? "\u{1F5D1} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E" : m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E";
-        return `<div class="pm-group ${mine ? "pm-group--mine" : "pm-group--other"}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${escapeHtml(txt)}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
+        const txtHtml = m.deleted_at ? `${ICONS.trash} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E` : escapeHtml(m.text || "\u{1F4F7} \u0424\u043E\u0442\u043E");
+        return `<div class="pm-group ${mine ? "pm-group--mine" : "pm-group--other"}"><div class="pm-bubble">${who}<span class="pm-bubble-text">${txtHtml}</span><span class="pm-bubble-time">${clockTime(postTime(m))}</span></div></div>`;
       };
       const render2 = () => {
         streamEl.innerHTML = messages.length ? messages.map(bubble).join("") : `<div class="pm-empty pm-empty--chat"><span class="pm-empty-ic">\u{1F44B}</span>\u041F\u043E\u0447\u043D\u0456\u0442\u044C \u0440\u043E\u0437\u043C\u043E\u0432\u0443 \u0432 \u0433\u0440\u0443\u043F\u0456.</div>`;
