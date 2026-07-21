@@ -55,7 +55,7 @@ SOURCES = [
         "url": "https://kivertsi.rayon.in.ua/tags/olika",
         "name": "Район.Ківерці",
         "geo": "Громада",
-        "type": "html",   # тег-сторінка без RSS — HTML-парсер
+        "type": "rayon",   # тег-сторінка rayon.in.ua — спеціальний парсер (.galleryCard)
     },
     {
         "url": "https://cstl-proxy.volodymyrshevchuk19.workers.dev/?path=/news/",
@@ -1056,25 +1056,6 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
     except Exception as e:
         raise ValueError(f"Не вдалось завантажити {source['url']}: {e}")
 
-    # ── ТИМЧАСОВИЙ діагностичний зонд (rayon.in.ua) — прибрати після налаштування ──
-    # rayon.in.ua = JS-SPA без RSS: у DOM статей нема. Дивимось чи дані у JSON-блоці
-    # сторінки (__NEXT_DATA__/__NUXT__/ld+json) або треба API. Друкуємо структуру в лог.
-    if "rayon.in.ua" in source.get("url", ""):
-        try:
-            from bs4 import BeautifulSoup as _BS
-            _s = _BS(raw, "html.parser")
-            _links = [a for a in _s.find_all("a", href=True) if "/news/" in a["href"]]
-            print(f"🔎 rayon: /news/ links = {len(_links)}")
-            for _i, _a in enumerate(_links[:2]):
-                print(f"🔎 rayon LINK[{_i}] href={_a.get('href')} | text={_a.get_text(strip=True)[:90]!r}")
-                _p = _a.parent
-                print(f"🔎 rayon PARENT[{_i}]:", str(_p)[:900])
-                if _p is not None and _p.parent is not None:
-                    print(f"🔎 rayon GRANDPARENT[{_i}]:", str(_p.parent)[:1800])
-        except Exception as _de:
-            print("🔎 rayon DEBUG error:", _de)
-    # ── кінець зонда ──────────────────────────────────────────────────────────────
-
     base = "https://" + urllib.parse.urlparse(source["url"]).netloc
     soup = BeautifulSoup(raw, "html.parser")
 
@@ -1173,6 +1154,116 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
         })
         seen_urls.add(href)
         remember_title(tokens, section, seen_by_section)
+
+    return articles
+
+
+def _parse_rayon_date(text: str) -> int | None:
+    """Дата rayon.in.ua: «21.07.2026 14:58» (київський час) → Unix ms (UTC).
+
+    На сайті час київський (UTC+3 влітку). Інші джерела зберігають UTC, тож
+    приводимо і цей до UTC (−3 год), щоб порядок стрічки не збивався.
+    """
+    m = re.search(r"(\d{1,2})\.(\d{2})\.(\d{4})\s+(\d{1,2}):(\d{2})", text)
+    if not m:
+        return _parse_date_uk(text)   # лише дата без часу → загальний парсер
+    d, mo, y, hh, mm = (int(g) for g in m.groups())
+    try:
+        dt = datetime.datetime(y, mo, d, hh, mm) - datetime.timedelta(hours=3)  # Київ→UTC
+        # timegm через календар: трактуємо як UTC (не локаль раннера)
+        import calendar
+        return int(calendar.timegm(dt.timetuple()) * 1000)
+    except ValueError:
+        return None
+
+
+def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
+    """Парсить тег-сторінку rayon.in.ua (напр. kivertsi.rayon.in.ua/tags/olika).
+
+    Сайт — SPA, але сторінка server-rendered: картки = <a class="galleryCard">.
+    Заголовок беремо з alt зображення (надійно), дата — <time class="galleryCard__time">
+    у форматі ДД.ММ.РРРР ГГ:ХВ (реальний час публікації), фото — <img src>.
+    Усі статті тегу → geo джерела («Громада»).
+    """
+    from bs4 import BeautifulSoup
+
+    try:
+        req = urllib.request.Request(source["url"], headers={
+            "User-Agent": BROWSER_UA,
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "uk-UA,uk;q=0.9",
+            "Referer": "https://www.google.com/",
+        })
+        with urllib.request.urlopen(req, timeout=15) as r:
+            raw = r.read()
+    except Exception as e:
+        raise ValueError(f"Не вдалось завантажити {source['url']}: {e}")
+
+    base = "https://" + urllib.parse.urlparse(source["url"]).netloc
+    soup = BeautifulSoup(raw, "html.parser")
+
+    articles = []
+    for card in soup.select("a.galleryCard[href]"):
+        href = card["href"]
+        if not href.startswith("http"):
+            href = base + href
+        if "/news/" not in href or href in seen_urls:
+            continue
+
+        # Заголовок: alt зображення картки → fallback .galleryCard__title
+        img = card.select_one("img[alt]")
+        title = (img.get("alt") or "").strip() if img else ""
+        if not title:
+            t_el = card.select_one(".galleryCard__title, h2, h3")
+            title = t_el.get_text(strip=True) if t_el else ""
+        title = strip_html(title).strip()
+        if not title:
+            continue
+
+        section = section_of(source["geo"])
+        tokens = title_tokens(title)
+        if is_dup_title(tokens, section, seen_by_section):
+            continue
+
+        # Дата публікації (реальна, київський час → UTC)
+        ts = int(time.time() * 1000)
+        tm = card.select_one("time.galleryCard__time, time")
+        if tm:
+            parsed = _parse_rayon_date(tm.get_text(strip=True))
+            if parsed:
+                ts = parsed
+
+        # Фото картки (оригінал, не conversions-мініатюра якщо є)
+        image = None
+        im = card.select_one("img[src]")
+        if im and im.get("src"):
+            src = im["src"]
+            image = src if src.startswith("http") else base + src
+
+        # Повний текст статті
+        content = fetch_full_article(href, title) or ""
+        excerpt = content[:400]
+
+        category = detect_category(title + " " + excerpt)
+        entry_type = classify_entry(title, excerpt + " " + content)
+
+        articles.append({
+            "title": title,
+            "excerpt": excerpt,
+            "content": content,
+            "category": category,
+            "geo": source["geo"],   # «Громада» — усі новини тегу Олика
+            "image": image,
+            "source": source["name"],
+            "sourceUrl": href,
+            "exclusive": False,
+            "ts": ts,
+            "_type": entry_type,
+        })
+        seen_urls.add(href)
+        remember_title(tokens, section, seen_by_section)
+        if len(articles) >= MAX_PER_SOURCE:
+            break
 
     return articles
 
@@ -1311,6 +1402,10 @@ def parse_source(source: dict, seen_urls: set, seen_by_section: dict) -> list:
     # Сайт Олицької громади через Cloudflare Worker
     if source.get("type") == "gromada":
         return parse_gromada_source(source, seen_urls, seen_by_section)
+
+    # rayon.in.ua — тег-сторінка з картками .galleryCard (спец-парсер)
+    if source.get("type") == "rayon":
+        return parse_rayon_source(source, seen_urls, seen_by_section)
 
     # HTML-джерела (тег-сторінки без RSS) — окремий парсер
     if source.get("type") == "html":
