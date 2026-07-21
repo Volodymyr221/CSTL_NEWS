@@ -1056,6 +1056,30 @@ def parse_html_source(source: dict, seen_urls: set, seen_by_section: dict) -> li
     except Exception as e:
         raise ValueError(f"Не вдалось завантажити {source['url']}: {e}")
 
+    # ── ТИМЧАСОВИЙ діагностичний зонд (rayon.in.ua) — прибрати після налаштування ──
+    # rayon.in.ua = JS-SPA без RSS: у DOM статей нема. Дивимось чи дані у JSON-блоці
+    # сторінки (__NEXT_DATA__/__NUXT__/ld+json) або треба API. Друкуємо структуру в лог.
+    if "rayon.in.ua" in source.get("url", ""):
+        try:
+            _html = raw.decode("utf-8", "replace")
+            print(f"🔎 rayon DEBUG: HTTP ok, HTML len={len(_html)}")
+            for _mk in ("__NEXT_DATA__", "__NUXT__", "window.__INITIAL", "window.__DATA",
+                        "application/ld+json", "<article", "/news/", "\"pubDate\"",
+                        "publishedAt", "published_at", "/api/"):
+                print(f"🔎 rayon has {_mk!r}: {_mk in _html}")
+            _m = re.search(r'id="__NEXT_DATA__"[^>]*>(.*?)</script>', _html, re.S)
+            if _m:
+                print("🔎 rayon __NEXT_DATA__ [0:2000]:", _m.group(1)[:2000])
+            _ld = re.findall(r'application/ld\+json[^>]*>(.*?)</script>', _html, re.S)
+            for _i, _blk in enumerate(_ld[:3]):
+                print(f"🔎 rayon ld+json[{_i}] [0:800]:", _blk.strip()[:800])
+            # API-хінти у скриптах
+            for _api in re.findall(r'https?://[^\s"\'<>]*?(?:/api/|/graphql)[^\s"\'<>]*', _html)[:8]:
+                print("🔎 rayon api-hint:", _api)
+        except Exception as _de:
+            print("🔎 rayon DEBUG error:", _de)
+    # ── кінець зонда ──────────────────────────────────────────────────────────────
+
     base = "https://" + urllib.parse.urlparse(source["url"]).netloc
     soup = BeautifulSoup(raw, "html.parser")
 
