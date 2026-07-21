@@ -17,21 +17,25 @@ function toggleSavedArticle(id) {
   return idx === -1;   // true = щойно збережено
 }
 
-// Кольори категорій — pill-бейдж на картці новини (Tier 6 — 17.05.2026)
+// Базові категорії (рішення Вови 21.07): лише 4. Кольори лишаємо тільки для них.
 const CATEGORY_COLORS = {
-  'Суспільство':  '#37474f',  // темно-сірий (новинний)
-  'Політика':     '#1a237e',  // navy
-  'Війна':        '#722F37',  // бордо
-  'Економіка':    '#2E5E1F',  // зелений (гроші)
-  'Бізнес':       '#2E5E1F',  // зелений
-  'Спорт':        '#1565C0',  // синій
+  'Суспільство':  '#37474f',  // темно-сірий (новинний) — дефолт
   'Культура':     '#B45309',  // теракот
-  'Технології':   '#455a64',  // сіро-синій
-  'Здоровʼя':     '#C2185B',  // медичний
-  'Освіта':       '#6a1b9a',  // фіолетовий
-  'Природа':      '#2e7d32',  // природний зелений
-  'Історія':      '#6d4c41',  // сепія-коричневий (історичні «історії Олики»)
+  'Спорт':        '#1565C0',  // синій
+  'Економіка':    '#2E5E1F',  // зелений (гроші)
 };
+// Звід старих/AI-категорій до 4 базових (щоб бейдж мав колір і назву з набору).
+const CATEGORY_ALIAS = {
+  'Політика': 'Суспільство', 'Влада': 'Суспільство', 'Війна': 'Суспільство',
+  'Технології': 'Суспільство', 'Природа': 'Суспільство', 'Освіта': 'Суспільство',
+  'Здоровʼя': 'Суспільство', "Здоров'я": 'Суспільство',
+  'Історія': 'Культура',
+  'Бізнес': 'Економіка',
+};
+// Будь-яку категорію зводимо до однієї з 4 базових (невідому → Суспільство).
+function normCategory(c) {
+  return CATEGORY_ALIAS[c] || (CATEGORY_COLORS[c] ? c : 'Суспільство');
+}
 
 // Кольори гео-бейджів — звідки новина (наш бренд Олика — найвиразніший)
 const GEO_COLORS = {
@@ -43,7 +47,7 @@ const GEO_COLORS = {
   'Україна та Світ': '#0057B7',  // синій — злитий розділ (на випадок майбутнього geo)
 };
 
-function catColor(c) { return CATEGORY_COLORS[c] || '#546e7a'; }
+function catColor(c) { return CATEGORY_COLORS[normCategory(c)] || '#546e7a'; }
 function geoColor(g) { return GEO_COLORS[g]      || '#546e7a'; }
 
 // Точка входу. Стрічка новин тепер живе блоком у вкладці Громада
@@ -109,7 +113,7 @@ export async function getArticlesByIds(ids) {
 function badgesHtml(a) {
   return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(a.category)}</span>
+    <span class="news-badge news-badge--cat" style="background:${catColor(a.category)}">${escapeHtml(normCategory(a.category))}</span>
     ${a.exclusive ? '<span class="news-badge news-badge--excl">⭐ Ексклюзив</span>' : ''}
     ${a.imageType === 'illustration' ? '<span class="news-badge news-badge--illus">🖼 Ілюстрація</span>' : ''}
   `;
@@ -182,7 +186,7 @@ export function openArticle(id) {
     modalMetaTags.innerHTML = `
       <span class="news-card-geo">${escapeHtml(article.geo)}</span>
       <span class="modal-meta-sep">•</span>
-      <span class="news-card-category">${escapeHtml(article.category)}</span>
+      <span class="news-card-category">${escapeHtml(normCategory(article.category))}</span>
       ${article.exclusive ? '<span class="exclusive-badge">Ексклюзив</span>' : ''}
     `;
   }
