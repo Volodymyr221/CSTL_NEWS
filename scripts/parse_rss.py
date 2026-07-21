@@ -1320,6 +1320,40 @@ def parse_rayon_source(source: dict, seen_urls: set, seen_by_section: dict) -> l
         if len(articles) >= MAX_PER_SOURCE:
             break
 
+    # ── ТИМЧАСОВИЙ зонд СТОРІНКИ СТАТТІ rayon (структура тіла/автора/метаданих) ──
+    # Прибрати після налаштування. Дивимось де тіло статті, автор, і звідки сміття
+    # (дата/перегляди/«Зберегти»/підпис фото), щоб fetch_full_article брав ЛИШЕ тіло.
+    try:
+        _aurl = "https://kivertsi.rayon.in.ua/news/1088477-nicni-avariyi-na-kivercivshhini-u-dtp-na-motociklax-travmuvalisia-nepovnolitni"
+        _rq = urllib.request.Request(_aurl, headers={"User-Agent": BROWSER_UA, "Accept-Language": "uk-UA,uk;q=0.9", "Referer": "https://www.google.com/"})
+        with urllib.request.urlopen(_rq, timeout=15) as _rr:
+            _araw = _rr.read()
+        _as = BeautifulSoup(_araw, "html.parser")
+        print("🔎 ART probe url:", _aurl)
+        # автор (byline)
+        for _kw in ("автор", "Наталка", "Марчук"):
+            _n = _as.find(string=re.compile(_kw, re.I))
+            if _n and _n.parent:
+                _p = _n.parent
+                _gp = _p.parent
+                print(f"🔎 ART author[{_kw}]: <{_p.name} class={_p.get('class')}> gp=<{_gp.name if _gp else None} class={_gp.get('class') if _gp else None}> txt={_n.strip()[:40]!r}")
+                break
+        # кандидати контейнера тіла
+        for _sel in ("[itemprop='articleBody']", "[class*=article]", "[class*=material]",
+                     "[class*=publication]", "[class*=content]", "[class*=news-text]", "[class*=post]"):
+            _el = _as.select_one(_sel)
+            if _el:
+                _t = _el.get_text(" ", strip=True)
+                print(f"🔎 ART body {_sel}: <{_el.name} class={_el.get('class')}> len={len(_t)} :: {_t[:70]!r}")
+        # метадані (звідки сміття)
+        for _kw in ("перегляд", "Зберегти"):
+            _n = _as.find(string=re.compile(_kw, re.I))
+            if _n and _n.parent:
+                print(f"🔎 ART meta[{_kw}]: <{_n.parent.name} class={_n.parent.get('class')}>")
+    except Exception as _e:
+        print("🔎 ART probe err:", _e)
+    # ── кінець зонда ──
+
     return articles
 
 
