@@ -6205,15 +6205,18 @@ ${post.text}
       <div class="article-img-caption">
         ${article.imageType === "illustration" ? "<strong>\u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F.</strong> " : ""}${article.imageCredit ? "\u0424\u043E\u0442\u043E: " + escapeHtml(article.imageCredit) : ""}
       </div>` : ""}
+    ${article.author ? `
+      <div class="article-author"><span class="article-author-ic">${ICONS.user}</span><strong>\u0410\u0432\u0442\u043E\u0440:</strong> ${escapeHtml(article.author)}</div>
+    ` : ""}
     <div class="article-body">${bodyHtml}</div>
-    ${!article.exclusive && article.sourceUrl && rawText.trim().length < 600 ? `
+    ${!article.exclusive && article.sourceUrl && !article.fullText && rawText.trim().length < 600 ? `
       <div class="article-short-note">
         \u0414\u0436\u0435\u0440\u0435\u043B\u043E \u043D\u0430\u0434\u0430\u0454 \u043B\u0438\u0448\u0435 \u0430\u043D\u043E\u043D\u0441 \u0447\u0435\u0440\u0435\u0437 RSS \u2014 \u043F\u043E\u0432\u043D\u0438\u0439 \u0442\u0435\u043A\u0441\u0442 \u043D\u0430 \u0441\u0430\u0439\u0442\u0456 \u0432\u0438\u0434\u0430\u043D\u043D\u044F.
         <a class="article-short-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E \u2192</a>
       </div>
     ` : ""}
     <div class="article-source-row">
-      <span class="article-source-author"><strong>\u0410\u0432\u0442\u043E\u0440 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457:</strong><br>${escapeHtml(article.source)}</span>
+      <span class="article-source-author"><strong>\u0414\u0436\u0435\u0440\u0435\u043B\u043E:</strong><br>${escapeHtml(article.source)}</span>
       ${article.sourceUrl ? `<a class="article-source-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">\u0427\u0438\u0442\u0430\u0442\u0438 \u043E\u0440\u0438\u0433\u0456\u043D\u0430\u043B \u2192</a>` : ""}
     </div>
   `;
