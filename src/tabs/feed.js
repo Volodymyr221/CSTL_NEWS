@@ -14,6 +14,7 @@ import {
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
   fetchPageComments, addPageComment, fetchMyEditablePageIds,
   createPagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
+  updatePage,
 } from '../core/supabase.js';
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
@@ -27,6 +28,8 @@ const IC_IMG    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_SEND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
 const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
+const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
+const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
 
 // ── Стан ────────────────────────────────────────────────────────────────────
 let pages = [];               // усі сторінки-канали
@@ -35,6 +38,7 @@ let reactionMap = new Map();  // post_id → { count, my }
 let commentMap = new Map();   // post_id → comments[]
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
+let feedSearch = '';          // рядок пошуку у стрічці
 let loaded = false;
 
 // Ключ реакції: uid залогіненого або анонімний clientId (як у Дошці).
@@ -183,11 +187,17 @@ function renderFeed() {
   const listEl = document.getElementById('feed-list');
   if (circlesEl) circlesEl.innerHTML = circlesHtml();
   if (!listEl) return;
-  if (!posts.length) {
-    listEl.innerHTML = `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`;
+  const q = feedSearch.trim().toLowerCase();
+  const shown = q
+    ? posts.filter(p => ((p.pages?.name || '') + ' ' + (p.text || '')).toLowerCase().includes(q))
+    : posts;
+  if (!shown.length) {
+    listEl.innerHTML = q
+      ? `<div class="fd-empty">Нічого не знайдено за запитом «${escapeHtml(feedSearch.trim())}».</div>`
+      : `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`;
     return;
   }
-  listEl.innerHTML = posts.map(postCardHtml).join('');
+  listEl.innerHTML = shown.map(postCardHtml).join('');
   wireGalleries(listEl);
 }
 
@@ -276,15 +286,20 @@ async function openPageScreen(pageId) {
   screen.innerHTML = `
     <div class="fd-screen-top">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
+      ${canEdit ? `<button class="fd-banner-edit" data-edit-page="${pageId}" type="button" aria-label="Змінити банер">${IC_CAMERA}</button>` : ''}
       <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
       <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
     </div>
     <div class="fd-screen-id">
-      <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
+      <span class="fd-screen-ava-wrap">
+        <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
+        ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="Змінити аватар">${IC_CAMERA}</button>` : ''}
+      </span>
       <div class="fd-screen-name">${escapeHtml(page.name)}</div>
       ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
+      ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
     </div>
     ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
     <div class="fd-screen-list">${pagePosts.length
@@ -297,6 +312,8 @@ async function openPageScreen(pageId) {
   });
   const composeBtn = screen.querySelector('.fd-compose-open');
   if (composeBtn) composeBtn.addEventListener('click', () => openComposer(pageId));
+  screen.querySelectorAll('[data-edit-page]').forEach(b =>
+    b.addEventListener('click', () => openPageEditor(pageId)));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
   wireGalleries(screen);       // каруселі фото в постах сторінки
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
@@ -403,6 +420,80 @@ function openComposer(pageId) {
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
+// ── Редактор сторінки: банер + аватар + опис (власник/адмін) ────────────────
+function openPageEditor(pageId) {
+  const page = pages.find(p => p.id === pageId);
+  if (!page) return;
+  let bannerBlob = null, avatarBlob = null;
+
+  const back = document.createElement('div');
+  back.className = 'fd-sheet-back';
+  back.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">Редагувати сторінку</div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">Банер (широка шапка)</div>
+        <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
+      </div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">Аватар</div>
+        <label class="fd-edit-avatar">${page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-a></label>
+      </div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">Тема / опис</div>
+        <input class="fd-edit-input" data-theme value="${escapeHtml(page.theme || '')}" maxlength="80" placeholder="напр. Культура, Туризм">
+      </div>
+      <button class="fd-edit-save" type="button">Зберегти</button>
+    </div>`;
+  const close = () => back.remove();
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+
+  const setPreview = (label, file) => {
+    label.querySelector('img')?.remove();
+    const img = document.createElement('img'); img.src = URL.createObjectURL(file); label.prepend(img);
+  };
+  const bInput = back.querySelector('[data-b]');
+  const aInput = back.querySelector('[data-a]');
+  bInput.addEventListener('change', () => { const f = bInput.files?.[0]; if (f) { bannerBlob = f; setPreview(back.querySelector('.fd-edit-banner'), f); } });
+  aInput.addEventListener('change', () => { const f = aInput.files?.[0]; if (f) { avatarBlob = f; setPreview(back.querySelector('.fd-edit-avatar'), f); } });
+
+  const saveBtn = back.querySelector('.fd-edit-save');
+  saveBtn.addEventListener('click', async () => {
+    saveBtn.disabled = true; saveBtn.textContent = 'Зберігаю…';
+    const patch = {};
+    if (bannerBlob) {
+      const up = await uploadPhotoToStorage(bannerBlob, 'pages/');
+      if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Банер не завантажився: ' + (up.error || '')); return; }
+      patch.banner_url = up.url;
+    }
+    if (avatarBlob) {
+      const up = await uploadPhotoToStorage(avatarBlob, 'pages/');
+      if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Аватар не завантажився: ' + (up.error || '')); return; }
+      patch.avatar_url = up.url;
+    }
+    const theme = back.querySelector('[data-theme]').value.trim();
+    if (theme !== (page.theme || '')) patch.theme = theme;
+    if (!Object.keys(patch).length) { close(); return; }
+
+    const res = await updatePage(pageId, patch);
+    if (res.ok) {
+      Object.assign(page, res.page);                         // оновити кеш сторінки
+      posts.forEach(p => { if (p.page_id === pageId && p.pages) { p.pages.avatar_url = page.avatar_url; p.pages.name = page.name; } });
+      close();
+      document.querySelectorAll('.fd-screen').forEach(s => s.remove());
+      renderFeed();
+      openPageScreen(pageId);
+    } else {
+      saveBtn.disabled = false; saveBtn.textContent = 'Зберегти';
+      alert('Не вдалося зберегти: ' + (res.error || ''));
+    }
+  });
+
+  document.body.appendChild(back);
+  requestAnimationFrame(() => back.classList.add('open'));
+}
+
 // ── Делегування подій на картках (лайк/коментарі/відкрити сторінку) ─────────
 function wireCards(root) {
   root.addEventListener('click', e => {
@@ -426,6 +517,17 @@ export async function initFeed() {
   const root = document.getElementById('page-shotam');
   if (root && !root.dataset.fdWired) {
     wireCards(root);            // делегування один раз на контейнер вкладки
+    // Пошук у стрічці: кнопка розгортає поле; ввід фільтрує пости наживо.
+    const sBtn = document.getElementById('feed-search-btn');
+    const sBar = document.getElementById('feed-search');
+    const sInp = document.getElementById('feed-search-input');
+    sBtn?.addEventListener('click', () => {
+      const show = sBar.hidden;
+      sBar.hidden = !show;
+      if (show) sInp.focus();
+      else { sInp.value = ''; feedSearch = ''; renderFeed(); }
+    });
+    sInp?.addEventListener('input', () => { feedSearch = sInp.value; renderFeed(); });
     root.dataset.fdWired = '1';
   }
   await loadData();

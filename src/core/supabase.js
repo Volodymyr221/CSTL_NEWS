@@ -1086,6 +1086,15 @@ export async function deletePagePost(postId) {
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
+// Оновити сторінку (аватар/банер/тема) — власник/адмін (RLS pages update).
+export async function updatePage(pageId, patch) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.from('pages')
+    .update(patch).eq('id', pageId)
+    .select('id, name, theme, avatar_url, banner_url, is_system').single();
+  return error ? { ok: false, error: error.message } : { ok: true, page: data };
+}
+
 // Дзвіночок: мої підписки → Set page_id.
 export async function fetchMySubscriptions() {
   if (!supa) return new Set();
