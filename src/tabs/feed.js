@@ -13,6 +13,7 @@ import {
   uploadPhotoToStorage,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
   fetchPageComments, addPageComment, deletePageComment, fetchMyEditablePageIds,
+  fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
 } from '../core/supabase.js';
@@ -36,6 +37,7 @@ let pages = [];               // усі сторінки-канали
 let posts = [];               // пости стрічки (усіх сторінок)
 let reactionMap = new Map();  // post_id → { count, my }
 let commentMap = new Map();   // post_id → comments[]
+let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
 let feedSearch = '';          // рядок пошуку у стрічці
@@ -66,15 +68,16 @@ function avatarHtml(url, name, cls) {
 
 // ── Завантаження даних ──────────────────────────────────────────────────────
 async function loadData() {
-  const [pg, ps, rx, cm, mine, subs] = await Promise.all([
+  const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
     fetchPages(),
     fetchPagePosts(null, 60),
     fetchPageReactions(currentUserId()),
     fetchPageComments(),
+    fetchPageCommentReactions(currentUserId()),
     isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(new Set()),
     isLoggedIn() ? fetchMySubscriptions()   : Promise.resolve(new Set()),
   ]);
-  pages = pg; posts = ps; reactionMap = rx; commentMap = cm; myPageIds = mine; mySubs = subs;
+  pages = pg; posts = ps; reactionMap = rx; commentMap = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
 
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
@@ -251,18 +254,64 @@ function pluralComments(n) {
   return 'коментарів';
 }
 
+// Відміна: 1-4 вподобання · 5+ вподобань (11-14 → вподобань).
+function pluralLikes(n) {
+  const d = n % 10, h = n % 100;
+  return (d >= 1 && d <= 4 && (h < 11 || h > 14)) ? 'вподобання' : 'вподобань';
+}
+
 // Рядок коментаря у стилі Instagram: аватар · (імʼя жирним + текст в один абзац) ·
-// мета-рядок (час · «Видалити» лише на своєму). Лайк коментаря — фаза 3b, відповіді — 3c.
+// мета-рядок (час · N вподобань · «Видалити» на своєму) · ♥ справа. Відповіді — фаза 3c.
 function commentRowHtml(c) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
+  const lr = comReactMap.get(c.id) || { count: 0, my: false };
+  const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
   return `<div class="fd-com-row"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
+      <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
     </div>`;
+}
+
+// Оновити ♥ і текст «N вподобань» конкретного коментаря (без перемалювання списку).
+function patchCommentLike(id) {
+  const lr = comReactMap.get(id) || { count: 0, my: false };
+  document.querySelectorAll(`[data-com-like="${id}"]`).forEach(b => {
+    b.classList.toggle('fd-com-like--on', lr.my);
+    b.innerHTML = lr.my ? IC_HEART_F : IC_HEART_O;
+  });
+  document.querySelectorAll(`[data-com-likes="${id}"]`).forEach(el => {
+    el.textContent = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
+  });
+}
+
+// Лайк коментаря — тільки авторизованим (як лайк поста).
+async function toggleCommentLike(id) {
+  if (!isLoggedIn()) { requireAuth('вподобати коментар', () => {}); return; }
+  const uid = currentUserId();
+  const lr = comReactMap.get(id) || { count: 0, my: false };
+  const on = !lr.my;
+  comReactMap.set(id, { count: Math.max(0, lr.count + (on ? 1 : -1)), my: on });
+  patchCommentLike(id);
+  const res = await setPageCommentReaction(id, uid, on);
+  if (!res.ok) { comReactMap.set(id, lr); patchCommentLike(id); }   // відкат
+}
+
+// Realtime: лайк коментаря ІНШОГО користувача → оновити лічильник (свою ігноруємо).
+function applyCommentReactionEvent(payload) {
+  const row = payload.new || payload.old;
+  if (!row || row.comment_id == null) return;
+  if (row.user_id === currentUserId()) return;
+  const lr = comReactMap.get(row.comment_id) || { count: 0, my: false };
+  if (payload.eventType === 'INSERT') lr.count += 1;
+  else if (payload.eventType === 'DELETE') lr.count = Math.max(0, lr.count - 1);
+  else return;
+  comReactMap.set(row.comment_id, lr);
+  patchCommentLike(row.comment_id);
 }
 
 // Перемалювати відкритий лист: заголовок-лічильник + список.
@@ -343,8 +392,10 @@ function openComments(postId) {
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
 
-  // Видалення свого коментаря (мета-рядок «Видалити»).
+  // Дії в листі: лайк коментаря (♥) + видалення свого («Видалити»).
   listEl.addEventListener('click', async e => {
+    const like = e.target.closest('[data-com-like]');
+    if (like) { toggleCommentLike(Number(like.dataset.comLike)); return; }
     const del = e.target.closest('[data-del-com]');
     if (!del) return;
     const id = Number(del.dataset.delCom);
@@ -646,6 +697,8 @@ export async function initFeed() {
 
     // Жива синхронізація лайків: лічильник ❤️ оновлюється у всіх наживо.
     subscribePageReactions(applyReactionEvent);
+    // Жива синхронізація лайків КОМЕНТАРІВ (фаза 3b).
+    subscribePageCommentReactions(applyCommentReactionEvent);
 
     root.dataset.fdWired = '1';
   }

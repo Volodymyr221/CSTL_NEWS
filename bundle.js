@@ -1293,6 +1293,46 @@
     const { error } = await supa.from("page_comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId);
     return error ? { ok: false, error: error.message } : { ok: true };
   }
+  async function fetchPageCommentReactions(userKey) {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("page_comment_reactions").select("comment_id, user_id");
+    if (error) {
+      console.warn("[supabase] fetchPageCommentReactions:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const r of data || []) {
+      if (!map.has(r.comment_id))
+        map.set(r.comment_id, { count: 0, my: false });
+      const e = map.get(r.comment_id);
+      e.count++;
+      if (r.user_id === userKey)
+        e.my = true;
+    }
+    return map;
+  }
+  async function setPageCommentReaction(commentId, uid, on) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!on) {
+      const { error: error2 } = await supa.from("page_comment_reactions").delete().eq("comment_id", commentId).eq("user_id", uid);
+      return error2 ? { ok: false, error: error2.message } : { ok: true };
+    }
+    const { error } = await supa.from("page_comment_reactions").upsert({ comment_id: commentId, user_id: uid }, { onConflict: "comment_id,user_id" });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  function subscribePageCommentReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-comment-reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_comment_reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   async function fetchMyEditablePageIds() {
     if (!supa)
       return /* @__PURE__ */ new Set();
@@ -10249,6 +10289,7 @@ ${ev.description || ""}`
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
   var commentMap = /* @__PURE__ */ new Map();
+  var comReactMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
   var feedSearch = "";
@@ -10276,11 +10317,12 @@ ${ev.description || ""}`
     return `<span class="${cls} ${cls}--ph">${letter}</span>`;
   }
   async function loadData2() {
-    const [pg, ps, rx, cm, mine, subs] = await Promise.all([
+    const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
       fetchPages(),
       fetchPagePosts(null, 60),
       fetchPageReactions(currentUserId()),
       fetchPageComments(),
+      fetchPageCommentReactions(currentUserId()),
       isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
       isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
     ]);
@@ -10288,6 +10330,7 @@ ${ev.description || ""}`
     posts = ps;
     reactionMap = rx;
     commentMap = cm;
+    comReactMap = cr;
     myPageIds = mine;
     mySubs = subs;
     const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
@@ -10458,16 +10501,66 @@ ${ev.description || ""}`
       return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
     return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
   }
+  function pluralLikes(n) {
+    const d = n % 10, h = n % 100;
+    return d >= 1 && d <= 4 && (h < 11 || h > 14) ? "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F" : "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C";
+  }
   function commentRowHtml(c) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
+    const lr = comReactMap.get(c.id) || { count: 0, my: false };
+    const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
     return `<div class="fd-com-row"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
+      <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
     </div>`;
+  }
+  function patchCommentLike(id) {
+    const lr = comReactMap.get(id) || { count: 0, my: false };
+    document.querySelectorAll(`[data-com-like="${id}"]`).forEach((b) => {
+      b.classList.toggle("fd-com-like--on", lr.my);
+      b.innerHTML = lr.my ? IC_HEART_F : IC_HEART_O;
+    });
+    document.querySelectorAll(`[data-com-likes="${id}"]`).forEach((el) => {
+      el.textContent = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
+    });
+  }
+  async function toggleCommentLike(id) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
+      });
+      return;
+    }
+    const uid = currentUserId();
+    const lr = comReactMap.get(id) || { count: 0, my: false };
+    const on = !lr.my;
+    comReactMap.set(id, { count: Math.max(0, lr.count + (on ? 1 : -1)), my: on });
+    patchCommentLike(id);
+    const res = await setPageCommentReaction(id, uid, on);
+    if (!res.ok) {
+      comReactMap.set(id, lr);
+      patchCommentLike(id);
+    }
+  }
+  function applyCommentReactionEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || row.comment_id == null)
+      return;
+    if (row.user_id === currentUserId())
+      return;
+    const lr = comReactMap.get(row.comment_id) || { count: 0, my: false };
+    if (payload.eventType === "INSERT")
+      lr.count += 1;
+    else if (payload.eventType === "DELETE")
+      lr.count = Math.max(0, lr.count - 1);
+    else
+      return;
+    comReactMap.set(row.comment_id, lr);
+    patchCommentLike(row.comment_id);
   }
   function renderCommentSheet() {
     if (!openCommentSheet)
@@ -10554,6 +10647,11 @@ ${ev.description || ""}`
         close();
     });
     listEl.addEventListener("click", async (e) => {
+      const like = e.target.closest("[data-com-like]");
+      if (like) {
+        toggleCommentLike(Number(like.dataset.comLike));
+        return;
+      }
       const del = e.target.closest("[data-del-com]");
       if (!del)
         return;
@@ -10929,6 +11027,7 @@ ${ev.description || ""}`
           applyCommentUpsert(payload.new);
       });
       subscribePageReactions(applyReactionEvent);
+      subscribePageCommentReactions(applyCommentReactionEvent);
       root.dataset.fdWired = "1";
     }
     await loadData2();

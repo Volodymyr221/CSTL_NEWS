@@ -1091,6 +1091,45 @@ export async function deletePageComment(commentId) {
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
+// Лайки коментарів → Map comment_id → { count, my }. userKey = uid (тільки авторизовані).
+// scripts/supabase_page_comment_reactions.sql.
+export async function fetchPageCommentReactions(userKey) {
+  if (!supa) return new Map();
+  const { data, error } = await supa.from('page_comment_reactions').select('comment_id, user_id');
+  if (error) { console.warn('[supabase] fetchPageCommentReactions:', error.message); return new Map(); }
+  const map = new Map();
+  for (const r of (data || [])) {
+    if (!map.has(r.comment_id)) map.set(r.comment_id, { count: 0, my: false });
+    const e = map.get(r.comment_id); e.count++;
+    if (r.user_id === userKey) e.my = true;
+  }
+  return map;
+}
+
+// Поставити/зняти лайк коментаря (on=true → додати).
+export async function setPageCommentReaction(commentId, uid, on) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  if (!on) {
+    const { error } = await supa.from('page_comment_reactions').delete()
+      .eq('comment_id', commentId).eq('user_id', uid);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  const { error } = await supa.from('page_comment_reactions')
+    .upsert({ comment_id: commentId, user_id: uid }, { onConflict: 'comment_id,user_id' });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Жива підписка на лайки коментарів (лічильник оновлюється у всіх наживо).
+export function subscribePageCommentReactions(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-comment-reactions-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_comment_reactions' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // Мої сторінки (де я власник/адмін) → Set page_id — для показу поля «написати пост».
 export async function fetchMyEditablePageIds() {
   if (!supa) return new Set();
