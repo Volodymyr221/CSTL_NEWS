@@ -25,6 +25,8 @@ const IC_BELL_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentC
 const IC_BACK   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
 const IC_IMG    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>';
 const IC_SEND   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
+const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
+const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 
 // ── Стан ────────────────────────────────────────────────────────────────────
 let pages = [];               // усі сторінки-канали
@@ -88,13 +90,68 @@ function circlesHtml() {
 }
 
 // ── Рендер: картка поста ────────────────────────────────────────────────────
+// Фото поста → масив URL (кілька фото). image_urls новий, image_url — легасі.
+function postImages(post) {
+  if (Array.isArray(post.image_urls) && post.image_urls.length) return post.image_urls;
+  if (post.image_url) return [post.image_url];
+  return [];
+}
+
+// Галерея: 1 фото — на всю ширину; 2+ — свайп-карусель (scroll-snap) + крапки + лічильник.
+function galleryHtml(images, postId) {
+  if (!images.length) return '';
+  if (images.length === 1) {
+    return `<div class="fd-photo" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
+  }
+  const slides = images.map((u, i) =>
+    `<div class="fd-gal-slide" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy"></div>`).join('');
+  const dots = images.map((_, i) => `<span class="fd-gal-dot${i === 0 ? ' on' : ''}"></span>`).join('');
+  return `<div class="fd-gallery" data-count="${images.length}">
+    <div class="fd-gal-track">${slides}</div>
+    <div class="fd-gal-count"><span class="fd-gal-cur">1</span>/${images.length}</div>
+    <div class="fd-gal-dots">${dots}</div>
+  </div>`;
+}
+
+// Оновлення крапок/лічильника каруселі при свайпі.
+function wireGalleries(root) {
+  root.querySelectorAll('.fd-gallery').forEach(g => {
+    if (g.dataset.wired) return; g.dataset.wired = '1';
+    const track = g.querySelector('.fd-gal-track');
+    const dots = g.querySelectorAll('.fd-gal-dot');
+    const cur = g.querySelector('.fd-gal-cur');
+    track.addEventListener('scroll', () => {
+      const i = Math.round(track.scrollLeft / track.clientWidth);
+      dots.forEach((d, k) => d.classList.toggle('on', k === i));
+      if (cur) cur.textContent = String(i + 1);
+    }, { passive: true });
+  });
+}
+
+// Повноекранний перегляд фото (свайп між усіма фото поста).
+function openViewer(images, startIdx) {
+  if (!images.length) return;
+  const ov = document.createElement('div');
+  ov.className = 'fd-viewer';
+  ov.innerHTML = `
+    <button class="fd-viewer-close" type="button">${IC_CLOSE}</button>
+    <div class="fd-viewer-track">${images.map(u =>
+      `<div class="fd-viewer-slide"><img src="${escapeHtml(u)}" alt=""></div>`).join('')}</div>`;
+  const close = () => { ov.remove(); document.body.style.overflow = ''; };
+  ov.querySelector('.fd-viewer-close').addEventListener('click', close);
+  ov.addEventListener('click', e => { if (e.target === ov || e.target.classList.contains('fd-viewer-slide')) close(); });
+  document.body.appendChild(ov);
+  document.body.style.overflow = 'hidden';
+  const track = ov.querySelector('.fd-viewer-track');
+  track.scrollLeft = (startIdx || 0) * track.clientWidth;   // відкрити на потрібному фото
+}
+
 function postCardHtml(post) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
   const cCount = (commentMap.get(post.id) || []).length;
   const authorName = post.author_uid ? liveName('', post.author_uid, '') : '';  // вже екранований
-  const photo = post.image_url
-    ? `<div class="fd-photo"><img src="${escapeHtml(post.image_url)}" alt="" loading="lazy"></div>` : '';
+  const photo = galleryHtml(postImages(post), post.id);
   const author = authorName
     ? `<div class="fd-author"${nameUid(post.author_uid)}>— ${authorName}</div>` : '';
   return `
@@ -131,6 +188,7 @@ function renderFeed() {
     return;
   }
   listEl.innerHTML = posts.map(postCardHtml).join('');
+  wireGalleries(listEl);
 }
 
 // ── Лайк ────────────────────────────────────────────────────────────────────
@@ -240,6 +298,7 @@ async function openPageScreen(pageId) {
   const composeBtn = screen.querySelector('.fd-compose-open');
   if (composeBtn) composeBtn.addEventListener('click', () => openComposer(pageId));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
+  wireGalleries(screen);       // каруселі фото в постах сторінки
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
 
   document.body.appendChild(screen);
@@ -259,11 +318,13 @@ async function toggleBell(pageId, screen) {
   }
 }
 
-// ── Композер: власник/адмін пише пост від імені сторінки ────────────────────
+// ── Композер: власник/адмін пише пост від імені сторінки (кілька фото) ───────
+const MAX_PHOTOS = 10;
 function openComposer(pageId) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
-  let imageBlob = null, imagePreview = null;
+  let files = [];               // масив File (кілька фото, як у FB/IG)
+  let previewUrls = [];         // objectURL-и для прев'ю (звільняємо при видаленні)
 
   const back = document.createElement('div');
   back.className = 'fd-sheet-back';
@@ -272,42 +333,63 @@ function openComposer(pageId) {
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title">Новий пост · ${escapeHtml(page.name)}</div>
       <textarea class="fd-comp-text" placeholder="Що нового?" maxlength="4000" rows="5"></textarea>
-      <div class="fd-comp-preview" hidden></div>
+      <div class="fd-comp-thumbs" hidden></div>
       <div class="fd-comp-bar">
-        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" hidden></label>
+        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
         <button class="fd-comp-send" type="button">Опублікувати</button>
       </div>
     </div>`;
-  const close = () => back.remove();
+  const close = () => { previewUrls.forEach(u => URL.revokeObjectURL(u)); back.remove(); };
   back.addEventListener('click', e => { if (e.target === back) close(); });
 
   const fileInput = back.querySelector('input[type=file]');
-  const preview = back.querySelector('.fd-comp-preview');
+  const thumbs = back.querySelector('.fd-comp-thumbs');
+  const renderThumbs = () => {
+    if (!files.length) { thumbs.hidden = true; thumbs.innerHTML = ''; return; }
+    thumbs.hidden = false;
+    thumbs.innerHTML = files.map((f, i) =>
+      `<div class="fd-comp-thumb"><img src="${previewUrls[i]}" alt="">
+        <button class="fd-comp-thumb-x" data-rm="${i}" type="button">${IC_X}</button></div>`).join('');
+  };
   fileInput.addEventListener('change', () => {
-    const f = fileInput.files?.[0];
-    if (!f) return;
-    imageBlob = f;
-    if (imagePreview) URL.revokeObjectURL(imagePreview);
-    imagePreview = URL.createObjectURL(f);
-    preview.hidden = false;
-    preview.innerHTML = `<img src="${imagePreview}" alt="">`;
+    for (const f of fileInput.files) {
+      if (files.length >= MAX_PHOTOS) break;
+      files.push(f); previewUrls.push(URL.createObjectURL(f));
+    }
+    fileInput.value = '';       // щоб те саме фото можна було додати знову
+    renderThumbs();
+  });
+  thumbs.addEventListener('click', e => {
+    const x = e.target.closest('[data-rm]'); if (!x) return;
+    const i = Number(x.dataset.rm);
+    URL.revokeObjectURL(previewUrls[i]);
+    files.splice(i, 1); previewUrls.splice(i, 1);
+    renderThumbs();
   });
 
   const sendBtn = back.querySelector('.fd-comp-send');
   sendBtn.addEventListener('click', async () => {
     const text = back.querySelector('.fd-comp-text').value.trim();
-    if (!text) return;
+    if (!text && !files.length) return;
     sendBtn.disabled = true; sendBtn.textContent = 'Публікую…';
-    let imageUrl = null;
-    if (imageBlob) {
-      const up = await uploadPhotoToStorage(imageBlob, 'pages/');
-      imageUrl = up.url;
+
+    // Завантажуємо усі фото; помилки НЕ ковтаємо — показуємо.
+    let urls = [];
+    if (files.length) {
+      const ups = await Promise.all(files.map(f => uploadPhotoToStorage(f, 'pages/')));
+      urls = ups.map(u => u.url).filter(Boolean);
+      const failed = ups.length - urls.length;
+      if (failed > 0) {
+        sendBtn.disabled = false; sendBtn.textContent = 'Опублікувати';
+        const firstErr = ups.find(u => !u.url)?.error || '';
+        alert(`Не вдалося завантажити ${failed} фото: ${firstErr}\nСпробуй ще раз.`);
+        return;
+      }
     }
-    const res = await createPagePost(pageId, currentUserId(), text, imageUrl);
+    const res = await createPagePost(pageId, currentUserId(), text || '', urls);
     if (res.ok) {
       posts.unshift(res.post);
       close();
-      // перемалювати відкритий екран сторінки і головну стрічку
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();
       openPageScreen(pageId);
@@ -328,6 +410,12 @@ function wireCards(root) {
     if (likeBtn) { toggleLike(Number(likeBtn.dataset.like)); return; }
     const comBtn = e.target.closest('[data-comments]');
     if (comBtn) { openComments(Number(comBtn.dataset.comments)); return; }
+    const view = e.target.closest('[data-view]');
+    if (view) {                                  // тап по фото → повноекранний перегляд
+      const post = posts.find(p => p.id === Number(view.dataset.view));
+      if (post) openViewer(postImages(post), Number(view.dataset.idx) || 0);
+      return;
+    }
     const openPage = e.target.closest('[data-open-page]');
     if (openPage) { openPageScreen(Number(openPage.dataset.openPage)); return; }
   });

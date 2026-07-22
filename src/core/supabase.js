@@ -997,7 +997,7 @@ export async function fetchPages() {
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
   let q = supa.from('page_posts')
-    .select('id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -1066,11 +1066,14 @@ export async function fetchMyEditablePageIds() {
 }
 
 // Створити пост сторінки (від імені сторінки; author_uid = людина-автор для підпису).
-export async function createPagePost(pageId, uid, text, imageUrl = null) {
+// imageUrls — масив URL-ів фото (кілька фото як у FB/IG). image_url лишаємо для
+// зворотної сумісності (перше фото), щоб старий рендер теж бачив.
+export async function createPagePost(pageId, uid, text, imageUrls = []) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : (imageUrls ? [imageUrls] : []);
   const { data, error } = await supa.from('page_posts')
-    .insert({ page_id: pageId, author_uid: uid, text, image_url: imageUrl })
-    .select('id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)')
+    .insert({ page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null })
+    .select('id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)')
     .single();
   return error ? { ok: false, error: error.message } : { ok: true, post: data };
 }

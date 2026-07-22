@@ -1204,7 +1204,7 @@
   async function fetchPagePosts(pageId = null, limit = 60) {
     if (!supa)
       return [];
-    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     if (pageId != null)
       q = q.eq("page_id", pageId);
     const { data, error } = await q;
@@ -1275,10 +1275,11 @@
     }
     return new Set((data || []).map((r) => r.page_id));
   }
-  async function createPagePost(pageId, uid, text, imageUrl = null) {
+  async function createPagePost(pageId, uid, text, imageUrls = []) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_posts").insert({ page_id: pageId, author_uid: uid, text, image_url: imageUrl }).select("id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)").single();
+    const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : imageUrls ? [imageUrls] : [];
+    const { data, error } = await supa.from("page_posts").insert({ page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null }).select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function fetchMySubscriptions() {
@@ -10206,6 +10207,8 @@ ${ev.description || ""}`
   var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
   var IC_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>';
   var IC_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
+  var IC_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
+  var IC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var pages = [];
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
@@ -10268,12 +10271,71 @@ ${ev.description || ""}`
       <span class="fd-circle-label">${escapeHtml(p.name)}</span>
     </button>`).join("")}</div>`;
   }
+  function postImages(post) {
+    if (Array.isArray(post.image_urls) && post.image_urls.length)
+      return post.image_urls;
+    if (post.image_url)
+      return [post.image_url];
+    return [];
+  }
+  function galleryHtml(images, postId) {
+    if (!images.length)
+      return "";
+    if (images.length === 1) {
+      return `<div class="fd-photo" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
+    }
+    const slides = images.map((u, i) => `<div class="fd-gal-slide" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy"></div>`).join("");
+    const dots = images.map((_, i) => `<span class="fd-gal-dot${i === 0 ? " on" : ""}"></span>`).join("");
+    return `<div class="fd-gallery" data-count="${images.length}">
+    <div class="fd-gal-track">${slides}</div>
+    <div class="fd-gal-count"><span class="fd-gal-cur">1</span>/${images.length}</div>
+    <div class="fd-gal-dots">${dots}</div>
+  </div>`;
+  }
+  function wireGalleries(root) {
+    root.querySelectorAll(".fd-gallery").forEach((g) => {
+      if (g.dataset.wired)
+        return;
+      g.dataset.wired = "1";
+      const track = g.querySelector(".fd-gal-track");
+      const dots = g.querySelectorAll(".fd-gal-dot");
+      const cur = g.querySelector(".fd-gal-cur");
+      track.addEventListener("scroll", () => {
+        const i = Math.round(track.scrollLeft / track.clientWidth);
+        dots.forEach((d, k) => d.classList.toggle("on", k === i));
+        if (cur)
+          cur.textContent = String(i + 1);
+      }, { passive: true });
+    });
+  }
+  function openViewer(images, startIdx) {
+    if (!images.length)
+      return;
+    const ov = document.createElement("div");
+    ov.className = "fd-viewer";
+    ov.innerHTML = `
+    <button class="fd-viewer-close" type="button">${IC_CLOSE}</button>
+    <div class="fd-viewer-track">${images.map((u) => `<div class="fd-viewer-slide"><img src="${escapeHtml(u)}" alt=""></div>`).join("")}</div>`;
+    const close = () => {
+      ov.remove();
+      document.body.style.overflow = "";
+    };
+    ov.querySelector(".fd-viewer-close").addEventListener("click", close);
+    ov.addEventListener("click", (e) => {
+      if (e.target === ov || e.target.classList.contains("fd-viewer-slide"))
+        close();
+    });
+    document.body.appendChild(ov);
+    document.body.style.overflow = "hidden";
+    const track = ov.querySelector(".fd-viewer-track");
+    track.scrollLeft = (startIdx || 0) * track.clientWidth;
+  }
   function postCardHtml(post) {
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
     const cCount = (commentMap.get(post.id) || []).length;
     const authorName = post.author_uid ? liveName("", post.author_uid, "") : "";
-    const photo = post.image_url ? `<div class="fd-photo"><img src="${escapeHtml(post.image_url)}" alt="" loading="lazy"></div>` : "";
+    const photo = galleryHtml(postImages(post), post.id);
     const author = authorName ? `<div class="fd-author"${nameUid(post.author_uid)}>\u2014 ${authorName}</div>` : "";
     return `
     <article class="fd-card" data-post="${post.id}">
@@ -10309,6 +10371,7 @@ ${ev.description || ""}`
       return;
     }
     listEl.innerHTML = posts.map(postCardHtml).join("");
+    wireGalleries(listEl);
   }
   async function toggleLike(postId) {
     const rx = reactionMap.get(postId) || { count: 0, my: false };
@@ -10424,6 +10487,7 @@ ${ev.description || ""}`
     if (composeBtn)
       composeBtn.addEventListener("click", () => openComposer(pageId));
     wireCards(screen);
+    wireGalleries(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
     document.body.appendChild(screen);
     requestAnimationFrame(() => screen.classList.add("open"));
@@ -10456,11 +10520,13 @@ ${ev.description || ""}`
       }
     }
   }
+  var MAX_PHOTOS = 10;
   function openComposer(pageId) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
       return;
-    let imageBlob = null, imagePreview = null;
+    let files = [];
+    let previewUrls = [];
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
@@ -10468,43 +10534,74 @@ ${ev.description || ""}`
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title">\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442 \xB7 ${escapeHtml(page.name)}</div>
       <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5"></textarea>
-      <div class="fd-comp-preview" hidden></div>
+      <div class="fd-comp-thumbs" hidden></div>
       <div class="fd-comp-bar">
-        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" hidden></label>
+        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
         <button class="fd-comp-send" type="button">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
       </div>
     </div>`;
-    const close = () => back.remove();
+    const close = () => {
+      previewUrls.forEach((u) => URL.revokeObjectURL(u));
+      back.remove();
+    };
     back.addEventListener("click", (e) => {
       if (e.target === back)
         close();
     });
     const fileInput = back.querySelector("input[type=file]");
-    const preview = back.querySelector(".fd-comp-preview");
-    fileInput.addEventListener("change", () => {
-      const f = fileInput.files?.[0];
-      if (!f)
+    const thumbs = back.querySelector(".fd-comp-thumbs");
+    const renderThumbs = () => {
+      if (!files.length) {
+        thumbs.hidden = true;
+        thumbs.innerHTML = "";
         return;
-      imageBlob = f;
-      if (imagePreview)
-        URL.revokeObjectURL(imagePreview);
-      imagePreview = URL.createObjectURL(f);
-      preview.hidden = false;
-      preview.innerHTML = `<img src="${imagePreview}" alt="">`;
+      }
+      thumbs.hidden = false;
+      thumbs.innerHTML = files.map((f, i) => `<div class="fd-comp-thumb"><img src="${previewUrls[i]}" alt="">
+        <button class="fd-comp-thumb-x" data-rm="${i}" type="button">${IC_X}</button></div>`).join("");
+    };
+    fileInput.addEventListener("change", () => {
+      for (const f of fileInput.files) {
+        if (files.length >= MAX_PHOTOS)
+          break;
+        files.push(f);
+        previewUrls.push(URL.createObjectURL(f));
+      }
+      fileInput.value = "";
+      renderThumbs();
+    });
+    thumbs.addEventListener("click", (e) => {
+      const x = e.target.closest("[data-rm]");
+      if (!x)
+        return;
+      const i = Number(x.dataset.rm);
+      URL.revokeObjectURL(previewUrls[i]);
+      files.splice(i, 1);
+      previewUrls.splice(i, 1);
+      renderThumbs();
     });
     const sendBtn = back.querySelector(".fd-comp-send");
     sendBtn.addEventListener("click", async () => {
       const text = back.querySelector(".fd-comp-text").value.trim();
-      if (!text)
+      if (!text && !files.length)
         return;
       sendBtn.disabled = true;
       sendBtn.textContent = "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
-      let imageUrl = null;
-      if (imageBlob) {
-        const up = await uploadPhotoToStorage(imageBlob, "pages/");
-        imageUrl = up.url;
+      let urls = [];
+      if (files.length) {
+        const ups = await Promise.all(files.map((f) => uploadPhotoToStorage(f, "pages/")));
+        urls = ups.map((u) => u.url).filter(Boolean);
+        const failed = ups.length - urls.length;
+        if (failed > 0) {
+          sendBtn.disabled = false;
+          sendBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+          const firstErr = ups.find((u) => !u.url)?.error || "";
+          alert(`\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 ${failed} \u0444\u043E\u0442\u043E: ${firstErr}
+\u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.`);
+          return;
+        }
       }
-      const res = await createPagePost(pageId, currentUserId(), text, imageUrl);
+      const res = await createPagePost(pageId, currentUserId(), text || "", urls);
       if (res.ok) {
         posts.unshift(res.post);
         close();
@@ -10530,6 +10627,13 @@ ${ev.description || ""}`
       const comBtn = e.target.closest("[data-comments]");
       if (comBtn) {
         openComments(Number(comBtn.dataset.comments));
+        return;
+      }
+      const view = e.target.closest("[data-view]");
+      if (view) {
+        const post = posts.find((p) => p.id === Number(view.dataset.view));
+        if (post)
+          openViewer(postImages(post), Number(view.dataset.idx) || 0);
         return;
       }
       const openPage = e.target.closest("[data-open-page]");

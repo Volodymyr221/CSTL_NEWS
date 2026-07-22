@@ -176,3 +176,53 @@
 .fd-comp-send:disabled { opacity: 0.6; }
 
 /* Темна тема — успадковує змінні; картки трохи темніші за фон уже через --white */
+
+/* ── Галерея фото поста (кілька фото — свайп-карусель) ── */
+.fd-gallery { position: relative; background: #f0ece1; }
+.fd-gal-track {
+  display: flex; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.fd-gal-track::-webkit-scrollbar { display: none; }
+.fd-gal-slide { flex: 0 0 100%; scroll-snap-align: center; }
+.fd-gal-slide img, .fd-photo img { width: 100%; display: block; max-height: 460px; object-fit: cover; }
+.fd-photo { cursor: pointer; }
+.fd-gal-slide { cursor: pointer; }
+.fd-gal-count {
+  position: absolute; top: 10px; right: 10px; z-index: 2;
+  background: rgba(0,0,0,0.6); color: #fff; font-size: 12px;
+  padding: 3px 9px; border-radius: 12px; font-variant-numeric: tabular-nums;
+}
+.fd-gal-dots { position: absolute; bottom: 8px; left: 0; right: 0; z-index: 2;
+  display: flex; gap: 5px; justify-content: center; pointer-events: none; }
+.fd-gal-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.55);
+  box-shadow: 0 0 2px rgba(0,0,0,0.4); transition: background 0.2s; }
+.fd-gal-dot.on { background: #fff; }
+
+/* ── Повноекранний перегляд фото ── */
+.fd-viewer { position: fixed; inset: 0; z-index: 1400; background: rgba(0,0,0,0.96); }
+.fd-viewer-track {
+  display: flex; height: 100%; overflow-x: auto; scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.fd-viewer-track::-webkit-scrollbar { display: none; }
+.fd-viewer-slide { flex: 0 0 100%; scroll-snap-align: center; display: flex; align-items: center; justify-content: center; padding: 20px; }
+.fd-viewer-slide img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.fd-viewer-close {
+  position: absolute; top: calc(12px + env(safe-area-inset-top, 0px)); right: 14px; z-index: 2;
+  width: 40px; height: 40px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(255,255,255,0.15); color: #fff; display: flex; align-items: center; justify-content: center;
+}
+.fd-viewer-close svg { width: 24px; height: 24px; }
+
+/* ── Прев'ю фото в композері (мініатюри, що видаляються) ── */
+.fd-comp-thumbs { display: flex; gap: 8px; overflow-x: auto; margin-bottom: 12px; padding-bottom: 2px; scrollbar-width: none; }
+.fd-comp-thumbs::-webkit-scrollbar { display: none; }
+.fd-comp-thumb { position: relative; flex: 0 0 auto; width: 84px; height: 84px; border-radius: 10px; overflow: hidden; }
+.fd-comp-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fd-comp-thumb-x {
+  position: absolute; top: 4px; right: 4px; width: 22px; height: 22px; border-radius: 50%;
+  background: rgba(0,0,0,0.6); color: #fff; border: 0; cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+}
+.fd-comp-thumb-x svg { width: 13px; height: 13px; }
