@@ -975,3 +975,129 @@ export async function fetchAnalyticsSummary(periodDays = 7) {
   }
   return { totalEvents: rows.length, uniqueVisitors, byTab, byDevice, byHour, pwaInstalls };
 }
+
+
+// ============================================================================
+// «СТРІЧКА» — сторінки-канали громади (pages / page_posts / page_reactions /
+// page_comments / page_subscriptions). Дата-шар; RLS у scripts/supabase_pages.sql.
+// ============================================================================
+
+// Усі сторінки-канали (для кружечків + шапок карток).
+export async function fetchPages() {
+  if (!supa) return [];
+  const { data, error } = await supa.from('pages')
+    .select('id, name, theme, avatar_url, banner_url, is_system')
+    .order('created_at', { ascending: true });
+  if (error) { console.warn('[supabase] fetchPages:', error.message); return []; }
+  return data || [];
+}
+
+// Пости стрічки: усіх сторінок (pageId=null) або однієї. Невидалені, найсвіжіші.
+// pages(name, avatar_url) — вкладений join за FK page_posts.page_id → pages.id.
+export async function fetchPagePosts(pageId = null, limit = 60) {
+  if (!supa) return [];
+  let q = supa.from('page_posts')
+    .select('id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (pageId != null) q = q.eq('page_id', pageId);
+  const { data, error } = await q;
+  if (error) { console.warn('[supabase] fetchPagePosts:', error.message); return []; }
+  return data || [];
+}
+
+// Лайки постів → Map post_id → { count, my }. userKey = uid або anonId.
+export async function fetchPageReactions(userKey) {
+  if (!supa) return new Map();
+  const { data, error } = await supa.from('page_reactions').select('post_id, user_id');
+  if (error) { console.warn('[supabase] fetchPageReactions:', error.message); return new Map(); }
+  const map = new Map();
+  for (const r of (data || [])) {
+    if (!map.has(r.post_id)) map.set(r.post_id, { count: 0, my: false });
+    const e = map.get(r.post_id); e.count++;
+    if (r.user_id === userKey) e.my = true;
+  }
+  return map;
+}
+
+// Поставити/зняти лайк ❤️ (on=true → додати, false → зняти).
+export async function setPageReaction(postId, userKey, on) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  if (!on) {
+    const { error } = await supa.from('page_reactions').delete()
+      .eq('post_id', postId).eq('user_id', userKey);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  const { error } = await supa.from('page_reactions')
+    .upsert({ post_id: postId, user_id: userKey, emoji: '❤️' }, { onConflict: 'post_id,user_id' });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Коментарі постів → Map post_id → comments[] (невидалені, за часом).
+export async function fetchPageComments() {
+  if (!supa) return new Map();
+  const { data, error } = await supa.from('page_comments')
+    .select('id, post_id, author_uid, text, created_at, deleted_at')
+    .is('deleted_at', null)
+    .order('created_at', { ascending: true });
+  if (error) { console.warn('[supabase] fetchPageComments:', error.message); return new Map(); }
+  const map = new Map();
+  for (const c of (data || [])) {
+    if (!map.has(c.post_id)) map.set(c.post_id, []);
+    map.get(c.post_id).push(c);
+  }
+  return map;
+}
+
+export async function addPageComment(postId, uid, text) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.from('page_comments')
+    .insert({ post_id: postId, author_uid: uid, text }).select().single();
+  return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+}
+
+// Мої сторінки (де я власник/адмін) → Set page_id — для показу поля «написати пост».
+export async function fetchMyEditablePageIds() {
+  if (!supa) return new Set();
+  const { data, error } = await supa.from('page_admins').select('page_id');
+  if (error) { console.warn('[supabase] page_admins:', error.message); return new Set(); }
+  return new Set((data || []).map(r => r.page_id));
+}
+
+// Створити пост сторінки (від імені сторінки; author_uid = людина-автор для підпису).
+export async function createPagePost(pageId, uid, text, imageUrl = null) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.from('page_posts')
+    .insert({ page_id: pageId, author_uid: uid, text, image_url: imageUrl })
+    .select('id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)')
+    .single();
+  return error ? { ok: false, error: error.message } : { ok: true, post: data };
+}
+
+// М'яке видалення поста (власник/адмін сторінки).
+export async function deletePagePost(postId) {
+  if (!supa) return { ok: false };
+  const { error } = await supa.from('page_posts')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', postId);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Дзвіночок: мої підписки → Set page_id.
+export async function fetchMySubscriptions() {
+  if (!supa) return new Set();
+  const { data, error } = await supa.from('page_subscriptions').select('page_id');
+  if (error) return new Set();
+  return new Set((data || []).map(r => r.page_id));
+}
+export async function setPageSubscription(pageId, uid, on) {
+  if (!supa) return { ok: false };
+  if (!on) {
+    const { error } = await supa.from('page_subscriptions').delete()
+      .eq('page_id', pageId).eq('uid', uid);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  const { error } = await supa.from('page_subscriptions')
+    .upsert({ page_id: pageId, uid }, { onConflict: 'page_id,uid' });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
