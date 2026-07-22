@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "22.07.2026",
-  "updatedTime": "03:56",
+  "updatedTime": "07:21",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -3248,7 +3248,7 @@
           "bus": "БАЗ А 079.24",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "06:50",
           "arrival_time": "07:49",
           "duration_min": 59,
@@ -3340,7 +3340,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "07:05",
           "arrival_time": "08:30",
           "duration_min": 85,
@@ -4311,8 +4311,8 @@
           "carrier": "мохнюк_т_с_волинська_обл",
           "bus": "БОГДАН А0902",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "16:40",
           "arrival_time": "18:30",
           "duration_min": 110,
@@ -4842,7 +4842,7 @@
         }
       ],
       "fetchedAt": "22.07.2026",
-      "fetchedTime": "03:56"
+      "fetchedTime": "07:21"
     },
     "2026-07-23": {
       "routes": [
@@ -6448,7 +6448,7 @@
         }
       ],
       "fetchedAt": "22.07.2026",
-      "fetchedTime": "03:56"
+      "fetchedTime": "07:21"
     },
     "2026-07-24": {
       "routes": [
