@@ -1064,7 +1064,7 @@ export async function setPageReaction(postId, userKey, on) {
 export async function fetchPageComments() {
   if (!supa) return new Map();
   const { data, error } = await supa.from('page_comments')
-    .select('id, post_id, author_uid, text, created_at, deleted_at')
+    .select('id, post_id, author_uid, text, created_at, deleted_at, parent_id')
     .is('deleted_at', null)
     .order('created_at', { ascending: true });
   if (error) { console.warn('[supabase] fetchPageComments:', error.message); return new Map(); }
@@ -1076,10 +1076,10 @@ export async function fetchPageComments() {
   return map;
 }
 
-export async function addPageComment(postId, uid, text) {
+export async function addPageComment(postId, uid, text, parentId = null) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const { data, error } = await supa.from('page_comments')
-    .insert({ post_id: postId, author_uid: uid, text }).select().single();
+    .insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
   return error ? { ok: false, error: error.message } : { ok: true, comment: data };
 }
 

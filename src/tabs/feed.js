@@ -245,6 +245,7 @@ function patchLike(postId) {
 // openCommentSheet — поточний відкритий лист (postId + вузли), щоб realtime міг
 // перемальовувати його наживо. Один лист за раз.
 let openCommentSheet = null;
+let replyTarget = null;   // { parentId, name } — активна відповідь у відкритому листі
 
 // Українська відміна: 1 коментар · 2-4 коментарі · 5+ коментарів.
 function pluralComments(n) {
@@ -261,20 +262,40 @@ function pluralLikes(n) {
 }
 
 // Рядок коментаря у стилі Instagram: аватар · (імʼя жирним + текст в один абзац) ·
-// мета-рядок (час · N вподобань · «Видалити» на своєму) · ♥ справа. Відповіді — фаза 3c.
-function commentRowHtml(c) {
+// мета-рядок (час · N вподобань · «Відповісти» · «Видалити» на своєму) · ♥ справа.
+// reply=true → вкладена відповідь (відступ). Відповідь чіпляється до кореневого
+// коментаря (parent_id||id) — 2 рівні, як в Instagram.
+function commentRowHtml(c, reply = false) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
   const lr = comReactMap.get(c.id) || { count: 0, my: false };
   const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
-  return `<div class="fd-com-row"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
+  return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
     </div>`;
+}
+
+// Впорядкувати коментарі у 2 рівні: кожен кореневий → одразу його відповіді (за часом).
+// Сироти (батька видалено/нема) показуємо як кореневі, щоб не зникали.
+function orderedComments(list) {
+  const repliesByParent = new Map();
+  for (const c of list) if (c.parent_id) {
+    if (!repliesByParent.has(c.parent_id)) repliesByParent.set(c.parent_id, []);
+    repliesByParent.get(c.parent_id).push(c);
+  }
+  const out = [];
+  for (const c of list) if (!c.parent_id) {
+    out.push({ c, reply: false });
+    for (const r of (repliesByParent.get(c.id) || [])) out.push({ c: r, reply: true });
+  }
+  const shown = new Set(out.map(o => o.c.id));
+  for (const c of list) if (!shown.has(c.id)) out.push({ c, reply: false });  // сироти
+  return out;
 }
 
 // Оновити ♥ і текст «N вподобань» конкретного коментаря (без перемалювання списку).
@@ -314,14 +335,14 @@ function applyCommentReactionEvent(payload) {
   patchCommentLike(row.comment_id);
 }
 
-// Перемалювати відкритий лист: заголовок-лічильник + список.
+// Перемалювати відкритий лист: заголовок-лічильник + список (кореневі + відповіді).
 function renderCommentSheet() {
   if (!openCommentSheet) return;
   const { postId, listEl, titleEl } = openCommentSheet;
   const list = commentMap.get(postId) || [];
   if (titleEl) titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : 'Коментарі';
   listEl.innerHTML = list.length
-    ? list.map(commentRowHtml).join('')
+    ? orderedComments(list).map(o => commentRowHtml(o.c, o.reply)).join('')
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
 }
 
@@ -370,6 +391,7 @@ function openComments(postId) {
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title fd-com-title">Коментарі</div>
       <div class="fd-com-list"></div>
+      <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
       <div class="fd-com-compose">
         <span class="fd-com-ava fd-com-myava">${myAva}</span>
         <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
@@ -378,8 +400,20 @@ function openComments(postId) {
     </div>`;
   const listEl = sheet.querySelector('.fd-com-list');
   const titleEl = sheet.querySelector('.fd-com-title');
+  const replyBar = sheet.querySelector('.fd-com-replybar');
+  const replyTo = sheet.querySelector('.fd-com-replyto');
+  replyTarget = null;
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
+
+  const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
+  const setReply = (parentId, name) => {
+    replyTarget = { parentId, name };
+    replyTo.textContent = `Відповідь для ${name}`;
+    replyBar.hidden = false;
+    sheet.querySelector('.fd-com-input')?.focus();
+  };
+  sheet.querySelector('.fd-com-replyx').addEventListener('click', clearReply);
   // Свій аватар/ім'я для компоузера могли бути не в кеші — дотягнути й оновити.
   if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
     const el = sheet.querySelector('.fd-com-myava');
@@ -392,10 +426,16 @@ function openComments(postId) {
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
 
-  // Дії в листі: лайк коментаря (♥) + видалення свого («Видалити»).
+  // Дії в листі: лайк коментаря (♥) + «Відповісти» + видалення свого.
   listEl.addEventListener('click', async e => {
     const like = e.target.closest('[data-com-like]');
     if (like) { toggleCommentLike(Number(like.dataset.comLike)); return; }
+    const rep = e.target.closest('[data-reply-parent]');
+    if (rep) {
+      const uid = rep.dataset.replyUid;
+      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель');
+      return;
+    }
     const del = e.target.closest('[data-del-com]');
     if (!del) return;
     const id = Number(del.dataset.delCom);
@@ -412,11 +452,13 @@ function openComments(postId) {
     if (!text) return;
     if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
     sendBtn.disabled = true;
-    const res = await addPageComment(postId, currentUserId(), text);
+    const parentId = replyTarget ? replyTarget.parentId : null;
+    const res = await addPageComment(postId, currentUserId(), text, parentId);
     sendBtn.disabled = false;
     if (res.ok) {
       applyCommentUpsert(res.comment);   // одразу показати свій (realtime продублює — дедуп)
       input.value = '';
+      clearReply();
       input.focus();
     } else {
       alert('Коментар не надіслано: ' + (res.error || 'невідома помилка'));  // без тихого провалу

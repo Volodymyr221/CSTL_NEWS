@@ -218,6 +218,17 @@
   align-items: center; justify-content: center; }
 .fd-com-like svg { width: 15px; height: 15px; }
 .fd-com-like--on { color: var(--fd-accent); }
+/* «Відповісти» — у мета-рядку, як «Видалити». */
+.fd-com-reply { font-size: 12px; color: var(--fd-muted); font-weight: 600; background: none;
+  border: 0; padding: 0; cursor: pointer; font-family: inherit; }
+/* Вкладена відповідь — відступ під аватар кореневого коментаря. */
+.fd-com-row--reply { margin-left: 44px; }
+/* Контекст-бар «Відповідь для …» над компоузером. */
+.fd-com-replybar { display: flex; align-items: center; justify-content: space-between;
+  padding: 6px 4px 8px; font-size: 13px; color: var(--fd-muted); }
+.fd-com-replyx { flex: none; width: 24px; height: 24px; padding: 0; border: 0; background: none;
+  cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
+.fd-com-replyx svg { width: 15px; height: 15px; }
 
 .fd-com-compose, .fd-comp-bar { display: flex; gap: 10px; align-items: center; }
 .fd-com-compose { padding-top: 10px; border-top: 1px solid var(--fd-divider); }

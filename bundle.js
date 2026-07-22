@@ -1268,7 +1268,7 @@
   async function fetchPageComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at").is("deleted_at", null).order("created_at", { ascending: true });
+    const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at, parent_id").is("deleted_at", null).order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchPageComments:", error.message);
       return /* @__PURE__ */ new Map();
@@ -1281,10 +1281,10 @@
     }
     return map;
   }
-  async function addPageComment(postId, uid, text) {
+  async function addPageComment(postId, uid, text, parentId = null) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text }).select().single();
+    const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
     return error ? { ok: false, error: error.message } : { ok: true, comment: data };
   }
   async function deletePageComment(commentId) {
@@ -10493,6 +10493,7 @@ ${ev.description || ""}`
     });
   }
   var openCommentSheet = null;
+  var replyTarget = null;
   function pluralComments(n) {
     const d = n % 10, h = n % 100;
     if (d === 1 && h !== 11)
@@ -10505,19 +10506,40 @@ ${ev.description || ""}`
     const d = n % 10, h = n % 100;
     return d >= 1 && d <= 4 && (h < 11 || h > 14) ? "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F" : "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C";
   }
-  function commentRowHtml(c) {
+  function commentRowHtml(c, reply = false) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
     const lr = comReactMap.get(c.id) || { count: 0, my: false };
     const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
-    return `<div class="fd-com-row"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
+    return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
     </div>`;
+  }
+  function orderedComments(list) {
+    const repliesByParent = /* @__PURE__ */ new Map();
+    for (const c of list)
+      if (c.parent_id) {
+        if (!repliesByParent.has(c.parent_id))
+          repliesByParent.set(c.parent_id, []);
+        repliesByParent.get(c.parent_id).push(c);
+      }
+    const out = [];
+    for (const c of list)
+      if (!c.parent_id) {
+        out.push({ c, reply: false });
+        for (const r of repliesByParent.get(c.id) || [])
+          out.push({ c: r, reply: true });
+      }
+    const shown = new Set(out.map((o) => o.c.id));
+    for (const c of list)
+      if (!shown.has(c.id))
+        out.push({ c, reply: false });
+    return out;
   }
   function patchCommentLike(id) {
     const lr = comReactMap.get(id) || { count: 0, my: false };
@@ -10569,7 +10591,7 @@ ${ev.description || ""}`
     const list = commentMap.get(postId) || [];
     if (titleEl)
       titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
-    listEl.innerHTML = list.length ? list.map(commentRowHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+    listEl.innerHTML = list.length ? orderedComments(list).map((o) => commentRowHtml(o.c, o.reply)).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
   }
   function patchCommentCount(postId) {
     const n = (commentMap.get(postId) || []).length;
@@ -10621,6 +10643,7 @@ ${ev.description || ""}`
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title fd-com-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
       <div class="fd-com-list"></div>
+      <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C">${IC_X}</button></div>
       <div class="fd-com-compose">
         <span class="fd-com-ava fd-com-myava">${myAva}</span>
         <input class="fd-com-input" type="text" placeholder="\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
@@ -10629,8 +10652,22 @@ ${ev.description || ""}`
     </div>`;
     const listEl = sheet.querySelector(".fd-com-list");
     const titleEl = sheet.querySelector(".fd-com-title");
+    const replyBar = sheet.querySelector(".fd-com-replybar");
+    const replyTo = sheet.querySelector(".fd-com-replyto");
+    replyTarget = null;
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
+    const clearReply = () => {
+      replyTarget = null;
+      replyBar.hidden = true;
+    };
+    const setReply = (parentId, name) => {
+      replyTarget = { parentId, name };
+      replyTo.textContent = `\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0434\u043B\u044F ${name}`;
+      replyBar.hidden = false;
+      sheet.querySelector(".fd-com-input")?.focus();
+    };
+    sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
     if (myUid && !cachedName(myUid))
       fetchAvatars([myUid]).then(() => {
         const el = sheet.querySelector(".fd-com-myava");
@@ -10650,6 +10687,12 @@ ${ev.description || ""}`
       const like = e.target.closest("[data-com-like]");
       if (like) {
         toggleCommentLike(Number(like.dataset.comLike));
+        return;
+      }
+      const rep = e.target.closest("[data-reply-parent]");
+      if (rep) {
+        const uid = rep.dataset.replyUid;
+        setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C");
         return;
       }
       const del = e.target.closest("[data-del-com]");
@@ -10677,11 +10720,13 @@ ${ev.description || ""}`
         return;
       }
       sendBtn.disabled = true;
-      const res = await addPageComment(postId, currentUserId(), text);
+      const parentId = replyTarget ? replyTarget.parentId : null;
+      const res = await addPageComment(postId, currentUserId(), text, parentId);
       sendBtn.disabled = false;
       if (res.ok) {
         applyCommentUpsert(res.comment);
         input.value = "";
+        clearReply();
         input.focus();
       } else {
         alert("\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E: " + (res.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430"));
