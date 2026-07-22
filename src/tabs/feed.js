@@ -31,6 +31,7 @@ const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
 const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
+const IC_DOTS   = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 
 // ── Стан ────────────────────────────────────────────────────────────────────
 let pages = [];               // усі сторінки-канали
@@ -480,21 +481,20 @@ async function openPageScreen(pageId) {
   screen.innerHTML = `
     <div class="fd-screen-top">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      ${canEdit ? `<button class="fd-banner-edit" data-edit-page="${pageId}" type="button" aria-label="Змінити банер">${IC_CAMERA}</button>` : ''}
+      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
-      <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
+      <div class="fd-banner${page.banner_url ? ' fd-banner--view' : ''}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
+      ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
     </div>
     <div class="fd-screen-body">
       <div class="fd-screen-id">
         <span class="fd-screen-ava-wrap">
-          <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
-          ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="Змінити аватар">${IC_CAMERA}</button>` : ''}
+          <span class="fd-screen-ava${page.avatar_url ? ' fd-screen-ava--view' : ''}">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
         </span>
         <div class="fd-screen-name">${escapeHtml(page.name)}</div>
         ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
-        ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
       </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
       <div class="fd-screen-list">${pagePosts.length
@@ -513,6 +513,20 @@ async function openPageScreen(pageId) {
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
   wireGalleries(screen);       // каруселі фото в постах сторінки
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
+
+  // Перегляд фото банера/аватара на весь екран (для всіх; реюз openViewer).
+  if (page.banner_url) screen.querySelector('.fd-banner--view')
+    ?.addEventListener('click', () => openViewer([page.banner_url], 0));
+  if (page.avatar_url) screen.querySelector('.fd-screen-ava--view')
+    ?.addEventListener('click', () => openViewer([page.avatar_url], 0));
+
+  // Меню «⋯» (лише адмін): відкрити/закрити; клік поза меню або по пункту — закриває.
+  const menuBtn = screen.querySelector('.fd-screen-menu');
+  const menuPop = screen.querySelector('.fd-screen-menu-pop');
+  if (menuBtn && menuPop) {
+    menuBtn.addEventListener('click', e => { e.stopPropagation(); menuPop.hidden = !menuPop.hidden; });
+    screen.addEventListener('click', () => { if (!menuPop.hidden) menuPop.hidden = true; });
+  }
 
   document.body.appendChild(screen);
   requestAnimationFrame(() => screen.classList.add('open'));

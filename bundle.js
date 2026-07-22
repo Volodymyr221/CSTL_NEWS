@@ -10285,6 +10285,7 @@ ${ev.description || ""}`
   var IC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
   var IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
+  var IC_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
   var pages = [];
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
@@ -10750,21 +10751,20 @@ ${ev.description || ""}`
     screen.innerHTML = `
     <div class="fd-screen-top">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      ${canEdit ? `<button class="fd-banner-edit" data-edit-page="${pageId}" type="button" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0431\u0430\u043D\u0435\u0440">${IC_CAMERA}</button>` : ""}
+      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="\u041C\u0435\u043D\u044E \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438">${IC_DOTS}</button>` : ""}
       <button class="fd-bell${subscribed ? " fd-bell--on" : ""}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
-      <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
+      <div class="fd-banner${page.banner_url ? " fd-banner--view" : ""}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
+      ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
     </div>
     <div class="fd-screen-body">
       <div class="fd-screen-id">
         <span class="fd-screen-ava-wrap">
-          <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
-          ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0430\u0432\u0430\u0442\u0430\u0440">${IC_CAMERA}</button>` : ""}
+          <span class="fd-screen-ava${page.avatar_url ? " fd-screen-ava--view" : ""}">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
         </span>
         <div class="fd-screen-name">${escapeHtml(page.name)}</div>
         ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
-        ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
       </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
       <div class="fd-screen-list">${pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>'}</div>
@@ -10780,6 +10780,22 @@ ${ev.description || ""}`
     wireCards(screen);
     wireGalleries(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
+    if (page.banner_url)
+      screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
+    if (page.avatar_url)
+      screen.querySelector(".fd-screen-ava--view")?.addEventListener("click", () => openViewer([page.avatar_url], 0));
+    const menuBtn = screen.querySelector(".fd-screen-menu");
+    const menuPop = screen.querySelector(".fd-screen-menu-pop");
+    if (menuBtn && menuPop) {
+      menuBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        menuPop.hidden = !menuPop.hidden;
+      });
+      screen.addEventListener("click", () => {
+        if (!menuPop.hidden)
+          menuPop.hidden = true;
+      });
+    }
     document.body.appendChild(screen);
     requestAnimationFrame(() => screen.classList.add("open"));
   }
