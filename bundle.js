@@ -1194,6 +1194,17 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function subscribePageReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
     if (!supa || !visitorId)
       return;
@@ -1225,7 +1236,7 @@
     }
     return data || [];
   }
-  async function fetchPageReactions(userKey2) {
+  async function fetchPageReactions(userKey) {
     if (!supa)
       return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("page_reactions").select("post_id, user_id");
@@ -1239,25 +1250,25 @@
         map.set(r.post_id, { count: 0, my: false });
       const e = map.get(r.post_id);
       e.count++;
-      if (r.user_id === userKey2)
+      if (r.user_id === userKey)
         e.my = true;
     }
     return map;
   }
-  async function setPageReaction(postId, userKey2, on) {
+  async function setPageReaction(postId, userKey, on) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!on) {
-      const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey2);
+      const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey);
       return error2 ? { ok: false, error: error2.message } : { ok: true };
     }
-    const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey2, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
+    const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   async function fetchPageComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at").is("deleted_at", null).order("created_at", { ascending: true });
+    const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at, parent_id").is("deleted_at", null).order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchPageComments:", error.message);
       return /* @__PURE__ */ new Map();
@@ -1270,11 +1281,57 @@
     }
     return map;
   }
-  async function addPageComment(postId, uid, text) {
+  async function addPageComment(postId, uid, text, parentId = null) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text }).select().single();
+    const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
     return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  }
+  async function deletePageComment(commentId) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { error } = await supa.from("page_comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  async function fetchPageCommentReactions(userKey) {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("page_comment_reactions").select("comment_id, user_id");
+    if (error) {
+      console.warn("[supabase] fetchPageCommentReactions:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const r of data || []) {
+      if (!map.has(r.comment_id))
+        map.set(r.comment_id, { count: 0, my: false });
+      const e = map.get(r.comment_id);
+      e.count++;
+      if (r.user_id === userKey)
+        e.my = true;
+    }
+    return map;
+  }
+  async function setPageCommentReaction(commentId, uid, on) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!on) {
+      const { error: error2 } = await supa.from("page_comment_reactions").delete().eq("comment_id", commentId).eq("user_id", uid);
+      return error2 ? { ok: false, error: error2.message } : { ok: true };
+    }
+    const { error } = await supa.from("page_comment_reactions").upsert({ comment_id: commentId, user_id: uid }, { onConflict: "comment_id,user_id" });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  function subscribePageCommentReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-comment-reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_comment_reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
   }
   async function fetchMyEditablePageIds() {
     if (!supa)
@@ -10232,13 +10289,11 @@ ${ev.description || ""}`
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
   var commentMap = /* @__PURE__ */ new Map();
+  var comReactMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
   var feedSearch = "";
   var loaded = false;
-  function userKey() {
-    return currentUserId() || getAnonId();
-  }
   function relTime(iso) {
     const t = new Date(iso).getTime();
     if (!Number.isFinite(t))
@@ -10262,12 +10317,12 @@ ${ev.description || ""}`
     return `<span class="${cls} ${cls}--ph">${letter}</span>`;
   }
   async function loadData2() {
-    const key = userKey();
-    const [pg, ps, rx, cm, mine, subs] = await Promise.all([
+    const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
       fetchPages(),
       fetchPagePosts(null, 60),
-      fetchPageReactions(key),
+      fetchPageReactions(currentUserId()),
       fetchPageComments(),
+      fetchPageCommentReactions(currentUserId()),
       isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
       isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
     ]);
@@ -10275,6 +10330,7 @@ ${ev.description || ""}`
     posts = ps;
     reactionMap = rx;
     commentMap = cm;
+    comReactMap = cr;
     myPageIds = mine;
     mySubs = subs;
     const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
@@ -10396,15 +10452,37 @@ ${ev.description || ""}`
     wireGalleries(listEl);
   }
   async function toggleLike(postId) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043F\u043E\u0441\u0442", () => {
+      });
+      return;
+    }
+    const uid = currentUserId();
     const rx = reactionMap.get(postId) || { count: 0, my: false };
     const on = !rx.my;
     reactionMap.set(postId, { count: Math.max(0, rx.count + (on ? 1 : -1)), my: on });
     patchLike(postId);
-    const res = await setPageReaction(postId, userKey(), on);
+    const res = await setPageReaction(postId, uid, on);
     if (!res.ok) {
       reactionMap.set(postId, rx);
       patchLike(postId);
     }
+  }
+  function applyReactionEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || row.post_id == null)
+      return;
+    if (row.user_id === currentUserId())
+      return;
+    const rx = reactionMap.get(row.post_id) || { count: 0, my: false };
+    if (payload.eventType === "INSERT")
+      rx.count += 1;
+    else if (payload.eventType === "DELETE")
+      rx.count = Math.max(0, rx.count - 1);
+    else
+      return;
+    reactionMap.set(row.post_id, rx);
+    patchLike(row.post_id);
   }
   function patchLike(postId) {
     const rx = reactionMap.get(postId) || { count: 0, my: false };
@@ -10415,17 +10493,105 @@ ${ev.description || ""}`
     });
   }
   var openCommentSheet = null;
-  function commentRowHtml(c) {
+  var replyTarget = null;
+  function pluralComments(n) {
+    const d = n % 10, h = n % 100;
+    if (d === 1 && h !== 11)
+      return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440";
+    if (d >= 2 && d <= 4 && (h < 12 || h > 14))
+      return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
+  }
+  function pluralLikes(n) {
+    const d = n % 10, h = n % 100;
+    return d >= 1 && d <= 4 && (h < 11 || h > 14) ? "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F" : "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C";
+  }
+  function commentRowHtml(c, reply = false) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
-    return `<div class="fd-com-row">
+    const mine = c.author_uid && c.author_uid === currentUserId();
+    const lr = comReactMap.get(c.id) || { count: 0, my: false };
+    const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
+    return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
-      <div class="fd-com-body"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span>
-      <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+      <div class="fd-com-body">
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+      </div>
+      <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
     </div>`;
   }
-  function renderCommentList(postId, listEl) {
+  function orderedComments(list) {
+    const repliesByParent = /* @__PURE__ */ new Map();
+    for (const c of list)
+      if (c.parent_id) {
+        if (!repliesByParent.has(c.parent_id))
+          repliesByParent.set(c.parent_id, []);
+        repliesByParent.get(c.parent_id).push(c);
+      }
+    const out = [];
+    for (const c of list)
+      if (!c.parent_id) {
+        out.push({ c, reply: false });
+        for (const r of repliesByParent.get(c.id) || [])
+          out.push({ c: r, reply: true });
+      }
+    const shown = new Set(out.map((o) => o.c.id));
+    for (const c of list)
+      if (!shown.has(c.id))
+        out.push({ c, reply: false });
+    return out;
+  }
+  function patchCommentLike(id) {
+    const lr = comReactMap.get(id) || { count: 0, my: false };
+    document.querySelectorAll(`[data-com-like="${id}"]`).forEach((b) => {
+      b.classList.toggle("fd-com-like--on", lr.my);
+      b.innerHTML = lr.my ? IC_HEART_F : IC_HEART_O;
+    });
+    document.querySelectorAll(`[data-com-likes="${id}"]`).forEach((el) => {
+      el.textContent = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
+    });
+  }
+  async function toggleCommentLike(id) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
+      });
+      return;
+    }
+    const uid = currentUserId();
+    const lr = comReactMap.get(id) || { count: 0, my: false };
+    const on = !lr.my;
+    comReactMap.set(id, { count: Math.max(0, lr.count + (on ? 1 : -1)), my: on });
+    patchCommentLike(id);
+    const res = await setPageCommentReaction(id, uid, on);
+    if (!res.ok) {
+      comReactMap.set(id, lr);
+      patchCommentLike(id);
+    }
+  }
+  function applyCommentReactionEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || row.comment_id == null)
+      return;
+    if (row.user_id === currentUserId())
+      return;
+    const lr = comReactMap.get(row.comment_id) || { count: 0, my: false };
+    if (payload.eventType === "INSERT")
+      lr.count += 1;
+    else if (payload.eventType === "DELETE")
+      lr.count = Math.max(0, lr.count - 1);
+    else
+      return;
+    comReactMap.set(row.comment_id, lr);
+    patchCommentLike(row.comment_id);
+  }
+  function renderCommentSheet() {
+    if (!openCommentSheet)
+      return;
+    const { postId, listEl, titleEl } = openCommentSheet;
     const list = commentMap.get(postId) || [];
-    listEl.innerHTML = list.length ? list.map(commentRowHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+    if (titleEl)
+      titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    listEl.innerHTML = list.length ? orderedComments(list).map((o) => commentRowHtml(o.c, o.reply)).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
   }
   function patchCommentCount(postId) {
     const n = (commentMap.get(postId) || []).length;
@@ -10449,11 +10615,11 @@ ${ev.description || ""}`
     if (c.author_uid && !cachedName(c.author_uid)) {
       fetchAvatars([c.author_uid]).then(() => {
         if (openCommentSheet && openCommentSheet.postId === c.post_id)
-          renderCommentList(c.post_id, openCommentSheet.listEl);
+          renderCommentSheet();
       });
     }
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
-      renderCommentList(c.post_id, openCommentSheet.listEl);
+      renderCommentSheet();
     patchCommentCount(c.post_id);
   }
   function applyCommentRemove(c) {
@@ -10464,25 +10630,50 @@ ${ev.description || ""}`
       return;
     commentMap.set(c.post_id, arr.filter((x) => x.id !== c.id));
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
-      renderCommentList(c.post_id, openCommentSheet.listEl);
+      renderCommentSheet();
     patchCommentCount(c.post_id);
   }
   function openComments(postId) {
+    const myUid = currentUserId();
+    const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
     const sheet = document.createElement("div");
     sheet.className = "fd-sheet-back";
     sheet.innerHTML = `
-    <div class="fd-sheet">
+    <div class="fd-sheet fd-com-sheet">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
+      <div class="fd-sheet-title fd-com-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
       <div class="fd-com-list"></div>
+      <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C">${IC_X}</button></div>
       <div class="fd-com-compose">
-        <input class="fd-com-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
+        <span class="fd-com-ava fd-com-myava">${myAva}</span>
+        <input class="fd-com-input" type="text" placeholder="\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
         <button class="fd-com-send" type="button">${IC_SEND}</button>
       </div>
     </div>`;
     const listEl = sheet.querySelector(".fd-com-list");
-    renderCommentList(postId, listEl);
-    openCommentSheet = { postId, back: sheet, listEl };
+    const titleEl = sheet.querySelector(".fd-com-title");
+    const replyBar = sheet.querySelector(".fd-com-replybar");
+    const replyTo = sheet.querySelector(".fd-com-replyto");
+    replyTarget = null;
+    openCommentSheet = { postId, back: sheet, listEl, titleEl };
+    renderCommentSheet();
+    const clearReply = () => {
+      replyTarget = null;
+      replyBar.hidden = true;
+    };
+    const setReply = (parentId, name) => {
+      replyTarget = { parentId, name };
+      replyTo.textContent = `\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0434\u043B\u044F ${name}`;
+      replyBar.hidden = false;
+      sheet.querySelector(".fd-com-input")?.focus();
+    };
+    sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
+    if (myUid && !cachedName(myUid))
+      fetchAvatars([myUid]).then(() => {
+        const el = sheet.querySelector(".fd-com-myava");
+        if (el)
+          el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
+      });
     const close = () => {
       sheet.remove();
       if (openCommentSheet && openCommentSheet.back === sheet)
@@ -10491,6 +10682,30 @@ ${ev.description || ""}`
     sheet.addEventListener("click", (e) => {
       if (e.target === sheet)
         close();
+    });
+    listEl.addEventListener("click", async (e) => {
+      const like = e.target.closest("[data-com-like]");
+      if (like) {
+        toggleCommentLike(Number(like.dataset.comLike));
+        return;
+      }
+      const rep = e.target.closest("[data-reply-parent]");
+      if (rep) {
+        const uid = rep.dataset.replyUid;
+        setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C");
+        return;
+      }
+      const del = e.target.closest("[data-del-com]");
+      if (!del)
+        return;
+      const id = Number(del.dataset.delCom);
+      if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440?"))
+        return;
+      const res = await deletePageComment(id);
+      if (res.ok)
+        applyCommentRemove({ id, post_id: postId });
+      else
+        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
     });
     const input = sheet.querySelector(".fd-com-input");
     const sendBtn = sheet.querySelector(".fd-com-send");
@@ -10505,11 +10720,13 @@ ${ev.description || ""}`
         return;
       }
       sendBtn.disabled = true;
-      const res = await addPageComment(postId, currentUserId(), text);
+      const parentId = replyTarget ? replyTarget.parentId : null;
+      const res = await addPageComment(postId, currentUserId(), text, parentId);
       sendBtn.disabled = false;
       if (res.ok) {
         applyCommentUpsert(res.comment);
         input.value = "";
+        clearReply();
         input.focus();
       } else {
         alert("\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E: " + (res.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430"));
@@ -10854,6 +11071,8 @@ ${ev.description || ""}`
         else
           applyCommentUpsert(payload.new);
       });
+      subscribePageReactions(applyReactionEvent);
+      subscribePageCommentReactions(applyCommentReactionEvent);
       root.dataset.fdWired = "1";
     }
     await loadData2();

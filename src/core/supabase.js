@@ -943,6 +943,19 @@ export function subscribePageComments(onChange) {
   return () => supa.removeChannel(ch);
 }
 
+// «СТРІЧКА»: жива підписка на лайки постів (лічильник оновлюється у всіх наживо).
+// DELETE-подія віддає post_id/user_id лише якщо таблиця має REPLICA IDENTITY FULL
+// (scripts/supabase_pages_reactions_auth.sql) — інакше зняття лайка не синхронізується.
+export function subscribePageReactions(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-reactions-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_reactions' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // ── АНАЛІТИКА (Потік 6, byyou) ──────────────────────────────────────────────
 // Власна статистика (без Google Analytics/Plausible) — сирі події у
 // analytics_events (scripts/supabase_analytics.sql), агрегати рахує адмінка.
@@ -1051,7 +1064,7 @@ export async function setPageReaction(postId, userKey, on) {
 export async function fetchPageComments() {
   if (!supa) return new Map();
   const { data, error } = await supa.from('page_comments')
-    .select('id, post_id, author_uid, text, created_at, deleted_at')
+    .select('id, post_id, author_uid, text, created_at, deleted_at, parent_id')
     .is('deleted_at', null)
     .order('created_at', { ascending: true });
   if (error) { console.warn('[supabase] fetchPageComments:', error.message); return new Map(); }
@@ -1063,11 +1076,58 @@ export async function fetchPageComments() {
   return map;
 }
 
-export async function addPageComment(postId, uid, text) {
+export async function addPageComment(postId, uid, text, parentId = null) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const { data, error } = await supa.from('page_comments')
-    .insert({ post_id: postId, author_uid: uid, text }).select().single();
+    .insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
   return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+}
+
+// Мʼяке видалення свого коментаря (RLS pcom update — автор або адмін сторінки).
+export async function deletePageComment(commentId) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { error } = await supa.from('page_comments')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', commentId);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Лайки коментарів → Map comment_id → { count, my }. userKey = uid (тільки авторизовані).
+// scripts/supabase_page_comment_reactions.sql.
+export async function fetchPageCommentReactions(userKey) {
+  if (!supa) return new Map();
+  const { data, error } = await supa.from('page_comment_reactions').select('comment_id, user_id');
+  if (error) { console.warn('[supabase] fetchPageCommentReactions:', error.message); return new Map(); }
+  const map = new Map();
+  for (const r of (data || [])) {
+    if (!map.has(r.comment_id)) map.set(r.comment_id, { count: 0, my: false });
+    const e = map.get(r.comment_id); e.count++;
+    if (r.user_id === userKey) e.my = true;
+  }
+  return map;
+}
+
+// Поставити/зняти лайк коментаря (on=true → додати).
+export async function setPageCommentReaction(commentId, uid, on) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  if (!on) {
+    const { error } = await supa.from('page_comment_reactions').delete()
+      .eq('comment_id', commentId).eq('user_id', uid);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  const { error } = await supa.from('page_comment_reactions')
+    .upsert({ comment_id: commentId, user_id: uid }, { onConflict: 'comment_id,user_id' });
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
+// Жива підписка на лайки коментарів (лічильник оновлюється у всіх наживо).
+export function subscribePageCommentReactions(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-comment-reactions-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_comment_reactions' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
 }
 
 // Мої сторінки (де я власник/адмін) → Set page_id — для показу поля «написати пост».

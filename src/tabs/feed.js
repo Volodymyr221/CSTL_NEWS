@@ -9,12 +9,13 @@
 import { escapeHtml } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
-  getAnonId, fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
+  fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
   uploadPhotoToStorage,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
-  fetchPageComments, addPageComment, fetchMyEditablePageIds,
+  fetchPageComments, addPageComment, deletePageComment, fetchMyEditablePageIds,
+  fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
-  updatePage, subscribePageComments,
+  updatePage, subscribePageComments, subscribePageReactions,
 } from '../core/supabase.js';
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
@@ -36,13 +37,14 @@ let pages = [];               // усі сторінки-канали
 let posts = [];               // пости стрічки (усіх сторінок)
 let reactionMap = new Map();  // post_id → { count, my }
 let commentMap = new Map();   // post_id → comments[]
+let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
 let feedSearch = '';          // рядок пошуку у стрічці
 let loaded = false;
 
-// Ключ реакції: uid залогіненого або анонімний clientId (як у Дошці).
-function userKey() { return currentUserId() || getAnonId(); }
+// Ключ реакції = uid залогіненого. Лайк лише авторизованим (рішення Вови 22.07:
+// анонімна реакція ламає ідентифікацію і статистику). Гість → null (жодна не «моя»).
 
 // Відносний час: «щойно», «5 хв», «2 год», «вчора», «12.07».
 function relTime(iso) {
@@ -66,16 +68,16 @@ function avatarHtml(url, name, cls) {
 
 // ── Завантаження даних ──────────────────────────────────────────────────────
 async function loadData() {
-  const key = userKey();
-  const [pg, ps, rx, cm, mine, subs] = await Promise.all([
+  const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
     fetchPages(),
     fetchPagePosts(null, 60),
-    fetchPageReactions(key),
+    fetchPageReactions(currentUserId()),
     fetchPageComments(),
+    fetchPageCommentReactions(currentUserId()),
     isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(new Set()),
     isLoggedIn() ? fetchMySubscriptions()   : Promise.resolve(new Set()),
   ]);
-  pages = pg; posts = ps; reactionMap = rx; commentMap = cm; myPageIds = mine; mySubs = subs;
+  pages = pg; posts = ps; reactionMap = rx; commentMap = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
 
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
@@ -201,18 +203,34 @@ function renderFeed() {
   wireGalleries(listEl);
 }
 
-// ── Лайк ────────────────────────────────────────────────────────────────────
+// ── Лайк (тільки авторизованим) ─────────────────────────────────────────────
 async function toggleLike(postId) {
+  if (!isLoggedIn()) { requireAuth('вподобати пост', () => {}); return; }  // гейт входу
+  const uid = currentUserId();
   const rx = reactionMap.get(postId) || { count: 0, my: false };
   const on = !rx.my;
   // Оптимістично
   reactionMap.set(postId, { count: Math.max(0, rx.count + (on ? 1 : -1)), my: on });
   patchLike(postId);
-  const res = await setPageReaction(postId, userKey(), on);
+  const res = await setPageReaction(postId, uid, on);
   if (!res.ok) {  // відкат
     reactionMap.set(postId, rx);
     patchLike(postId);
   }
+}
+
+// Realtime: лайк/зняття ІНШОГО користувача → оновити лічильник наживо.
+// Свою подію ігноруємо (уже враховано оптимістично) — без подвоєння.
+function applyReactionEvent(payload) {
+  const row = payload.new || payload.old;
+  if (!row || row.post_id == null) return;
+  if (row.user_id === currentUserId()) return;         // своя реакція — вже врахована
+  const rx = reactionMap.get(row.post_id) || { count: 0, my: false };
+  if (payload.eventType === 'INSERT') rx.count += 1;
+  else if (payload.eventType === 'DELETE') rx.count = Math.max(0, rx.count - 1);
+  else return;                                         // UPDATE (зміна emoji) — лічильник той самий
+  reactionMap.set(row.post_id, rx);
+  patchLike(row.post_id);
 }
 function patchLike(postId) {
   const rx = reactionMap.get(postId) || { count: 0, my: false };
@@ -223,24 +241,108 @@ function patchLike(postId) {
   });
 }
 
-// ── Коментарі (нижній лист) — з живою синхронізацією ─────────────────────────
+// ── Коментарі (нижній лист, стиль Instagram) — з живою синхронізацією ────────
 // openCommentSheet — поточний відкритий лист (postId + вузли), щоб realtime міг
 // перемальовувати його наживо. Один лист за раз.
 let openCommentSheet = null;
+let replyTarget = null;   // { parentId, name } — активна відповідь у відкритому листі
 
-function commentRowHtml(c) {
+// Українська відміна: 1 коментар · 2-4 коментарі · 5+ коментарів.
+function pluralComments(n) {
+  const d = n % 10, h = n % 100;
+  if (d === 1 && h !== 11) return 'коментар';
+  if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return 'коментарі';
+  return 'коментарів';
+}
+
+// Відміна: 1-4 вподобання · 5+ вподобань (11-14 → вподобань).
+function pluralLikes(n) {
+  const d = n % 10, h = n % 100;
+  return (d >= 1 && d <= 4 && (h < 11 || h > 14)) ? 'вподобання' : 'вподобань';
+}
+
+// Рядок коментаря у стилі Instagram: аватар · (імʼя жирним + текст в один абзац) ·
+// мета-рядок (час · N вподобань · «Відповісти» · «Видалити» на своєму) · ♥ справа.
+// reply=true → вкладена відповідь (відступ). Відповідь чіпляється до кореневого
+// коментаря (parent_id||id) — 2 рівні, як в Instagram.
+function commentRowHtml(c, reply = false) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
-  return `<div class="fd-com-row">
+  const mine = c.author_uid && c.author_uid === currentUserId();
+  const lr = comReactMap.get(c.id) || { count: 0, my: false };
+  const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
+  return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
-      <div class="fd-com-body"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span>
-      <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+      <div class="fd-com-body">
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+      </div>
+      <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
     </div>`;
 }
 
-function renderCommentList(postId, listEl) {
+// Впорядкувати коментарі у 2 рівні: кожен кореневий → одразу його відповіді (за часом).
+// Сироти (батька видалено/нема) показуємо як кореневі, щоб не зникали.
+function orderedComments(list) {
+  const repliesByParent = new Map();
+  for (const c of list) if (c.parent_id) {
+    if (!repliesByParent.has(c.parent_id)) repliesByParent.set(c.parent_id, []);
+    repliesByParent.get(c.parent_id).push(c);
+  }
+  const out = [];
+  for (const c of list) if (!c.parent_id) {
+    out.push({ c, reply: false });
+    for (const r of (repliesByParent.get(c.id) || [])) out.push({ c: r, reply: true });
+  }
+  const shown = new Set(out.map(o => o.c.id));
+  for (const c of list) if (!shown.has(c.id)) out.push({ c, reply: false });  // сироти
+  return out;
+}
+
+// Оновити ♥ і текст «N вподобань» конкретного коментаря (без перемалювання списку).
+function patchCommentLike(id) {
+  const lr = comReactMap.get(id) || { count: 0, my: false };
+  document.querySelectorAll(`[data-com-like="${id}"]`).forEach(b => {
+    b.classList.toggle('fd-com-like--on', lr.my);
+    b.innerHTML = lr.my ? IC_HEART_F : IC_HEART_O;
+  });
+  document.querySelectorAll(`[data-com-likes="${id}"]`).forEach(el => {
+    el.textContent = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
+  });
+}
+
+// Лайк коментаря — тільки авторизованим (як лайк поста).
+async function toggleCommentLike(id) {
+  if (!isLoggedIn()) { requireAuth('вподобати коментар', () => {}); return; }
+  const uid = currentUserId();
+  const lr = comReactMap.get(id) || { count: 0, my: false };
+  const on = !lr.my;
+  comReactMap.set(id, { count: Math.max(0, lr.count + (on ? 1 : -1)), my: on });
+  patchCommentLike(id);
+  const res = await setPageCommentReaction(id, uid, on);
+  if (!res.ok) { comReactMap.set(id, lr); patchCommentLike(id); }   // відкат
+}
+
+// Realtime: лайк коментаря ІНШОГО користувача → оновити лічильник (свою ігноруємо).
+function applyCommentReactionEvent(payload) {
+  const row = payload.new || payload.old;
+  if (!row || row.comment_id == null) return;
+  if (row.user_id === currentUserId()) return;
+  const lr = comReactMap.get(row.comment_id) || { count: 0, my: false };
+  if (payload.eventType === 'INSERT') lr.count += 1;
+  else if (payload.eventType === 'DELETE') lr.count = Math.max(0, lr.count - 1);
+  else return;
+  comReactMap.set(row.comment_id, lr);
+  patchCommentLike(row.comment_id);
+}
+
+// Перемалювати відкритий лист: заголовок-лічильник + список (кореневі + відповіді).
+function renderCommentSheet() {
+  if (!openCommentSheet) return;
+  const { postId, listEl, titleEl } = openCommentSheet;
   const list = commentMap.get(postId) || [];
+  if (titleEl) titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : 'Коментарі';
   listEl.innerHTML = list.length
-    ? list.map(commentRowHtml).join('')
+    ? orderedComments(list).map(o => commentRowHtml(o.c, o.reply)).join('')
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
 }
 
@@ -263,12 +365,10 @@ function applyCommentUpsert(c) {
   // Автор ще не в кеші імен — дотягнути ім'я/аватар і перемалювати після цього.
   if (c.author_uid && !cachedName(c.author_uid)) {
     fetchAvatars([c.author_uid]).then(() => {
-      if (openCommentSheet && openCommentSheet.postId === c.post_id)
-        renderCommentList(c.post_id, openCommentSheet.listEl);
+      if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
     });
   }
-  if (openCommentSheet && openCommentSheet.postId === c.post_id)
-    renderCommentList(c.post_id, openCommentSheet.listEl);
+  if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
   patchCommentCount(c.post_id);
 }
 
@@ -277,33 +377,73 @@ function applyCommentRemove(c) {
   const arr = commentMap.get(c.post_id);
   if (!arr) return;
   commentMap.set(c.post_id, arr.filter(x => x.id !== c.id));
-  if (openCommentSheet && openCommentSheet.postId === c.post_id)
-    renderCommentList(c.post_id, openCommentSheet.listEl);
+  if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
   patchCommentCount(c.post_id);
 }
 
 function openComments(postId) {
+  const myUid = currentUserId();
+  const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
   const sheet = document.createElement('div');
   sheet.className = 'fd-sheet-back';
   sheet.innerHTML = `
-    <div class="fd-sheet">
+    <div class="fd-sheet fd-com-sheet">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">Коментарі</div>
+      <div class="fd-sheet-title fd-com-title">Коментарі</div>
       <div class="fd-com-list"></div>
+      <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
       <div class="fd-com-compose">
-        <input class="fd-com-input" type="text" placeholder="Написати коментар…" maxlength="1000">
+        <span class="fd-com-ava fd-com-myava">${myAva}</span>
+        <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
         <button class="fd-com-send" type="button">${IC_SEND}</button>
       </div>
     </div>`;
   const listEl = sheet.querySelector('.fd-com-list');
-  renderCommentList(postId, listEl);
-  openCommentSheet = { postId, back: sheet, listEl };
+  const titleEl = sheet.querySelector('.fd-com-title');
+  const replyBar = sheet.querySelector('.fd-com-replybar');
+  const replyTo = sheet.querySelector('.fd-com-replyto');
+  replyTarget = null;
+  openCommentSheet = { postId, back: sheet, listEl, titleEl };
+  renderCommentSheet();
+
+  const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
+  const setReply = (parentId, name) => {
+    replyTarget = { parentId, name };
+    replyTo.textContent = `Відповідь для ${name}`;
+    replyBar.hidden = false;
+    sheet.querySelector('.fd-com-input')?.focus();
+  };
+  sheet.querySelector('.fd-com-replyx').addEventListener('click', clearReply);
+  // Свій аватар/ім'я для компоузера могли бути не в кеші — дотягнути й оновити.
+  if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
+    const el = sheet.querySelector('.fd-com-myava');
+    if (el) el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
+  });
 
   const close = () => {
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+
+  // Дії в листі: лайк коментаря (♥) + «Відповісти» + видалення свого.
+  listEl.addEventListener('click', async e => {
+    const like = e.target.closest('[data-com-like]');
+    if (like) { toggleCommentLike(Number(like.dataset.comLike)); return; }
+    const rep = e.target.closest('[data-reply-parent]');
+    if (rep) {
+      const uid = rep.dataset.replyUid;
+      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель');
+      return;
+    }
+    const del = e.target.closest('[data-del-com]');
+    if (!del) return;
+    const id = Number(del.dataset.delCom);
+    if (!confirm('Видалити коментар?')) return;
+    const res = await deletePageComment(id);
+    if (res.ok) applyCommentRemove({ id, post_id: postId });   // realtime теж прийде — дедуп
+    else alert('Не вдалося видалити: ' + (res.error || ''));
+  });
 
   const input = sheet.querySelector('.fd-com-input');
   const sendBtn = sheet.querySelector('.fd-com-send');
@@ -312,11 +452,13 @@ function openComments(postId) {
     if (!text) return;
     if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
     sendBtn.disabled = true;
-    const res = await addPageComment(postId, currentUserId(), text);
+    const parentId = replyTarget ? replyTarget.parentId : null;
+    const res = await addPageComment(postId, currentUserId(), text, parentId);
     sendBtn.disabled = false;
     if (res.ok) {
       applyCommentUpsert(res.comment);   // одразу показати свій (realtime продублює — дедуп)
       input.value = '';
+      clearReply();
       input.focus();
     } else {
       alert('Коментар не надіслано: ' + (res.error || 'невідома помилка'));  // без тихого провалу
@@ -594,6 +736,11 @@ export async function initFeed() {
       if (t === 'DELETE') applyCommentRemove(payload.old);
       else applyCommentUpsert(payload.new);   // INSERT + UPDATE (deleted_at → remove усередині)
     });
+
+    // Жива синхронізація лайків: лічильник ❤️ оновлюється у всіх наживо.
+    subscribePageReactions(applyReactionEvent);
+    // Жива синхронізація лайків КОМЕНТАРІВ (фаза 3b).
+    subscribePageCommentReactions(applyCommentReactionEvent);
 
     root.dataset.fdWired = '1';
   }
