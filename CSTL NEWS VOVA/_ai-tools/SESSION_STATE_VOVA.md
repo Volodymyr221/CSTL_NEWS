@@ -20,6 +20,7 @@
 - **✅ Етап 0 (гілка `vova/strichka-tabbar`, PR #506):** `index.html` — новий порядок таб-бару + «Шо в селі»→«Стрічка» + feed-іконка. `switchTab` за id, CSS без nth-child → безпечно. CACHE `cstl-20260722-1046`.
 - **✅ Етап 1 — база (SQL `scripts/supabase_pages.sql`, прямий коміт main):** 6 таблиць pages/page_admins/page_posts/page_comments/page_reactions/page_subscriptions + can_edit_page() + RLS + realtime + seed 2 сторінки. Вова застосував (email власника volodymyrshevchuk19@gmail.com). pages=2, page_admins=2.
 - **✅ Етап 2 — клієнт (гілка `vova/strichka-feed`, цим `/finish`):** `src/tabs/feed.js` (НОВИЙ) + дата-шар у `supabase.js` + `index.html` вкладка + `initFeed` в `app.js` + `style/feed.css` (НОВИЙ). Кружечки-канали + стрічка постів + екран сторінки + лайк/коментарі/дзвіночок/композер (публікація як у FB). CACHE `cstl-20260722-1446`.
+- **✅ Кілька фото на пост (гілка `vova/strichka-photos`, цим `/finish`):** `page_posts.image_urls text[]` (міграція ALTER застосував Вова); композер мультивибір+прев'ю+показ помилок (фікс тихого зникання фото); галерея-карусель (2+) + повноекранний перегляд. CACHE `cstl-20260722-1511`.
 - **⏸️ Лишилось:** Етап 5 (реальний push send-page-push), Етап 6 (Афіша громади — events як системна сторінка). Наживо ще не тестовано.
 
 ### Задачі A-C (22.07) — новини + обговорення (гілка `vova/disc-hide-deleted` цим `/finish`; Задача A — прямий коміт у main):
