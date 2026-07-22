@@ -191,15 +191,29 @@
 .fd-sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: #d1d5db; margin: 4px auto 12px; }
 .fd-sheet-title { font-weight: 700; font-size: 16px; margin-bottom: 12px; color: var(--fd-ink); }
 
-.fd-com-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
-.fd-com-empty { color: var(--fd-muted); font-size: 14px; text-align: center; padding: 20px; }
-.fd-com-row { display: flex; gap: 10px; }
+/* Коментарі — лист у стилі Instagram: висока панель, список скролиться,
+   компоузер закріплений унизу. */
+.fd-com-sheet { display: flex; flex-direction: column; height: 82svh; overflow: hidden; }
+.fd-com-title { text-align: center; margin-bottom: 0; padding-bottom: 10px;
+  border-bottom: 1px solid var(--fd-divider); }
+.fd-com-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
+  padding: 12px 0; margin-bottom: 0; }
+.fd-com-empty { color: var(--fd-muted); font-size: 14px; text-align: center; padding: 28px 20px; }
+.fd-com-row { display: flex; gap: 10px; align-items: flex-start; }
 .fd-com-ava { width: 34px; height: 34px; flex: none; }
-.fd-com-body { display: flex; flex-direction: column; line-height: 1.35; }
-.fd-com-name { font-weight: 700; font-size: 13px; color: var(--fd-ink); }
-.fd-com-txt { font-size: 14.5px; color: var(--fd-ink); word-break: break-word; }
+.fd-com-body { flex: 1; min-width: 0; line-height: 1.4; }
+/* Імʼя жирним і текст — в один абзац, що переноситься (як в Instagram). */
+.fd-com-line { font-size: 14px; color: var(--fd-ink); word-break: break-word; }
+.fd-com-name { font-weight: 700; }
+.fd-com-txt { font-weight: 400; }
+.fd-com-meta { display: flex; gap: 14px; align-items: center; margin-top: 3px; }
+.fd-com-time { font-size: 12px; color: var(--fd-muted); }
+.fd-com-del { font-size: 12px; color: var(--fd-muted); background: none; border: 0; padding: 0;
+  cursor: pointer; font-family: inherit; }
 
 .fd-com-compose, .fd-comp-bar { display: flex; gap: 10px; align-items: center; }
+.fd-com-compose { padding-top: 10px; border-top: 1px solid var(--fd-divider); }
+.fd-com-myava { width: 34px; height: 34px; flex: none; }
 .fd-com-input {
   flex: 1; height: 42px; padding: 0 14px; border-radius: 21px; border: 1px solid var(--fd-divider);
   background: var(--fd-chip); font-size: 16px; font-family: inherit; outline: none; color: var(--fd-ink);

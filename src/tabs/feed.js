@@ -12,7 +12,7 @@ import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
   uploadPhotoToStorage,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
-  fetchPageComments, addPageComment, fetchMyEditablePageIds,
+  fetchPageComments, addPageComment, deletePageComment, fetchMyEditablePageIds,
   createPagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
 } from '../core/supabase.js';
@@ -238,22 +238,39 @@ function patchLike(postId) {
   });
 }
 
-// ── Коментарі (нижній лист) — з живою синхронізацією ─────────────────────────
+// ── Коментарі (нижній лист, стиль Instagram) — з живою синхронізацією ────────
 // openCommentSheet — поточний відкритий лист (postId + вузли), щоб realtime міг
 // перемальовувати його наживо. Один лист за раз.
 let openCommentSheet = null;
 
+// Українська відміна: 1 коментар · 2-4 коментарі · 5+ коментарів.
+function pluralComments(n) {
+  const d = n % 10, h = n % 100;
+  if (d === 1 && h !== 11) return 'коментар';
+  if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return 'коментарі';
+  return 'коментарів';
+}
+
+// Рядок коментаря у стилі Instagram: аватар · (імʼя жирним + текст в один абзац) ·
+// мета-рядок (час · «Видалити» лише на своєму). Лайк коментаря — фаза 3b, відповіді — 3c.
 function commentRowHtml(c) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
-  return `<div class="fd-com-row">
+  const mine = c.author_uid && c.author_uid === currentUserId();
+  return `<div class="fd-com-row"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
-      <div class="fd-com-body"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span>
-      <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+      <div class="fd-com-body">
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+      </div>
     </div>`;
 }
 
-function renderCommentList(postId, listEl) {
+// Перемалювати відкритий лист: заголовок-лічильник + список.
+function renderCommentSheet() {
+  if (!openCommentSheet) return;
+  const { postId, listEl, titleEl } = openCommentSheet;
   const list = commentMap.get(postId) || [];
+  if (titleEl) titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : 'Коментарі';
   listEl.innerHTML = list.length
     ? list.map(commentRowHtml).join('')
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
@@ -278,12 +295,10 @@ function applyCommentUpsert(c) {
   // Автор ще не в кеші імен — дотягнути ім'я/аватар і перемалювати після цього.
   if (c.author_uid && !cachedName(c.author_uid)) {
     fetchAvatars([c.author_uid]).then(() => {
-      if (openCommentSheet && openCommentSheet.postId === c.post_id)
-        renderCommentList(c.post_id, openCommentSheet.listEl);
+      if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
     });
   }
-  if (openCommentSheet && openCommentSheet.postId === c.post_id)
-    renderCommentList(c.post_id, openCommentSheet.listEl);
+  if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
   patchCommentCount(c.post_id);
 }
 
@@ -292,33 +307,52 @@ function applyCommentRemove(c) {
   const arr = commentMap.get(c.post_id);
   if (!arr) return;
   commentMap.set(c.post_id, arr.filter(x => x.id !== c.id));
-  if (openCommentSheet && openCommentSheet.postId === c.post_id)
-    renderCommentList(c.post_id, openCommentSheet.listEl);
+  if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
   patchCommentCount(c.post_id);
 }
 
 function openComments(postId) {
+  const myUid = currentUserId();
+  const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
   const sheet = document.createElement('div');
   sheet.className = 'fd-sheet-back';
   sheet.innerHTML = `
-    <div class="fd-sheet">
+    <div class="fd-sheet fd-com-sheet">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">Коментарі</div>
+      <div class="fd-sheet-title fd-com-title">Коментарі</div>
       <div class="fd-com-list"></div>
       <div class="fd-com-compose">
-        <input class="fd-com-input" type="text" placeholder="Написати коментар…" maxlength="1000">
+        <span class="fd-com-ava fd-com-myava">${myAva}</span>
+        <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
         <button class="fd-com-send" type="button">${IC_SEND}</button>
       </div>
     </div>`;
   const listEl = sheet.querySelector('.fd-com-list');
-  renderCommentList(postId, listEl);
-  openCommentSheet = { postId, back: sheet, listEl };
+  const titleEl = sheet.querySelector('.fd-com-title');
+  openCommentSheet = { postId, back: sheet, listEl, titleEl };
+  renderCommentSheet();
+  // Свій аватар/ім'я для компоузера могли бути не в кеші — дотягнути й оновити.
+  if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
+    const el = sheet.querySelector('.fd-com-myava');
+    if (el) el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
+  });
 
   const close = () => {
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
+
+  // Видалення свого коментаря (мета-рядок «Видалити»).
+  listEl.addEventListener('click', async e => {
+    const del = e.target.closest('[data-del-com]');
+    if (!del) return;
+    const id = Number(del.dataset.delCom);
+    if (!confirm('Видалити коментар?')) return;
+    const res = await deletePageComment(id);
+    if (res.ok) applyCommentRemove({ id, post_id: postId });   // realtime теж прийде — дедуп
+    else alert('Не вдалося видалити: ' + (res.error || ''));
+  });
 
   const input = sheet.querySelector('.fd-com-input');
   const sendBtn = sheet.querySelector('.fd-com-send');

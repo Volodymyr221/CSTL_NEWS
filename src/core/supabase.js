@@ -1083,6 +1083,14 @@ export async function addPageComment(postId, uid, text) {
   return error ? { ok: false, error: error.message } : { ok: true, comment: data };
 }
 
+// Мʼяке видалення свого коментаря (RLS pcom update — автор або адмін сторінки).
+export async function deletePageComment(commentId) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { error } = await supa.from('page_comments')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', commentId);
+  return error ? { ok: false, error: error.message } : { ok: true };
+}
+
 // Мої сторінки (де я власник/адмін) → Set page_id — для показу поля «написати пост».
 export async function fetchMyEditablePageIds() {
   if (!supa) return new Set();
