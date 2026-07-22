@@ -154,9 +154,11 @@
 
 .fd-screen-id { text-align: center; margin-top: -42px; padding: 0 20px 4px; position: relative; z-index: 1; }
 .fd-screen-ava-wrap { display: inline-block; position: relative; width: 84px; height: 84px; }
-/* М'яка тінь під аватаркою (як у первинній перебудові) */
+/* Тінь аватарки — РІВНОМІРНА навколо (зсув 0), ті самі blur/прозорість що в .fd-screen-body:
+   верхня половина кружечка виступає на банер → кидає таку саму тінь, що й край блоку →
+   аватарка + верхній край блоку читаються одним силуетом, без перепаду на межі. */
 .fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--fd-bg);
-  overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+  overflow: hidden; box-shadow: 0 0 18px rgba(0,0,0,0.20); }
 .fd-screen-ava-img--ph { font-size: 32px; }
 .fd-ava-edit { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; border-radius: 50%;
   border: 3px solid var(--fd-bg); background: var(--fd-accent); color: #fff; cursor: pointer; display: grid; place-items: center; }
