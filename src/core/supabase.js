@@ -1151,6 +1151,16 @@ export async function createPagePost(pageId, uid, text, imageUrls = []) {
   return error ? { ok: false, error: error.message } : { ok: true, post: data };
 }
 
+// Оновити пост (текст/фото) — власник/адмін сторінки (RLS pposts update = can_edit_page).
+export async function updatePagePost(postId, patch) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.from('page_posts')
+    .update(patch).eq('id', postId)
+    .select('id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)')
+    .single();
+  return error ? { ok: false, error: error.message } : { ok: true, post: data };
+}
+
 // М'яке видалення поста (власник/адмін сторінки).
 export async function deletePagePost(postId) {
   if (!supa) return { ok: false };

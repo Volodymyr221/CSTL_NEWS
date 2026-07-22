@@ -82,6 +82,15 @@
 .fd-head-txt { display: flex; flex-direction: column; line-height: 1.25; min-width: 0; }
 .fd-page-name { font-weight: 700; font-size: 14.5px; color: var(--fd-ink); }
 .fd-time { font-size: 12px; color: var(--fd-muted); }
+/* «⋯» поста (лише власник/адмін сторінки) — справа у шапці картки. */
+.fd-card-menu { margin-left: auto; flex: none; width: 32px; height: 32px; padding: 0; border: 0;
+  background: none; cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
+.fd-card-menu svg { width: 20px; height: 20px; }
+/* Меню поста (нижній лист): Редагувати / Видалити. */
+.fd-postmenu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 8px;
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 16px; color: var(--fd-ink); text-align: left; }
+.fd-postmenu-item svg { width: 20px; height: 20px; flex: none; }
+.fd-postmenu-item--danger { color: #c0392b; }
 
 .fd-text { padding: 2px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
 
