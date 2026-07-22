@@ -93,6 +93,10 @@ function lsSet(key, value) {
 function getComments(postId) {
   return commentsByPost.get(postId) || [];
 }
+// Невидалені повідомлення (для лічильників/прев'ю/учасників) — видалені не рахуємо.
+function activeComments(postId) {
+  return getComments(postId).filter(c => !c.deleted_at);
+}
 
 // Чи це моє повідомлення (для right-вирівнювання у чаті) — за sender_uid з БД,
 // тільки коли залогінений (account-bound, синхрон між пристроями).
@@ -185,22 +189,23 @@ function authorAvatar(author, uid) {
 // Контейнер має data-comments-for щоб realtime/optimistic оновлення його перемальовували.
 // Поле вводу — окремо у модалці (поза стрічкою), тому переживає перемальовування.
 function chatMessagesHtml(post) {
-  const items = getComments(post.id);
+  const all = getComments(post.id);
+  // Видалені повідомлення прибираємо повністю (як Telegram) — без плашки-сліду.
+  // byId будуємо з УСІХ (разом із видаленими), щоб цитата-відповідь на видалене
+  // могла показати «Видалене повідомлення».
+  const items = all.filter(c => !c.deleted_at);
   if (!items.length) {
     return `<div class="bd-chat-stream" data-comments-for="${post.id}">
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>Поки порожньо.<br>Напишіть перше повідомлення</div>
     </div>`;
   }
-  const byId = new Map(items.map(c => [c.id, c]));
+  const byId = new Map(all.map(c => [c.id, c]));
   const dividerTs = _chatDividerTs;
   let hadOld = false, dividerPlaced = false, lastDay = null;
 
   // Бульбашка у форматі приватного чату: цитата-відповідь + текст + конкретний час;
   // плейсхолдери видаленого/редагованого. data-msg/data-tag — для жестів/меню (UI-B).
   const renderDiscBubble = (c) => {
-    if (c.deleted_at) {
-      return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ''}"><span class="pm-bubble-text">${ICONS.trash} Повідомлення видалено</span></div>`;
-    }
     const reply = c.reply_to_id ? byId.get(c.reply_to_id) : null;
     const replyHtml = reply
       ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? 'Видалене повідомлення' : (reply.text || '')).slice(0, 90))}</span>`
@@ -286,7 +291,7 @@ function updateChatHeaderCount(postId) {
   if (postId !== _chatOpenPostId) return;
   const el = document.getElementById('bd-chat-reply-count');
   if (el) {
-    const n = getComments(postId).length;
+    const n = activeComments(postId).length;
     el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
   }
 }
@@ -440,7 +445,7 @@ export function openChatModal(post) {
   _chatOpenPostId = post.id;
   _chatDividerTs = getChatSeen(post.id);
   _chatUnseen = 0;
-  const replyCount = getComments(post.id).length;
+  const replyCount = activeComments(post.id).length;
 
   const backdrop = document.createElement('div');
   backdrop.className = 'board-backdrop bd-chat-backdrop';
@@ -739,9 +744,9 @@ async function doDiscDelete(c) {
 
 // CHAT: картка-прев'ю теми обговорення. Тап по картці → повноекранна модалка-чат.
 export function renderChatCard(p) {
-  const comments = getComments(p.id);
+  const comments = activeComments(p.id);   // видалені не рахуємо і не показуємо
   const count = comments.length;
-  const recent = comments.slice(-2);   // два останніх повідомлення у прев'ю картки
+  const recent = comments.slice(-2);   // два останніх (невидалених) повідомлення у прев'ю картки
   // Унікальні учасники чату — за uid акаунту (той самий юзер зі зміненим іменем
   // рахується РАЗ; анонімів без uid зводимо за іменем як раніше).
   const participants = new Set(comments.map(c => c.sender_uid || ('nm:' + (c.author || 'Житель')))).size;

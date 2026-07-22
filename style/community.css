@@ -2696,17 +2696,10 @@
 /* Обговорення (Вова 20.07): пошук БІЛИЙ (був #FAF8EF = колір карток) — на глибшому
    фоні відділяється; scoped під #disc-content, Дошки не чіпає. */
 #disc-content .bd-search { background: #FFFFFF; }
-/* Варіант C (Вова 21.07): шапка Обговорень — ГОСТРІ кути + БЕЗ важкої тіні
-   (заокруглені кути+тінь виглядали як груба «полиця»). Замість тіні — тонка
-   лінія-розділювач знизу. Scoped під #disc-content → Дошки НЕ чіпає. */
-#disc-content .bd-controls {
-  border-bottom-left-radius: 0;
-  border-bottom-right-radius: 0;
-  box-shadow: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.10);
-}
-/* Пошук-пігулку теж менш заокруглюємо (14→6px) під гострий вигляд шапки. */
-#disc-content .bd-search { border-radius: 6px; }
+/* Обговорення (Вова 22.07): шапка й пошук заокруглені ЯК НА ДОШЦІ — прибрано
+   варіант C (гострі кути 6px + розділювач замість тіні). .bd-controls повертається
+   до базового вигляду (заокруглені нижні кути 12px + тінь), пошук — 14px як на Дошці. */
+#disc-content .bd-search { border-radius: 14px; }
 /* Розширити картки: бічний відступ стрічки 14→10px (картки ширші на 8px сумарно). */
 #disc-content .bd-stream { padding-left: 10px; padding-right: 10px; }
 
@@ -2726,10 +2719,14 @@
   box-shadow: 0 3px 10px rgba(0,0,0,0.10);
 }
 .bd-search-icon {
-  font-size: 14px;
+  font-size: 16px;   /* 1em-масштаб SVG-лупи (ICONS.search) */
   margin-right: 8px;
   opacity: 0.6;
+  display: inline-flex;
+  align-items: center;
+  color: var(--ink, #2b2b2b);
 }
+.bd-search-icon svg { width: 1em; height: 1em; display: block; }
 .bd-search-input {
   flex: 1;
   background: transparent;
