@@ -2,7 +2,7 @@ import { bootApp } from './core/boot.js';
 import { initWeather } from './core/weather.js';
 import { initCommunity } from './tabs/community.js';
 import { initNews } from './tabs/news.js';
-import { initEvents } from './tabs/events.js';
+import { initFeed } from './tabs/feed.js';   // «Стрічка» (events.js лишається для Етапу 6 — Афіша громади)
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard } from './tabs/board.js';
@@ -224,7 +224,7 @@ function init() {
   initWeather();
   initCommunity();
   initNews();
-  initEvents();
+  initFeed();            // «Стрічка» — сторінки-канали (замінила стрічку подій «Шо в селі»)
   initBuses();
   initSavedRoutesHeader();   // дані відстеження + банер (Б7.3: без окремої іконки — тепер через хаб)
   initSavedHub();            // хаб «Збережені» (іконка 🔖 в шапці)

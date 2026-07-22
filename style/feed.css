@@ -1,0 +1,178 @@
+/* style/feed.css — «Стрічка»: сторінки-канали громади (мінісоцмережа).
+   Сучасний вигляд: чисті картки, повітря, stories-кружечки, палітра додатку. */
+
+/* Шапка вкладки */
+.fd-head {
+  position: sticky; top: 0; z-index: 20;
+  padding: 10px 16px 8px;
+  background: var(--bg, #F4F1E6);
+  background: color-mix(in srgb, var(--bg, #F4F1E6) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px);
+}
+.fd-head-title {
+  margin: 0; font-family: Georgia, serif;
+  font-size: 22px; font-weight: 800; color: var(--black, #2b2b2b);
+}
+
+/* Кружечки-канали (горизонтальний скрол, як stories) */
+.fd-circles-wrap { position: sticky; top: 44px; z-index: 19;
+  background: color-mix(in srgb, var(--bg, #F4F1E6) 88%, transparent);
+  -webkit-backdrop-filter: blur(12px); backdrop-filter: blur(12px); }
+.fd-circles {
+  display: flex; gap: 14px; overflow-x: auto; padding: 6px 16px 12px;
+  scrollbar-width: none;
+}
+.fd-circles::-webkit-scrollbar { display: none; }
+.fd-circle {
+  flex: 0 0 auto; display: flex; flex-direction: column; align-items: center;
+  gap: 6px; width: 64px; background: none; border: 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.fd-circle-ring {
+  width: 60px; height: 60px; border-radius: 50%; padding: 2.5px;
+  background: linear-gradient(135deg, var(--red, #722F37), #c98a92);
+  display: flex; align-items: center; justify-content: center;
+}
+.fd-circle-ava, .fd-screen-ava-img, .fd-ava, .fd-com-ava-img {
+  width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block;
+  background: #fff;
+}
+.fd-circle-ava { border: 2px solid var(--bg, #F4F1E6); }
+.fd-circle-ava--ph, .fd-ava--ph, .fd-screen-ava-img--ph, .fd-com-ava-img--ph {
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--red, #722F37), #9c5860);
+  color: #fff; font-weight: 700; font-family: Georgia, serif;
+}
+.fd-circle-ava--ph { font-size: 22px; border: 2px solid var(--bg, #F4F1E6); }
+.fd-circle-label {
+  font-size: 11px; color: var(--ink, #3a3a3a); line-height: 1.15;
+  max-width: 64px; text-align: center;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+/* Стрічка постів */
+.fd-list { padding: 4px 12px calc(90px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+.fd-empty { text-align: center; color: var(--gray, #8a8a8a); font-size: 14px; line-height: 1.6; padding: 40px 20px; }
+
+.fd-card {
+  background: var(--white, #fff);
+  border-radius: 18px;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.07);
+  overflow: hidden;
+}
+.fd-card-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 10px; cursor: pointer; }
+.fd-ava-wrap { width: 38px; height: 38px; flex: none; }
+.fd-ava { border: 0; }
+.fd-ava--ph { font-size: 16px; }
+.fd-head-txt { display: flex; flex-direction: column; line-height: 1.2; }
+.fd-page-name { font-weight: 700; font-size: 14.5px; color: var(--black, #2b2b2b); }
+.fd-time { font-size: 12px; color: var(--gray, #9a9a9a); }
+
+.fd-photo { width: 100%; background: #f0ece1; }
+.fd-photo img { width: 100%; display: block; max-height: 460px; object-fit: cover; }
+
+.fd-text { padding: 12px 14px 4px; font-size: 15.5px; line-height: 1.55; color: var(--black, #2b2b2b); white-space: pre-wrap; word-break: break-word; }
+.fd-author { padding: 2px 14px 0; font-size: 12.5px; color: var(--gray, #8a8a8a); }
+
+.fd-actions { display: flex; gap: 18px; padding: 10px 14px 12px; }
+.fd-like, .fd-cbtn {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: none; border: 0; cursor: pointer; padding: 4px 2px;
+  color: var(--ink, #555); font-size: 14px; -webkit-tap-highlight-color: transparent;
+}
+.fd-like .fd-ic, .fd-cbtn .fd-ic { width: 22px; height: 22px; display: inline-flex; }
+.fd-like .fd-ic svg, .fd-cbtn .fd-ic svg { width: 22px; height: 22px; }
+.fd-like--on { color: var(--red, #722F37); }
+.fd-cnt { min-width: 8px; font-variant-numeric: tabular-nums; }
+
+/* ── Екран сторінки (Екран 2) ── */
+.fd-screen {
+  position: fixed; inset: 0; z-index: 1200;
+  background: var(--bg, #F4F1E6); overflow-y: auto;
+  transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.32,0.72,0,1);
+  -webkit-overflow-scrolling: touch;
+}
+.fd-screen.open { transform: translateX(0); }
+.fd-screen-top { position: relative; height: 150px; background: linear-gradient(135deg, #4a3138, var(--red, #722F37)); }
+.fd-banner { position: absolute; inset: 0; }
+.fd-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fd-screen-back, .fd-bell {
+  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 2;
+  width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(0,0,0,0.35); color: #fff; display: flex; align-items: center; justify-content: center;
+  -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
+}
+.fd-screen-back { left: 12px; }
+.fd-bell { right: 12px; }
+.fd-screen-back svg, .fd-bell svg { width: 22px; height: 22px; }
+.fd-bell--on { background: #fff; color: var(--red, #722F37); }
+
+.fd-screen-id { text-align: center; margin-top: -40px; padding: 0 20px 4px; position: relative; z-index: 1; }
+.fd-screen-ava { display: inline-block; width: 84px; height: 84px; border-radius: 50%;
+  border: 4px solid var(--bg, #F4F1E6); overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+.fd-screen-ava-img--ph { font-size: 32px; }
+.fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; margin-top: 8px; color: var(--black, #2b2b2b); }
+.fd-screen-theme { font-size: 13px; color: var(--gray, #8a8a8a); margin-top: 2px; }
+
+.fd-compose-open {
+  display: flex; align-items: center; gap: 10px; width: calc(100% - 24px); margin: 14px 12px 4px;
+  padding: 12px 16px; border: 0; border-radius: 14px; cursor: pointer;
+  background: var(--white, #fff); box-shadow: 0 3px 12px rgba(0,0,0,0.06);
+  color: var(--gray, #8a8a8a); font-size: 15px; text-align: left;
+}
+.fd-compose-open svg { width: 22px; height: 22px; color: var(--red, #722F37); }
+.fd-screen-list { padding: 10px 12px calc(30px + env(safe-area-inset-bottom, 0px)); display: flex; flex-direction: column; gap: 14px; }
+
+/* ── Нижні листи (коментарі / композер) ── */
+.fd-sheet-back {
+  position: fixed; inset: 0; z-index: 1300; background: rgba(0,0,0,0.45);
+  display: flex; align-items: flex-end; justify-content: center;
+  opacity: 0; transition: opacity 0.2s ease;
+}
+.fd-sheet-back.open { opacity: 1; }
+.fd-sheet {
+  width: 100%; max-width: 640px; max-height: 80svh; overflow-y: auto;
+  background: var(--white, #fff); border-radius: 20px 20px 0 0;
+  padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.32,0.72,0,1);
+}
+.fd-sheet-back.open .fd-sheet { transform: translateY(0); }
+.fd-sheet-handle { width: 40px; height: 4px; border-radius: 2px; background: #d1d5db; margin: 4px auto 12px; }
+.fd-sheet-title { font-weight: 700; font-size: 16px; margin-bottom: 12px; color: var(--black, #2b2b2b); }
+
+.fd-com-list { display: flex; flex-direction: column; gap: 12px; margin-bottom: 12px; }
+.fd-com-empty { color: var(--gray, #9a9a9a); font-size: 14px; text-align: center; padding: 20px; }
+.fd-com-row { display: flex; gap: 10px; }
+.fd-com-ava { width: 34px; height: 34px; flex: none; }
+.fd-com-body { display: flex; flex-direction: column; line-height: 1.35; }
+.fd-com-name { font-weight: 700; font-size: 13px; color: var(--black, #2b2b2b); }
+.fd-com-txt { font-size: 14.5px; color: var(--ink, #3a3a3a); word-break: break-word; }
+
+.fd-com-compose, .fd-comp-bar { display: flex; gap: 10px; align-items: center; }
+.fd-com-input {
+  flex: 1; height: 42px; padding: 0 14px; border-radius: 21px;
+  border: 1.5px solid rgba(0,0,0,0.14); background: var(--gray-light, #f3f1ea);
+  font-size: 16px; font-family: inherit; outline: none; color: var(--black, #2b2b2b);
+}
+.fd-com-send, .fd-comp-photo {
+  width: 42px; height: 42px; flex: none; border-radius: 50%; border: 0; cursor: pointer;
+  background: var(--red, #722F37); color: #fff; display: flex; align-items: center; justify-content: center;
+}
+.fd-com-send svg, .fd-comp-photo svg { width: 20px; height: 20px; }
+
+/* Композер поста */
+.fd-comp-text {
+  width: 100%; border: 0; outline: none; resize: none; font-family: inherit;
+  font-size: 16px; line-height: 1.5; color: var(--black, #2b2b2b); padding: 4px 2px 10px;
+}
+.fd-comp-preview { margin-bottom: 12px; }
+.fd-comp-preview img { width: 100%; border-radius: 12px; display: block; }
+.fd-comp-bar { justify-content: space-between; }
+.fd-comp-photo { background: var(--gray-light, #f3f1ea); color: var(--red, #722F37); }
+.fd-comp-send {
+  height: 42px; padding: 0 22px; border: 0; border-radius: 21px; cursor: pointer;
+  background: var(--red, #722F37); color: #fff; font-size: 15px; font-weight: 700;
+}
+.fd-comp-send:disabled { opacity: 0.6; }
+
+/* Темна тема — успадковує змінні; картки трохи темніші за фон уже через --white */

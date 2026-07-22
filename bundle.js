@@ -1191,6 +1191,114 @@
         console.warn("[supabase] logEvent:", error.message);
     });
   }
+  async function fetchPages() {
+    if (!supa)
+      return [];
+    const { data, error } = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system").order("created_at", { ascending: true });
+    if (error) {
+      console.warn("[supabase] fetchPages:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function fetchPagePosts(pageId = null, limit = 60) {
+    if (!supa)
+      return [];
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    if (pageId != null)
+      q = q.eq("page_id", pageId);
+    const { data, error } = await q;
+    if (error) {
+      console.warn("[supabase] fetchPagePosts:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function fetchPageReactions(userKey2) {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("page_reactions").select("post_id, user_id");
+    if (error) {
+      console.warn("[supabase] fetchPageReactions:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const r of data || []) {
+      if (!map.has(r.post_id))
+        map.set(r.post_id, { count: 0, my: false });
+      const e = map.get(r.post_id);
+      e.count++;
+      if (r.user_id === userKey2)
+        e.my = true;
+    }
+    return map;
+  }
+  async function setPageReaction(postId, userKey2, on) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!on) {
+      const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey2);
+      return error2 ? { ok: false, error: error2.message } : { ok: true };
+    }
+    const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey2, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
+  async function fetchPageComments() {
+    if (!supa)
+      return /* @__PURE__ */ new Map();
+    const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at").is("deleted_at", null).order("created_at", { ascending: true });
+    if (error) {
+      console.warn("[supabase] fetchPageComments:", error.message);
+      return /* @__PURE__ */ new Map();
+    }
+    const map = /* @__PURE__ */ new Map();
+    for (const c of data || []) {
+      if (!map.has(c.post_id))
+        map.set(c.post_id, []);
+      map.get(c.post_id).push(c);
+    }
+    return map;
+  }
+  async function addPageComment(postId, uid, text) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text }).select().single();
+    return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  }
+  async function fetchMyEditablePageIds() {
+    if (!supa)
+      return /* @__PURE__ */ new Set();
+    const { data, error } = await supa.from("page_admins").select("page_id");
+    if (error) {
+      console.warn("[supabase] page_admins:", error.message);
+      return /* @__PURE__ */ new Set();
+    }
+    return new Set((data || []).map((r) => r.page_id));
+  }
+  async function createPagePost(pageId, uid, text, imageUrl = null) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("page_posts").insert({ page_id: pageId, author_uid: uid, text, image_url: imageUrl }).select("id, page_id, author_uid, text, image_url, created_at, pages(name, avatar_url)").single();
+    return error ? { ok: false, error: error.message } : { ok: true, post: data };
+  }
+  async function fetchMySubscriptions() {
+    if (!supa)
+      return /* @__PURE__ */ new Set();
+    const { data, error } = await supa.from("page_subscriptions").select("page_id");
+    if (error)
+      return /* @__PURE__ */ new Set();
+    return new Set((data || []).map((r) => r.page_id));
+  }
+  async function setPageSubscription(pageId, uid, on) {
+    if (!supa)
+      return { ok: false };
+    if (!on) {
+      const { error: error2 } = await supa.from("page_subscriptions").delete().eq("page_id", pageId).eq("uid", uid);
+      return error2 ? { ok: false, error: error2.message } : { ok: true };
+    }
+    const { error } = await supa.from("page_subscriptions").upsert({ page_id: pageId, uid }, { onConflict: "page_id,uid" });
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
 
   // src/core/auth.js
   var _user = null;
@@ -3430,7 +3538,7 @@
       <button class="pm-fab-ad" type="button" data-new-ad aria-label="\u041D\u043E\u0432\u0435 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">${EDIT_ICON_SVG}</button>
     `, "pm-screen--ads");
       const listEl = api.screen.querySelector("#pm-ads");
-      let [posts, threads, unread] = await Promise.all([
+      let [posts2, threads, unread] = await Promise.all([
         fetchMyPosts(me),
         fetchMyThreads(me),
         fetchUnreadByThread(me)
@@ -3512,7 +3620,7 @@
       };
       function render2() {
         openRow = null;
-        const list = posts.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
+        const list = posts2.filter((p) => (AD_STATUS[p.status]?.group || "active") === filter);
         if (!list.length) {
           const empty = {
             active: `<span class="pm-empty-ic">${ICONS.clipboard}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0430\u043A\u0442\u0438\u0432\u043D\u0438\u0445 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C.<br>\u041F\u043E\u0434\u0430\u0439\u0442\u0435 \u043F\u0435\u0440\u0448\u0435 \u2014 \u043A\u043D\u043E\u043F\u043A\u0430 \u0432\u043D\u0438\u0437\u0443.`,
@@ -3636,7 +3744,7 @@
           bumpBtn.disabled = true;
           const r = await bumpPost(Number(bumpBtn.dataset.bump));
           if (r.ok) {
-            const p = posts.find((x) => String(x.id) === bumpBtn.dataset.bump);
+            const p = posts2.find((x) => String(x.id) === bumpBtn.dataset.bump);
             if (p)
               p.bumped_at = r.bumped_at || (/* @__PURE__ */ new Date()).toISOString();
             showToast("\u{1F53C} \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u043E \u0432\u0433\u043E\u0440\u0443", 2500);
@@ -3645,7 +3753,7 @@
             const h = Math.floor((r.seconds_left || 0) / 3600);
             const m = Math.max(1, Math.ceil((r.seconds_left || 0) % 3600 / 60));
             showToast(`\u041F\u0456\u0434\u043D\u044F\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u0440\u0430\u0437 \u043D\u0430 3 \u0433\u043E\u0434. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0447\u0435\u0440\u0435\u0437 ${h > 0 ? h + " \u0433\u043E\u0434" : m + " \u0445\u0432"}.`, 3500);
-            const p = posts.find((x) => String(x.id) === bumpBtn.dataset.bump);
+            const p = posts2.find((x) => String(x.id) === bumpBtn.dataset.bump);
             if (p)
               p.bumped_at = new Date(Date.now() - (BUMP_COOLDOWN_MS - (r.seconds_left || 0) * 1e3)).toISOString();
             render2();
@@ -3665,7 +3773,7 @@
           closeMenus(null);
           const id = Number(act.dataset.id);
           if (act.dataset.act === "edit") {
-            const p = posts.find((x) => x.id === id);
+            const p = posts2.find((x) => x.id === id);
             if (p)
               openBoardModal({ editPost: p });
             return;
@@ -3673,7 +3781,7 @@
           if (act.dataset.act === "close") {
             const r = await closePost(id);
             if (r.ok) {
-              const p = posts.find((x) => x.id === id);
+              const p = posts2.find((x) => x.id === id);
               if (p)
                 p.status = "closed";
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2014 \u0443 \u0410\u0440\u0445\u0456\u0432\u0456", 2800);
@@ -3684,7 +3792,7 @@
           } else if (act.dataset.act === "restore") {
             const r = await restorePost(id);
             if (r.ok) {
-              const p = posts.find((x) => x.id === id);
+              const p = posts2.find((x) => x.id === id);
               if (p)
                 p.status = "published";
               showToast("\u21A9\uFE0F \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u043E \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456", 2800);
@@ -3699,7 +3807,7 @@
               return;
             const r = await deleteMyPost(id);
             if (r.ok) {
-              posts = posts.filter((x) => x.id !== id);
+              posts2 = posts2.filter((x) => x.id !== id);
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2500);
               render2();
             } else
@@ -3709,7 +3817,7 @@
         }
         const open = e.target.closest("[data-open-ad]");
         if (open) {
-          const p = posts.find((x) => String(x.id) === open.dataset.openAd);
+          const p = posts2.find((x) => String(x.id) === open.dataset.openAd);
           if (p)
             window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
         }
@@ -3720,8 +3828,8 @@
       });
     });
   }
-  function openSavedAds(posts, opts = {}) {
-    let list = Array.isArray(posts) ? posts.slice() : [];
+  function openSavedAds(posts2, opts = {}) {
+    let list = Array.isArray(posts2) ? posts2.slice() : [];
     const api = buildScreen(`
     <header class="pm-head pm-head--list">
       <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
@@ -4312,8 +4420,8 @@ ${post.text}
       input?.removeEventListener("blur", handler);
     };
   }
-  function openDiscussionList(title, posts) {
-    const body = posts.length ? posts.map(renderChatCard).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
+  function openDiscussionList(title, posts2) {
+    const body = posts2.length ? posts2.map(renderChatCard).join("") : '<div class="disc-sheet-empty">\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E</div>';
     openDiscSheet({ title, bodyHtml: `<div class="disc-sheet-list">${body}</div>` });
   }
   function openMyDiscussions() {
@@ -5327,15 +5435,15 @@ ${post.text}
       return;
     if (isSupabaseReady()) {
       const uid = currentUserId();
-      const [posts, anns, comments, saved, reactions] = await Promise.all([
+      const [posts2, anns, comments, saved, reactions] = await Promise.all([
         fetchPublishedPosts(),
         fetchPublishedAnnouncements(),
         fetchAllComments(),
         uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set()),
         fetchAllReactions(uid || getAnonId())
       ]);
-      if (posts !== null) {
-        allPosts = posts;
+      if (posts2 !== null) {
+        allPosts = posts2;
         allAnnouncements = anns || [];
         setDiscussionsData(comments, reactions);
         setSavedIds(saved);
@@ -8176,11 +8284,11 @@ ${post.text}
         const ids = [...await fetchSavedPostIds(currentUserId())];
         if (ids.length) {
           const supa2 = getSupabase();
-          const { data: posts, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
+          const { data: posts2, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
           if (error)
             throw error;
-          data.chats = (posts || []).filter((p) => p.type === "chat");
-          data.boards = (posts || []).filter((p) => p.type !== "chat");
+          data.chats = (posts2 || []).filter((p) => p.type === "chat");
+          data.boards = (posts2 || []).filter((p) => p.type !== "chat");
         }
       } catch (e) {
         console.warn("[saved-hub] posts", e);
@@ -8711,43 +8819,6 @@ ${post.text}
     document.body.removeChild(a);
     setTimeout(() => URL.revokeObjectURL(url), 1500);
   }
-  function renderSkeleton(el) {
-    el.innerHTML = Array(3).fill(`
-    <div class="ev-skeleton">
-      <div class="ev-skel-img"></div>
-      <div class="ev-skel-body">
-        <div class="ev-skel-line w60"></div>
-        <div class="ev-skel-line w100"></div>
-        <div class="ev-skel-line w80"></div>
-        <div class="ev-skel-line w40"></div>
-      </div>
-    </div>
-  `).join("");
-  }
-  function cardHtml2(ev) {
-    const catC = catColor3(ev.category);
-    let cover;
-    if (ev.image) {
-      cover = `<img class="shotam-card-cover" src="${escapeHtml(ev.image)}" alt="" loading="lazy">`;
-    } else {
-      const grad = ev.cover_gradient || "linear-gradient(135deg, #999 0%, #555 100%)";
-      cover = `<div class="shotam-card-cover shotam-card-cover--art" style="background:${escapeHtml(grad)}"><span>${ev.cover_emoji || "\u{1F4C5}"}</span></div>`;
-    }
-    const when = ev.time ? `${formatFullDate(ev.date)}, ${ev.time}` : formatFullDate(ev.date);
-    const loc = ev.location ? ` \xB7 ${escapeHtml(ev.location)}` : "";
-    return `
-    <article class="shotam-card" data-id="${ev.id}">
-      ${cover}
-      <div class="shotam-card-body">
-        <div class="news-card-meta">
-          <span class="news-badge news-badge--cat" style="background:${catC}">${escapeHtml(ev.category)}</span>
-        </div>
-        <h2 class="shotam-card-title">${escapeHtml(ev.title)}</h2>
-        ${ev.description ? `<p class="shotam-card-excerpt">${escapeHtml(ev.description)}</p>` : ""}
-        <div class="shotam-card-footer">${escapeHtml(when)}${loc}</div>
-      </div>
-    </article>`;
-  }
   function openShotamModal(id) {
     const ev = allEvents.find((e) => e.id === id);
     if (!ev)
@@ -8805,68 +8876,6 @@ ${ev.description || ""}`
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
-  }
-  function getFiltered() {
-    const now = /* @__PURE__ */ new Date();
-    now.setHours(0, 0, 0, 0);
-    return allEvents.filter((e) => {
-      if (e.auto)
-        return false;
-      const d = /* @__PURE__ */ new Date(e.date + "T00:00:00");
-      return d >= now;
-    }).sort((a, b) => {
-      const byDate = new Date(a.date) - new Date(b.date);
-      if (byDate !== 0)
-        return byDate;
-      return (a.time || "").localeCompare(b.time || "");
-    });
-  }
-  function renderList() {
-    const el = document.getElementById("events-list");
-    if (!el)
-      return;
-    const list = getFiltered();
-    if (!list.length) {
-      el.innerHTML = `<div class="empty-state">\u041F\u043E\u043A\u0438 \u043D\u0456\u0447\u043E\u0433\u043E \u043D\u043E\u0432\u043E\u0433\u043E \u0443 \u0441\u0435\u043B\u0456</div>`;
-      return;
-    }
-    el.innerHTML = list.map(cardHtml2).join("");
-    el.querySelectorAll(".shotam-card").forEach((card) => {
-      card.addEventListener("click", () => {
-        const id = Number(card.dataset.id);
-        if (Number.isFinite(id))
-          openShotamModal(id);
-      });
-    });
-  }
-  function handleEvImgError(e) {
-    const img = e.target;
-    if (!img || img.tagName !== "IMG")
-      return;
-    const ph = document.createElement("div");
-    ph.className = img.className + " img-fallback";
-    ph.textContent = "\u{1F3F0}";
-    img.replaceWith(ph);
-  }
-  async function initEvents() {
-    const el = document.getElementById("events-list");
-    if (el) {
-      renderSkeleton(el);
-      el.addEventListener("error", handleEvImgError, true);
-    }
-    try {
-      const [evRes, holRes] = await Promise.all([
-        fetch("./data/events.json"),
-        fetch("./data/holidays.json")
-      ]);
-      const events = await evRes.json();
-      const holData = await holRes.json();
-      const holidays = (holData.holidays || []).map((h) => ({ ...h, time: null, location: null }));
-      allEvents = [...events, ...holidays];
-    } catch {
-      allEvents = [];
-    }
-    renderList();
   }
 
   // src/tabs/community-blocks.js
@@ -9365,19 +9374,19 @@ ${ev.description || ""}`
       return;
     bwStopAuto();
     try {
-      let posts = [], usedSupabase = false;
+      let posts2 = [], usedSupabase = false;
       if (isSupabaseReady()) {
         const p = await fetchPublishedPosts();
         if (p !== null) {
-          posts = p;
+          posts2 = p;
           usedSupabase = true;
         }
       }
       if (!usedSupabase) {
         const boardRes = await fetch("./data/community-board.json");
-        posts = (await boardRes.json()).posts || [];
+        posts2 = (await boardRes.json()).posts || [];
       }
-      const ads = posts.filter((p) => (p.type || "board") === "board");
+      const ads = posts2.filter((p) => (p.type || "board") === "board");
       const shown = bwShuffle(ads).slice(0, BW_MAX_CARDS);
       const cards = shown.map(bwCardHtml).join("");
       el.classList.remove("cm-loading");
@@ -9929,7 +9938,7 @@ ${ev.description || ""}`
     const m = ["\u0441\u0456\u0447\u043D\u044F", "\u043B\u044E\u0442\u043E\u0433\u043E", "\u0431\u0435\u0440\u0435\u0437\u043D\u044F", "\u043A\u0432\u0456\u0442\u043D\u044F", "\u0442\u0440\u0430\u0432\u043D\u044F", "\u0447\u0435\u0440\u0432\u043D\u044F", "\u043B\u0438\u043F\u043D\u044F", "\u0441\u0435\u0440\u043F\u043D\u044F", "\u0432\u0435\u0440\u0435\u0441\u043D\u044F", "\u0436\u043E\u0432\u0442\u043D\u044F", "\u043B\u0438\u0441\u0442\u043E\u043F\u0430\u0434\u0430", "\u0433\u0440\u0443\u0434\u043D\u044F"][d.getMonth()];
     return `${wd} \xB7 ${d.getDate()} ${m}`;
   }
-  function renderSkeleton2() {
+  function renderSkeleton() {
     const el = document.getElementById("cm-content");
     if (!el)
       return;
@@ -10157,7 +10166,7 @@ ${ev.description || ""}`
     onScroll();
   }
   function initCommunity() {
-    renderSkeleton2();
+    renderSkeleton();
     attachSwitchTabDelegation();
     startHeroRotator();
     initCenterFocus();
@@ -10185,6 +10194,363 @@ ${ev.description || ""}`
       const tab = target.dataset.switchTab;
       if (tab && typeof window.switchTab === "function")
         window.switchTab(tab);
+    });
+  }
+
+  // src/tabs/feed.js
+  var IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
+  var IC_HEART_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
+  var IC_COMMENT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.4 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 8.5-8.5 8.5 8.5 0 0 1 8.5 8.5z"/></svg>';
+  var IC_BELL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M10 5a2 2 0 1 1 4 0a7 7 0 0 1 4 6v3a4 4 0 0 0 2 3h-16a4 4 0 0 0 2 -3v-3a7 7 0 0 1 4 -6"/><path d="M9 17v1a3 3 0 0 0 6 0v-1"/></svg>';
+  var IC_BELL_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"><path d="M14.235 19c.865 0 1.322 1.024.745 1.668A3.992 3.992 0 0 1 12 22a3.992 3.992 0 0 1-2.98-1.332c-.552-.616-.158-1.579.634-1.661L10 19h4.235z"/><path d="M12 2c1.358 0 2.506.903 2.875 2.141l.046.171.008.043a8.013 8.013 0 0 1 4.024 6.069l.028.287L19 11v2.931l.021.136a3 3 0 0 0 1.143 1.847l.167.117.162.099c.86.487.56 1.766-.377 1.864L20 18H4c-1.028 0-1.387-1.364-.493-1.87a3 3 0 0 0 1.472-2.063L5 13.924V11c0-2.71 1.346-5.152 3.454-6.62A3.002 3.002 0 0 1 12 2z"/></svg>';
+  var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
+  var IC_IMG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M15 8h.01"/><path d="M3 6a3 3 0 0 1 3 -3h12a3 3 0 0 1 3 3v12a3 3 0 0 1 -3 3h-12a3 3 0 0 1 -3 -3v-12z"/><path d="M3 16l5 -5c.928 -.893 2.072 -.893 3 0l5 5"/><path d="M14 14l1 -1c.928 -.893 2.072 -.893 3 0l3 3"/></svg>';
+  var IC_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
+  var pages = [];
+  var posts = [];
+  var reactionMap = /* @__PURE__ */ new Map();
+  var commentMap = /* @__PURE__ */ new Map();
+  var myPageIds = /* @__PURE__ */ new Set();
+  var mySubs = /* @__PURE__ */ new Set();
+  var loaded = false;
+  function userKey() {
+    return currentUserId() || getAnonId();
+  }
+  function relTime(iso) {
+    const t = new Date(iso).getTime();
+    if (!Number.isFinite(t))
+      return "";
+    const diff = Math.floor((Date.now() - t) / 1e3);
+    if (diff < 60)
+      return "\u0449\u043E\u0439\u043D\u043E";
+    if (diff < 3600)
+      return `${Math.floor(diff / 60)} \u0445\u0432`;
+    if (diff < 86400)
+      return `${Math.floor(diff / 3600)} \u0433\u043E\u0434`;
+    if (diff < 172800)
+      return "\u0432\u0447\u043E\u0440\u0430";
+    const d = new Date(t);
+    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+  }
+  function avatarHtml(url, name, cls) {
+    const letter = escapeHtml((name || "?").trim().charAt(0).toUpperCase() || "?");
+    if (url)
+      return `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy">`;
+    return `<span class="${cls} ${cls}--ph">${letter}</span>`;
+  }
+  async function loadData2() {
+    const key = userKey();
+    const [pg, ps, rx, cm, mine, subs] = await Promise.all([
+      fetchPages(),
+      fetchPagePosts(null, 60),
+      fetchPageReactions(key),
+      fetchPageComments(),
+      isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
+      isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
+    ]);
+    pages = pg;
+    posts = ps;
+    reactionMap = rx;
+    commentMap = cm;
+    myPageIds = mine;
+    mySubs = subs;
+    const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
+    if (uids.length)
+      await fetchAvatars(uids);
+    loaded = true;
+  }
+  function circlesHtml() {
+    if (!pages.length)
+      return "";
+    return `<div class="fd-circles">${pages.map((p) => `
+    <button class="fd-circle" data-open-page="${p.id}" type="button">
+      <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, "fd-circle-ava")}</span>
+      <span class="fd-circle-label">${escapeHtml(p.name)}</span>
+    </button>`).join("")}</div>`;
+  }
+  function postCardHtml(post) {
+    const page = post.pages || {};
+    const rx = reactionMap.get(post.id) || { count: 0, my: false };
+    const cCount = (commentMap.get(post.id) || []).length;
+    const authorName = post.author_uid ? liveName("", post.author_uid, "") : "";
+    const photo = post.image_url ? `<div class="fd-photo"><img src="${escapeHtml(post.image_url)}" alt="" loading="lazy"></div>` : "";
+    const author = authorName ? `<div class="fd-author"${nameUid(post.author_uid)}>\u2014 ${authorName}</div>` : "";
+    return `
+    <article class="fd-card" data-post="${post.id}">
+      <header class="fd-card-head" data-open-page="${post.page_id}">
+        <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
+        <span class="fd-head-txt">
+          <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
+          <span class="fd-time">${relTime(post.created_at)}</span>
+        </span>
+      </header>
+      ${photo}
+      <div class="fd-text">${escapeHtml(post.text)}</div>
+      ${author}
+      <footer class="fd-actions">
+        <button class="fd-like${rx.my ? " fd-like--on" : ""}" data-like="${post.id}" type="button">
+          <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ""}</span>
+        </button>
+        <button class="fd-cbtn" data-comments="${post.id}" type="button">
+          <span class="fd-ic">${IC_COMMENT}</span><span class="fd-cnt">${cCount || ""}</span>
+        </button>
+      </footer>
+    </article>`;
+  }
+  function renderFeed() {
+    const circlesEl = document.getElementById("feed-circles");
+    const listEl = document.getElementById("feed-list");
+    if (circlesEl)
+      circlesEl.innerHTML = circlesHtml();
+    if (!listEl)
+      return;
+    if (!posts.length) {
+      listEl.innerHTML = `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
+      return;
+    }
+    listEl.innerHTML = posts.map(postCardHtml).join("");
+  }
+  async function toggleLike(postId) {
+    const rx = reactionMap.get(postId) || { count: 0, my: false };
+    const on = !rx.my;
+    reactionMap.set(postId, { count: Math.max(0, rx.count + (on ? 1 : -1)), my: on });
+    patchLike(postId);
+    const res = await setPageReaction(postId, userKey(), on);
+    if (!res.ok) {
+      reactionMap.set(postId, rx);
+      patchLike(postId);
+    }
+  }
+  function patchLike(postId) {
+    const rx = reactionMap.get(postId) || { count: 0, my: false };
+    document.querySelectorAll(`[data-like="${postId}"]`).forEach((btn) => {
+      btn.classList.toggle("fd-like--on", rx.my);
+      btn.querySelector(".fd-ic").innerHTML = rx.my ? IC_HEART_F : IC_HEART_O;
+      btn.querySelector(".fd-cnt").textContent = rx.count || "";
+    });
+  }
+  function openComments(postId) {
+    const list = commentMap.get(postId) || [];
+    const rowsHtml = list.length ? list.map((c) => {
+      const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
+      return `<div class="fd-com-row">
+      <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
+      <div class="fd-com-body"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span>
+      <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+    </div>`;
+    }).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+    const sheet = document.createElement("div");
+    sheet.className = "fd-sheet-back";
+    sheet.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
+      <div class="fd-com-list">${rowsHtml}</div>
+      <div class="fd-com-compose">
+        <input class="fd-com-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
+        <button class="fd-com-send" type="button">${IC_SEND}</button>
+      </div>
+    </div>`;
+    const close = () => sheet.remove();
+    sheet.addEventListener("click", (e) => {
+      if (e.target === sheet)
+        close();
+    });
+    const input = sheet.querySelector(".fd-com-input");
+    const send = async () => {
+      const text = input.value.trim();
+      if (!text)
+        return;
+      if (!isLoggedIn()) {
+        close();
+        requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
+        });
+        return;
+      }
+      input.value = "";
+      const res = await addPageComment(postId, currentUserId(), text);
+      if (res.ok) {
+        const arr = commentMap.get(postId) || [];
+        arr.push(res.comment);
+        commentMap.set(postId, arr);
+        close();
+        openComments(postId);
+        patchCommentCount(postId);
+      } else {
+        input.value = text;
+      }
+    };
+    sheet.querySelector(".fd-com-send").addEventListener("click", send);
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter")
+        send();
+    });
+    document.body.appendChild(sheet);
+    requestAnimationFrame(() => sheet.classList.add("open"));
+  }
+  function patchCommentCount(postId) {
+    const n = (commentMap.get(postId) || []).length;
+    document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
+  }
+  async function openPageScreen(pageId) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page)
+      return;
+    const canEdit = myPageIds.has(pageId);
+    const subscribed = mySubs.has(pageId);
+    const pagePosts = posts.filter((p) => p.page_id === pageId);
+    const screen = document.createElement("div");
+    screen.className = "fd-screen";
+    screen.innerHTML = `
+    <div class="fd-screen-top">
+      <button class="fd-screen-back" type="button">${IC_BACK}</button>
+      <button class="fd-bell${subscribed ? " fd-bell--on" : ""}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
+        ${subscribed ? IC_BELL_F : IC_BELL}
+      </button>
+      <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
+    </div>
+    <div class="fd-screen-id">
+      <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
+      <div class="fd-screen-name">${escapeHtml(page.name)}</div>
+      ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
+    </div>
+    ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
+    <div class="fd-screen-list">${pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>'}</div>`;
+    screen.querySelector(".fd-screen-back").addEventListener("click", () => {
+      screen.classList.remove("open");
+      setTimeout(() => screen.remove(), 240);
+    });
+    const composeBtn = screen.querySelector(".fd-compose-open");
+    if (composeBtn)
+      composeBtn.addEventListener("click", () => openComposer(pageId));
+    wireCards(screen);
+    screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
+    document.body.appendChild(screen);
+    requestAnimationFrame(() => screen.classList.add("open"));
+  }
+  async function toggleBell(pageId, screen) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F", () => {
+      });
+      return;
+    }
+    const on = !mySubs.has(pageId);
+    if (on)
+      mySubs.add(pageId);
+    else
+      mySubs.delete(pageId);
+    const btn = screen.querySelector(".fd-bell");
+    if (btn) {
+      btn.classList.toggle("fd-bell--on", on);
+      btn.innerHTML = on ? IC_BELL_F : IC_BELL;
+    }
+    const res = await setPageSubscription(pageId, currentUserId(), on);
+    if (!res.ok) {
+      if (on)
+        mySubs.delete(pageId);
+      else
+        mySubs.add(pageId);
+      if (btn) {
+        btn.classList.toggle("fd-bell--on", !on);
+        btn.innerHTML = !on ? IC_BELL_F : IC_BELL;
+      }
+    }
+  }
+  function openComposer(pageId) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page)
+      return;
+    let imageBlob = null, imagePreview = null;
+    const back = document.createElement("div");
+    back.className = "fd-sheet-back";
+    back.innerHTML = `
+    <div class="fd-sheet fd-composer">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442 \xB7 ${escapeHtml(page.name)}</div>
+      <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5"></textarea>
+      <div class="fd-comp-preview" hidden></div>
+      <div class="fd-comp-bar">
+        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" hidden></label>
+        <button class="fd-comp-send" type="button">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
+      </div>
+    </div>`;
+    const close = () => back.remove();
+    back.addEventListener("click", (e) => {
+      if (e.target === back)
+        close();
+    });
+    const fileInput = back.querySelector("input[type=file]");
+    const preview = back.querySelector(".fd-comp-preview");
+    fileInput.addEventListener("change", () => {
+      const f = fileInput.files?.[0];
+      if (!f)
+        return;
+      imageBlob = f;
+      if (imagePreview)
+        URL.revokeObjectURL(imagePreview);
+      imagePreview = URL.createObjectURL(f);
+      preview.hidden = false;
+      preview.innerHTML = `<img src="${imagePreview}" alt="">`;
+    });
+    const sendBtn = back.querySelector(".fd-comp-send");
+    sendBtn.addEventListener("click", async () => {
+      const text = back.querySelector(".fd-comp-text").value.trim();
+      if (!text)
+        return;
+      sendBtn.disabled = true;
+      sendBtn.textContent = "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
+      let imageUrl = null;
+      if (imageBlob) {
+        const up = await uploadPhotoToStorage(imageBlob, "pages/");
+        imageUrl = up.url;
+      }
+      const res = await createPagePost(pageId, currentUserId(), text, imageUrl);
+      if (res.ok) {
+        posts.unshift(res.post);
+        close();
+        document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
+        renderFeed();
+        openPageScreen(pageId);
+      } else {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438: " + (res.error || ""));
+      }
+    });
+    document.body.appendChild(back);
+    requestAnimationFrame(() => back.classList.add("open"));
+  }
+  function wireCards(root) {
+    root.addEventListener("click", (e) => {
+      const likeBtn = e.target.closest("[data-like]");
+      if (likeBtn) {
+        toggleLike(Number(likeBtn.dataset.like));
+        return;
+      }
+      const comBtn = e.target.closest("[data-comments]");
+      if (comBtn) {
+        openComments(Number(comBtn.dataset.comments));
+        return;
+      }
+      const openPage = e.target.closest("[data-open-page]");
+      if (openPage) {
+        openPageScreen(Number(openPage.dataset.openPage));
+        return;
+      }
+    });
+  }
+  async function initFeed() {
+    const root = document.getElementById("page-shotam");
+    if (root && !root.dataset.fdWired) {
+      wireCards(root);
+      root.dataset.fdWired = "1";
+    }
+    await loadData2();
+    renderFeed();
+    window.addEventListener("cstl-tab-changed", () => {
+      if (document.querySelector('.tab-item[data-tab="shotam"].active')) {
+        loadData2().then(renderFeed);
+      }
     });
   }
 
@@ -11349,7 +11715,7 @@ END:VEVENT`
       return "";
     return `${MONTHS_GEN[dt.getMonth()]} ${y}`;
   }
-  function cardHtml3(p) {
+  function cardHtml2(p) {
     const name = p && p.name && p.name.trim() ? p.name.trim() : "\u0416\u0438\u0442\u0435\u043B\u044C \u0433\u0440\u043E\u043C\u0430\u0434\u0438";
     const url = p && p.avatar_url || cachedAvatar(p && p.uid) || "";
     const av = avatarCircle({ name, url, cls: "pcard-av" });
@@ -11379,7 +11745,7 @@ END:VEVENT`
       variant: "sheet",
       className: "app-modal--top",
       // поверх кабінету/чату (інакше ховається під ними)
-      bodyHtml: cardHtml3(p || { uid }),
+      bodyHtml: cardHtml2(p || { uid }),
       onMount: (wrap) => {
         const avwrap = wrap.querySelector(".pcard-avwrap");
         const url = avwrap && avwrap.dataset.pcardPhoto;
@@ -11602,7 +11968,7 @@ END:VEVENT`
     initWeather();
     initCommunity();
     initNews();
-    initEvents();
+    initFeed();
     initBuses();
     initSavedRoutesHeader();
     initSavedHub();

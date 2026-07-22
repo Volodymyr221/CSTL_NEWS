@@ -17,6 +17,7 @@
 @import url('style/modal.css');      /* .article-modal — sticky-header, swipe, body */
 @import url('style/tabbar.css');     /* .tab-bar, .tab-item, .tab-icon, .tab-label */
 @import url('style/community.css');  /* .cm-* — вкладка Громада, D2 colored blocks, hero, board */
+@import url('style/feed.css');       /* .fd-* — вкладка «Стрічка»: сторінки-канали громади */
 @import url('style/account.css');    /* .acc-* — Фаза Б: вхід, профіль, Кабінет жителя + іконка 👤 */
 @import url('style/messages.css');   /* .pm-* — Фаза Б: приватний чат, список розмов, Мої оголошення */
 @import url('style/sidebar.css');    /* .sidebar-* — бічне меню (бургер) + «Кабінет» для команди + інфо-модалки */
