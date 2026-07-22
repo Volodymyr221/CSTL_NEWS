@@ -255,28 +255,24 @@ function pluralComments(n) {
   return 'коментарів';
 }
 
-// Відміна: 1-4 вподобання · 5+ вподобань (11-14 → вподобань).
-function pluralLikes(n) {
-  const d = n % 10, h = n % 100;
-  return (d >= 1 && d <= 4 && (h < 11 || h > 14)) ? 'вподобання' : 'вподобань';
-}
-
 // Рядок коментаря у стилі Instagram: аватар · (імʼя жирним + текст в один абзац) ·
-// мета-рядок (час · N вподобань · «Відповісти» · «Видалити» на своєму) · ♥ справа.
-// reply=true → вкладена відповідь (відступ). Відповідь чіпляється до кореневого
-// коментаря (parent_id||id) — 2 рівні, як в Instagram.
+// мета-рядок (час · «Відповісти» · «Видалити» на своєму) · праворуч ♥ і лічильник
+// ПІД сердечком (як в Instagram). reply=true → вкладена відповідь (відступ).
+// Відповідь чіпляється до кореневого коментаря (parent_id||id) — 2 рівні.
 function commentRowHtml(c, reply = false) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
   const lr = comReactMap.get(c.id) || { count: 0, my: false };
-  const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
-      <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
+      <div class="fd-com-likewrap">
+        <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
+        <span class="fd-com-likecnt" data-com-likes="${c.id}">${lr.count || ''}</span>
+      </div>
     </div>`;
 }
 
@@ -306,7 +302,7 @@ function patchCommentLike(id) {
     b.innerHTML = lr.my ? IC_HEART_F : IC_HEART_O;
   });
   document.querySelectorAll(`[data-com-likes="${id}"]`).forEach(el => {
-    el.textContent = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : '';
+    el.textContent = lr.count || '';   // лише число, під сердечком (як в Instagram)
   });
 }
 
