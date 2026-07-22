@@ -440,7 +440,7 @@ function renderHeader() {
       <div class="bd-search-row">
         ${catFilterHtml}
         <div class="bd-search">
-          <span class="bd-search-icon">🔍</span>
+          <span class="bd-search-icon">${ICONS.search}</span>
           <input class="bd-search-input" id="bd-search-input" type="search"
                  placeholder="${activeType === 'chat' ? 'Пошук в обговореннях...' : activeType === 'saved' ? 'Пошук у збережених...' : 'Пошук по дошці...'}" value="${escapeHtml(searchQuery)}">
           ${searchQuery ? '<button class="bd-search-clear" type="button" id="bd-search-clear">✕</button>' : ''}
