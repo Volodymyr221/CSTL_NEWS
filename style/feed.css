@@ -217,9 +217,9 @@
   margin-top: 5px; min-width: 26px; }
 .fd-com-like { width: 26px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer;
   color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
-.fd-com-like svg { width: 15px; height: 15px; }
+.fd-com-like svg { width: 17px; height: 17px; }
 .fd-com-like--on { color: var(--fd-accent); }
-.fd-com-likecnt { font-size: 11px; line-height: 1; color: var(--fd-muted); }
+.fd-com-likecnt { font-size: 11px; line-height: 1; color: var(--fd-muted); font-weight: 700; }
 .fd-com-likecnt:empty { display: none; }
 /* «Відповісти» — у мета-рядку, як «Видалити». */
 .fd-com-reply { font-size: 12px; color: var(--fd-muted); font-weight: 600; background: none;
