@@ -144,10 +144,18 @@
 .fd-screen-back svg, .fd-bell svg, .fd-banner-edit svg { width: 21px; height: 21px; }
 .fd-bell--on { background: #fff; color: var(--fd-accent); }
 
+/* Контент-лист «наїжджає» на банер: заокруглений верх + тінь угору на банер */
+.fd-screen-body {
+  position: relative; z-index: 1; background: var(--fd-bg);
+  border-radius: 18px 18px 0 0; margin-top: -18px;
+  box-shadow: 0 -7px 18px rgba(0,0,0,0.20);
+}
+
 .fd-screen-id { text-align: center; margin-top: -42px; padding: 0 20px 4px; position: relative; z-index: 1; }
 .fd-screen-ava-wrap { display: inline-block; position: relative; width: 88px; height: 88px; }
+/* Тінь аватарки радіально — падає і вгору на банер, і вниз на лист */
 .fd-screen-ava { display: block; width: 88px; height: 88px; border-radius: 50%; border: 4px solid var(--fd-bg);
-  overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
+  overflow: hidden; box-shadow: 0 2px 20px rgba(0,0,0,0.32); }
 .fd-screen-ava-img--ph { font-size: 34px; }
 .fd-ava-edit { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; border-radius: 50%;
   border: 3px solid var(--fd-bg); background: var(--fd-accent); color: #fff; cursor: pointer; display: grid; place-items: center; }

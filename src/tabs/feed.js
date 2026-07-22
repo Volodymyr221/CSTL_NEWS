@@ -292,19 +292,21 @@ async function openPageScreen(pageId) {
       </button>
       <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
     </div>
-    <div class="fd-screen-id">
-      <span class="fd-screen-ava-wrap">
-        <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
-        ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="Змінити аватар">${IC_CAMERA}</button>` : ''}
-      </span>
-      <div class="fd-screen-name">${escapeHtml(page.name)}</div>
-      ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
-      ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
-    </div>
-    ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
-    <div class="fd-screen-list">${pagePosts.length
-      ? pagePosts.map(postCardHtml).join('')
-      : '<div class="fd-empty">Тут ще немає постів.</div>'}</div>`;
+    <div class="fd-screen-body">
+      <div class="fd-screen-id">
+        <span class="fd-screen-ava-wrap">
+          <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
+          ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="Змінити аватар">${IC_CAMERA}</button>` : ''}
+        </span>
+        <div class="fd-screen-name">${escapeHtml(page.name)}</div>
+        ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
+        ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
+      </div>
+      ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
+      <div class="fd-screen-list">${pagePosts.length
+        ? pagePosts.map(postCardHtml).join('')
+        : '<div class="fd-empty">Тут ще немає постів.</div>'}</div>
+    </div>`;
 
   screen.querySelector('.fd-screen-back').addEventListener('click', () => {
     screen.classList.remove('open');
