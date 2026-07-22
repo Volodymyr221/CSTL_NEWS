@@ -46,12 +46,15 @@ create table if not exists public.page_posts (
   page_id     bigint not null references public.pages(id)     on delete cascade,
   author_uid  uuid            references public.profiles(uid) on delete set null,  -- людина-автор (підпис «— Ім'я»)
   text        text   not null,
-  image_url   text,                        -- одне фото (широке), опційно
+  image_url   text,                        -- ЛЕГАСІ: перше фото (для зворотної сумісності)
+  image_urls  text[] default '{}',         -- кілька фото (як у FB/IG)
   created_at  timestamptz default now(),
   deleted_at  timestamptz                  -- м'яке видалення (як у чатах)
 );
 create index if not exists idx_page_posts_page on public.page_posts (page_id, created_at desc);
 create index if not exists idx_page_posts_feed on public.page_posts (created_at desc) where deleted_at is null;
+-- Міграція для вже створеної таблиці (кілька фото): додати image_urls якщо ще нема.
+alter table public.page_posts add column if not exists image_urls text[] default '{}';
 
 -- ── 4. PAGE_COMMENTS — коментарі під постами ────────────────────────────────
 create table if not exists public.page_comments (
