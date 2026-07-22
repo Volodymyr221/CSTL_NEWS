@@ -1183,6 +1183,17 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function subscribePageComments(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-comments-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_comments" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
     if (!supa || !visitorId)
       return;
@@ -10403,34 +10414,86 @@ ${ev.description || ""}`
       btn.querySelector(".fd-cnt").textContent = rx.count || "";
     });
   }
-  function openComments(postId) {
-    const list = commentMap.get(postId) || [];
-    const rowsHtml = list.length ? list.map((c) => {
-      const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
-      return `<div class="fd-com-row">
+  var openCommentSheet = null;
+  function commentRowHtml(c) {
+    const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
+    return `<div class="fd-com-row">
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span>
       <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
     </div>`;
-    }).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+  }
+  function renderCommentList(postId, listEl) {
+    const list = commentMap.get(postId) || [];
+    listEl.innerHTML = list.length ? list.map(commentRowHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+  }
+  function patchCommentCount(postId) {
+    const n = (commentMap.get(postId) || []).length;
+    document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
+  }
+  function applyCommentUpsert(c) {
+    if (!c)
+      return;
+    if (c.deleted_at) {
+      applyCommentRemove(c);
+      return;
+    }
+    const arr = commentMap.get(c.post_id) || [];
+    const idx = arr.findIndex((x) => x.id === c.id);
+    if (idx >= 0)
+      arr[idx] = c;
+    else
+      arr.push(c);
+    arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    commentMap.set(c.post_id, arr);
+    if (c.author_uid && !cachedName(c.author_uid)) {
+      fetchAvatars([c.author_uid]).then(() => {
+        if (openCommentSheet && openCommentSheet.postId === c.post_id)
+          renderCommentList(c.post_id, openCommentSheet.listEl);
+      });
+    }
+    if (openCommentSheet && openCommentSheet.postId === c.post_id)
+      renderCommentList(c.post_id, openCommentSheet.listEl);
+    patchCommentCount(c.post_id);
+  }
+  function applyCommentRemove(c) {
+    if (!c)
+      return;
+    const arr = commentMap.get(c.post_id);
+    if (!arr)
+      return;
+    commentMap.set(c.post_id, arr.filter((x) => x.id !== c.id));
+    if (openCommentSheet && openCommentSheet.postId === c.post_id)
+      renderCommentList(c.post_id, openCommentSheet.listEl);
+    patchCommentCount(c.post_id);
+  }
+  function openComments(postId) {
     const sheet = document.createElement("div");
     sheet.className = "fd-sheet-back";
     sheet.innerHTML = `
     <div class="fd-sheet">
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
-      <div class="fd-com-list">${rowsHtml}</div>
+      <div class="fd-com-list"></div>
       <div class="fd-com-compose">
         <input class="fd-com-input" type="text" placeholder="\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
         <button class="fd-com-send" type="button">${IC_SEND}</button>
       </div>
     </div>`;
-    const close = () => sheet.remove();
+    const listEl = sheet.querySelector(".fd-com-list");
+    renderCommentList(postId, listEl);
+    openCommentSheet = { postId, back: sheet, listEl };
+    const close = () => {
+      sheet.remove();
+      if (openCommentSheet && openCommentSheet.back === sheet)
+        openCommentSheet = null;
+    };
     sheet.addEventListener("click", (e) => {
       if (e.target === sheet)
         close();
     });
     const input = sheet.querySelector(".fd-com-input");
+    const sendBtn = sheet.querySelector(".fd-com-send");
     const send = async () => {
       const text = input.value.trim();
       if (!text)
@@ -10441,30 +10504,24 @@ ${ev.description || ""}`
         });
         return;
       }
-      input.value = "";
+      sendBtn.disabled = true;
       const res = await addPageComment(postId, currentUserId(), text);
+      sendBtn.disabled = false;
       if (res.ok) {
-        const arr = commentMap.get(postId) || [];
-        arr.push(res.comment);
-        commentMap.set(postId, arr);
-        close();
-        openComments(postId);
-        patchCommentCount(postId);
+        applyCommentUpsert(res.comment);
+        input.value = "";
+        input.focus();
       } else {
-        input.value = text;
+        alert("\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E: " + (res.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430"));
       }
     };
-    sheet.querySelector(".fd-com-send").addEventListener("click", send);
+    sendBtn.addEventListener("click", send);
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter")
         send();
     });
     document.body.appendChild(sheet);
     requestAnimationFrame(() => sheet.classList.add("open"));
-  }
-  function patchCommentCount(postId) {
-    const n = (commentMap.get(postId) || []).length;
-    document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
   }
   async function openPageScreen(pageId) {
     const page = pages.find((p) => p.id === pageId);
@@ -10789,6 +10846,13 @@ ${ev.description || ""}`
       sInp?.addEventListener("input", () => {
         feedSearch = sInp.value;
         renderFeed();
+      });
+      subscribePageComments((payload) => {
+        const t = payload.eventType;
+        if (t === "DELETE")
+          applyCommentRemove(payload.old);
+        else
+          applyCommentUpsert(payload.new);
       });
       root.dataset.fdWired = "1";
     }

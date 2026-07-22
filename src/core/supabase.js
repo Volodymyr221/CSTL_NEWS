@@ -930,6 +930,19 @@ export function subscribeComments(onChange) {
   return () => supa.removeChannel(ch);
 }
 
+// «СТРІЧКА»: жива підписка на коментарі постів-сторінок (публічно для всіх —
+// коментар будь-кого зʼявляється у всіх наживо). Таблиця вже в publication
+// supabase_realtime (scripts/supabase_pages.sql).
+export function subscribePageComments(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-comments-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_comments' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // ── АНАЛІТИКА (Потік 6, byyou) ──────────────────────────────────────────────
 // Власна статистика (без Google Analytics/Plausible) — сирі події у
 // analytics_events (scripts/supabase_analytics.sql), агрегати рахує адмінка.
