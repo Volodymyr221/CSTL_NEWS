@@ -11,6 +11,7 @@
 import datetime
 import html
 import json
+import os
 import re
 import time
 import traceback
@@ -377,7 +378,7 @@ def get_full_content(entry, title: str = "") -> str:
                     if len(rich) > 60:
                         return rich[:8000]
     summ = strip_html(entry.get("summary") or entry.get("description") or "")
-    return "".join(f"<p>{html.escape(p)}</p>" for p in summ.split("\n\n") if p.strip())
+    return _split_runon_html("".join(f"<p>{html.escape(p)}</p>" for p in summ.split("\n\n") if p.strip()))
 
 
 def normalize_title(title: str) -> str:
@@ -698,6 +699,10 @@ USER_AGENT = "Mozilla/5.0 (compatible; CSTL-NEWS-Bot/1.0; +https://github.com/Vo
 # Для завантаження повного тексту статей — реалістичний Chrome UA щоб обійти базові блокування
 BROWSER_UA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
 
+# Тимчасова діагностика дотягування повного тексту (логи CI): чому джерело (напр.
+# konkurent) не віддає тіло. Default увімкнено; вимкнути — env CSTL_DEBUG_FETCH=0.
+DEBUG_FETCH = os.environ.get("CSTL_DEBUG_FETCH", "1") == "1"
+
 
 def fetch_rss(url: str) -> tuple:
     """Завантажує RSS з BROWSER_UA. Повертає (bytes, response_headers)."""
@@ -938,6 +943,45 @@ def _inline_html(node) -> str:
     return "".join(out)
 
 
+# Межа втраченого абзацу: кінець речення (. ! ? » ” ") ВПРИТУЛ до великої кирилиці
+# або відкривної лапки (« “ " чи HTML-ентіті &). У нормальному тексті після крапки
+# ЗАВЖДИ пробіл → цей патерн ловить лише склейки, де RSS втратив межу </p><p>.
+_RUNON_BOUNDARY = re.compile(r'(?<=[.!?»”"])(?=[«“"&А-ЯЄІЇҐ])')
+# Відомі скорочення — щоб не різати «вул.Назва», «м.Луцьк» на два абзаци.
+_ABBR_TAIL = re.compile(
+    r'(?:вул|просп|бул|пл|м|с|смт|р|рр|ст|грн|тис|млн|млрд|обл|буд|кв|проф|акад|'
+    r'ім|див|напр|тобто|та\s+ін)\.$', re.I)
+
+
+def _split_runon_paragraphs(inner: str) -> list:
+    """Розбити внутрішній текст одного <p> на кілька, якщо RSS склеїв абзаци
+    (крапка впритул до великої літери, без пробілу). Захист: сегмент <40 симв.
+    або хвіст-скорочення → не межа."""
+    pieces, last = [], 0
+    for m in _RUNON_BOUNDARY.finditer(inner):
+        i = m.start()
+        seg = inner[last:i]
+        if _ABBR_TAIL.search(seg.strip()[-10:]):
+            continue
+        if len(re.sub(r'<[^>]+>', '', seg).strip()) < 40:
+            continue
+        pieces.append(seg)
+        last = i
+    pieces.append(inner[last:])
+    return [p.strip() for p in pieces if p.strip()]
+
+
+def _split_runon_html(html_str: str) -> str:
+    """Відновити втрачені межі абзаців у готовому HTML: кожен <p> з кількома
+    склеєними абзацами → окремі <p>. Інші теги (h3/ul/blockquote) не чіпаємо."""
+    def repl(mm):
+        ps = _split_runon_paragraphs(mm.group(1))
+        if len(ps) <= 1:
+            return mm.group(0)
+        return "".join(f"<p>{p}</p>" for p in ps)
+    return re.sub(r'<p>(.*?)</p>', repl, html_str, flags=re.S)
+
+
 def _blocks_to_html(el, title: str = "") -> str:
     """Тіло статті → БЕЗПЕЧНИЙ HTML зі збереженням структури (підзаголовки, списки
     •, абзаци, жирний/курсив) — як в оригіналі (варіант A, БЕЗ фото). Аллоулист
@@ -998,8 +1042,8 @@ def _blocks_to_html(el, title: str = "") -> str:
 
     if not parts:                          # блоків нема (голі div) — запасний плоский варіант
         fb = clean_article_text(_paragraphs_fallback(el), title)
-        return "".join(f"<p>{html.escape(p)}</p>" for p in fb.split("\n\n") if p.strip())
-    return "".join(parts)
+        return _split_runon_html("".join(f"<p>{html.escape(p)}</p>" for p in fb.split("\n\n") if p.strip()))
+    return _split_runon_html("".join(parts))   # відновити склеєні RSS-ом межі абзаців
 
 
 def fetch_full_article(url: str, title: str = "") -> str | None:
@@ -1024,8 +1068,12 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
         # SAFE_OPENER перевіряє редиректи (щоб 3xx не відвів на приватну адресу).
         with SAFE_OPENER.open(req, timeout=12) as r:
             raw = r.read()
-    except Exception:
+    except Exception as e:
+        if DEBUG_FETCH:
+            print(f"[FETCH] {url[:70]} — ЗАВАНТАЖЕННЯ ВПАЛО: {type(e).__name__}: {e}")
         return None
+    if DEBUG_FETCH:
+        print(f"[FETCH] {url[:70]} — завантажено {len(raw)} байт")
 
     try:
         from bs4 import BeautifulSoup
@@ -1051,21 +1099,33 @@ def fetch_full_article(url: str, title: str = "") -> str | None:
         if el:
             # Плоский текст — лише для порогу довжини; віддаємо БАГАТИЙ HTML (варіант A).
             if len(clean_article_text(_blocks_to_text(el), title)) > 300:
+                if DEBUG_FETCH:
+                    print(f"[FETCH] {url[:70]} — OK селектор '{sel}'")
                 return _blocks_to_html(el, title)[:8000]
 
-    # Fallback: контейнер з найбільшою кількістю тексту → теж багатий HTML
-    best_el, best_len = None, 0
+    # Fallback (readability-стиль): контейнер із найбільшою масою тексту в <p>.
+    # Не обмежуємось верхнім рівнем — тіло статті зазвичай ВКЛАДЕНЕ (через це старий
+    # top-level-only фолбек не знаходив body у деяких видань, напр. konkurent).
+    # Щоб не схопити весь <body> з рештками меню — спускаємось у найглибший
+    # контейнер, що ще тримає ≥85% тексту.
+    candidates = []
     for tag in soup.find_all(["div", "section", "article"]):
-        if tag.find_parent(["div", "section", "article"]):
+        ps = tag.find_all("p", recursive=True)
+        if len(ps) < 2:
             continue
-        n = len(_blocks_to_text(tag))
-        if n > best_len:
-            best_el, best_len = tag, n
-    if best_el is not None and best_len > 500:
-        rich = _blocks_to_html(best_el, title)
-        if len(rich) > 300:
+        mass = sum(len(p.get_text(" ", strip=True)) for p in ps)
+        if mass >= 400:
+            candidates.append((mass, tag))
+    if candidates:
+        best_mass, best_el = max(candidates, key=lambda x: x[0])
+        rich = _blocks_to_html(best_el, title)   # _NOISE_RE вже прибрав меню/рекламу, _TAIL_RE зріже хвіст
+        if len(strip_html(rich)) > 300:
+            if DEBUG_FETCH:
+                print(f"[FETCH] {url[:70]} — OK фолбек (<p>-маса {best_mass})")
             return rich[:8000]
 
+    if DEBUG_FETCH:
+        print(f"[FETCH] {url[:70]} — НЕ ЗНАЙДЕНО тіла (домен {domain}, {len(candidates)} кандидатів)")
     return None
 
 
