@@ -16,28 +16,24 @@
 /* Фон вкладки (як в Автобусах — прецедент base.css) */
 .app-main[data-tab="shotam"] { background: var(--fd-bg); }
 
-/* ── Шапка вкладки: назва зліва + іконки справа ── */
-.fd-head {
+/* ── Верхній band: кружечки-канали + пошук (без заголовка, компактно) ── */
+.fd-topbar {
   position: sticky; top: 0; z-index: 20;
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 10px 16px 8px;
+  display: flex; align-items: center;
   background: color-mix(in srgb, var(--fd-bg) 84%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--fd-divider);
 }
-.fd-head-title {
-  margin: 0; font-family: Georgia, serif;
-  font-size: 21px; font-weight: 800; letter-spacing: 0.3px; color: var(--fd-ink);
-}
-.fd-head-actions { display: flex; gap: 8px; }
 .fd-head-btn {
-  width: 36px; height: 36px; border-radius: 50%; border: 0; cursor: pointer;
+  width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
   display: grid; place-items: center; background: color-mix(in srgb, var(--fd-ink) 6%, transparent);
   color: var(--fd-ink); -webkit-tap-highlight-color: transparent;
 }
-.fd-head-btn svg { width: 20px; height: 20px; }
+.fd-head-btn svg { width: 19px; height: 19px; }
+.fd-search-btn { flex: none; margin: 0 12px 0 2px; }
 
 /* Рядок пошуку (згортається) */
-.fd-search { padding: 0 12px 8px; background: color-mix(in srgb, var(--fd-bg) 84%, transparent); }
+.fd-search { padding: 8px 12px; background: color-mix(in srgb, var(--fd-bg) 84%, transparent); }
 .fd-search[hidden] { display: none; }
 .fd-search input {
   width: 100%; height: 40px; padding: 0 16px; border-radius: 20px;
@@ -45,38 +41,33 @@
   font-size: 16px; font-family: inherit; color: var(--fd-ink); outline: none;
 }
 
-/* ── Кружечки-канали (stories), підпис у 2 рядки ── */
-.fd-circles-wrap {
-  position: sticky; top: 52px; z-index: 19;
-  background: color-mix(in srgb, var(--fd-bg) 84%, transparent);
-  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--fd-divider);
-}
-.fd-circles { display: flex; gap: 14px; overflow-x: auto; padding: 8px 14px 12px; scrollbar-width: none; }
+/* ── Кружечки-канали (stories) — компактні, підпис у 2 рядки ── */
+.fd-circles-wrap { flex: 1; min-width: 0; }
+.fd-circles { display: flex; gap: 12px; overflow-x: auto; padding: 8px 4px 8px 12px; scrollbar-width: none; }
 .fd-circles::-webkit-scrollbar { display: none; }
 .fd-circle {
-  flex: 0 0 auto; width: 70px; display: flex; flex-direction: column; align-items: center;
-  gap: 6px; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  flex: 0 0 auto; width: 58px; display: flex; flex-direction: column; align-items: center;
+  gap: 5px; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .fd-circle-ring {
-  width: 62px; height: 62px; border-radius: 50%; padding: 2.5px;
+  width: 52px; height: 52px; border-radius: 50%; padding: 2px;
   background: conic-gradient(from 135deg, var(--fd-accent), var(--fd-accent-soft), var(--fd-accent));
   display: flex; align-items: center; justify-content: center;
 }
 .fd-circle-ava, .fd-ava, .fd-com-ava-img, .fd-screen-ava-img {
   width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; background: #fff;
 }
-.fd-circle-ava { border: 2.5px solid var(--fd-bg); }
+.fd-circle-ava { border: 2px solid var(--fd-bg); }
 .fd-circle-ava--ph, .fd-ava--ph, .fd-com-ava-img--ph, .fd-screen-ava-img--ph {
   display: flex; align-items: center; justify-content: center;
   background: linear-gradient(140deg, var(--fd-accent), #9c5860);
   color: #fff; font-weight: 700; font-family: Georgia, serif;
 }
-.fd-circle-ava--ph { font-size: 22px; border: 2.5px solid var(--fd-bg); }
+.fd-circle-ava--ph { font-size: 18px; border: 2px solid var(--fd-bg); }
 .fd-circle-label {
-  font-size: 11px; color: var(--fd-ink); line-height: 1.15; text-align: center;
+  font-size: 10.5px; color: var(--fd-ink); line-height: 1.12; text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
-  overflow: hidden; max-height: 2.4em; word-break: break-word;
+  overflow: hidden; max-height: 2.3em; word-break: break-word;
 }
 
 /* ── Стрічка постів (на всю ширину, білі блоки, сірий проміжок) ── */
