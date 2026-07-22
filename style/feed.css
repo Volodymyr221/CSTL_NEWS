@@ -132,7 +132,7 @@
 .fd-screen-top { position: relative; height: 150px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
 .fd-banner { position: absolute; inset: 0; }
 .fd-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.fd-screen-back, .fd-bell, .fd-banner-edit {
+.fd-screen-back, .fd-bell, .fd-screen-menu {
   position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 2;
   width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(0,0,0,0.38); color: #fff; display: flex; align-items: center; justify-content: center;
@@ -140,9 +140,20 @@
 }
 .fd-screen-back { left: 12px; }
 .fd-bell { right: 12px; }
-.fd-banner-edit { right: 58px; }
-.fd-screen-back svg, .fd-bell svg, .fd-banner-edit svg { width: 21px; height: 21px; }
+.fd-screen-menu { right: 58px; }
+.fd-screen-back svg, .fd-bell svg, .fd-screen-menu svg { width: 21px; height: 21px; }
 .fd-bell--on { background: #fff; color: var(--fd-accent); }
+/* Тап по банеру/аватару → перегляд фото на весь екран. */
+.fd-banner--view, .fd-screen-ava--view { cursor: pointer; }
+/* Випадне меню «⋯» сторінки (адмін). */
+.fd-screen-menu-pop { position: absolute; z-index: 4; top: calc(52px + env(safe-area-inset-top, 0px));
+  right: 12px; background: var(--fd-surface); border-radius: 12px; padding: 6px;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.22); min-width: 190px; }
+.fd-screen-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
+  border: 0; background: none; cursor: pointer; font: inherit; font-size: 15px; color: var(--fd-ink);
+  border-radius: 8px; text-align: left; }
+.fd-screen-menu-item:hover { background: var(--fd-chip); }
+.fd-screen-menu-item svg { width: 19px; height: 19px; flex: none; }
 
 /* Контент після банера — пряма межа + м'яка тінь блоку ВГОРУ на банер */
 /* display: flow-root — новий BFC: зупиняє схлопування від'ємного margin аватарки,
@@ -160,17 +171,8 @@
 .fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--fd-bg);
   overflow: hidden; box-shadow: 0 0 18px rgba(0,0,0,0.20); }
 .fd-screen-ava-img--ph { font-size: 32px; }
-.fd-ava-edit { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; border-radius: 50%;
-  border: 3px solid var(--fd-bg); background: var(--fd-accent); color: #fff; cursor: pointer; display: grid; place-items: center; }
-.fd-ava-edit svg { width: 14px; height: 14px; }
 .fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; margin-top: 8px; color: var(--fd-ink); }
 .fd-screen-theme { font-size: 13px; color: var(--fd-muted); margin-top: 3px; }
-.fd-screen-edit {
-  margin: 12px auto 2px; display: inline-flex; align-items: center; gap: 7px;
-  padding: 8px 18px; border-radius: 20px; border: 1px solid var(--fd-divider); background: var(--fd-surface);
-  color: var(--fd-ink); font-size: 14px; font-weight: 600; cursor: pointer;
-}
-.fd-screen-edit svg { width: 17px; height: 17px; color: var(--fd-accent); }
 
 .fd-compose-open {
   display: flex; align-items: center; gap: 10px; width: calc(100% - 24px); margin: 12px 12px 4px;
