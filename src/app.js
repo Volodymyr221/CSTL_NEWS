@@ -230,10 +230,11 @@ function init() {
   initSavedHub();            // хаб «Збережені» (іконка 🔖 в шапці)
   initPower();
 
-  // При запуску / поверненні застосунку на передній план — завжди Громада
-  document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'visible') window.switchTab('community');
-  });
+  // Вкладку при згортанні/поверненні застосунку НЕ скидаємо (Вова 22.07): раніше
+  // visibilitychange→switchTab('community') перекидав на Громаду щоразу при
+  // поверненні з фону — навіть якщо сидів в Обговореннях з відкритою модалкою.
+  // Скидання на головну лишається лише при СВІЖОМУ завантаженні/перезавантаженні
+  // (currentTab за замовчуванням = 'community', сторінка community видима стартово).
   initBoard();
   initChatsHub();
   initProfileCardTaps();   // тап по аватару → картка профілю

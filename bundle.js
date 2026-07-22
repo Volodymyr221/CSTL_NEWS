@@ -12077,10 +12077,6 @@ END:VEVENT`
     initSavedRoutesHeader();
     initSavedHub();
     initPower();
-    document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible")
-        window.switchTab("community");
-    });
     initBoard();
     initChatsHub();
     initProfileCardTaps();
