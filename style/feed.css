@@ -208,16 +208,17 @@
 .fd-com-txt { font-weight: 400; }
 .fd-com-meta { display: flex; gap: 14px; align-items: center; margin-top: 3px; }
 .fd-com-time { font-size: 12px; color: var(--fd-muted); }
-.fd-com-likes { font-size: 12px; color: var(--fd-muted); font-weight: 600; }
-.fd-com-likes:empty { display: none; }
 .fd-com-del { font-size: 12px; color: var(--fd-muted); background: none; border: 0; padding: 0;
   cursor: pointer; font-family: inherit; }
-/* ♥ лайк коментаря — справа від рядка (як в Instagram). */
-.fd-com-like { flex: none; width: 26px; height: 26px; margin-top: 5px; padding: 0; border: 0;
-  background: none; cursor: pointer; color: var(--fd-muted); display: flex;
-  align-items: center; justify-content: center; }
+/* ♥ лайк коментаря + лічильник ПІД сердечком, справа (як в Instagram). */
+.fd-com-likewrap { flex: none; display: flex; flex-direction: column; align-items: center;
+  margin-top: 5px; min-width: 26px; }
+.fd-com-like { width: 26px; height: 22px; padding: 0; border: 0; background: none; cursor: pointer;
+  color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
 .fd-com-like svg { width: 15px; height: 15px; }
 .fd-com-like--on { color: var(--fd-accent); }
+.fd-com-likecnt { font-size: 11px; line-height: 1; color: var(--fd-muted); }
+.fd-com-likecnt:empty { display: none; }
 /* «Відповісти» — у мета-рядку, як «Видалити». */
 .fd-com-reply { font-size: 12px; color: var(--fd-muted); font-weight: 600; background: none;
   border: 0; padding: 0; cursor: pointer; font-family: inherit; }

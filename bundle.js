@@ -10502,22 +10502,20 @@ ${ev.description || ""}`
       return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
     return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
   }
-  function pluralLikes(n) {
-    const d = n % 10, h = n % 100;
-    return d >= 1 && d <= 4 && (h < 11 || h > 14) ? "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u043D\u044F" : "\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u043D\u044C";
-  }
   function commentRowHtml(c, reply = false) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
     const lr = comReactMap.get(c.id) || { count: 0, my: false };
-    const likesTxt = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
     return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><span class="fd-com-likes" data-com-likes="${c.id}">${likesTxt}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
-      <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
+      <div class="fd-com-likewrap">
+        <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
+        <span class="fd-com-likecnt" data-com-likes="${c.id}">${lr.count || ""}</span>
+      </div>
     </div>`;
   }
   function orderedComments(list) {
@@ -10548,7 +10546,7 @@ ${ev.description || ""}`
       b.innerHTML = lr.my ? IC_HEART_F : IC_HEART_O;
     });
     document.querySelectorAll(`[data-com-likes="${id}"]`).forEach((el) => {
-      el.textContent = lr.count ? `${lr.count} ${pluralLikes(lr.count)}` : "";
+      el.textContent = lr.count || "";
     });
   }
   async function toggleCommentLike(id) {
