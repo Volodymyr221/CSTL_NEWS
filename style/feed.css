@@ -129,7 +129,7 @@
 .fd-screen { position: fixed; inset: 0; z-index: 1200; background: var(--fd-bg); overflow-y: auto;
   transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.32,0.72,0,1); -webkit-overflow-scrolling: touch; }
 .fd-screen.open { transform: translateX(0); }
-.fd-screen-top { position: relative; height: 158px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
+.fd-screen-top { position: relative; height: 150px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
 .fd-banner { position: absolute; inset: 0; }
 .fd-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .fd-screen-back, .fd-bell, .fd-banner-edit {
@@ -147,17 +147,17 @@
 /* Контент після банера — проста пряма межа (без піднятого листа/тіні на банер, IMG_3491) */
 .fd-screen-body { position: relative; z-index: 1; background: var(--fd-bg); }
 
-.fd-screen-id { text-align: center; margin-top: -42px; padding: 0 20px 4px; position: relative; z-index: 1; }
-.fd-screen-ava-wrap { display: inline-block; position: relative; width: 88px; height: 88px; }
+.fd-screen-id { text-align: center; margin-top: -40px; padding: 0 20px 4px; position: relative; z-index: 1; }
+.fd-screen-ava-wrap { display: inline-block; position: relative; width: 84px; height: 84px; }
 /* М'яка тінь під аватаркою (як у первинній перебудові) */
-.fd-screen-ava { display: block; width: 88px; height: 88px; border-radius: 50%; border: 4px solid var(--fd-bg);
+.fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--fd-bg);
   overflow: hidden; box-shadow: 0 4px 14px rgba(0,0,0,0.18); }
-.fd-screen-ava-img--ph { font-size: 34px; }
+.fd-screen-ava-img--ph { font-size: 32px; }
 .fd-ava-edit { position: absolute; right: 2px; bottom: 2px; width: 28px; height: 28px; border-radius: 50%;
   border: 3px solid var(--fd-bg); background: var(--fd-accent); color: #fff; cursor: pointer; display: grid; place-items: center; }
 .fd-ava-edit svg { width: 14px; height: 14px; }
-.fd-screen-name { font-family: Georgia, serif; font-size: 21px; font-weight: 800; margin-top: 8px; color: var(--fd-ink); }
-.fd-screen-theme { font-size: 13.5px; color: var(--fd-muted); margin-top: 3px; }
+.fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; margin-top: 8px; color: var(--fd-ink); }
+.fd-screen-theme { font-size: 13px; color: var(--fd-muted); margin-top: 3px; }
 .fd-screen-edit {
   margin: 12px auto 2px; display: inline-flex; align-items: center; gap: 7px;
   padding: 8px 18px; border-radius: 20px; border: 1px solid var(--fd-divider); background: var(--fd-surface);
