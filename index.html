@@ -63,18 +63,15 @@
     <!-- Вкладка: «Стрічка» — сторінки-канали громади (мінісоцмережа).
          Кружечки-канали (stories) + вертикальна стрічка постів. Рендерить feed.js. -->
     <div id="page-shotam" class="page" style="display:none">
-      <div class="fd-head">
-        <h1 class="fd-head-title">Стрічка</h1>
-        <div class="fd-head-actions">
-          <button class="fd-head-btn" id="feed-search-btn" type="button" aria-label="Пошук">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5 -4.5"/></svg>
-          </button>
-        </div>
+      <div class="fd-topbar">
+        <div id="feed-circles" class="fd-circles-wrap"></div>
+        <button class="fd-head-btn fd-search-btn" id="feed-search-btn" type="button" aria-label="Пошук">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5 -4.5"/></svg>
+        </button>
       </div>
       <div class="fd-search" id="feed-search" hidden>
         <input type="search" id="feed-search-input" placeholder="Пошук у стрічці…">
       </div>
-      <div id="feed-circles" class="fd-circles-wrap"></div>
       <div id="feed-list" class="fd-list"></div>
     </div>
 
