@@ -4066,6 +4066,9 @@ ${post.text}
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
   }
+  function activeComments(postId) {
+    return getComments(postId).filter((c) => !c.deleted_at);
+  }
   function isMyComment(c) {
     const uid = currentUserId();
     return !!uid && c.sender_uid === uid;
@@ -4152,19 +4155,17 @@ ${post.text}
     return avatarCircle({ name: author, url: cachedAvatar(uid), uid: uid || "", cls: "bd-avatar" });
   }
   function chatMessagesHtml(post) {
-    const items = getComments(post.id);
+    const all = getComments(post.id);
+    const items = all.filter((c) => !c.deleted_at);
     if (!items.length) {
       return `<div class="bd-chat-stream" data-comments-for="${post.id}">
       <div class="bd-chat-empty"><span class="bd-chat-empty-icon">${COMMENT_ICON_SVG}</span>\u041F\u043E\u043A\u0438 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0430\u043F\u0438\u0448\u0456\u0442\u044C \u043F\u0435\u0440\u0448\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</div>
     </div>`;
     }
-    const byId2 = new Map(items.map((c) => [c.id, c]));
+    const byId2 = new Map(all.map((c) => [c.id, c]));
     const dividerTs = _chatDividerTs;
     let hadOld = false, dividerPlaced = false, lastDay = null;
     const renderDiscBubble = (c) => {
-      if (c.deleted_at) {
-        return `<div class="pm-bubble pm-bubble--deleted" data-msg="${c.id}" data-tag="${c.client_tag || ""}"><span class="pm-bubble-text">${ICONS.trash} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E</span></div>`;
-      }
       const reply = c.reply_to_id ? byId2.get(c.reply_to_id) : null;
       const replyHtml = reply ? `<span class="pm-quote" data-jump="${reply.id}">${escapeHtml((reply.deleted_at ? "\u0412\u0438\u0434\u0430\u043B\u0435\u043D\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F" : reply.text || "").slice(0, 90))}</span>` : "";
       const edited = c.edited_at ? '<span class="pm-bubble-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span> ' : "";
@@ -4250,7 +4251,7 @@ ${post.text}
       return;
     const el = document.getElementById("bd-chat-reply-count");
     if (el) {
-      const n = getComments(postId).length;
+      const n = activeComments(postId).length;
       el.innerHTML = `${COMMENT_ICON_SVG} ${n} ${msgWord(n)}`;
     }
   }
@@ -4395,7 +4396,7 @@ ${post.text}
     _chatOpenPostId = post.id;
     _chatDividerTs = getChatSeen(post.id);
     _chatUnseen = 0;
-    const replyCount = getComments(post.id).length;
+    const replyCount = activeComments(post.id).length;
     const backdrop = document.createElement("div");
     backdrop.className = "board-backdrop bd-chat-backdrop";
     const modal = document.createElement("div");
@@ -4733,7 +4734,7 @@ ${post.text}
     }
   }
   function renderChatCard(p) {
-    const comments = getComments(p.id);
+    const comments = activeComments(p.id);
     const count = comments.length;
     const recent = comments.slice(-2);
     const participants = new Set(comments.map((c) => c.sender_uid || "nm:" + (c.author || "\u0416\u0438\u0442\u0435\u043B\u044C"))).size;
