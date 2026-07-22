@@ -10484,17 +10484,19 @@ ${ev.description || ""}`
       </button>
       <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
     </div>
-    <div class="fd-screen-id">
-      <span class="fd-screen-ava-wrap">
-        <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
-        ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0430\u0432\u0430\u0442\u0430\u0440">${IC_CAMERA}</button>` : ""}
-      </span>
-      <div class="fd-screen-name">${escapeHtml(page.name)}</div>
-      ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
-      ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
-    </div>
-    ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
-    <div class="fd-screen-list">${pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>'}</div>`;
+    <div class="fd-screen-body">
+      <div class="fd-screen-id">
+        <span class="fd-screen-ava-wrap">
+          <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
+          ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0430\u0432\u0430\u0442\u0430\u0440">${IC_CAMERA}</button>` : ""}
+        </span>
+        <div class="fd-screen-name">${escapeHtml(page.name)}</div>
+        ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
+        ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
+      </div>
+      ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
+      <div class="fd-screen-list">${pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>'}</div>
+    </div>`;
     screen.querySelector(".fd-screen-back").addEventListener("click", () => {
       screen.classList.remove("open");
       setTimeout(() => screen.remove(), 240);
