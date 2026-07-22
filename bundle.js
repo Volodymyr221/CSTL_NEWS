@@ -1194,6 +1194,17 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function subscribePageReactions(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-reactions-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_reactions" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
     if (!supa || !visitorId)
       return;
@@ -1225,7 +1236,7 @@
     }
     return data || [];
   }
-  async function fetchPageReactions(userKey2) {
+  async function fetchPageReactions(userKey) {
     if (!supa)
       return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("page_reactions").select("post_id, user_id");
@@ -1239,19 +1250,19 @@
         map.set(r.post_id, { count: 0, my: false });
       const e = map.get(r.post_id);
       e.count++;
-      if (r.user_id === userKey2)
+      if (r.user_id === userKey)
         e.my = true;
     }
     return map;
   }
-  async function setPageReaction(postId, userKey2, on) {
+  async function setPageReaction(postId, userKey, on) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!on) {
-      const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey2);
+      const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey);
       return error2 ? { ok: false, error: error2.message } : { ok: true };
     }
-    const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey2, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
+    const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   async function fetchPageComments() {
@@ -10236,9 +10247,6 @@ ${ev.description || ""}`
   var mySubs = /* @__PURE__ */ new Set();
   var feedSearch = "";
   var loaded = false;
-  function userKey() {
-    return currentUserId() || getAnonId();
-  }
   function relTime(iso) {
     const t = new Date(iso).getTime();
     if (!Number.isFinite(t))
@@ -10262,11 +10270,10 @@ ${ev.description || ""}`
     return `<span class="${cls} ${cls}--ph">${letter}</span>`;
   }
   async function loadData2() {
-    const key = userKey();
     const [pg, ps, rx, cm, mine, subs] = await Promise.all([
       fetchPages(),
       fetchPagePosts(null, 60),
-      fetchPageReactions(key),
+      fetchPageReactions(currentUserId()),
       fetchPageComments(),
       isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
       isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
@@ -10396,15 +10403,37 @@ ${ev.description || ""}`
     wireGalleries(listEl);
   }
   async function toggleLike(postId) {
+    if (!isLoggedIn()) {
+      requireAuth("\u0432\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043F\u043E\u0441\u0442", () => {
+      });
+      return;
+    }
+    const uid = currentUserId();
     const rx = reactionMap.get(postId) || { count: 0, my: false };
     const on = !rx.my;
     reactionMap.set(postId, { count: Math.max(0, rx.count + (on ? 1 : -1)), my: on });
     patchLike(postId);
-    const res = await setPageReaction(postId, userKey(), on);
+    const res = await setPageReaction(postId, uid, on);
     if (!res.ok) {
       reactionMap.set(postId, rx);
       patchLike(postId);
     }
+  }
+  function applyReactionEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || row.post_id == null)
+      return;
+    if (row.user_id === currentUserId())
+      return;
+    const rx = reactionMap.get(row.post_id) || { count: 0, my: false };
+    if (payload.eventType === "INSERT")
+      rx.count += 1;
+    else if (payload.eventType === "DELETE")
+      rx.count = Math.max(0, rx.count - 1);
+    else
+      return;
+    reactionMap.set(row.post_id, rx);
+    patchLike(row.post_id);
   }
   function patchLike(postId) {
     const rx = reactionMap.get(postId) || { count: 0, my: false };
@@ -10854,6 +10883,7 @@ ${ev.description || ""}`
         else
           applyCommentUpsert(payload.new);
       });
+      subscribePageReactions(applyReactionEvent);
       root.dataset.fdWired = "1";
     }
     await loadData2();

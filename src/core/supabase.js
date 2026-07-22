@@ -943,6 +943,19 @@ export function subscribePageComments(onChange) {
   return () => supa.removeChannel(ch);
 }
 
+// «СТРІЧКА»: жива підписка на лайки постів (лічильник оновлюється у всіх наживо).
+// DELETE-подія віддає post_id/user_id лише якщо таблиця має REPLICA IDENTITY FULL
+// (scripts/supabase_pages_reactions_auth.sql) — інакше зняття лайка не синхронізується.
+export function subscribePageReactions(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-reactions-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_reactions' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // ── АНАЛІТИКА (Потік 6, byyou) ──────────────────────────────────────────────
 // Власна статистика (без Google Analytics/Plausible) — сирі події у
 // analytics_events (scripts/supabase_analytics.sql), агрегати рахує адмінка.
