@@ -223,8 +223,10 @@
   border: 0; padding: 0; cursor: pointer; font-family: inherit; }
 /* Вкладена відповідь — відступ під аватар кореневого коментаря. */
 .fd-com-row--reply { margin-left: 44px; }
-/* Контекст-бар «Відповідь для …» над компоузером. */
-.fd-com-replybar { display: flex; align-items: center; justify-content: space-between;
+/* Контекст-бар «Відповідь для …» над компоузером.
+   :not([hidden]) — щоб атрибут hidden реально ховав бар (інакше display:flex
+   перебивав би [hidden]{display:none} з UA-стилю, і плашка не зникала). */
+.fd-com-replybar:not([hidden]) { display: flex; align-items: center; justify-content: space-between;
   padding: 6px 4px 8px; font-size: 13px; color: var(--fd-muted); }
 .fd-com-replyx { flex: none; width: 24px; height: 24px; padding: 0; border: 0; background: none;
   cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
