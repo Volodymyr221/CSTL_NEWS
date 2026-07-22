@@ -179,7 +179,9 @@ main отримує мердж-коміт
 | `src/tabs/community-blocks.js` | Render-блоки Громади: погода, світло, автобус, дошка, подія, контакти |
 | `src/tabs/community-modal.js` | Bottom-sheet модалка «Нове оголошення» (ТІЛЬКИ оголошення, `type:'board'`; «Розмова»-таб прибрано 02.07) |
 | `src/tabs/news.js` | Стрічка новин, фільтри |
-| `src/tabs/events.js` | Афіша подій |
+| `src/tabs/events.js` | Афіша подій (легасі — заміщено «Стрічкою»; лишається для Етапу 6 «Афіша громади») |
+| `src/tabs/feed.js` | **«Стрічка»** — сторінки-канали громади: кружечки, стрічка постів, екран сторінки, лайк/коментар/дзвіночок/композер |
+| `scripts/supabase_pages.sql` | Схема «Стрічки»: pages/page_admins/page_posts/page_comments/page_reactions/page_subscriptions + RLS |
 | `src/tabs/buses.js` | Розклад автобусів + відстеження рейсів + push |
 | `src/tabs/board.js` | Дошка громади: оголошення/обговорення, реакції, коментарі, закладки, FAB |
 | `src/tabs/power.js` | Графік відключень електрики |
