@@ -116,7 +116,9 @@ drop policy if exists "pages admin insert" on public.pages;
 drop policy if exists "pages admin update" on public.pages;
 create policy "pages read"         on public.pages for select using (true);
 create policy "pages admin insert" on public.pages for insert with check (is_admin());
-create policy "pages admin update" on public.pages for update using (is_admin()) with check (is_admin());
+-- Оновлювати сторінку (банер/аватар/тема) може глобальний admin АБО власник/адмін цієї сторінки.
+create policy "pages admin update" on public.pages for update
+  using (is_admin() or can_edit_page(id)) with check (is_admin() or can_edit_page(id));
 
 -- PAGE_ADMINS: користувач бачить СВОЇ членства; керує ними глобальний admin (v1).
 -- (Власник-призначає-адмінів — окремим етапом з UI, щоб не плодити рекурсію тут.)

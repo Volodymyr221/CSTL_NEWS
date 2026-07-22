@@ -1282,6 +1282,12 @@
     const { data, error } = await supa.from("page_posts").insert({ page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null }).select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
+  async function updatePage(pageId, patch) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("pages").update(patch).eq("id", pageId).select("id, name, theme, avatar_url, banner_url, is_system").single();
+    return error ? { ok: false, error: error.message } : { ok: true, page: data };
+  }
   async function fetchMySubscriptions() {
     if (!supa)
       return /* @__PURE__ */ new Set();
@@ -10209,12 +10215,15 @@ ${ev.description || ""}`
   var IC_SEND = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14l11 -11"/><path d="M21 3l-6.5 18a.55 .55 0 0 1 -1 0l-3.5 -7l-7 -3.5a.55 .55 0 0 1 0 -1l18 -6.5"/></svg>';
   var IC_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var IC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
+  var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
+  var IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
   var pages = [];
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
   var commentMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
+  var feedSearch = "";
   var loaded = false;
   function userKey() {
     return currentUserId() || getAnonId();
@@ -10366,11 +10375,13 @@ ${ev.description || ""}`
       circlesEl.innerHTML = circlesHtml();
     if (!listEl)
       return;
-    if (!posts.length) {
-      listEl.innerHTML = `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
+    const q = feedSearch.trim().toLowerCase();
+    const shown = q ? posts.filter((p) => ((p.pages?.name || "") + " " + (p.text || "")).toLowerCase().includes(q)) : posts;
+    if (!shown.length) {
+      listEl.innerHTML = q ? `<div class="fd-empty">\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0437\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(feedSearch.trim())}\xBB.</div>` : `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
       return;
     }
-    listEl.innerHTML = posts.map(postCardHtml).join("");
+    listEl.innerHTML = shown.map(postCardHtml).join("");
     wireGalleries(listEl);
   }
   async function toggleLike(postId) {
@@ -10467,15 +10478,20 @@ ${ev.description || ""}`
     screen.innerHTML = `
     <div class="fd-screen-top">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
+      ${canEdit ? `<button class="fd-banner-edit" data-edit-page="${pageId}" type="button" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0431\u0430\u043D\u0435\u0440">${IC_CAMERA}</button>` : ""}
       <button class="fd-bell${subscribed ? " fd-bell--on" : ""}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
       <div class="fd-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
     </div>
     <div class="fd-screen-id">
-      <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
+      <span class="fd-screen-ava-wrap">
+        <span class="fd-screen-ava">${avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img")}</span>
+        ${canEdit ? `<button class="fd-ava-edit" data-edit-page="${pageId}" type="button" aria-label="\u0417\u043C\u0456\u043D\u0438\u0442\u0438 \u0430\u0432\u0430\u0442\u0430\u0440">${IC_CAMERA}</button>` : ""}
+      </span>
       <div class="fd-screen-name">${escapeHtml(page.name)}</div>
       ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
+      ${canEdit ? `<div><button class="fd-screen-edit" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
     </div>
     ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
     <div class="fd-screen-list">${pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>'}</div>`;
@@ -10486,6 +10502,7 @@ ${ev.description || ""}`
     const composeBtn = screen.querySelector(".fd-compose-open");
     if (composeBtn)
       composeBtn.addEventListener("click", () => openComposer(pageId));
+    screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
@@ -10617,6 +10634,112 @@ ${ev.description || ""}`
     document.body.appendChild(back);
     requestAnimationFrame(() => back.classList.add("open"));
   }
+  function openPageEditor(pageId) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page)
+      return;
+    let bannerBlob = null, avatarBlob = null;
+    const back = document.createElement("div");
+    back.className = "fd-sheet-back";
+    back.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">\u0411\u0430\u043D\u0435\u0440 (\u0448\u0438\u0440\u043E\u043A\u0430 \u0448\u0430\u043F\u043A\u0430)</div>
+        <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
+      </div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">\u0410\u0432\u0430\u0442\u0430\u0440</div>
+        <label class="fd-edit-avatar">${page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-a></label>
+      </div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">\u0422\u0435\u043C\u0430 / \u043E\u043F\u0438\u0441</div>
+        <input class="fd-edit-input" data-theme value="${escapeHtml(page.theme || "")}" maxlength="80" placeholder="\u043D\u0430\u043F\u0440. \u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430, \u0422\u0443\u0440\u0438\u0437\u043C">
+      </div>
+      <button class="fd-edit-save" type="button">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+    </div>`;
+    const close = () => back.remove();
+    back.addEventListener("click", (e) => {
+      if (e.target === back)
+        close();
+    });
+    const setPreview = (label, file) => {
+      label.querySelector("img")?.remove();
+      const img = document.createElement("img");
+      img.src = URL.createObjectURL(file);
+      label.prepend(img);
+    };
+    const bInput = back.querySelector("[data-b]");
+    const aInput = back.querySelector("[data-a]");
+    bInput.addEventListener("change", () => {
+      const f = bInput.files?.[0];
+      if (f) {
+        bannerBlob = f;
+        setPreview(back.querySelector(".fd-edit-banner"), f);
+      }
+    });
+    aInput.addEventListener("change", () => {
+      const f = aInput.files?.[0];
+      if (f) {
+        avatarBlob = f;
+        setPreview(back.querySelector(".fd-edit-avatar"), f);
+      }
+    });
+    const saveBtn = back.querySelector(".fd-edit-save");
+    saveBtn.addEventListener("click", async () => {
+      saveBtn.disabled = true;
+      saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026";
+      const patch = {};
+      if (bannerBlob) {
+        const up = await uploadPhotoToStorage(bannerBlob, "pages/");
+        if (!up.url) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
+          alert("\u0411\u0430\u043D\u0435\u0440 \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0432\u0441\u044F: " + (up.error || ""));
+          return;
+        }
+        patch.banner_url = up.url;
+      }
+      if (avatarBlob) {
+        const up = await uploadPhotoToStorage(avatarBlob, "pages/");
+        if (!up.url) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
+          alert("\u0410\u0432\u0430\u0442\u0430\u0440 \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0432\u0441\u044F: " + (up.error || ""));
+          return;
+        }
+        patch.avatar_url = up.url;
+      }
+      const theme = back.querySelector("[data-theme]").value.trim();
+      if (theme !== (page.theme || ""))
+        patch.theme = theme;
+      if (!Object.keys(patch).length) {
+        close();
+        return;
+      }
+      const res = await updatePage(pageId, patch);
+      if (res.ok) {
+        Object.assign(page, res.page);
+        posts.forEach((p) => {
+          if (p.page_id === pageId && p.pages) {
+            p.pages.avatar_url = page.avatar_url;
+            p.pages.name = page.name;
+          }
+        });
+        close();
+        document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
+        renderFeed();
+        openPageScreen(pageId);
+      } else {
+        saveBtn.disabled = false;
+        saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
+        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + (res.error || ""));
+      }
+    });
+    document.body.appendChild(back);
+    requestAnimationFrame(() => back.classList.add("open"));
+  }
   function wireCards(root) {
     root.addEventListener("click", (e) => {
       const likeBtn = e.target.closest("[data-like]");
@@ -10647,6 +10770,24 @@ ${ev.description || ""}`
     const root = document.getElementById("page-shotam");
     if (root && !root.dataset.fdWired) {
       wireCards(root);
+      const sBtn = document.getElementById("feed-search-btn");
+      const sBar = document.getElementById("feed-search");
+      const sInp = document.getElementById("feed-search-input");
+      sBtn?.addEventListener("click", () => {
+        const show = sBar.hidden;
+        sBar.hidden = !show;
+        if (show)
+          sInp.focus();
+        else {
+          sInp.value = "";
+          feedSearch = "";
+          renderFeed();
+        }
+      });
+      sInp?.addEventListener("input", () => {
+        feedSearch = sInp.value;
+        renderFeed();
+      });
       root.dataset.fdWired = "1";
     }
     await loadData2();
