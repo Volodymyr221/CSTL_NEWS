@@ -16,14 +16,17 @@
 /* Фон вкладки (як в Автобусах — прецедент base.css) */
 .app-main[data-tab="shotam"] { background: var(--fd-bg); }
 
-/* ── Верхній band: кружечки-канали (без заголовка і пошуку, компактно) ── */
+/* ── Верхній band: кружечки-канали (без заголовка і пошуку, компактно) ──
+   Замість жорсткої лінії/тіні — низ плавно згасає в прозорість (mask-image):
+   пости «виринають» знизу без різкого краю. --sh (0..1) — прогрес стискання при
+   скролі вниз (пише feed.js): кільця й відступи меншають → блок нижчий. */
 .fd-topbar {
-  position: sticky; top: 0; z-index: 20;
+  position: sticky; top: 0; z-index: 20; --sh: 0;
   display: flex; align-items: center;
   background: color-mix(in srgb, var(--fd-bg) 84%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--fd-divider);
-  box-shadow: 0 6px 14px rgba(16, 18, 22, 0.10);   /* тінь знизу — відділити від стрічки */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 13px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 13px), transparent);
 }
 
 /* ── Кружечки-канали (stories) — повний розмір, підпис по СЛОВАХ (без переносу букв) ──
@@ -31,17 +34,23 @@
    ширині, «виділені посередині», не з краю); багато (не влазять) → скрол зліва (сторіз). */
 .fd-circles-wrap { flex: 1; min-width: 0; }
 .fd-circles {
-  display: flex; gap: 16px; overflow-x: auto; padding: 8px 16px 10px;
+  display: flex; gap: 16px; overflow-x: auto;
+  /* Вертикальні відступи меншають при стисканні (--sh); низ ≥14px, щоб підписи
+     лишались над зоною згасання маски (13px). */
+  padding: calc(8px - 4px * var(--sh)) 16px calc(18px - 4px * var(--sh));
   scrollbar-width: none; justify-content: flex-start;
 }
 .fd-circles.is-fit { justify-content: space-evenly; }
 .fd-circles::-webkit-scrollbar { display: none; }
 .fd-circle {
   flex: 0 0 auto; width: 86px; display: flex; flex-direction: column; align-items: center;
-  gap: 6px; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
+  gap: calc(6px - 2.5px * var(--sh)); background: none; border: 0; cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
+/* Кільце стискається при скролі вниз: 62px → 46px (через --sh). */
 .fd-circle-ring {
-  width: 62px; height: 62px; border-radius: 50%; padding: 2.5px;
+  width: calc(62px - 16px * var(--sh)); height: calc(62px - 16px * var(--sh));
+  border-radius: 50%; padding: 2.5px;
   background: conic-gradient(from 135deg, var(--fd-accent), var(--fd-accent-soft), var(--fd-accent));
   display: flex; align-items: center; justify-content: center;
 }

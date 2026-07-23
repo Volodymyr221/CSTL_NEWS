@@ -990,6 +990,25 @@ export async function initFeed() {
     // Переміряти розкладку кружечків при зміні ширини екрана (поворот тощо).
     window.addEventListener('resize', layoutCircles);
 
+    // Стискання топбару при скролі стрічки вниз: прогрес 0..1 на перших SHRINK_RANGE
+    // пікселів → CSS-змінна --sh (кільця/відступи меншають плавно, scroll-linked).
+    // Той самий патерн що на Громаді: слухач на .app-main + rAF-троттлінг.
+    const main = document.querySelector('.app-main');
+    const bar = root.querySelector('.fd-topbar');
+    if (main && bar) {
+      const SHRINK_RANGE = 70;
+      let shRaf = 0;
+      const applyShrink = () => {
+        shRaf = 0;
+        const p = Math.min(1, Math.max(0, main.scrollTop / SHRINK_RANGE));
+        bar.style.setProperty('--sh', p.toFixed(3));
+      };
+      const onShrink = () => { if (!shRaf) shRaf = requestAnimationFrame(applyShrink); };
+      main.addEventListener('scroll', onShrink, { passive: true });
+      window.addEventListener('cstl-tab-changed', onShrink);   // повернулись на Стрічку → перерахунок
+      onShrink();
+    }
+
     // Жива синхронізація коментарів: коментар будь-кого зʼявляється у всіх наживо
     // (відкритий лист перемальовується, лічильник картки оновлюється). Один раз.
     subscribePageComments(payload => {
