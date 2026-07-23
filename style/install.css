@@ -1,0 +1,70 @@
+/* style/install.css — банер «Відкрий/встанови у додатку» (.pwa-cta).
+   Показується лише в браузері (не в PWA); логіка — src/core/install-banner.js. */
+
+.pwa-cta {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: calc(76px + env(safe-area-inset-bottom, 0px));  /* над таб-баром */
+  z-index: 3000;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.93);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
+  backdrop-filter: blur(14px) saturate(1.4);
+  border: 1px solid rgba(114, 47, 55, 0.18);
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.18);
+  transform: translateY(160%);
+  transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.pwa-cta--in { transform: translateY(0); }
+
+.pwa-cta-ic { font-size: 26px; line-height: 1; }
+
+.pwa-cta-txt {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+  min-width: 0;
+}
+.pwa-cta-txt b { font-size: 14px; color: #2a1a1c; }
+.pwa-cta-txt span { font-size: 12px; color: #7a6a66; }
+
+.pwa-cta-go {
+  padding: 9px 14px;
+  border: none;
+  border-radius: 12px;
+  background: var(--red, #722F37);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pwa-cta-x {
+  position: absolute;
+  top: 5px;
+  right: 8px;
+  border: none;
+  background: transparent;
+  color: #9a8a86;
+  font-size: 15px;
+  line-height: 1;
+  padding: 4px;
+  cursor: pointer;
+}
+
+.pwa-cta-hint {
+  grid-column: 1 / -1;
+  font-size: 12px;
+  color: #5a4a46;
+  line-height: 1.45;
+  padding-top: 8px;
+  margin-top: 2px;
+  border-top: 1px solid rgba(0, 0, 0, 0.06);
+}

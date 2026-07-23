@@ -21,3 +21,4 @@
 @import url('style/account.css');    /* .acc-* — Фаза Б: вхід, профіль, Кабінет жителя + іконка 👤 */
 @import url('style/messages.css');   /* .pm-* — Фаза Б: приватний чат, список розмов, Мої оголошення */
 @import url('style/sidebar.css');    /* .sidebar-* — бічне меню (бургер) + «Кабінет» для команди + інфо-модалки */
+@import url('style/install.css');    /* .pwa-cta — банер «Відкрий/встанови у додатку» (лише в браузері) */

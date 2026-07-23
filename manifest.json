@@ -2,6 +2,7 @@
   "name": "CSTL LIFE",
   "short_name": "CSTL LIFE",
   "description": "Локальна медіа-платформа Олики та Волині",
+  "id": "/CSTL_NEWS/",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
