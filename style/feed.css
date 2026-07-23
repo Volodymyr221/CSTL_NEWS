@@ -17,16 +17,15 @@
 .app-main[data-tab="shotam"] { background: var(--fd-bg); }
 
 /* ── Верхній band: кружечки-канали (без заголовка і пошуку, компактно) ──
-   Замість жорсткої лінії/тіні — низ плавно згасає в прозорість (mask-image):
-   пости «виринають» знизу без різкого краю. --sh (0..1) — прогрес стискання при
-   скролі вниз (пише feed.js): кільця й відступи меншають → блок нижчий. */
+   --sh (0..1) — прогрес стискання при скролі вниз (пише feed.js): кільця й
+   відступи меншають → блок нижчий. */
 .fd-topbar {
   position: sticky; top: 0; z-index: 20; --sh: 0;
   display: flex; align-items: center;
   background: color-mix(in srgb, var(--fd-bg) 84%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 13px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 13px), transparent);
+  border-bottom: 1px solid var(--fd-divider);
+  box-shadow: 0 6px 14px rgba(16, 18, 22, 0.10);   /* тінь знизу — відділити від стрічки */
 }
 
 /* ── Кружечки-канали (stories) — повний розмір, підпис по СЛОВАХ (без переносу букв) ──
