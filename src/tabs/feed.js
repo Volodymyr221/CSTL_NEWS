@@ -6,7 +6,7 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -226,19 +226,15 @@ function postCardHtml(post) {
     </article>`;
 }
 
-// Пряме посилання на пост (deep link): #/post/feed/<id> — застосунок при відкритті
-// перемикає на «Стрічку» і прокручує до цього поста (handlePostHash у app.js).
-function feedPostUrl(id) {
-  return `${location.origin}${location.pathname}#/post/feed/${id}`;
-}
-
 // Поділитися постом: системне «Поділитись» (Web Share) або копіювання лінка.
+// Ділимося ТІЛЬКИ посиланням (deep-link #/post/feed/<id>) — без тексту поста
+// (рішення Вови 23.07). handlePostHash у app.js відкриває саме цей пост.
 async function sharePost(id) {
   const post = posts.find(p => p.id === id);
-  const url = feedPostUrl(id);
+  const url = deepLink('feed', id);
   if (navigator.share) {
     try {
-      await navigator.share({ title: post?.pages?.name || 'CSTL Life', text: (post?.text || '').slice(0, 140), url });
+      await navigator.share({ title: post?.pages?.name || 'CSTL Life', url });
     } catch (_) { /* користувач скасував — нічого */ }
     return;
   }

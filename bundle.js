@@ -94,10 +94,12 @@
       return "\u041E\u043B\u0438\u043A\u0430";
     }
   }
-  async function sharePost({ title, text, url }) {
+  function deepLink(source, id) {
+    return `${location.origin}${location.pathname}#/post/${source}/${id}`;
+  }
+  async function sharePost({ title, url }) {
     const shareData = {
       title: title || "CSTL LIFE",
-      text: text || "",
       url: url || location.href
     };
     if (navigator.share) {
@@ -1820,10 +1822,6 @@
   function catIcon(id) {
     const c = byId(id);
     return c ? c.icon : ALL_ICON;
-  }
-  function catLabel(id) {
-    const c = byId(id);
-    return c ? c.label : id;
   }
   function catShort(id) {
     const c = byId(id);
@@ -4187,20 +4185,6 @@
       addSavedPost(uid, postId);
     }
   }
-  function buildShareText(post) {
-    if (post.type === "board") {
-      return `${catLabel(post.category)}
-
-${post.text}
-\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
-    }
-    if (post.type === "chat") {
-      const tags = (post.tags || []).join(" ");
-      return `${post.text}${tags ? "\n\n" + tags : ""}
-\u2014 ${post.author || "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E"}`;
-    }
-    return post.text || "";
-  }
   function saveBtnHtml(post) {
     const saved = isSaved(post.id);
     return `<button class="bd-icon-btn bd-bookmark${saved ? " bd-bookmark--active" : ""}" type="button"
@@ -4210,12 +4194,12 @@ ${post.text}
   </button>`;
   }
   function shareBtnHtml(post) {
-    const shareText = buildShareText(post);
+    const source = post.type === "chat" ? "disc" : "board";
     const shareTitle = post.type === "chat" ? "\u041E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438" : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437 \u0414\u043E\u0448\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u041E\u043B\u0438\u043A\u0438";
     return `<button class="bd-icon-btn bd-share-btn" type="button"
           data-share-board
           data-share-title="${escapeHtml(shareTitle)}"
-          data-share-text="${escapeHtml(shareText)}"
+          data-share-url="${escapeHtml(deepLink(source, post.id))}"
           aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F">${SHARE_ICON_SVG}</button>`;
   }
 
@@ -6017,7 +6001,7 @@ ${post.text}
         e.stopPropagation();
         sharePost({
           title: shareBtn.dataset.shareTitle,
-          text: shareBtn.dataset.shareText
+          url: shareBtn.dataset.shareUrl
         });
         return;
       }
@@ -6072,6 +6056,24 @@ ${post.text}
     const post = allPosts.find((p) => p.id === postId);
     if (post)
       openChatModal(post);
+  }
+  async function openBoardItemById(postId) {
+    if (!allPosts.length) {
+      try {
+        await renderBoard();
+      } catch (_) {
+      }
+    }
+    const post = allPosts.find((p) => p.id === postId);
+    if (!post)
+      return;
+    if (post.type === "chat") {
+      window.switchTab?.("discussions");
+      openChatModal(post);
+    } else {
+      window.switchTab?.("board");
+      openAdModalStandalone(post);
+    }
   }
   var BOARD_BODY_GAP = 12;
   function syncBoardBodyOffset() {
@@ -6325,6 +6327,11 @@ ${post.text}
     await ensureNewsLoaded();
     return ids.map((id) => allArticles.find((a) => a.id === id)).filter(Boolean);
   }
+  async function openArticleById(id) {
+    window.switchTab?.("news");
+    await ensureNewsLoaded();
+    openArticle(id);
+  }
   function badgesHtml(a) {
     return `
     <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
@@ -6435,8 +6442,7 @@ ${post.text}
     if (shareBtn)
       shareBtn.onclick = () => sharePost({
         title: article.title,
-        text: article.excerpt || "",
-        url: article.sourceUrl || location.href
+        url: deepLink("news", article.id)
       });
     if (remindBtn)
       remindBtn.hidden = true;
@@ -10503,15 +10509,12 @@ ${ev.description || ""}`
       </footer>
     </article>`;
   }
-  function feedPostUrl(id) {
-    return `${location.origin}${location.pathname}#/post/feed/${id}`;
-  }
   async function sharePost2(id) {
     const post = posts.find((p) => p.id === id);
-    const url = feedPostUrl(id);
+    const url = deepLink("feed", id);
     if (navigator.share) {
       try {
-        await navigator.share({ title: post?.pages?.name || "CSTL Life", text: (post?.text || "").slice(0, 140), url });
+        await navigator.share({ title: post?.pages?.name || "CSTL Life", url });
       } catch (_) {
       }
       return;
@@ -12713,13 +12716,18 @@ END:VEVENT`
     openThreadById(Number(m[1]));
   }
   function handlePostHash() {
-    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc)\/(\d+)/);
+    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc|news)\/(\d+)/);
     if (!m)
       return;
     history.replaceState(null, "", location.pathname + location.search);
     const [, source, id] = m;
+    const n = Number(id);
     if (source === "feed")
-      focusFeedPost(Number(id));
+      focusFeedPost(n);
+    else if (source === "board" || source === "disc")
+      openBoardItemById(n);
+    else if (source === "news")
+      openArticleById(n);
   }
   function init() {
     bootApp();
