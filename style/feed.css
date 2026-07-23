@@ -92,7 +92,8 @@
 .fd-postmenu-item svg { width: 20px; height: 20px; flex: none; }
 .fd-postmenu-item--danger { color: #c0392b; }
 
-/* Блок опису під фото: коли є фото — відкидає тінь УГОРУ на нього (глибина, «налягає»). */
+/* Фото обрамлене тінню зверху (від шапки) і знизу (від блоку опису) — «налягання», глибина. */
+.fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: 0 7px 16px rgba(16, 18, 22, 0.16); }
 .fd-card-body { position: relative; z-index: 1; background: var(--fd-surface); }
 .fd-card-body--onphoto { box-shadow: 0 -7px 16px rgba(16, 18, 22, 0.18); }
 
