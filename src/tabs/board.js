@@ -1022,7 +1022,7 @@ function attachBoardDelegation() {
       e.stopPropagation();
       sharePost({
         title: shareBtn.dataset.shareTitle,
-        text:  shareBtn.dataset.shareText,
+        url:   shareBtn.dataset.shareUrl,
       });
       return;
     }
@@ -1092,6 +1092,17 @@ export async function openChatById(postId) {
   if (!allPosts.length) { try { await renderBoard(); } catch (_) { /* fail-soft */ } }
   const post = allPosts.find(p => p.id === postId);
   if (post) openChatModal(post);
+}
+
+// Deep-link (6b): відкрити елемент Дошки за id — оголошення АБО обговорення.
+// Сам визначає тип поста (chat → Обговорення-чат, інше → модалка оголошення) і
+// перемикає на потрібну вкладку. Холодний старт — дочекатись даних (await renderBoard).
+export async function openBoardItemById(postId) {
+  if (!allPosts.length) { try { await renderBoard(); } catch (_) { /* fail-soft */ } }
+  const post = allPosts.find(p => p.id === postId);
+  if (!post) return;
+  if (post.type === 'chat') { window.switchTab?.('discussions'); openChatModal(post); }
+  else                      { window.switchTab?.('board');       openAdModalStandalone(post); }
 }
 
 // Відступ тіла Дошки = реальна висота «прибитої» шапки (.bd-controls), щоб картки

@@ -154,14 +154,22 @@ export function attachSwipe(el, onLeft, onRight) {
   }, { passive: true });
 }
 
-// Web Share API — поділитись контентом через рідне меню iOS/Android.
+// Deep-link на елемент застосунку: #/post/<source>/<id>.
+// source: feed («Стрічка») · board (оголошення Дошки) · disc (Обговорення) · news (стаття).
+// На GitHub Pages (статичний хостинг) роутинг через hash; обробка — handlePostHash у app.js.
+export function deepLink(source, id) {
+  return `${location.origin}${location.pathname}#/post/${source}/${id}`;
+}
+
+// Web Share API — поділитись ПОСИЛАННЯМ через рідне меню iOS/Android.
 // iOS Safari відкриває меню з Viber/Telegram/Messenger/SMS одним тапом.
 // Fallback: copy URL у clipboard + toast «Скопійовано».
-// Стратегія віральності з docs/COMMUNITY_BOARD_VISION.md.
-export async function sharePost({ title, text, url }) {
+// Рішення Вови (23.07): ділимося/копіюємо ТІЛЬКИ посилання — без дублювання тексту
+// контенту (раніше text заповнював тіло повідомлення). Стратегія віральності —
+// посилання веде людину в застосунок (docs/COMMUNITY_BOARD_VISION.md).
+export async function sharePost({ title, url }) {
   const shareData = {
     title: title || 'CSTL LIFE',
-    text:  text || '',
     url:   url || location.href,
   };
   // iOS Safari + Chrome Android підтримують navigator.share()

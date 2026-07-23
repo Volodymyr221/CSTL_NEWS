@@ -1,4 +1,4 @@
-import { formatTime, escapeHtml, sharePost, showToast } from '../core/utils.js';
+import { formatTime, escapeHtml, sharePost, showToast, deepLink } from '../core/utils.js';
 import { ICONS } from '../core/icons.js';
 
 let allArticles = [];
@@ -107,6 +107,13 @@ export async function ensureNewsLoaded() {
 export async function getArticlesByIds(ids) {
   await ensureNewsLoaded();
   return ids.map(id => allArticles.find(a => a.id === id)).filter(Boolean);
+}
+
+// Deep-link (6b): відкрити статтю за id — перемкнути на «Новини» + дочекатись даних.
+export async function openArticleById(id) {
+  window.switchTab?.('news');
+  await ensureNewsLoaded();
+  openArticle(id);
 }
 
 // HTML для двох кольорових бейджів (geo + category) — використовується у обох картках
@@ -234,10 +241,12 @@ export function openArticle(id) {
   if (shareBtn)  shareBtn.innerHTML  = ICONS.share;
   if (remindBtn) remindBtn.innerHTML = ICONS.bell;
   if (saveBtn)   saveBtn.innerHTML   = ICONS.bookmark;
+  // Ділимося посиланням У ЗАСТОСУНОК на цю статтю (#/post/news/<id>), не зовнішнім
+  // джерелом — щоб людина відкрила статтю в CSTL (рішення Вови 23.07). Оригінал —
+  // усередині статті («Читати оригінал»).
   if (shareBtn) shareBtn.onclick = () => sharePost({
     title: article.title,
-    text:  article.excerpt || '',
-    url:   article.sourceUrl || location.href,
+    url:   deepLink('news', article.id),
   });
   if (remindBtn) remindBtn.hidden = true;   // нагадування лише для подій/свят (events.js)
   if (saveBtn) {

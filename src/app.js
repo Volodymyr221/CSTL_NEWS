@@ -1,11 +1,11 @@
 import { bootApp } from './core/boot.js';
 import { initWeather } from './core/weather.js';
 import { initCommunity } from './tabs/community.js';
-import { initNews } from './tabs/news.js';
+import { initNews, openArticleById } from './tabs/news.js';
 import { initFeed, focusFeedPost } from './tabs/feed.js';   // «Стрічка» (events.js лишається для Етапу 6 — Афіша громади)
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
-import { initBoard } from './tabs/board.js';
+import { initBoard, openBoardItemById } from './tabs/board.js';
 import { initAuth, currentUserId } from './core/auth.js';
 import { logEvent, getAnonId } from './core/supabase.js';
 import { initAccountUI } from './core/account-ui.js';
@@ -211,14 +211,18 @@ function handleThreadHash() {
   openThreadById(Number(m[1]));
 }
 
-// Deep-link на пост: #/post/<source>/<id>. Крок 6a — джерело `feed` («Стрічка»);
-// board/disc (Дошка/Обговорення) додамо у 6b. Той самий hash-патерн (GitHub Pages).
+// Deep-link на елемент: #/post/<source>/<id>. Крок 6a — `feed` («Стрічка»);
+// 6b додає board (оголошення Дошки), disc (Обговорення), news (стаття Новин).
+// Той самий hash-патерн (GitHub Pages — статичний хостинг, без справжніх шляхів).
 function handlePostHash() {
-  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc)\/(\d+)/);
+  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc|news)\/(\d+)/);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
   const [, source, id] = m;
-  if (source === 'feed') focusFeedPost(Number(id));
+  const n = Number(id);
+  if      (source === 'feed')              focusFeedPost(n);
+  else if (source === 'board' || source === 'disc') openBoardItemById(n);
+  else if (source === 'news')              openArticleById(n);
 }
 
 // Ініціалізація при завантаженні сторінки
