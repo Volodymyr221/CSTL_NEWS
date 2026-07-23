@@ -14,7 +14,7 @@ import {
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
   fetchPageComments, addPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
-  createPagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
+  createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
 } from '../core/supabase.js';
 
@@ -32,6 +32,7 @@ const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
 const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
 const IC_DOTS   = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+const IC_TRASH  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7V4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
 
 // ── Стан ────────────────────────────────────────────────────────────────────
 let pages = [];               // усі сторінки-канали
@@ -161,6 +162,7 @@ function postCardHtml(post) {
   const photo = galleryHtml(postImages(post), post.id);
   const author = authorName
     ? `<div class="fd-author"${nameUid(post.author_uid)}>— ${authorName}</div>` : '';
+  const canEditPost = myPageIds.has(post.page_id);   // «⋯» лише для своїх сторінок
   return `
     <article class="fd-card" data-post="${post.id}">
       <header class="fd-card-head" data-open-page="${post.page_id}">
@@ -169,6 +171,7 @@ function postCardHtml(post) {
           <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
           <span class="fd-time">${relTime(post.created_at)}</span>
         </span>
+        ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
       ${photo}
       <div class="fd-text">${escapeHtml(post.text)}</div>
@@ -545,25 +548,29 @@ async function toggleBell(pageId, screen) {
   }
 }
 
-// ── Композер: власник/адмін пише пост від імені сторінки (кілька фото) ───────
+// ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────
+// editPost заданий → режим редагування: префіл тексту + наявні фото, «Зберегти».
 const MAX_PHOTOS = 10;
-function openComposer(pageId) {
+function openComposer(pageId, editPost = null) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
-  let files = [];               // масив File (кілька фото, як у FB/IG)
-  let previewUrls = [];         // objectURL-и для прев'ю (звільняємо при видаленні)
+  const edit = !!editPost;
+  let existing = edit ? postImages(editPost).slice() : [];  // URL-и наявних фото (редагування)
+  let files = [];               // масив File нових фото
+  let previewUrls = [];         // objectURL-и для прев'ю нових (звільняємо при видаленні)
+  const CTA = edit ? 'Зберегти' : 'Опублікувати';
 
   const back = document.createElement('div');
   back.className = 'fd-sheet-back';
   back.innerHTML = `
     <div class="fd-sheet fd-composer">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">Новий пост · ${escapeHtml(page.name)}</div>
-      <textarea class="fd-comp-text" placeholder="Що нового?" maxlength="4000" rows="5"></textarea>
+      <div class="fd-sheet-title">${edit ? 'Редагувати пост' : 'Новий пост'} · ${escapeHtml(page.name)}</div>
+      <textarea class="fd-comp-text" placeholder="Що нового?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || '') : ''}</textarea>
       <div class="fd-comp-thumbs" hidden></div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
-        <button class="fd-comp-send" type="button">Опублікувати</button>
+        <button class="fd-comp-send" type="button">${CTA}</button>
       </div>
     </div>`;
   const close = () => { previewUrls.forEach(u => URL.revokeObjectURL(u)); back.remove(); };
@@ -572,57 +579,68 @@ function openComposer(pageId) {
   const fileInput = back.querySelector('input[type=file]');
   const thumbs = back.querySelector('.fd-comp-thumbs');
   const renderThumbs = () => {
-    if (!files.length) { thumbs.hidden = true; thumbs.innerHTML = ''; return; }
+    if (!existing.length && !files.length) { thumbs.hidden = true; thumbs.innerHTML = ''; return; }
     thumbs.hidden = false;
-    thumbs.innerHTML = files.map((f, i) =>
+    const exHtml = existing.map((u, i) =>
+      `<div class="fd-comp-thumb"><img src="${escapeHtml(u)}" alt="">
+        <button class="fd-comp-thumb-x" data-rmex="${i}" type="button">${IC_X}</button></div>`).join('');
+    const nwHtml = files.map((f, i) =>
       `<div class="fd-comp-thumb"><img src="${previewUrls[i]}" alt="">
         <button class="fd-comp-thumb-x" data-rm="${i}" type="button">${IC_X}</button></div>`).join('');
+    thumbs.innerHTML = exHtml + nwHtml;
   };
   fileInput.addEventListener('change', () => {
     for (const f of fileInput.files) {
-      if (files.length >= MAX_PHOTOS) break;
+      if (existing.length + files.length >= MAX_PHOTOS) break;
       files.push(f); previewUrls.push(URL.createObjectURL(f));
     }
     fileInput.value = '';       // щоб те саме фото можна було додати знову
     renderThumbs();
   });
   thumbs.addEventListener('click', e => {
+    const rmEx = e.target.closest('[data-rmex]');
+    if (rmEx) { existing.splice(Number(rmEx.dataset.rmex), 1); renderThumbs(); return; }
     const x = e.target.closest('[data-rm]'); if (!x) return;
     const i = Number(x.dataset.rm);
     URL.revokeObjectURL(previewUrls[i]);
     files.splice(i, 1); previewUrls.splice(i, 1);
     renderThumbs();
   });
+  renderThumbs();               // показати наявні фото одразу в режимі редагування
 
   const sendBtn = back.querySelector('.fd-comp-send');
   sendBtn.addEventListener('click', async () => {
     const text = back.querySelector('.fd-comp-text').value.trim();
-    if (!text && !files.length) return;
-    sendBtn.disabled = true; sendBtn.textContent = 'Публікую…';
+    if (!text && !existing.length && !files.length) return;
+    sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
-    // Завантажуємо усі фото; помилки НЕ ковтаємо — показуємо.
-    let urls = [];
+    // Завантажуємо нові фото; помилки НЕ ковтаємо — показуємо.
+    let newUrls = [];
     if (files.length) {
       const ups = await Promise.all(files.map(f => uploadPhotoToStorage(f, 'pages/')));
-      urls = ups.map(u => u.url).filter(Boolean);
-      const failed = ups.length - urls.length;
+      newUrls = ups.map(u => u.url).filter(Boolean);
+      const failed = ups.length - newUrls.length;
       if (failed > 0) {
-        sendBtn.disabled = false; sendBtn.textContent = 'Опублікувати';
+        sendBtn.disabled = false; sendBtn.textContent = CTA;
         const firstErr = ups.find(u => !u.url)?.error || '';
         alert(`Не вдалося завантажити ${failed} фото: ${firstErr}\nСпробуй ще раз.`);
         return;
       }
     }
-    const res = await createPagePost(pageId, currentUserId(), text || '', urls);
+    const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
+    const res = edit
+      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null })
+      : await createPagePost(pageId, currentUserId(), text || '', finalUrls);
     if (res.ok) {
-      posts.unshift(res.post);
+      if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
+      else posts.unshift(res.post);
       close();
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();
       openPageScreen(pageId);
     } else {
-      sendBtn.disabled = false; sendBtn.textContent = 'Опублікувати';
-      alert('Не вдалося опублікувати: ' + (res.error || ''));
+      sendBtn.disabled = false; sendBtn.textContent = CTA;
+      alert((edit ? 'Не вдалося зберегти: ' : 'Не вдалося опублікувати: ') + (res.error || ''));
     }
   });
 
@@ -704,9 +722,44 @@ function openPageEditor(pageId) {
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
+// ── Меню поста «⋯» (власник/адмін сторінки): Редагувати / Видалити ───────────
+function openPostMenu(postId) {
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  const back = document.createElement('div');
+  back.className = 'fd-sheet-back';
+  back.innerHTML = `
+    <div class="fd-sheet fd-postmenu">
+      <div class="fd-sheet-handle"></div>
+      <button class="fd-postmenu-item" data-act="edit" type="button">${IC_EDIT}Редагувати</button>
+      <button class="fd-postmenu-item fd-postmenu-item--danger" data-act="del" type="button">${IC_TRASH}Видалити</button>
+    </div>`;
+  const close = () => back.remove();
+  back.addEventListener('click', async e => {
+    if (e.target === back) { close(); return; }
+    const item = e.target.closest('[data-act]');
+    if (!item) return;
+    if (item.dataset.act === 'edit') { close(); openComposer(post.page_id, post); return; }
+    // Видалення
+    if (!confirm('Видалити пост?')) return;
+    const res = await deletePagePost(postId);
+    if (!res.ok) { alert('Не вдалося видалити: ' + (res.error || '')); return; }
+    const hadScreen = !!document.querySelector('.fd-screen');
+    posts = posts.filter(p => p.id !== postId);
+    close();
+    document.querySelectorAll('.fd-screen').forEach(s => s.remove());
+    renderFeed();
+    if (hadScreen) openPageScreen(post.page_id);
+  });
+  document.body.appendChild(back);
+  requestAnimationFrame(() => back.classList.add('open'));
+}
+
 // ── Делегування подій на картках (лайк/коментарі/відкрити сторінку) ─────────
 function wireCards(root) {
   root.addEventListener('click', e => {
+    const menuBtn = e.target.closest('[data-post-menu]');   // «⋯» поста — перед open-page
+    if (menuBtn) { openPostMenu(Number(menuBtn.dataset.postMenu)); return; }
     const likeBtn = e.target.closest('[data-like]');
     if (likeBtn) { toggleLike(Number(likeBtn.dataset.like)); return; }
     const comBtn = e.target.closest('[data-comments]');

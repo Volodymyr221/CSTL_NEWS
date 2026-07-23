@@ -1350,6 +1350,18 @@
     const { data, error } = await supa.from("page_posts").insert({ page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null }).select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
+  async function updatePagePost(postId, patch) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").single();
+    return error ? { ok: false, error: error.message } : { ok: true, post: data };
+  }
+  async function deletePagePost(postId) {
+    if (!supa)
+      return { ok: false };
+    const { error } = await supa.from("page_posts").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", postId);
+    return error ? { ok: false, error: error.message } : { ok: true };
+  }
   async function updatePage(pageId, patch) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
@@ -10286,6 +10298,7 @@ ${ev.description || ""}`
   var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
   var IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
   var IC_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
+  var IC_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7V4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
   var pages = [];
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
@@ -10414,6 +10427,7 @@ ${ev.description || ""}`
     const authorName = post.author_uid ? liveName("", post.author_uid, "") : "";
     const photo = galleryHtml(postImages(post), post.id);
     const author = authorName ? `<div class="fd-author"${nameUid(post.author_uid)}>\u2014 ${authorName}</div>` : "";
+    const canEditPost = myPageIds.has(post.page_id);
     return `
     <article class="fd-card" data-post="${post.id}">
       <header class="fd-card-head" data-open-page="${post.page_id}">
@@ -10422,6 +10436,7 @@ ${ev.description || ""}`
           <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
           <span class="fd-time">${relTime(post.created_at)}</span>
         </span>
+        ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="\u041C\u0435\u043D\u044E \u043F\u043E\u0441\u0442\u0430">${IC_DOTS}</button>` : ""}
       </header>
       ${photo}
       <div class="fd-text">${escapeHtml(post.text)}</div>
@@ -10828,23 +10843,26 @@ ${ev.description || ""}`
     }
   }
   var MAX_PHOTOS = 10;
-  function openComposer(pageId) {
+  function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
       return;
+    const edit = !!editPost;
+    let existing = edit ? postImages(editPost).slice() : [];
     let files = [];
     let previewUrls = [];
+    const CTA = edit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
     <div class="fd-sheet fd-composer">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442 \xB7 ${escapeHtml(page.name)}</div>
-      <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5"></textarea>
+      <div class="fd-sheet-title">${edit ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043F\u043E\u0441\u0442" : "\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442"} \xB7 ${escapeHtml(page.name)}</div>
+      <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || "") : ""}</textarea>
       <div class="fd-comp-thumbs" hidden></div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
-        <button class="fd-comp-send" type="button">\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438</button>
+        <button class="fd-comp-send" type="button">${CTA}</button>
       </div>
     </div>`;
     const close = () => {
@@ -10858,18 +10876,21 @@ ${ev.description || ""}`
     const fileInput = back.querySelector("input[type=file]");
     const thumbs = back.querySelector(".fd-comp-thumbs");
     const renderThumbs = () => {
-      if (!files.length) {
+      if (!existing.length && !files.length) {
         thumbs.hidden = true;
         thumbs.innerHTML = "";
         return;
       }
       thumbs.hidden = false;
-      thumbs.innerHTML = files.map((f, i) => `<div class="fd-comp-thumb"><img src="${previewUrls[i]}" alt="">
+      const exHtml = existing.map((u, i) => `<div class="fd-comp-thumb"><img src="${escapeHtml(u)}" alt="">
+        <button class="fd-comp-thumb-x" data-rmex="${i}" type="button">${IC_X}</button></div>`).join("");
+      const nwHtml = files.map((f, i) => `<div class="fd-comp-thumb"><img src="${previewUrls[i]}" alt="">
         <button class="fd-comp-thumb-x" data-rm="${i}" type="button">${IC_X}</button></div>`).join("");
+      thumbs.innerHTML = exHtml + nwHtml;
     };
     fileInput.addEventListener("change", () => {
       for (const f of fileInput.files) {
-        if (files.length >= MAX_PHOTOS)
+        if (existing.length + files.length >= MAX_PHOTOS)
           break;
         files.push(f);
         previewUrls.push(URL.createObjectURL(f));
@@ -10878,6 +10899,12 @@ ${ev.description || ""}`
       renderThumbs();
     });
     thumbs.addEventListener("click", (e) => {
+      const rmEx = e.target.closest("[data-rmex]");
+      if (rmEx) {
+        existing.splice(Number(rmEx.dataset.rmex), 1);
+        renderThumbs();
+        return;
+      }
       const x = e.target.closest("[data-rm]");
       if (!x)
         return;
@@ -10887,38 +10914,45 @@ ${ev.description || ""}`
       previewUrls.splice(i, 1);
       renderThumbs();
     });
+    renderThumbs();
     const sendBtn = back.querySelector(".fd-comp-send");
     sendBtn.addEventListener("click", async () => {
       const text = back.querySelector(".fd-comp-text").value.trim();
-      if (!text && !files.length)
+      if (!text && !existing.length && !files.length)
         return;
       sendBtn.disabled = true;
-      sendBtn.textContent = "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
-      let urls = [];
+      sendBtn.textContent = edit ? "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026" : "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
+      let newUrls = [];
       if (files.length) {
         const ups = await Promise.all(files.map((f) => uploadPhotoToStorage(f, "pages/")));
-        urls = ups.map((u) => u.url).filter(Boolean);
-        const failed = ups.length - urls.length;
+        newUrls = ups.map((u) => u.url).filter(Boolean);
+        const failed = ups.length - newUrls.length;
         if (failed > 0) {
           sendBtn.disabled = false;
-          sendBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+          sendBtn.textContent = CTA;
           const firstErr = ups.find((u) => !u.url)?.error || "";
           alert(`\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 ${failed} \u0444\u043E\u0442\u043E: ${firstErr}
 \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.`);
           return;
         }
       }
-      const res = await createPagePost(pageId, currentUserId(), text || "", urls);
+      const finalUrls = [...existing, ...newUrls];
+      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls);
       if (res.ok) {
-        posts.unshift(res.post);
+        if (edit) {
+          const i = posts.findIndex((p) => p.id === editPost.id);
+          if (i >= 0)
+            posts[i] = res.post;
+        } else
+          posts.unshift(res.post);
         close();
         document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
         renderFeed();
         openPageScreen(pageId);
       } else {
         sendBtn.disabled = false;
-        sendBtn.textContent = "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
-        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438: " + (res.error || ""));
+        sendBtn.textContent = CTA;
+        alert((edit ? "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " : "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438: ") + (res.error || ""));
       }
     });
     document.body.appendChild(back);
@@ -11030,8 +11064,57 @@ ${ev.description || ""}`
     document.body.appendChild(back);
     requestAnimationFrame(() => back.classList.add("open"));
   }
+  function openPostMenu(postId) {
+    const post = posts.find((p) => p.id === postId);
+    if (!post)
+      return;
+    const back = document.createElement("div");
+    back.className = "fd-sheet-back";
+    back.innerHTML = `
+    <div class="fd-sheet fd-postmenu">
+      <div class="fd-sheet-handle"></div>
+      <button class="fd-postmenu-item" data-act="edit" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>
+      <button class="fd-postmenu-item fd-postmenu-item--danger" data-act="del" type="button">${IC_TRASH}\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>
+    </div>`;
+    const close = () => back.remove();
+    back.addEventListener("click", async (e) => {
+      if (e.target === back) {
+        close();
+        return;
+      }
+      const item = e.target.closest("[data-act]");
+      if (!item)
+        return;
+      if (item.dataset.act === "edit") {
+        close();
+        openComposer(post.page_id, post);
+        return;
+      }
+      if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0441\u0442?"))
+        return;
+      const res = await deletePagePost(postId);
+      if (!res.ok) {
+        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
+        return;
+      }
+      const hadScreen = !!document.querySelector(".fd-screen");
+      posts = posts.filter((p) => p.id !== postId);
+      close();
+      document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
+      renderFeed();
+      if (hadScreen)
+        openPageScreen(post.page_id);
+    });
+    document.body.appendChild(back);
+    requestAnimationFrame(() => back.classList.add("open"));
+  }
   function wireCards(root) {
     root.addEventListener("click", (e) => {
+      const menuBtn = e.target.closest("[data-post-menu]");
+      if (menuBtn) {
+        openPostMenu(Number(menuBtn.dataset.postMenu));
+        return;
+      }
       const likeBtn = e.target.closest("[data-like]");
       if (likeBtn) {
         toggleLike(Number(likeBtn.dataset.like));
