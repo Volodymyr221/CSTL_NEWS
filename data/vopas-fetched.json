@@ -1,5 +1,5 @@
 {
-  "fetched_at": "2026-07-23T21:47:08.127620+03:00",
+  "fetched_at": "2026-07-23T23:16:14.022032+03:00",
   "date": "23.07.2026",
   "source": "vopas.com.ua",
   "routes": [
@@ -6282,8 +6282,8 @@
       "carrier": "ТОВ \"САН САН БУС\"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6297,8 +6297,8 @@
       "carrier": "ТОВ \"МТК \"КАЗНА ТРАНС\"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6312,8 +6312,8 @@
       "carrier": "ТОВ \"МТК \"КАЗНА ТРАНС\"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6327,8 +6327,8 @@
       "carrier": "Конончук В.В.",
       "bus": "Сканія",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6342,8 +6342,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6357,8 +6357,8 @@
       "carrier": "ТОВ \"САН САН БУС\"",
       "bus": "МАН В 3212",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
@@ -6372,8 +6372,8 @@
       "carrier": "Павлюк В.І Тернопільська обл.",
       "bus": "",
       "price": null,
-      "status": "в продажі",
-      "sale_active": true,
+      "status": "продаж припинено",
+      "sale_active": false,
       "cancelled": false,
       "from": "Личани",
       "to": "Луцьк"
