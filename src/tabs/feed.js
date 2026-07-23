@@ -154,6 +154,40 @@ function openViewer(images, startIdx) {
   track.scrollLeft = (startIdx || 0) * track.clientWidth;   // відкрити на потрібному фото
 }
 
+// Свайп-вниз закриває нижній лист — той самий філ, що в core/modal.js: граб від
+// шапки (перші ~64px) закриває ЗАВЖДИ; у тілі — лише коли скрол угорі (інакше це
+// звичайний скрол). back = .fd-sheet-back; panel = .fd-sheet; scroller = елемент,
+// що реально скролиться (для листа коментарів — сам список, інакше сам panel).
+function attachSheetSwipe(back, panel, scroller, doClose) {
+  scroller = scroller || panel;
+  let startY = 0, dragging = false, dy = 0;
+  panel.addEventListener('touchstart', e => {
+    const y = e.touches[0].clientY;
+    const inHeader = (y - panel.getBoundingClientRect().top) < 64;
+    if (!inHeader && scroller.scrollTop > 0) return;   // це скрол тіла, не закриття
+    startY = y; dragging = true; dy = 0;
+  }, { passive: true });
+  panel.addEventListener('touchmove', e => {
+    if (!dragging) return;
+    dy = e.touches[0].clientY - startY;
+    if (dy <= 0) { panel.style.transform = ''; return; }     // тягнуть вгору — нативному скролу
+    if (scroller.scrollTop > 0) {                            // ще прокручено — не хапаємо
+      panel.style.transform = ''; startY = e.touches[0].clientY; dy = 0; return;
+    }
+    e.preventDefault();                                      // блокуємо нативний скрол поки тягнемо
+    panel.style.transition = 'none';
+    panel.style.transform = `translateY(${dy}px)`;
+  }, { passive: false });
+  panel.addEventListener('touchend', () => {
+    if (!dragging) return;
+    dragging = false;
+    panel.style.transition = '';                            // повертаємо CSS-анімацію (плавно)
+    if (dy > 90) { panel.style.transform = 'translateY(100%)'; back.classList.remove('open'); setTimeout(doClose, 240); }
+    else panel.style.transform = '';                        // не дотягнув — плавно назад
+    dy = 0;
+  });
+}
+
 function postCardHtml(post) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
@@ -467,6 +501,7 @@ function openComments(postId) {
   sendBtn.addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
+  attachSheetSwipe(sheet, sheet.querySelector('.fd-sheet'), listEl, close);   // свайп-закриття
   document.body.appendChild(sheet);
   requestAnimationFrame(() => sheet.classList.add('open'));
 }
@@ -644,6 +679,7 @@ function openComposer(pageId, editPost = null) {
     }
   });
 
+  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
   document.body.appendChild(back);
   requestAnimationFrame(() => back.classList.add('open'));
 }
@@ -718,6 +754,7 @@ function openPageEditor(pageId) {
     }
   });
 
+  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
   document.body.appendChild(back);
   requestAnimationFrame(() => back.classList.add('open'));
 }
@@ -751,6 +788,7 @@ function openPostMenu(postId) {
     renderFeed();
     if (hadScreen) openPageScreen(post.page_id);
   });
+  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
   document.body.appendChild(back);
   requestAnimationFrame(() => back.classList.add('open'));
 }

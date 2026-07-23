@@ -10420,6 +10420,50 @@ ${ev.description || ""}`
     const track = ov.querySelector(".fd-viewer-track");
     track.scrollLeft = (startIdx || 0) * track.clientWidth;
   }
+  function attachSheetSwipe(back, panel, scroller, doClose) {
+    scroller = scroller || panel;
+    let startY = 0, dragging = false, dy = 0;
+    panel.addEventListener("touchstart", (e) => {
+      const y = e.touches[0].clientY;
+      const inHeader = y - panel.getBoundingClientRect().top < 64;
+      if (!inHeader && scroller.scrollTop > 0)
+        return;
+      startY = y;
+      dragging = true;
+      dy = 0;
+    }, { passive: true });
+    panel.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      dy = e.touches[0].clientY - startY;
+      if (dy <= 0) {
+        panel.style.transform = "";
+        return;
+      }
+      if (scroller.scrollTop > 0) {
+        panel.style.transform = "";
+        startY = e.touches[0].clientY;
+        dy = 0;
+        return;
+      }
+      e.preventDefault();
+      panel.style.transition = "none";
+      panel.style.transform = `translateY(${dy}px)`;
+    }, { passive: false });
+    panel.addEventListener("touchend", () => {
+      if (!dragging)
+        return;
+      dragging = false;
+      panel.style.transition = "";
+      if (dy > 90) {
+        panel.style.transform = "translateY(100%)";
+        back.classList.remove("open");
+        setTimeout(doClose, 240);
+      } else
+        panel.style.transform = "";
+      dy = 0;
+    });
+  }
   function postCardHtml(post) {
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
@@ -10751,6 +10795,7 @@ ${ev.description || ""}`
       if (e.key === "Enter")
         send();
     });
+    attachSheetSwipe(sheet, sheet.querySelector(".fd-sheet"), listEl, close);
     document.body.appendChild(sheet);
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
@@ -10955,6 +11000,7 @@ ${ev.description || ""}`
         alert((edit ? "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " : "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438: ") + (res.error || ""));
       }
     });
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
     requestAnimationFrame(() => back.classList.add("open"));
   }
@@ -11061,6 +11107,7 @@ ${ev.description || ""}`
         alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + (res.error || ""));
       }
     });
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
     requestAnimationFrame(() => back.classList.add("open"));
   }
@@ -11105,6 +11152,7 @@ ${ev.description || ""}`
       if (hadScreen)
         openPageScreen(post.page_id);
     });
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
     requestAnimationFrame(() => back.classList.add("open"));
   }
