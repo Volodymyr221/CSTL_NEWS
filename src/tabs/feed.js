@@ -16,7 +16,9 @@ import {
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
+  saveUserPushDevice, notifyNewPagePost,
 } from '../core/supabase.js';
+import { ensurePushSubscription } from '../core/push.js';
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -624,7 +626,27 @@ async function toggleBell(pageId, screen) {
   if (!res.ok) {                       // відкат
     if (on) mySubs.delete(pageId); else mySubs.add(pageId);
     if (btn) { btn.classList.toggle('fd-bell--on', !on); btn.innerHTML = !on ? IC_BELL_F : IC_BELL; }
+    return;
   }
+  // Увімкнули дзвіночок → зареєструвати push-пристрій, щоб Edge-функція мала куди слати.
+  // Реюз патерну чатів (P-5): дозвіл + браузер-підписка → user_push_devices за uid.
+  if (on) registerFeedPushDevice();
+}
+
+// Запит дозволу на сповіщення + збереження push-пристрою під акаунт (для сповіщень «Стрічки»).
+// Fire-and-forget: підписка в БД уже є; якщо push недоступний/відмовлено — тихо (тост-натяк).
+async function registerFeedPushDevice() {
+  try {
+    const sub = await ensurePushSubscription();
+    if (!sub) { showToast('Сповіщення вимкнено у браузері — дозволь у налаштуваннях'); return; }
+    const j = sub.toJSON();
+    await saveUserPushDevice({
+      uid:      currentUserId(),
+      endpoint: sub.endpoint,
+      p256dh:   j.keys?.p256dh,
+      auth_key: j.keys?.auth,
+    });
+  } catch (e) { console.warn('[feed] registerFeedPushDevice:', e && e.message); }
 }
 
 // ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────
@@ -712,7 +734,7 @@ function openComposer(pageId, editPost = null) {
       : await createPagePost(pageId, currentUserId(), text || '', finalUrls);
     if (res.ok) {
       if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
-      else posts.unshift(res.post);
+      else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
       close();
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();

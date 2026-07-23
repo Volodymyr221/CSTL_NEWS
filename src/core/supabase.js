@@ -1196,3 +1196,11 @@ export async function setPageSubscription(pageId, uid, on) {
     .upsert({ page_id: pageId, uid }, { onConflict: 'page_id,uid' });
   return error ? { ok: false, error: error.message } : { ok: true };
 }
+
+// Push підписникам сторінки про новий пост (Edge Function send-page-push, verify_jwt).
+// Fire-and-forget — публікацію не блокує; помилку лише логуємо.
+export function notifyNewPagePost(postId) {
+  if (!supa || !postId) return;
+  supa.functions.invoke('send-page-push', { body: { post_id: postId } })
+    .catch(e => console.warn('[supabase] send-page-push:', e?.message));
+}
