@@ -57,6 +57,10 @@
       reader.readAsDataURL(file);
     });
   }
+  function formatEventDate(dateStr) {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", weekday: "long" });
+  }
   function pad(n) {
     return String(n).padStart(2, "0");
   }
@@ -1228,7 +1232,7 @@
   async function fetchPagePosts(pageId = null, limit = 60) {
     if (!supa)
       return [];
-    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     if (pageId != null)
       q = q.eq("page_id", pageId);
     const { data, error } = await q;
@@ -1345,17 +1349,26 @@
     }
     return new Set((data || []).map((r) => r.page_id));
   }
-  async function createPagePost(pageId, uid, text, imageUrls = []) {
+  async function createPagePost(pageId, uid, text, imageUrls = [], event = {}) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : imageUrls ? [imageUrls] : [];
-    const { data, error } = await supa.from("page_posts").insert({ page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null }).select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").single();
+    const { data, error } = await supa.from("page_posts").insert({
+      page_id: pageId,
+      author_uid: uid,
+      text,
+      image_urls: arr,
+      image_url: arr[0] || null,
+      event_date: event.event_date || null,
+      event_time: event.event_time || null,
+      event_location: event.event_location || null
+    }).select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function updatePagePost(postId, patch) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)").single();
+    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function deletePagePost(postId) {
@@ -10475,6 +10488,15 @@ ${ev.description || ""}`
       dy = 0;
     });
   }
+  function eventBadgeHtml(post) {
+    if (!post.event_date)
+      return "";
+    const when = formatEventDate(post.event_date) + (post.event_time ? ` \xB7 ${escapeHtml(post.event_time)}` : "");
+    const past = post.event_date < todayKey();
+    const loc = post.event_location ? `<span class="fd-evb-loc">${escapeHtml(post.event_location)}</span>` : "";
+    return `<div class="fd-evb${past ? " fd-evb--past" : ""}">
+    <span class="fd-evb-when">\u{1F5D3} ${when}</span>${loc}</div>`;
+  }
   function postCardHtml(post) {
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
@@ -10493,6 +10515,7 @@ ${ev.description || ""}`
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="\u041C\u0435\u043D\u044E \u043F\u043E\u0441\u0442\u0430">${IC_DOTS}</button>` : ""}
       </header>
+      ${eventBadgeHtml(post)}
       ${photo}
       <div class="fd-text">${escapeHtml(post.text)}</div>
       ${author}
@@ -10855,6 +10878,14 @@ ${ev.description || ""}`
     document.body.appendChild(sheet);
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
+  function screenListHtml(tab, pagePosts) {
+    if (tab === "events") {
+      const today = todayKey();
+      const evs = pagePosts.filter((p) => p.event_date && p.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
+      return evs.length ? evs.map(postCardHtml).join("") : '<div class="fd-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439.</div>';
+    }
+    return pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
+  }
   async function openPageScreen(pageId) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
@@ -10882,8 +10913,12 @@ ${ev.description || ""}`
         <div class="fd-screen-name">${escapeHtml(page.name)}</div>
         ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
       </div>
+      <div class="fd-screen-tabs">
+        <button class="fd-sctab is-on" data-sctab="posts"  type="button">\u0414\u043E\u043F\u0438\u0441\u0438</button>
+        <button class="fd-sctab"       data-sctab="events" type="button">\u041F\u043E\u0434\u0456\u0457</button>
+      </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
-      <div class="fd-screen-list">${pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>'}</div>
+      <div class="fd-screen-list">${screenListHtml("posts", pagePosts)}</div>
     </div>`;
     screen.querySelector(".fd-screen-back").addEventListener("click", () => {
       screen.classList.remove("open");
@@ -10896,6 +10931,13 @@ ${ev.description || ""}`
     wireCards(screen);
     wireGalleries(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
+    screen.querySelectorAll(".fd-sctab").forEach((tab) => tab.addEventListener("click", () => {
+      screen.querySelectorAll(".fd-sctab").forEach((t) => t.classList.toggle("is-on", t === tab));
+      const list = screen.querySelector(".fd-screen-list");
+      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
+      wireCards(screen);
+      wireGalleries(screen);
+    }));
     if (page.banner_url)
       screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
     if (page.avatar_url)
@@ -10974,13 +11016,26 @@ ${ev.description || ""}`
     let files = [];
     let previewUrls = [];
     const CTA = edit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
+    let postType = edit && editPost.event_date ? "event" : "post";
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
     <div class="fd-sheet fd-composer">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">${edit ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u043F\u043E\u0441\u0442" : "\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442"} \xB7 ${escapeHtml(page.name)}</div>
+      <div class="fd-sheet-title">${edit ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" : "\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442"} \xB7 ${escapeHtml(page.name)}</div>
+      <div class="fd-comp-type">
+        <button class="fd-comp-type-btn${postType === "post" ? " is-on" : ""}" data-type="post"  type="button">\u0414\u043E\u043F\u0438\u0441</button>
+        <button class="fd-comp-type-btn${postType === "event" ? " is-on" : ""}" data-type="event" type="button">\u041F\u043E\u0434\u0456\u044F</button>
+      </div>
       <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || "") : ""}</textarea>
+      <div class="fd-comp-event"${postType === "event" ? "" : " hidden"}>
+        <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F4C5} \u0414\u0430\u0442\u0430 \u043F\u043E\u0434\u0456\u0457</span>
+          <input class="fd-comp-date" type="date" value="${edit ? escapeHtml(editPost.event_date || "") : ""}"></label>
+        <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F550} \u0427\u0430\u0441 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)</span>
+          <input class="fd-comp-etime" type="time" value="${edit ? escapeHtml(editPost.event_time || "") : ""}"></label>
+        <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F4CD} \u041C\u0456\u0441\u0446\u0435 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)</span>
+          <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="\u041D\u0430\u043F\u0440. \u0426\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0430 \u043F\u043B\u043E\u0449\u0430, \u041E\u043B\u0438\u043A\u0430" value="${edit ? escapeHtml(editPost.event_location || "") : ""}"></label>
+      </div>
       <div class="fd-comp-thumbs" hidden></div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
@@ -10995,6 +11050,12 @@ ${ev.description || ""}`
       if (e.target === back)
         close();
     });
+    const eventBox = back.querySelector(".fd-comp-event");
+    back.querySelectorAll(".fd-comp-type-btn").forEach((btn) => btn.addEventListener("click", () => {
+      postType = btn.dataset.type;
+      back.querySelectorAll(".fd-comp-type-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+      eventBox.hidden = postType !== "event";
+    }));
     const fileInput = back.querySelector("input[type=file]");
     const thumbs = back.querySelector(".fd-comp-thumbs");
     const renderThumbs = () => {
@@ -11040,6 +11101,17 @@ ${ev.description || ""}`
     const sendBtn = back.querySelector(".fd-comp-send");
     sendBtn.addEventListener("click", async () => {
       const text = back.querySelector(".fd-comp-text").value.trim();
+      const eventFields = { event_date: null, event_time: null, event_location: null };
+      if (postType === "event") {
+        const d = back.querySelector(".fd-comp-date").value;
+        if (!d) {
+          showToast("\u0412\u043A\u0430\u0436\u0438 \u0434\u0430\u0442\u0443 \u043F\u043E\u0434\u0456\u0457");
+          return;
+        }
+        eventFields.event_date = d;
+        eventFields.event_time = back.querySelector(".fd-comp-etime").value || null;
+        eventFields.event_location = back.querySelector(".fd-comp-eloc").value.trim() || null;
+      }
       if (!text && !existing.length && !files.length)
         return;
       sendBtn.disabled = true;
@@ -11059,7 +11131,7 @@ ${ev.description || ""}`
         }
       }
       const finalUrls = [...existing, ...newUrls];
-      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls);
+      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields);
       if (res.ok) {
         if (edit) {
           const i = posts.findIndex((p) => p.id === editPost.id);

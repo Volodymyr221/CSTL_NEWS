@@ -6,7 +6,7 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast, deepLink } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink, formatEventDate, todayKey } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -190,6 +190,17 @@ function attachSheetSwipe(back, panel, scroller, doClose) {
   });
 }
 
+// Плашка події на картці: «🗓 12 серпня, субота · 10:00 📍 місце» (якщо пост — подія).
+function eventBadgeHtml(post) {
+  if (!post.event_date) return '';
+  const when = formatEventDate(post.event_date) + (post.event_time ? ` · ${escapeHtml(post.event_time)}` : '');
+  const past = post.event_date < todayKey();   // подія в минулому — приглушена
+  const loc  = post.event_location
+    ? `<span class="fd-evb-loc">${escapeHtml(post.event_location)}</span>` : '';
+  return `<div class="fd-evb${past ? ' fd-evb--past' : ''}">
+    <span class="fd-evb-when">🗓 ${when}</span>${loc}</div>`;
+}
+
 function postCardHtml(post) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
@@ -209,6 +220,7 @@ function postCardHtml(post) {
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
+      ${eventBadgeHtml(post)}
       ${photo}
       <div class="fd-text">${escapeHtml(post.text)}</div>
       ${author}
@@ -549,6 +561,24 @@ function openComments(postId) {
 }
 
 // ── Екран сторінки (Екран 2) ────────────────────────────────────────────────
+// Список постів каналу для сегмента «Дописи | Події».
+// posts  — усі пости каналу (за свіжістю, як стрічка).
+// events — лише пости-події, майбутні (event_date ≥ сьогодні), за датою зростання.
+function screenListHtml(tab, pagePosts) {
+  if (tab === 'events') {
+    const today = todayKey();
+    const evs = pagePosts
+      .filter(p => p.event_date && p.event_date >= today)
+      .sort((a, b) => a.event_date.localeCompare(b.event_date));
+    return evs.length
+      ? evs.map(postCardHtml).join('')
+      : '<div class="fd-empty">Ще немає запланованих подій.</div>';
+  }
+  return pagePosts.length
+    ? pagePosts.map(postCardHtml).join('')
+    : '<div class="fd-empty">Тут ще немає постів.</div>';
+}
+
 async function openPageScreen(pageId) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
@@ -576,10 +606,12 @@ async function openPageScreen(pageId) {
         <div class="fd-screen-name">${escapeHtml(page.name)}</div>
         ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
       </div>
+      <div class="fd-screen-tabs">
+        <button class="fd-sctab is-on" data-sctab="posts"  type="button">Дописи</button>
+        <button class="fd-sctab"       data-sctab="events" type="button">Події</button>
+      </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
-      <div class="fd-screen-list">${pagePosts.length
-        ? pagePosts.map(postCardHtml).join('')
-        : '<div class="fd-empty">Тут ще немає постів.</div>'}</div>
+      <div class="fd-screen-list">${screenListHtml('posts', pagePosts)}</div>
     </div>`;
 
   screen.querySelector('.fd-screen-back').addEventListener('click', () => {
@@ -593,6 +625,15 @@ async function openPageScreen(pageId) {
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
   wireGalleries(screen);       // каруселі фото в постах сторінки
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
+
+  // Сегмент «Дописи | Події» — перемикає список у межах екрана каналу.
+  screen.querySelectorAll('.fd-sctab').forEach(tab =>
+    tab.addEventListener('click', () => {
+      screen.querySelectorAll('.fd-sctab').forEach(t => t.classList.toggle('is-on', t === tab));
+      const list = screen.querySelector('.fd-screen-list');
+      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
+      wireCards(screen); wireGalleries(screen);
+    }));
 
   // Перегляд фото банера/аватара на весь екран (для всіх; реюз openViewer).
   if (page.banner_url) screen.querySelector('.fd-banner--view')
@@ -656,14 +697,28 @@ function openComposer(pageId, editPost = null) {
   let files = [];               // масив File нових фото
   let previewUrls = [];         // objectURL-и для прев'ю нових (звільняємо при видаленні)
   const CTA = edit ? 'Зберегти' : 'Опублікувати';
+  // Тип поста: допис або подія. Редагування події (є event_date) → одразу «Подія».
+  let postType = (edit && editPost.event_date) ? 'event' : 'post';
 
   const back = document.createElement('div');
   back.className = 'fd-sheet-back';
   back.innerHTML = `
     <div class="fd-sheet fd-composer">
       <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">${edit ? 'Редагувати пост' : 'Новий пост'} · ${escapeHtml(page.name)}</div>
+      <div class="fd-sheet-title">${edit ? 'Редагувати' : 'Новий пост'} · ${escapeHtml(page.name)}</div>
+      <div class="fd-comp-type">
+        <button class="fd-comp-type-btn${postType === 'post'  ? ' is-on' : ''}" data-type="post"  type="button">Допис</button>
+        <button class="fd-comp-type-btn${postType === 'event' ? ' is-on' : ''}" data-type="event" type="button">Подія</button>
+      </div>
       <textarea class="fd-comp-text" placeholder="Що нового?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || '') : ''}</textarea>
+      <div class="fd-comp-event"${postType === 'event' ? '' : ' hidden'}>
+        <label class="fd-comp-field"><span class="fd-comp-flab">📅 Дата події</span>
+          <input class="fd-comp-date" type="date" value="${edit ? escapeHtml(editPost.event_date || '') : ''}"></label>
+        <label class="fd-comp-field"><span class="fd-comp-flab">🕐 Час (необовʼязково)</span>
+          <input class="fd-comp-etime" type="time" value="${edit ? escapeHtml(editPost.event_time || '') : ''}"></label>
+        <label class="fd-comp-field"><span class="fd-comp-flab">📍 Місце (необовʼязково)</span>
+          <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
+      </div>
       <div class="fd-comp-thumbs" hidden></div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
@@ -672,6 +727,15 @@ function openComposer(pageId, editPost = null) {
     </div>`;
   const close = () => { previewUrls.forEach(u => URL.revokeObjectURL(u)); back.remove(); };
   back.addEventListener('click', e => { if (e.target === back) close(); });
+
+  // Перемикач Допис/Подія — показує/ховає блок полів події.
+  const eventBox = back.querySelector('.fd-comp-event');
+  back.querySelectorAll('.fd-comp-type-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      postType = btn.dataset.type;
+      back.querySelectorAll('.fd-comp-type-btn').forEach(b => b.classList.toggle('is-on', b === btn));
+      eventBox.hidden = postType !== 'event';
+    }));
 
   const fileInput = back.querySelector('input[type=file]');
   const thumbs = back.querySelector('.fd-comp-thumbs');
@@ -708,6 +772,16 @@ function openComposer(pageId, editPost = null) {
   const sendBtn = back.querySelector('.fd-comp-send');
   sendBtn.addEventListener('click', async () => {
     const text = back.querySelector('.fd-comp-text').value.trim();
+    // Подія: зібрати дату/час/місце. Дата — обовʼязкова; час і місце — опційні.
+    // Якщо тип «Допис» — усі event-поля null (при редагуванні це знімає подію).
+    const eventFields = { event_date: null, event_time: null, event_location: null };
+    if (postType === 'event') {
+      const d = back.querySelector('.fd-comp-date').value;
+      if (!d) { showToast('Вкажи дату події'); return; }
+      eventFields.event_date     = d;
+      eventFields.event_time     = back.querySelector('.fd-comp-etime').value || null;
+      eventFields.event_location = back.querySelector('.fd-comp-eloc').value.trim() || null;
+    }
     if (!text && !existing.length && !files.length) return;
     sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
@@ -726,8 +800,8 @@ function openComposer(pageId, editPost = null) {
     }
     const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
     const res = edit
-      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null })
-      : await createPagePost(pageId, currentUserId(), text || '', finalUrls);
+      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, ...eventFields })
+      : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields);
     if (res.ok) {
       if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
       else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)

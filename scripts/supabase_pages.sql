@@ -56,6 +56,15 @@ create index if not exists idx_page_posts_feed on public.page_posts (created_at 
 -- Міграція для вже створеної таблиці (кілька фото): додати image_urls якщо ще нема.
 alter table public.page_posts add column if not exists image_urls text[] default '{}';
 
+-- Етап 6 (23.07): пост може бути ПОДІЄЮ — опційна дата/час/місце заходу.
+-- Пост із event_date IS NOT NULL = подія (таб «Події» на каналі + плашка на картці).
+alter table public.page_posts add column if not exists event_date     date;
+alter table public.page_posts add column if not exists event_time     text;
+alter table public.page_posts add column if not exists event_location text;
+create index if not exists idx_page_posts_events
+  on public.page_posts (page_id, event_date)
+  where event_date is not null and deleted_at is null;
+
 -- ── 4. PAGE_COMMENTS — коментарі під постами ────────────────────────────────
 create table if not exists public.page_comments (
   id          bigserial primary key,

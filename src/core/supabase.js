@@ -1023,7 +1023,7 @@ export async function fetchPages() {
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
   let q = supa.from('page_posts')
-    .select('id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -1141,12 +1141,19 @@ export async function fetchMyEditablePageIds() {
 // Створити пост сторінки (від імені сторінки; author_uid = людина-автор для підпису).
 // imageUrls — масив URL-ів фото (кілька фото як у FB/IG). image_url лишаємо для
 // зворотної сумісності (перше фото), щоб старий рендер теж бачив.
-export async function createPagePost(pageId, uid, text, imageUrls = []) {
+// event — опційно { event_date, event_time, event_location }: якщо є event_date,
+// пост стає ПОДІЄЮ (таб «Події» на каналі + плашка на картці). Порожні → null.
+export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : (imageUrls ? [imageUrls] : []);
   const { data, error } = await supa.from('page_posts')
-    .insert({ page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null })
-    .select('id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)')
+    .insert({
+      page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null,
+      event_date:     event.event_date     || null,
+      event_time:     event.event_time     || null,
+      event_location: event.event_location || null,
+    })
+    .select('id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
     .single();
   return error ? { ok: false, error: error.message } : { ok: true, post: data };
 }
@@ -1156,7 +1163,7 @@ export async function updatePagePost(postId, patch) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const { data, error } = await supa.from('page_posts')
     .update(patch).eq('id', postId)
-    .select('id, page_id, author_uid, text, image_url, image_urls, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
     .single();
   return error ? { ok: false, error: error.message } : { ok: true, post: data };
 }
