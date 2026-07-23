@@ -180,8 +180,11 @@ main отримує мердж-коміт
 | `src/tabs/community-modal.js` | Bottom-sheet модалка «Нове оголошення» (ТІЛЬКИ оголошення, `type:'board'`; «Розмова»-таб прибрано 02.07) |
 | `src/tabs/news.js` | Стрічка новин, фільтри |
 | `src/tabs/events.js` | Афіша подій (легасі — заміщено «Стрічкою»; лишається для Етапу 6 «Афіша громади») |
-| `src/tabs/feed.js` | **«Стрічка»** — сторінки-канали громади: кружечки, стрічка постів, екран сторінки, лайк/коментар/дзвіночок/композер |
+| `src/tabs/feed.js` | **«Стрічка»** — сторінки-канали громади: кружечки, стрічка постів, екран сторінки, дзвіночок, композер (кілька фото). Коментарі у стилі Instagram (лічильник, ♥ лайк коментаря з числом під сердечком, відповіді 2 рівні, «Видалити» своє, свайп-закриття `attachSheetSwipe`). Лайки постів/коментарів — тільки авторизованим, realtime-синхронізація. Меню «⋯» сторінки (редагувати) і поста (редагувати/видалити) — власник/адмін. Перегляд банера/аватара на весь екран. Deep-links `#/post/feed/<id>` (кнопка «Поділитися»). |
 | `scripts/supabase_pages.sql` | Схема «Стрічки»: pages/page_admins/page_posts/page_comments/page_reactions/page_subscriptions + RLS |
+| `scripts/supabase_pages_reactions_auth.sql` | RLS: лайки постів «Стрічки» тільки авторизованим (`user_id=auth.uid()`) + `replica identity full` (realtime DELETE). |
+| `scripts/supabase_page_comment_reactions.sql` | Таблиця `page_comment_reactions` — ♥ лайки коментарів «Стрічки» (тільки авторизовані) + RLS + realtime. |
+| `scripts/supabase_page_comment_replies.sql` | Колонка `parent_id` у `page_comments` — відповіді на коментарі (2 рівні). |
 | `src/tabs/buses.js` | Розклад автобусів + відстеження рейсів + push |
 | `src/tabs/board.js` | Дошка громади: оголошення/обговорення, реакції, коментарі, закладки, FAB |
 | `src/tabs/power.js` | Графік відключень електрики |

@@ -2,7 +2,7 @@ import { bootApp } from './core/boot.js';
 import { initWeather } from './core/weather.js';
 import { initCommunity } from './tabs/community.js';
 import { initNews } from './tabs/news.js';
-import { initFeed } from './tabs/feed.js';   // «Стрічка» (events.js лишається для Етапу 6 — Афіша громади)
+import { initFeed, focusFeedPost } from './tabs/feed.js';   // «Стрічка» (events.js лишається для Етапу 6 — Афіша громади)
 import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard } from './tabs/board.js';
@@ -211,6 +211,16 @@ function handleThreadHash() {
   openThreadById(Number(m[1]));
 }
 
+// Deep-link на пост: #/post/<source>/<id>. Крок 6a — джерело `feed` («Стрічка»);
+// board/disc (Дошка/Обговорення) додамо у 6b. Той самий hash-патерн (GitHub Pages).
+function handlePostHash() {
+  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc)\/(\d+)/);
+  if (!m) return;
+  history.replaceState(null, '', location.pathname + location.search);
+  const [, source, id] = m;
+  if (source === 'feed') focusFeedPost(Number(id));
+}
+
 // Ініціалізація при завантаженні сторінки
 function init() {
   bootApp();
@@ -243,6 +253,8 @@ function init() {
   window.addEventListener('hashchange', handleInviteHash);
   handleThreadHash();                              // P-9: холодний старт з нотифікації чату
   window.addEventListener('hashchange', handleThreadHash);
+  handlePostHash();                                // deep-link на пост «Стрічки»
+  window.addEventListener('hashchange', handlePostHash);
 
   // Аналітика: switchTab() рано виходить коли tab===currentTab, тому початковий
   // перегляд дефолтної вкладки (Громада, currentTab вже 'community') інакше

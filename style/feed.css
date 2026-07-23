@@ -102,6 +102,13 @@
 .fd-author b { color: var(--fd-ink); font-weight: 600; }
 
 .fd-actions { display: flex; align-items: center; gap: 22px; padding: 8px 14px 12px; }
+/* «Поділитися» — праворуч, навпроти лайка/коментаря (deep-link на пост). */
+.fd-share { margin-left: auto; background: none; border: 0; padding: 0; cursor: pointer; color: var(--fd-muted); }
+.fd-share .fd-ic { width: 24px; height: 24px; display: inline-flex; }
+.fd-share .fd-ic svg { width: 23px; height: 23px; }
+/* Підсвітка поста при відкритті за deep-link. */
+@keyframes fd-flash { 0%,100% { background: transparent; } 30% { background: rgba(114,47,55,0.10); } }
+.fd-card--flash { animation: fd-flash 1.5s ease; }
 .fd-like, .fd-cbtn {
   display: inline-flex; align-items: center; gap: 7px; background: none; border: 0; cursor: pointer;
   padding: 2px; color: var(--fd-ink); font-size: 14px; -webkit-tap-highlight-color: transparent;
