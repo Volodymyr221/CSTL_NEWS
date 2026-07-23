@@ -57,6 +57,33 @@
       reader.readAsDataURL(file);
     });
   }
+  function compressImage(file, maxDim = 1280, quality = 0.8) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let w = img.width, h = img.height;
+          if (w > h && w > maxDim) {
+            h = h * maxDim / w;
+            w = maxDim;
+          } else if (h >= w && h > maxDim) {
+            w = w * maxDim / h;
+            h = maxDim;
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(w);
+          canvas.height = Math.round(h);
+          canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((b) => b ? resolve(b) : reject(new Error("toBlob failed")), "image/jpeg", quality);
+        };
+        img.onerror = reject;
+        img.src = e.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
   function formatEventDate(dateStr) {
     const d = new Date(dateStr);
     return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", weekday: "long" });
@@ -1983,38 +2010,6 @@
   function accountAuthorName() {
     return firstNameOnly(currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
   }
-  function compressImage(file) {
-    return new Promise(function executor(resolve, reject) {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          const maxDim = 800;
-          let w = img.width, h = img.height;
-          if (w > h && w > maxDim) {
-            h = h * maxDim / w;
-            w = maxDim;
-          } else if (h > maxDim) {
-            w = w * maxDim / h;
-            h = maxDim;
-          }
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(w);
-          canvas.height = Math.round(h);
-          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-          canvas.toBlob(
-            (blob) => blob ? resolve(blob) : reject(new Error("toBlob failed")),
-            "image/jpeg",
-            0.78
-          );
-        };
-        img.onerror = reject;
-        img.src = e.target.result;
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  }
   function openBoardModal(opts = {}) {
     if (document.querySelector(".app-modal--board-compose"))
       return;
@@ -2167,7 +2162,7 @@
             return;
           let blob;
           try {
-            blob = await compressImage(file);
+            blob = await compressImage(file, 800, 0.78);
           } catch {
             showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043E\u0431\u0440\u043E\u0431\u0438\u0442\u0438 \u0444\u043E\u0442\u043E", 3e3);
             return;
@@ -11118,7 +11113,14 @@ ${ev.description || ""}`
       sendBtn.textContent = edit ? "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026" : "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
       let newUrls = [];
       if (files.length) {
-        const ups = await Promise.all(files.map((f) => uploadPhotoToStorage(f, "pages/")));
+        const ups = await Promise.all(files.map(async (f) => {
+          try {
+            const blob = await compressImage(f);
+            return await uploadPhotoToStorage(blob, "pages/");
+          } catch (e) {
+            return { url: null, error: e && e.message || "\u0441\u0442\u0438\u0441\u043D\u0435\u043D\u043D\u044F \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F" };
+          }
+        }));
         newUrls = ups.map((u) => u.url).filter(Boolean);
         const failed = ups.length - newUrls.length;
         if (failed > 0) {

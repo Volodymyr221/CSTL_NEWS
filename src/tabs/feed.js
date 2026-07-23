@@ -6,7 +6,7 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast, deepLink, formatEventDate, todayKey } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, compressImage } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -786,9 +786,18 @@ function openComposer(pageId, editPost = null) {
     sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
     // Завантажуємо нові фото; помилки НЕ ковтаємо — показуємо.
+    // Стискаємо КОЖНЕ фото перед upload (телефонні 3-5 МБ інакше падають «Load
+    // failed»); uploadPhotoToStorage очікує стиснутий Blob. Кількість — без ліміту (до MAX_PHOTOS).
     let newUrls = [];
     if (files.length) {
-      const ups = await Promise.all(files.map(f => uploadPhotoToStorage(f, 'pages/')));
+      const ups = await Promise.all(files.map(async f => {
+        try {
+          const blob = await compressImage(f);
+          return await uploadPhotoToStorage(blob, 'pages/');
+        } catch (e) {
+          return { url: null, error: (e && e.message) || 'стиснення не вдалося' };
+        }
+      }));
       newUrls = ups.map(u => u.url).filter(Boolean);
       const failed = ups.length - newUrls.length;
       if (failed > 0) {
