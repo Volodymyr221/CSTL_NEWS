@@ -10391,7 +10391,11 @@ ${ev.description || ""}`
     if (!images.length)
       return "";
     if (images.length === 1) {
-      return `<div class="fd-photo" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
+      const u = escapeHtml(images[0]);
+      return `<div class="fd-photo fd-photo--single" data-view="${postId}" data-idx="0">
+      <div class="fd-photo-bg" style="background-image:url('${u}')"></div>
+      <img src="${u}" alt="" loading="lazy">
+    </div>`;
     }
     const slides = images.map((u, i) => `<div class="fd-gal-slide" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy"></div>`).join("");
     const dots = images.map((_, i) => `<span class="fd-gal-dot${i === 0 ? " on" : ""}"></span>`).join("");
@@ -10504,7 +10508,7 @@ ${ev.description || ""}`
     const canEditPost = myPageIds.has(post.page_id);
     return `
     <article class="fd-card" data-post="${post.id}">
-      <header class="fd-card-head${hasPhoto && !post.event_date ? " fd-card-head--onphoto" : ""}" data-open-page="${post.page_id}">
+      <header class="fd-card-head${hasPhoto ? " fd-card-head--onphoto" : ""}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
@@ -10512,9 +10516,9 @@ ${ev.description || ""}`
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="\u041C\u0435\u043D\u044E \u043F\u043E\u0441\u0442\u0430">${IC_DOTS}</button>` : ""}
       </header>
-      ${eventBadgeHtml(post)}
       ${photo}
       <div class="fd-card-body${hasPhoto ? " fd-card-body--onphoto" : ""}">
+        ${eventBadgeHtml(post)}
         <div class="fd-text">${escapeHtml(post.text)}</div>
         ${author}
         <footer class="fd-actions">
@@ -11122,7 +11126,7 @@ ${ev.description || ""}`
           let url = null;
           for (let attempt = 0; attempt < 2 && !url; attempt++) {
             try {
-              const blob = await compressImage(f);
+              const blob = await compressImage(f, 1600, 0.82);
               const res2 = await uploadPhotoToStorage(blob, "pages/");
               if (res2.url)
                 url = res2.url;

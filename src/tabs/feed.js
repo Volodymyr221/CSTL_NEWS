@@ -111,7 +111,13 @@ function postImages(post) {
 function galleryHtml(images, postId) {
   if (!images.length) return '';
   if (images.length === 1) {
-    return `<div class="fd-photo" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
+    const u = escapeHtml(images[0]);
+    // Розмита копія того ж фото як фон → вертикальні/нестандартні кадри показуємо
+    // ПОВНІСТЮ (object-fit:contain), без обрізки; поля заповнює блюр (як Telegram).
+    return `<div class="fd-photo fd-photo--single" data-view="${postId}" data-idx="0">
+      <div class="fd-photo-bg" style="background-image:url('${u}')"></div>
+      <img src="${u}" alt="" loading="lazy">
+    </div>`;
   }
   const slides = images.map((u, i) =>
     `<div class="fd-gal-slide" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy"></div>`).join('');
@@ -214,7 +220,7 @@ function postCardHtml(post) {
   const canEditPost = myPageIds.has(post.page_id);   // «⋯» лише для своїх сторінок
   return `
     <article class="fd-card" data-post="${post.id}">
-      <header class="fd-card-head${hasPhoto && !post.event_date ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
+      <header class="fd-card-head${hasPhoto ? ' fd-card-head--onphoto' : ''}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
@@ -222,9 +228,9 @@ function postCardHtml(post) {
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
-      ${eventBadgeHtml(post)}
       ${photo}
       <div class="fd-card-body${hasPhoto ? ' fd-card-body--onphoto' : ''}">
+        ${eventBadgeHtml(post)}
         <div class="fd-text">${escapeHtml(post.text)}</div>
         ${author}
         <footer class="fd-actions">
@@ -799,7 +805,7 @@ function openComposer(pageId, editPost = null) {
         let url = null;
         for (let attempt = 0; attempt < 2 && !url; attempt++) {
           try {
-            const blob = await compressImage(f);
+            const blob = await compressImage(f, 1600, 0.82);   // більший розмір/якість для повного показу
             const res  = await uploadPhotoToStorage(blob, 'pages/');
             if (res.url) url = res.url;
             else if (attempt === 1) failed.push(res.error || 'upload');
