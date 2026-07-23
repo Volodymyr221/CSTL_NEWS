@@ -785,25 +785,29 @@ function openComposer(pageId, editPost = null) {
     if (!text && !existing.length && !files.length) return;
     sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
-    // Завантажуємо нові фото; помилки НЕ ковтаємо — показуємо.
-    // Стискаємо КОЖНЕ фото перед upload (телефонні 3-5 МБ інакше падають «Load
-    // failed»); uploadPhotoToStorage очікує стиснутий Blob. Кількість — без ліміту (до MAX_PHOTOS).
+    // Завантажуємо нові фото ПОСЛІДОВНО (по одному), не паралельно: на iOS PWA
+    // кілька одночасних upload у сховище падають «Load failed». Кожне фото
+    // стискаємо (телефонні 3-5 МБ) + один повтор при збої мережі. Кількість — до MAX_PHOTOS.
     let newUrls = [];
     if (files.length) {
-      const ups = await Promise.all(files.map(async f => {
-        try {
-          const blob = await compressImage(f);
-          return await uploadPhotoToStorage(blob, 'pages/');
-        } catch (e) {
-          return { url: null, error: (e && e.message) || 'стиснення не вдалося' };
+      const failed = [];
+      for (const f of files) {
+        let url = null;
+        for (let attempt = 0; attempt < 2 && !url; attempt++) {
+          try {
+            const blob = await compressImage(f);
+            const res  = await uploadPhotoToStorage(blob, 'pages/');
+            if (res.url) url = res.url;
+            else if (attempt === 1) failed.push(res.error || 'upload');
+          } catch (e) {
+            if (attempt === 1) failed.push((e && e.message) || 'стиснення не вдалося');
+          }
         }
-      }));
-      newUrls = ups.map(u => u.url).filter(Boolean);
-      const failed = ups.length - newUrls.length;
-      if (failed > 0) {
+        if (url) newUrls.push(url);
+      }
+      if (failed.length) {
         sendBtn.disabled = false; sendBtn.textContent = CTA;
-        const firstErr = ups.find(u => !u.url)?.error || '';
-        alert(`Не вдалося завантажити ${failed} фото: ${firstErr}\nСпробуй ще раз.`);
+        alert(`Не вдалося завантажити ${failed.length} фото: ${failed[0]}\nСпробуй ще раз.`);
         return;
       }
     }

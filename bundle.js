@@ -11113,21 +11113,29 @@ ${ev.description || ""}`
       sendBtn.textContent = edit ? "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026" : "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
       let newUrls = [];
       if (files.length) {
-        const ups = await Promise.all(files.map(async (f) => {
-          try {
-            const blob = await compressImage(f);
-            return await uploadPhotoToStorage(blob, "pages/");
-          } catch (e) {
-            return { url: null, error: e && e.message || "\u0441\u0442\u0438\u0441\u043D\u0435\u043D\u043D\u044F \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F" };
+        const failed = [];
+        for (const f of files) {
+          let url = null;
+          for (let attempt = 0; attempt < 2 && !url; attempt++) {
+            try {
+              const blob = await compressImage(f);
+              const res2 = await uploadPhotoToStorage(blob, "pages/");
+              if (res2.url)
+                url = res2.url;
+              else if (attempt === 1)
+                failed.push(res2.error || "upload");
+            } catch (e) {
+              if (attempt === 1)
+                failed.push(e && e.message || "\u0441\u0442\u0438\u0441\u043D\u0435\u043D\u043D\u044F \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F");
+            }
           }
-        }));
-        newUrls = ups.map((u) => u.url).filter(Boolean);
-        const failed = ups.length - newUrls.length;
-        if (failed > 0) {
+          if (url)
+            newUrls.push(url);
+        }
+        if (failed.length) {
           sendBtn.disabled = false;
           sendBtn.textContent = CTA;
-          const firstErr = ups.find((u) => !u.url)?.error || "";
-          alert(`\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 ${failed} \u0444\u043E\u0442\u043E: ${firstErr}
+          alert(`\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 ${failed.length} \u0444\u043E\u0442\u043E: ${failed[0]}
 \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.`);
           return;
         }
