@@ -10497,7 +10497,9 @@ ${ev.description || ""}`
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
     const cCount = (commentMap.get(post.id) || []).length;
     const authorName = post.author_uid ? liveName("", post.author_uid, "") : "";
-    const photo = galleryHtml(postImages(post), post.id);
+    const imgs = postImages(post);
+    const photo = galleryHtml(imgs, post.id);
+    const hasPhoto = imgs.length > 0;
     const author = authorName ? `<div class="fd-author"${nameUid(post.author_uid)}>\u2014 ${authorName}</div>` : "";
     const canEditPost = myPageIds.has(post.page_id);
     return `
@@ -10512,19 +10514,21 @@ ${ev.description || ""}`
       </header>
       ${eventBadgeHtml(post)}
       ${photo}
-      <div class="fd-text">${escapeHtml(post.text)}</div>
-      ${author}
-      <footer class="fd-actions">
-        <button class="fd-like${rx.my ? " fd-like--on" : ""}" data-like="${post.id}" type="button">
-          <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ""}</span>
-        </button>
-        <button class="fd-cbtn" data-comments="${post.id}" type="button">
-          <span class="fd-ic">${IC_COMMENT}</span><span class="fd-cnt">${cCount || ""}</span>
-        </button>
-        <button class="fd-share" data-share="${post.id}" type="button" aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F \u043F\u043E\u0441\u0442\u043E\u043C">
-          <span class="fd-ic">${IC_SEND}</span>
-        </button>
-      </footer>
+      <div class="fd-card-body${hasPhoto ? " fd-card-body--onphoto" : ""}">
+        <div class="fd-text">${escapeHtml(post.text)}</div>
+        ${author}
+        <footer class="fd-actions">
+          <button class="fd-like${rx.my ? " fd-like--on" : ""}" data-like="${post.id}" type="button">
+            <span class="fd-ic">${rx.my ? IC_HEART_F : IC_HEART_O}</span><span class="fd-cnt">${rx.count || ""}</span>
+          </button>
+          <button class="fd-cbtn" data-comments="${post.id}" type="button">
+            <span class="fd-ic">${IC_COMMENT}</span><span class="fd-cnt">${cCount || ""}</span>
+          </button>
+          <button class="fd-share" data-share="${post.id}" type="button" aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F \u043F\u043E\u0441\u0442\u043E\u043C">
+            <span class="fd-ic">${IC_SEND}</span>
+          </button>
+        </footer>
+      </div>
     </article>`;
   }
   async function sharePost2(id) {
