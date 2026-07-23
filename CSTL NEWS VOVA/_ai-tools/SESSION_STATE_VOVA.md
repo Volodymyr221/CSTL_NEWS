@@ -11,7 +11,7 @@
 
 **Гілка сесії:** `claude/startuem-7vcvch` (harness-гілка — /finish робимо відсіля, не з `vova/*`). **Останній живий CACHE:** `cstl-20260723-1702`. Усе задеплоєно в `main`.
 
-> 🔴🔴 **НЕ ЗАБУТИ — ЧЕКАЄ ДІЇ ВОВИ (обіцяв вдома з компа):** задеплоїти Edge Function `send-page-push` командою в ТЕРМІНАЛІ (не SQL-редактор!): `supabase functions deploy send-page-push --project-ref uabyfecseqnemvcqhdem`. Код у репо (`supabase/functions/send-page-push/`). Без цього push нових постів «Стрічки» (Етап 5) не дійде — клієнт уже на проді, але викликає ще неіснуючу функцію (тихо, у try/catch, нічого не ламає). Щойно задеплоєно — оживе само.
+> ✅ **Edge Function `send-page-push` ЗАДЕПЛОЄНО (23.07, version 1, ACTIVE, verify_jwt=true)** — через Supabase MCP напряму (Вова перемкнув дозволи конектора «All tools»→Allow у claude.ai Connectors → тепер Claude деплоїть функції/SQL сам). Етап 5 push повністю живий. Лишилось — живий тест на 2 акаунтах (дзвіночок + пост від іншого → сповіщення).
 
 ### ✅ Стрічка Етап 5 — Push нових постів (23.07, гілка `claude/startuem-7vcvch`, цим `/finish`):
 - **Мета:** дзвіночок сторінки реально шле push підписникам про новий пост (був лише запис підписки в БД, нічого не слав).
