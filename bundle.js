@@ -12062,6 +12062,82 @@ END:VEVENT`
     requestAnimationFrame(() => bar.classList.add("consent-bar--show"));
   }
 
+  // src/core/install-banner.js
+  var SNOOZE_KEY = "cstl-install-snooze-v1";
+  var SNOOZE_DAYS = 7;
+  function isStandalone() {
+    return window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+  function isIOS() {
+    return /iphone|ipad|ipod/i.test(navigator.userAgent);
+  }
+  function snoozed() {
+    try {
+      const t = Number(localStorage.getItem(SNOOZE_KEY) || 0);
+      return t && Date.now() - t < SNOOZE_DAYS * 24 * 60 * 60 * 1e3;
+    } catch {
+      return false;
+    }
+  }
+  function snooze() {
+    try {
+      localStorage.setItem(SNOOZE_KEY, String(Date.now()));
+    } catch {
+    }
+  }
+  var deferredPrompt = null;
+  function initInstallBanner() {
+    if (isStandalone())
+      return;
+    window.addEventListener("beforeinstallprompt", (e) => {
+      e.preventDefault();
+      deferredPrompt = e;
+    });
+    if (snoozed())
+      return;
+    setTimeout(showBanner2, 2500);
+  }
+  function showBanner2() {
+    if (isStandalone() || snoozed() || document.querySelector(".pwa-cta"))
+      return;
+    const ios = isIOS();
+    const el = document.createElement("div");
+    el.className = "pwa-cta";
+    el.innerHTML = `
+    <button class="pwa-cta-x" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
+    <div class="pwa-cta-ic">\u{1F4F2}</div>
+    <div class="pwa-cta-txt">
+      <b>\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u0443 \u0434\u043E\u0434\u0430\u0442\u043A\u0443 CSTL Life</b>
+      <span>\u0428\u0432\u0438\u0434\u0448\u0435 \u0437 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0433\u043E \u0435\u043A\u0440\u0430\u043D\u0430</span>
+    </div>
+    <button class="pwa-cta-go" type="button">${ios ? "\u042F\u043A \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438" : "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438"}</button>
+    <div class="pwa-cta-hint" hidden>\u0422\u0430\u043F\u043D\u0438 <b>\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C&nbsp;\u238B</b> \u0443\u043D\u0438\u0437\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430 \u2192 <b>\xAB\u0414\u043E\u0434\u0430\u0442\u0438 \u043D\u0430 \u043F\u043E\u0447\u0430\u0442\u043A\u043E\u0432\u0438\u0439 \u0435\u043A\u0440\u0430\u043D\xBB</b>.</div>`;
+    el.querySelector(".pwa-cta-x").addEventListener("click", () => {
+      snooze();
+      el.remove();
+    });
+    el.querySelector(".pwa-cta-go").addEventListener("click", async () => {
+      if (deferredPrompt) {
+        deferredPrompt.prompt();
+        try {
+          await deferredPrompt.userChoice;
+        } catch {
+        }
+        deferredPrompt = null;
+        snooze();
+        el.remove();
+      } else if (ios) {
+        const hint = el.querySelector(".pwa-cta-hint");
+        hint.hidden = !hint.hidden;
+      } else {
+        snooze();
+        el.remove();
+      }
+    });
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add("pwa-cta--in"));
+  }
+
   // src/core/messages-ui.js
   var GR_SVG = {
     link: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg>',
@@ -12735,6 +12811,7 @@ END:VEVENT`
     initAccountUI();
     initSidebar();
     initConsent();
+    initInstallBanner();
     initMessages();
     initBoardChat();
     initModalSwipe();
