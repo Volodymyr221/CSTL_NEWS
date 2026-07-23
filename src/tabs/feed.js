@@ -137,6 +137,9 @@ function wireGalleries(root) {
       dots.forEach((d, k) => d.classList.toggle('on', k === i));
       if (cur) cur.textContent = String(i + 1);
     }, { passive: true });
+    // iOS Safari зі scroll-snap іноді ініціалізує трек на останньому слайді —
+    // явно ставимо на перший (1/N) після layout.
+    requestAnimationFrame(() => { track.scrollLeft = 0; });
   });
 }
 

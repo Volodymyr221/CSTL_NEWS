@@ -10428,6 +10428,9 @@ ${ev.description || ""}`
         if (cur)
           cur.textContent = String(i + 1);
       }, { passive: true });
+      requestAnimationFrame(() => {
+        track.scrollLeft = 0;
+      });
     });
   }
   function openViewer(images, startIdx) {
