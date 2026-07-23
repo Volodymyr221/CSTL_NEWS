@@ -92,7 +92,11 @@
 .fd-postmenu-item svg { width: 20px; height: 20px; flex: none; }
 .fd-postmenu-item--danger { color: #c0392b; }
 
-.fd-text { padding: 2px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
+/* Блок опису під фото: коли є фото — відкидає тінь УГОРУ на нього (глибина, «налягає»). */
+.fd-card-body { position: relative; z-index: 1; background: var(--fd-surface); }
+.fd-card-body--onphoto { box-shadow: 0 -7px 16px rgba(16, 18, 22, 0.18); }
+
+.fd-text { padding: 8px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
 
 /* Фото — на всю ширину */
 .fd-photo { width: 100%; background: #e9ebee; cursor: pointer; }
