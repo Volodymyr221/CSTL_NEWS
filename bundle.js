@@ -1386,6 +1386,11 @@
     const { error } = await supa.from("page_subscriptions").upsert({ page_id: pageId, uid }, { onConflict: "page_id,uid" });
     return error ? { ok: false, error: error.message } : { ok: true };
   }
+  function notifyNewPagePost(postId) {
+    if (!supa || !postId)
+      return;
+    supa.functions.invoke("send-page-push", { body: { post_id: postId } }).catch((e) => console.warn("[supabase] send-page-push:", e?.message));
+  }
 
   // src/core/auth.js
   var _user = null;
@@ -10933,6 +10938,27 @@ ${ev.description || ""}`
         btn.classList.toggle("fd-bell--on", !on);
         btn.innerHTML = !on ? IC_BELL_F : IC_BELL;
       }
+      return;
+    }
+    if (on)
+      registerFeedPushDevice();
+  }
+  async function registerFeedPushDevice() {
+    try {
+      const sub = await ensurePushSubscription();
+      if (!sub) {
+        showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E \u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0456 \u2014 \u0434\u043E\u0437\u0432\u043E\u043B\u044C \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445");
+        return;
+      }
+      const j = sub.toJSON();
+      await saveUserPushDevice({
+        uid: currentUserId(),
+        endpoint: sub.endpoint,
+        p256dh: j.keys?.p256dh,
+        auth_key: j.keys?.auth
+      });
+    } catch (e) {
+      console.warn("[feed] registerFeedPushDevice:", e && e.message);
     }
   }
   var MAX_PHOTOS = 10;
@@ -11036,8 +11062,10 @@ ${ev.description || ""}`
           const i = posts.findIndex((p) => p.id === editPost.id);
           if (i >= 0)
             posts[i] = res.post;
-        } else
+        } else {
           posts.unshift(res.post);
+          notifyNewPagePost(res.post.id);
+        }
         close();
         document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
         renderFeed();
