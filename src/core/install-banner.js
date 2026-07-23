@@ -31,21 +31,25 @@ function snooze() { try { localStorage.setItem(SNOOZE_KEY, String(Date.now())); 
 let deferredPrompt = null;   // Android beforeinstallprompt (відкладений нативний діалог)
 
 export function initInstallBanner() {
-  if (isStandalone()) return;   // вже в додатку — банер не потрібен
+  if (isStandalone()) return;   // вже в PWA (відкрито з іконки) — банер не потрібен
 
-  // Android: перехопити нативний міні-інфобар, показати його по кнопці банера.
+  // Android/desktop: сигнал «застосунок МОЖНА встановити» приходить ЛИШЕ якщо PWA
+  // ще НЕ встановлена. Якщо вже встановлена — подія не приходить, банер не зʼявиться
+  // (не набридаємо тим, у кого додаток є). Показуємо банер саме з цієї події.
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
     deferredPrompt = e;
+    if (!snoozed()) setTimeout(() => showBanner(false), 1200);
   });
 
-  if (snoozed()) return;
-  setTimeout(showBanner, 2500);   // ненав'язливо — коли контент уже видно
+  // iOS: події beforeinstallprompt немає, і дізнатися з браузера чи встановлена PWA
+  // НЕМОЖЛИВО (обмеження Apple). Показуємо коротку інструкцію-підказку. Кого відкрив
+  // з іконки — вже відсіяно вгорі (standalone), тож набридання мінімальне.
+  if (isIOS() && !snoozed()) setTimeout(() => showBanner(true), 2500);
 }
 
-function showBanner() {
+function showBanner(iosMode) {
   if (isStandalone() || snoozed() || document.querySelector('.pwa-cta')) return;
-  const ios = isIOS();
 
   const el = document.createElement('div');
   el.className = 'pwa-cta';
@@ -53,10 +57,10 @@ function showBanner() {
     <button class="pwa-cta-x" type="button" aria-label="Закрити">✕</button>
     <div class="pwa-cta-ic">📲</div>
     <div class="pwa-cta-txt">
-      <b>Відкрий у додатку CSTL Life</b>
-      <span>Швидше з головного екрана</span>
+      <b>Встанови CSTL Life на екран</b>
+      <span>Швидший доступ з головного екрана</span>
     </div>
-    <button class="pwa-cta-go" type="button">${ios ? 'Як встановити' : 'Встановити'}</button>
+    <button class="pwa-cta-go" type="button">${iosMode ? 'Як встановити' : 'Встановити'}</button>
     <div class="pwa-cta-hint" hidden>Тапни <b>Поділитись&nbsp;⎋</b> унизу браузера → <b>«Додати на початковий екран»</b>.</div>`;
 
   el.querySelector('.pwa-cta-x').addEventListener('click', () => { snooze(); el.remove(); });
@@ -67,7 +71,7 @@ function showBanner() {
       try { await deferredPrompt.userChoice; } catch {}
       deferredPrompt = null;
       snooze(); el.remove();
-    } else if (ios) {                      // iOS — показати/сховати інструкцію
+    } else if (iosMode) {                  // iOS — показати/сховати інструкцію
       const hint = el.querySelector('.pwa-cta-hint');
       hint.hidden = !hint.hidden;
     } else {                              // інше — просто сховати

@@ -12092,25 +12092,25 @@ END:VEVENT`
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredPrompt = e;
+      if (!snoozed())
+        setTimeout(() => showBanner2(false), 1200);
     });
-    if (snoozed())
-      return;
-    setTimeout(showBanner2, 2500);
+    if (isIOS() && !snoozed())
+      setTimeout(() => showBanner2(true), 2500);
   }
-  function showBanner2() {
+  function showBanner2(iosMode) {
     if (isStandalone() || snoozed() || document.querySelector(".pwa-cta"))
       return;
-    const ios = isIOS();
     const el = document.createElement("div");
     el.className = "pwa-cta";
     el.innerHTML = `
     <button class="pwa-cta-x" type="button" aria-label="\u0417\u0430\u043A\u0440\u0438\u0442\u0438">\u2715</button>
     <div class="pwa-cta-ic">\u{1F4F2}</div>
     <div class="pwa-cta-txt">
-      <b>\u0412\u0456\u0434\u043A\u0440\u0438\u0439 \u0443 \u0434\u043E\u0434\u0430\u0442\u043A\u0443 CSTL Life</b>
-      <span>\u0428\u0432\u0438\u0434\u0448\u0435 \u0437 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0433\u043E \u0435\u043A\u0440\u0430\u043D\u0430</span>
+      <b>\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438 CSTL Life \u043D\u0430 \u0435\u043A\u0440\u0430\u043D</b>
+      <span>\u0428\u0432\u0438\u0434\u0448\u0438\u0439 \u0434\u043E\u0441\u0442\u0443\u043F \u0437 \u0433\u043E\u043B\u043E\u0432\u043D\u043E\u0433\u043E \u0435\u043A\u0440\u0430\u043D\u0430</span>
     </div>
-    <button class="pwa-cta-go" type="button">${ios ? "\u042F\u043A \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438" : "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438"}</button>
+    <button class="pwa-cta-go" type="button">${iosMode ? "\u042F\u043A \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438" : "\u0412\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u0438"}</button>
     <div class="pwa-cta-hint" hidden>\u0422\u0430\u043F\u043D\u0438 <b>\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044C&nbsp;\u238B</b> \u0443\u043D\u0438\u0437\u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430 \u2192 <b>\xAB\u0414\u043E\u0434\u0430\u0442\u0438 \u043D\u0430 \u043F\u043E\u0447\u0430\u0442\u043A\u043E\u0432\u0438\u0439 \u0435\u043A\u0440\u0430\u043D\xBB</b>.</div>`;
     el.querySelector(".pwa-cta-x").addEventListener("click", () => {
       snooze();
@@ -12126,7 +12126,7 @@ END:VEVENT`
         deferredPrompt = null;
         snooze();
         el.remove();
-      } else if (ios) {
+      } else if (iosMode) {
         const hint = el.querySelector(".pwa-cta-hint");
         hint.hidden = !hint.hidden;
       } else {
