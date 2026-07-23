@@ -6,7 +6,7 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, compressImage, containsProfanity } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, compressImage, containsProfanity, autoGrowTextarea } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -838,6 +838,7 @@ function openComposer(pageId, editPost = null) {
 
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
   document.body.appendChild(back);
+  autoGrowTextarea(back.querySelector('.fd-comp-text'));   // поле росте по тексту (скрол — сам лист)
   requestAnimationFrame(() => back.classList.add('open'));
 }
 

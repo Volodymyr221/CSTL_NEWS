@@ -6,7 +6,7 @@
 // Тип 💬 Розмова (chat) прибрано 01.07.2026 — обговорення створюються
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
-import { showToast, escapeHtml, containsProfanity, compressImage } from '../core/utils.js';
+import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea } from '../core/utils.js';
 import { submitPost, updateBoardPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
@@ -343,6 +343,7 @@ export function openBoardModal(opts = {}) {
   // Початковий рендер
   renderBoardFields();
   renderPreview();
+  autoGrowTextarea(wrap.querySelector('#bm-text'));   // поле опису росте по тексту (скрол — сам лист)
   setTimeout(() => wrap.querySelector('#bm-text')?.focus(), 200);
 
   // Уточнюємо ім'я з профілю в БД (кеш міг бути ще не готовий при відкритті).
