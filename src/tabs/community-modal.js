@@ -6,7 +6,7 @@
 // Тип 💬 Розмова (chat) прибрано 01.07.2026 — обговорення створюються
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
-import { showToast, escapeHtml, containsProfanity } from '../core/utils.js';
+import { showToast, escapeHtml, containsProfanity, compressImage } from '../core/utils.js';
 import { submitPost, updateBoardPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
@@ -65,34 +65,8 @@ function accountAuthorName() {
   return firstNameOnly(currentUserName()) || 'Житель';
 }
 
-// Стискаємо фото на клієнті → повертаємо Blob (JPEG ~50-200KB).
-function compressImage(file) {
-  return new Promise(function executor(resolve, reject) {
-    const reader = new FileReader();
-    reader.onload = e => {
-      const img = new Image();
-      img.onload = () => {
-        const maxDim = 800;
-        let w = img.width, h = img.height;
-        if (w > h && w > maxDim) { h = h * maxDim / w; w = maxDim; }
-        else if (h > maxDim)     { w = w * maxDim / h; h = maxDim; }
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.round(w);
-        canvas.height = Math.round(h);
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-        canvas.toBlob(
-          blob => blob ? resolve(blob) : reject(new Error('toBlob failed')),
-          'image/jpeg',
-          0.78,
-        );
-      };
-      img.onerror = reject;
-      img.src = e.target.result;
-    };
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
+// compressImage винесено у core/utils.js (спільна з «Стрічкою»). Дошка стискає
+// до 800px/0.78 (менші картки-оголошення), тому виклик з явними параметрами.
 
 export function openBoardModal(opts = {}) {
   if (document.querySelector('.app-modal--board-compose')) return;
@@ -263,7 +237,7 @@ export function openBoardModal(opts = {}) {
 
         let blob;
         try {
-          blob = await compressImage(file);
+          blob = await compressImage(file, 800, 0.78);
         } catch {
           showToast('Не вдалось обробити фото', 3000);
           return;

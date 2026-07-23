@@ -80,6 +80,32 @@ export function squareImageBlob(file, size = 256) {
   });
 }
 
+// Стиснути фото на клієнті → JPEG-Blob. Спільна для Дошки (оголошення) і «Стрічки».
+// Телефонні фото — 3-5 МБ; uploadPhotoToStorage очікує стиснутий Blob, інакше
+// upload падає «Load failed» (розмір/мережа). maxDim/quality — під контекст.
+export function compressImage(file, maxDim = 1280, quality = 0.8) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > h && w > maxDim)      { h = h * maxDim / w; w = maxDim; }
+        else if (h >= w && h > maxDim) { w = w * maxDim / h; h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width  = Math.round(w);
+        canvas.height = Math.round(h);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        canvas.toBlob(b => b ? resolve(b) : reject(new Error('toBlob failed')), 'image/jpeg', quality);
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 // Форматування дати події: "12 квітня, субота"
 export function formatEventDate(dateStr) {
   const d = new Date(dateStr);
