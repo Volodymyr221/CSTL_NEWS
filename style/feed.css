@@ -49,9 +49,10 @@
   gap: calc(6px - 6px * var(--sh)); background: none; border: 0; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-/* Кільце стискається при скролі вниз лише трохи: 62px → 52px (через --sh). */
+/* Кільце НЕ звужується при скролі — розмір фіксований (рішення Вови): блок меншає
+   лише за рахунок згасання назв, іконки лишаються рівномірними. */
 .fd-circle-ring {
-  width: calc(62px - 10px * var(--sh)); height: calc(62px - 10px * var(--sh));
+  width: 62px; height: 62px;
   border-radius: 50%; padding: 2.5px;
   background: conic-gradient(from 135deg, var(--fd-accent), var(--fd-accent-soft), var(--fd-accent));
   display: flex; align-items: center; justify-content: center;
