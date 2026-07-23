@@ -10338,7 +10338,6 @@ ${ev.description || ""}`
   var comReactMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
-  var feedSearch = "";
   var loaded = false;
   function relTime(iso) {
     const t = new Date(iso).getTime();
@@ -10428,8 +10427,10 @@ ${ev.description || ""}`
         if (cur)
           cur.textContent = String(i + 1);
       }, { passive: true });
+      track.scrollLeft = 0;
       requestAnimationFrame(() => {
         track.scrollLeft = 0;
+        track.classList.add("snap");
       });
     });
   }
@@ -10592,18 +10593,26 @@ ${ev.description || ""}`
   function renderFeed() {
     const circlesEl = document.getElementById("feed-circles");
     const listEl = document.getElementById("feed-list");
-    if (circlesEl)
+    if (circlesEl) {
       circlesEl.innerHTML = circlesHtml();
+      layoutCircles();
+    }
     if (!listEl)
       return;
-    const q = feedSearch.trim().toLowerCase();
-    const shown = q ? posts.filter((p) => ((p.pages?.name || "") + " " + (p.text || "")).toLowerCase().includes(q)) : posts;
-    if (!shown.length) {
-      listEl.innerHTML = q ? `<div class="fd-empty">\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E \u0437\u0430 \u0437\u0430\u043F\u0438\u0442\u043E\u043C \xAB${escapeHtml(feedSearch.trim())}\xBB.</div>` : `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
+    if (!posts.length) {
+      listEl.innerHTML = `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
       return;
     }
-    listEl.innerHTML = shown.map(postCardHtml).join("");
+    listEl.innerHTML = posts.map(postCardHtml).join("");
     wireGalleries(listEl);
+  }
+  function layoutCircles() {
+    const el = document.querySelector("#feed-circles .fd-circles");
+    if (!el)
+      return;
+    el.classList.remove("is-fit");
+    if (el.scrollWidth <= el.clientWidth + 1)
+      el.classList.add("is-fit");
   }
   async function toggleLike(postId) {
     if (!isLoggedIn()) {
@@ -11386,24 +11395,7 @@ ${ev.description || ""}`
     const root = document.getElementById("page-shotam");
     if (root && !root.dataset.fdWired) {
       wireCards(root);
-      const sBtn = document.getElementById("feed-search-btn");
-      const sBar = document.getElementById("feed-search");
-      const sInp = document.getElementById("feed-search-input");
-      sBtn?.addEventListener("click", () => {
-        const show = sBar.hidden;
-        sBar.hidden = !show;
-        if (show)
-          sInp.focus();
-        else {
-          sInp.value = "";
-          feedSearch = "";
-          renderFeed();
-        }
-      });
-      sInp?.addEventListener("input", () => {
-        feedSearch = sInp.value;
-        renderFeed();
-      });
+      window.addEventListener("resize", layoutCircles);
       subscribePageComments((payload) => {
         const t = payload.eventType;
         if (t === "DELETE")

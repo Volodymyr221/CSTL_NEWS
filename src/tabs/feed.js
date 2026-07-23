@@ -44,7 +44,6 @@ let commentMap = new Map();   // post_id → comments[]
 let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
-let feedSearch = '';          // рядок пошуку у стрічці
 let loaded = false;
 
 // Ключ реакції = uid залогіненого. Лайк лише авторизованим (рішення Вови 22.07:
@@ -137,9 +136,11 @@ function wireGalleries(root) {
       dots.forEach((d, k) => d.classList.toggle('on', k === i));
       if (cur) cur.textContent = String(i + 1);
     }, { passive: true });
-    // iOS Safari зі scroll-snap іноді ініціалізує трек на останньому слайді —
-    // явно ставимо на перший (1/N) після layout.
-    requestAnimationFrame(() => { track.scrollLeft = 0; });
+    // iOS Safari зі scroll-snap іноді ініціалізує трек не з першого кадру.
+    // Спершу гарантовано стаємо на 1-й слайд (без snap), і аж наступним кадром
+    // вмикаємо прилипання (.snap) — старт завжди 1/N, свайп працює як раніше.
+    track.scrollLeft = 0;
+    requestAnimationFrame(() => { track.scrollLeft = 0; track.classList.add('snap'); });
   });
 }
 
@@ -288,20 +289,25 @@ export async function focusFeedPost(id) {
 function renderFeed() {
   const circlesEl = document.getElementById('feed-circles');
   const listEl = document.getElementById('feed-list');
-  if (circlesEl) circlesEl.innerHTML = circlesHtml();
+  if (circlesEl) { circlesEl.innerHTML = circlesHtml(); layoutCircles(); }
   if (!listEl) return;
-  const q = feedSearch.trim().toLowerCase();
-  const shown = q
-    ? posts.filter(p => ((p.pages?.name || '') + ' ' + (p.text || '')).toLowerCase().includes(q))
-    : posts;
-  if (!shown.length) {
-    listEl.innerHTML = q
-      ? `<div class="fd-empty">Нічого не знайдено за запитом «${escapeHtml(feedSearch.trim())}».</div>`
-      : `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`;
+  if (!posts.length) {
+    listEl.innerHTML = `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`;
     return;
   }
-  listEl.innerHTML = shown.map(postCardHtml).join('');
+  listEl.innerHTML = posts.map(postCardHtml).join('');
   wireGalleries(listEl);
+}
+
+// Розкладка кружечків-каналів: влазять у рядок → рівномірно по ширині (space-evenly,
+// клас .is-fit); не влазять → горизонтальний скрол зліва (як сторіз). Замір натуральної
+// ширини у скрол-режимі → overflow-safe (початок завжди досяжний). Викликається на
+// рендер і на resize/поворот екрану.
+function layoutCircles() {
+  const el = document.querySelector('#feed-circles .fd-circles');
+  if (!el) return;
+  el.classList.remove('is-fit');                        // міряємо натуральну ширину
+  if (el.scrollWidth <= el.clientWidth + 1) el.classList.add('is-fit');
 }
 
 // ── Лайк (тільки авторизованим) ─────────────────────────────────────────────
@@ -981,17 +987,8 @@ export async function initFeed() {
   const root = document.getElementById('page-shotam');
   if (root && !root.dataset.fdWired) {
     wireCards(root);            // делегування один раз на контейнер вкладки
-    // Пошук у стрічці: кнопка розгортає поле; ввід фільтрує пости наживо.
-    const sBtn = document.getElementById('feed-search-btn');
-    const sBar = document.getElementById('feed-search');
-    const sInp = document.getElementById('feed-search-input');
-    sBtn?.addEventListener('click', () => {
-      const show = sBar.hidden;
-      sBar.hidden = !show;
-      if (show) sInp.focus();
-      else { sInp.value = ''; feedSearch = ''; renderFeed(); }
-    });
-    sInp?.addEventListener('input', () => { feedSearch = sInp.value; renderFeed(); });
+    // Переміряти розкладку кружечків при зміні ширини екрана (поворот тощо).
+    window.addEventListener('resize', layoutCircles);
 
     // Жива синхронізація коментарів: коментар будь-кого зʼявляється у всіх наживо
     // (відкритий лист перемальовується, лічильник картки оновлюється). Один раз.
