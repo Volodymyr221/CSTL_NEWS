@@ -10504,7 +10504,7 @@ ${ev.description || ""}`
     const canEditPost = myPageIds.has(post.page_id);
     return `
     <article class="fd-card" data-post="${post.id}">
-      <header class="fd-card-head" data-open-page="${post.page_id}">
+      <header class="fd-card-head${hasPhoto && !post.event_date ? " fd-card-head--onphoto" : ""}" data-open-page="${post.page_id}">
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
