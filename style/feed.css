@@ -276,7 +276,7 @@
 
 /* Композер поста */
 .fd-comp-text { width: 100%; border: 0; outline: none; resize: none; font-family: inherit; font-size: 16px;
-  line-height: 1.5; color: var(--fd-ink); padding: 4px 2px 10px; background: transparent; }
+  line-height: 1.5; color: var(--fd-ink); padding: 4px 2px 10px; background: transparent; min-height: 120px; }
 .fd-comp-bar { justify-content: space-between; }
 .fd-comp-photo { background: var(--fd-chip); color: var(--fd-accent); }
 .fd-comp-send { height: 42px; padding: 0 22px; border: 0; border-radius: 21px; cursor: pointer;

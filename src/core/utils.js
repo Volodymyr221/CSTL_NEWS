@@ -80,6 +80,18 @@ export function squareImageBlob(file, size = 256) {
   });
 }
 
+// Textarea росте по контенту замість внутрішнього скролу. У bottom-sheet
+// внутрішній скрол textarea конфліктує зі свайпом на iOS і ховає верх тексту —
+// тому поле розширюється, а скролиться сам лист (sheet overflow-y:auto).
+// Викликати ПІСЛЯ вставки в DOM (для префілу в режимі редагування).
+export function autoGrowTextarea(el) {
+  if (!el) return;
+  const fit = () => { el.style.height = 'auto'; el.style.height = el.scrollHeight + 'px'; };
+  el.style.overflowY = 'hidden';
+  el.addEventListener('input', fit);
+  requestAnimationFrame(fit);
+}
+
 // Стиснути фото на клієнті → JPEG-Blob. Спільна для Дошки (оголошення) і «Стрічки».
 // Телефонні фото — 3-5 МБ; uploadPhotoToStorage очікує стиснутий Blob, інакше
 // upload падає «Load failed» (розмір/мережа). maxDim/quality — під контекст.

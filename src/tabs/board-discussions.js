@@ -15,7 +15,7 @@
 // board.js імпортує ЗВІДСИ (один напрямок): renderChatCard, openChatModal,
 // FAB-дії, handleLikeClick, attach*-ініціалізатори, handleDiscussionsAuthChange.
 
-import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle } from '../core/utils.js';
+import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle, autoGrowTextarea } from '../core/utils.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
 import {
   isSupabaseReady,
@@ -405,6 +405,7 @@ export function openDiscussionCompose() {
     // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
     onMount: (sheet, close) => {
       const ta = sheet.querySelector('#disc-compose-topic');
+      autoGrowTextarea(ta);   // поле теми росте по тексту (скрол — сам лист)
       detachKb = attachSheetKeyboardFix(sheet, ta);
       sheet.querySelector('#disc-compose-form')?.addEventListener('submit', async (e) => {
         e.preventDefault();

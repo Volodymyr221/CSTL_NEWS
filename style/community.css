@@ -1591,6 +1591,7 @@
   resize: vertical;
   background: #FAFAFA;
 }
+#bm-text { min-height: 88px; resize: none; }   /* авто-зростання (autoGrowTextarea) — скрол сам лист */
 .cm-board-input:focus { outline: none; border-color: var(--red); background: white; }
 .cm-board-input--small { padding: 8px 11px; font-size: 16px; }
 .cm-board-row { margin-top: 8px; }
@@ -3294,7 +3295,8 @@
   padding: 12px 14px;
   font-size: 15px;
   font-family: inherit;
-  resize: vertical;
+  resize: none;               /* авто-зростання (autoGrowTextarea) — скрол сам лист */
+  min-height: 66px;
   box-sizing: border-box;
 }
 .disc-compose-input:focus { outline: none; border-color: var(--red); }

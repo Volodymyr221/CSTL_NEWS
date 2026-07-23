@@ -57,6 +57,17 @@
       reader.readAsDataURL(file);
     });
   }
+  function autoGrowTextarea(el) {
+    if (!el)
+      return;
+    const fit = () => {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    };
+    el.style.overflowY = "hidden";
+    el.addEventListener("input", fit);
+    requestAnimationFrame(fit);
+  }
   function compressImage(file, maxDim = 1280, quality = 0.8) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -2256,6 +2267,7 @@
     }
     renderBoardFields();
     renderPreview();
+    autoGrowTextarea(wrap.querySelector("#bm-text"));
     setTimeout(() => wrap.querySelector("#bm-text")?.focus(), 200);
     if (isLoggedIn() && !isEdit) {
       getProfile().then((p) => {
@@ -4536,6 +4548,7 @@
       // detachKb — зсуває аркуш над клавіатурою, коли вона таки відкриється.
       onMount: (sheet, close) => {
         const ta = sheet.querySelector("#disc-compose-topic");
+        autoGrowTextarea(ta);
         detachKb = attachSheetKeyboardFix(sheet, ta);
         sheet.querySelector("#disc-compose-form")?.addEventListener("submit", async (e) => {
           e.preventDefault();
@@ -11175,6 +11188,7 @@ ${ev.description || ""}`
     });
     attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
+    autoGrowTextarea(back.querySelector(".fd-comp-text"));
     requestAnimationFrame(() => back.classList.add("open"));
   }
   function openPageEditor(pageId) {
