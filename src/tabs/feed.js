@@ -6,7 +6,7 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, compressImage } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, compressImage, containsProfanity } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -544,6 +544,7 @@ function openComments(postId) {
   const send = async () => {
     const text = input.value.trim();
     if (!text) return;
+    if (containsProfanity(text)) { showToast('🚫 Коментар містить заборонені слова', 3500, 'error'); return; }
     if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
     sendBtn.disabled = true;
     const parentId = replyTarget ? replyTarget.parentId : null;
@@ -789,6 +790,7 @@ function openComposer(pageId, editPost = null) {
       eventFields.event_location = back.querySelector('.fd-comp-eloc').value.trim() || null;
     }
     if (!text && !existing.length && !files.length) return;
+    if (text && containsProfanity(text)) { showToast('🚫 Пост містить заборонені слова', 3500, 'error'); return; }
     sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
     // Завантажуємо нові фото ПОСЛІДОВНО (по одному), не паралельно: на iOS PWA
