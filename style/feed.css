@@ -37,7 +37,7 @@
 .fd-circles.is-fit { justify-content: space-evenly; }
 .fd-circles::-webkit-scrollbar { display: none; }
 .fd-circle {
-  flex: 0 0 auto; width: 74px; display: flex; flex-direction: column; align-items: center;
+  flex: 0 0 auto; width: 86px; display: flex; flex-direction: column; align-items: center;
   gap: 6px; background: none; border: 0; cursor: pointer; -webkit-tap-highlight-color: transparent;
 }
 .fd-circle-ring {
@@ -55,10 +55,13 @@
   color: #fff; font-weight: 700; font-family: Georgia, serif;
 }
 .fd-circle-ava--ph { font-size: 22px; border: 2.5px solid var(--fd-bg); }
-/* Перенос ЛИШЕ по словах (не по буквах); до 3 рядків — повна назва влазить */
+/* Перенос ЛИШЕ по словах (не по буквах); максимум 2 рядки — блок нижчий.
+   Ширина підпису (86px, ширша за кільце 62px) дає 2 слова в рядок → «Відділ культури»
+   в один рядок, «ОТГ» у другий (замість 3 рядків по слову). */
 .fd-circle-label {
+  width: 100%;
   font-size: 11px; font-weight: 700; color: var(--fd-ink); line-height: 1.15; text-align: center;
-  display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   word-break: normal; overflow-wrap: normal; hyphens: manual;
 }
 
