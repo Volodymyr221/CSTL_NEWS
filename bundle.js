@@ -10428,8 +10428,10 @@ ${ev.description || ""}`
         if (cur)
           cur.textContent = String(i + 1);
       }, { passive: true });
+      track.scrollLeft = 0;
       requestAnimationFrame(() => {
         track.scrollLeft = 0;
+        track.classList.add("snap");
       });
     });
   }

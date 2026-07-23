@@ -137,9 +137,11 @@ function wireGalleries(root) {
       dots.forEach((d, k) => d.classList.toggle('on', k === i));
       if (cur) cur.textContent = String(i + 1);
     }, { passive: true });
-    // iOS Safari зі scroll-snap іноді ініціалізує трек на останньому слайді —
-    // явно ставимо на перший (1/N) після layout.
-    requestAnimationFrame(() => { track.scrollLeft = 0; });
+    // iOS Safari зі scroll-snap іноді ініціалізує трек не з першого кадру.
+    // Спершу гарантовано стаємо на 1-й слайд (без snap), і аж наступним кадром
+    // вмикаємо прилипання (.snap) — старт завжди 1/N, свайп працює як раніше.
+    track.scrollLeft = 0;
+    requestAnimationFrame(() => { track.scrollLeft = 0; track.classList.add('snap'); });
   });
 }
 

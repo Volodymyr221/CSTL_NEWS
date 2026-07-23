@@ -130,7 +130,10 @@
 
 /* ── Галерея фото (кілька — свайп-карусель) ── */
 .fd-gallery { position: relative; background: #e9ebee; }
-.fd-gal-track { display: flex; overflow-x: auto; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+/* scroll-snap увімкнено лише після старту (клас .snap) — інакше iOS стартує не з 1-го кадру.
+   overflow-anchor:none — щоб фото, яке довантажується (lazy), не «перетягувало» карусель на себе. */
+.fd-gal-track { display: flex; overflow-x: auto; overflow-anchor: none; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.fd-gal-track.snap { scroll-snap-type: x mandatory; }
 .fd-gal-track::-webkit-scrollbar { display: none; }
 .fd-gal-slide { flex: 0 0 100%; scroll-snap-align: start; cursor: pointer; }
 .fd-gal-slide img { width: 100%; display: block; max-height: 520px; object-fit: cover; }
