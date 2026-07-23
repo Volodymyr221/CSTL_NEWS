@@ -10849,6 +10849,10 @@ ${ev.description || ""}`
       const text = input.value.trim();
       if (!text)
         return;
+      if (containsProfanity(text)) {
+        showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
+        return;
+      }
       if (!isLoggedIn()) {
         close();
         requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
@@ -11113,6 +11117,10 @@ ${ev.description || ""}`
       }
       if (!text && !existing.length && !files.length)
         return;
+      if (text && containsProfanity(text)) {
+        showToast("\u{1F6AB} \u041F\u043E\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
+        return;
+      }
       sendBtn.disabled = true;
       sendBtn.textContent = edit ? "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026" : "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
       let newUrls = [];
