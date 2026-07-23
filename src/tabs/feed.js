@@ -111,13 +111,9 @@ function postImages(post) {
 function galleryHtml(images, postId) {
   if (!images.length) return '';
   if (images.length === 1) {
-    const u = escapeHtml(images[0]);
-    // Розмита копія того ж фото як фон → вертикальні/нестандартні кадри показуємо
-    // ПОВНІСТЮ (object-fit:contain), без обрізки; поля заповнює блюр (як Telegram).
-    return `<div class="fd-photo fd-photo--single" data-view="${postId}" data-idx="0">
-      <div class="fd-photo-bg" style="background-image:url('${u}')"></div>
-      <img src="${u}" alt="" loading="lazy">
-    </div>`;
+    // Стабільна рамка 4:5 (портрет-максимум), cover — як Instagram: без полів,
+    // рівний ритм стрічки. Повний кадр (без обрізки) — по тапу (openViewer, лайтбокс).
+    return `<div class="fd-photo fd-photo--single" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
   }
   const slides = images.map((u, i) =>
     `<div class="fd-gal-slide" data-view="${postId}" data-idx="${i}"><img src="${escapeHtml(u)}" alt="" loading="lazy"></div>`).join('');
