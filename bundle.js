@@ -11396,6 +11396,24 @@ ${ev.description || ""}`
     if (root && !root.dataset.fdWired) {
       wireCards(root);
       window.addEventListener("resize", layoutCircles);
+      const main = document.querySelector(".app-main");
+      const bar = root.querySelector(".fd-topbar");
+      if (main && bar) {
+        const SHRINK_RANGE = 70;
+        let shRaf = 0;
+        const applyShrink = () => {
+          shRaf = 0;
+          const p = Math.min(1, Math.max(0, main.scrollTop / SHRINK_RANGE));
+          bar.style.setProperty("--sh", p.toFixed(3));
+        };
+        const onShrink = () => {
+          if (!shRaf)
+            shRaf = requestAnimationFrame(applyShrink);
+        };
+        main.addEventListener("scroll", onShrink, { passive: true });
+        window.addEventListener("cstl-tab-changed", onShrink);
+        onShrink();
+      }
       subscribePageComments((payload) => {
         const t = payload.eventType;
         if (t === "DELETE")
