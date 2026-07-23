@@ -10492,8 +10492,56 @@ ${ev.description || ""}`
         <button class="fd-cbtn" data-comments="${post.id}" type="button">
           <span class="fd-ic">${IC_COMMENT}</span><span class="fd-cnt">${cCount || ""}</span>
         </button>
+        <button class="fd-share" data-share="${post.id}" type="button" aria-label="\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F \u043F\u043E\u0441\u0442\u043E\u043C">
+          <span class="fd-ic">${IC_SEND}</span>
+        </button>
       </footer>
     </article>`;
+  }
+  function feedPostUrl(id) {
+    return `${location.origin}${location.pathname}#/post/feed/${id}`;
+  }
+  async function sharePost2(id) {
+    const post = posts.find((p) => p.id === id);
+    const url = feedPostUrl(id);
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: post?.pages?.name || "CSTL Life", text: (post?.text || "").slice(0, 140), url });
+      } catch (_) {
+      }
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      showToast("\u041F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F \u0441\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
+    } catch {
+      prompt("\u0421\u043A\u043E\u043F\u0456\u044E\u0439\u0442\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F:", url);
+    }
+  }
+  async function focusFeedPost(id) {
+    window.switchTab?.("shotam");
+    if (!loaded) {
+      await loadData2();
+      renderFeed();
+    }
+    let tries = 0;
+    const tryFocus = () => {
+      const el = document.querySelector(`#feed-list [data-post="${id}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" });
+        el.classList.add("fd-card--flash");
+        setTimeout(() => el.classList.remove("fd-card--flash"), 1600);
+        return;
+      }
+      if (++tries < 8) {
+        requestAnimationFrame(tryFocus);
+        return;
+      }
+      const post = posts.find((p) => p.id === id);
+      if (post)
+        openPageScreen(post.page_id);
+    };
+    requestAnimationFrame(tryFocus);
   }
   function renderFeed() {
     const circlesEl = document.getElementById("feed-circles");
@@ -11171,6 +11219,11 @@ ${ev.description || ""}`
       const comBtn = e.target.closest("[data-comments]");
       if (comBtn) {
         openComments(Number(comBtn.dataset.comments));
+        return;
+      }
+      const shareBtn = e.target.closest("[data-share]");
+      if (shareBtn) {
+        sharePost2(Number(shareBtn.dataset.share));
         return;
       }
       const view = e.target.closest("[data-view]");
@@ -12631,6 +12684,15 @@ END:VEVENT`
     history.replaceState(null, "", location.pathname + location.search);
     openThreadById(Number(m[1]));
   }
+  function handlePostHash() {
+    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc)\/(\d+)/);
+    if (!m)
+      return;
+    history.replaceState(null, "", location.pathname + location.search);
+    const [, source, id] = m;
+    if (source === "feed")
+      focusFeedPost(Number(id));
+  }
   function init() {
     bootApp();
     initAuth();
@@ -12656,6 +12718,8 @@ END:VEVENT`
     window.addEventListener("hashchange", handleInviteHash);
     handleThreadHash();
     window.addEventListener("hashchange", handleThreadHash);
+    handlePostHash();
+    window.addEventListener("hashchange", handlePostHash);
     logEvent(currentUserId() || getAnonId(), "tab_view", { tab: currentTab, meta: { device: _analyticsDevice } });
     setTimeout(() => {
       const splash = document.getElementById("splash");

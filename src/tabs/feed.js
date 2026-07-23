@@ -6,7 +6,7 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml } from '../core/utils.js';
+import { escapeHtml, showToast } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -217,8 +217,52 @@ function postCardHtml(post) {
         <button class="fd-cbtn" data-comments="${post.id}" type="button">
           <span class="fd-ic">${IC_COMMENT}</span><span class="fd-cnt">${cCount || ''}</span>
         </button>
+        <button class="fd-share" data-share="${post.id}" type="button" aria-label="Поділитися постом">
+          <span class="fd-ic">${IC_SEND}</span>
+        </button>
       </footer>
     </article>`;
+}
+
+// Пряме посилання на пост (deep link): #/post/feed/<id> — застосунок при відкритті
+// перемикає на «Стрічку» і прокручує до цього поста (handlePostHash у app.js).
+function feedPostUrl(id) {
+  return `${location.origin}${location.pathname}#/post/feed/${id}`;
+}
+
+// Поділитися постом: системне «Поділитись» (Web Share) або копіювання лінка.
+async function sharePost(id) {
+  const post = posts.find(p => p.id === id);
+  const url = feedPostUrl(id);
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: post?.pages?.name || 'CSTL Life', text: (post?.text || '').slice(0, 140), url });
+    } catch (_) { /* користувач скасував — нічого */ }
+    return;
+  }
+  try { await navigator.clipboard.writeText(url); showToast('Посилання скопійовано'); }
+  catch { prompt('Скопіюйте посилання:', url); }
+}
+
+// Відкрити пост за deep-link: перемкнути на «Стрічку», прокрутити до нього + підсвітити.
+// Якщо поста ще нема в DOM (не долетів рендер / не в перших 60) — відкрити його сторінку.
+export async function focusFeedPost(id) {
+  window.switchTab?.('shotam');
+  if (!loaded) { await loadData(); renderFeed(); }
+  let tries = 0;
+  const tryFocus = () => {
+    const el = document.querySelector(`#feed-list [data-post="${id}"]`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('fd-card--flash');
+      setTimeout(() => el.classList.remove('fd-card--flash'), 1600);
+      return;
+    }
+    if (++tries < 8) { requestAnimationFrame(tryFocus); return; }
+    const post = posts.find(p => p.id === id);   // не в стрічці → відкрити сторінку каналу
+    if (post) openPageScreen(post.page_id);
+  };
+  requestAnimationFrame(tryFocus);
 }
 
 // ── Рендер: головна стрічка (Екран 1) ───────────────────────────────────────
@@ -802,6 +846,8 @@ function wireCards(root) {
     if (likeBtn) { toggleLike(Number(likeBtn.dataset.like)); return; }
     const comBtn = e.target.closest('[data-comments]');
     if (comBtn) { openComments(Number(comBtn.dataset.comments)); return; }
+    const shareBtn = e.target.closest('[data-share]');
+    if (shareBtn) { sharePost(Number(shareBtn.dataset.share)); return; }
     const view = e.target.closest('[data-view]');
     if (view) {                                  // тап по фото → повноекранний перегляд
       const post = posts.find(p => p.id === Number(view.dataset.view));
