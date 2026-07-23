@@ -23,6 +23,7 @@
   background: color-mix(in srgb, var(--fd-bg) 84%, transparent);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--fd-divider);
+  box-shadow: 0 6px 14px rgba(16, 18, 22, 0.10);   /* тінь знизу — відділити від стрічки */
 }
 .fd-head-btn {
   width: 34px; height: 34px; border-radius: 50%; border: 0; cursor: pointer;
@@ -93,9 +94,9 @@
 .fd-postmenu-item--danger { color: #c0392b; }
 
 /* Фото обрамлене тінню зверху (від шапки) і знизу (від блоку опису) — «налягання», глибина. */
-.fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: 0 7px 16px rgba(16, 18, 22, 0.16); }
+.fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: 0 5px 12px rgba(16, 18, 22, 0.10); }
 .fd-card-body { position: relative; z-index: 1; background: var(--fd-surface); }
-.fd-card-body--onphoto { box-shadow: 0 -7px 16px rgba(16, 18, 22, 0.18); }
+.fd-card-body--onphoto { box-shadow: 0 -5px 12px rgba(16, 18, 22, 0.11); }
 
 .fd-text { padding: 8px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
 
