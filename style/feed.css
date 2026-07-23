@@ -106,7 +106,7 @@
 
 /* Одиночне фото: стабільна рамка 4:5 (портрет-максимум), cover — без полів, рівний
    ритм стрічки (як Instagram). Повний кадр без обрізки — по тапу (лайтбокс openViewer). */
-.fd-photo--single img { width: 100%; aspect-ratio: 4 / 5; max-height: none; object-fit: cover; }
+.fd-photo--single img { width: 100%; aspect-ratio: 3 / 4; max-height: none; object-fit: cover; }
 
 .fd-author { padding: 2px 14px 0; font-size: 12.5px; color: var(--fd-muted); }
 .fd-author b { color: var(--fd-ink); font-weight: 600; }
