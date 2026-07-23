@@ -34,21 +34,21 @@
 .fd-circles-wrap { flex: 1; min-width: 0; }
 .fd-circles {
   display: flex; gap: 16px; overflow-x: auto;
-  /* Вертикальні відступи меншають при стисканні (--sh); низ ≥14px, щоб підписи
-     лишались над зоною згасання маски (13px). */
-  padding: calc(8px - 4px * var(--sh)) 16px calc(18px - 4px * var(--sh));
+  /* Вертикальні відступи меншають при стисканні (--sh) — разом зі згасанням підпису
+     блок стає помітно нижчим (верх 8→4, низ 18→10). */
+  padding: calc(8px - 4px * var(--sh)) 16px calc(18px - 8px * var(--sh));
   scrollbar-width: none; justify-content: flex-start;
 }
 .fd-circles.is-fit { justify-content: space-evenly; }
 .fd-circles::-webkit-scrollbar { display: none; }
 .fd-circle {
   flex: 0 0 auto; width: 86px; display: flex; flex-direction: column; align-items: center;
-  gap: calc(6px - 2.5px * var(--sh)); background: none; border: 0; cursor: pointer;
+  gap: calc(6px - 6px * var(--sh)); background: none; border: 0; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
-/* Кільце стискається при скролі вниз: 62px → 46px (через --sh). */
+/* Кільце стискається при скролі вниз лише трохи: 62px → 52px (через --sh). */
 .fd-circle-ring {
-  width: calc(62px - 16px * var(--sh)); height: calc(62px - 16px * var(--sh));
+  width: calc(62px - 10px * var(--sh)); height: calc(62px - 10px * var(--sh));
   border-radius: 50%; padding: 2.5px;
   background: conic-gradient(from 135deg, var(--fd-accent), var(--fd-accent-soft), var(--fd-accent));
   display: flex; align-items: center; justify-content: center;
@@ -71,6 +71,10 @@
   font-size: 11px; font-weight: 700; color: var(--fd-ink); line-height: 1.15; text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   word-break: normal; overflow-wrap: normal; hyphens: manual;
+  /* При скролі вниз (--sh) підпис плавно згасає І забирає свою висоту (max-height→0)
+     → блок додатково меншає; скрол угору повертає. */
+  opacity: calc(1 - var(--sh));
+  max-height: calc(28px - 28px * var(--sh));
 }
 
 /* ── Стрічка постів (на всю ширину, білі блоки, сірий проміжок) ── */
