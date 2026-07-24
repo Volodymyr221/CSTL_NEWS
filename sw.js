@@ -192,8 +192,11 @@ self.addEventListener('notificationclick', e => {
         // (P-9: раніше просто фокусувало, thread_id ігнорувався).
         for (const c of list) {
           if ('focus' in c) {
-            if (threadId != null || groupId != null) {
-              try { c.postMessage({ __cstl: 'notif-click', threadId, groupId }); } catch (_) {}
+            if (threadId != null || groupId != null || url) {
+              // url — deep-link на конкретний елемент (#/post/feed/<id> тощо). Раніше
+              // при ВІДКРИТОМУ додатку він ігнорувався: тап по сповіщенню про новий
+              // пост лише фокусував вікно і лишав користувача там, де він був.
+              try { c.postMessage({ __cstl: 'notif-click', threadId, groupId, url }); } catch (_) {}
             }
             return c.focus();
           }

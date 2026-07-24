@@ -262,6 +262,21 @@ function init() {
   handlePostHash();                                // deep-link на пост «Стрічки»
   window.addEventListener('hashchange', handlePostHash);
 
+  // Тап по системному сповіщенню, коли додаток УЖЕ відкритий. Холодний старт працював
+  // (sw.js відкриває вікно на deep-link), а тут раніше вікно лише фокусувалось — і
+  // користувач лишався там, де був. Тепер sw.js форвардить url → застосовуємо його як
+  // hash і відкриваємо саме той елемент (пост «Стрічки», оголошення, стаття).
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', e => {
+      const d = e.data;
+      if (!d || d.__cstl !== 'notif-click' || !d.url) return;
+      const i = String(d.url).indexOf('#');
+      if (i < 0) return;                           // url без deep-link — нічого відкривати
+      location.hash = String(d.url).slice(i);
+      handlePostHash();                            // ідемпотентно: сам чистить hash після відкриття
+    });
+  }
+
   // Аналітика: switchTab() рано виходить коли tab===currentTab, тому початковий
   // перегляд дефолтної вкладки (Громада, currentTab вже 'community') інакше
   // ніколи б не залогувався.

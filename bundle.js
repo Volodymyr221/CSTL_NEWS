@@ -13117,6 +13117,18 @@ END:VEVENT`
     window.addEventListener("hashchange", handleThreadHash);
     handlePostHash();
     window.addEventListener("hashchange", handlePostHash);
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", (e) => {
+        const d = e.data;
+        if (!d || d.__cstl !== "notif-click" || !d.url)
+          return;
+        const i = String(d.url).indexOf("#");
+        if (i < 0)
+          return;
+        location.hash = String(d.url).slice(i);
+        handlePostHash();
+      });
+    }
     logEvent(currentUserId() || getAnonId(), "tab_view", { tab: currentTab, meta: { device: _analyticsDevice } });
     setTimeout(() => {
       const splash = document.getElementById("splash");
