@@ -11019,7 +11019,7 @@ ${ev.description || ""}`
     if (title) {
       let tRaf = 0, pinAt = 0;
       const RANGE = 60;
-      const SETTLE = 24;
+      const SETTLE = 0;
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
       };
