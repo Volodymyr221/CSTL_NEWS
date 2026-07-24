@@ -492,3 +492,8 @@
 }
 .fd-comp-as-btn.is-on { color: var(--fd-accent); border-color: var(--fd-accent); background: rgba(114,47,55,0.06); }
 .fd-comp-as-btn.is-on .fd-comp-as-dot { border-color: var(--fd-accent); background: var(--fd-accent); }
+
+/* Запрошений, але ще жодного разу не заходив у додаток — приглушений рядок,
+   щоб власник одразу бачив різницю між «уже в команді» і «чекає першого входу». */
+.fd-team-row--invited .fd-team-who b { color: var(--fd-muted); font-weight: 600; }
+.fd-team-role--invited { color: #8a6d3b; background: rgba(180,83,9,0.10); }
