@@ -679,13 +679,16 @@ async function openPageScreen(pageId) {
   const title = screen.querySelector('.fd-screen-title');
   if (title) {
     let tRaf = 0, pinAt = 0;
-    const RANGE = 60;                                 // останні 60px до піну — плавний перехід
+    const RANGE = 60;                                 // 60px плавного згортання
+    const SETTLE = 24;                                // згортання завершується за 24px ДО піну →
+                                                      // заголовок пінається вже у фінальній формі,
+                                                      // ріст висоти не триває під час прилипання (без дьоргання нижніх блоків).
     // Поріг піну міряємо ОДИН раз (не щокадру getBoundingClientRect — то reflow і сіпання):
     // scroll-позиція, де верх назви дійде до верху екрана.
     const measure = () => { pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop; };
     const applyTitle = () => {
       tRaf = 0;
-      const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE)) / RANGE));  // лише scrollTop — дешево
+      const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE - SETTLE)) / RANGE));  // лише scrollTop — дешево
       title.style.setProperty('--p', p.toFixed(3));
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
@@ -1069,11 +1072,12 @@ export async function initFeed() {
     const main = document.querySelector('.app-main');
     const bar = root.querySelector('.fd-topbar');
     if (main && bar) {
-      const SHRINK_RANGE = 40;
+      const SHRINK_START = 30;   // мертва зона: перші 30px скролу назви ще стоять повністю
+      const SHRINK_RANGE = 40;   // далі на 40px плавно згортаються (30→70px)
       let shRaf = 0;
       const applyShrink = () => {
         shRaf = 0;
-        const p = Math.min(1, Math.max(0, main.scrollTop / SHRINK_RANGE));
+        const p = Math.min(1, Math.max(0, (main.scrollTop - SHRINK_START) / SHRINK_RANGE));
         bar.style.setProperty('--sh', p.toFixed(3));
       };
       const onShrink = () => { if (!shRaf) shRaf = requestAnimationFrame(applyShrink); };

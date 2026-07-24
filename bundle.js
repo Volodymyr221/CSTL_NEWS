@@ -10995,12 +10995,13 @@ ${ev.description || ""}`
     if (title) {
       let tRaf = 0, pinAt = 0;
       const RANGE = 60;
+      const SETTLE = 24;
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
       };
       const applyTitle = () => {
         tRaf = 0;
-        const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE)) / RANGE));
+        const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE - SETTLE)) / RANGE));
         title.style.setProperty("--p", p.toFixed(3));
       };
       const onTitle = () => {
@@ -11492,11 +11493,12 @@ ${ev.description || ""}`
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {
+        const SHRINK_START = 30;
         const SHRINK_RANGE = 40;
         let shRaf = 0;
         const applyShrink = () => {
           shRaf = 0;
-          const p = Math.min(1, Math.max(0, main.scrollTop / SHRINK_RANGE));
+          const p = Math.min(1, Math.max(0, (main.scrollTop - SHRINK_START) / SHRINK_RANGE));
           bar.style.setProperty("--sh", p.toFixed(3));
         };
         const onShrink = () => {
