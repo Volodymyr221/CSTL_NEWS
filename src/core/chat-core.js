@@ -45,59 +45,24 @@ export function buildScreen(innerHtml, extraClass = '') {
   requestAnimationFrame(() => { backdrop.classList.add('visible'); screen.classList.add('visible'); });
   const api = { screen, backdrop, _cleanup: [] };
   // Екран — повноекранний ШАР, підключений до історії браузера (core/layers.js).
-  // Без цього системний жест «назад» на iPhone закривав екран І одночасно відкочував
-  // увесь додаток по історії (див. коментар у layers.js). Тепер жест з'їдає рівно
-  // один запис → закривається лише цей екран.
-  api._layer = openLayer(() => closeScreen(api));
-  const close = () => closeLayer(api._layer);
+  // Жест «назад» обслуговує СИСТЕМА. Власний edge-свайп прибрано
+  // 24.07: iOS малює свою анімацію переходу, і наше перетягування накладалось згори.
+  api._layer = openLayer(() => closeScreen(api), {
+    animateOut: () => { screen.classList.remove('visible'); backdrop.classList.remove('visible'); },
+  });
+  const close = () => closeLayer(api._layer, { animate: 240 });
   backdrop.addEventListener('click', close);
   screen.querySelector('[data-pm-back]')?.addEventListener('click', close);
   api.close = close;
-  setupEdgeBack(api);   // свайп від лівого краю → назад (як на iOS)
+  // setupEdgeBack прибрано 24.07 — див. коментар вище (жест = система).
   _openScreens.push(api);
   return api;
 }
 
-// Свайп від ЛІВОГО краю екрану вправо → закрити (назад). Плавно: під час перетягування
-// transition вимкнено (йде за пальцем), на відпусканні — снап/закриття. Під час свайпу
-// показуємо екран, що НИЖЧЕ в стеку (інакше за чатом визирає сторінка-вкладка, а не список).
-function setupEdgeBack(api) {
-  const screen = api.screen;
-  let sx = 0, sy = 0, dragging = false, lock = null, below = null;
-  const winW = () => window.innerWidth || screen.clientWidth || 360;
-  const findBelow = () => { const i = _openScreens.indexOf(api); return i > 0 ? _openScreens[i - 1] : null; };
-  const showBelow = () => { if (below) below.screen.style.display = ''; };   // .pm-screen z=2401 > затемнення 2400
-  const hideBelow = () => { if (below) below.screen.style.display = 'none'; };
-  screen.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    if (t.clientX > 24) { dragging = false; return; }   // лише від самого лівого краю
-    sx = t.clientX; sy = t.clientY; dragging = true; lock = null; below = findBelow();
-  }, { passive: true });
-  screen.addEventListener('touchmove', (e) => {
-    if (!dragging) return;
-    const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-    if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) { lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v'; if (lock === 'h') showBelow(); }
-    if (lock === 'v') { dragging = false; screen.style.transition = ''; screen.style.transform = ''; hideBelow(); return; }
-    if (lock === 'h' && dx > 0) {
-      e.preventDefault();
-      screen.style.transition = 'none';
-      screen.style.transform = `translateX(-50%) translateX(${dx}px)`;   // зберігаємо центрування -50%
-    }
-  }, { passive: false });
-  screen.addEventListener('touchend', (e) => {
-    if (!dragging) return;
-    dragging = false;
-    const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
-    screen.style.transition = '';   // повертаємо CSS-плавність (0.28s)
-    if (lock === 'h' && dx > winW() * 0.33) {
-      screen.style.transform = `translateX(-50%) translateX(${winW()}px)`;   // доїхати вправо
-      setTimeout(() => api.close(), 180);   // closeScreen сам відновить нижній екран
-    } else {
-      screen.style.transform = '';   // снап назад
-      hideBelow();                    // знову ховаємо нижній (оптимізація як було)
-    }
-  }, { passive: false });
-}
+// setupEdgeBack (власний свайп від лівого краю) ПРИБРАНО 24.07 — скрін IMG_3559.
+// Причина: жест від краю системний, iOS малює власну анімацію переходу, і наше
+// перетягування накладалось згори — їхали два екрани. Тепер жест обслуговує система
+// через історію браузера (core/layers.js), а ми лише прибираємо екран по popstate.
 
 function closeScreen(api) {
   if (!api || api._closed) return;
