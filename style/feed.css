@@ -26,8 +26,10 @@
      (0.20) → лишається лише скло-blur, а не біла плашка. --fd-bg = #ECEEF1. */
   background: rgba(236, 238, 241, calc(0.86 - 0.66 * var(--sh)));
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  border-bottom: 1px solid var(--fd-divider);
-  box-shadow: 0 6px 14px rgba(16, 18, 22, 0.10);   /* тінь знизу — відділити від стрічки */
+  /* Без лінії/тіні — низ ПЛАВНО згасає в прозорість (маска): край майже непомітний.
+     Фейд у зоні нижнього padding (24px), тому іконки/підписи лишаються чіткими. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 24px), transparent);
 }
 
 /* ── Кружечки-канали (stories) — повний розмір, підпис по СЛОВАХ (без переносу букв) ──
@@ -38,7 +40,7 @@
   display: flex; gap: 16px; overflow-x: auto;
   /* Вертикальні відступи меншають при стисканні (--sh) — разом зі згасанням підпису
      блок стає помітно нижчим (верх 8→4, низ 18→10). */
-  padding: calc(8px - 4px * var(--sh)) 16px calc(18px - 8px * var(--sh));
+  padding: calc(8px - 4px * var(--sh)) 16px 24px;
   scrollbar-width: none; justify-content: flex-start;
 }
 .fd-circles.is-fit { justify-content: space-evenly; }
