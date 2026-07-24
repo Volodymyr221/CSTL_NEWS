@@ -168,6 +168,7 @@ main отримує мердж-коміт
 | `src/app.js` | Точка входу — імпортує всі модулі |
 | `src/core/boot.js` | PWA setup, Service Worker |
 | `src/core/utils.js` | `formatTime`, `escapeHtml`, `showToast`, `formatEventDate` |
+| `src/core/sheet-motion.js` | **Нативне (iOS) завершення жесту «свайп-закриття»** (24.07). Сам жест кожної модалки лишається на місці — тут лише те, що стається у момент відпускання пальця: `createDragTracker()` (швидкість пальця) + `finishSwipe()` (кидок закриває навіть коротким рухом; час доїзду = залишок шляху ÷ швидкість, 110..240мс; модалка летить за пальцем, а не замирає) + `sheetRemaining()`/`centeredRemaining()`. Використовують: `core/modal.js`, `tabs/feed.js`, `tabs/board.js`, `tabs/board-discussions.js`, `tabs/community-blocks.js`. |
 | `src/core/weather.js` | Віджет погоди у шапці (Open-Meteo API + geolocation з utils.js) |
 | `src/core/supabase.js` | Клієнт Supabase + увесь дата-шар (пости, реакції, коментарі, чат, закладки, push) |
 | `src/core/auth.js` | **Фаза Б:** вхід Google, поточний користувач, `requireAuth` (гейтинг), профіль |

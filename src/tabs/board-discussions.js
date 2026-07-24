@@ -28,6 +28,7 @@ import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
 import { ICONS } from '../core/icons.js';
 import { getSavedIds, saveBtnHtml } from '../core/board-shared.js';
+import { createDragTracker, finishSwipe, centeredRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
 // ── Доступ до постів Дошки (ін'єкція з board.js — стан лишається там) ────────
 let _getPosts = () => [];
@@ -582,35 +583,47 @@ export function openChatModal(post) {
   // тож пружний повернення/закриття лишаються плавними.
   let startY = 0, curY = 0, dragging = false, rafId = 0;
   const dragZone = modal.querySelector('.bd-chat-modal-head');
+  const drag = createDragTracker();       // швидкість пальця → нативне завершення жесту
   const applyDrag = () => {
     rafId = 0;
     modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
   };
   dragZone.addEventListener('touchstart', e => {
     startY = e.touches[0].clientY; curY = 0; dragging = true;
+    drag.start(startY);
     modal.style.transition = 'none';      // рух — миттєвий за пальцем, без анімації
     modal.style.willChange = 'transform';
   }, { passive: true });
   dragZone.addEventListener('touchmove', e => {
     if (!dragging) return;
     curY = Math.max(0, e.touches[0].clientY - startY);   // лише вниз
+    drag.move(e.touches[0].clientY);
     if (!rafId) rafId = requestAnimationFrame(applyDrag);
   }, { passive: true });
   const endDrag = () => {
     if (!dragging) return;
     dragging = false;
     if (rafId) { cancelAnimationFrame(rafId); rafId = 0; }
-    modal.style.transition = '';          // повертаємо CSS-плавність (снап-назад / закриття)
     modal.style.willChange = '';
-    if (curY > 90) closeChatModal();
-    else modal.style.transform = '';      // пружний повернення на місце
+    // Доїзд рахує sheet-motion: кидок закриває навіть коротким рухом; при закритті
+    // модалка ЛЕТИТЬ униз за пальцем (keepTransform — щоб closeChatModal не стер
+    // інлайн transform і вона не стрибнула назад у центр перед зникненням).
+    const remaining = centeredRemaining(modal);
+    finishSwipe({
+      panel: modal, dy: curY, velocity: drag.velocity, remaining,
+      dismissTransform: `translate3d(-50%, ${Math.round(curY + remaining)}px, 0)`,
+      onDismiss: () => closeChatModal({ keepTransform: true }),
+    });
     curY = 0;
   };
   dragZone.addEventListener('touchend', endDrag);
   dragZone.addEventListener('touchcancel', endDrag);
 }
 
-export function closeChatModal() {
+// keepTransform:true — закриття прийшло від свайпу, і модалка вже летить донизу
+// власним інлайн transform. Стирати його тут не можна: вона стрибнула б назад
+// у центр і вже звідти зникала (саме це і виглядало як ривок).
+export function closeChatModal(opts = {}) {
   if (!_chatModalEl) return;
   const modal = _chatModalEl;
   const backdrop = document.querySelector('.bd-chat-backdrop');
@@ -624,7 +637,7 @@ export function closeChatModal() {
   _chatUnseen = 0;
   _chatModalEl = null;
   modal.classList.remove('visible');
-  modal.style.transform = '';
+  if (!opts.keepTransform) modal.style.transform = '';
   backdrop?.classList.remove('visible');
   document.body.classList.remove('modal-open');
   document.removeEventListener('keydown', onChatEsc);
