@@ -1,17 +1,23 @@
 -- scripts/supabase_page_push.sql
 -- Надійні сповіщення про новий пост сторінки «Стрічки» (потік /byyou 24.07).
 --
+-- ✅ УЖЕ НАКАТАНО 24.07 через Supabase MCP (міграція `page_push_trigger_and_log`).
+--    Цей файл — джерело правди на випадок відновлення/повторного розгортання.
+--
 -- ЩО ЦЕ ЛІКУЄ
 --   Раніше сповіщення слав БРАУЗЕР АВТОРА одразу після публікації. Якщо автор закрив
 --   додаток, втратив мережу або пост створено інакше (адмінка, SQL) — сповіщення не
 --   йшло НІКОЛИ і мовчки. Тепер розсилку запускає САМА БАЗА при появі поста.
 --
--- ДВІ ЧАСТИНИ
---   1) page_push_log — журнал: про який пост розсилка вже була. Гарантує, що
---      сповіщення піде РІВНО РАЗ, навіть якщо функцію покличуть двічі (клієнт + тригер)
---      або якщо станеться повтор після збою мережі.
---   2) тригер AFTER INSERT ON page_posts → викликає Edge-функцію send-page-push
---      через pg_net (розширення для HTTP-запитів прямо з бази).
+-- ТРИ ЧАСТИНИ
+--   1) page_push_log — журнал: про який пост розсилка вже була. Гарантує, що сповіщення
+--      піде РІВНО РАЗ, навіть якщо функцію покличуть двічі (тригер + клієнт-підстраховка)
+--      або станеться повтор після збою мережі.
+--   2) app_secrets — спільний секрет, яким тригер доводить Edge-функції, що виклик
+--      справді від бази. ⚠️ Свідомо НЕ використовуємо тут ключ service_role: він не має
+--      з'являтись ані в git, ані в переписці. Функція має `verify_jwt = false` і
+--      автентифікує себе САМА (секрет або токен автора).
+--   3) тригер AFTER INSERT ON page_posts → кличе Edge-функцію через pg_net.
 --
 -- ⚠️ ЛИШЕ НОВІ ПОСТИ (рішення Вови 24.07): тригер на INSERT, не на UPDATE —
 --    виправив друкарську помилку в пості → люди НЕ отримують друге сповіщення.
@@ -24,53 +30,55 @@ create table if not exists public.page_push_log (
   sent_at  timestamptz not null default now(),
   sent     int not null default 0            -- скільком пристроям реально відправлено
 );
-
 alter table public.page_push_log enable row level security;
-
--- Пише і читає лише сервер (Edge Function через service_role). Людям тут нічого робити.
 drop policy if exists "service manages page push log" on public.page_push_log;
 create policy "service manages page push log" on public.page_push_log for all
   using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
 
--- ── 2. Розширення для HTTP-запитів із бази ──────────────────────────────────
+-- ── 2. Спільний секрет «база ↔ Edge-функція» ────────────────────────────────
+create table if not exists public.app_secrets (
+  name       text primary key,
+  value      text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.app_secrets enable row level security;
+drop policy if exists "service reads app secrets" on public.app_secrets;
+create policy "service reads app secrets" on public.app_secrets for all
+  using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+-- Значення секрету НЕ зберігаємо у git. Згенерувати і покласти (один раз):
+--   insert into app_secrets (name, value)
+--   values ('page_push_secret', encode(gen_random_bytes(32), 'hex'))
+--   on conflict (name) do nothing;
+-- Після зміни секрету нічого передеплоювати не треба — функція читає його з бази.
+
+-- ── 3. Розширення для HTTP-запитів із бази ──────────────────────────────────
 create extension if not exists pg_net with schema extensions;
 
--- ── 3. Ключ беремо з Vault (сховище секретів Supabase) ──────────────────────
--- ⚠️ Ключ service_role НЕ пишемо в цей файл — він потрапив би в git.
--- ОДИН РАЗ виконай окремо у SQL Editor, підставивши свій ключ
--- (Supabase → Project Settings → API → service_role, він же «secret»):
---
---   select vault.create_secret('ВСТАВ_СЮДИ_SERVICE_ROLE_КЛЮЧ', 'service_role_key');
---
--- Якщо колись зміниш ключ:
---   select vault.update_secret(id, 'НОВИЙ_КЛЮЧ') from vault.secrets where name = 'service_role_key';
-
--- ── 4. Функція тригера: кличе Edge-функцію send-page-push ───────────────────
+-- ── 4. Функція тригера ──────────────────────────────────────────────────────
 create or replace function public.notify_new_page_post()
 returns trigger
 language plpgsql
 security definer
-set search_path = public, extensions, vault
+set search_path = public, extensions
 as $$
 declare
-  v_key text;
+  v_secret text;
   v_url text := 'https://uabyfecseqnemvcqhdem.supabase.co/functions/v1/send-page-push';
 begin
-  -- Ключ із Vault. Якщо секрет не заведено — тихо виходимо: публікація поста НЕ має
-  -- падати через проблему зі сповіщеннями (пост важливіший за пуш).
-  select decrypted_secret into v_key
-    from vault.decrypted_secrets where name = 'service_role_key' limit 1;
-  if v_key is null then
-    raise warning 'notify_new_page_post: секрет service_role_key не заведено у Vault';
+  select value into v_secret from public.app_secrets where name = 'page_push_secret' limit 1;
+  if v_secret is null then
+    raise warning 'notify_new_page_post: секрет page_push_secret відсутній';
     return new;
   end if;
 
-  -- Асинхронний HTTP-виклик: pg_net ставить запит у чергу і НЕ блокує вставку поста.
+  -- Асинхронно: pg_net ставить запит у чергу і НЕ блокує вставку поста.
+  -- Публікація поста важливіша за сповіщення — вона не має падати через пуш.
   perform net.http_post(
     url     := v_url,
     headers := jsonb_build_object(
-                 'Content-Type',  'application/json',
-                 'Authorization', 'Bearer ' || v_key
+                 'Content-Type',       'application/json',
+                 'x-cstl-push-secret', v_secret
                ),
     body    := jsonb_build_object('post_id', new.id),
     timeout_milliseconds := 8000
@@ -80,14 +88,16 @@ end;
 $$;
 
 -- ── 5. Тригер: ЛИШЕ на новий пост ───────────────────────────────────────────
--- AFTER INSERT (не UPDATE) — рішення Вови 24.07: виправлення друкарської помилки
--- в опублікованому пості НЕ має слати людям друге сповіщення.
 drop trigger if exists trg_notify_new_page_post on public.page_posts;
 create trigger trg_notify_new_page_post
   after insert on public.page_posts
   for each row execute function public.notify_new_page_post();
 
--- ── Перевірка після накатування ─────────────────────────────────────────────
---   select * from page_push_log order by sent_at desc limit 5;          -- кому вже слали
+-- ── Перевірка ───────────────────────────────────────────────────────────────
+--   select tgname from pg_trigger where tgname = 'trg_notify_new_page_post';
+--   select * from page_push_log order by sent_at desc limit 5;        -- кому вже слали
 --   select status_code, content from net._http_response
---     order by created desc limit 5;                                     -- відповіді Edge-функції
+--     order by created desc limit 5;                                   -- відповіді функції
+--
+-- Перевірено 24.07 наживо: чужий виклик → 401 «no auth»; підроблений секрет → 401
+-- «bad secret»; правильний → 200. Вставка поста запускає тригер за ~40 мс.
