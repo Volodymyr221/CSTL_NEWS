@@ -10955,10 +10955,12 @@ ${ev.description || ""}`
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
       <div class="fd-screen-list">${screenListHtml("posts", pagePosts)}</div>
     </div>`;
-    screen.querySelector(".fd-screen-back").addEventListener("click", () => {
+    const closeScreen2 = () => {
       screen.classList.remove("open");
       setTimeout(() => screen.remove(), 240);
-    });
+    };
+    screen.querySelector(".fd-screen-back").addEventListener("click", closeScreen2);
+    attachScreenSwipeBack(screen, closeScreen2);
     const composeBtn = screen.querySelector(".fd-compose-open");
     if (composeBtn)
       composeBtn.addEventListener("click", () => openComposer(pageId));
@@ -10991,12 +10993,14 @@ ${ev.description || ""}`
     }
     const title = screen.querySelector(".fd-screen-title");
     if (title) {
-      let tRaf = 0;
+      let tRaf = 0, pinAt = 0;
+      const RANGE = 60;
+      const measure = () => {
+        pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
+      };
       const applyTitle = () => {
         tRaf = 0;
-        const rt = title.getBoundingClientRect().top;
-        const RANGE = 60;
-        const p = Math.min(1, Math.max(0, (RANGE - rt) / RANGE));
+        const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE)) / RANGE));
         title.style.setProperty("--p", p.toFixed(3));
       };
       const onTitle = () => {
@@ -11004,10 +11008,68 @@ ${ev.description || ""}`
           tRaf = requestAnimationFrame(applyTitle);
       };
       screen.addEventListener("scroll", onTitle, { passive: true });
-      requestAnimationFrame(applyTitle);
+      window.addEventListener("resize", () => {
+        measure();
+        onTitle();
+      });
+      requestAnimationFrame(() => {
+        measure();
+        applyTitle();
+      });
     }
     document.body.appendChild(screen);
     requestAnimationFrame(() => screen.classList.add("open"));
+  }
+  function attachScreenSwipeBack(screen, close) {
+    let sx = 0, sy = 0, dragging = false, lock = null;
+    const winW = () => window.innerWidth || screen.clientWidth || 360;
+    screen.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      if (t.clientX > 24) {
+        dragging = false;
+        return;
+      }
+      sx = t.clientX;
+      sy = t.clientY;
+      dragging = true;
+      lock = null;
+    }, { passive: true });
+    screen.addEventListener("touchmove", (e) => {
+      if (!dragging)
+        return;
+      const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+      if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
+        lock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+      if (lock === "v") {
+        dragging = false;
+        screen.style.transition = "";
+        screen.style.transform = "";
+        return;
+      }
+      if (lock === "h" && dx > 0) {
+        e.preventDefault();
+        screen.style.transition = "none";
+        screen.style.transform = `translateX(${dx}px)`;
+      }
+    }, { passive: false });
+    screen.addEventListener("touchend", (e) => {
+      if (!dragging)
+        return;
+      dragging = false;
+      if (lock !== "h") {
+        screen.style.transition = "";
+        screen.style.transform = "";
+        return;
+      }
+      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
+      screen.style.transition = "";
+      if (dx > winW() * 0.33) {
+        screen.style.transform = "translateX(100%)";
+        close();
+      } else {
+        screen.style.transform = "";
+      }
+    }, { passive: false });
   }
   async function toggleBell(pageId, screen) {
     if (!isLoggedIn()) {

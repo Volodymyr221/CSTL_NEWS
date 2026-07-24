@@ -639,10 +639,9 @@ async function openPageScreen(pageId) {
       <div class="fd-screen-list">${screenListHtml('posts', pagePosts)}</div>
     </div>`;
 
-  screen.querySelector('.fd-screen-back').addEventListener('click', () => {
-    screen.classList.remove('open');
-    setTimeout(() => screen.remove(), 240);
-  });
+  const closeScreen = () => { screen.classList.remove('open'); setTimeout(() => screen.remove(), 240); };
+  screen.querySelector('.fd-screen-back').addEventListener('click', closeScreen);
+  attachScreenSwipeBack(screen, closeScreen);   // свайп-назад від лівого краю (як Telegram/iOS)
   const composeBtn = screen.querySelector('.fd-compose-open');
   if (composeBtn) composeBtn.addEventListener('click', () => openComposer(pageId));
   screen.querySelectorAll('[data-edit-page]').forEach(b =>
@@ -679,21 +678,62 @@ async function openPageScreen(pageId) {
   // --p (0..1): 0 у спокої, 1 коли назва пінається. scroll-linked, rAF.
   const title = screen.querySelector('.fd-screen-title');
   if (title) {
-    let tRaf = 0;
+    let tRaf = 0, pinAt = 0;
+    const RANGE = 60;                                 // останні 60px до піну — плавний перехід
+    // Поріг піну міряємо ОДИН раз (не щокадру getBoundingClientRect — то reflow і сіпання):
+    // scroll-позиція, де верх назви дійде до верху екрана.
+    const measure = () => { pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop; };
     const applyTitle = () => {
       tRaf = 0;
-      const rt = title.getBoundingClientRect().top;   // .fd-screen top ≈ 0 (viewport)
-      const RANGE = 60;                                // останні 60px до піну — плавний перехід
-      const p = Math.min(1, Math.max(0, (RANGE - rt) / RANGE));
+      const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE)) / RANGE));  // лише scrollTop — дешево
       title.style.setProperty('--p', p.toFixed(3));
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
     screen.addEventListener('scroll', onTitle, { passive: true });
-    requestAnimationFrame(applyTitle);
+    window.addEventListener('resize', () => { measure(); onTitle(); });
+    requestAnimationFrame(() => { measure(); applyTitle(); });
   }
 
   document.body.appendChild(screen);
   requestAnimationFrame(() => screen.classList.add('open'));
+}
+
+// Свайп-назад від ЛІВОГО краю (як Telegram/iOS): тягнеш екран вправо → закриття;
+// менше третини ширини — снап назад. Під час перетягування transition вимкнено (йде
+// за пальцем, без сіпання), на відпусканні — CSS-плавність. Тінь ліворуч (CSS box-shadow
+// на .fd-screen) показує, що екран поверх попередньої сторінки.
+function attachScreenSwipeBack(screen, close) {
+  let sx = 0, sy = 0, dragging = false, lock = null;
+  const winW = () => window.innerWidth || screen.clientWidth || 360;
+  screen.addEventListener('touchstart', (e) => {
+    const t = e.touches[0];
+    if (t.clientX > 24) { dragging = false; return; }   // лише від самого лівого краю
+    sx = t.clientX; sy = t.clientY; dragging = true; lock = null;
+  }, { passive: true });
+  screen.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
+    if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
+    if (lock === 'v') { dragging = false; screen.style.transition = ''; screen.style.transform = ''; return; }
+    if (lock === 'h' && dx > 0) {
+      e.preventDefault();
+      screen.style.transition = 'none';
+      screen.style.transform = `translateX(${dx}px)`;
+    }
+  }, { passive: false });
+  screen.addEventListener('touchend', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    if (lock !== 'h') { screen.style.transition = ''; screen.style.transform = ''; return; }
+    const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
+    screen.style.transition = '';   // повернути CSS-плавність (transform 0.24s)
+    if (dx > winW() * 0.33) {
+      screen.style.transform = 'translateX(100%)';   // доїхати вправо → закрити
+      close();
+    } else {
+      screen.style.transform = '';   // снап назад до translateX(0) (.open)
+    }
+  }, { passive: false });
 }
 
 async function toggleBell(pageId, screen) {

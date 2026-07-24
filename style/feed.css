@@ -169,7 +169,10 @@
 .fd-viewer-close svg { width: 24px; height: 24px; }
 
 /* ── Екран сторінки (Екран 2) ── */
+/* box-shadow ліворуч — при свайпі-назад видно, що екран поверх попередньої сторінки (як Telegram).
+   overflow-anchor:none — щоб зміна висоти sticky-заголовка не смикала скрол (плавний пін). */
 .fd-screen { position: fixed; inset: 0; z-index: 1200; background: var(--fd-bg); overflow-y: auto;
+  overflow-anchor: none; box-shadow: -8px 0 24px rgba(0,0,0,0.28);
   transform: translateX(100%); transition: transform 0.24s cubic-bezier(0.32,0.72,0,1); -webkit-overflow-scrolling: touch; }
 .fd-screen.open { transform: translateX(0); }
 .fd-screen-top { position: relative; height: 150px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
