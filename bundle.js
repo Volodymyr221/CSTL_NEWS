@@ -11192,6 +11192,19 @@ ${ev.description || ""}`
       return false;
     }
   }
+  async function healFeedPushDevice() {
+    try {
+      if (!isLoggedIn() || !mySubs.size)
+        return;
+      if (pushBlockedMsg())
+        return;
+      if (Notification.permission !== "granted")
+        return;
+      await registerFeedPushDevice();
+    } catch (e) {
+      console.warn("[feed] healFeedPushDevice:", e && e.message);
+    }
+  }
   var MAX_PHOTOS = 10;
   function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
@@ -11582,6 +11595,7 @@ ${ev.description || ""}`
     }
     await loadData2();
     renderFeed();
+    healFeedPushDevice();
     window.addEventListener("cstl-tab-changed", () => {
       if (document.querySelector('.tab-item[data-tab="shotam"].active')) {
         loadData2().then(renderFeed);
