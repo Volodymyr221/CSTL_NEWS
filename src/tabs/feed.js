@@ -768,6 +768,15 @@ function attachScreenSwipeBack(screen, close) {
 async function toggleBell(pageId, screen) {
   if (!isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   const on = !mySubs.has(pageId);
+
+  // 🔑 ПОРЯДОК КРИТИЧНИЙ. Дозвіл на сповіщення запитуємо ПЕРШИМ — ще до будь-якого
+  // await (запис у базу тощо). Браузер (особливо Safari/iOS) відкриває вікно дозволу
+  // ЛИШЕ поки триває «жест користувача» — тобто прямо в обробнику тапу. Якщо перед
+  // запитом дочекатись мережі, жест уже «згорів» і вікно не з'явиться взагалі —
+  // саме тому раніше на iPhone нічого не приходило. registerFeedPushDevice()
+  // викликаємо синхронно (без await перед ним) і чекаємо на результат уже після.
+  const devicePromise = on ? registerFeedPushDevice() : null;
+
   if (on) mySubs.add(pageId); else mySubs.delete(pageId);
   const btn = screen.querySelector('.fd-bell');
   if (btn) { btn.classList.toggle('fd-bell--on', on); btn.innerHTML = on ? IC_BELL_F : IC_BELL; }
@@ -777,17 +786,19 @@ async function toggleBell(pageId, screen) {
     if (btn) { btn.classList.toggle('fd-bell--on', !on); btn.innerHTML = !on ? IC_BELL_F : IC_BELL; }
     return;
   }
-  // Увімкнули дзвіночок → зареєструвати push-пристрій, щоб Edge-функція мала куди слати.
-  // Реюз патерну чатів (P-5): дозвіл + браузер-підписка → user_push_devices за uid.
-  if (on) registerFeedPushDevice();
+  // Підписка в базі збережена. Тепер дивимось, чим закінчилась реєстрація пристрою:
+  // якщо push недоступний — кажемо про це чесно (сама підписка лишається, тож коли
+  // користувач дозволить сповіщення пізніше, вони почнуть приходити).
+  if (devicePromise) await devicePromise;
 }
 
-// Запит дозволу на сповіщення + збереження push-пристрою під акаунт (для сповіщень «Стрічки»).
-// Fire-and-forget: підписка в БД уже є; якщо push недоступний/відмовлено — тихо (тост-натяк).
+// Дозвіл на сповіщення + збереження push-пристрою під акаунт (сповіщення «Стрічки»).
+// ⚠️ Викликати ЛИШЕ синхронно з обробника тапу (див. коментар у toggleBell) —
+// інакше вікно дозволу не з'явиться на iOS. Реюз патерну чатів (P-5).
 async function registerFeedPushDevice() {
   try {
     const sub = await ensurePushSubscription();
-    if (!sub) { showToast('Сповіщення вимкнено у браузері — дозволь у налаштуваннях'); return; }
+    if (!sub) { showToast('Сповіщення вимкнено у браузері — дозволь у налаштуваннях'); return false; }
     const j = sub.toJSON();
     await saveUserPushDevice({
       uid:      currentUserId(),
@@ -795,7 +806,8 @@ async function registerFeedPushDevice() {
       p256dh:   j.keys?.p256dh,
       auth_key: j.keys?.auth,
     });
-  } catch (e) { console.warn('[feed] registerFeedPushDevice:', e && e.message); }
+    return true;
+  } catch (e) { console.warn('[feed] registerFeedPushDevice:', e && e.message); return false; }
 }
 
 // ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────
