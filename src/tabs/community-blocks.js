@@ -25,6 +25,7 @@ import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnB
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import { ensureNewsLoaded, newsCardsHtml, openArticle } from './news.js';
 import { openModal } from '../core/modal.js';
+import { createDragTracker, finishSwipe, sheetRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
 let cmBusIndex = 0;
 let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
@@ -360,23 +361,34 @@ function wireWeatherSwipe(overlay, close) {
   const sheet = overlay.querySelector('.app-modal-sheet');
   if (!sheet) return;
   let startY = 0, dragging = false;
+  const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
   sheet.addEventListener('touchstart', e => {
     if (e.target.closest('.wx-chart-svg-wrap')) return;   // графік → скрабер, не свайп
     if (sheet.scrollTop > 2) return;
     startY = e.touches[0].clientY;
     dragging = true;
+    drag.start(startY);
   }, { passive: true });
   sheet.addEventListener('touchmove', e => {
     if (!dragging) return;
     const dy = e.touches[0].clientY - startY;
-    if (dy > 0) sheet.style.transform = `translateY(${dy}px)`;
+    // transition:none — БЕЗ цього аркуш їхав крізь CSS-анімацію 0.25s і «наздоганяв»
+    // палець ривками (той самий дьоргаючий баг, що вилікували в чаті Дошки 14.07).
+    if (dy > 0) { sheet.style.transition = 'none'; sheet.style.transform = `translateY(${dy}px)`; }
+    drag.move(e.touches[0].clientY);
   }, { passive: true });
   sheet.addEventListener('touchend', e => {
     if (!dragging) return;
     dragging = false;
     const dy = e.changedTouches[0].clientY - startY;
-    sheet.style.transform = '';
-    if (dy > 90) close();
+    // Раніше тут був `transform=''` ПЕРЕД close() — аркуш стрибав назад угору на
+    // місце і вже звідти з'їжджав донизу. Тепер доїжджає одним рухом.
+    finishSwipe({
+      panel: sheet, dy: Math.max(dy, 0), velocity: drag.velocity,
+      remaining: sheetRemaining(sheet, dy),
+      dismissTransform: 'translateY(100%)',
+      onDismiss: () => close(),
+    });
   });
 }
 

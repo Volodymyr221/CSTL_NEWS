@@ -22,6 +22,7 @@ import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
+import { createDragTracker, finishSwipe, sheetRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -204,29 +205,37 @@ function openViewer(images, startIdx) {
 function attachSheetSwipe(back, panel, scroller, doClose) {
   scroller = scroller || panel;
   let startY = 0, dragging = false, dy = 0;
+  const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
   panel.addEventListener('touchstart', e => {
     const y = e.touches[0].clientY;
     const inHeader = (y - panel.getBoundingClientRect().top) < 64;
     if (!inHeader && scroller.scrollTop > 0) return;   // це скрол тіла, не закриття
     startY = y; dragging = true; dy = 0;
+    drag.start(y);
   }, { passive: true });
   panel.addEventListener('touchmove', e => {
     if (!dragging) return;
     dy = e.touches[0].clientY - startY;
     if (dy <= 0) { panel.style.transform = ''; return; }     // тягнуть вгору — нативному скролу
     if (scroller.scrollTop > 0) {                            // ще прокручено — не хапаємо
-      panel.style.transform = ''; startY = e.touches[0].clientY; dy = 0; return;
+      panel.style.transform = ''; startY = e.touches[0].clientY; drag.start(startY); dy = 0; return;
     }
     e.preventDefault();                                      // блокуємо нативний скрол поки тягнемо
     panel.style.transition = 'none';
     panel.style.transform = `translateY(${dy}px)`;
+    drag.move(e.touches[0].clientY);
   }, { passive: false });
   panel.addEventListener('touchend', () => {
     if (!dragging) return;
     dragging = false;
-    panel.style.transition = '';                            // повертаємо CSS-анімацію (плавно)
-    if (dy > 90) { panel.style.transform = 'translateY(100%)'; back.classList.remove('open'); setTimeout(doClose, 240); }
-    else panel.style.transform = '';                        // не дотягнув — плавно назад
+    // Доїзд рахує sheet-motion: кидок закриває навіть коротким рухом, а час
+    // завершення пропорційний залишку шляху (не фіксовані 240мс).
+    finishSwipe({
+      panel, dy, velocity: drag.velocity,
+      remaining: sheetRemaining(panel, dy),
+      dismissTransform: 'translateY(100%)',
+      onDismiss: (ms) => { back.classList.remove('open'); setTimeout(doClose, ms); },
+    });
     dy = 0;
   });
 }

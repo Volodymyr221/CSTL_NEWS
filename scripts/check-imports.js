@@ -147,9 +147,14 @@ function extractDeclarations(content) {
   for (const m of content.matchAll(/function\s*\*?\s*[A-Za-z_$][\w$]*\s*\(([^)]*)\)/g)) {
     addParams(m[1], decls);
   }
-  // Параметри method definition в класах і об'єктах
-  for (const m of content.matchAll(/(?:^|\n)\s*(?:async\s+|static\s+|get\s+|set\s+)*[A-Za-z_$][\w$]*\s*\(([^)]*)\)\s*\{/g)) {
-    addParams(m[1], decls);
+  // Method definition в класах і об'єктах: і ПАРАМЕТРИ, і сама НАЗВА методу.
+  // Назва потрібна бо скорочений метод об'єкта (`{ start(pos) { … } }` — звичайний
+  // ESM-патерн) виглядає для шукача викликів як виклик `start(` → чекер лаявся на
+  // коректний код. Друга сліпа пляма того ж роду, що й async-стрілки (24.07).
+  // Ключові слова, які теж підпадають (`if (…) {`), і так у WHITELIST.
+  for (const m of content.matchAll(/(?:^|\n)\s*(?:async\s+|static\s+|get\s+|set\s+)*([A-Za-z_$][\w$]*)\s*\(([^)]*)\)\s*\{/g)) {
+    decls.add(m[1]);
+    addParams(m[2], decls);
   }
   // Arrow function params: (a, b) => / a =>
   for (const m of content.matchAll(/\(([^)]*)\)\s*=>/g)) {

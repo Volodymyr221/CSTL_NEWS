@@ -1859,6 +1859,67 @@
   var COMMUNITY_ALL = "\u0412\u0441\u044F \u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
   var COMMUNITY_ALL_LABEL = "\u041E\u043B\u0438\u0446\u044C\u043A\u0430 \u0433\u0440\u043E\u043C\u0430\u0434\u0430";
 
+  // src/core/sheet-motion.js
+  var FLICK_V = 0.45;
+  var FLICK_MIN = 8;
+  var DIST = 90;
+  var MIN_MS = 110;
+  var MAX_MS = 240;
+  var SHEET_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+  function createDragTracker() {
+    let lastPos = 0, lastT = 0, v = 0;
+    return {
+      start(pos) {
+        lastPos = pos;
+        lastT = performance.now();
+        v = 0;
+      },
+      move(pos) {
+        const t = performance.now();
+        const dt = t - lastT;
+        if (dt <= 0)
+          return;
+        v = v * 0.6 + (pos - lastPos) / dt * 0.4;
+        lastPos = pos;
+        lastT = t;
+      },
+      get velocity() {
+        return v;
+      }
+      // px/мс, додатна = рух вниз
+    };
+  }
+  function finishSwipe({
+    panel,
+    dy,
+    velocity = 0,
+    remaining,
+    dismissTransform,
+    restTransform = "",
+    onDismiss
+  }) {
+    const dismiss = dy > DIST || velocity > FLICK_V && dy > FLICK_MIN;
+    const travel = Math.max(dismiss ? remaining : dy, 1);
+    const speed = Math.max(Math.abs(velocity), 0.9);
+    const ms = Math.round(Math.min(MAX_MS, Math.max(MIN_MS, travel / speed)));
+    panel.style.transition = `transform ${ms}ms ${SHEET_EASE}`;
+    panel.style.transform = dismiss ? dismissTransform : restTransform;
+    if (dismiss)
+      onDismiss?.(ms);
+    else
+      setTimeout(() => {
+        panel.style.transition = "";
+      }, ms);
+    return dismiss;
+  }
+  function sheetRemaining(panel, dy) {
+    return Math.max((panel.offsetHeight || 0) - dy, 1);
+  }
+  function centeredRemaining(panel) {
+    const top = panel.getBoundingClientRect().top;
+    return Math.max(window.innerHeight - top, 1);
+  }
+
   // src/core/modal.js
   var _active = null;
   function buildSheet({ title, bodyHtml }) {
@@ -1910,6 +1971,7 @@
     closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
       let startY = 0, dragging = false, dy = 0;
+      const drag = createDragTracker();
       panel.addEventListener("touchstart", (e) => {
         const y = e.touches[0].clientY;
         const inHeader = y - panel.getBoundingClientRect().top < 64;
@@ -1918,6 +1980,7 @@
         startY = y;
         dragging = true;
         dy = 0;
+        drag.start(y);
       }, { passive: true });
       panel.addEventListener("touchmove", (e) => {
         if (!dragging)
@@ -1930,24 +1993,27 @@
         if (panel.scrollTop > 0) {
           panel.style.transform = "";
           startY = e.touches[0].clientY;
+          drag.start(startY);
           dy = 0;
           return;
         }
         e.preventDefault();
         panel.style.transition = "none";
         panel.style.transform = `translateY(${dy}px)`;
+        drag.move(e.touches[0].clientY);
       }, { passive: false });
       panel.addEventListener("touchend", () => {
         if (!dragging)
           return;
         dragging = false;
-        panel.style.transition = "";
-        if (dy > 90) {
-          panel.style.transform = "translateY(100%)";
-          close();
-        } else {
-          panel.style.transform = "";
-        }
+        finishSwipe({
+          panel,
+          dy,
+          velocity: drag.velocity,
+          remaining: sheetRemaining(panel, dy),
+          dismissTransform: "translateY(100%)",
+          onDismiss: () => close()
+        });
         dy = 0;
       });
     }
@@ -4815,6 +4881,7 @@
     input?.addEventListener("blur", _chatViewportHandler);
     let startY = 0, curY = 0, dragging = false, rafId = 0;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
+    const drag = createDragTracker();
     const applyDrag = () => {
       rafId = 0;
       modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
@@ -4823,6 +4890,7 @@
       startY = e.touches[0].clientY;
       curY = 0;
       dragging = true;
+      drag.start(startY);
       modal.style.transition = "none";
       modal.style.willChange = "transform";
     }, { passive: true });
@@ -4830,6 +4898,7 @@
       if (!dragging)
         return;
       curY = Math.max(0, e.touches[0].clientY - startY);
+      drag.move(e.touches[0].clientY);
       if (!rafId)
         rafId = requestAnimationFrame(applyDrag);
     }, { passive: true });
@@ -4841,18 +4910,22 @@
         cancelAnimationFrame(rafId);
         rafId = 0;
       }
-      modal.style.transition = "";
       modal.style.willChange = "";
-      if (curY > 90)
-        closeChatModal();
-      else
-        modal.style.transform = "";
+      const remaining = centeredRemaining(modal);
+      finishSwipe({
+        panel: modal,
+        dy: curY,
+        velocity: drag.velocity,
+        remaining,
+        dismissTransform: `translate3d(-50%, ${Math.round(curY + remaining)}px, 0)`,
+        onDismiss: () => closeChatModal({ keepTransform: true })
+      });
       curY = 0;
     };
     dragZone.addEventListener("touchend", endDrag);
     dragZone.addEventListener("touchcancel", endDrag);
   }
-  function closeChatModal() {
+  function closeChatModal(opts = {}) {
     if (!_chatModalEl)
       return;
     const modal = _chatModalEl;
@@ -4868,7 +4941,8 @@
     _chatUnseen = 0;
     _chatModalEl = null;
     modal.classList.remove("visible");
-    modal.style.transform = "";
+    if (!opts.keepTransform)
+      modal.style.transform = "";
     backdrop?.classList.remove("visible");
     document.body.classList.remove("modal-open");
     document.removeEventListener("keydown", onChatEsc);
@@ -5870,12 +5944,14 @@
     const scroller = area || modal;
     const grip = modal.querySelector(".cm-board-modal-bar");
     let sY = 0, sX = 0, canSwipe = false, swiping = false;
+    const drag = createDragTracker();
     modal.addEventListener("touchstart", (e) => {
       const onGrip = grip && (e.target === grip || grip.contains(e.target));
       canSwipe = onGrip || scroller.scrollTop <= 2;
       sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
       swiping = false;
+      drag.start(sY);
       if (canSwipe)
         modal.style.transition = "none";
     }, { passive: true });
@@ -5895,16 +5971,20 @@
       } else if (swiping) {
         modal.style.transform = "translate(-50%, -50%) scale(1)";
       }
+      drag.move(e.touches[0].clientY);
     }, { passive: false });
     modal.addEventListener("touchend", (e) => {
       if (!canSwipe)
         return;
-      modal.style.transition = "";
       const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-      if (swiping && dy > 90)
-        close();
-      else
-        modal.style.transform = "";
+      finishSwipe({
+        panel: modal,
+        dy: swiping ? dy : 0,
+        velocity: drag.velocity,
+        remaining: centeredRemaining(modal),
+        dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
+        onDismiss: () => close()
+      });
       swiping = false;
       canSwipe = false;
     }, { passive: true });
@@ -5960,12 +6040,14 @@
       const scroller = area || modal;
       const grip = modal.querySelector(".cm-board-modal-bar");
       let sY = 0, sX = 0, canSwipe = false, swiping = false;
+      const drag = createDragTracker();
       modal.addEventListener("touchstart", (e) => {
         const onGrip = grip && (e.target === grip || grip.contains(e.target));
         canSwipe = onGrip || scroller.scrollTop <= 2;
         sY = e.touches[0].clientY;
         sX = e.touches[0].clientX;
         swiping = false;
+        drag.start(sY);
         if (canSwipe)
           modal.style.transition = "none";
       }, { passive: true });
@@ -5985,16 +6067,20 @@
         } else if (swiping) {
           modal.style.transform = "translate(-50%, -50%) scale(1)";
         }
+        drag.move(e.touches[0].clientY);
       }, { passive: false });
       modal.addEventListener("touchend", (e) => {
         if (!canSwipe)
           return;
-        modal.style.transition = "";
         const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-        if (swiping && dy > 90)
-          collapse();
-        else
-          modal.style.transform = "";
+        finishSwipe({
+          panel: modal,
+          dy: swiping ? dy : 0,
+          velocity: drag.velocity,
+          remaining: centeredRemaining(modal),
+          dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
+          onDismiss: () => collapse()
+        });
         swiping = false;
         canSwipe = false;
       }, { passive: true });
@@ -9363,6 +9449,7 @@ ${ev.description || ""}`
     if (!sheet)
       return;
     let startY = 0, dragging = false;
+    const drag = createDragTracker();
     sheet.addEventListener("touchstart", (e) => {
       if (e.target.closest(".wx-chart-svg-wrap"))
         return;
@@ -9370,22 +9457,31 @@ ${ev.description || ""}`
         return;
       startY = e.touches[0].clientY;
       dragging = true;
+      drag.start(startY);
     }, { passive: true });
     sheet.addEventListener("touchmove", (e) => {
       if (!dragging)
         return;
       const dy = e.touches[0].clientY - startY;
-      if (dy > 0)
+      if (dy > 0) {
+        sheet.style.transition = "none";
         sheet.style.transform = `translateY(${dy}px)`;
+      }
+      drag.move(e.touches[0].clientY);
     }, { passive: true });
     sheet.addEventListener("touchend", (e) => {
       if (!dragging)
         return;
       dragging = false;
       const dy = e.changedTouches[0].clientY - startY;
-      sheet.style.transform = "";
-      if (dy > 90)
-        close();
+      finishSwipe({
+        panel: sheet,
+        dy: Math.max(dy, 0),
+        velocity: drag.velocity,
+        remaining: sheetRemaining(sheet, dy),
+        dismissTransform: "translateY(100%)",
+        onDismiss: () => close()
+      });
     });
   }
   async function renderBusBlock() {
@@ -10755,6 +10851,7 @@ ${ev.description || ""}`
   function attachSheetSwipe(back, panel, scroller, doClose) {
     scroller = scroller || panel;
     let startY = 0, dragging = false, dy = 0;
+    const drag = createDragTracker();
     panel.addEventListener("touchstart", (e) => {
       const y = e.touches[0].clientY;
       const inHeader = y - panel.getBoundingClientRect().top < 64;
@@ -10763,6 +10860,7 @@ ${ev.description || ""}`
       startY = y;
       dragging = true;
       dy = 0;
+      drag.start(y);
     }, { passive: true });
     panel.addEventListener("touchmove", (e) => {
       if (!dragging)
@@ -10775,24 +10873,30 @@ ${ev.description || ""}`
       if (scroller.scrollTop > 0) {
         panel.style.transform = "";
         startY = e.touches[0].clientY;
+        drag.start(startY);
         dy = 0;
         return;
       }
       e.preventDefault();
       panel.style.transition = "none";
       panel.style.transform = `translateY(${dy}px)`;
+      drag.move(e.touches[0].clientY);
     }, { passive: false });
     panel.addEventListener("touchend", () => {
       if (!dragging)
         return;
       dragging = false;
-      panel.style.transition = "";
-      if (dy > 90) {
-        panel.style.transform = "translateY(100%)";
-        back.classList.remove("open");
-        setTimeout(doClose, 240);
-      } else
-        panel.style.transform = "";
+      finishSwipe({
+        panel,
+        dy,
+        velocity: drag.velocity,
+        remaining: sheetRemaining(panel, dy),
+        dismissTransform: "translateY(100%)",
+        onDismiss: (ms) => {
+          back.classList.remove("open");
+          setTimeout(doClose, ms);
+        }
+      });
       dy = 0;
     });
   }

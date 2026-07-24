@@ -10,6 +10,7 @@
 //   'center' — центрована картка, scale-in. Акаунт (join/profile/cabinet екрани).
 
 import { escapeHtml } from './utils.js';
+import { createDragTracker, finishSwipe, sheetRemaining } from './sheet-motion.js';
 
 let _active = null;   // { el, close } — лише одна активна модалка примітиву за раз
 
@@ -71,6 +72,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   // Свайп-вниз закриває (лише sheet-варіант).
   if (variant === 'sheet' && swipeClose && panel) {
     let startY = 0, dragging = false, dy = 0;
+    const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
     panel.addEventListener('touchstart', e => {
       const y = e.touches[0].clientY;
       // Граб від верхньої шапки (перші ~64px аркуша — рисочка/заголовок) закриває свайпом
@@ -79,6 +81,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       const inHeader = (y - panel.getBoundingClientRect().top) < 64;
       if (!inHeader && panel.scrollTop > 0) return;
       startY = y; dragging = true; dy = 0;
+      drag.start(y);
     }, { passive: true });
     panel.addEventListener('touchmove', e => {
       if (!dragging) return;
@@ -94,6 +97,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       if (panel.scrollTop > 0) {
         panel.style.transform = '';
         startY = e.touches[0].clientY;
+        drag.start(startY);
         dy = 0;
         return;
       }
@@ -102,19 +106,20 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       e.preventDefault();
       panel.style.transition = 'none';
       panel.style.transform = `translateY(${dy}px)`;
+      drag.move(e.touches[0].clientY);
     }, { passive: false });
     panel.addEventListener('touchend', () => {
       if (!dragging) return;
       dragging = false;
-      panel.style.transition = '';   // повертаємо CSS-анімацію (0.25s) — і для закриття, і для відскоку
-      if (dy > 90) {
-        // Плавно доїхати донизу ПЕРЕД видаленням. Раніше close() лишав інлайн transform
-        // на translateY(dy) → панель застигала на місці й різко зникала (дьоргання).
-        panel.style.transform = 'translateY(100%)';
-        close();
-      } else {
-        panel.style.transform = '';   // не дотягнув до порогу — плавно назад на місце
-      }
+      // Доїзд рахує sheet-motion: закрити (дотягнув АБО кинув швидко) чи повернути,
+      // і за який час — пропорційно залишку шляху. Раніше close() лишав інлайн
+      // transform на translateY(dy) → панель застигала на місці й різко зникала.
+      finishSwipe({
+        panel, dy, velocity: drag.velocity,
+        remaining: sheetRemaining(panel, dy),
+        dismissTransform: 'translateY(100%)',
+        onDismiss: () => close(),
+      });
       dy = 0;
     });
   }

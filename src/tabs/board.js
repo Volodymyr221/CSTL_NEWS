@@ -24,6 +24,7 @@ import {
   fetchSavedPostIds, hydrateNames, nameUid, liveName,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
+import { createDragTracker, finishSwipe, centeredRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
@@ -781,10 +782,12 @@ export function openAdModalStandalone(post) {
   const scroller = area || modal;
   const grip = modal.querySelector('.cm-board-modal-bar');
   let sY = 0, sX = 0, canSwipe = false, swiping = false;
+  const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
   modal.addEventListener('touchstart', e => {
     const onGrip = grip && (e.target === grip || grip.contains(e.target));
     canSwipe = onGrip || scroller.scrollTop <= 2;
     sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
+    drag.start(sY);
     if (canSwipe) modal.style.transition = 'none';
   }, { passive: true });
   modal.addEventListener('touchmove', e => {
@@ -794,12 +797,19 @@ export function openAdModalStandalone(post) {
     if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
     if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`; }
     else if (swiping) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; }
+    drag.move(e.touches[0].clientY);
   }, { passive: false });
   modal.addEventListener('touchend', e => {
     if (!canSwipe) return;
-    modal.style.transition = '';
     const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-    if (swiping && dy > 90) close(); else modal.style.transform = '';
+    // Летить донизу за пальцем, а не замирає на місці: close() лише знімає .visible
+    // (згасання), а куди їхати — домальовує інлайн transform із sheet-motion.
+    finishSwipe({
+      panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
+      remaining: centeredRemaining(modal),
+      dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
+      onDismiss: () => close(),
+    });
     swiping = false; canSwipe = false;
   }, { passive: true });
 
@@ -864,12 +874,14 @@ function initBoardNoteExpand(root) {
     const scroller = area || modal;
     const grip = modal.querySelector('.cm-board-modal-bar');
     let sY = 0, sX = 0, canSwipe = false, swiping = false;
+    const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
     modal.addEventListener('touchstart', e => {
       const onGrip = grip && (e.target === grip || grip.contains(e.target));
       canSwipe = onGrip || scroller.scrollTop <= 2;
       sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
       swiping = false;
+      drag.start(sY);
       if (canSwipe) modal.style.transition = 'none';
     }, { passive: true });
     modal.addEventListener('touchmove', e => {
@@ -885,13 +897,19 @@ function initBoardNoteExpand(root) {
       } else if (swiping) {
         modal.style.transform = 'translate(-50%, -50%) scale(1)';
       }
+      drag.move(e.touches[0].clientY);
     }, { passive: false });
     modal.addEventListener('touchend', e => {
       if (!canSwipe) return;
-      modal.style.transition = '';
       const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
-      if (swiping && dy > 90) collapse();
-      else modal.style.transform = '';
+      // Летить донизу за пальцем, а не замирає на місці: collapse() лише знімає
+      // .visible (згасання), а куди їхати — домальовує інлайн transform.
+      finishSwipe({
+        panel: modal, dy: swiping ? dy : 0, velocity: drag.velocity,
+        remaining: centeredRemaining(modal),
+        dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
+        onDismiss: () => collapse(),
+      });
       swiping = false; canSwipe = false;
     }, { passive: true });
 
