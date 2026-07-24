@@ -1277,7 +1277,7 @@
   async function fetchPagePosts(pageId = null, limit = 60) {
     if (!supa)
       return [];
-    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     if (pageId != null)
       q = q.eq("page_id", pageId);
     const { data, error } = await q;
@@ -1394,7 +1394,7 @@
     }
     return new Set((data || []).map((r) => r.page_id));
   }
-  async function createPagePost(pageId, uid, text, imageUrls = [], event = {}) {
+  async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : imageUrls ? [imageUrls] : [];
@@ -1404,16 +1404,17 @@
       text,
       image_urls: arr,
       image_url: arr[0] || null,
+      show_author: showAuthor !== false,
       event_date: event.event_date || null,
       event_time: event.event_time || null,
       event_location: event.event_location || null
-    }).select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
+    }).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function updatePagePost(postId, patch) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
+    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function deletePagePost(postId) {

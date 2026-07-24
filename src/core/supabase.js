@@ -1023,7 +1023,7 @@ export async function fetchPages() {
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
   let q = supa.from('page_posts')
-    .select('id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -1143,17 +1143,20 @@ export async function fetchMyEditablePageIds() {
 // зворотної сумісності (перше фото), щоб старий рендер теж бачив.
 // event — опційно { event_date, event_time, event_location }: якщо є event_date,
 // пост стає ПОДІЄЮ (таб «Події» на каналі + плашка на картці). Порожні → null.
-export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}) {
+// showAuthor — від чийого імені пост: true = під текстом видно підпис автора-людини,
+// false = суто від імені спільноти (вибір у композері, крок 6).
+export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : (imageUrls ? [imageUrls] : []);
   const { data, error } = await supa.from('page_posts')
     .insert({
       page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null,
+      show_author: showAuthor !== false,
       event_date:     event.event_date     || null,
       event_time:     event.event_time     || null,
       event_location: event.event_location || null,
     })
-    .select('id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
     .single();
   return error ? { ok: false, error: error.message } : { ok: true, post: data };
 }
@@ -1163,7 +1166,7 @@ export async function updatePagePost(postId, patch) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const { data, error } = await supa.from('page_posts')
     .update(patch).eq('id', postId)
-    .select('id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
     .single();
   return error ? { ok: false, error: error.message } : { ok: true, post: data };
 }
@@ -1224,4 +1227,32 @@ export function notifyNewPagePost(postId) {
       console.info('[push] send-page-push:', JSON.stringify(data));
     })
     .catch(e => console.warn('[push] send-page-push впала:', e?.message));
+}
+
+// ── Команда сторінки «Стрічки»: власник + модератори (крок 5 потоку 24.07) ───
+// Усі три — RPC із перевіркою прав НА СЕРВЕРІ (scripts/supabase_page_moderators.sql):
+// керувати може лише власник сторінки або глобальний адмін. Клієнту не довіряємо.
+
+// Список команди. Повертає [] якщо прав нема (сервер кине помилку — глушимо тихо).
+export async function fetchPageModerators(pageId) {
+  if (!supa) return [];
+  const { data, error } = await supa.rpc('list_page_moderators', { p_page_id: pageId });
+  if (error) { console.warn('[supabase] list_page_moderators:', error.message); return []; }
+  return data || [];
+}
+
+// Додати за поштою. Повертає 'ok' | 'not_found' (людина ще не заходила в додаток) | 'error'.
+export async function addPageModerator(pageId, email) {
+  if (!supa) return 'error';
+  const { data, error } = await supa.rpc('add_page_moderator', { p_page_id: pageId, p_email: email });
+  if (error) { console.warn('[supabase] add_page_moderator:', error.message); return 'error'; }
+  return data || 'error';
+}
+
+// Прибрати зі сторінки. 'ok' | 'owner_protected' (власника прибрати не можна) | 'error'.
+export async function removePageModerator(pageId, uid) {
+  if (!supa) return 'error';
+  const { data, error } = await supa.rpc('remove_page_moderator', { p_page_id: pageId, p_uid: uid });
+  if (error) { console.warn('[supabase] remove_page_moderator:', error.message); return 'error'; }
+  return data || 'error';
 }
