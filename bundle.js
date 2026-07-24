@@ -10662,7 +10662,7 @@ ${ev.description || ""}`
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
     const cCount = (commentMap.get(post.id) || []).length;
-    const authorName = post.author_uid ? liveName("", post.author_uid, "") : "";
+    const authorName = post.author_uid && post.show_author !== false ? liveName("", post.author_uid, "") : "";
     const imgs = postImages(post);
     const photo = galleryHtml(imgs, post.id);
     const hasPhoto = imgs.length > 0;
@@ -11406,6 +11406,7 @@ ${ev.description || ""}`
     let previewUrls = [];
     const CTA = edit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
     let postType = edit && editPost.event_date ? "event" : "post";
+    let showAuthor = edit ? editPost.show_author !== false : false;
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
@@ -11426,6 +11427,13 @@ ${ev.description || ""}`
           <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="\u041D\u0430\u043F\u0440. \u0426\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0430 \u043F\u043B\u043E\u0449\u0430, \u041E\u043B\u0438\u043A\u0430" value="${edit ? escapeHtml(editPost.event_location || "") : ""}"></label>
       </div>
       <div class="fd-comp-thumbs" hidden></div>
+      <div class="fd-comp-as">
+        <div class="fd-comp-as-label">\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u044F\u043A</div>
+        <button class="fd-comp-as-btn${showAuthor ? "" : " is-on"}" data-as="page" type="button">
+          <span class="fd-comp-as-dot"></span>${escapeHtml(page.name || "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430")}</button>
+        <button class="fd-comp-as-btn${showAuthor ? " is-on" : ""}" data-as="me" type="button">
+          <span class="fd-comp-as-dot"></span>\u0412\u0456\u0434 \u0441\u0435\u0431\u0435</button>
+      </div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
         <button class="fd-comp-send" type="button">${CTA}</button>
@@ -11446,6 +11454,10 @@ ${ev.description || ""}`
       eventBox.hidden = postType !== "event";
     }));
     const fileInput = back.querySelector("input[type=file]");
+    back.querySelectorAll(".fd-comp-as-btn").forEach((btn) => btn.addEventListener("click", () => {
+      showAuthor = btn.dataset.as === "me";
+      back.querySelectorAll(".fd-comp-as-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+    }));
     const thumbs = back.querySelector(".fd-comp-thumbs");
     const renderThumbs = () => {
       if (!existing.length && !files.length) {
@@ -11528,7 +11540,7 @@ ${ev.description || ""}`
         }
       }
       const finalUrls = [...existing, ...newUrls];
-      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields);
+      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields, showAuthor);
       if (res.ok) {
         if (edit) {
           const i = posts.findIndex((p) => p.id === editPost.id);

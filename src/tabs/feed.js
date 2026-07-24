@@ -976,7 +976,6 @@ function openComposer(pageId, editPost = null) {
   // Від чийого імені публікуємо. За замовчуванням — від СПІЛЬНОТИ (офіційний голос
   // сторінки, як у Facebook). «Від себе» лишає під текстом підпис автора-людини.
   // При редагуванні беремо те, що вже стоїть у поста.
-  const page = pages.find(p => p.id === pageId);
   let showAuthor = edit ? (editPost.show_author !== false) : false;
 
   const back = document.createElement('div');
@@ -1002,7 +1001,7 @@ function openComposer(pageId, editPost = null) {
       <div class="fd-comp-as">
         <div class="fd-comp-as-label">Публікувати як</div>
         <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
-          <span class="fd-comp-as-dot"></span>${escapeHtml(page?.name || 'Спільнота')}</button>
+          <span class="fd-comp-as-dot"></span>${escapeHtml(page.name || 'Спільнота')}</button>
         <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
           <span class="fd-comp-as-dot"></span>Від себе</button>
       </div>
