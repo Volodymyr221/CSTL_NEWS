@@ -1277,7 +1277,7 @@
   async function fetchPagePosts(pageId = null, limit = 60) {
     if (!supa)
       return [];
-    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     if (pageId != null)
       q = q.eq("page_id", pageId);
     const { data, error } = await q;
@@ -1394,7 +1394,7 @@
     }
     return new Set((data || []).map((r) => r.page_id));
   }
-  async function createPagePost(pageId, uid, text, imageUrls = [], event = {}) {
+  async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : imageUrls ? [imageUrls] : [];
@@ -1404,16 +1404,17 @@
       text,
       image_urls: arr,
       image_url: arr[0] || null,
+      show_author: showAuthor !== false,
       event_date: event.event_date || null,
       event_time: event.event_time || null,
       event_location: event.event_location || null
-    }).select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
+    }).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function updatePagePost(postId, patch) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
+    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function deletePagePost(postId) {
@@ -1456,6 +1457,36 @@
       }
       console.info("[push] send-page-push:", JSON.stringify(data));
     }).catch((e) => console.warn("[push] send-page-push \u0432\u043F\u0430\u043B\u0430:", e?.message));
+  }
+  async function fetchPageModerators(pageId) {
+    if (!supa)
+      return [];
+    const { data, error } = await supa.rpc("list_page_moderators", { p_page_id: pageId });
+    if (error) {
+      console.warn("[supabase] list_page_moderators:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function addPageModerator(pageId, email) {
+    if (!supa)
+      return "error";
+    const { data, error } = await supa.rpc("add_page_moderator", { p_page_id: pageId, p_email: email });
+    if (error) {
+      console.warn("[supabase] add_page_moderator:", error.message);
+      return "error";
+    }
+    return data || "error";
+  }
+  async function removePageModerator(pageId, uid) {
+    if (!supa)
+      return "error";
+    const { data, error } = await supa.rpc("remove_page_moderator", { p_page_id: pageId, p_uid: uid });
+    if (error) {
+      console.warn("[supabase] remove_page_moderator:", error.message);
+      return "error";
+    }
+    return data || "error";
   }
 
   // src/core/auth.js
@@ -2441,6 +2472,49 @@
     };
   }
 
+  // src/core/layers.js
+  var stack = [];
+  var seq = 0;
+  function openLayer(close, opts = {}) {
+    const layer = { id: ++seq, close, closed: false };
+    const top = stack[stack.length - 1];
+    if (opts.reuseEntry && top) {
+      top.closed = true;
+      stack[stack.length - 1] = layer;
+      return layer;
+    }
+    stack.push(layer);
+    history.pushState({ cstlLayer: layer.id }, "");
+    return layer;
+  }
+  function closeLayer(layer) {
+    if (!layer || layer.closed)
+      return;
+    if (stack[stack.length - 1] === layer) {
+      history.back();
+      return;
+    }
+    finish(layer);
+  }
+  function finish(layer) {
+    const i = stack.indexOf(layer);
+    if (i >= 0)
+      stack.splice(i, 1);
+    if (layer.closed)
+      return;
+    layer.closed = true;
+    try {
+      layer.close();
+    } catch (e) {
+      console.warn("[layers] close:", e && e.message);
+    }
+  }
+  window.addEventListener("popstate", () => {
+    const top = stack[stack.length - 1];
+    if (top)
+      finish(top);
+  });
+
   // src/core/chat-core.js
   var ACT_ICONS = {
     reply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
@@ -2468,7 +2542,8 @@
       screen.classList.add("visible");
     });
     const api = { screen, backdrop, _cleanup: [] };
-    const close = () => closeScreen(api);
+    api._layer = openLayer(() => closeScreen(api));
+    const close = () => closeLayer(api._layer);
     backdrop.addEventListener("click", close);
     screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
     api.close = close;
@@ -8638,7 +8713,7 @@
     <input class="acc-input" id="acc-bdate" type="date" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}">
     <button class="acc-primary" type="button" id="acc-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
     <button class="acc-skip" type="button" id="acc-later">\u041F\u0456\u0437\u043D\u0456\u0448\u0435</button>`);
-    const finish = async (withDate) => {
+    const finish2 = async (withDate) => {
       const name = wrap.querySelector("#acc-name").value.trim();
       const bd = wrap.querySelector("#acc-bdate").value;
       const res = await saveProfile({ name, birth_date: withDate ? bd : null });
@@ -8650,8 +8725,8 @@
       if (withDate)
         showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
     };
-    wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
-    wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
+    wrap.querySelector("#acc-save").addEventListener("click", () => finish2(true));
+    wrap.querySelector("#acc-later").addEventListener("click", () => finish2(false));
   }
   var NOTIF_KEYS = [
     { k: "buses", ic: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
@@ -10366,6 +10441,179 @@ ${ev.description || ""}`
     });
   }
 
+  // src/core/cropper.js
+  var OUT_MAX_W = 1600;
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0444\u043E\u0442\u043E"));
+      };
+      img.src = url;
+    });
+  }
+  function openCropper(file, opts = {}) {
+    const aspect = opts.aspect || 1;
+    const round = !!opts.round;
+    const title = opts.title || "\u041A\u0430\u0434\u0440\u0443\u0432\u0430\u043D\u043D\u044F";
+    return new Promise(async (resolve) => {
+      let img;
+      try {
+        img = await loadImage(file);
+      } catch {
+        resolve(null);
+        return;
+      }
+      const back = document.createElement("div");
+      back.className = "crop-back";
+      back.innerHTML = `
+      <div class="crop-top">
+        <button class="crop-cancel" type="button">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+        <span class="crop-title">${title}</span>
+        <button class="crop-done" type="button">\u0413\u043E\u0442\u043E\u0432\u043E</button>
+      </div>
+      <div class="crop-stage">
+        <canvas class="crop-canvas"></canvas>
+        <div class="crop-frame${round ? " crop-frame--round" : ""}"></div>
+      </div>
+      <div class="crop-bottom">
+        <span class="crop-hint">\u041F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u0439 \u0444\u043E\u0442\u043E \u043F\u0430\u043B\u044C\u0446\u0435\u043C \xB7 \u0449\u0438\u043F\u043E\u043A \u0430\u0431\u043E \u043F\u043E\u0432\u0437\u0443\u043D\u043E\u043A \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431</span>
+        <input class="crop-zoom" type="range" min="1" max="4" step="0.01" value="1">
+      </div>`;
+      document.body.appendChild(back);
+      document.body.classList.add("modal-open");
+      const stage = back.querySelector(".crop-stage");
+      const frame = back.querySelector(".crop-frame");
+      const canvas = back.querySelector(".crop-canvas");
+      const zoomEl = back.querySelector(".crop-zoom");
+      const ctx = canvas.getContext("2d");
+      let fw = 0, fh = 0, fx = 0, fy = 0;
+      let scale = 1, minScale = 1, tx = 0, ty = 0;
+      function layout() {
+        const sw = stage.clientWidth, sh = stage.clientHeight;
+        canvas.width = Math.round(sw * (window.devicePixelRatio || 1));
+        canvas.height = Math.round(sh * (window.devicePixelRatio || 1));
+        canvas.style.width = sw + "px";
+        canvas.style.height = sh + "px";
+        const pad2 = 16;
+        fw = Math.min(sw - pad2 * 2, (sh - pad2 * 2) * aspect);
+        fh = fw / aspect;
+        fx = (sw - fw) / 2;
+        fy = (sh - fh) / 2;
+        frame.style.width = fw + "px";
+        frame.style.height = fh + "px";
+        frame.style.left = fx + "px";
+        frame.style.top = fy + "px";
+        minScale = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+        if (scale < minScale)
+          scale = minScale;
+        zoomEl.min = String(minScale);
+        zoomEl.max = String(minScale * 4);
+        zoomEl.value = String(scale);
+        clampAndDraw();
+      }
+      function clamp() {
+        const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+        const minX = fx + fw - w, maxX = fx;
+        const minY = fy + fh - h, maxY = fy;
+        tx = Math.min(maxX, Math.max(minX, tx));
+        ty = Math.min(maxY, Math.max(minY, ty));
+      }
+      function draw() {
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
+      }
+      const clampAndDraw = () => {
+        clamp();
+        draw();
+      };
+      function center() {
+        scale = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+        tx = fx + (fw - img.naturalWidth * scale) / 2;
+        ty = fy + (fh - img.naturalHeight * scale) / 2;
+      }
+      let dragging = false, lastX = 0, lastY = 0, pinchDist = 0, pinchScale = 1;
+      const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      stage.addEventListener("touchstart", (e) => {
+        if (e.touches.length === 1) {
+          dragging = true;
+          lastX = e.touches[0].clientX;
+          lastY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+          dragging = false;
+          pinchDist = dist(e.touches);
+          pinchScale = scale;
+        }
+      }, { passive: true });
+      stage.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        if (e.touches.length === 2 && pinchDist > 0) {
+          const k = dist(e.touches) / pinchDist;
+          const next = Math.min(minScale * 4, Math.max(minScale, pinchScale * k));
+          const cx = fx + fw / 2, cy = fy + fh / 2;
+          tx = cx - (cx - tx) * (next / scale);
+          ty = cy - (cy - ty) * (next / scale);
+          scale = next;
+          zoomEl.value = String(scale);
+          clampAndDraw();
+          return;
+        }
+        if (!dragging || !e.touches.length)
+          return;
+        const t = e.touches[0];
+        tx += t.clientX - lastX;
+        ty += t.clientY - lastY;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        clampAndDraw();
+      }, { passive: false });
+      stage.addEventListener("touchend", () => {
+        dragging = false;
+        pinchDist = 0;
+      }, { passive: true });
+      zoomEl.addEventListener("input", () => {
+        const next = Number(zoomEl.value) || minScale;
+        const cx = fx + fw / 2, cy = fy + fh / 2;
+        tx = cx - (cx - tx) * (next / scale);
+        ty = cy - (cy - ty) * (next / scale);
+        scale = next;
+        clampAndDraw();
+      });
+      const finish2 = (blob) => {
+        back.remove();
+        document.body.classList.remove("modal-open");
+        window.removeEventListener("resize", layout);
+        resolve(blob);
+      };
+      back.querySelector(".crop-cancel").addEventListener("click", () => finish2(null));
+      back.querySelector(".crop-done").addEventListener("click", () => {
+        const sx = (fx - tx) / scale, sy = (fy - ty) / scale;
+        const sw = fw / scale, sh = fh / scale;
+        const outW = Math.min(OUT_MAX_W, Math.round(sw));
+        const outH = Math.round(outW / aspect);
+        const out = document.createElement("canvas");
+        out.width = outW;
+        out.height = outH;
+        out.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+        out.toBlob((b) => finish2(b), "image/jpeg", 0.88);
+      });
+      window.addEventListener("resize", layout);
+      requestAnimationFrame(() => {
+        layout();
+        center();
+        clampAndDraw();
+      });
+    });
+  }
+
   // src/tabs/feed.js
   var IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
   var IC_HEART_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -10380,6 +10628,7 @@ ${ev.description || ""}`
   var IC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
   var IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
+  var IC_USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
   var IC_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
   var IC_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7V4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
   var pages = [];
@@ -10586,7 +10835,7 @@ ${ev.description || ""}`
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
     const cCount = (commentMap.get(post.id) || []).length;
-    const authorName = post.author_uid ? liveName("", post.author_uid, "") : "";
+    const authorName = post.author_uid && post.show_author !== false ? liveName("", post.author_uid, "") : "";
     const imgs = postImages(post);
     const photo = galleryHtml(imgs, post.id);
     const hasPhoto = imgs.length > 0;
@@ -10987,7 +11236,7 @@ ${ev.description || ""}`
     }
     return pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
   }
-  async function openPageScreen(pageId) {
+  async function openPageScreen(pageId, reopen = false) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
       return;
@@ -11006,7 +11255,10 @@ ${ev.description || ""}`
     <div class="fd-screen-top">
       ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="\u041C\u0435\u043D\u044E \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438">${IC_DOTS}</button>` : ""}
       <div class="fd-banner${page.banner_url ? " fd-banner--view" : ""}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
-      ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
+      ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
+        <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button>
+        <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438</button>
+      </div>` : ""}
     </div>
     <div class="fd-screen-body">
       <div class="fd-screen-id">
@@ -11027,15 +11279,20 @@ ${ev.description || ""}`
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
       <div class="fd-screen-list">${screenListHtml("posts", pagePosts)}</div>
     </div>`;
-    const closeScreen2 = () => {
-      screen.classList.remove("open");
-      setTimeout(() => screen.remove(), 240);
-    };
+    const layer = openLayer(
+      () => {
+        screen.classList.remove("open");
+        setTimeout(() => screen.remove(), 240);
+      },
+      { reuseEntry: reopen }
+    );
+    const closeScreen2 = () => closeLayer(layer);
     screen.querySelector(".fd-screen-back").addEventListener("click", closeScreen2);
     attachScreenSwipeBack(screen, closeScreen2);
     const composeBtn = screen.querySelector(".fd-compose-open");
     if (composeBtn)
       composeBtn.addEventListener("click", () => openComposer(pageId));
+    screen.querySelectorAll("[data-team-page]").forEach((b) => b.addEventListener("click", () => openPageTeam(pageId)));
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
@@ -11221,6 +11478,96 @@ ${ev.description || ""}`
       console.warn("[feed] healFeedPushDevice:", e && e.message);
     }
   }
+  function openPageTeam(pageId) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page)
+      return;
+    const back = document.createElement("div");
+    back.className = "fd-sheet-back";
+    back.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438</div>
+      <div class="fd-team-list">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u044E\u2026</div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">\u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0437\u0430 \u043F\u043E\u0448\u0442\u043E\u044E</div>
+        <div class="fd-team-add">
+          <input class="fd-edit-input" data-email type="email" inputmode="email"
+                 autocapitalize="off" autocorrect="off" placeholder="\u0456\u043C'\u044F@gmail.com">
+          <button class="fd-team-add-btn" type="button">\u0414\u043E\u0434\u0430\u0442\u0438</button>
+        </div>
+        <div class="fd-team-hint">\u041B\u044E\u0434\u0438\u043D\u0430 \u043C\u0430\u0454 \u0445\u043E\u0447\u0430 \u0431 \u0440\u0430\u0437 \u0437\u0430\u0439\u0442\u0438 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0447\u0435\u0440\u0435\u0437 Google \u2014 \u0456\u043D\u0430\u043A\u0448\u0435 \u0457\u0457 \u0430\u043A\u0430\u0443\u043D\u0442\u0430 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454.</div>
+      </div>
+    </div>`;
+    const close = () => back.remove();
+    back.addEventListener("click", (e) => {
+      if (e.target === back)
+        close();
+    });
+    const listEl = back.querySelector(".fd-team-list");
+    const render2 = (rows) => {
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="fd-team-empty">\u041A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u044E \u043C\u043E\u0436\u0435 \u043B\u0438\u0448\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map((r) => `
+      <div class="fd-team-row">
+        <div class="fd-team-who">
+          <b>${escapeHtml(r.name || "\u0411\u0435\u0437 \u0456\u043C\u0435\u043D\u0456")}</b>
+          <span>${escapeHtml(r.email || "")}</span>
+        </div>
+        <span class="fd-team-role">${r.role === "owner" ? "\u0412\u043B\u0430\u0441\u043D\u0438\u043A" : "\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440"}</span>
+        ${r.role === "owner" ? "" : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438">${IC_X}</button>`}
+      </div>`).join("");
+    };
+    const reload = async () => render2(await fetchPageModerators(pageId));
+    reload();
+    listEl.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-del]");
+      if (!btn)
+        return;
+      if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044E \u043B\u044E\u0434\u0438\u043D\u0443 \u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438?"))
+        return;
+      btn.disabled = true;
+      const res = await removePageModerator(pageId, btn.dataset.del);
+      if (res === "ok") {
+        showToast("\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E");
+        reload();
+      } else if (res === "owner_protected") {
+        btn.disabled = false;
+        showToast("\u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u043F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043D\u0435 \u043C\u043E\u0436\u043D\u0430");
+      } else {
+        btn.disabled = false;
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
+      }
+    });
+    const emailEl = back.querySelector("[data-email]");
+    const addBtn = back.querySelector(".fd-team-add-btn");
+    addBtn.addEventListener("click", async () => {
+      const email = emailEl.value.trim();
+      if (!email || !email.includes("@")) {
+        showToast("\u0412\u0432\u0435\u0434\u0438 \u043F\u043E\u0448\u0442\u0443 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E");
+        emailEl.focus();
+        return;
+      }
+      addBtn.disabled = true;
+      addBtn.textContent = "\u0414\u043E\u0434\u0430\u044E\u2026";
+      const res = await addPageModerator(pageId, email);
+      addBtn.disabled = false;
+      addBtn.textContent = "\u0414\u043E\u0434\u0430\u0442\u0438";
+      if (res === "ok") {
+        emailEl.value = "";
+        showToast("\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0434\u043E\u0434\u0430\u043D\u043E");
+        reload();
+      } else if (res === "not_found")
+        showToast("\u0422\u0430\u043A\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A");
+      else
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438");
+    });
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
+    document.body.appendChild(back);
+    requestAnimationFrame(() => back.classList.add("open"));
+  }
   var MAX_PHOTOS = 10;
   function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
@@ -11232,6 +11579,7 @@ ${ev.description || ""}`
     let previewUrls = [];
     const CTA = edit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438" : "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
     let postType = edit && editPost.event_date ? "event" : "post";
+    let showAuthor = edit ? editPost.show_author !== false : false;
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
@@ -11252,6 +11600,13 @@ ${ev.description || ""}`
           <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="\u041D\u0430\u043F\u0440. \u0426\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0430 \u043F\u043B\u043E\u0449\u0430, \u041E\u043B\u0438\u043A\u0430" value="${edit ? escapeHtml(editPost.event_location || "") : ""}"></label>
       </div>
       <div class="fd-comp-thumbs" hidden></div>
+      <div class="fd-comp-as">
+        <div class="fd-comp-as-label">\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u044F\u043A</div>
+        <button class="fd-comp-as-btn${showAuthor ? "" : " is-on"}" data-as="page" type="button">
+          <span class="fd-comp-as-dot"></span>${escapeHtml(page.name || "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430")}</button>
+        <button class="fd-comp-as-btn${showAuthor ? " is-on" : ""}" data-as="me" type="button">
+          <span class="fd-comp-as-dot"></span>\u0412\u0456\u0434 \u0441\u0435\u0431\u0435</button>
+      </div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
         <button class="fd-comp-send" type="button">${CTA}</button>
@@ -11272,6 +11627,10 @@ ${ev.description || ""}`
       eventBox.hidden = postType !== "event";
     }));
     const fileInput = back.querySelector("input[type=file]");
+    back.querySelectorAll(".fd-comp-as-btn").forEach((btn) => btn.addEventListener("click", () => {
+      showAuthor = btn.dataset.as === "me";
+      back.querySelectorAll(".fd-comp-as-btn").forEach((b) => b.classList.toggle("is-on", b === btn));
+    }));
     const thumbs = back.querySelector(".fd-comp-thumbs");
     const renderThumbs = () => {
       if (!existing.length && !files.length) {
@@ -11354,7 +11713,7 @@ ${ev.description || ""}`
         }
       }
       const finalUrls = [...existing, ...newUrls];
-      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields);
+      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields, showAuthor);
       if (res.ok) {
         if (edit) {
           const i = posts.findIndex((p) => p.id === editPost.id);
@@ -11367,7 +11726,7 @@ ${ev.description || ""}`
         close();
         document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
         renderFeed();
-        openPageScreen(pageId);
+        openPageScreen(pageId, true);
       } else {
         sendBtn.disabled = false;
         sendBtn.textContent = CTA;
@@ -11421,19 +11780,27 @@ ${ev.description || ""}`
     };
     const bInput = back.querySelector("[data-b]");
     const aInput = back.querySelector("[data-a]");
-    bInput.addEventListener("change", () => {
+    bInput.addEventListener("change", async () => {
       const f = bInput.files?.[0];
-      if (f) {
-        bannerBlob = f;
-        setPreview(back.querySelector(".fd-edit-banner"), f);
-      }
+      bInput.value = "";
+      if (!f)
+        return;
+      const cropped = await openCropper(f, { aspect: 2.3, title: "\u0411\u0430\u043D\u0435\u0440 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438" });
+      if (!cropped)
+        return;
+      bannerBlob = cropped;
+      setPreview(back.querySelector(".fd-edit-banner"), cropped);
     });
-    aInput.addEventListener("change", () => {
+    aInput.addEventListener("change", async () => {
       const f = aInput.files?.[0];
-      if (f) {
-        avatarBlob = f;
-        setPreview(back.querySelector(".fd-edit-avatar"), f);
-      }
+      aInput.value = "";
+      if (!f)
+        return;
+      const cropped = await openCropper(f, { aspect: 1, round: true, title: "\u0410\u0432\u0430\u0442\u0430\u0440 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438" });
+      if (!cropped)
+        return;
+      avatarBlob = cropped;
+      setPreview(back.querySelector(".fd-edit-avatar"), cropped);
     });
     const saveBtn = back.querySelector(".fd-edit-save");
     saveBtn.addEventListener("click", async () => {
@@ -11441,7 +11808,7 @@ ${ev.description || ""}`
       saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026";
       const patch = {};
       if (bannerBlob) {
-        const up = await uploadImageReliable(bannerBlob, { folder: "pages/", maxDim: 1600, quality: 0.85 });
+        const up = await uploadBlobWithRetry(bannerBlob, "pages/");
         if (!up.url) {
           saveBtn.disabled = false;
           saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
@@ -11451,7 +11818,7 @@ ${ev.description || ""}`
         patch.banner_url = up.url;
       }
       if (avatarBlob) {
-        const up = await uploadImageReliable(avatarBlob, { folder: "pages/", square: true, maxDim: 512 });
+        const up = await uploadBlobWithRetry(avatarBlob, "pages/");
         if (!up.url) {
           saveBtn.disabled = false;
           saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
@@ -11482,7 +11849,7 @@ ${ev.description || ""}`
         close();
         document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
         renderFeed();
-        openPageScreen(pageId);
+        openPageScreen(pageId, true);
       } else {
         saveBtn.disabled = false;
         saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
@@ -11532,7 +11899,7 @@ ${ev.description || ""}`
       document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
       renderFeed();
       if (hadScreen)
-        openPageScreen(post.page_id);
+        openPageScreen(post.page_id, true);
     });
     attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);

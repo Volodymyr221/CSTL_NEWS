@@ -16,9 +16,12 @@ import {
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
+  fetchPageModerators, addPageModerator, removePageModerator,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
-import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
+import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
+import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
+import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -36,6 +39,7 @@ const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
 const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
+const IC_USERS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
 const IC_DOTS   = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 const IC_TRASH  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7V4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
 
@@ -239,7 +243,11 @@ function postCardHtml(post) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
   const cCount = (commentMap.get(post.id) || []).length;
-  const authorName = post.author_uid ? liveName('', post.author_uid, '') : '';  // вже екранований
+  // Підпис автора-людини — лише якщо пост опубліковано «від себе». Пости від імені
+  // спільноти виглядають суто офіційно, без особистого імені (вибір у композері).
+  // show_author за замовчуванням true → старі пости виглядають як раніше.
+  const authorName = (post.author_uid && post.show_author !== false)
+    ? liveName('', post.author_uid, '') : '';  // вже екранований
   const imgs = postImages(post);
   const photo = galleryHtml(imgs, post.id);
   const hasPhoto = imgs.length > 0;
@@ -623,7 +631,11 @@ function screenListHtml(tab, pagePosts) {
     : '<div class="fd-empty">Тут ще немає постів.</div>';
 }
 
-async function openPageScreen(pageId) {
+// reopen=true — екран переоткривають одразу після того, як його прибрали з DOM вручну
+// (опублікували пост / зберегли сторінку / видалили пост). Тоді запис в історії вже є,
+// і новий додавати не треба — інакше вони б накопичувались і жест «назад» довелося б
+// робити двічі. Див. core/layers.js.
+async function openPageScreen(pageId, reopen = false) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
   const canEdit = myPageIds.has(pageId);
@@ -642,7 +654,10 @@ async function openPageScreen(pageId) {
     <div class="fd-screen-top">
       ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <div class="fd-banner${page.banner_url ? ' fd-banner--view' : ''}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
-      ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
+      ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
+        <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button>
+        <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}Команда сторінки</button>
+      </div>` : ''}
     </div>
     <div class="fd-screen-body">
       <div class="fd-screen-id">
@@ -664,11 +679,22 @@ async function openPageScreen(pageId) {
       <div class="fd-screen-list">${screenListHtml('posts', pagePosts)}</div>
     </div>`;
 
-  const closeScreen = () => { screen.classList.remove('open'); setTimeout(() => screen.remove(), 240); };
+  // Екран — повноекранний ШАР, підключений до історії браузера (core/layers.js).
+  // Завдяки цьому системний жест «назад» від лівого краю на iPhone закриває САМЕ цей
+  // екран, а не відкочує весь додаток на попередню вкладку (баг зі скріна IMG_3557).
+  // reuseEntry — коли екран переоткривається після збереження сторінки: попередній
+  // прибрано з DOM вручну, тож новий запис в історію не додаємо.
+  const layer = openLayer(
+    () => { screen.classList.remove('open'); setTimeout(() => screen.remove(), 240); },
+    { reuseEntry: reopen },
+  );
+  const closeScreen = () => closeLayer(layer);   // через історію — стан не розходиться
   screen.querySelector('.fd-screen-back').addEventListener('click', closeScreen);
   attachScreenSwipeBack(screen, closeScreen);   // свайп-назад від лівого краю (як Telegram/iOS)
   const composeBtn = screen.querySelector('.fd-compose-open');
   if (composeBtn) composeBtn.addEventListener('click', () => openComposer(pageId));
+  screen.querySelectorAll('[data-team-page]').forEach(b =>
+    b.addEventListener('click', () => openPageTeam(pageId)));
   screen.querySelectorAll('[data-edit-page]').forEach(b =>
     b.addEventListener('click', () => openPageEditor(pageId)));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
@@ -856,6 +882,85 @@ async function healFeedPushDevice() {
   } catch (e) { console.warn('[feed] healFeedPushDevice:', e && e.message); }
 }
 
+// ── Команда сторінки: власник + модератори (крок 5 потоку 24.07) ────────────
+// Модератор може писати й редагувати пости сторінки, але додавати інших людей —
+// ні: це право лише власника (перевірка на сервері, RPC can_manage_page).
+// Додаємо за поштою: людина мусить хоч раз зайти в додаток через Google, інакше
+// її акаунта ще не існує і сервер відповість «not_found».
+function openPageTeam(pageId) {
+  const page = pages.find(p => p.id === pageId);
+  if (!page) return;
+
+  const back = document.createElement('div');
+  back.className = 'fd-sheet-back';
+  back.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">Команда сторінки</div>
+      <div class="fd-team-list">Завантажую…</div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">Додати модератора за поштою</div>
+        <div class="fd-team-add">
+          <input class="fd-edit-input" data-email type="email" inputmode="email"
+                 autocapitalize="off" autocorrect="off" placeholder="ім'я@gmail.com">
+          <button class="fd-team-add-btn" type="button">Додати</button>
+        </div>
+        <div class="fd-team-hint">Людина має хоча б раз зайти в додаток через Google — інакше її акаунта ще немає.</div>
+      </div>
+    </div>`;
+  const close = () => back.remove();
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+
+  const listEl = back.querySelector('.fd-team-list');
+  const render = (rows) => {
+    if (!rows.length) {
+      listEl.innerHTML = '<div class="fd-team-empty">Керувати командою може лише власник сторінки.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(r => `
+      <div class="fd-team-row">
+        <div class="fd-team-who">
+          <b>${escapeHtml(r.name || 'Без імені')}</b>
+          <span>${escapeHtml(r.email || '')}</span>
+        </div>
+        <span class="fd-team-role">${r.role === 'owner' ? 'Власник' : 'Модератор'}</span>
+        ${r.role === 'owner' ? '' : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="Прибрати">${IC_X}</button>`}
+      </div>`).join('');
+  };
+
+  const reload = async () => render(await fetchPageModerators(pageId));
+  reload();
+
+  // Прибрати модератора (власника прибрати не можна — захист на сервері).
+  listEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-del]');
+    if (!btn) return;
+    if (!confirm('Прибрати цю людину зі сторінки?')) return;
+    btn.disabled = true;
+    const res = await removePageModerator(pageId, btn.dataset.del);
+    if (res === 'ok') { showToast('Прибрано'); reload(); }
+    else if (res === 'owner_protected') { btn.disabled = false; showToast('Власника сторінки прибрати не можна'); }
+    else { btn.disabled = false; showToast('Не вдалося — спробуй ще раз'); }
+  });
+
+  const emailEl = back.querySelector('[data-email]');
+  const addBtn = back.querySelector('.fd-team-add-btn');
+  addBtn.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if (!email || !email.includes('@')) { showToast('Введи пошту повністю'); emailEl.focus(); return; }
+    addBtn.disabled = true; addBtn.textContent = 'Додаю…';
+    const res = await addPageModerator(pageId, email);
+    addBtn.disabled = false; addBtn.textContent = 'Додати';
+    if (res === 'ok') { emailEl.value = ''; showToast('Модератора додано'); reload(); }
+    else if (res === 'not_found') showToast('Такого користувача ще немає — хай спершу зайде в додаток');
+    else showToast('Не вдалося додати');
+  });
+
+  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);
+  document.body.appendChild(back);
+  requestAnimationFrame(() => back.classList.add('open'));
+}
+
 // ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────
 // editPost заданий → режим редагування: префіл тексту + наявні фото, «Зберегти».
 const MAX_PHOTOS = 10;
@@ -869,6 +974,10 @@ function openComposer(pageId, editPost = null) {
   const CTA = edit ? 'Зберегти' : 'Опублікувати';
   // Тип поста: допис або подія. Редагування події (є event_date) → одразу «Подія».
   let postType = (edit && editPost.event_date) ? 'event' : 'post';
+  // Від чийого імені публікуємо. За замовчуванням — від СПІЛЬНОТИ (офіційний голос
+  // сторінки, як у Facebook). «Від себе» лишає під текстом підпис автора-людини.
+  // При редагуванні беремо те, що вже стоїть у поста.
+  let showAuthor = edit ? (editPost.show_author !== false) : false;
 
   const back = document.createElement('div');
   back.className = 'fd-sheet-back';
@@ -890,6 +999,13 @@ function openComposer(pageId, editPost = null) {
           <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
       </div>
       <div class="fd-comp-thumbs" hidden></div>
+      <div class="fd-comp-as">
+        <div class="fd-comp-as-label">Публікувати як</div>
+        <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
+          <span class="fd-comp-as-dot"></span>${escapeHtml(page.name || 'Спільнота')}</button>
+        <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
+          <span class="fd-comp-as-dot"></span>Від себе</button>
+      </div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
         <button class="fd-comp-send" type="button">${CTA}</button>
@@ -908,6 +1024,13 @@ function openComposer(pageId, editPost = null) {
     }));
 
   const fileInput = back.querySelector('input[type=file]');
+  // Перемикач «від спільноти / від себе»
+  back.querySelectorAll('.fd-comp-as-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      showAuthor = btn.dataset.as === 'me';
+      back.querySelectorAll('.fd-comp-as-btn').forEach(b => b.classList.toggle('is-on', b === btn));
+    }));
+
   const thumbs = back.querySelector('.fd-comp-thumbs');
   const renderThumbs = () => {
     if (!existing.length && !files.length) { thumbs.hidden = true; thumbs.innerHTML = ''; return; }
@@ -974,15 +1097,15 @@ function openComposer(pageId, editPost = null) {
     }
     const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
     const res = edit
-      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, ...eventFields })
-      : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields);
+      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields })
+      : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor);
     if (res.ok) {
       if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
       else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
       close();
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();
-      openPageScreen(pageId);
+      openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
     } else {
       sendBtn.disabled = false; sendBtn.textContent = CTA;
       alert((edit ? 'Не вдалося зберегти: ' : 'Не вдалося опублікувати: ') + (res.error || ''));
@@ -1034,8 +1157,24 @@ function openPageEditor(pageId) {
   };
   const bInput = back.querySelector('[data-b]');
   const aInput = back.querySelector('[data-a]');
-  bInput.addEventListener('change', () => { const f = bInput.files?.[0]; if (f) { bannerBlob = f; setPreview(back.querySelector('.fd-edit-banner'), f); } });
-  aInput.addEventListener('change', () => { const f = aInput.files?.[0]; if (f) { avatarBlob = f; setPreview(back.querySelector('.fd-edit-avatar'), f); } });
+  // Після вибору фото — рамка кадрування: користувач сам наводить, що буде видно.
+  // Пропорція 2.3:1 = реальна форма банера (.fd-screen-top: 168px висоти на всю ширину),
+  // тож у рамці видно рівно те, що потім покажеться на сторінці. Аватар — кругла 1:1.
+  // Скасував кадрування → нічого не міняємо (поле лишається як було).
+  bInput.addEventListener('change', async () => {
+    const f = bInput.files?.[0]; bInput.value = '';        // щоб те саме фото можна було обрати ще раз
+    if (!f) return;
+    const cropped = await openCropper(f, { aspect: 2.3, title: 'Банер сторінки' });
+    if (!cropped) return;
+    bannerBlob = cropped; setPreview(back.querySelector('.fd-edit-banner'), cropped);
+  });
+  aInput.addEventListener('change', async () => {
+    const f = aInput.files?.[0]; aInput.value = '';
+    if (!f) return;
+    const cropped = await openCropper(f, { aspect: 1, round: true, title: 'Аватар спільноти' });
+    if (!cropped) return;
+    avatarBlob = cropped; setPreview(back.querySelector('.fd-edit-avatar'), cropped);
+  });
 
   const saveBtn = back.querySelector('.fd-edit-save');
   saveBtn.addEventListener('click', async () => {
@@ -1043,12 +1182,13 @@ function openPageEditor(pageId) {
     const patch = {};
     if (bannerBlob) {
       // Сире телефонне фото падало «Load failed» — тепер стиснення+повтор через хелпер.
-      const up = await uploadImageReliable(bannerBlob, { folder: 'pages/', maxDim: 1600, quality: 0.85 });
+      // Кадр уже обрізаний і стиснений кроппером (JPEG) → вантажимо як готовий blob.
+      const up = await uploadBlobWithRetry(bannerBlob, 'pages/');
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Банер не завантажився: ' + (up.error || '')); return; }
       patch.banner_url = up.url;
     }
     if (avatarBlob) {
-      const up = await uploadImageReliable(avatarBlob, { folder: 'pages/', square: true, maxDim: 512 });
+      const up = await uploadBlobWithRetry(avatarBlob, 'pages/');
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Аватар не завантажився: ' + (up.error || '')); return; }
       patch.avatar_url = up.url;
     }
@@ -1065,7 +1205,7 @@ function openPageEditor(pageId) {
       close();
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();
-      openPageScreen(pageId);
+      openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
     } else {
       saveBtn.disabled = false; saveBtn.textContent = 'Зберегти';
       alert('Не вдалося зберегти: ' + (res.error || ''));
@@ -1104,7 +1244,7 @@ function openPostMenu(postId) {
     close();
     document.querySelectorAll('.fd-screen').forEach(s => s.remove());
     renderFeed();
-    if (hadScreen) openPageScreen(post.page_id);
+    if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
   });
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
   document.body.appendChild(back);
