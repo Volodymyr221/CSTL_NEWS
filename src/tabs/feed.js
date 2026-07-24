@@ -609,10 +609,6 @@ async function openPageScreen(pageId) {
   screen.className = 'fd-screen';
   screen.innerHTML = `
     <div class="fd-screen-fixedbar">
-      <div class="fd-screen-titlebar">
-        <div class="fd-tb-name">${escapeHtml(page.name)}</div>
-        ${page.theme ? `<div class="fd-tb-theme">${escapeHtml(page.theme)}</div>` : ''}
-      </div>
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
       <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
@@ -628,8 +624,12 @@ async function openPageScreen(pageId) {
         <span class="fd-screen-ava-wrap">
           <span class="fd-screen-ava${page.avatar_url ? ' fd-screen-ava--view' : ''}">${avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img')}</span>
         </span>
-        <div class="fd-screen-name">${escapeHtml(page.name)}</div>
-        ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
+      </div>
+      <div class="fd-screen-title">
+        <div class="fd-screen-title-in">
+          <div class="fd-screen-name">${escapeHtml(page.name)}</div>
+          ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
+        </div>
       </div>
       <div class="fd-screen-tabs">
         <button class="fd-sctab is-on" data-sctab="posts"  type="button">Дописи</button>
@@ -674,21 +674,18 @@ async function openPageScreen(pageId) {
     screen.addEventListener('click', () => { if (!menuPop.hidden) menuPop.hidden = true; });
   }
 
-  // Sticky-заголовок: коли велика назва йде під верхній бар — компактна назва+опис
-  // плавно проявляється (opacity 0→1 = блюр «наростає»), лишається на рівні іконок.
-  // scroll-linked (за пальцем), rAF-троттлінг. Реф-точка — нижній край .fd-screen-titlebar.
-  const titlebar = screen.querySelector('.fd-screen-titlebar');
-  const bigName = screen.querySelector('.fd-screen-name');
-  if (titlebar && bigName) {
+  // Sticky-заголовок (iOS-стиль): та сама назва+опис при скролі доходить доверху,
+  // ЗМЕНШУЄТЬСЯ і фіксується на рівні іконок; під нею проявляється скло-блюр (низ згасає).
+  // --p (0..1): 0 у спокої, 1 коли назва пінається. scroll-linked, rAF.
+  const title = screen.querySelector('.fd-screen-title');
+  if (title) {
     let tRaf = 0;
     const applyTitle = () => {
       tRaf = 0;
-      const barBottom = titlebar.getBoundingClientRect().bottom;
-      const nameBottom = bigName.getBoundingClientRect().bottom;
-      // t=0 поки велика назва нижче бара; 0→1 на 40px коли вона йде під бар.
-      const t = Math.min(1, Math.max(0, (barBottom - nameBottom) / 40));
-      titlebar.style.opacity = t.toFixed(3);
-      titlebar.style.pointerEvents = t > 0.6 ? 'auto' : 'none';
+      const rt = title.getBoundingClientRect().top;   // .fd-screen top ≈ 0 (viewport)
+      const RANGE = 60;                                // останні 60px до піну — плавний перехід
+      const p = Math.min(1, Math.max(0, (RANGE - rt) / RANGE));
+      title.style.setProperty('--p', p.toFixed(3));
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
     screen.addEventListener('scroll', onTitle, { passive: true });
