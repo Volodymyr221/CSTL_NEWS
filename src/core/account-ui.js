@@ -5,6 +5,7 @@
 // М'яка модель (soft): вхід НЕ примусовий. Гість користується додатком як завжди;
 // вхід пропонується контекстно (через подію cstl-need-login від requireAuth).
 
+import { openLayer, closeLayer } from './layers.js';   // шари ↔ історія браузера (жест «назад»)
 import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
@@ -114,12 +115,19 @@ function saveNotifPrefs(uid, prefs) {
 }
 
 // ── Екран 3: «Мій кабінет» — повноекранний, з анкетою ─────────────
-function closeCabinet() {
+// Кабінет — повноекранний ШАР (core/layers.js): системний жест «назад» і кнопка
+// браузера закривають саме його, а не відкочують увесь додаток.
+let _cabLayer = null;
+function removeCabinet() {
   const c = document.getElementById('acc-cab');
   if (!c) return;
   c.classList.remove('open');
   document.body.classList.remove('modal-open');
   setTimeout(() => c.remove(), 240);
+}
+function closeCabinet() {
+  if (_cabLayer) { closeLayer(_cabLayer); _cabLayer = null; return; }
+  removeCabinet();
 }
 
 async function openAccount() {
@@ -223,6 +231,7 @@ async function openAccount() {
   document.body.appendChild(cab);
   document.body.classList.add('modal-open');
   requestAnimationFrame(() => cab.classList.add('open'));
+  _cabLayer = openLayer(() => { _cabLayer = null; removeCabinet(); });
 
   cab.querySelector('.acc-cab-back').addEventListener('click', closeCabinet);
 

@@ -15,6 +15,8 @@
 //   const blob = await openCropper(file, { aspect: 2.3, title: 'Банер сторінки' });
 //   if (blob) → завантажувати; null → користувач скасував.
 
+import { openLayer, closeLayer } from './layers.js';   // шари ↔ історія браузера
+
 const OUT_MAX_W = 1600;        // ширина результату (висота — з пропорції)
 
 // Читає File у HTMLImageElement (щоб знати справжній розмір і малювати в canvas).
@@ -157,7 +159,13 @@ export function openCropper(file, opts = {}) {
       clampAndDraw();
     });
 
+    // Кроппер — теж повноекранний ШАР: жест «назад» = «Скасувати», а не вихід із додатка.
+    let done = false;
+    const cropLayer = openLayer(() => { if (!done) finish(null); });
     const finish = (blob) => {
+      if (done) return;
+      done = true;
+      closeLayer(cropLayer);
       back.remove();
       document.body.classList.remove('modal-open');
       window.removeEventListener('resize', layout);
