@@ -390,3 +390,21 @@ export function looksLikeSpam(text) {
   return false;
 }
 
+
+// ── Середовище запуску (PWA / iOS) ───────────────────────────────────────────
+// Спільне джерело правди: раніше ті самі перевірки дублювались у install-banner.js,
+// а push.js їх взагалі не мав (через це дзвіночок мовчав на iPhone у Safari).
+
+// Запущені як ВСТАНОВЛЕНИЙ додаток (з домашнього екрана), а не вкладка браузера?
+// display-mode:standalone — стандарт; navigator.standalone — старий прапорець Safari iOS.
+export function isStandalone() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
+      || window.navigator.standalone === true;
+}
+
+// iPhone/iPad? (iPadOS 13+ у UA прикидається Mac-ом — ловимо його за наявністю дотику)
+export function isIOS() {
+  const ua = navigator.userAgent || '';
+  return /iphone|ipad|ipod/i.test(ua)
+      || (/Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1);
+}

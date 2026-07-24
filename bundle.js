@@ -432,6 +432,13 @@
       return true;
     return false;
   }
+  function isStandalone() {
+    return window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  }
+  function isIOS() {
+    const ua = navigator.userAgent || "";
+    return /iphone|ipad|ipod/i.test(ua) || /Macintosh/.test(ua) && (navigator.maxTouchPoints || 0) > 1;
+  }
 
   // src/core/supabase.js
   var SUPABASE_URL = "https://uabyfecseqnemvcqhdem.supabase.co";
@@ -2787,6 +2794,9 @@
     return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
   }
   function pushBlockedMsg() {
+    if (isIOS() && !isStandalone()) {
+      return "\u041D\u0430 iPhone \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043F\u0440\u0430\u0446\u044E\u044E\u0442\u044C \u043B\u0438\u0448\u0435 \u0443 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E\u043C\u0443 \u0434\u043E\u0434\u0430\u0442\u043A\u0443: \xAB\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F\xBB \u2192 \xAB\u041D\u0430 \u0435\u043A\u0440\u0430\u043D \u0414\u043E\u043C\u0456\u0432\xBB";
+    }
     if (!isPushCapable())
       return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
     if (Notification.permission === "denied")
@@ -12331,12 +12341,6 @@ END:VEVENT`
   // src/core/install-banner.js
   var SNOOZE_KEY = "cstl-install-snooze-v1";
   var SNOOZE_DAYS = 7;
-  function isStandalone() {
-    return window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
-  }
-  function isIOS() {
-    return /iphone|ipad|ipod/i.test(navigator.userAgent);
-  }
   function snoozed() {
     try {
       const t = Number(localStorage.getItem(SNOOZE_KEY) || 0);
