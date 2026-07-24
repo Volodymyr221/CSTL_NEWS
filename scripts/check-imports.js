@@ -174,6 +174,11 @@ function addParams(paramsStr, decls) {
   for (const part of paramsStr.split(',')) {
     let name = part.trim();
     if (!name) continue;
+    // Асинхронна стрілка всередині виклику — напр. `new Promise(async (resolve) => …)`.
+    // Регулярка вище захоплює сюди хвіст зовнішньої дужки («async (resolve»), тож ім'я
+    // не розпізнавалось і параметр помилково вважався невідомим. Беремо те, що після
+    // останньої відкритої дужки. (Таких місць у src/ понад 40 — сліпа пляма чекера.)
+    if (name.includes('(')) name = name.slice(name.lastIndexOf('(') + 1);
     name = name.replace(/^\.\.\./, '').split('=')[0].trim();
     // Destructuring у параметрі — пропускаємо (рідко і складно парсити)
     if (name.startsWith('{') || name.startsWith('[')) continue;

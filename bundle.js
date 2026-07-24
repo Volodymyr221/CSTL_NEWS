@@ -10441,6 +10441,179 @@ ${ev.description || ""}`
     });
   }
 
+  // src/core/cropper.js
+  var OUT_MAX_W = 1600;
+  function loadImage(file) {
+    return new Promise((resolve, reject) => {
+      const url = URL.createObjectURL(file);
+      const img = new Image();
+      img.onload = () => {
+        URL.revokeObjectURL(url);
+        resolve(img);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(url);
+        reject(new Error("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u043E\u0447\u0438\u0442\u0430\u0442\u0438 \u0444\u043E\u0442\u043E"));
+      };
+      img.src = url;
+    });
+  }
+  function openCropper(file, opts = {}) {
+    const aspect = opts.aspect || 1;
+    const round = !!opts.round;
+    const title = opts.title || "\u041A\u0430\u0434\u0440\u0443\u0432\u0430\u043D\u043D\u044F";
+    return new Promise(async (resolve) => {
+      let img;
+      try {
+        img = await loadImage(file);
+      } catch {
+        resolve(null);
+        return;
+      }
+      const back = document.createElement("div");
+      back.className = "crop-back";
+      back.innerHTML = `
+      <div class="crop-top">
+        <button class="crop-cancel" type="button">\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438</button>
+        <span class="crop-title">${title}</span>
+        <button class="crop-done" type="button">\u0413\u043E\u0442\u043E\u0432\u043E</button>
+      </div>
+      <div class="crop-stage">
+        <canvas class="crop-canvas"></canvas>
+        <div class="crop-frame${round ? " crop-frame--round" : ""}"></div>
+      </div>
+      <div class="crop-bottom">
+        <span class="crop-hint">\u041F\u0435\u0440\u0435\u0441\u0443\u0432\u0430\u0439 \u0444\u043E\u0442\u043E \u043F\u0430\u043B\u044C\u0446\u0435\u043C \xB7 \u0449\u0438\u043F\u043E\u043A \u0430\u0431\u043E \u043F\u043E\u0432\u0437\u0443\u043D\u043E\u043A \u2014 \u043C\u0430\u0441\u0448\u0442\u0430\u0431</span>
+        <input class="crop-zoom" type="range" min="1" max="4" step="0.01" value="1">
+      </div>`;
+      document.body.appendChild(back);
+      document.body.classList.add("modal-open");
+      const stage = back.querySelector(".crop-stage");
+      const frame = back.querySelector(".crop-frame");
+      const canvas = back.querySelector(".crop-canvas");
+      const zoomEl = back.querySelector(".crop-zoom");
+      const ctx = canvas.getContext("2d");
+      let fw = 0, fh = 0, fx = 0, fy = 0;
+      let scale = 1, minScale = 1, tx = 0, ty = 0;
+      function layout() {
+        const sw = stage.clientWidth, sh = stage.clientHeight;
+        canvas.width = Math.round(sw * (window.devicePixelRatio || 1));
+        canvas.height = Math.round(sh * (window.devicePixelRatio || 1));
+        canvas.style.width = sw + "px";
+        canvas.style.height = sh + "px";
+        const pad2 = 16;
+        fw = Math.min(sw - pad2 * 2, (sh - pad2 * 2) * aspect);
+        fh = fw / aspect;
+        fx = (sw - fw) / 2;
+        fy = (sh - fh) / 2;
+        frame.style.width = fw + "px";
+        frame.style.height = fh + "px";
+        frame.style.left = fx + "px";
+        frame.style.top = fy + "px";
+        minScale = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+        if (scale < minScale)
+          scale = minScale;
+        zoomEl.min = String(minScale);
+        zoomEl.max = String(minScale * 4);
+        zoomEl.value = String(scale);
+        clampAndDraw();
+      }
+      function clamp() {
+        const w = img.naturalWidth * scale, h = img.naturalHeight * scale;
+        const minX = fx + fw - w, maxX = fx;
+        const minY = fy + fh - h, maxY = fy;
+        tx = Math.min(maxX, Math.max(minX, tx));
+        ty = Math.min(maxY, Math.max(minY, ty));
+      }
+      function draw() {
+        const dpr = window.devicePixelRatio || 1;
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, tx, ty, img.naturalWidth * scale, img.naturalHeight * scale);
+      }
+      const clampAndDraw = () => {
+        clamp();
+        draw();
+      };
+      function center() {
+        scale = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
+        tx = fx + (fw - img.naturalWidth * scale) / 2;
+        ty = fy + (fh - img.naturalHeight * scale) / 2;
+      }
+      let dragging = false, lastX = 0, lastY = 0, pinchDist = 0, pinchScale = 1;
+      const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      stage.addEventListener("touchstart", (e) => {
+        if (e.touches.length === 1) {
+          dragging = true;
+          lastX = e.touches[0].clientX;
+          lastY = e.touches[0].clientY;
+        } else if (e.touches.length === 2) {
+          dragging = false;
+          pinchDist = dist(e.touches);
+          pinchScale = scale;
+        }
+      }, { passive: true });
+      stage.addEventListener("touchmove", (e) => {
+        e.preventDefault();
+        if (e.touches.length === 2 && pinchDist > 0) {
+          const k = dist(e.touches) / pinchDist;
+          const next = Math.min(minScale * 4, Math.max(minScale, pinchScale * k));
+          const cx = fx + fw / 2, cy = fy + fh / 2;
+          tx = cx - (cx - tx) * (next / scale);
+          ty = cy - (cy - ty) * (next / scale);
+          scale = next;
+          zoomEl.value = String(scale);
+          clampAndDraw();
+          return;
+        }
+        if (!dragging || !e.touches.length)
+          return;
+        const t = e.touches[0];
+        tx += t.clientX - lastX;
+        ty += t.clientY - lastY;
+        lastX = t.clientX;
+        lastY = t.clientY;
+        clampAndDraw();
+      }, { passive: false });
+      stage.addEventListener("touchend", () => {
+        dragging = false;
+        pinchDist = 0;
+      }, { passive: true });
+      zoomEl.addEventListener("input", () => {
+        const next = Number(zoomEl.value) || minScale;
+        const cx = fx + fw / 2, cy = fy + fh / 2;
+        tx = cx - (cx - tx) * (next / scale);
+        ty = cy - (cy - ty) * (next / scale);
+        scale = next;
+        clampAndDraw();
+      });
+      const finish2 = (blob) => {
+        back.remove();
+        document.body.classList.remove("modal-open");
+        window.removeEventListener("resize", layout);
+        resolve(blob);
+      };
+      back.querySelector(".crop-cancel").addEventListener("click", () => finish2(null));
+      back.querySelector(".crop-done").addEventListener("click", () => {
+        const sx = (fx - tx) / scale, sy = (fy - ty) / scale;
+        const sw = fw / scale, sh = fh / scale;
+        const outW = Math.min(OUT_MAX_W, Math.round(sw));
+        const outH = Math.round(outW / aspect);
+        const out = document.createElement("canvas");
+        out.width = outW;
+        out.height = outH;
+        out.getContext("2d").drawImage(img, sx, sy, sw, sh, 0, 0, outW, outH);
+        out.toBlob((b) => finish2(b), "image/jpeg", 0.88);
+      });
+      window.addEventListener("resize", layout);
+      requestAnimationFrame(() => {
+        layout();
+        center();
+        clampAndDraw();
+      });
+    });
+  }
+
   // src/tabs/feed.js
   var IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
   var IC_HEART_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -11607,19 +11780,27 @@ ${ev.description || ""}`
     };
     const bInput = back.querySelector("[data-b]");
     const aInput = back.querySelector("[data-a]");
-    bInput.addEventListener("change", () => {
+    bInput.addEventListener("change", async () => {
       const f = bInput.files?.[0];
-      if (f) {
-        bannerBlob = f;
-        setPreview(back.querySelector(".fd-edit-banner"), f);
-      }
+      bInput.value = "";
+      if (!f)
+        return;
+      const cropped = await openCropper(f, { aspect: 2.3, title: "\u0411\u0430\u043D\u0435\u0440 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438" });
+      if (!cropped)
+        return;
+      bannerBlob = cropped;
+      setPreview(back.querySelector(".fd-edit-banner"), cropped);
     });
-    aInput.addEventListener("change", () => {
+    aInput.addEventListener("change", async () => {
       const f = aInput.files?.[0];
-      if (f) {
-        avatarBlob = f;
-        setPreview(back.querySelector(".fd-edit-avatar"), f);
-      }
+      aInput.value = "";
+      if (!f)
+        return;
+      const cropped = await openCropper(f, { aspect: 1, round: true, title: "\u0410\u0432\u0430\u0442\u0430\u0440 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438" });
+      if (!cropped)
+        return;
+      avatarBlob = cropped;
+      setPreview(back.querySelector(".fd-edit-avatar"), cropped);
     });
     const saveBtn = back.querySelector(".fd-edit-save");
     saveBtn.addEventListener("click", async () => {
@@ -11627,7 +11808,7 @@ ${ev.description || ""}`
       saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026";
       const patch = {};
       if (bannerBlob) {
-        const up = await uploadImageReliable(bannerBlob, { folder: "pages/", maxDim: 1600, quality: 0.85 });
+        const up = await uploadBlobWithRetry(bannerBlob, "pages/");
         if (!up.url) {
           saveBtn.disabled = false;
           saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
@@ -11637,7 +11818,7 @@ ${ev.description || ""}`
         patch.banner_url = up.url;
       }
       if (avatarBlob) {
-        const up = await uploadImageReliable(avatarBlob, { folder: "pages/", square: true, maxDim: 512 });
+        const up = await uploadBlobWithRetry(avatarBlob, "pages/");
         if (!up.url) {
           saveBtn.disabled = false;
           saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";

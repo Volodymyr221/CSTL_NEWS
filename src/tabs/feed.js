@@ -19,8 +19,9 @@ import {
   fetchPageModerators, addPageModerator, removePageModerator,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
-import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
+import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
+import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -1156,8 +1157,24 @@ function openPageEditor(pageId) {
   };
   const bInput = back.querySelector('[data-b]');
   const aInput = back.querySelector('[data-a]');
-  bInput.addEventListener('change', () => { const f = bInput.files?.[0]; if (f) { bannerBlob = f; setPreview(back.querySelector('.fd-edit-banner'), f); } });
-  aInput.addEventListener('change', () => { const f = aInput.files?.[0]; if (f) { avatarBlob = f; setPreview(back.querySelector('.fd-edit-avatar'), f); } });
+  // Після вибору фото — рамка кадрування: користувач сам наводить, що буде видно.
+  // Пропорція 2.3:1 = реальна форма банера (.fd-screen-top: 168px висоти на всю ширину),
+  // тож у рамці видно рівно те, що потім покажеться на сторінці. Аватар — кругла 1:1.
+  // Скасував кадрування → нічого не міняємо (поле лишається як було).
+  bInput.addEventListener('change', async () => {
+    const f = bInput.files?.[0]; bInput.value = '';        // щоб те саме фото можна було обрати ще раз
+    if (!f) return;
+    const cropped = await openCropper(f, { aspect: 2.3, title: 'Банер сторінки' });
+    if (!cropped) return;
+    bannerBlob = cropped; setPreview(back.querySelector('.fd-edit-banner'), cropped);
+  });
+  aInput.addEventListener('change', async () => {
+    const f = aInput.files?.[0]; aInput.value = '';
+    if (!f) return;
+    const cropped = await openCropper(f, { aspect: 1, round: true, title: 'Аватар спільноти' });
+    if (!cropped) return;
+    avatarBlob = cropped; setPreview(back.querySelector('.fd-edit-avatar'), cropped);
+  });
 
   const saveBtn = back.querySelector('.fd-edit-save');
   saveBtn.addEventListener('click', async () => {
@@ -1165,12 +1182,13 @@ function openPageEditor(pageId) {
     const patch = {};
     if (bannerBlob) {
       // Сире телефонне фото падало «Load failed» — тепер стиснення+повтор через хелпер.
-      const up = await uploadImageReliable(bannerBlob, { folder: 'pages/', maxDim: 1600, quality: 0.85 });
+      // Кадр уже обрізаний і стиснений кроппером (JPEG) → вантажимо як готовий blob.
+      const up = await uploadBlobWithRetry(bannerBlob, 'pages/');
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Банер не завантажився: ' + (up.error || '')); return; }
       patch.banner_url = up.url;
     }
     if (avatarBlob) {
-      const up = await uploadImageReliable(avatarBlob, { folder: 'pages/', square: true, maxDim: 512 });
+      const up = await uploadBlobWithRetry(avatarBlob, 'pages/');
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Аватар не завантажився: ' + (up.error || '')); return; }
       patch.avatar_url = up.url;
     }

@@ -1,0 +1,40 @@
+/* style/crop.css — рамка кадрування фото (банер сторінки, аватар).
+   Повний екран поверх усього: зверху кнопки, посередині фото з рамкою, знизу повзунок.
+   Затемнення НАВКОЛО рамки робить `box-shadow` з величезним розтягом — так видно, що
+   саме залишиться в кадрі, а що обріжеться. */
+
+.crop-back {
+  position: fixed; inset: 0; z-index: 4200;
+  background: #0d0d0f; color: #fff;
+  display: flex; flex-direction: column;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.crop-top {
+  flex: 0 0 auto; height: 52px; display: flex; align-items: center; justify-content: space-between;
+  padding: 0 14px; gap: 12px;
+}
+.crop-title { font-size: 15px; font-weight: 600; opacity: 0.9; }
+.crop-cancel, .crop-done {
+  border: 0; background: none; color: #fff; font: inherit; font-size: 15px;
+  padding: 8px 4px; cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.crop-done { font-weight: 700; color: #E9B7BD; }   /* світле бордо на темному тлі */
+
+/* Сцена — уся вільна висота; canvas малює фото, рамка лежить поверх. */
+.crop-stage { position: relative; flex: 1 1 auto; min-height: 0; overflow: hidden; touch-action: none; }
+.crop-canvas { position: absolute; inset: 0; display: block; }
+
+.crop-frame {
+  position: absolute; pointer-events: none;
+  border: 2px solid rgba(255,255,255,0.92);
+  border-radius: 4px;
+  /* Затемнення всього, що поза рамкою (розтяг 9999px перекриває будь-який екран). */
+  box-shadow: 0 0 0 9999px rgba(0,0,0,0.62);
+}
+.crop-frame--round { border-radius: 50%; }
+
+.crop-bottom { flex: 0 0 auto; padding: 12px 20px 18px; display: flex; flex-direction: column; gap: 10px; }
+.crop-hint { font-size: 12.5px; opacity: 0.65; text-align: center; line-height: 1.4; }
+.crop-zoom { width: 100%; accent-color: #E9B7BD; }
