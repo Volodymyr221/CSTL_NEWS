@@ -177,22 +177,26 @@
    вгорі видимої області при скролі (не залежить від transform .fd-screen, на відміну від
    fixed). Кнопки всередині — absolute, тож завжди видно на екрані. */
 .fd-screen-fixedbar { position: sticky; top: 0; z-index: 5; height: 0; }
-/* Компактний sticky-заголовок (назва+опис) — проявляється при скролі (JS керує opacity).
-   Скло-блюр + низ ПЛАВНО згасає (маска), контент скролиться під ним → назву завжди видно. */
-.fd-screen-titlebar {
-  position: absolute; top: 0; left: 0; right: 0; z-index: 1;
-  padding: calc(env(safe-area-inset-top, 0px) + 7px) 60px 15px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+/* Sticky-заголовок каналу: ТА САМА назва+опис. При скролі доходить доверху і ПІНАЄТЬСЯ;
+   --p (0..1, пише feed.js) керує: скло-підкладка (::before) проявляється, текст меншає,
+   бар набирає висоту (іконки повністю на блюрі), назва центрується по вертикалі. */
+.fd-screen-title {
+  position: sticky; top: 0; z-index: 3; margin-top: 8px;
+  display: flex; align-items: center; justify-content: center; text-align: center;
+  padding-top: calc(env(safe-area-inset-top, 0px) * var(--p, 0));
+  min-height: calc((env(safe-area-inset-top, 0px) + 60px) * var(--p, 0));
+}
+.fd-screen-title::before {                 /* скло-блюр + низ згасає, проявляється при піні */
+  content: ''; position: absolute; inset: 0; z-index: -1; opacity: var(--p, 0);
   background: rgba(236, 238, 241, 0.72);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 15px), transparent);
-  mask-image: linear-gradient(to bottom, #000 calc(100% - 15px), transparent);
-  opacity: 0; pointer-events: none; will-change: opacity;
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
 }
-.fd-tb-name { font-family: Georgia, serif; font-weight: 800; font-size: 15px; line-height: 1.15;
-  color: var(--fd-ink); max-width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.fd-tb-theme { font-size: 11px; line-height: 1.2; color: var(--fd-muted); max-width: 100%;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.fd-screen-title-in {                      /* текст меншає при піні (20px → ~15px) */
+  transform: scale(calc(1 - 0.25 * var(--p, 0))); transform-origin: center center;
+  will-change: transform;
+}
 .fd-screen-back, .fd-bell, .fd-screen-menu {
   /* back/bell — усередині .fd-screen-fixedbar (sticky), тож absolute відносно нього →
      завжди на екрані при скролі. «⋯» — absolute у банері (прокручується). */
@@ -236,7 +240,7 @@
 .fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--fd-bg);
   overflow: hidden; box-shadow: 0 0 18px rgba(0,0,0,0.20); }
 .fd-screen-ava-img--ph { font-size: 32px; }
-.fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; margin-top: 8px; color: var(--fd-ink); }
+.fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; color: var(--fd-ink); }
 .fd-screen-theme { font-size: 13px; color: var(--fd-muted); margin-top: 3px; }
 
 .fd-compose-open {
