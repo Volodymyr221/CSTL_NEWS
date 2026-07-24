@@ -761,9 +761,16 @@ async function openPageScreen(pageId, reopen = false) {
                                                       // (p=1 при scrollTop=pinAt): останнє зменшення
                                                       // збігається з тим, як назва стає нерухомою вгорі.
                                                       // Дьоргання нема бо висота розчеплена (transform, не потік).
+    const titleIn = title.querySelector('.fd-screen-title-in');
     // Поріг піну міряємо ОДИН раз (не щокадру getBoundingClientRect — то reflow і сіпання):
     // scroll-позиція, де верх назви дійде до верху екрана.
-    const measure = () => { pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop; };
+    // Заразом віддаємо склу реальну висоту заголовка (--fd-th): у довгих назв це 3 рядки
+    // замість 2, і без цього скло не дотягувалось — опис випадав з-під блюру (IMG_3564).
+    // offsetHeight = висота В ПОТОЦІ, на неї scale не впливає, тож міряти можна будь-коли.
+    const measure = () => {
+      pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
+      if (titleIn) title.style.setProperty('--fd-th', `${titleIn.offsetHeight}px`);
+    };
     const applyTitle = () => {
       tRaf = 0;
       const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE - SETTLE)) / RANGE));  // лише scrollTop — дешево
