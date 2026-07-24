@@ -10438,7 +10438,29 @@ ${ev.description || ""}`
     <div class="fd-gal-dots">${dots}</div>
   </div>`;
   }
+  var PHOTO_MIN_AR = 3 / 4;
+  function applyPhotoRatio(box, img) {
+    const w = img.naturalWidth, h = img.naturalHeight;
+    if (!w || !h)
+      return;
+    box.style.setProperty("--fd-ar", Math.max(w / h, PHOTO_MIN_AR).toFixed(4));
+  }
+  function wirePhotoRatios(root) {
+    root.querySelectorAll(".fd-photo--single, .fd-gallery").forEach((box) => {
+      if (box.dataset.arWired)
+        return;
+      box.dataset.arWired = "1";
+      const img = box.querySelector("img");
+      if (!img)
+        return;
+      if (img.complete)
+        applyPhotoRatio(box, img);
+      else
+        img.addEventListener("load", () => applyPhotoRatio(box, img), { once: true });
+    });
+  }
   function wireGalleries(root) {
+    wirePhotoRatios(root);
     root.querySelectorAll(".fd-gallery").forEach((g) => {
       if (g.dataset.wired)
         return;

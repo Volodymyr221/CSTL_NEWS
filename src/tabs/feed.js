@@ -127,8 +127,33 @@ function galleryHtml(images, postId) {
   </div>`;
 }
 
-// Оновлення крапок/лічильника каруселі при свайпі.
+// Пропорція фото у стрічці: РІДНА (як у файлі), але не вища за стелю 3:4.
+// Читаємо справжній розмір кадру (naturalWidth/naturalHeight — пікселі самого файлу)
+// і пишемо його у CSS-змінну --fd-ar на контейнері фото. Тому квадратні й ширші кадри
+// показуються цілими на всю ширину (нічого не зрізається з боків), а дуже високі
+// вертикальні обрізаються рамкою 3:4 (cover) — як було раніше.
+const PHOTO_MIN_AR = 3 / 4;   // 0.75 — найвище (найвужче) що показуємо без обрізки
+
+function applyPhotoRatio(box, img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  if (!w || !h) return;                                    // фото не завантажилось — лишається fallback 3/4
+  box.style.setProperty('--fd-ar', (Math.max(w / h, PHOTO_MIN_AR)).toFixed(4));
+}
+
+// Для каруселі (2+ фото) беремо пропорцію ПЕРШОГО кадру — усі слайди однакової висоти.
+function wirePhotoRatios(root) {
+  root.querySelectorAll('.fd-photo--single, .fd-gallery').forEach(box => {
+    if (box.dataset.arWired) return; box.dataset.arWired = '1';
+    const img = box.querySelector('img');
+    if (!img) return;
+    if (img.complete) applyPhotoRatio(box, img);           // з кешу — розмір уже відомий
+    else img.addEventListener('load', () => applyPhotoRatio(box, img), { once: true });
+  });
+}
+
+// Оновлення крапок/лічильника каруселі при свайпі (+ пропорції фото постів).
 function wireGalleries(root) {
+  wirePhotoRatios(root);
   root.querySelectorAll('.fd-gallery').forEach(g => {
     if (g.dataset.wired) return; g.dataset.wired = '1';
     const track = g.querySelector('.fd-gal-track');

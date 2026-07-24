@@ -119,9 +119,12 @@
 .fd-photo { width: 100%; background: #e9ebee; cursor: pointer; }
 .fd-photo img { width: 100%; display: block; max-height: 520px; object-fit: cover; }
 
-/* Одиночне фото: стабільна рамка 4:5 (портрет-максимум), cover — без полів, рівний
-   ритм стрічки (як Instagram). Повний кадр без обрізки — по тапу (лайтбокс openViewer). */
-.fd-photo--single img { width: 100%; aspect-ratio: 3 / 4; max-height: none; object-fit: cover; }
+/* Одиночне фото: пропорція РІДНА — квадратні й ширші кадри показуються цілими, без
+   обрізки (--fd-ar пише feed.js з реального розміру файлу). Стеля 3:4 (портрет-максимум):
+   усе вище обрізається рамкою (cover), інакше один пост зайняв би весь екран. Поки фото
+   не завантажилось діє fallback 3/4 — рамка тримає місце й стрічка не стрибає.
+   Повний кадр без обрізки — по тапу (лайтбокс openViewer). */
+.fd-photo--single img { width: 100%; aspect-ratio: var(--fd-ar, 3 / 4); max-height: none; object-fit: cover; }
 
 .fd-author { padding: 2px 14px 0; font-size: 12.5px; color: var(--fd-muted); }
 .fd-author b { color: var(--fd-ink); font-weight: 600; }
@@ -151,7 +154,9 @@
 .fd-gal-track.snap { scroll-snap-type: x mandatory; }
 .fd-gal-track::-webkit-scrollbar { display: none; }
 .fd-gal-slide { flex: 0 0 100%; scroll-snap-align: start; cursor: pointer; }
-.fd-gal-slide img { width: 100%; display: block; max-height: 520px; object-fit: cover; }
+/* Карусель: усі слайди однакової висоти — пропорцію беремо з ПЕРШОГО фото (--fd-ar на
+   .fd-gallery), інакше висота стрибала б при свайпі. Стеля та сама 3:4. */
+.fd-gal-slide img { width: 100%; display: block; aspect-ratio: var(--fd-ar, 3 / 4); object-fit: cover; }
 .fd-gal-count { position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.62); color: #fff;
   font-size: 12px; padding: 3px 9px; border-radius: 12px; font-variant-numeric: tabular-nums; }
 .fd-gal-dots { position: absolute; bottom: 10px; left: 0; right: 0; z-index: 2; display: flex; gap: 5px; justify-content: center; pointer-events: none; }
