@@ -43,32 +43,64 @@ const clamp01 = v => Math.min(1, Math.max(0, v));
 //   'bg'      — затемнення це КОНТЕЙНЕР, усередині якого лежить сама панель
 //               (.fd-sheet-back у Стрічці) → прозорість гасити НЕ можна, бо
 //               загасне й панель. Тому міняємо лише альфу кольору фону.
+// 🔴 РЕГРЕСІЯ, ЯКУ ТУТ ВИПРАВЛЕНО (Вова 24.07, скріни IMG_3566/3567): на старті жесту
+// фон СПАЛАХУВАВ суцільно чорним і просвітлювався від чорного. Причина: базовий колір
+// читався ОДРАЗУ при дротуванні свайпу, а всі 5 листів «Стрічки» дротують свайп ДО
+// `document.body.appendChild`. У елемента поза документом `getComputedStyle` повертає
+// ПОРОЖНІЙ рядок → розбір не вдавався → альфа за замовчуванням бралась 1 → rgba(0,0,0,1).
+// Три правила, що роблять це неможливим у принципі:
+//   1) читаємо базовий вигляд ЛІНИВО — на першому русі пальця, коли елемент точно в DOM;
+//   2) не вгадуємо: не прочитався колір → взагалі не чіпаємо фон (краще нічого, ніж чорне);
+//   3) інваріант «ніколи не темніше за спокій» — усе рахується ВІД запам'ятованого
+//      відтінку спокою і лише світлішає (саме як просив Вова: «модалка має взяти собі
+//      певний відтінок, і від цього відтінку просвітлюватись»).
 export function createBackdropFade(el, mode = 'opacity') {
   if (!el) return null;
   const isBg = mode === 'bg';
-  const parts = isBg ? (getComputedStyle(el).backgroundColor.match(/[\d.]+/g) || []) : null;
-  const baseA = isBg ? (parts[3] !== undefined ? +parts[3] : 1) : 1;
+  const prop = isBg ? 'background-color' : 'opacity';
+  let base = null;   // {rgb,a} для 'bg' або {o} для 'opacity'; null = ще не міряли / не вдалось
 
-  const setK = (k) => {
-    if (isBg) el.style.backgroundColor = `rgba(${parts[0] || 0}, ${parts[1] || 0}, ${parts[2] || 0}, ${(baseA * k).toFixed(3)})`;
-    else el.style.opacity = k.toFixed(3);
+  // Вигляд СПОКОЮ. Міряється один раз за жест і лише коли елемент уже в документі.
+  const readBase = () => {
+    const cs = getComputedStyle(el);
+    if (isBg) {
+      const m = (cs.backgroundColor || '').match(/[\d.]+/g);
+      if (!m || m.length < 3) return null;                 // не вгадуємо — краще no-op
+      return { rgb: [m[0], m[1], m[2]], a: m[3] !== undefined ? +m[3] : 1 };
+    }
+    const o = parseFloat(cs.opacity);
+    return Number.isFinite(o) ? { o } : null;
   };
+
+  // k: 1 = як у спокої, 0 = прозоро. Вище за 1 не піднімаємось — це і є інваріант.
+  const setK = (k) => {
+    if (!base) return;
+    const kk = clamp01(k);
+    if (isBg) el.style.backgroundColor = `rgba(${base.rgb[0]}, ${base.rgb[1]}, ${base.rgb[2]}, ${(base.a * kk).toFixed(3)})`;
+    else el.style.opacity = (base.o * kk).toFixed(3);
+  };
+
+  const clearInline = () => { el.style.opacity = ''; el.style.backgroundColor = ''; };
+
   return {
     // p — прогрес жесту 0..1 (0 = панель на місці, 1 = пішла повністю)
     track(p) {
+      if (!base) { base = readBase(); if (!base) return; }
       el.style.transition = 'none';
       setK(1 - (1 - BACK_MIN) * clamp01(p));
     },
     // Доїзд разом із панеллю: за ТОЙ САМИЙ час, тож фон і панель рухаються як одне ціле.
     settle(dismiss, ms) {
-      el.style.transition = `${isBg ? 'background-color' : 'opacity'} ${ms}ms linear`;
-      setK(dismiss ? 0 : 1);
-      // Повертаємо елемент під керування CSS (інакше інлайн-стиль лишиться
-      // на наступне відкриття і фон відкриється вже підсвітленим).
+      if (!base) return;              // нічого не чіпали — нічого й повертати
+      el.style.transition = `${prop} ${ms}ms linear`;
+      // Закриття — гасимо до прозорого. Повернення — СКИДАЄМО інлайн, щоб доїхати рівно
+      // до істини CSS: якщо жест почався ще під час появи модалки, запам'ятований спокій
+      // був проміжним, і повертатись треба не до нього, а до кінцевого стану.
+      if (dismiss) setK(0); else clearInline();
       setTimeout(() => {
         el.style.transition = '';
-        el.style.opacity = '';
-        el.style.backgroundColor = '';
+        if (dismiss) clearInline();
+        base = null;                  // наступний жест переміряє (поворот екрана, зміна теми)
       }, ms + 30);
     },
   };

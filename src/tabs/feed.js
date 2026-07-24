@@ -627,8 +627,10 @@ function openComments(postId) {
   sendBtn.addEventListener('click', send);
   input.addEventListener('keydown', e => { if (e.key === 'Enter') send(); });
 
-  attachSheetSwipe(sheet, sheet.querySelector('.fd-sheet'), listEl, close);   // свайп-закриття
+  // Спершу в DOM, ТОДІ дротуємо жест: обробники читають реальні стилі елемента, а поза
+  // документом браузер віддає порожнечу (через це фон спалахував чорним — див. sheet-motion.js).
   document.body.appendChild(sheet);
+  attachSheetSwipe(sheet, sheet.querySelector('.fd-sheet'), listEl, close);   // свайп-закриття
   requestAnimationFrame(() => sheet.classList.add('open'));
 }
 
@@ -958,8 +960,8 @@ function openPageTeam(pageId) {
     else showToast('Не вдалося додати — спробуй ще раз');
   });
 
+  document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);
-  document.body.appendChild(back);
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
@@ -1114,8 +1116,8 @@ function openComposer(pageId, editPost = null) {
     }
   });
 
+  document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
-  document.body.appendChild(back);
   autoGrowTextarea(back.querySelector('.fd-comp-text'));   // поле росте по тексту (скрол — сам лист)
   requestAnimationFrame(() => back.classList.add('open'));
 }
@@ -1214,8 +1216,8 @@ function openPageEditor(pageId) {
     }
   });
 
+  document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
-  document.body.appendChild(back);
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
@@ -1248,8 +1250,8 @@ function openPostMenu(postId) {
     renderFeed();
     if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
   });
+  document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
-  document.body.appendChild(back);
   requestAnimationFrame(() => back.classList.add('open'));
 }
 

@@ -1872,28 +1872,57 @@
     if (!el)
       return null;
     const isBg = mode === "bg";
-    const parts = isBg ? getComputedStyle(el).backgroundColor.match(/[\d.]+/g) || [] : null;
-    const baseA = isBg ? parts[3] !== void 0 ? +parts[3] : 1 : 1;
+    const prop = isBg ? "background-color" : "opacity";
+    let base = null;
+    const readBase = () => {
+      const cs = getComputedStyle(el);
+      if (isBg) {
+        const m = (cs.backgroundColor || "").match(/[\d.]+/g);
+        if (!m || m.length < 3)
+          return null;
+        return { rgb: [m[0], m[1], m[2]], a: m[3] !== void 0 ? +m[3] : 1 };
+      }
+      const o = parseFloat(cs.opacity);
+      return Number.isFinite(o) ? { o } : null;
+    };
     const setK = (k) => {
+      if (!base)
+        return;
+      const kk = clamp01(k);
       if (isBg)
-        el.style.backgroundColor = `rgba(${parts[0] || 0}, ${parts[1] || 0}, ${parts[2] || 0}, ${(baseA * k).toFixed(3)})`;
+        el.style.backgroundColor = `rgba(${base.rgb[0]}, ${base.rgb[1]}, ${base.rgb[2]}, ${(base.a * kk).toFixed(3)})`;
       else
-        el.style.opacity = k.toFixed(3);
+        el.style.opacity = (base.o * kk).toFixed(3);
+    };
+    const clearInline = () => {
+      el.style.opacity = "";
+      el.style.backgroundColor = "";
     };
     return {
       // p — прогрес жесту 0..1 (0 = панель на місці, 1 = пішла повністю)
       track(p) {
+        if (!base) {
+          base = readBase();
+          if (!base)
+            return;
+        }
         el.style.transition = "none";
         setK(1 - (1 - BACK_MIN) * clamp01(p));
       },
       // Доїзд разом із панеллю: за ТОЙ САМИЙ час, тож фон і панель рухаються як одне ціле.
       settle(dismiss, ms) {
-        el.style.transition = `${isBg ? "background-color" : "opacity"} ${ms}ms linear`;
-        setK(dismiss ? 0 : 1);
+        if (!base)
+          return;
+        el.style.transition = `${prop} ${ms}ms linear`;
+        if (dismiss)
+          setK(0);
+        else
+          clearInline();
         setTimeout(() => {
           el.style.transition = "";
-          el.style.opacity = "";
-          el.style.backgroundColor = "";
+          if (dismiss)
+            clearInline();
+          base = null;
         }, ms + 30);
       }
     };
@@ -11367,8 +11396,8 @@ ${ev.description || ""}`
       if (e.key === "Enter")
         send();
     });
-    attachSheetSwipe(sheet, sheet.querySelector(".fd-sheet"), listEl, close);
     document.body.appendChild(sheet);
+    attachSheetSwipe(sheet, sheet.querySelector(".fd-sheet"), listEl, close);
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
   function screenListHtml(tab, pagePosts) {
@@ -11663,8 +11692,8 @@ ${ev.description || ""}`
       else
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
     });
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     requestAnimationFrame(() => back.classList.add("open"));
   }
   var MAX_PHOTOS = 10;
@@ -11832,8 +11861,8 @@ ${ev.description || ""}`
         alert((edit ? "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " : "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438: ") + (res.error || ""));
       }
     });
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     autoGrowTextarea(back.querySelector(".fd-comp-text"));
     requestAnimationFrame(() => back.classList.add("open"));
   }
@@ -11955,8 +11984,8 @@ ${ev.description || ""}`
         alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + (res.error || ""));
       }
     });
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     requestAnimationFrame(() => back.classList.add("open"));
   }
   function openPostMenu(postId) {
@@ -12000,8 +12029,8 @@ ${ev.description || ""}`
       if (hadScreen)
         openPageScreen(post.page_id, true);
     });
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     requestAnimationFrame(() => back.classList.add("open"));
   }
   function wireCards(root) {
