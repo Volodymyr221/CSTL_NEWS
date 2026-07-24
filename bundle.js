@@ -10926,6 +10926,10 @@ ${ev.description || ""}`
     screen.className = "fd-screen";
     screen.innerHTML = `
     <div class="fd-screen-fixedbar">
+      <div class="fd-screen-titlebar">
+        <div class="fd-tb-name">${escapeHtml(page.name)}</div>
+        ${page.theme ? `<div class="fd-tb-theme">${escapeHtml(page.theme)}</div>` : ""}
+      </div>
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
       <button class="fd-bell${subscribed ? " fd-bell--on" : ""}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
@@ -10984,6 +10988,25 @@ ${ev.description || ""}`
         if (!menuPop.hidden)
           menuPop.hidden = true;
       });
+    }
+    const titlebar = screen.querySelector(".fd-screen-titlebar");
+    const bigName = screen.querySelector(".fd-screen-name");
+    if (titlebar && bigName) {
+      let tRaf = 0;
+      const applyTitle = () => {
+        tRaf = 0;
+        const barBottom = titlebar.getBoundingClientRect().bottom;
+        const nameBottom = bigName.getBoundingClientRect().bottom;
+        const t = Math.min(1, Math.max(0, (barBottom - nameBottom) / 40));
+        titlebar.style.opacity = t.toFixed(3);
+        titlebar.style.pointerEvents = t > 0.6 ? "auto" : "none";
+      };
+      const onTitle = () => {
+        if (!tRaf)
+          tRaf = requestAnimationFrame(applyTitle);
+      };
+      screen.addEventListener("scroll", onTitle, { passive: true });
+      requestAnimationFrame(applyTitle);
     }
     document.body.appendChild(screen);
     requestAnimationFrame(() => screen.classList.add("open"));

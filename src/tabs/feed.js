@@ -609,6 +609,10 @@ async function openPageScreen(pageId) {
   screen.className = 'fd-screen';
   screen.innerHTML = `
     <div class="fd-screen-fixedbar">
+      <div class="fd-screen-titlebar">
+        <div class="fd-tb-name">${escapeHtml(page.name)}</div>
+        ${page.theme ? `<div class="fd-tb-theme">${escapeHtml(page.theme)}</div>` : ''}
+      </div>
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
       <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
@@ -668,6 +672,27 @@ async function openPageScreen(pageId) {
   if (menuBtn && menuPop) {
     menuBtn.addEventListener('click', e => { e.stopPropagation(); menuPop.hidden = !menuPop.hidden; });
     screen.addEventListener('click', () => { if (!menuPop.hidden) menuPop.hidden = true; });
+  }
+
+  // Sticky-заголовок: коли велика назва йде під верхній бар — компактна назва+опис
+  // плавно проявляється (opacity 0→1 = блюр «наростає»), лишається на рівні іконок.
+  // scroll-linked (за пальцем), rAF-троттлінг. Реф-точка — нижній край .fd-screen-titlebar.
+  const titlebar = screen.querySelector('.fd-screen-titlebar');
+  const bigName = screen.querySelector('.fd-screen-name');
+  if (titlebar && bigName) {
+    let tRaf = 0;
+    const applyTitle = () => {
+      tRaf = 0;
+      const barBottom = titlebar.getBoundingClientRect().bottom;
+      const nameBottom = bigName.getBoundingClientRect().bottom;
+      // t=0 поки велика назва нижче бара; 0→1 на 40px коли вона йде під бар.
+      const t = Math.min(1, Math.max(0, (barBottom - nameBottom) / 40));
+      titlebar.style.opacity = t.toFixed(3);
+      titlebar.style.pointerEvents = t > 0.6 ? 'auto' : 'none';
+    };
+    const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
+    screen.addEventListener('scroll', onTitle, { passive: true });
+    requestAnimationFrame(applyTitle);
   }
 
   document.body.appendChild(screen);
