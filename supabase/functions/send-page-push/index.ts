@@ -39,21 +39,32 @@ serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Хто викликає (за JWT)
-    const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
-    const callerUid = userData?.user?.id;
-    if (userErr || !callerUid) return json({ error: 'bad token' }, 401);
+    // ── Хто викликає: сервер чи людина? ──────────────────────────────────────
+    // ДВА довірених джерела виклику:
+    //   1) ТРИГЕР БАЗИ (основний, надійний) — ходить із ключем service_role. Це не
+    //      користувацький токен, тож getUser() його не розпізнає; впізнаємо за полем
+    //      role у самому JWT. Базі довіряємо: вона кличе рівно на реальний INSERT.
+    //   2) БРАУЗЕР АВТОРА (підстраховка) — звичайний користувацький токен, для нього
+    //      лишається сувора перевірка «ти справді автор цього поста».
+    const isServiceCall = jwtRole(jwt) === 'service_role';
+
+    let callerUid: string | null = null;
+    if (!isServiceCall) {
+      const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
+      callerUid = userData?.user?.id ?? null;
+      if (userErr || !callerUid) return json({ error: 'bad token' }, 401);
+    }
 
     const { post_id } = await req.json().catch(() => ({}));
     if (!post_id) return json({ error: 'no post_id' }, 400);
 
-    // Пост + перевірка що викликач — його автор
+    // Пост + (для виклику людиною) перевірка що викликач — його автор
     const { data: post } = await admin
       .from('page_posts')
       .select('id, page_id, author_uid, text, image_urls')
       .eq('id', post_id).single();
     if (!post) return json({ error: 'post not found' }, 404);
-    if (post.author_uid !== callerUid) return json({ error: 'not author' }, 403);
+    if (!isServiceCall && post.author_uid !== callerUid) return json({ error: 'not author' }, 403);
 
     // 🔒 ІДЕМПОТЕНТНІСТЬ: розсилка про один пост — рівно раз.
     // Функцію можуть покликати ДВІЧІ: тригер бази (надійний шлях) і браузер автора
@@ -72,10 +83,13 @@ serve(async (req) => {
       .from('pages').select('name').eq('id', post.page_id).single();
     const pageName = (page && page.name) || 'Стрічка';
 
-    // Підписники сторінки, крім автора
-    const { data: subs } = await admin
+    // Підписники сторінки, крім АВТОРА ПОСТА. Беремо саме post.author_uid, а не
+    // викликача: при виклику з тригера бази викликач — сервер, а не людина.
+    let subsQuery = admin
       .from('page_subscriptions').select('uid')
-      .eq('page_id', post.page_id).neq('uid', callerUid);
+      .eq('page_id', post.page_id);
+    if (post.author_uid) subsQuery = subsQuery.neq('uid', post.author_uid);
+    const { data: subs } = await subsQuery;
     const recipientUids = (subs || []).map((s: { uid: string }) => s.uid);
     if (!recipientUids.length) return json({ sent: 0, reason: 'no subscribers' });
 
@@ -123,6 +137,18 @@ serve(async (req) => {
     return json({ error: e.message }, 500);
   }
 });
+
+// Роль із JWT без перевірки підпису — і це безпечно: підпис уже перевірив шлюз Supabase
+// (verify_jwt = true), сюди доходять лише токени, підписані ключем цього проєкту.
+// Нам потрібно лише відрізнити службовий ключ (тригер бази) від користувацького.
+function jwtRole(jwt: string): string | null {
+  try {
+    const payload = jwt.split('.')[1];
+    if (!payload) return null;
+    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
+    return JSON.parse(atob(b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '='))).role ?? null;
+  } catch { return null; }
+}
 
 function json(obj: unknown, status = 200) {
   return new Response(JSON.stringify(obj), {
