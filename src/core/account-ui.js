@@ -13,8 +13,8 @@ import { openThreadsList, openMyAds } from '../tabs/board-chat.js';
 import { ICONS } from './icons.js';
 import { openSavedHub } from './saved-hub.js';
 import { SETTLEMENTS, OTHER_SETTLEMENT } from './settlements.js';
-import { escapeHtml, showToast, avatarCircle, squareImageBlob } from './utils.js';
-import { uploadPhotoToStorage } from './supabase.js';
+import { escapeHtml, showToast, avatarCircle } from './utils.js';
+import { uploadImageReliable } from './upload.js';   // стиснення(square)+повтор — єдиний надійний шлях
 import { openModal as openModalPrimitive, closeModal as closeModalPrimitive } from './modal.js';
 
 let _newUserChecked = false;  // чи вже перевіряли профіль на авто-показ (раз за сесію)
@@ -267,8 +267,7 @@ async function openAccount() {
     if (!file) return;
     avBtn.disabled = true; avBox.classList.add('acc-av--loading');
     try {
-      const blob = await squareImageBlob(file, 256);
-      const { url, error } = await uploadPhotoToStorage(blob, 'avatars/');
+      const { url, error } = await uploadImageReliable(file, { folder: 'avatars/', square: true, maxDim: 256 });
       if (!url) throw new Error(error || 'upload');
       const res = await saveProfile({ avatar_url: url });
       if (!res.ok) throw new Error(res.error || 'save');
