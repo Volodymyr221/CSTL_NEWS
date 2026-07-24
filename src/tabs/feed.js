@@ -16,6 +16,7 @@ import {
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
+  fetchPageModerators, addPageModerator, removePageModerator,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -37,6 +38,7 @@ const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
 const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
+const IC_USERS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
 const IC_DOTS   = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
 const IC_TRASH  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7V4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
 
@@ -647,7 +649,10 @@ async function openPageScreen(pageId, reopen = false) {
     <div class="fd-screen-top">
       ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <div class="fd-banner${page.banner_url ? ' fd-banner--view' : ''}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
-      ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
+      ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
+        <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button>
+        <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}Команда сторінки</button>
+      </div>` : ''}
     </div>
     <div class="fd-screen-body">
       <div class="fd-screen-id">
@@ -683,6 +688,8 @@ async function openPageScreen(pageId, reopen = false) {
   attachScreenSwipeBack(screen, closeScreen);   // свайп-назад від лівого краю (як Telegram/iOS)
   const composeBtn = screen.querySelector('.fd-compose-open');
   if (composeBtn) composeBtn.addEventListener('click', () => openComposer(pageId));
+  screen.querySelectorAll('[data-team-page]').forEach(b =>
+    b.addEventListener('click', () => openPageTeam(pageId)));
   screen.querySelectorAll('[data-edit-page]').forEach(b =>
     b.addEventListener('click', () => openPageEditor(pageId)));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
@@ -868,6 +875,85 @@ async function healFeedPushDevice() {
     if (Notification.permission !== 'granted') return;  // дозвіл питає лише тап по дзвіночку
     await registerFeedPushDevice();
   } catch (e) { console.warn('[feed] healFeedPushDevice:', e && e.message); }
+}
+
+// ── Команда сторінки: власник + модератори (крок 5 потоку 24.07) ────────────
+// Модератор може писати й редагувати пости сторінки, але додавати інших людей —
+// ні: це право лише власника (перевірка на сервері, RPC can_manage_page).
+// Додаємо за поштою: людина мусить хоч раз зайти в додаток через Google, інакше
+// її акаунта ще не існує і сервер відповість «not_found».
+function openPageTeam(pageId) {
+  const page = pages.find(p => p.id === pageId);
+  if (!page) return;
+
+  const back = document.createElement('div');
+  back.className = 'fd-sheet-back';
+  back.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">Команда сторінки</div>
+      <div class="fd-team-list">Завантажую…</div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">Додати модератора за поштою</div>
+        <div class="fd-team-add">
+          <input class="fd-edit-input" data-email type="email" inputmode="email"
+                 autocapitalize="off" autocorrect="off" placeholder="ім'я@gmail.com">
+          <button class="fd-team-add-btn" type="button">Додати</button>
+        </div>
+        <div class="fd-team-hint">Людина має хоча б раз зайти в додаток через Google — інакше її акаунта ще немає.</div>
+      </div>
+    </div>`;
+  const close = () => back.remove();
+  back.addEventListener('click', e => { if (e.target === back) close(); });
+
+  const listEl = back.querySelector('.fd-team-list');
+  const render = (rows) => {
+    if (!rows.length) {
+      listEl.innerHTML = '<div class="fd-team-empty">Керувати командою може лише власник сторінки.</div>';
+      return;
+    }
+    listEl.innerHTML = rows.map(r => `
+      <div class="fd-team-row">
+        <div class="fd-team-who">
+          <b>${escapeHtml(r.name || 'Без імені')}</b>
+          <span>${escapeHtml(r.email || '')}</span>
+        </div>
+        <span class="fd-team-role">${r.role === 'owner' ? 'Власник' : 'Модератор'}</span>
+        ${r.role === 'owner' ? '' : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="Прибрати">${IC_X}</button>`}
+      </div>`).join('');
+  };
+
+  const reload = async () => render(await fetchPageModerators(pageId));
+  reload();
+
+  // Прибрати модератора (власника прибрати не можна — захист на сервері).
+  listEl.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-del]');
+    if (!btn) return;
+    if (!confirm('Прибрати цю людину зі сторінки?')) return;
+    btn.disabled = true;
+    const res = await removePageModerator(pageId, btn.dataset.del);
+    if (res === 'ok') { showToast('Прибрано'); reload(); }
+    else if (res === 'owner_protected') { btn.disabled = false; showToast('Власника сторінки прибрати не можна'); }
+    else { btn.disabled = false; showToast('Не вдалося — спробуй ще раз'); }
+  });
+
+  const emailEl = back.querySelector('[data-email]');
+  const addBtn = back.querySelector('.fd-team-add-btn');
+  addBtn.addEventListener('click', async () => {
+    const email = emailEl.value.trim();
+    if (!email || !email.includes('@')) { showToast('Введи пошту повністю'); emailEl.focus(); return; }
+    addBtn.disabled = true; addBtn.textContent = 'Додаю…';
+    const res = await addPageModerator(pageId, email);
+    addBtn.disabled = false; addBtn.textContent = 'Додати';
+    if (res === 'ok') { emailEl.value = ''; showToast('Модератора додано'); reload(); }
+    else if (res === 'not_found') showToast('Такого користувача ще немає — хай спершу зайде в додаток');
+    else showToast('Не вдалося додати');
+  });
+
+  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);
+  document.body.appendChild(back);
+  requestAnimationFrame(() => back.classList.add('open'));
 }
 
 // ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────

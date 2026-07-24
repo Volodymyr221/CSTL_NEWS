@@ -1458,6 +1458,36 @@
       console.info("[push] send-page-push:", JSON.stringify(data));
     }).catch((e) => console.warn("[push] send-page-push \u0432\u043F\u0430\u043B\u0430:", e?.message));
   }
+  async function fetchPageModerators(pageId) {
+    if (!supa)
+      return [];
+    const { data, error } = await supa.rpc("list_page_moderators", { p_page_id: pageId });
+    if (error) {
+      console.warn("[supabase] list_page_moderators:", error.message);
+      return [];
+    }
+    return data || [];
+  }
+  async function addPageModerator(pageId, email) {
+    if (!supa)
+      return "error";
+    const { data, error } = await supa.rpc("add_page_moderator", { p_page_id: pageId, p_email: email });
+    if (error) {
+      console.warn("[supabase] add_page_moderator:", error.message);
+      return "error";
+    }
+    return data || "error";
+  }
+  async function removePageModerator(pageId, uid) {
+    if (!supa)
+      return "error";
+    const { data, error } = await supa.rpc("remove_page_moderator", { p_page_id: pageId, p_uid: uid });
+    if (error) {
+      console.warn("[supabase] remove_page_moderator:", error.message);
+      return "error";
+    }
+    return data || "error";
+  }
 
   // src/core/auth.js
   var _user = null;
@@ -10425,6 +10455,7 @@ ${ev.description || ""}`
   var IC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
   var IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
+  var IC_USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
   var IC_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
   var IC_TRASH = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16"/><path d="M10 11v6M14 11v6"/><path d="M5 7l1 12a2 2 0 0 0 2 2h8a2 2 0 0 0 2 -2l1 -12"/><path d="M9 7V4a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v3"/></svg>';
   var pages = [];
@@ -11051,7 +11082,10 @@ ${ev.description || ""}`
     <div class="fd-screen-top">
       ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="\u041C\u0435\u043D\u044E \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438">${IC_DOTS}</button>` : ""}
       <div class="fd-banner${page.banner_url ? " fd-banner--view" : ""}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
-      ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
+      ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
+        <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button>
+        <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438</button>
+      </div>` : ""}
     </div>
     <div class="fd-screen-body">
       <div class="fd-screen-id">
@@ -11085,6 +11119,7 @@ ${ev.description || ""}`
     const composeBtn = screen.querySelector(".fd-compose-open");
     if (composeBtn)
       composeBtn.addEventListener("click", () => openComposer(pageId));
+    screen.querySelectorAll("[data-team-page]").forEach((b) => b.addEventListener("click", () => openPageTeam(pageId)));
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
@@ -11269,6 +11304,96 @@ ${ev.description || ""}`
     } catch (e) {
       console.warn("[feed] healFeedPushDevice:", e && e.message);
     }
+  }
+  function openPageTeam(pageId) {
+    const page = pages.find((p) => p.id === pageId);
+    if (!page)
+      return;
+    const back = document.createElement("div");
+    back.className = "fd-sheet-back";
+    back.innerHTML = `
+    <div class="fd-sheet">
+      <div class="fd-sheet-handle"></div>
+      <div class="fd-sheet-title">\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438</div>
+      <div class="fd-team-list">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u044E\u2026</div>
+      <div class="fd-edit-field">
+        <div class="fd-edit-label">\u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0437\u0430 \u043F\u043E\u0448\u0442\u043E\u044E</div>
+        <div class="fd-team-add">
+          <input class="fd-edit-input" data-email type="email" inputmode="email"
+                 autocapitalize="off" autocorrect="off" placeholder="\u0456\u043C'\u044F@gmail.com">
+          <button class="fd-team-add-btn" type="button">\u0414\u043E\u0434\u0430\u0442\u0438</button>
+        </div>
+        <div class="fd-team-hint">\u041B\u044E\u0434\u0438\u043D\u0430 \u043C\u0430\u0454 \u0445\u043E\u0447\u0430 \u0431 \u0440\u0430\u0437 \u0437\u0430\u0439\u0442\u0438 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0447\u0435\u0440\u0435\u0437 Google \u2014 \u0456\u043D\u0430\u043A\u0448\u0435 \u0457\u0457 \u0430\u043A\u0430\u0443\u043D\u0442\u0430 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454.</div>
+      </div>
+    </div>`;
+    const close = () => back.remove();
+    back.addEventListener("click", (e) => {
+      if (e.target === back)
+        close();
+    });
+    const listEl = back.querySelector(".fd-team-list");
+    const render2 = (rows) => {
+      if (!rows.length) {
+        listEl.innerHTML = '<div class="fd-team-empty">\u041A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u044E \u043C\u043E\u0436\u0435 \u043B\u0438\u0448\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438.</div>';
+        return;
+      }
+      listEl.innerHTML = rows.map((r) => `
+      <div class="fd-team-row">
+        <div class="fd-team-who">
+          <b>${escapeHtml(r.name || "\u0411\u0435\u0437 \u0456\u043C\u0435\u043D\u0456")}</b>
+          <span>${escapeHtml(r.email || "")}</span>
+        </div>
+        <span class="fd-team-role">${r.role === "owner" ? "\u0412\u043B\u0430\u0441\u043D\u0438\u043A" : "\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440"}</span>
+        ${r.role === "owner" ? "" : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438">${IC_X}</button>`}
+      </div>`).join("");
+    };
+    const reload = async () => render2(await fetchPageModerators(pageId));
+    reload();
+    listEl.addEventListener("click", async (e) => {
+      const btn = e.target.closest("[data-del]");
+      if (!btn)
+        return;
+      if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044E \u043B\u044E\u0434\u0438\u043D\u0443 \u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438?"))
+        return;
+      btn.disabled = true;
+      const res = await removePageModerator(pageId, btn.dataset.del);
+      if (res === "ok") {
+        showToast("\u041F\u0440\u0438\u0431\u0440\u0430\u043D\u043E");
+        reload();
+      } else if (res === "owner_protected") {
+        btn.disabled = false;
+        showToast("\u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u043F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u043D\u0435 \u043C\u043E\u0436\u043D\u0430");
+      } else {
+        btn.disabled = false;
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
+      }
+    });
+    const emailEl = back.querySelector("[data-email]");
+    const addBtn = back.querySelector(".fd-team-add-btn");
+    addBtn.addEventListener("click", async () => {
+      const email = emailEl.value.trim();
+      if (!email || !email.includes("@")) {
+        showToast("\u0412\u0432\u0435\u0434\u0438 \u043F\u043E\u0448\u0442\u0443 \u043F\u043E\u0432\u043D\u0456\u0441\u0442\u044E");
+        emailEl.focus();
+        return;
+      }
+      addBtn.disabled = true;
+      addBtn.textContent = "\u0414\u043E\u0434\u0430\u044E\u2026";
+      const res = await addPageModerator(pageId, email);
+      addBtn.disabled = false;
+      addBtn.textContent = "\u0414\u043E\u0434\u0430\u0442\u0438";
+      if (res === "ok") {
+        emailEl.value = "";
+        showToast("\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0434\u043E\u0434\u0430\u043D\u043E");
+        reload();
+      } else if (res === "not_found")
+        showToast("\u0422\u0430\u043A\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A");
+      else
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438");
+    });
+    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
+    document.body.appendChild(back);
+    requestAnimationFrame(() => back.classList.add("open"));
   }
   var MAX_PHOTOS = 10;
   function openComposer(pageId, editPost = null) {

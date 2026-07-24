@@ -442,3 +442,35 @@
   background: var(--fd-surface); color: var(--fd-accent);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
+
+/* ── Команда сторінки (власник + модератори) ─────────────────────────────── */
+.fd-team-list { margin: 4px 0 14px; }
+.fd-team-row {
+  display: flex; align-items: center; gap: 10px; padding: 10px 0;
+  border-bottom: 1px solid rgba(0,0,0,0.06);
+}
+.fd-team-row:last-child { border-bottom: 0; }
+.fd-team-who { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fd-team-who b { font-size: 15px; color: var(--fd-ink); }
+/* Пошта може бути довга — обрізаємо трикрапкою, щоб рядок не ламав розкладку */
+.fd-team-who span { font-size: 12.5px; color: var(--fd-muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-team-role {
+  flex: 0 0 auto; font-size: 12px; color: var(--fd-accent);
+  background: rgba(114,47,55,0.08); border-radius: 10px; padding: 3px 9px;
+}
+.fd-team-del {
+  flex: 0 0 auto; width: 30px; height: 30px; border: 0; border-radius: 50%;
+  background: rgba(0,0,0,0.05); color: var(--fd-muted);
+  display: flex; align-items: center; justify-content: center; cursor: pointer;
+}
+.fd-team-del svg { width: 16px; height: 16px; }
+.fd-team-empty { font-size: 14px; color: var(--fd-muted); padding: 6px 0 2px; }
+/* Поле пошти + кнопка в один рядок: поле тягнеться, кнопка по вмісту */
+.fd-team-add { display: flex; gap: 8px; align-items: center; }
+.fd-team-add .fd-edit-input { flex: 1; min-width: 0; }
+.fd-team-add-btn {
+  flex: 0 0 auto; height: 44px; padding: 0 16px; border: 0; border-radius: 12px;
+  background: var(--fd-accent); color: #fff; font-size: 15px; font-weight: 600; cursor: pointer;
+}
+.fd-team-add-btn:disabled { opacity: 0.6; }
+.fd-team-hint { font-size: 12px; color: var(--fd-muted); margin-top: 8px; line-height: 1.4; }
