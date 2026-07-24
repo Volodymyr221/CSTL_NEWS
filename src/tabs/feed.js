@@ -608,12 +608,14 @@ async function openPageScreen(pageId) {
   const screen = document.createElement('div');
   screen.className = 'fd-screen';
   screen.innerHTML = `
-    <div class="fd-screen-top">
+    <div class="fd-screen-fixedbar">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
+    </div>
+    <div class="fd-screen-top">
+      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <div class="fd-banner${page.banner_url ? ' fd-banner--view' : ''}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
       ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button></div>` : ''}
     </div>

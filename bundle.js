@@ -10925,12 +10925,14 @@ ${ev.description || ""}`
     const screen = document.createElement("div");
     screen.className = "fd-screen";
     screen.innerHTML = `
-    <div class="fd-screen-top">
+    <div class="fd-screen-fixedbar">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="\u041C\u0435\u043D\u044E \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438">${IC_DOTS}</button>` : ""}
       <button class="fd-bell${subscribed ? " fd-bell--on" : ""}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
+    </div>
+    <div class="fd-screen-top">
+      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="\u041C\u0435\u043D\u044E \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438">${IC_DOTS}</button>` : ""}
       <div class="fd-banner${page.banner_url ? " fd-banner--view" : ""}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}</div>
       ${canEdit ? `<div class="fd-screen-menu-pop" hidden><button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</button></div>` : ""}
     </div>
