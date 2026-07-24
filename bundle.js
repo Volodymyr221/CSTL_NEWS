@@ -11497,8 +11497,34 @@ ${ev.description || ""}`
       const RANGE = 60;
       const SETTLE = 0;
       const titleIn = title.querySelector(".fd-screen-title-in");
+      const ICON_ZONE = 58;
+      const PIN_MAX = 0.9;
+      const PIN_MIN = 0.7;
+      const widestLine = (el) => {
+        if (!el)
+          return 0;
+        const r = document.createRange();
+        r.selectNodeContents(el);
+        return [...r.getClientRects()].reduce((w, x) => Math.max(w, x.width), 0);
+      };
+      const measurePin = () => {
+        if (!titleIn)
+          return;
+        const prevP = title.style.getPropertyValue("--p");
+        title.style.setProperty("--p", "0");
+        const w = Math.max(
+          widestLine(title.querySelector(".fd-screen-name")),
+          widestLine(title.querySelector(".fd-screen-theme"))
+        );
+        title.style.setProperty("--p", prevP || "0");
+        const avail = Math.max(window.innerWidth - ICON_ZONE * 2, 1);
+        const fit = w > 0 ? avail / w : PIN_MAX;
+        const s = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
+        title.style.setProperty("--fd-pin-s", s.toFixed(3));
+      };
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
+        measurePin();
         if (titleIn)
           title.style.setProperty("--fd-th", `${titleIn.offsetHeight}px`);
       };

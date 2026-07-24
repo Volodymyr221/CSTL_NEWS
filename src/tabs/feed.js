@@ -769,8 +769,39 @@ async function openPageScreen(pageId, reopen = false) {
     // Заразом віддаємо склу реальну висоту заголовка (--fd-th): у довгих назв це 3 рядки
     // замість 2, і без цього скло не дотягувалось — опис випадав з-під блюру (IMG_3564).
     // offsetHeight = висота В ПОТОЦІ, на неї scale не впливає, тож міряти можна будь-коли.
+    // Наскільки зменшувати назву у піні — рахуємо ДИНАМІЧНО (Вова 24.07, IMG_3568).
+    // Було жорстко 0.78 для всіх: коротка «OLYKA CASTLE» стискалась так само сильно, як
+    // довжелезна назва, хоч місця мала вдосталь. Тепер зменшуємо рівно настільки, щоб
+    // текст влізав між іконками «назад»/«дзвіночок» — і не більше.
+    const ICON_ZONE = 58;     // 12 (відступ іконки) + 38 (сама іконка) + 8 (на дихання)
+    const PIN_MAX   = 0.90;   // менше за 1 завжди — інакше зменшення взагалі не читалось би
+    const PIN_MIN   = 0.70;   // дрібніше — вже погано читається
+    // Ширина найширшого РЯДКА (не коробки): рядок може бути коротшим за доступну ширину,
+    // і тоді стискати його нема потреби. Range дає геометрію по рядках.
+    const widestLine = (el) => {
+      if (!el) return 0;
+      const r = document.createRange();
+      r.selectNodeContents(el);
+      return [...r.getClientRects()].reduce((w, x) => Math.max(w, x.width), 0);
+    };
+    const measurePin = () => {
+      if (!titleIn) return;
+      // Рядки міряються у ЕКРАННИХ координатах, тобто вже із застосованим зменшенням.
+      // Тому на час заміру знімаємо його (--p:0) і одразу повертаємо — в межах одного
+      // кадру, на екрані не видно. Робиться лише при відкритті сторінки і при повороті.
+      const prevP = title.style.getPropertyValue('--p');
+      title.style.setProperty('--p', '0');
+      const w = Math.max(widestLine(title.querySelector('.fd-screen-name')),
+                         widestLine(title.querySelector('.fd-screen-theme')));
+      title.style.setProperty('--p', prevP || '0');
+      const avail = Math.max(window.innerWidth - ICON_ZONE * 2, 1);
+      const fit = w > 0 ? avail / w : PIN_MAX;
+      const s = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
+      title.style.setProperty('--fd-pin-s', s.toFixed(3));
+    };
     const measure = () => {
       pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
+      measurePin();   // спершу масштаб — від нього залежить і висота скла нижче
       if (titleIn) title.style.setProperty('--fd-th', `${titleIn.offsetHeight}px`);
     };
     const applyTitle = () => {
