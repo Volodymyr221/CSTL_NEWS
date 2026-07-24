@@ -173,10 +173,14 @@
 .fd-screen-top { position: relative; height: 150px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
 .fd-banner { position: absolute; inset: 0; }
 .fd-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* Липкий бар back/bell: sticky top:0, height:0 — перший елемент .fd-screen, тримається
+   вгорі видимої області при скролі (не залежить від transform .fd-screen, на відміну від
+   fixed). Кнопки всередині — absolute, тож завжди видно на екрані. */
+.fd-screen-fixedbar { position: sticky; top: 0; z-index: 5; height: 0; }
 .fd-screen-back, .fd-bell, .fd-screen-menu {
-  /* back/bell — fixed (статичні при скролі, лишаються на місці); .fd-screen має transform,
-     тож fixed прив'язується до нього (повноекранного) і не скролиться. */
-  position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 5;
+  /* back/bell — усередині .fd-screen-fixedbar (sticky), тож absolute відносно нього →
+     завжди на екрані при скролі. «⋯» — absolute у банері (прокручується). */
+  position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 2;
   width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(0,0,0,0.38); color: #fff; display: flex; align-items: center; justify-content: center;
   -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
@@ -184,7 +188,7 @@
 .fd-screen-back { left: 12px; }
 .fd-bell { right: 12px; }
 /* «⋯» лишається як було — прокручується з банером (щоб узгоджуватись зі своїм поповером). */
-.fd-screen-menu { right: 58px; position: absolute; z-index: 2; }
+.fd-screen-menu { right: 58px; }
 .fd-screen-back svg, .fd-bell svg, .fd-screen-menu svg { width: 21px; height: 21px; }
 .fd-bell--on { background: #fff; color: var(--fd-accent); }
 /* Тап по банеру/аватару → перегляд фото на весь екран. */
