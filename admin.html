@@ -1607,8 +1607,10 @@ document.getElementById('btn-logout').addEventListener('click', window.supabase_
 // «← На сайт» — повертає на index.html БЕЗ виходу з адмінки.
 // Сесія Supabase лишається у localStorage, при наступному відкритті admin.html
 // одразу всередині без введення пароля.
+// location.replace (не href) — заміняє запис адмінки в історії браузера, тож
+// свайпом-назад у додатку в адмінку більше НЕ потрапиш (Вова 24.07).
 document.getElementById('btn-minimize').addEventListener('click', () => {
-  window.location.href = './';
+  window.location.replace('./');
 });
 
 // Старт
