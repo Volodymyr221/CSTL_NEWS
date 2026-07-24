@@ -17,7 +17,7 @@ import {
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
 } from '../core/supabase.js';
-import { ensurePushSubscription } from '../core/push.js';
+import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
@@ -635,7 +635,7 @@ async function openPageScreen(pageId) {
   screen.innerHTML = `
     <div class="fd-screen-fixedbar">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
+      <button class="fd-bell${bellClass(pageId)}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
     </div>
@@ -765,6 +765,24 @@ function attachScreenSwipeBack(screen, close) {
   }, { passive: false });
 }
 
+// ── Чесний дзвіночок: три стани ──────────────────────────────────────────────
+// 🔔 порожній  — не підписаний;
+// 🔔 залитий   — підписаний, сповіщення реально дійдуть;
+// ⚠️ бурштин   — підписаний, АЛЕ сповіщення НЕ дійдуть (нема дозволу / пристрій не вміє).
+// Третій стан головний: раніше дзвіночок горів «увімкнено» навіть коли дозволу нема —
+// користувач був певен що підписався, а не приходило нічого.
+function bellClass(pageId) {
+  if (!mySubs.has(pageId)) return '';
+  return pushBlockedMsg() ? ' fd-bell--on fd-bell--warn' : ' fd-bell--on';
+}
+function paintBell(btn, pageId) {
+  if (!btn) return;
+  btn.className = `fd-bell${bellClass(pageId)}`;
+  btn.innerHTML = mySubs.has(pageId) ? IC_BELL_F : IC_BELL;
+  const why = mySubs.has(pageId) ? pushBlockedMsg() : null;
+  btn.setAttribute('aria-label', why ? `Сповіщення: ${why}` : 'Сповіщення');
+}
+
 async function toggleBell(pageId, screen) {
   if (!isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   const on = !mySubs.has(pageId);
@@ -779,17 +797,24 @@ async function toggleBell(pageId, screen) {
 
   if (on) mySubs.add(pageId); else mySubs.delete(pageId);
   const btn = screen.querySelector('.fd-bell');
-  if (btn) { btn.classList.toggle('fd-bell--on', on); btn.innerHTML = on ? IC_BELL_F : IC_BELL; }
+  paintBell(btn, pageId);
   const res = await setPageSubscription(pageId, currentUserId(), on);
   if (!res.ok) {                       // відкат
     if (on) mySubs.delete(pageId); else mySubs.add(pageId);
-    if (btn) { btn.classList.toggle('fd-bell--on', !on); btn.innerHTML = !on ? IC_BELL_F : IC_BELL; }
+    paintBell(btn, pageId);
+    showToast('Не вдалося зберегти — спробуй ще раз');
     return;
   }
-  // Підписка в базі збережена. Тепер дивимось, чим закінчилась реєстрація пристрою:
-  // якщо push недоступний — кажемо про це чесно (сама підписка лишається, тож коли
-  // користувач дозволить сповіщення пізніше, вони почнуть приходити).
-  if (devicePromise) await devicePromise;
+  // Підписка в базі збережена. Дивимось, чим закінчилась реєстрація пристрою.
+  // Якщо push недоступний — кажемо чесно і лишаємо дзвіночок у стані ⚠️. Саму підписку
+  // НЕ скасовуємо: щойно користувач дозволить сповіщення, вони почнуть приходити
+  // (self-heal при старті перереєструє пристрій — крок 4).
+  if (devicePromise) {
+    const okDevice = await devicePromise;
+    paintBell(btn, pageId);            // дозвіл міг щойно змінитись → перемалювати
+    if (!okDevice) showToast(pushBlockedMsg() || 'Не вдалося увімкнути сповіщення — спробуй ще раз');
+    else showToast('Сповіщення увімкнено');
+  }
 }
 
 // Дозвіл на сповіщення + збереження push-пристрою під акаунт (сповіщення «Стрічки»).
@@ -798,7 +823,7 @@ async function toggleBell(pageId, screen) {
 async function registerFeedPushDevice() {
   try {
     const sub = await ensurePushSubscription();
-    if (!sub) { showToast('Сповіщення вимкнено у браузері — дозволь у налаштуваннях'); return false; }
+    if (!sub) return false;            // ЧОМУ саме — повідомляє викликач (єдине місце тостів)
     const j = sub.toJSON();
     await saveUserPushDevice({
       uid:      currentUserId(),

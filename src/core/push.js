@@ -17,6 +17,15 @@ export function isPushCapable() {
   return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
 }
 
+// Чому сповіщення НЕ зможуть прийти — текст людською мовою, або null якщо все гаразд.
+// Спільне для дзвіночка Автобусів і дзвіночка сторінок «Стрічки»: стан дзвіночка має
+// бути чесний скрізь однаково — краще показати ⚠️ і пояснити, ніж вдавати що працює.
+export function pushBlockedMsg() {
+  if (!isPushCapable()) return 'Сповіщення недоступні на цьому пристрої';
+  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях телефону — увімкни їх для CSTL LIFE';
+  return null;
+}
+
 // Порівнює два ключі застосунку (applicationServerKey) побайтно.
 // Потрібно щоб виявити стару підписку зі старим VAPID-ключем після ротації.
 function pushKeysEqual(a, b) {

@@ -2786,6 +2786,13 @@
   function isPushCapable() {
     return "Notification" in window && "serviceWorker" in navigator && "PushManager" in window;
   }
+  function pushBlockedMsg() {
+    if (!isPushCapable())
+      return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
+    if (Notification.permission === "denied")
+      return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0457\u0445 \u0434\u043B\u044F CSTL LIFE";
+    return null;
+  }
   function pushKeysEqual(a, b) {
     if (!a || !b)
       return false;
@@ -6682,13 +6689,6 @@
         toStop = p.to;
     } catch {
     }
-  }
-  function pushBlockedMsg() {
-    if (!isPushCapable())
-      return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
-    if (Notification.permission === "denied")
-      return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u2014 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F \u043D\u0435 \u043F\u0440\u0438\u0445\u043E\u0434\u0438\u0442\u0438\u043C\u0443\u0442\u044C";
-    return null;
   }
   async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
     if (trackDate < getTodayISO())
@@ -10973,7 +10973,7 @@ ${ev.description || ""}`
     screen.innerHTML = `
     <div class="fd-screen-fixedbar">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      <button class="fd-bell${subscribed ? " fd-bell--on" : ""}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
+      <button class="fd-bell${bellClass(pageId)}" data-bell="${pageId}" type="button" aria-label="\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
     </div>
@@ -11118,6 +11118,19 @@ ${ev.description || ""}`
       }
     }, { passive: false });
   }
+  function bellClass(pageId) {
+    if (!mySubs.has(pageId))
+      return "";
+    return pushBlockedMsg() ? " fd-bell--on fd-bell--warn" : " fd-bell--on";
+  }
+  function paintBell(btn, pageId) {
+    if (!btn)
+      return;
+    btn.className = `fd-bell${bellClass(pageId)}`;
+    btn.innerHTML = mySubs.has(pageId) ? IC_BELL_F : IC_BELL;
+    const why = mySubs.has(pageId) ? pushBlockedMsg() : null;
+    btn.setAttribute("aria-label", why ? `\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F: ${why}` : "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F");
+  }
   async function toggleBell(pageId, screen) {
     if (!isLoggedIn()) {
       requireAuth("\u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F", () => {
@@ -11125,37 +11138,37 @@ ${ev.description || ""}`
       return;
     }
     const on = !mySubs.has(pageId);
+    const devicePromise = on ? registerFeedPushDevice() : null;
     if (on)
       mySubs.add(pageId);
     else
       mySubs.delete(pageId);
     const btn = screen.querySelector(".fd-bell");
-    if (btn) {
-      btn.classList.toggle("fd-bell--on", on);
-      btn.innerHTML = on ? IC_BELL_F : IC_BELL;
-    }
+    paintBell(btn, pageId);
     const res = await setPageSubscription(pageId, currentUserId(), on);
     if (!res.ok) {
       if (on)
         mySubs.delete(pageId);
       else
         mySubs.add(pageId);
-      if (btn) {
-        btn.classList.toggle("fd-bell--on", !on);
-        btn.innerHTML = !on ? IC_BELL_F : IC_BELL;
-      }
+      paintBell(btn, pageId);
+      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
       return;
     }
-    if (on)
-      registerFeedPushDevice();
+    if (devicePromise) {
+      const okDevice = await devicePromise;
+      paintBell(btn, pageId);
+      if (!okDevice)
+        showToast(pushBlockedMsg() || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
+      else
+        showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E");
+    }
   }
   async function registerFeedPushDevice() {
     try {
       const sub = await ensurePushSubscription();
-      if (!sub) {
-        showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u043E \u0443 \u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0456 \u2014 \u0434\u043E\u0437\u0432\u043E\u043B\u044C \u0443 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445");
-        return;
-      }
+      if (!sub)
+        return false;
       const j = sub.toJSON();
       await saveUserPushDevice({
         uid: currentUserId(),
@@ -11163,8 +11176,10 @@ ${ev.description || ""}`
         p256dh: j.keys?.p256dh,
         auth_key: j.keys?.auth
       });
+      return true;
     } catch (e) {
       console.warn("[feed] registerFeedPushDevice:", e && e.message);
+      return false;
     }
   }
   var MAX_PHOTOS = 10;

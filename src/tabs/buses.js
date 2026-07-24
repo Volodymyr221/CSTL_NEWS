@@ -6,7 +6,7 @@ import {
 } from '../core/bus-schedule.js';
 import { getAnonId, savePushSubscription, deletePushSubscription, fetchTrackedRoutesFromDB } from '../core/supabase.js';
 import { isLoggedIn, currentUserId, requireAuth, onAuthChange } from '../core/auth.js';
-import { isPushCapable, ensurePushSubscription } from '../core/push.js';
+import { isPushCapable, ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { ICONS } from '../core/icons.js';
 
 const PREFS_KEY = 'bus_prefs_v2';
@@ -87,13 +87,8 @@ function loadPrefs() {
 // ── Push-сповіщення Level B ───────────────────────────────────────────────────
 // VAPID+urlBase64+isPushCapable+підписка браузера — спільний модуль core/push.js (Б8.1).
 
-// Якщо push недоступний — повертає текст пояснення, інакше null.
-// Використовується для чесного стану дзвіночка і тосту при збереженні.
-function pushBlockedMsg() {
-  if (!isPushCapable()) return 'Сповіщення недоступні на цьому пристрої';
-  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях — нагадування не приходитимуть';
-  return null;
-}
+// pushBlockedMsg (чому сповіщення не дійдуть) переїхав у спільний core/push.js —
+// тим самим текстом тепер користується і дзвіночок сторінок «Стрічки» (24.07).
 
 async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
   // Дозволяємо сьогодні І майбутні дні: сервер (send-bus-push) видаляє лише
