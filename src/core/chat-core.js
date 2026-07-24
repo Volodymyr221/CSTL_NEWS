@@ -17,6 +17,7 @@
 
 import { escapeHtml, avatarCircle } from './utils.js';
 import { cachedAvatar } from './supabase.js';   // Потік 12 Б: чуже фото по uid (кеш)
+import { openLayer, closeLayer } from './layers.js';   // екрани ↔ історія браузера (жест «назад»)
 
 // Лінійні іконки для меню дій над повідомленням (монохром, у стилі чату)
 export const ACT_ICONS = {
@@ -43,7 +44,12 @@ export function buildScreen(innerHtml, extraClass = '') {
   document.body.classList.add('modal-open');
   requestAnimationFrame(() => { backdrop.classList.add('visible'); screen.classList.add('visible'); });
   const api = { screen, backdrop, _cleanup: [] };
-  const close = () => closeScreen(api);
+  // Екран — повноекранний ШАР, підключений до історії браузера (core/layers.js).
+  // Без цього системний жест «назад» на iPhone закривав екран І одночасно відкочував
+  // увесь додаток по історії (див. коментар у layers.js). Тепер жест з'їдає рівно
+  // один запис → закривається лише цей екран.
+  api._layer = openLayer(() => closeScreen(api));
+  const close = () => closeLayer(api._layer);
   backdrop.addEventListener('click', close);
   screen.querySelector('[data-pm-back]')?.addEventListener('click', close);
   api.close = close;

@@ -2441,6 +2441,49 @@
     };
   }
 
+  // src/core/layers.js
+  var stack = [];
+  var seq = 0;
+  function openLayer(close, opts = {}) {
+    const layer = { id: ++seq, close, closed: false };
+    const top = stack[stack.length - 1];
+    if (opts.reuseEntry && top) {
+      top.closed = true;
+      stack[stack.length - 1] = layer;
+      return layer;
+    }
+    stack.push(layer);
+    history.pushState({ cstlLayer: layer.id }, "");
+    return layer;
+  }
+  function closeLayer(layer) {
+    if (!layer || layer.closed)
+      return;
+    if (stack[stack.length - 1] === layer) {
+      history.back();
+      return;
+    }
+    finish(layer);
+  }
+  function finish(layer) {
+    const i = stack.indexOf(layer);
+    if (i >= 0)
+      stack.splice(i, 1);
+    if (layer.closed)
+      return;
+    layer.closed = true;
+    try {
+      layer.close();
+    } catch (e) {
+      console.warn("[layers] close:", e && e.message);
+    }
+  }
+  window.addEventListener("popstate", () => {
+    const top = stack[stack.length - 1];
+    if (top)
+      finish(top);
+  });
+
   // src/core/chat-core.js
   var ACT_ICONS = {
     reply: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>',
@@ -2468,7 +2511,8 @@
       screen.classList.add("visible");
     });
     const api = { screen, backdrop, _cleanup: [] };
-    const close = () => closeScreen(api);
+    api._layer = openLayer(() => closeScreen(api));
+    const close = () => closeLayer(api._layer);
     backdrop.addEventListener("click", close);
     screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
     api.close = close;
@@ -10365,49 +10409,6 @@ ${ev.description || ""}`
         window.switchTab(tab);
     });
   }
-
-  // src/core/layers.js
-  var stack = [];
-  var seq = 0;
-  function openLayer(close, opts = {}) {
-    const layer = { id: ++seq, close, closed: false };
-    const top = stack[stack.length - 1];
-    if (opts.reuseEntry && top) {
-      top.closed = true;
-      stack[stack.length - 1] = layer;
-      return layer;
-    }
-    stack.push(layer);
-    history.pushState({ cstlLayer: layer.id }, "");
-    return layer;
-  }
-  function closeLayer(layer) {
-    if (!layer || layer.closed)
-      return;
-    if (stack[stack.length - 1] === layer) {
-      history.back();
-      return;
-    }
-    finish(layer);
-  }
-  function finish(layer) {
-    const i = stack.indexOf(layer);
-    if (i >= 0)
-      stack.splice(i, 1);
-    if (layer.closed)
-      return;
-    layer.closed = true;
-    try {
-      layer.close();
-    } catch (e) {
-      console.warn("[layers] close:", e && e.message);
-    }
-  }
-  window.addEventListener("popstate", () => {
-    const top = stack[stack.length - 1];
-    if (top)
-      finish(top);
-  });
 
   // src/tabs/feed.js
   var IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
