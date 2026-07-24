@@ -4164,7 +4164,7 @@
       openChat(thread, thread.post);
   }
   var _chatBannerTimer = null;
-  function showChatPushBanner({ title, body, threadId }) {
+  function showChatPushBanner({ title, body, threadId, url }) {
     let el = document.getElementById("chat-push-banner");
     if (!el) {
       el = document.createElement("div");
@@ -4175,8 +4175,13 @@
     el.innerHTML = `<div class="cpb-title">${escapeHtml(title || "\u041D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F")}</div><div class="cpb-body">${escapeHtml(body || "")}</div>`;
     el.onclick = () => {
       el.classList.remove("visible");
-      if (threadId != null)
+      if (threadId != null) {
         openThreadById(threadId);
+        return;
+      }
+      const i = url ? String(url).indexOf("#") : -1;
+      if (i >= 0)
+        location.hash = String(url).slice(i);
     };
     requestAnimationFrame(() => el.classList.add("visible"));
     clearTimeout(_chatBannerTimer);
@@ -4192,8 +4197,13 @@
         if (e.data.__cstl === "push") {
           refreshUnreadBadge();
           window.dispatchEvent(new CustomEvent("cstl-chat-refresh"));
-          if (e.data.pushType === "chat" && document.visibilityState === "visible") {
-            showChatPushBanner({ title: e.data.title, body: e.data.body, threadId: e.data.threadId });
+          if ((e.data.pushType === "chat" || e.data.pushType === "page") && document.visibilityState === "visible") {
+            showChatPushBanner({
+              title: e.data.title,
+              body: e.data.body,
+              threadId: e.data.threadId,
+              url: e.data.url
+            });
           }
         } else if (e.data.__cstl === "notif-click" && e.data.threadId != null) {
           openThreadById(e.data.threadId);

@@ -163,6 +163,10 @@ self.addEventListener('push', e => {
           __cstl: 'push', pushType: data.type || null,
           title: data.title || '', body: data.body || '',
           threadId: data.thread_id ?? null, groupId: data.group_id ?? null,
+          // url — deep-link (напр. на новий пост «Стрічки»). Потрібен in-app банеру:
+          // при відкритому додатку системне сповіщення НЕ показуємо (нижче), тож без
+          // банера користувач не дізнався б про новий пост узагалі.
+          url: data.url || null,
         }); } catch (_) {} });
         // App is in foreground — skip system notification, in-app banner handles it
         if (list.some(c => c.visibilityState === 'visible')) return;
