@@ -111,7 +111,10 @@ export async function getArticlesByIds(ids) {
 
 // Deep-link (6b): відкрити статтю за id — перемкнути на «Новини» + дочекатись даних.
 export async function openArticleById(id) {
-  window.switchTab?.('news');
+  // Новини живуть блоком «Табло новин» у Громаді (окремої вкладки Новин нема).
+  // 'news' у switchTab перенаправляється на 'shotam' (Стрічку) — тому фон deep-link
+  // виходив Стрічкою. Вова: фон має бути Громада (де блок новин), а стаття — модалкою зверху.
+  window.switchTab?.('community');
   await ensureNewsLoaded();
   openArticle(id);
 }
