@@ -11239,6 +11239,10 @@ ${ev.description || ""}`
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</div>
       <div class="fd-edit-field">
+        <div class="fd-edit-label">\u041D\u0430\u0437\u0432\u0430</div>
+        <input class="fd-edit-input" data-name value="${escapeHtml(page.name || "")}" maxlength="120" placeholder="\u041D\u0430\u0437\u0432\u0430 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438">
+      </div>
+      <div class="fd-edit-field">
         <div class="fd-edit-label">\u0411\u0430\u043D\u0435\u0440 (\u0448\u0438\u0440\u043E\u043A\u0430 \u0448\u0430\u043F\u043A\u0430)</div>
         <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
       </div>
@@ -11304,6 +11308,9 @@ ${ev.description || ""}`
         }
         patch.avatar_url = up.url;
       }
+      const name = back.querySelector("[data-name]").value.trim();
+      if (name && name !== page.name)
+        patch.name = name;
       const theme = back.querySelector("[data-theme]").value.trim();
       if (theme !== (page.theme || ""))
         patch.theme = theme;
