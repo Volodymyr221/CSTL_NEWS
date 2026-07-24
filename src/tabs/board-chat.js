@@ -26,10 +26,11 @@ import {
   fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
   fetchThreadStates, setThreadState, fetchThreadClearedAt,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
-  editMessage, deleteMessage, uploadPhotoToStorage,
+  editMessage, deleteMessage,
   bumpPost, closePost, deleteMyPost, restorePost, removeSavedPost,
   hydrateAvatars, hydrateNames, nameUid,
 } from '../core/supabase.js';
+import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — інакше сире фото падало «Load failed»
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity, openPhotoLightbox } from '../core/utils.js';
@@ -399,7 +400,7 @@ export async function openChat(thread, post) {
     const temp = { id: 'tmp-' + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: new Date().toISOString() };
     messages.push(temp);
     appendOne(temp);
-    const up = await uploadPhotoToStorage(file);
+    const up = await uploadImageReliable(file, { maxDim: 1600, quality: 0.82 });
     if (!up.url) {
       messages = messages.filter(m => m.client_tag !== tag);
       renderStream();

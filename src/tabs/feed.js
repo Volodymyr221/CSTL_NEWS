@@ -6,11 +6,10 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, compressImage, containsProfanity, autoGrowTextarea } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
-  uploadPhotoToStorage,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
   fetchPageComments, addPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
@@ -19,6 +18,7 @@ import {
   saveUserPushDevice, notifyNewPagePost,
 } from '../core/supabase.js';
 import { ensurePushSubscription } from '../core/push.js';
+import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -873,24 +873,14 @@ function openComposer(pageId, editPost = null) {
     sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
     // Завантажуємо нові фото ПОСЛІДОВНО (по одному), не паралельно: на iOS PWA
-    // кілька одночасних upload у сховище падають «Load failed». Кожне фото
-    // стискаємо (телефонні 3-5 МБ) + один повтор при збої мережі. Кількість — до MAX_PHOTOS.
+    // кілька одночасних upload у сховище падають «Load failed». Стиснення+повтор — у хелпері.
     let newUrls = [];
     if (files.length) {
       const failed = [];
       for (const f of files) {
-        let url = null;
-        for (let attempt = 0; attempt < 2 && !url; attempt++) {
-          try {
-            const blob = await compressImage(f, 1600, 0.82);   // більший розмір/якість для повного показу
-            const res  = await uploadPhotoToStorage(blob, 'pages/');
-            if (res.url) url = res.url;
-            else if (attempt === 1) failed.push(res.error || 'upload');
-          } catch (e) {
-            if (attempt === 1) failed.push((e && e.message) || 'стиснення не вдалося');
-          }
-        }
-        if (url) newUrls.push(url);
+        const up = await uploadImageReliable(f, { folder: 'pages/', maxDim: 1600, quality: 0.82 });
+        if (up.url) newUrls.push(up.url);
+        else failed.push(up.error || 'upload');
       }
       if (failed.length) {
         sendBtn.disabled = false; sendBtn.textContent = CTA;
@@ -968,12 +958,13 @@ function openPageEditor(pageId) {
     saveBtn.disabled = true; saveBtn.textContent = 'Зберігаю…';
     const patch = {};
     if (bannerBlob) {
-      const up = await uploadPhotoToStorage(bannerBlob, 'pages/');
+      // Сире телефонне фото падало «Load failed» — тепер стиснення+повтор через хелпер.
+      const up = await uploadImageReliable(bannerBlob, { folder: 'pages/', maxDim: 1600, quality: 0.85 });
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Банер не завантажився: ' + (up.error || '')); return; }
       patch.banner_url = up.url;
     }
     if (avatarBlob) {
-      const up = await uploadPhotoToStorage(avatarBlob, 'pages/');
+      const up = await uploadImageReliable(avatarBlob, { folder: 'pages/', square: true, maxDim: 512 });
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Аватар не завантажився: ' + (up.error || '')); return; }
       patch.avatar_url = up.url;
     }
