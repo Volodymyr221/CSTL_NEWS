@@ -684,13 +684,19 @@ async function openPageScreen(pageId, reopen = false) {
   // екран, а не відкочує весь додаток на попередню вкладку (баг зі скріна IMG_3557).
   // reuseEntry — коли екран переоткривається після збереження сторінки: попередній
   // прибрано з DOM вручну, тож новий запис в історію не додаємо.
+  // ЖЕСТ «НАЗАД» ОБСЛУГОВУЄ СИСТЕМА (див. core/layers.js). Власного свайпу тут НЕМА
+  // навмисно: iOS однаково малює свою анімацію переходу, і два рухи накладались.
+  // close — миттєве прибирання (систему вже відпрацювала анімацію);
+  // animateOut — плавне зникнення для натискання КНОПКИ «назад», де анімації нема.
   const layer = openLayer(
-    () => { screen.classList.remove('open'); setTimeout(() => screen.remove(), 240); },
-    { reuseEntry: reopen },
+    () => screen.remove(),
+    {
+      reuseEntry: reopen,
+      animateOut: () => screen.classList.remove('open'),
+    },
   );
-  const closeScreen = () => closeLayer(layer);   // через історію — стан не розходиться
+  const closeScreen = () => closeLayer(layer, { animate: 240 });   // кнопка — з анімацією
   screen.querySelector('.fd-screen-back').addEventListener('click', closeScreen);
-  attachScreenSwipeBack(screen, closeScreen);   // свайп-назад від лівого краю (як Telegram/iOS)
   const composeBtn = screen.querySelector('.fd-compose-open');
   if (composeBtn) composeBtn.addEventListener('click', () => openComposer(pageId));
   screen.querySelectorAll('[data-team-page]').forEach(b =>
@@ -753,43 +759,10 @@ async function openPageScreen(pageId, reopen = false) {
   requestAnimationFrame(() => screen.classList.add('open'));
 }
 
-// Свайп-назад від ЛІВОГО краю (як Telegram/iOS): тягнеш екран вправо → закриття;
-// менше третини ширини — снап назад. Під час перетягування transition вимкнено (йде
-// за пальцем, без сіпання), на відпусканні — CSS-плавність. Тінь ліворуч (CSS box-shadow
-// на .fd-screen) показує, що екран поверх попередньої сторінки.
-function attachScreenSwipeBack(screen, close) {
-  let sx = 0, sy = 0, dragging = false, lock = null;
-  const winW = () => window.innerWidth || screen.clientWidth || 360;
-  screen.addEventListener('touchstart', (e) => {
-    const t = e.touches[0];
-    if (t.clientX > 24) { dragging = false; return; }   // лише від самого лівого краю
-    sx = t.clientX; sy = t.clientY; dragging = true; lock = null;
-  }, { passive: true });
-  screen.addEventListener('touchmove', (e) => {
-    if (!dragging) return;
-    const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-    if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) lock = Math.abs(dx) > Math.abs(dy) ? 'h' : 'v';
-    if (lock === 'v') { dragging = false; screen.style.transition = ''; screen.style.transform = ''; return; }
-    if (lock === 'h' && dx > 0) {
-      e.preventDefault();
-      screen.style.transition = 'none';
-      screen.style.transform = `translateX(${dx}px)`;
-    }
-  }, { passive: false });
-  screen.addEventListener('touchend', (e) => {
-    if (!dragging) return;
-    dragging = false;
-    if (lock !== 'h') { screen.style.transition = ''; screen.style.transform = ''; return; }
-    const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
-    screen.style.transition = '';   // повернути CSS-плавність (transform 0.24s)
-    if (dx > winW() * 0.33) {
-      screen.style.transform = 'translateX(100%)';   // доїхати вправо → закрити
-      close();
-    } else {
-      screen.style.transform = '';   // снап назад до translateX(0) (.open)
-    }
-  }, { passive: false });
-}
+// Свайп-назад власними руками ПРИБРАНО 24.07 (скрін IMG_3559): жест від лівого краю —
+// системний, iOS малює свою анімацію переходу, і наше перетягування накладалось згори
+// (їхали два екрани). Тепер жест повністю обслуговує система через історію браузера —
+// див. core/layers.js. Кнопка «назад» закриває з власною анімацією (animateOut).
 
 // ── Чесний дзвіночок: три стани ──────────────────────────────────────────────
 // 🔔 порожній  — не підписаний;

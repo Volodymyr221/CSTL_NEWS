@@ -2476,7 +2476,7 @@
   var stack = [];
   var seq = 0;
   function openLayer(close, opts = {}) {
-    const layer = { id: ++seq, close, closed: false };
+    const layer = { id: ++seq, close, closed: false, animateOut: opts.animateOut || null };
     const top = stack[stack.length - 1];
     if (opts.reuseEntry && top) {
       top.closed = true;
@@ -2487,14 +2487,25 @@
     history.pushState({ cstlLayer: layer.id }, "");
     return layer;
   }
-  function closeLayer(layer) {
+  function closeLayer(layer, opts = {}) {
     if (!layer || layer.closed)
       return;
-    if (stack[stack.length - 1] === layer) {
-      history.back();
+    const go = () => {
+      if (stack[stack.length - 1] === layer)
+        history.back();
+      else
+        finish(layer);
+    };
+    if (opts.animate && typeof layer.animateOut === "function") {
+      layer.animating = true;
+      try {
+        layer.animateOut();
+      } catch (_) {
+      }
+      setTimeout(go, opts.animate);
       return;
     }
-    finish(layer);
+    go();
   }
   function finish(layer) {
     const i = stack.indexOf(layer);
@@ -2542,79 +2553,18 @@
       screen.classList.add("visible");
     });
     const api = { screen, backdrop, _cleanup: [] };
-    api._layer = openLayer(() => closeScreen(api));
-    const close = () => closeLayer(api._layer);
+    api._layer = openLayer(() => closeScreen(api), {
+      animateOut: () => {
+        screen.classList.remove("visible");
+        backdrop.classList.remove("visible");
+      }
+    });
+    const close = () => closeLayer(api._layer, { animate: 240 });
     backdrop.addEventListener("click", close);
     screen.querySelector("[data-pm-back]")?.addEventListener("click", close);
     api.close = close;
-    setupEdgeBack(api);
     _openScreens.push(api);
     return api;
-  }
-  function setupEdgeBack(api) {
-    const screen = api.screen;
-    let sx = 0, sy = 0, dragging = false, lock = null, below = null;
-    const winW = () => window.innerWidth || screen.clientWidth || 360;
-    const findBelow = () => {
-      const i = _openScreens.indexOf(api);
-      return i > 0 ? _openScreens[i - 1] : null;
-    };
-    const showBelow = () => {
-      if (below)
-        below.screen.style.display = "";
-    };
-    const hideBelow = () => {
-      if (below)
-        below.screen.style.display = "none";
-    };
-    screen.addEventListener("touchstart", (e) => {
-      const t = e.touches[0];
-      if (t.clientX > 24) {
-        dragging = false;
-        return;
-      }
-      sx = t.clientX;
-      sy = t.clientY;
-      dragging = true;
-      lock = null;
-      below = findBelow();
-    }, { passive: true });
-    screen.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
-      const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-      if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-        lock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
-        if (lock === "h")
-          showBelow();
-      }
-      if (lock === "v") {
-        dragging = false;
-        screen.style.transition = "";
-        screen.style.transform = "";
-        hideBelow();
-        return;
-      }
-      if (lock === "h" && dx > 0) {
-        e.preventDefault();
-        screen.style.transition = "none";
-        screen.style.transform = `translateX(-50%) translateX(${dx}px)`;
-      }
-    }, { passive: false });
-    screen.addEventListener("touchend", (e) => {
-      if (!dragging)
-        return;
-      dragging = false;
-      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
-      screen.style.transition = "";
-      if (lock === "h" && dx > winW() * 0.33) {
-        screen.style.transform = `translateX(-50%) translateX(${winW()}px)`;
-        setTimeout(() => api.close(), 180);
-      } else {
-        screen.style.transform = "";
-        hideBelow();
-      }
-    }, { passive: false });
   }
   function closeScreen(api) {
     if (!api || api._closed)
@@ -11280,15 +11230,14 @@ ${ev.description || ""}`
       <div class="fd-screen-list">${screenListHtml("posts", pagePosts)}</div>
     </div>`;
     const layer = openLayer(
-      () => {
-        screen.classList.remove("open");
-        setTimeout(() => screen.remove(), 240);
-      },
-      { reuseEntry: reopen }
+      () => screen.remove(),
+      {
+        reuseEntry: reopen,
+        animateOut: () => screen.classList.remove("open")
+      }
     );
-    const closeScreen2 = () => closeLayer(layer);
+    const closeScreen2 = () => closeLayer(layer, { animate: 240 });
     screen.querySelector(".fd-screen-back").addEventListener("click", closeScreen2);
-    attachScreenSwipeBack(screen, closeScreen2);
     const composeBtn = screen.querySelector(".fd-compose-open");
     if (composeBtn)
       composeBtn.addEventListener("click", () => openComposer(pageId));
@@ -11349,57 +11298,6 @@ ${ev.description || ""}`
     }
     document.body.appendChild(screen);
     requestAnimationFrame(() => screen.classList.add("open"));
-  }
-  function attachScreenSwipeBack(screen, close) {
-    let sx = 0, sy = 0, dragging = false, lock = null;
-    const winW = () => window.innerWidth || screen.clientWidth || 360;
-    screen.addEventListener("touchstart", (e) => {
-      const t = e.touches[0];
-      if (t.clientX > 24) {
-        dragging = false;
-        return;
-      }
-      sx = t.clientX;
-      sy = t.clientY;
-      dragging = true;
-      lock = null;
-    }, { passive: true });
-    screen.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
-      const t = e.touches[0], dx = t.clientX - sx, dy = t.clientY - sy;
-      if (!lock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
-        lock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
-      if (lock === "v") {
-        dragging = false;
-        screen.style.transition = "";
-        screen.style.transform = "";
-        return;
-      }
-      if (lock === "h" && dx > 0) {
-        e.preventDefault();
-        screen.style.transition = "none";
-        screen.style.transform = `translateX(${dx}px)`;
-      }
-    }, { passive: false });
-    screen.addEventListener("touchend", (e) => {
-      if (!dragging)
-        return;
-      dragging = false;
-      if (lock !== "h") {
-        screen.style.transition = "";
-        screen.style.transform = "";
-        return;
-      }
-      const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : sx) - sx;
-      screen.style.transition = "";
-      if (dx > winW() * 0.33) {
-        screen.style.transform = "translateX(100%)";
-        close();
-      } else {
-        screen.style.transform = "";
-      }
-    }, { passive: false });
   }
   function bellClass(pageId) {
     if (!mySubs.has(pageId))
