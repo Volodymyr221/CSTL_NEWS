@@ -185,7 +185,10 @@ function openViewer(images, startIdx) {
     <button class="fd-viewer-close" type="button">${IC_CLOSE}</button>
     <div class="fd-viewer-track">${images.map(u =>
       `<div class="fd-viewer-slide"><img src="${escapeHtml(u)}" alt=""></div>`).join('')}</div>`;
-  const close = () => { ov.remove(); document.body.style.overflow = ''; };
+  // Той самий механізм, що й у решти шарів (core/layers.js): системний жест
+  // «назад» і кнопка браузера закривають перегляд фото, а не відкочують додаток.
+  const layer = openLayer(() => { ov.remove(); document.body.style.overflow = ''; });
+  const close = () => closeLayer(layer);
   ov.querySelector('.fd-viewer-close').addEventListener('click', close);
   ov.addEventListener('click', e => { if (e.target === ov || e.target.classList.contains('fd-viewer-slide')) close(); });
   document.body.appendChild(ov);

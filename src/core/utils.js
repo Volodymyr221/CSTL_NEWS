@@ -1,3 +1,6 @@
+// src/core/utils.js — спільні дрібні хелпери додатка.
+import { openLayer, closeLayer } from './layers.js';   // шари ↔ історія браузера (жест «назад»)
+
 // Форматування часу: "щойно", "5 хв тому", "2 год тому", "12 квітня"
 // Приймає або number (мс), або ISO string ("2026-05-18T..."), або null.
 export function formatTime(value) {
@@ -257,7 +260,9 @@ export function openPhotoLightbox(url) {
   const ov = document.createElement('div');
   ov.className = 'pm-lightbox';
   ov.innerHTML = `<img src="${escapeHtml(url)}" alt="фото">`;
-  ov.addEventListener('click', () => ov.remove());
+  // Спільний механізм шарів (core/layers.js): жест «назад» закриває саме фото.
+  const layer = openLayer(() => ov.remove());
+  ov.addEventListener('click', () => closeLayer(layer));
   document.body.appendChild(ov);
 }
 

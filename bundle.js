@@ -1,4 +1,58 @@
 (() => {
+  // src/core/layers.js
+  var stack = [];
+  var seq = 0;
+  function openLayer(close, opts = {}) {
+    const layer = { id: ++seq, close, closed: false, animateOut: opts.animateOut || null };
+    const top = stack[stack.length - 1];
+    if (opts.reuseEntry && top) {
+      top.closed = true;
+      stack[stack.length - 1] = layer;
+      return layer;
+    }
+    stack.push(layer);
+    history.pushState({ cstlLayer: layer.id }, "");
+    return layer;
+  }
+  function closeLayer(layer, opts = {}) {
+    if (!layer || layer.closed)
+      return;
+    const go = () => {
+      if (stack[stack.length - 1] === layer)
+        history.back();
+      else
+        finish(layer);
+    };
+    if (opts.animate && typeof layer.animateOut === "function") {
+      layer.animating = true;
+      try {
+        layer.animateOut();
+      } catch (_) {
+      }
+      setTimeout(go, opts.animate);
+      return;
+    }
+    go();
+  }
+  function finish(layer) {
+    const i = stack.indexOf(layer);
+    if (i >= 0)
+      stack.splice(i, 1);
+    if (layer.closed)
+      return;
+    layer.closed = true;
+    try {
+      layer.close();
+    } catch (e) {
+      console.warn("[layers] close:", e && e.message);
+    }
+  }
+  window.addEventListener("popstate", () => {
+    const top = stack[stack.length - 1];
+    if (top)
+      finish(top);
+  });
+
   // src/core/utils.js
   function formatTime(value) {
     if (!value)
@@ -182,7 +236,8 @@
     const ov = document.createElement("div");
     ov.className = "pm-lightbox";
     ov.innerHTML = `<img src="${escapeHtml(url)}" alt="\u0444\u043E\u0442\u043E">`;
-    ov.addEventListener("click", () => ov.remove());
+    const layer = openLayer(() => ov.remove());
+    ov.addEventListener("click", () => closeLayer(layer));
     document.body.appendChild(ov);
   }
   var FILTER_HOMOGLYPHS = { a: "\u0430", e: "\u0435", o: "\u043E", c: "\u0441", x: "\u0445", p: "\u0440", y: "\u0443", k: "\u043A", i: "\u0456", b: "\u0431", m: "\u043C", h: "\u043D", t: "\u0442" };
@@ -2471,60 +2526,6 @@
       tags: []
     };
   }
-
-  // src/core/layers.js
-  var stack = [];
-  var seq = 0;
-  function openLayer(close, opts = {}) {
-    const layer = { id: ++seq, close, closed: false, animateOut: opts.animateOut || null };
-    const top = stack[stack.length - 1];
-    if (opts.reuseEntry && top) {
-      top.closed = true;
-      stack[stack.length - 1] = layer;
-      return layer;
-    }
-    stack.push(layer);
-    history.pushState({ cstlLayer: layer.id }, "");
-    return layer;
-  }
-  function closeLayer(layer, opts = {}) {
-    if (!layer || layer.closed)
-      return;
-    const go = () => {
-      if (stack[stack.length - 1] === layer)
-        history.back();
-      else
-        finish(layer);
-    };
-    if (opts.animate && typeof layer.animateOut === "function") {
-      layer.animating = true;
-      try {
-        layer.animateOut();
-      } catch (_) {
-      }
-      setTimeout(go, opts.animate);
-      return;
-    }
-    go();
-  }
-  function finish(layer) {
-    const i = stack.indexOf(layer);
-    if (i >= 0)
-      stack.splice(i, 1);
-    if (layer.closed)
-      return;
-    layer.closed = true;
-    try {
-      layer.close();
-    } catch (e) {
-      console.warn("[layers] close:", e && e.message);
-    }
-  }
-  window.addEventListener("popstate", () => {
-    const top = stack[stack.length - 1];
-    if (top)
-      finish(top);
-  });
 
   // src/core/chat-core.js
   var ACT_ICONS = {
@@ -8704,13 +8705,22 @@
     } catch {
     }
   }
-  function closeCabinet() {
+  var _cabLayer = null;
+  function removeCabinet() {
     const c = document.getElementById("acc-cab");
     if (!c)
       return;
     c.classList.remove("open");
     document.body.classList.remove("modal-open");
     setTimeout(() => c.remove(), 240);
+  }
+  function closeCabinet() {
+    if (_cabLayer) {
+      closeLayer(_cabLayer);
+      _cabLayer = null;
+      return;
+    }
+    removeCabinet();
   }
   async function openAccount() {
     const u = currentUser();
@@ -8806,6 +8816,10 @@
     document.body.appendChild(cab);
     document.body.classList.add("modal-open");
     requestAnimationFrame(() => cab.classList.add("open"));
+    _cabLayer = openLayer(() => {
+      _cabLayer = null;
+      removeCabinet();
+    });
     cab.querySelector(".acc-cab-back").addEventListener("click", closeCabinet);
     const avBtn = cab.querySelector("#acc-av-btn");
     const avFile = cab.querySelector("#acc-av-file");
@@ -10537,7 +10551,16 @@ ${ev.description || ""}`
         scale = next;
         clampAndDraw();
       });
+      let done = false;
+      const cropLayer = openLayer(() => {
+        if (!done)
+          finish2(null);
+      });
       const finish2 = (blob) => {
+        if (done)
+          return;
+        done = true;
+        closeLayer(cropLayer);
         back.remove();
         document.body.classList.remove("modal-open");
         window.removeEventListener("resize", layout);
@@ -10714,10 +10737,11 @@ ${ev.description || ""}`
     ov.innerHTML = `
     <button class="fd-viewer-close" type="button">${IC_CLOSE}</button>
     <div class="fd-viewer-track">${images.map((u) => `<div class="fd-viewer-slide"><img src="${escapeHtml(u)}" alt=""></div>`).join("")}</div>`;
-    const close = () => {
+    const layer = openLayer(() => {
       ov.remove();
       document.body.style.overflow = "";
-    };
+    });
+    const close = () => closeLayer(layer);
     ov.querySelector(".fd-viewer-close").addEventListener("click", close);
     ov.addEventListener("click", (e) => {
       if (e.target === ov || e.target.classList.contains("fd-viewer-slide"))
