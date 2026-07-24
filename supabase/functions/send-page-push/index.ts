@@ -55,6 +55,18 @@ serve(async (req) => {
     if (!post) return json({ error: 'post not found' }, 404);
     if (post.author_uid !== callerUid) return json({ error: 'not author' }, 403);
 
+    // 🔒 ІДЕМПОТЕНТНІСТЬ: розсилка про один пост — рівно раз.
+    // Функцію можуть покликати ДВІЧІ: тригер бази (надійний шлях) і браузер автора
+    // (підстраховка), плюс можливий повтор після збою мережі. Журнал page_push_log
+    // (post_id — первинний ключ) робить другий виклик безпечним no-op: якщо рядок
+    // уже є, insert нічого не поверне → виходимо, не надіславши дубль користувачам.
+    const { data: logRow } = await admin
+      .from('page_push_log')
+      .insert({ post_id: post.id })
+      .select('post_id')
+      .maybeSingle();
+    if (!logRow) return json({ sent: 0, reason: 'already sent' });
+
     // Назва сторінки (заголовок сповіщення)
     const { data: page } = await admin
       .from('pages').select('name').eq('id', post.page_id).single();
@@ -99,6 +111,12 @@ serve(async (req) => {
       }
     }
     if (dead.length) await admin.from('user_push_devices').delete().in('id', dead);
+
+    // Якщо не дійшло НІКОМУ (тимчасовий збій сервісу push) — прибираємо запис із журналу,
+    // щоб повтор (підстраховка з клієнта / ручний виклик) міг спробувати ще раз.
+    // Дубль при цьому неможливий: сповіщення не отримав жоден пристрій.
+    if (sent === 0) await admin.from('page_push_log').delete().eq('post_id', post.id);
+    else            await admin.from('page_push_log').update({ sent }).eq('post_id', post.id);
 
     return json({ sent });
   } catch (e: any) {
