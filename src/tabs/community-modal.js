@@ -7,7 +7,8 @@
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
 import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea } from '../core/utils.js';
-import { submitPost, updateBoardPost, isSupabaseReady, uploadPhotoToStorage } from '../core/supabase.js';
+import { submitPost, updateBoardPost, isSupabaseReady } from '../core/supabase.js';
+import { uploadBlobWithRetry } from '../core/upload.js';   // повтор upload при збої (blob уже стиснуто для прев'ю)
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { openModal } from '../core/modal.js';
@@ -252,7 +253,7 @@ export function openBoardModal(opts = {}) {
 
         state.uploadingCount++;
         updateSubmitState();
-        const { url, error } = await uploadPhotoToStorage(blob);
+        const { url, error } = await uploadBlobWithRetry(blob);
         state.uploadingCount--;
         updateSubmitState();
 
