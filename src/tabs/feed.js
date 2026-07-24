@@ -999,7 +999,7 @@ export async function initFeed() {
     const main = document.querySelector('.app-main');
     const bar = root.querySelector('.fd-topbar');
     if (main && bar) {
-      const SHRINK_RANGE = 70;
+      const SHRINK_RANGE = 40;
       let shRaf = 0;
       const applyShrink = () => {
         shRaf = 0;
