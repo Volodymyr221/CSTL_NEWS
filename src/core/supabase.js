@@ -1204,10 +1204,24 @@ export async function setPageSubscription(pageId, uid, on) {
   return error ? { ok: false, error: error.message } : { ok: true };
 }
 
-// Push підписникам сторінки про новий пост (Edge Function send-page-push, verify_jwt).
-// Fire-and-forget — публікацію не блокує; помилку лише логуємо.
+// Push підписникам сторінки про новий пост (Edge Function send-page-push).
+//
+// ⚠️ Це ПІДСТРАХОВКА, а не основний шлях. Основний — тригер бази `trg_notify_new_page_post`
+// (scripts/supabase_page_push.sql): він спрацьовує на самій вставці поста, тож сповіщення
+// йде навіть коли браузер автора закрився / впала мережа / пост створено з адмінки.
+// Обидва шляхи ведуть в одну функцію, а журнал `page_push_log` не дає надіслати дубль:
+// хто прийшов другим — тихо виходить. Тому лишаємо обидва — це дешева надлишковість.
+//
+// Публікацію не блокує (fire-and-forget), але результат більше не мовчить: раніше
+// провал бачив лише той, хто відкрив консоль, і «сповіщення не прийшло» неможливо
+// було відрізнити від «функція взагалі не задеплоєна».
 export function notifyNewPagePost(postId) {
   if (!supa || !postId) return;
   supa.functions.invoke('send-page-push', { body: { post_id: postId } })
-    .catch(e => console.warn('[supabase] send-page-push:', e?.message));
+    .then(({ data, error }) => {
+      if (error) { console.warn('[push] send-page-push помилка:', error.message); return; }
+      // reason:'already sent' — нормально: тригер бази нас випередив.
+      console.info('[push] send-page-push:', JSON.stringify(data));
+    })
+    .catch(e => console.warn('[push] send-page-push впала:', e?.message));
 }

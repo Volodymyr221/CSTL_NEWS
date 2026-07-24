@@ -1449,7 +1449,13 @@
   function notifyNewPagePost(postId) {
     if (!supa || !postId)
       return;
-    supa.functions.invoke("send-page-push", { body: { post_id: postId } }).catch((e) => console.warn("[supabase] send-page-push:", e?.message));
+    supa.functions.invoke("send-page-push", { body: { post_id: postId } }).then(({ data, error }) => {
+      if (error) {
+        console.warn("[push] send-page-push \u043F\u043E\u043C\u0438\u043B\u043A\u0430:", error.message);
+        return;
+      }
+      console.info("[push] send-page-push:", JSON.stringify(data));
+    }).catch((e) => console.warn("[push] send-page-push \u0432\u043F\u0430\u043B\u0430:", e?.message));
   }
 
   // src/core/auth.js
