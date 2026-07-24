@@ -11497,8 +11497,8 @@ ${ev.description || ""}`
       const RANGE = 60;
       const SETTLE = 0;
       const titleIn = title.querySelector(".fd-screen-title-in");
-      const ICON_ZONE = 58;
-      const PIN_MAX = 0.9;
+      const ICON_ZONE = 68;
+      const PIN_MAX = 0.86;
       const PIN_MIN = 0.7;
       const widestLine = (el) => {
         if (!el)
