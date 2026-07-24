@@ -11467,8 +11467,11 @@ ${ev.description || ""}`
       let tRaf = 0, pinAt = 0;
       const RANGE = 60;
       const SETTLE = 0;
+      const titleIn = title.querySelector(".fd-screen-title-in");
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
+        if (titleIn)
+          title.style.setProperty("--fd-th", `${titleIn.offsetHeight}px`);
       };
       const applyTitle = () => {
         tRaf = 0;
