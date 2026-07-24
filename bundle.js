@@ -11980,8 +11980,8 @@ ${ev.description || ""}`
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {
-        const SHRINK_START = 50;
-        const SHRINK_RANGE = 40;
+        const SHRINK_START = 0;
+        const SHRINK_RANGE = 60;
         let shRaf = 0;
         const applyShrink = () => {
           shRaf = 0;
