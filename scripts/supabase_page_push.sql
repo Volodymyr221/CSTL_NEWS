@@ -31,3 +31,63 @@ alter table public.page_push_log enable row level security;
 drop policy if exists "service manages page push log" on public.page_push_log;
 create policy "service manages page push log" on public.page_push_log for all
   using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+-- ── 2. Розширення для HTTP-запитів із бази ──────────────────────────────────
+create extension if not exists pg_net with schema extensions;
+
+-- ── 3. Ключ беремо з Vault (сховище секретів Supabase) ──────────────────────
+-- ⚠️ Ключ service_role НЕ пишемо в цей файл — він потрапив би в git.
+-- ОДИН РАЗ виконай окремо у SQL Editor, підставивши свій ключ
+-- (Supabase → Project Settings → API → service_role, він же «secret»):
+--
+--   select vault.create_secret('ВСТАВ_СЮДИ_SERVICE_ROLE_КЛЮЧ', 'service_role_key');
+--
+-- Якщо колись зміниш ключ:
+--   select vault.update_secret(id, 'НОВИЙ_КЛЮЧ') from vault.secrets where name = 'service_role_key';
+
+-- ── 4. Функція тригера: кличе Edge-функцію send-page-push ───────────────────
+create or replace function public.notify_new_page_post()
+returns trigger
+language plpgsql
+security definer
+set search_path = public, extensions, vault
+as $$
+declare
+  v_key text;
+  v_url text := 'https://uabyfecseqnemvcqhdem.supabase.co/functions/v1/send-page-push';
+begin
+  -- Ключ із Vault. Якщо секрет не заведено — тихо виходимо: публікація поста НЕ має
+  -- падати через проблему зі сповіщеннями (пост важливіший за пуш).
+  select decrypted_secret into v_key
+    from vault.decrypted_secrets where name = 'service_role_key' limit 1;
+  if v_key is null then
+    raise warning 'notify_new_page_post: секрет service_role_key не заведено у Vault';
+    return new;
+  end if;
+
+  -- Асинхронний HTTP-виклик: pg_net ставить запит у чергу і НЕ блокує вставку поста.
+  perform net.http_post(
+    url     := v_url,
+    headers := jsonb_build_object(
+                 'Content-Type',  'application/json',
+                 'Authorization', 'Bearer ' || v_key
+               ),
+    body    := jsonb_build_object('post_id', new.id),
+    timeout_milliseconds := 8000
+  );
+  return new;
+end;
+$$;
+
+-- ── 5. Тригер: ЛИШЕ на новий пост ───────────────────────────────────────────
+-- AFTER INSERT (не UPDATE) — рішення Вови 24.07: виправлення друкарської помилки
+-- в опублікованому пості НЕ має слати людям друге сповіщення.
+drop trigger if exists trg_notify_new_page_post on public.page_posts;
+create trigger trg_notify_new_page_post
+  after insert on public.page_posts
+  for each row execute function public.notify_new_page_post();
+
+-- ── Перевірка після накатування ─────────────────────────────────────────────
+--   select * from page_push_log order by sent_at desc limit 5;          -- кому вже слали
+--   select status_code, content from net._http_response
+--     order by created desc limit 5;                                     -- відповіді Edge-функції
