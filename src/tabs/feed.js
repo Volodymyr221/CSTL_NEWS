@@ -19,6 +19,7 @@ import {
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
+import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -623,7 +624,11 @@ function screenListHtml(tab, pagePosts) {
     : '<div class="fd-empty">Тут ще немає постів.</div>';
 }
 
-async function openPageScreen(pageId) {
+// reopen=true — екран переоткривають одразу після того, як його прибрали з DOM вручну
+// (опублікували пост / зберегли сторінку / видалили пост). Тоді запис в історії вже є,
+// і новий додавати не треба — інакше вони б накопичувались і жест «назад» довелося б
+// робити двічі. Див. core/layers.js.
+async function openPageScreen(pageId, reopen = false) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
   const canEdit = myPageIds.has(pageId);
@@ -664,7 +669,16 @@ async function openPageScreen(pageId) {
       <div class="fd-screen-list">${screenListHtml('posts', pagePosts)}</div>
     </div>`;
 
-  const closeScreen = () => { screen.classList.remove('open'); setTimeout(() => screen.remove(), 240); };
+  // Екран — повноекранний ШАР, підключений до історії браузера (core/layers.js).
+  // Завдяки цьому системний жест «назад» від лівого краю на iPhone закриває САМЕ цей
+  // екран, а не відкочує весь додаток на попередню вкладку (баг зі скріна IMG_3557).
+  // reuseEntry — коли екран переоткривається після збереження сторінки: попередній
+  // прибрано з DOM вручну, тож новий запис в історію не додаємо.
+  const layer = openLayer(
+    () => { screen.classList.remove('open'); setTimeout(() => screen.remove(), 240); },
+    { reuseEntry: reopen },
+  );
+  const closeScreen = () => closeLayer(layer);   // через історію — стан не розходиться
   screen.querySelector('.fd-screen-back').addEventListener('click', closeScreen);
   attachScreenSwipeBack(screen, closeScreen);   // свайп-назад від лівого краю (як Telegram/iOS)
   const composeBtn = screen.querySelector('.fd-compose-open');
@@ -982,7 +996,7 @@ function openComposer(pageId, editPost = null) {
       close();
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();
-      openPageScreen(pageId);
+      openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
     } else {
       sendBtn.disabled = false; sendBtn.textContent = CTA;
       alert((edit ? 'Не вдалося зберегти: ' : 'Не вдалося опублікувати: ') + (res.error || ''));
@@ -1065,7 +1079,7 @@ function openPageEditor(pageId) {
       close();
       document.querySelectorAll('.fd-screen').forEach(s => s.remove());
       renderFeed();
-      openPageScreen(pageId);
+      openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
     } else {
       saveBtn.disabled = false; saveBtn.textContent = 'Зберегти';
       alert('Не вдалося зберегти: ' + (res.error || ''));
@@ -1104,7 +1118,7 @@ function openPostMenu(postId) {
     close();
     document.querySelectorAll('.fd-screen').forEach(s => s.remove());
     renderFeed();
-    if (hadScreen) openPageScreen(post.page_id);
+    if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
   });
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
   document.body.appendChild(back);

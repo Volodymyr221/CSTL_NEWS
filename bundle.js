@@ -8638,7 +8638,7 @@
     <input class="acc-input" id="acc-bdate" type="date" max="${(/* @__PURE__ */ new Date()).toISOString().slice(0, 10)}">
     <button class="acc-primary" type="button" id="acc-save">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
     <button class="acc-skip" type="button" id="acc-later">\u041F\u0456\u0437\u043D\u0456\u0448\u0435</button>`);
-    const finish = async (withDate) => {
+    const finish2 = async (withDate) => {
       const name = wrap.querySelector("#acc-name").value.trim();
       const bd = wrap.querySelector("#acc-bdate").value;
       const res = await saveProfile({ name, birth_date: withDate ? bd : null });
@@ -8650,8 +8650,8 @@
       if (withDate)
         showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
     };
-    wrap.querySelector("#acc-save").addEventListener("click", () => finish(true));
-    wrap.querySelector("#acc-later").addEventListener("click", () => finish(false));
+    wrap.querySelector("#acc-save").addEventListener("click", () => finish2(true));
+    wrap.querySelector("#acc-later").addEventListener("click", () => finish2(false));
   }
   var NOTIF_KEYS = [
     { k: "buses", ic: ICONS.bus, label: "\u0410\u0432\u0442\u043E\u0431\u0443\u0441\u0438", def: true },
@@ -10366,6 +10366,49 @@ ${ev.description || ""}`
     });
   }
 
+  // src/core/layers.js
+  var stack = [];
+  var seq = 0;
+  function openLayer(close, opts = {}) {
+    const layer = { id: ++seq, close, closed: false };
+    const top = stack[stack.length - 1];
+    if (opts.reuseEntry && top) {
+      top.closed = true;
+      stack[stack.length - 1] = layer;
+      return layer;
+    }
+    stack.push(layer);
+    history.pushState({ cstlLayer: layer.id }, "");
+    return layer;
+  }
+  function closeLayer(layer) {
+    if (!layer || layer.closed)
+      return;
+    if (stack[stack.length - 1] === layer) {
+      history.back();
+      return;
+    }
+    finish(layer);
+  }
+  function finish(layer) {
+    const i = stack.indexOf(layer);
+    if (i >= 0)
+      stack.splice(i, 1);
+    if (layer.closed)
+      return;
+    layer.closed = true;
+    try {
+      layer.close();
+    } catch (e) {
+      console.warn("[layers] close:", e && e.message);
+    }
+  }
+  window.addEventListener("popstate", () => {
+    const top = stack[stack.length - 1];
+    if (top)
+      finish(top);
+  });
+
   // src/tabs/feed.js
   var IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
   var IC_HEART_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -10987,7 +11030,7 @@ ${ev.description || ""}`
     }
     return pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
   }
-  async function openPageScreen(pageId) {
+  async function openPageScreen(pageId, reopen = false) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
       return;
@@ -11027,10 +11070,14 @@ ${ev.description || ""}`
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
       <div class="fd-screen-list">${screenListHtml("posts", pagePosts)}</div>
     </div>`;
-    const closeScreen2 = () => {
-      screen.classList.remove("open");
-      setTimeout(() => screen.remove(), 240);
-    };
+    const layer = openLayer(
+      () => {
+        screen.classList.remove("open");
+        setTimeout(() => screen.remove(), 240);
+      },
+      { reuseEntry: reopen }
+    );
+    const closeScreen2 = () => closeLayer(layer);
     screen.querySelector(".fd-screen-back").addEventListener("click", closeScreen2);
     attachScreenSwipeBack(screen, closeScreen2);
     const composeBtn = screen.querySelector(".fd-compose-open");
@@ -11367,7 +11414,7 @@ ${ev.description || ""}`
         close();
         document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
         renderFeed();
-        openPageScreen(pageId);
+        openPageScreen(pageId, true);
       } else {
         sendBtn.disabled = false;
         sendBtn.textContent = CTA;
@@ -11482,7 +11529,7 @@ ${ev.description || ""}`
         close();
         document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
         renderFeed();
-        openPageScreen(pageId);
+        openPageScreen(pageId, true);
       } else {
         saveBtn.disabled = false;
         saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
@@ -11532,7 +11579,7 @@ ${ev.description || ""}`
       document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
       renderFeed();
       if (hadScreen)
-        openPageScreen(post.page_id);
+        openPageScreen(post.page_id, true);
     });
     attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
