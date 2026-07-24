@@ -680,9 +680,10 @@ async function openPageScreen(pageId) {
   if (title) {
     let tRaf = 0, pinAt = 0;
     const RANGE = 60;                                 // 60px плавного згортання
-    const SETTLE = 24;                                // згортання завершується за 24px ДО піну →
-                                                      // заголовок пінається вже у фінальній формі,
-                                                      // ріст висоти не триває під час прилипання (без дьоргання нижніх блоків).
+    const SETTLE = 0;                                 // згортання завершується РІВНО в момент піну
+                                                      // (p=1 при scrollTop=pinAt): останнє зменшення
+                                                      // збігається з тим, як назва стає нерухомою вгорі.
+                                                      // Дьоргання нема бо висота розчеплена (transform, не потік).
     // Поріг піну міряємо ОДИН раз (не щокадру getBoundingClientRect — то reflow і сіпання):
     // scroll-позиція, де верх назви дійде до верху екрана.
     const measure = () => { pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop; };

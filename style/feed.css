@@ -37,7 +37,7 @@
    ширині, «виділені посередині», не з краю); багато (не влазять) → скрол зліва (сторіз). */
 .fd-circles-wrap { flex: 1; min-width: 0; }
 .fd-circles {
-  display: flex; gap: 16px; overflow-x: auto;
+  display: flex; gap: 18px; overflow-x: auto;
   /* Вертикальні відступи меншають при стисканні (--sh) — разом зі згасанням підпису
      блок стає помітно нижчим (верх 8→4, низ 18→10). */
   padding: calc(8px - 4px * var(--sh)) 16px 12px;
@@ -46,7 +46,7 @@
 .fd-circles.is-fit { justify-content: space-evenly; }
 .fd-circles::-webkit-scrollbar { display: none; }
 .fd-circle {
-  flex: 0 0 auto; width: 86px; display: flex; flex-direction: column; align-items: center;
+  flex: 0 0 auto; width: 96px; display: flex; flex-direction: column; align-items: center;
   gap: calc(6px - 6px * var(--sh)); background: none; border: 0; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
 }
@@ -72,9 +72,10 @@
    Ширина підпису (86px, ширша за кільце 62px) дає 2 слова в рядок → «Відділ культури»
    в один рядок, «ОТГ» у другий (замість 3 рядків по слову). */
 .fd-circle-label {
-  /* Ширше за кільце (86px колонка) → у рядок влазить більше тексту, використовуючи
-     бічне місце; кружечок width:86px не змінюється → відстань між іконками збережена. */
-  width: 100px;
+  /* Ширше за колонку (96px) → у рядок влазить більше слів, використовуючи бічне місце.
+     Виступ ~8px на бік лишається в межах бічного відступу .fd-circles (16px) → заміри
+     розкладки (space-evenly/scroll) не ламаються, підписи сусідів не злипаються. */
+  width: 112px;
   font-size: 11px; font-weight: 700; color: var(--fd-ink); line-height: 1.15; text-align: center;
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
   word-break: normal; overflow-wrap: normal; hyphens: manual;
