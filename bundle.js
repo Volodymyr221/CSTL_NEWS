@@ -1711,6 +1711,31 @@
     }
   }
 
+  // src/core/upload.js
+  async function uploadBlobWithRetry(blob, folder = "", retries = 2) {
+    let lastErr = "";
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      const res = await uploadPhotoToStorage(blob, folder);
+      if (res.url)
+        return { url: res.url, error: null };
+      lastErr = res.error || "upload";
+      if (attempt < retries)
+        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+    }
+    return { url: null, error: lastErr };
+  }
+  async function uploadImageReliable(file, { folder = "", square = false, maxDim = 1600, quality = 0.82, retries = 2 } = {}) {
+    if (!file)
+      return { url: null, error: "\u043D\u0435\u043C\u0430 \u0444\u0430\u0439\u043B\u0443" };
+    let blob;
+    try {
+      blob = square ? await squareImageBlob(file, maxDim) : await compressImage(file, maxDim, quality);
+    } catch (e) {
+      return { url: null, error: e && e.message || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u0431\u0440\u043E\u0431\u0438\u0442\u0438 \u0444\u043E\u0442\u043E" };
+    }
+    return uploadBlobWithRetry(blob, folder, retries);
+  }
+
   // src/core/settlements.js
   var SETTLEMENTS = [
     "\u041E\u043B\u0438\u043A\u0430",
@@ -2187,7 +2212,7 @@
           renderPreview();
           state.uploadingCount++;
           updateSubmitState();
-          const { url, error } = await uploadPhotoToStorage(blob);
+          const { url, error } = await uploadBlobWithRetry(blob);
           state.uploadingCount--;
           updateSubmitState();
           if (error || !url) {
@@ -3163,7 +3188,7 @@
       const temp = { id: "tmp-" + Date.now(), client_tag: tag, thread_id: thread.id, sender_uid: me, text: null, photo_url: localUrl, reply_to_id: replyId, created_at: (/* @__PURE__ */ new Date()).toISOString() };
       messages.push(temp);
       appendOne(temp);
-      const up = await uploadPhotoToStorage(file);
+      const up = await uploadImageReliable(file, { maxDim: 1600, quality: 0.82 });
       if (!up.url) {
         messages = messages.filter((m) => m.client_tag !== tag);
         renderStream();
@@ -8784,8 +8809,7 @@
       avBtn.disabled = true;
       avBox.classList.add("acc-av--loading");
       try {
-        const blob = await squareImageBlob(file, 256);
-        const { url, error } = await uploadPhotoToStorage(blob, "avatars/");
+        const { url, error } = await uploadImageReliable(file, { folder: "avatars/", square: true, maxDim: 256 });
         if (!url)
           throw new Error(error || "upload");
         const res = await saveProfile({ avatar_url: url });
@@ -11239,22 +11263,11 @@ ${ev.description || ""}`
       if (files.length) {
         const failed = [];
         for (const f of files) {
-          let url = null;
-          for (let attempt = 0; attempt < 2 && !url; attempt++) {
-            try {
-              const blob = await compressImage(f, 1600, 0.82);
-              const res2 = await uploadPhotoToStorage(blob, "pages/");
-              if (res2.url)
-                url = res2.url;
-              else if (attempt === 1)
-                failed.push(res2.error || "upload");
-            } catch (e) {
-              if (attempt === 1)
-                failed.push(e && e.message || "\u0441\u0442\u0438\u0441\u043D\u0435\u043D\u043D\u044F \u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F");
-            }
-          }
-          if (url)
-            newUrls.push(url);
+          const up = await uploadImageReliable(f, { folder: "pages/", maxDim: 1600, quality: 0.82 });
+          if (up.url)
+            newUrls.push(up.url);
+          else
+            failed.push(up.error || "upload");
         }
         if (failed.length) {
           sendBtn.disabled = false;
@@ -11352,7 +11365,7 @@ ${ev.description || ""}`
       saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026";
       const patch = {};
       if (bannerBlob) {
-        const up = await uploadPhotoToStorage(bannerBlob, "pages/");
+        const up = await uploadImageReliable(bannerBlob, { folder: "pages/", maxDim: 1600, quality: 0.85 });
         if (!up.url) {
           saveBtn.disabled = false;
           saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
@@ -11362,7 +11375,7 @@ ${ev.description || ""}`
         patch.banner_url = up.url;
       }
       if (avatarBlob) {
-        const up = await uploadPhotoToStorage(avatarBlob, "pages/");
+        const up = await uploadImageReliable(avatarBlob, { folder: "pages/", square: true, maxDim: 512 });
         if (!up.url) {
           saveBtn.disabled = false;
           saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
