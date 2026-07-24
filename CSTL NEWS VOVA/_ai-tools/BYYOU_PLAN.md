@@ -16,16 +16,21 @@
 ### Кроки
 | # | Крок | Файли | Стан |
 |---|------|-------|------|
-| 1 | Новий модуль `core/upload.js`: `uploadImageReliable(file,opts)` (стиснення+повтор) + `uploadBlobWithRetry(blob,folder)` (повтор для вже стиснутих) | `src/core/upload.js` | 🟢 |
-| 2 | Банер сторінки: сире → `uploadImageReliable` + try/catch | `src/tabs/feed.js` | 🟢 |
-| 3 | Аватар сторінки: сире → `uploadImageReliable` (square) | `src/tabs/feed.js` | 🟢 |
-| 4 | Фото постів: inline compress+retry → `uploadImageReliable` (DRY) | `src/tabs/feed.js` | 🟢 |
-| 5 | Фото приватного чату Дошки: сире → `uploadImageReliable` | `src/tabs/board-chat.js` | 🟢 |
-| 6 | Фото оголошення: `uploadPhotoToStorage` → `uploadBlobWithRetry` (додати повтор) | `src/tabs/community-modal.js` | 🟢 |
-| 7 | Аватар профілю: → `uploadImageReliable` (square, +повтор) | `src/core/account-ui.js` | 🟢 |
-| 8 | Bump `CACHE_NAME` | `sw.js` | 🟢 |
-| 9 | `node --check` усіх змінених + `node build.js` | — | 🟢 |
-| 10 | Браузер-смоук `/qa-explore` (або fail-soft node --check) | — | 🟢 |
-| 11 | Реліз-нотатки + смоук на iPhone: банер/аватар сторінки, фото поста, фото чату, фото оголошення, аватар профілю | — | 🟡 |
+| 1 | Новий модуль `core/upload.js`: `uploadImageReliable` + `uploadBlobWithRetry` | `src/core/upload.js` | ✅ `40056f56` |
+| 2 | Банер сторінки → `uploadImageReliable` | `src/tabs/feed.js` | ✅ `6b15293f` |
+| 3 | Аватар сторінки → `uploadImageReliable` (square) | `src/tabs/feed.js` | ✅ `6b15293f` |
+| 4 | Фото постів → `uploadImageReliable` (DRY) | `src/tabs/feed.js` | ✅ `6b15293f` |
+| 5 | Фото приватного чату → `uploadImageReliable` | `src/tabs/board-chat.js` | ✅ `b08d0c1c` |
+| 6 | Фото оголошення → `uploadBlobWithRetry` (повтор) | `src/tabs/community-modal.js` | ✅ `d0a6c6ae` |
+| 7 | Аватар профілю → `uploadImageReliable` (square+повтор) | `src/core/account-ui.js` | ✅ `2da663c7` |
+| 8 | Bump `CACHE_NAME` cstl-20260724-1618 + rebuild | `sw.js`,`bundle.js` | ✅ `3c269b1f` |
+| 9 | `node --check` (5 файлів) + `node build.js` (35, check-imports 0) | — | ✅ |
+| 10 | Браузер-смоук: 4 екрани · 0 падінь · консоль чиста (лише мережеві) · верстка ✅ | — | ✅ |
+| 11 | Реліз-нотатки + смоук на iPhone | — | 🟡 чекає |
 
-**Де зупинились:** план складено, чекаю «ок» на старті (Брама старту). Push заблоковано до слова «деплой».
+### Реліз-нотатки
+**ЩО ЗМІНИЛОСЬ:** усі 6 місць завантаження фото (банер/аватар сторінки, фото постів, фото приватного чату, фото оголошення, аватар профілю) ходять через єдиний надійний шлях — стиснення телефонного фото + повтор при збої мережі. Раніше банер/аватар сторінки і фото чату слали СИРИЙ файл → «Load failed».
+**ЩО МОЖЕ ЗЛАМАТИСЬ:** усі шляхи завантаження фото (це основний ризик — перевірити кожен). Нічого крім завантаження фото не чіпав.
+**ЩО ПЕРЕВІРИТИ НА IPHONE:** (1) банер сторінки; (2) аватар сторінки; (3) фото в пост (кілька); (4) фото в приватний чат Дошки; (5) аватар профілю в кабінеті.
+
+**Де зупинились:** кроки 1-10 ✅ (локальні коміти `40056f56`→`3c269b1f`). Блок готовий, БЕЗ push. Чекаю слово «деплой» → PR у main. Далі смоук на iPhone (крок 11).
