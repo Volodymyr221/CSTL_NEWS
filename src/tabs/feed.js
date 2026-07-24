@@ -16,7 +16,7 @@ import {
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
-  fetchPageModerators, addPageModerator, removePageModerator,
+  fetchPageModerators, addPageModerator, removePageModerator, cancelPageInvite, claimMyPageInvites,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -878,7 +878,7 @@ function openPageTeam(pageId) {
                  autocapitalize="off" autocorrect="off" placeholder="ім'я@gmail.com">
           <button class="fd-team-add-btn" type="button">Додати</button>
         </div>
-        <div class="fd-team-hint">Людина має хоча б раз зайти в додаток через Google — інакше її акаунта ще немає.</div>
+        <div class="fd-team-hint">Якщо людина ще не користувалась додатком — запрошення збережеться і спрацює само, щойно вона вперше зайде цією поштою.</div>
       </div>
     </div>`;
   const close = () => back.remove();
@@ -890,15 +890,24 @@ function openPageTeam(pageId) {
       listEl.innerHTML = '<div class="fd-team-empty">Керувати командою може лише власник сторінки.</div>';
       return;
     }
-    listEl.innerHTML = rows.map(r => `
-      <div class="fd-team-row">
+    listEl.innerHTML = rows.map(r => {
+      const invited = r.status === 'invited';           // ще не заходила в додаток
+      const label = invited ? 'Запрошено' : (r.role === 'owner' ? 'Власник' : 'Модератор');
+      // Кнопка «прибрати»: для активних — за uid, для запрошених — за поштою.
+      const del = r.role === 'owner' ? ''
+        : invited
+          ? `<button class="fd-team-del" data-cancel="${escapeHtml(r.email || '')}" type="button" aria-label="Скасувати запрошення">${IC_X}</button>`
+          : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="Прибрати">${IC_X}</button>`;
+      return `
+      <div class="fd-team-row${invited ? ' fd-team-row--invited' : ''}">
         <div class="fd-team-who">
-          <b>${escapeHtml(r.name || 'Без імені')}</b>
+          <b>${escapeHtml(r.name || (invited ? 'Чекає першого входу' : 'Без імені'))}</b>
           <span>${escapeHtml(r.email || '')}</span>
         </div>
-        <span class="fd-team-role">${r.role === 'owner' ? 'Власник' : 'Модератор'}</span>
-        ${r.role === 'owner' ? '' : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="Прибрати">${IC_X}</button>`}
-      </div>`).join('');
+        <span class="fd-team-role${invited ? ' fd-team-role--invited' : ''}">${label}</span>
+        ${del}
+      </div>`;
+    }).join('');
   };
 
   const reload = async () => render(await fetchPageModerators(pageId));
@@ -906,6 +915,15 @@ function openPageTeam(pageId) {
 
   // Прибрати модератора (власника прибрати не можна — захист на сервері).
   listEl.addEventListener('click', async (e) => {
+    const cancelBtn = e.target.closest('[data-cancel]');
+    if (cancelBtn) {                                   // скасувати запрошення
+      if (!confirm('Скасувати запрошення для цієї пошти?')) return;
+      cancelBtn.disabled = true;
+      const res = await cancelPageInvite(pageId, cancelBtn.dataset.cancel);
+      if (res === 'ok') { showToast('Запрошення скасовано'); reload(); }
+      else { cancelBtn.disabled = false; showToast('Не вдалося — спробуй ще раз'); }
+      return;
+    }
     const btn = e.target.closest('[data-del]');
     if (!btn) return;
     if (!confirm('Прибрати цю людину зі сторінки?')) return;
@@ -924,9 +942,11 @@ function openPageTeam(pageId) {
     addBtn.disabled = true; addBtn.textContent = 'Додаю…';
     const res = await addPageModerator(pageId, email);
     addBtn.disabled = false; addBtn.textContent = 'Додати';
-    if (res === 'ok') { emailEl.value = ''; showToast('Модератора додано'); reload(); }
-    else if (res === 'not_found') showToast('Такого користувача ще немає — хай спершу зайде в додаток');
-    else showToast('Не вдалося додати');
+    if (res === 'ok')            { emailEl.value = ''; showToast('Модератора додано'); reload(); }
+    else if (res === 'invited')  { emailEl.value = ''; showToast('Запрошення збережено — спрацює, щойно людина вперше зайде'); reload(); }
+    else if (res === 'already')  { emailEl.value = ''; showToast('Ця людина вже в команді сторінки'); }
+    else if (res === 'bad_email') showToast('Перевір пошту — здається, у ній помилка');
+    else showToast('Не вдалося додати — спробуй ще раз');
   });
 
   attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);
@@ -1292,6 +1312,10 @@ export async function initFeed() {
   await loadData();
   renderFeed();
   healFeedPushDevice();     // тихо полагодити push-пристрій, якщо є підписки (див. нижче)
+  // Запрошення в команду сторінки, надіслані ДО того як людина вперше зайшла.
+  // Основний шлях — тригер бази при появі профілю; це підстраховка (напр. профіль
+  // уже існував, а запрошення прийшло пізніше). Тихо: нічого не показуємо.
+  if (isLoggedIn()) claimMyPageInvites().then(n => { if (n > 0) loadData().then(renderFeed); });
 
   // Перезавантаження при поверненні на вкладку (напр. після входу — з'явиться
   // композер/дзвіночок, оновляться мої лайки/підписки).

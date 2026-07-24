@@ -1478,6 +1478,26 @@
     }
     return data || "error";
   }
+  async function cancelPageInvite(pageId, email) {
+    if (!supa)
+      return "error";
+    const { data, error } = await supa.rpc("cancel_page_invite", { p_page_id: pageId, p_email: email });
+    if (error) {
+      console.warn("[supabase] cancel_page_invite:", error.message);
+      return "error";
+    }
+    return data || "error";
+  }
+  async function claimMyPageInvites() {
+    if (!supa)
+      return 0;
+    const { data, error } = await supa.rpc("claim_my_page_invites");
+    if (error) {
+      console.warn("[supabase] claim_my_page_invites:", error.message);
+      return 0;
+    }
+    return data || 0;
+  }
   async function removePageModerator(pageId, uid) {
     if (!supa)
       return "error";
@@ -11394,7 +11414,7 @@ ${ev.description || ""}`
                  autocapitalize="off" autocorrect="off" placeholder="\u0456\u043C'\u044F@gmail.com">
           <button class="fd-team-add-btn" type="button">\u0414\u043E\u0434\u0430\u0442\u0438</button>
         </div>
-        <div class="fd-team-hint">\u041B\u044E\u0434\u0438\u043D\u0430 \u043C\u0430\u0454 \u0445\u043E\u0447\u0430 \u0431 \u0440\u0430\u0437 \u0437\u0430\u0439\u0442\u0438 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0447\u0435\u0440\u0435\u0437 Google \u2014 \u0456\u043D\u0430\u043A\u0448\u0435 \u0457\u0457 \u0430\u043A\u0430\u0443\u043D\u0442\u0430 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454.</div>
+        <div class="fd-team-hint">\u042F\u043A\u0449\u043E \u043B\u044E\u0434\u0438\u043D\u0430 \u0449\u0435 \u043D\u0435 \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u043B\u0430\u0441\u044C \u0434\u043E\u0434\u0430\u0442\u043A\u043E\u043C \u2014 \u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u0442\u044C\u0441\u044F \u0456 \u0441\u043F\u0440\u0430\u0446\u044E\u0454 \u0441\u0430\u043C\u043E, \u0449\u043E\u0439\u043D\u043E \u0432\u043E\u043D\u0430 \u0432\u043F\u0435\u0440\u0448\u0435 \u0437\u0430\u0439\u0434\u0435 \u0446\u0456\u0454\u044E \u043F\u043E\u0448\u0442\u043E\u044E.</div>
       </div>
     </div>`;
     const close = () => back.remove();
@@ -11408,19 +11428,39 @@ ${ev.description || ""}`
         listEl.innerHTML = '<div class="fd-team-empty">\u041A\u0435\u0440\u0443\u0432\u0430\u0442\u0438 \u043A\u043E\u043C\u0430\u043D\u0434\u043E\u044E \u043C\u043E\u0436\u0435 \u043B\u0438\u0448\u0435 \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438.</div>';
         return;
       }
-      listEl.innerHTML = rows.map((r) => `
-      <div class="fd-team-row">
+      listEl.innerHTML = rows.map((r) => {
+        const invited = r.status === "invited";
+        const label = invited ? "\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043E" : r.role === "owner" ? "\u0412\u043B\u0430\u0441\u043D\u0438\u043A" : "\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440";
+        const del = r.role === "owner" ? "" : invited ? `<button class="fd-team-del" data-cancel="${escapeHtml(r.email || "")}" type="button" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F">${IC_X}</button>` : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438">${IC_X}</button>`;
+        return `
+      <div class="fd-team-row${invited ? " fd-team-row--invited" : ""}">
         <div class="fd-team-who">
-          <b>${escapeHtml(r.name || "\u0411\u0435\u0437 \u0456\u043C\u0435\u043D\u0456")}</b>
+          <b>${escapeHtml(r.name || (invited ? "\u0427\u0435\u043A\u0430\u0454 \u043F\u0435\u0440\u0448\u043E\u0433\u043E \u0432\u0445\u043E\u0434\u0443" : "\u0411\u0435\u0437 \u0456\u043C\u0435\u043D\u0456"))}</b>
           <span>${escapeHtml(r.email || "")}</span>
         </div>
-        <span class="fd-team-role">${r.role === "owner" ? "\u0412\u043B\u0430\u0441\u043D\u0438\u043A" : "\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440"}</span>
-        ${r.role === "owner" ? "" : `<button class="fd-team-del" data-del="${escapeHtml(r.uid)}" type="button" aria-label="\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438">${IC_X}</button>`}
-      </div>`).join("");
+        <span class="fd-team-role${invited ? " fd-team-role--invited" : ""}">${label}</span>
+        ${del}
+      </div>`;
+      }).join("");
     };
     const reload = async () => render2(await fetchPageModerators(pageId));
     reload();
     listEl.addEventListener("click", async (e) => {
+      const cancelBtn = e.target.closest("[data-cancel]");
+      if (cancelBtn) {
+        if (!confirm("\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u043F\u043E\u0448\u0442\u0438?"))
+          return;
+        cancelBtn.disabled = true;
+        const res2 = await cancelPageInvite(pageId, cancelBtn.dataset.cancel);
+        if (res2 === "ok") {
+          showToast("\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0441\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E");
+          reload();
+        } else {
+          cancelBtn.disabled = false;
+          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
+        }
+        return;
+      }
       const btn = e.target.closest("[data-del]");
       if (!btn)
         return;
@@ -11457,10 +11497,17 @@ ${ev.description || ""}`
         emailEl.value = "";
         showToast("\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0434\u043E\u0434\u0430\u043D\u043E");
         reload();
-      } else if (res === "not_found")
-        showToast("\u0422\u0430\u043A\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A");
+      } else if (res === "invited") {
+        emailEl.value = "";
+        showToast("\u0417\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u2014 \u0441\u043F\u0440\u0430\u0446\u044E\u0454, \u0449\u043E\u0439\u043D\u043E \u043B\u044E\u0434\u0438\u043D\u0430 \u0432\u043F\u0435\u0440\u0448\u0435 \u0437\u0430\u0439\u0434\u0435");
+        reload();
+      } else if (res === "already") {
+        emailEl.value = "";
+        showToast("\u0426\u044F \u043B\u044E\u0434\u0438\u043D\u0430 \u0432\u0436\u0435 \u0432 \u043A\u043E\u043C\u0430\u043D\u0434\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438");
+      } else if (res === "bad_email")
+        showToast("\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043F\u043E\u0448\u0442\u0443 \u2014 \u0437\u0434\u0430\u0454\u0442\u044C\u0441\u044F, \u0443 \u043D\u0456\u0439 \u043F\u043E\u043C\u0438\u043B\u043A\u0430");
       else
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438");
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
     });
     attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
     document.body.appendChild(back);
@@ -11877,6 +11924,11 @@ ${ev.description || ""}`
     await loadData2();
     renderFeed();
     healFeedPushDevice();
+    if (isLoggedIn())
+      claimMyPageInvites().then((n) => {
+        if (n > 0)
+          loadData2().then(renderFeed);
+      });
     window.addEventListener("cstl-tab-changed", () => {
       if (document.querySelector('.tab-item[data-tab="shotam"].active')) {
         loadData2().then(renderFeed);

@@ -1241,12 +1241,34 @@ export async function fetchPageModerators(pageId) {
   return data || [];
 }
 
-// Додати за поштою. Повертає 'ok' | 'not_found' (людина ще не заходила в додаток) | 'error'.
+// Додати за поштою. Сервер відповідає одним із:
+//   'ok'        — людину додано в команду одразу (вона вже користується додатком);
+//   'invited'   — акаунта ще нема, лишили запрошення; спрацює само при першому вході;
+//   'already'   — вона вже в команді цієї сторінки;
+//   'bad_email' — пошта введена неправильно;
+//   'error'     — технічний збій (деталі в консолі).
 export async function addPageModerator(pageId, email) {
   if (!supa) return 'error';
   const { data, error } = await supa.rpc('add_page_moderator', { p_page_id: pageId, p_email: email });
   if (error) { console.warn('[supabase] add_page_moderator:', error.message); return 'error'; }
   return data || 'error';
+}
+
+// Скасувати запрошення (людина ще не заходила — прибираємо саме запрошення).
+export async function cancelPageInvite(pageId, email) {
+  if (!supa) return 'error';
+  const { data, error } = await supa.rpc('cancel_page_invite', { p_page_id: pageId, p_email: email });
+  if (error) { console.warn('[supabase] cancel_page_invite:', error.message); return 'error'; }
+  return data || 'error';
+}
+
+// Забрати свої запрошення після входу. Основний шлях — тригер бази при появі профілю;
+// це підстраховка на випадок, коли профіль уже існував, а запрошення прийшло пізніше.
+export async function claimMyPageInvites() {
+  if (!supa) return 0;
+  const { data, error } = await supa.rpc('claim_my_page_invites');
+  if (error) { console.warn('[supabase] claim_my_page_invites:', error.message); return 0; }
+  return data || 0;
 }
 
 // Прибрати зі сторінки. 'ok' | 'owner_protected' (власника прибрати не можна) | 'error'.
