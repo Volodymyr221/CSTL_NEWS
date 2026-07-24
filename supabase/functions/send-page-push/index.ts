@@ -2,11 +2,16 @@
 // Edge Function: пуш про новий пост СТОРІНКИ-каналу «Стрічки» — усім підписникам
 // дзвіночка (page_subscriptions) ≠ автор.
 //
-// Викликається КЛІЄНТОМ одразу після вставки поста:
-//   supa.functions.invoke('send-page-push', { body: { post_id } })
-// verify_jwt = true → у запиті є JWT автора; перевіряємо що він і є автор поста
-// (захист від чужих викликів). Далі service_role знаходить усіх підписників
-// сторінки (uid ≠ автор) і шле web-push на їхні пристрої (user_push_devices).
+// ДВА ШЛЯХИ ВИКЛИКУ (обидва ведуть сюди, дублю не буде — див. page_push_log):
+//   1) ОСНОВНИЙ — тригер бази `trg_notify_new_page_post` на INSERT у page_posts.
+//      Доводить себе секретом у заголовку x-cstl-push-secret. Працює навіть коли
+//      браузер автора закрито / пост створено з адмінки.
+//   2) ПІДСТРАХОВКА — браузер автора одразу після публікації:
+//      supa.functions.invoke('send-page-push', { body: { post_id } })
+//      Тут перевіряємо токен і що викликач справді автор поста.
+// verify_jwt ВИМКНЕНО: функція автентифікує себе сама (секрет або токен автора) —
+// інакше тригер бази не міг би її покликати, не маючи користувацького токена.
+// Далі service_role знаходить підписників сторінки (uid ≠ автор) і шле web-push.
 //
 // Патерн VAPID/web-push — як у send-group-push (заголовок = назва сторінки,
 // тіло = текст поста). Тег page-<id> групує сповіщення однієї сторінки.
@@ -26,30 +31,37 @@ webpush.setVapidDetails(VAPID_EMAIL, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-cstl-push-secret',
 };
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: cors });
 
   try {
-    const authHeader = req.headers.get('Authorization') || '';
-    const jwt = authHeader.replace('Bearer ', '');
-    if (!jwt) return json({ error: 'no auth' }, 401);
-
     const admin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // ── Хто викликає: сервер чи людина? ──────────────────────────────────────
+    // ── Хто викликає: база чи людина? ────────────────────────────────────────
     // ДВА довірених джерела виклику:
-    //   1) ТРИГЕР БАЗИ (основний, надійний) — ходить із ключем service_role. Це не
-    //      користувацький токен, тож getUser() його не розпізнає; впізнаємо за полем
-    //      role у самому JWT. Базі довіряємо: вона кличе рівно на реальний INSERT.
+    //   1) ТРИГЕР БАЗИ (основний, надійний) — доводить це спільним секретом у
+    //      заголовку x-cstl-push-secret (лежить у таблиці app_secrets, читає лише
+    //      service_role). Базі довіряємо: вона кличе рівно на реальний INSERT поста.
     //   2) БРАУЗЕР АВТОРА (підстраховка) — звичайний користувацький токен, для нього
     //      лишається сувора перевірка «ти справді автор цього поста».
-    const isServiceCall = jwtRole(jwt) === 'service_role';
+    // Функція автентифікує себе САМА (verify_jwt вимкнено), тож без секрету і без
+    // валідного токена користувача сторонній виклик нічого не зробить.
+    const secretHeader = req.headers.get('x-cstl-push-secret') || '';
+    let isServiceCall = false;
+    if (secretHeader) {
+      const { data: row } = await admin
+        .from('app_secrets').select('value').eq('name', 'page_push_secret').maybeSingle();
+      isServiceCall = !!row?.value && row.value === secretHeader;
+      if (!isServiceCall) return json({ error: 'bad secret' }, 401);
+    }
 
     let callerUid: string | null = null;
     if (!isServiceCall) {
+      const jwt = (req.headers.get('Authorization') || '').replace('Bearer ', '');
+      if (!jwt) return json({ error: 'no auth' }, 401);
       const { data: userData, error: userErr } = await admin.auth.getUser(jwt);
       callerUid = userData?.user?.id ?? null;
       if (userErr || !callerUid) return json({ error: 'bad token' }, 401);
@@ -91,12 +103,17 @@ serve(async (req) => {
     if (post.author_uid) subsQuery = subsQuery.neq('uid', post.author_uid);
     const { data: subs } = await subsQuery;
     const recipientUids = (subs || []).map((s: { uid: string }) => s.uid);
-    if (!recipientUids.length) return json({ sent: 0, reason: 'no subscribers' });
+    // ⚠️ Виходимо ТІЛЬКИ прибравши запис журналу. Інакше «нікому не надіслали» лишалось
+    // би позначеним як «надіслано», і повтор уже не спрацював би. Реальна гонка: тригер
+    // кличе функцію за ~40 мс після вставки поста, а пристрій підписника саме в цю мить
+    // міг ще дореєстровуватись (self-heal при старті) → сповіщення втрачалось назавжди.
+    // Дубль неможливий: нікому нічого не пішло.
+    if (!recipientUids.length) return await bail(admin, post.id, 'no subscribers');
 
     // Пристрої всіх підписників
     const { data: devices } = await admin
       .from('user_push_devices').select('*').in('uid', recipientUids);
-    if (!devices?.length) return json({ sent: 0, reason: 'no devices' });
+    if (!devices?.length) return await bail(admin, post.id, 'no devices');
 
     const hasPhoto = Array.isArray(post.image_urls) && post.image_urls.length > 0;
     const bodyText = (post.text && post.text.trim()) || (hasPhoto ? '📷 Фото' : 'Новий пост');
@@ -138,16 +155,12 @@ serve(async (req) => {
   }
 });
 
-// Роль із JWT без перевірки підпису — і це безпечно: підпис уже перевірив шлюз Supabase
-// (verify_jwt = true), сюди доходять лише токени, підписані ключем цього проєкту.
-// Нам потрібно лише відрізнити службовий ключ (тригер бази) від користувацького.
-function jwtRole(jwt: string): string | null {
-  try {
-    const payload = jwt.split('.')[1];
-    if (!payload) return null;
-    const b64 = payload.replace(/-/g, '+').replace(/_/g, '/');
-    return JSON.parse(atob(b64.padEnd(b64.length + (4 - b64.length % 4) % 4, '='))).role ?? null;
-  } catch { return null; }
+// Вихід «нічого не надіслано»: прибираємо позначку в журналі, щоб повторний виклик
+// (підстраховка з клієнта) міг спробувати ще раз. Дубль неможливий — нікому не пішло.
+// deno-lint-ignore no-explicit-any
+async function bail(admin: any, postId: number, reason: string) {
+  await admin.from('page_push_log').delete().eq('post_id', postId);
+  return json({ sent: 0, reason });
 }
 
 function json(obj: unknown, status = 200) {
