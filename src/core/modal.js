@@ -10,7 +10,7 @@
 //   'center' — центрована картка, scale-in. Акаунт (join/profile/cabinet екрани).
 
 import { escapeHtml } from './utils.js';
-import { createDragTracker, finishSwipe, sheetRemaining } from './sheet-motion.js';
+import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from './sheet-motion.js';
 
 let _active = null;   // { el, close } — лише одна активна модалка примітиву за раз
 
@@ -71,8 +71,9 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
 
   // Свайп-вниз закриває (лише sheet-варіант).
   if (variant === 'sheet' && swipeClose && panel) {
-    let startY = 0, dragging = false, dy = 0;
+    let startY = 0, dragging = false, dy = 0, travel = 1;
     const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
+    const fade = createBackdropFade(backdrop);   // затемнення світлішає разом з рухом
     panel.addEventListener('touchstart', e => {
       const y = e.touches[0].clientY;
       // Граб від верхньої шапки (перші ~64px аркуша — рисочка/заголовок) закриває свайпом
@@ -81,12 +82,13 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       const inHeader = (y - panel.getBoundingClientRect().top) < 64;
       if (!inHeader && panel.scrollTop > 0) return;
       startY = y; dragging = true; dy = 0;
+      travel = Math.max(panel.offsetHeight || 1, 1);   // повний шлях аркуша — міряємо раз за жест
       drag.start(y);
     }, { passive: true });
     panel.addEventListener('touchmove', e => {
       if (!dragging) return;
       dy = e.touches[0].clientY - startY;
-      if (dy <= 0) { panel.style.transform = ''; return; }   // тягнуть вгору — віддаємо нативному скролу
+      if (dy <= 0) { panel.style.transform = ''; fade?.track(0); return; }   // тягнуть вгору — віддаємо нативному скролу
       // Зсув-закриття вмикаємо ЛИШЕ коли контент на самому верху (scrollTop === 0) —
       // як у рідних нижніх аркушах iOS (потягнути-закрити можна лише долиставши вгору).
       // Якщо контент ще прокручений (напр. прокрутив вниз, потім розвернув палець
@@ -96,6 +98,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       // на прокрученому контейнері зі sticky-дітьми рве їх від тіла на iOS WebKit.
       if (panel.scrollTop > 0) {
         panel.style.transform = '';
+        fade?.track(0);
         startY = e.touches[0].clientY;
         drag.start(startY);
         dy = 0;
@@ -106,6 +109,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       e.preventDefault();
       panel.style.transition = 'none';
       panel.style.transform = `translateY(${dy}px)`;
+      fade?.track(dy / travel);   // фон світлішає рівно на стільки, на скільки пішов аркуш
       drag.move(e.touches[0].clientY);
     }, { passive: false });
     panel.addEventListener('touchend', () => {
@@ -119,6 +123,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
         remaining: sheetRemaining(panel, dy),
         dismissTransform: 'translateY(100%)',
         onDismiss: () => close(),
+        backdrop: fade,
       });
       dy = 0;
     });

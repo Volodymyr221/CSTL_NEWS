@@ -28,7 +28,7 @@ import { setupBubbleGestures, ACT_ICONS } from '../core/chat-core.js';
 import { openModal as openModalPrimitive } from '../core/modal.js';
 import { ICONS } from '../core/icons.js';
 import { getSavedIds, saveBtnHtml } from '../core/board-shared.js';
-import { createDragTracker, finishSwipe, centeredRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { createDragTracker, finishSwipe, centeredRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
 // ── Доступ до постів Дошки (ін'єкція з board.js — стан лишається там) ────────
 let _getPosts = () => [];
@@ -581,15 +581,18 @@ export function openChatModal(post) {
   // Фікс: на час drag transition:none + оновлення transform у requestAnimationFrame
   // (translate3d = GPU, без layout-thrash); на відпусканні transition повертаємо,
   // тож пружний повернення/закриття лишаються плавними.
-  let startY = 0, curY = 0, dragging = false, rafId = 0;
+  let startY = 0, curY = 0, dragging = false, rafId = 0, travel = 1;
   const dragZone = modal.querySelector('.bd-chat-modal-head');
   const drag = createDragTracker();       // швидкість пальця → нативне завершення жесту
+  const fade = createBackdropFade(document.querySelector('.bd-chat-backdrop'));
   const applyDrag = () => {
     rafId = 0;
     modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
+    fade?.track(curY / travel);           // фон світлішає разом з рухом, у тому ж кадрі
   };
   dragZone.addEventListener('touchstart', e => {
     startY = e.touches[0].clientY; curY = 0; dragging = true;
+    travel = centeredRemaining(modal);    // шлях до нижнього краю — міряємо раз за жест
     drag.start(startY);
     modal.style.transition = 'none';      // рух — миттєвий за пальцем, без анімації
     modal.style.willChange = 'transform';
@@ -613,6 +616,7 @@ export function openChatModal(post) {
       panel: modal, dy: curY, velocity: drag.velocity, remaining,
       dismissTransform: `translate3d(-50%, ${Math.round(curY + remaining)}px, 0)`,
       onDismiss: () => closeChatModal({ keepTransform: true }),
+      backdrop: fade,
     });
     curY = 0;
   };

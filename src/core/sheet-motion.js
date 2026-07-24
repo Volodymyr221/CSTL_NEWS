@@ -23,9 +23,56 @@ const FLICK_MIN = 8;      // ...але рух має бути помітним (
 const DIST      = 90;     // px — поріг «дотягнув повільно» (як було до цієї зміни)
 const MIN_MS    = 110;    // швидше — око не встигає побачити рух, виглядає як різке зникнення
 const MAX_MS    = 240;    // не довше за наявні таймери прибирання з DOM (setTimeout ..., 240)
+const BACK_MIN  = 0.25;   // до якої частки темряви світлішає фон, коли панель повністю відтягнута
 
 // Крива рідного нижнього аркуша iOS (вже використовується у style/modal.css і feed.css).
 export const SHEET_EASE = 'cubic-bezier(0.32, 0.72, 0, 1)';
+
+const clamp01 = v => Math.min(1, Math.max(0, v));
+
+// Затемнення фону, зчеплене з пальцем.
+//
+// НАВІЩО: у рідних аркушах iOS темний фон СВІТЛІШАЄ поки тягнеш панель донизу —
+// разом з рухом, а не після нього. У нас фон тримався на повну і гаснув аж після
+// відпускання, тож мозок читав це як «фон не реагує на мій палець» (Вова 24.07:
+// «стало трошки краще, але все одно не як нативний iOS»).
+//
+// ДВА РЕЖИМИ — бо затемнення в застосунку влаштоване по-різному:
+//   'opacity' — затемнення це ОКРЕМИЙ шар поруч із панеллю (.app-modal-backdrop,
+//               .board-backdrop, .bd-chat-backdrop) → гасимо його прозорість;
+//   'bg'      — затемнення це КОНТЕЙНЕР, усередині якого лежить сама панель
+//               (.fd-sheet-back у Стрічці) → прозорість гасити НЕ можна, бо
+//               загасне й панель. Тому міняємо лише альфу кольору фону.
+export function createBackdropFade(el, mode = 'opacity') {
+  if (!el) return null;
+  const isBg = mode === 'bg';
+  const parts = isBg ? (getComputedStyle(el).backgroundColor.match(/[\d.]+/g) || []) : null;
+  const baseA = isBg ? (parts[3] !== undefined ? +parts[3] : 1) : 1;
+
+  const setK = (k) => {
+    if (isBg) el.style.backgroundColor = `rgba(${parts[0] || 0}, ${parts[1] || 0}, ${parts[2] || 0}, ${(baseA * k).toFixed(3)})`;
+    else el.style.opacity = k.toFixed(3);
+  };
+  return {
+    // p — прогрес жесту 0..1 (0 = панель на місці, 1 = пішла повністю)
+    track(p) {
+      el.style.transition = 'none';
+      setK(1 - (1 - BACK_MIN) * clamp01(p));
+    },
+    // Доїзд разом із панеллю: за ТОЙ САМИЙ час, тож фон і панель рухаються як одне ціле.
+    settle(dismiss, ms) {
+      el.style.transition = `${isBg ? 'background-color' : 'opacity'} ${ms}ms linear`;
+      setK(dismiss ? 0 : 1);
+      // Повертаємо елемент під керування CSS (інакше інлайн-стиль лишиться
+      // на наступне відкриття і фон відкриється вже підсвітленим).
+      setTimeout(() => {
+        el.style.transition = '';
+        el.style.opacity = '';
+        el.style.backgroundColor = '';
+      }, ms + 30);
+    },
+  };
+}
 
 // Стежить за швидкістю пальця. Згладжування (0.6 старе / 0.4 нове) — щоб один
 // смиканий кадр (палець на мить завмер перед відпусканням) не вирішував долю жесту.
@@ -52,9 +99,10 @@ export function createDragTracker() {
 //   dismissTransform — куди їхати при закритті (повний рядок transform)
 //   restTransform    — куди повертатись якщо не закриваємо (зазвичай '' = на місце)
 //   onDismiss(ms)    — власне закриття; викликається ОДРАЗУ, політ домальовує інлайн transform
+//   backdrop         — з createBackdropFade(): затемнення доїжджає за той самий час
 export function finishSwipe({
   panel, dy, velocity = 0, remaining,
-  dismissTransform, restTransform = '', onDismiss,
+  dismissTransform, restTransform = '', onDismiss, backdrop,
 }) {
   const dismiss = dy > DIST || (velocity > FLICK_V && dy > FLICK_MIN);
   const travel  = Math.max(dismiss ? remaining : dy, 1);
@@ -63,6 +111,7 @@ export function finishSwipe({
 
   panel.style.transition = `transform ${ms}ms ${SHEET_EASE}`;
   panel.style.transform  = dismiss ? dismissTransform : restTransform;
+  backdrop?.settle(dismiss, ms);   // фон гасне/вертається СИНХРОННО з панеллю
 
   if (dismiss) onDismiss?.(ms);
   // Повернення на місце: віддаємо елемент назад під CSS-анімацію, коли доїхав.

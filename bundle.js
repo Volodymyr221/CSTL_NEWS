@@ -1865,7 +1865,39 @@
   var DIST = 90;
   var MIN_MS = 110;
   var MAX_MS = 240;
+  var BACK_MIN = 0.25;
   var SHEET_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
+  var clamp01 = (v) => Math.min(1, Math.max(0, v));
+  function createBackdropFade(el, mode = "opacity") {
+    if (!el)
+      return null;
+    const isBg = mode === "bg";
+    const parts = isBg ? getComputedStyle(el).backgroundColor.match(/[\d.]+/g) || [] : null;
+    const baseA = isBg ? parts[3] !== void 0 ? +parts[3] : 1 : 1;
+    const setK = (k) => {
+      if (isBg)
+        el.style.backgroundColor = `rgba(${parts[0] || 0}, ${parts[1] || 0}, ${parts[2] || 0}, ${(baseA * k).toFixed(3)})`;
+      else
+        el.style.opacity = k.toFixed(3);
+    };
+    return {
+      // p — прогрес жесту 0..1 (0 = панель на місці, 1 = пішла повністю)
+      track(p) {
+        el.style.transition = "none";
+        setK(1 - (1 - BACK_MIN) * clamp01(p));
+      },
+      // Доїзд разом із панеллю: за ТОЙ САМИЙ час, тож фон і панель рухаються як одне ціле.
+      settle(dismiss, ms) {
+        el.style.transition = `${isBg ? "background-color" : "opacity"} ${ms}ms linear`;
+        setK(dismiss ? 0 : 1);
+        setTimeout(() => {
+          el.style.transition = "";
+          el.style.opacity = "";
+          el.style.backgroundColor = "";
+        }, ms + 30);
+      }
+    };
+  }
   function createDragTracker() {
     let lastPos = 0, lastT = 0, v = 0;
     return {
@@ -1896,7 +1928,8 @@
     remaining,
     dismissTransform,
     restTransform = "",
-    onDismiss
+    onDismiss,
+    backdrop
   }) {
     const dismiss = dy > DIST || velocity > FLICK_V && dy > FLICK_MIN;
     const travel = Math.max(dismiss ? remaining : dy, 1);
@@ -1904,6 +1937,7 @@
     const ms = Math.round(Math.min(MAX_MS, Math.max(MIN_MS, travel / speed)));
     panel.style.transition = `transform ${ms}ms ${SHEET_EASE}`;
     panel.style.transform = dismiss ? dismissTransform : restTransform;
+    backdrop?.settle(dismiss, ms);
     if (dismiss)
       onDismiss?.(ms);
     else
@@ -1970,8 +2004,9 @@
     backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
-      let startY = 0, dragging = false, dy = 0;
+      let startY = 0, dragging = false, dy = 0, travel = 1;
       const drag = createDragTracker();
+      const fade = createBackdropFade(backdrop);
       panel.addEventListener("touchstart", (e) => {
         const y = e.touches[0].clientY;
         const inHeader = y - panel.getBoundingClientRect().top < 64;
@@ -1980,6 +2015,7 @@
         startY = y;
         dragging = true;
         dy = 0;
+        travel = Math.max(panel.offsetHeight || 1, 1);
         drag.start(y);
       }, { passive: true });
       panel.addEventListener("touchmove", (e) => {
@@ -1988,10 +2024,12 @@
         dy = e.touches[0].clientY - startY;
         if (dy <= 0) {
           panel.style.transform = "";
+          fade?.track(0);
           return;
         }
         if (panel.scrollTop > 0) {
           panel.style.transform = "";
+          fade?.track(0);
           startY = e.touches[0].clientY;
           drag.start(startY);
           dy = 0;
@@ -2000,6 +2038,7 @@
         e.preventDefault();
         panel.style.transition = "none";
         panel.style.transform = `translateY(${dy}px)`;
+        fade?.track(dy / travel);
         drag.move(e.touches[0].clientY);
       }, { passive: false });
       panel.addEventListener("touchend", () => {
@@ -2012,7 +2051,8 @@
           velocity: drag.velocity,
           remaining: sheetRemaining(panel, dy),
           dismissTransform: "translateY(100%)",
-          onDismiss: () => close()
+          onDismiss: () => close(),
+          backdrop: fade
         });
         dy = 0;
       });
@@ -4879,17 +4919,20 @@
     vv?.addEventListener("scroll", _chatViewportHandler);
     input?.addEventListener("focus", _chatViewportHandler);
     input?.addEventListener("blur", _chatViewportHandler);
-    let startY = 0, curY = 0, dragging = false, rafId = 0;
+    let startY = 0, curY = 0, dragging = false, rafId = 0, travel = 1;
     const dragZone = modal.querySelector(".bd-chat-modal-head");
     const drag = createDragTracker();
+    const fade = createBackdropFade(document.querySelector(".bd-chat-backdrop"));
     const applyDrag = () => {
       rafId = 0;
       modal.style.transform = `translate3d(-50%, ${curY}px, 0)`;
+      fade?.track(curY / travel);
     };
     dragZone.addEventListener("touchstart", (e) => {
       startY = e.touches[0].clientY;
       curY = 0;
       dragging = true;
+      travel = centeredRemaining(modal);
       drag.start(startY);
       modal.style.transition = "none";
       modal.style.willChange = "transform";
@@ -4918,7 +4961,8 @@
         velocity: drag.velocity,
         remaining,
         dismissTransform: `translate3d(-50%, ${Math.round(curY + remaining)}px, 0)`,
-        onDismiss: () => closeChatModal({ keepTransform: true })
+        onDismiss: () => closeChatModal({ keepTransform: true }),
+        backdrop: fade
       });
       curY = 0;
     };
@@ -5943,14 +5987,16 @@
     const area = modal.querySelector(".cm-board-modal-scrollarea");
     const scroller = area || modal;
     const grip = modal.querySelector(".cm-board-modal-bar");
-    let sY = 0, sX = 0, canSwipe = false, swiping = false;
+    let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
     const drag = createDragTracker();
+    const fade = createBackdropFade(backdrop);
     modal.addEventListener("touchstart", (e) => {
       const onGrip = grip && (e.target === grip || grip.contains(e.target));
       canSwipe = onGrip || scroller.scrollTop <= 2;
       sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
       swiping = false;
+      travel = centeredRemaining(modal);
       drag.start(sY);
       if (canSwipe)
         modal.style.transition = "none";
@@ -5968,8 +6014,10 @@
         e.preventDefault();
         swiping = true;
         modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
+        fade?.track(dy / travel);
       } else if (swiping) {
         modal.style.transform = "translate(-50%, -50%) scale(1)";
+        fade?.track(0);
       }
       drag.move(e.touches[0].clientY);
     }, { passive: false });
@@ -5983,7 +6031,8 @@
         velocity: drag.velocity,
         remaining: centeredRemaining(modal),
         dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
-        onDismiss: () => close()
+        onDismiss: () => close(),
+        backdrop: fade
       });
       swiping = false;
       canSwipe = false;
@@ -6039,14 +6088,16 @@
       const area = modal.querySelector(".cm-board-modal-scrollarea");
       const scroller = area || modal;
       const grip = modal.querySelector(".cm-board-modal-bar");
-      let sY = 0, sX = 0, canSwipe = false, swiping = false;
+      let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
       const drag = createDragTracker();
+      const fade = createBackdropFade(backdrop);
       modal.addEventListener("touchstart", (e) => {
         const onGrip = grip && (e.target === grip || grip.contains(e.target));
         canSwipe = onGrip || scroller.scrollTop <= 2;
         sY = e.touches[0].clientY;
         sX = e.touches[0].clientX;
         swiping = false;
+        travel = centeredRemaining(modal);
         drag.start(sY);
         if (canSwipe)
           modal.style.transition = "none";
@@ -6064,8 +6115,10 @@
           e.preventDefault();
           swiping = true;
           modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
+          fade?.track(dy / travel);
         } else if (swiping) {
           modal.style.transform = "translate(-50%, -50%) scale(1)";
+          fade?.track(0);
         }
         drag.move(e.touches[0].clientY);
       }, { passive: false });
@@ -6079,7 +6132,8 @@
           velocity: drag.velocity,
           remaining: centeredRemaining(modal),
           dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
-          onDismiss: () => collapse()
+          onDismiss: () => collapse(),
+          backdrop: fade
         });
         swiping = false;
         canSwipe = false;
@@ -9448,8 +9502,9 @@ ${ev.description || ""}`
     const sheet = overlay.querySelector(".app-modal-sheet");
     if (!sheet)
       return;
-    let startY = 0, dragging = false;
+    let startY = 0, dragging = false, travel = 1;
     const drag = createDragTracker();
+    const fade = createBackdropFade(overlay.querySelector(".app-modal-backdrop"));
     sheet.addEventListener("touchstart", (e) => {
       if (e.target.closest(".wx-chart-svg-wrap"))
         return;
@@ -9457,6 +9512,7 @@ ${ev.description || ""}`
         return;
       startY = e.touches[0].clientY;
       dragging = true;
+      travel = Math.max(sheet.offsetHeight || 1, 1);
       drag.start(startY);
     }, { passive: true });
     sheet.addEventListener("touchmove", (e) => {
@@ -9466,7 +9522,9 @@ ${ev.description || ""}`
       if (dy > 0) {
         sheet.style.transition = "none";
         sheet.style.transform = `translateY(${dy}px)`;
-      }
+        fade?.track(dy / travel);
+      } else
+        fade?.track(0);
       drag.move(e.touches[0].clientY);
     }, { passive: true });
     sheet.addEventListener("touchend", (e) => {
@@ -9480,7 +9538,8 @@ ${ev.description || ""}`
         velocity: drag.velocity,
         remaining: sheetRemaining(sheet, dy),
         dismissTransform: "translateY(100%)",
-        onDismiss: () => close()
+        onDismiss: () => close(),
+        backdrop: fade
       });
     });
   }
@@ -10850,8 +10909,9 @@ ${ev.description || ""}`
   }
   function attachSheetSwipe(back, panel, scroller, doClose) {
     scroller = scroller || panel;
-    let startY = 0, dragging = false, dy = 0;
+    let startY = 0, dragging = false, dy = 0, travel = 1;
     const drag = createDragTracker();
+    const fade = createBackdropFade(back, "bg");
     panel.addEventListener("touchstart", (e) => {
       const y = e.touches[0].clientY;
       const inHeader = y - panel.getBoundingClientRect().top < 64;
@@ -10860,6 +10920,7 @@ ${ev.description || ""}`
       startY = y;
       dragging = true;
       dy = 0;
+      travel = Math.max(panel.offsetHeight || 1, 1);
       drag.start(y);
     }, { passive: true });
     panel.addEventListener("touchmove", (e) => {
@@ -10868,10 +10929,12 @@ ${ev.description || ""}`
       dy = e.touches[0].clientY - startY;
       if (dy <= 0) {
         panel.style.transform = "";
+        fade?.track(0);
         return;
       }
       if (scroller.scrollTop > 0) {
         panel.style.transform = "";
+        fade?.track(0);
         startY = e.touches[0].clientY;
         drag.start(startY);
         dy = 0;
@@ -10880,6 +10943,7 @@ ${ev.description || ""}`
       e.preventDefault();
       panel.style.transition = "none";
       panel.style.transform = `translateY(${dy}px)`;
+      fade?.track(dy / travel);
       drag.move(e.touches[0].clientY);
     }, { passive: false });
     panel.addEventListener("touchend", () => {
@@ -10895,7 +10959,8 @@ ${ev.description || ""}`
         onDismiss: (ms) => {
           back.classList.remove("open");
           setTimeout(doClose, ms);
-        }
+        },
+        backdrop: fade
       });
       dy = 0;
     });

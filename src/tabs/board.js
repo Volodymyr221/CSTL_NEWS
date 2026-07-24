@@ -24,7 +24,7 @@ import {
   fetchSavedPostIds, hydrateNames, nameUid, liveName,
 } from '../core/supabase.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
-import { createDragTracker, finishSwipe, centeredRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { createDragTracker, finishSwipe, centeredRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
@@ -781,12 +781,14 @@ export function openAdModalStandalone(post) {
   const area = modal.querySelector('.cm-board-modal-scrollarea');
   const scroller = area || modal;
   const grip = modal.querySelector('.cm-board-modal-bar');
-  let sY = 0, sX = 0, canSwipe = false, swiping = false;
+  let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
   const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
+  const fade = createBackdropFade(backdrop);   // затемнення світлішає разом з рухом
   modal.addEventListener('touchstart', e => {
     const onGrip = grip && (e.target === grip || grip.contains(e.target));
     canSwipe = onGrip || scroller.scrollTop <= 2;
     sY = e.touches[0].clientY; sX = e.touches[0].clientX; swiping = false;
+    travel = centeredRemaining(modal);   // шлях до нижнього краю — міряємо раз за жест
     drag.start(sY);
     if (canSwipe) modal.style.transition = 'none';
   }, { passive: true });
@@ -795,8 +797,8 @@ export function openAdModalStandalone(post) {
     const dy = e.touches[0].clientY - sY;
     const dx = e.touches[0].clientX - sX;
     if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) { canSwipe = false; return; }
-    if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`; }
-    else if (swiping) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; }
+    if (dy > 0) { e.preventDefault(); swiping = true; modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`; fade?.track(dy / travel); }
+    else if (swiping) { modal.style.transform = 'translate(-50%, -50%) scale(1)'; fade?.track(0); }
     drag.move(e.touches[0].clientY);
   }, { passive: false });
   modal.addEventListener('touchend', e => {
@@ -809,6 +811,7 @@ export function openAdModalStandalone(post) {
       remaining: centeredRemaining(modal),
       dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
       onDismiss: () => close(),
+      backdrop: fade,
     });
     swiping = false; canSwipe = false;
   }, { passive: true });
@@ -873,14 +876,16 @@ function initBoardNoteExpand(root) {
     // коли опис прокручено; АБО коли скролер угорі (scrollTop<=2). Горизонталь = свайп галереї.
     const scroller = area || modal;
     const grip = modal.querySelector('.cm-board-modal-bar');
-    let sY = 0, sX = 0, canSwipe = false, swiping = false;
+    let sY = 0, sX = 0, canSwipe = false, swiping = false, travel = 1;
     const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
+    const fade = createBackdropFade(backdrop);   // затемнення світлішає разом з рухом
     modal.addEventListener('touchstart', e => {
       const onGrip = grip && (e.target === grip || grip.contains(e.target));
       canSwipe = onGrip || scroller.scrollTop <= 2;
       sY = e.touches[0].clientY;
       sX = e.touches[0].clientX;
       swiping = false;
+      travel = centeredRemaining(modal);   // шлях до нижнього краю — міряємо раз за жест
       drag.start(sY);
       if (canSwipe) modal.style.transition = 'none';
     }, { passive: true });
@@ -894,8 +899,10 @@ function initBoardNoteExpand(root) {
         e.preventDefault();
         swiping = true;
         modal.style.transform = `translate(-50%, calc(-50% + ${dy}px)) scale(1)`;
+        fade?.track(dy / travel);            // фон світлішає разом з рухом
       } else if (swiping) {
         modal.style.transform = 'translate(-50%, -50%) scale(1)';
+        fade?.track(0);
       }
       drag.move(e.touches[0].clientY);
     }, { passive: false });
@@ -909,6 +916,7 @@ function initBoardNoteExpand(root) {
         remaining: centeredRemaining(modal),
         dismissTransform: `translate(-50%, calc(-50% + ${Math.round(dy + centeredRemaining(modal))}px)) scale(1)`,
         onDismiss: () => collapse(),
+        backdrop: fade,
       });
       swiping = false; canSwipe = false;
     }, { passive: true });

@@ -25,7 +25,7 @@ import { buildHeroCard, renderRouteMapV4, parseRouteEndpoints, openSavedRouteOnB
 import { isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import { ensureNewsLoaded, newsCardsHtml, openArticle } from './news.js';
 import { openModal } from '../core/modal.js';
-import { createDragTracker, finishSwipe, sheetRemaining } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 
 let cmBusIndex = 0;
 let cmBusEntries = []; // [{ route, dateISO }] — рейс + день (сьогодні або майбутній)
@@ -360,13 +360,15 @@ function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx 
 function wireWeatherSwipe(overlay, close) {
   const sheet = overlay.querySelector('.app-modal-sheet');
   if (!sheet) return;
-  let startY = 0, dragging = false;
+  let startY = 0, dragging = false, travel = 1;
   const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
+  const fade = createBackdropFade(overlay.querySelector('.app-modal-backdrop'));
   sheet.addEventListener('touchstart', e => {
     if (e.target.closest('.wx-chart-svg-wrap')) return;   // графік → скрабер, не свайп
     if (sheet.scrollTop > 2) return;
     startY = e.touches[0].clientY;
     dragging = true;
+    travel = Math.max(sheet.offsetHeight || 1, 1);        // повний шлях аркуша — раз за жест
     drag.start(startY);
   }, { passive: true });
   sheet.addEventListener('touchmove', e => {
@@ -374,7 +376,11 @@ function wireWeatherSwipe(overlay, close) {
     const dy = e.touches[0].clientY - startY;
     // transition:none — БЕЗ цього аркуш їхав крізь CSS-анімацію 0.25s і «наздоганяв»
     // палець ривками (той самий дьоргаючий баг, що вилікували в чаті Дошки 14.07).
-    if (dy > 0) { sheet.style.transition = 'none'; sheet.style.transform = `translateY(${dy}px)`; }
+    if (dy > 0) {
+      sheet.style.transition = 'none';
+      sheet.style.transform = `translateY(${dy}px)`;
+      fade?.track(dy / travel);                           // фон світлішає разом з рухом
+    } else fade?.track(0);
     drag.move(e.touches[0].clientY);
   }, { passive: true });
   sheet.addEventListener('touchend', e => {
@@ -388,6 +394,7 @@ function wireWeatherSwipe(overlay, close) {
       remaining: sheetRemaining(sheet, dy),
       dismissTransform: 'translateY(100%)',
       onDismiss: () => close(),
+      backdrop: fade,
     });
   });
 }
