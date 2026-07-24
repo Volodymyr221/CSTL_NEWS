@@ -242,7 +242,11 @@ function postCardHtml(post) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
   const cCount = (commentMap.get(post.id) || []).length;
-  const authorName = post.author_uid ? liveName('', post.author_uid, '') : '';  // вже екранований
+  // Підпис автора-людини — лише якщо пост опубліковано «від себе». Пости від імені
+  // спільноти виглядають суто офіційно, без особистого імені (вибір у композері).
+  // show_author за замовчуванням true → старі пости виглядають як раніше.
+  const authorName = (post.author_uid && post.show_author !== false)
+    ? liveName('', post.author_uid, '') : '';  // вже екранований
   const imgs = postImages(post);
   const photo = galleryHtml(imgs, post.id);
   const hasPhoto = imgs.length > 0;
@@ -969,6 +973,11 @@ function openComposer(pageId, editPost = null) {
   const CTA = edit ? 'Зберегти' : 'Опублікувати';
   // Тип поста: допис або подія. Редагування події (є event_date) → одразу «Подія».
   let postType = (edit && editPost.event_date) ? 'event' : 'post';
+  // Від чийого імені публікуємо. За замовчуванням — від СПІЛЬНОТИ (офіційний голос
+  // сторінки, як у Facebook). «Від себе» лишає під текстом підпис автора-людини.
+  // При редагуванні беремо те, що вже стоїть у поста.
+  const page = pages.find(p => p.id === pageId);
+  let showAuthor = edit ? (editPost.show_author !== false) : false;
 
   const back = document.createElement('div');
   back.className = 'fd-sheet-back';
@@ -990,6 +999,13 @@ function openComposer(pageId, editPost = null) {
           <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
       </div>
       <div class="fd-comp-thumbs" hidden></div>
+      <div class="fd-comp-as">
+        <div class="fd-comp-as-label">Публікувати як</div>
+        <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
+          <span class="fd-comp-as-dot"></span>${escapeHtml(page?.name || 'Спільнота')}</button>
+        <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
+          <span class="fd-comp-as-dot"></span>Від себе</button>
+      </div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
         <button class="fd-comp-send" type="button">${CTA}</button>
@@ -1008,6 +1024,13 @@ function openComposer(pageId, editPost = null) {
     }));
 
   const fileInput = back.querySelector('input[type=file]');
+  // Перемикач «від спільноти / від себе»
+  back.querySelectorAll('.fd-comp-as-btn').forEach(btn =>
+    btn.addEventListener('click', () => {
+      showAuthor = btn.dataset.as === 'me';
+      back.querySelectorAll('.fd-comp-as-btn').forEach(b => b.classList.toggle('is-on', b === btn));
+    }));
+
   const thumbs = back.querySelector('.fd-comp-thumbs');
   const renderThumbs = () => {
     if (!existing.length && !files.length) { thumbs.hidden = true; thumbs.innerHTML = ''; return; }
@@ -1074,8 +1097,8 @@ function openComposer(pageId, editPost = null) {
     }
     const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
     const res = edit
-      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, ...eventFields })
-      : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields);
+      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields })
+      : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor);
     if (res.ok) {
       if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
       else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)

@@ -474,3 +474,21 @@
 }
 .fd-team-add-btn:disabled { opacity: 0.6; }
 .fd-team-hint { font-size: 12px; color: var(--fd-muted); margin-top: 8px; line-height: 1.4; }
+
+/* ── Композер: від чийого імені публікуємо ───────────────────────────────── */
+/* Рядок над кнопкою публікації: підпис + два варіанти. Обраний — бордовий,
+   з крапкою-маркером (як радіо-кнопка, але в стилі решти композера). */
+.fd-comp-as { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding: 10px 2px 2px; }
+.fd-comp-as-label { font-size: 12.5px; color: var(--fd-muted); margin-right: 2px; }
+.fd-comp-as-btn {
+  display: inline-flex; align-items: center; gap: 6px; max-width: 100%;
+  padding: 7px 12px; border: 1px solid var(--fd-divider); border-radius: 999px;
+  background: var(--fd-surface); color: var(--fd-muted); font: inherit; font-size: 13px;
+  cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.fd-comp-as-dot {
+  width: 12px; height: 12px; flex: none; border-radius: 50%;
+  border: 2px solid var(--fd-divider); background: transparent;
+}
+.fd-comp-as-btn.is-on { color: var(--fd-accent); border-color: var(--fd-accent); background: rgba(114,47,55,0.06); }
+.fd-comp-as-btn.is-on .fd-comp-as-dot { border-color: var(--fd-accent); background: var(--fd-accent); }
