@@ -22,13 +22,12 @@
 .fd-topbar {
   position: sticky; top: 0; z-index: 20; --sh: 0;
   display: flex; align-items: center;
-  background: color-mix(in srgb, var(--fd-bg) 84%, transparent);
+  /* У спокої — світла плашка (0.86); при стисканні (--sh) фон стає майже прозорим
+     (0.20) → лишається лише скло-blur, а не біла плашка. --fd-bg = #ECEEF1. */
+  background: rgba(236, 238, 241, calc(0.86 - 0.66 * var(--sh)));
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   border-bottom: 1px solid var(--fd-divider);
   box-shadow: 0 6px 14px rgba(16, 18, 22, 0.10);   /* тінь знизу — відділити від стрічки */
-  /* При стисканні (--sh) нижні кути трохи заокруглюються (не сильно). */
-  border-bottom-left-radius: calc(12px * var(--sh));
-  border-bottom-right-radius: calc(12px * var(--sh));
 }
 
 /* ── Кружечки-канали (stories) — повний розмір, підпис по СЛОВАХ (без переносу букв) ──
