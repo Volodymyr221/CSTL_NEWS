@@ -891,6 +891,10 @@ function openPageEditor(pageId) {
       <div class="fd-sheet-handle"></div>
       <div class="fd-sheet-title">Редагувати сторінку</div>
       <div class="fd-edit-field">
+        <div class="fd-edit-label">Назва</div>
+        <input class="fd-edit-input" data-name value="${escapeHtml(page.name || '')}" maxlength="120" placeholder="Назва спільноти">
+      </div>
+      <div class="fd-edit-field">
         <div class="fd-edit-label">Банер (широка шапка)</div>
         <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
       </div>
@@ -930,6 +934,8 @@ function openPageEditor(pageId) {
       if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Аватар не завантажився: ' + (up.error || '')); return; }
       patch.avatar_url = up.url;
     }
+    const name = back.querySelector('[data-name]').value.trim();
+    if (name && name !== page.name) patch.name = name;      // порожню назву не приймаємо
     const theme = back.querySelector('[data-theme]').value.trim();
     if (theme !== (page.theme || '')) patch.theme = theme;
     if (!Object.keys(patch).length) { close(); return; }

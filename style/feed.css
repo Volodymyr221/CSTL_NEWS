@@ -183,18 +183,22 @@
 .fd-screen-title {
   position: sticky; top: 0; z-index: 3; margin-top: 8px;
   display: flex; align-items: center; justify-content: center; text-align: center;
-  padding-top: calc(env(safe-area-inset-top, 0px) * var(--p, 0));
-  min-height: calc((env(safe-area-inset-top, 0px) + 60px) * var(--p, 0));
+  /* Горизонт. відступ росте (20→56px) → у піні текст не заходить під іконки.
+     Контент-зона [safe, safe+58] → центр = safe+29 = центр іконок (по вертикалі). */
+  padding: calc(env(safe-area-inset-top, 0px) * var(--p, 0)) calc(20px + 36px * var(--p, 0)) 0;
+  min-height: calc((env(safe-area-inset-top, 0px) + 58px) * var(--p, 0));
 }
-.fd-screen-title::before {                 /* скло-блюр + низ згасає, проявляється при піні */
-  content: ''; position: absolute; inset: 0; z-index: -1; opacity: var(--p, 0);
+.fd-screen-title::before {                 /* скло-блюр + низ згасає; вищий за контент —
+  тягнеться нижче іконок (safe+74), тож під іконками ще є суцільний блюр перед фейдом. */
+  content: ''; position: absolute; top: 0; left: 0; right: 0; z-index: -1; opacity: var(--p, 0);
+  height: calc((env(safe-area-inset-top, 0px) + 74px) * var(--p, 0));
   background: rgba(236, 238, 241, 0.72);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
   mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
 }
-.fd-screen-title-in {                      /* текст меншає при піні (20px → ~15px) */
-  transform: scale(calc(1 - 0.25 * var(--p, 0))); transform-origin: center center;
+.fd-screen-title-in {                      /* текст меншає при піні (20px → ~16.4px) */
+  transform: scale(calc(1 - 0.18 * var(--p, 0))); transform-origin: center center;
   will-change: transform;
 }
 .fd-screen-back, .fd-bell, .fd-screen-menu {
