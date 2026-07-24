@@ -11493,7 +11493,7 @@ ${ev.description || ""}`
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {
-        const SHRINK_START = 30;
+        const SHRINK_START = 50;
         const SHRINK_RANGE = 40;
         let shRaf = 0;
         const applyShrink = () => {

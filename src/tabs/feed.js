@@ -1072,8 +1072,8 @@ export async function initFeed() {
     const main = document.querySelector('.app-main');
     const bar = root.querySelector('.fd-topbar');
     if (main && bar) {
-      const SHRINK_START = 30;   // мертва зона: перші 30px скролу назви ще стоять повністю
-      const SHRINK_RANGE = 40;   // далі на 40px плавно згортаються (30→70px)
+      const SHRINK_START = 50;   // мертва зона: перші 50px скролу назви ще стоять повністю
+      const SHRINK_RANGE = 40;   // далі на 40px плавно згортаються (50→90px)
       let shRaf = 0;
       const applyShrink = () => {
         shRaf = 0;
