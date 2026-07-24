@@ -6349,7 +6349,7 @@
     return ids.map((id) => allArticles.find((a) => a.id === id)).filter(Boolean);
   }
   async function openArticleById(id) {
-    window.switchTab?.("news");
+    window.switchTab?.("community");
     await ensureNewsLoaded();
     openArticle(id);
   }
