@@ -17,7 +17,7 @@ import {
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
 } from '../core/supabase.js';
-import { ensurePushSubscription } from '../core/push.js';
+import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
@@ -127,8 +127,33 @@ function galleryHtml(images, postId) {
   </div>`;
 }
 
-// Оновлення крапок/лічильника каруселі при свайпі.
+// Пропорція фото у стрічці: РІДНА (як у файлі), але не вища за стелю 3:4.
+// Читаємо справжній розмір кадру (naturalWidth/naturalHeight — пікселі самого файлу)
+// і пишемо його у CSS-змінну --fd-ar на контейнері фото. Тому квадратні й ширші кадри
+// показуються цілими на всю ширину (нічого не зрізається з боків), а дуже високі
+// вертикальні обрізаються рамкою 3:4 (cover) — як було раніше.
+const PHOTO_MIN_AR = 3 / 4;   // 0.75 — найвище (найвужче) що показуємо без обрізки
+
+function applyPhotoRatio(box, img) {
+  const w = img.naturalWidth, h = img.naturalHeight;
+  if (!w || !h) return;                                    // фото не завантажилось — лишається fallback 3/4
+  box.style.setProperty('--fd-ar', (Math.max(w / h, PHOTO_MIN_AR)).toFixed(4));
+}
+
+// Для каруселі (2+ фото) беремо пропорцію ПЕРШОГО кадру — усі слайди однакової висоти.
+function wirePhotoRatios(root) {
+  root.querySelectorAll('.fd-photo--single, .fd-gallery').forEach(box => {
+    if (box.dataset.arWired) return; box.dataset.arWired = '1';
+    const img = box.querySelector('img');
+    if (!img) return;
+    if (img.complete) applyPhotoRatio(box, img);           // з кешу — розмір уже відомий
+    else img.addEventListener('load', () => applyPhotoRatio(box, img), { once: true });
+  });
+}
+
+// Оновлення крапок/лічильника каруселі при свайпі (+ пропорції фото постів).
 function wireGalleries(root) {
+  wirePhotoRatios(root);
   root.querySelectorAll('.fd-gallery').forEach(g => {
     if (g.dataset.wired) return; g.dataset.wired = '1';
     const track = g.querySelector('.fd-gal-track');
@@ -610,7 +635,7 @@ async function openPageScreen(pageId) {
   screen.innerHTML = `
     <div class="fd-screen-fixedbar">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
-      <button class="fd-bell${subscribed ? ' fd-bell--on' : ''}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
+      <button class="fd-bell${bellClass(pageId)}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
     </div>
@@ -740,29 +765,65 @@ function attachScreenSwipeBack(screen, close) {
   }, { passive: false });
 }
 
+// ── Чесний дзвіночок: три стани ──────────────────────────────────────────────
+// 🔔 порожній  — не підписаний;
+// 🔔 залитий   — підписаний, сповіщення реально дійдуть;
+// ⚠️ бурштин   — підписаний, АЛЕ сповіщення НЕ дійдуть (нема дозволу / пристрій не вміє).
+// Третій стан головний: раніше дзвіночок горів «увімкнено» навіть коли дозволу нема —
+// користувач був певен що підписався, а не приходило нічого.
+function bellClass(pageId) {
+  if (!mySubs.has(pageId)) return '';
+  return pushBlockedMsg() ? ' fd-bell--on fd-bell--warn' : ' fd-bell--on';
+}
+function paintBell(btn, pageId) {
+  if (!btn) return;
+  btn.className = `fd-bell${bellClass(pageId)}`;
+  btn.innerHTML = mySubs.has(pageId) ? IC_BELL_F : IC_BELL;
+  const why = mySubs.has(pageId) ? pushBlockedMsg() : null;
+  btn.setAttribute('aria-label', why ? `Сповіщення: ${why}` : 'Сповіщення');
+}
+
 async function toggleBell(pageId, screen) {
   if (!isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   const on = !mySubs.has(pageId);
+
+  // 🔑 ПОРЯДОК КРИТИЧНИЙ. Дозвіл на сповіщення запитуємо ПЕРШИМ — ще до будь-якого
+  // await (запис у базу тощо). Браузер (особливо Safari/iOS) відкриває вікно дозволу
+  // ЛИШЕ поки триває «жест користувача» — тобто прямо в обробнику тапу. Якщо перед
+  // запитом дочекатись мережі, жест уже «згорів» і вікно не з'явиться взагалі —
+  // саме тому раніше на iPhone нічого не приходило. registerFeedPushDevice()
+  // викликаємо синхронно (без await перед ним) і чекаємо на результат уже після.
+  const devicePromise = on ? registerFeedPushDevice() : null;
+
   if (on) mySubs.add(pageId); else mySubs.delete(pageId);
   const btn = screen.querySelector('.fd-bell');
-  if (btn) { btn.classList.toggle('fd-bell--on', on); btn.innerHTML = on ? IC_BELL_F : IC_BELL; }
+  paintBell(btn, pageId);
   const res = await setPageSubscription(pageId, currentUserId(), on);
   if (!res.ok) {                       // відкат
     if (on) mySubs.delete(pageId); else mySubs.add(pageId);
-    if (btn) { btn.classList.toggle('fd-bell--on', !on); btn.innerHTML = !on ? IC_BELL_F : IC_BELL; }
+    paintBell(btn, pageId);
+    showToast('Не вдалося зберегти — спробуй ще раз');
     return;
   }
-  // Увімкнули дзвіночок → зареєструвати push-пристрій, щоб Edge-функція мала куди слати.
-  // Реюз патерну чатів (P-5): дозвіл + браузер-підписка → user_push_devices за uid.
-  if (on) registerFeedPushDevice();
+  // Підписка в базі збережена. Дивимось, чим закінчилась реєстрація пристрою.
+  // Якщо push недоступний — кажемо чесно і лишаємо дзвіночок у стані ⚠️. Саму підписку
+  // НЕ скасовуємо: щойно користувач дозволить сповіщення, вони почнуть приходити
+  // (self-heal при старті перереєструє пристрій — крок 4).
+  if (devicePromise) {
+    const okDevice = await devicePromise;
+    paintBell(btn, pageId);            // дозвіл міг щойно змінитись → перемалювати
+    if (!okDevice) showToast(pushBlockedMsg() || 'Не вдалося увімкнути сповіщення — спробуй ще раз');
+    else showToast('Сповіщення увімкнено');
+  }
 }
 
-// Запит дозволу на сповіщення + збереження push-пристрою під акаунт (для сповіщень «Стрічки»).
-// Fire-and-forget: підписка в БД уже є; якщо push недоступний/відмовлено — тихо (тост-натяк).
+// Дозвіл на сповіщення + збереження push-пристрою під акаунт (сповіщення «Стрічки»).
+// ⚠️ Викликати ЛИШЕ синхронно з обробника тапу (див. коментар у toggleBell) —
+// інакше вікно дозволу не з'явиться на iOS. Реюз патерну чатів (P-5).
 async function registerFeedPushDevice() {
   try {
     const sub = await ensurePushSubscription();
-    if (!sub) { showToast('Сповіщення вимкнено у браузері — дозволь у налаштуваннях'); return; }
+    if (!sub) return false;            // ЧОМУ саме — повідомляє викликач (єдине місце тостів)
     const j = sub.toJSON();
     await saveUserPushDevice({
       uid:      currentUserId(),
@@ -770,7 +831,29 @@ async function registerFeedPushDevice() {
       p256dh:   j.keys?.p256dh,
       auth_key: j.keys?.auth,
     });
-  } catch (e) { console.warn('[feed] registerFeedPushDevice:', e && e.message); }
+    return true;
+  } catch (e) { console.warn('[feed] registerFeedPushDevice:', e && e.message); return false; }
+}
+
+// ── Self-heal push-пристрою (крок 4) ─────────────────────────────────────────
+// ПРОБЛЕМА: пристрій реєструвався ЛИШЕ в мить натискання дзвіночка. Тому сповіщення
+// тихо вмирали у трьох звичайних життєвих випадках:
+//   1) увімкнув дзвіночок на телефоні → на планшеті/іншому браузері пристрій не
+//      зареєстрований, там не приходить нічого;
+//   2) браузер періодично ПРОТЕРМІНОВУЄ push-підписку (endpoint змінюється) — старий
+//      запис у базі стає мертвим, новий ніхто не створює → тиша назавжди;
+//   3) хто підписався до появи Етапу 5 — має підписку в базі, але жодного пристрою.
+// РІШЕННЯ: при кожному старті, якщо користувач має хоч одну підписку І дозвіл уже
+// надано — тихо переконатись що підписка браузера жива, і зберегти її під акаунт.
+// Дозвіл НЕ питаємо (він уже є) → жодних вікон і нав'язування; повний no-op для тих,
+// хто дзвіночком не користується.
+async function healFeedPushDevice() {
+  try {
+    if (!isLoggedIn() || !mySubs.size) return;
+    if (pushBlockedMsg()) return;                       // недоступно/відмовлено — не смикаємо
+    if (Notification.permission !== 'granted') return;  // дозвіл питає лише тап по дзвіночку
+    await registerFeedPushDevice();
+  } catch (e) { console.warn('[feed] healFeedPushDevice:', e && e.message); }
 }
 
 // ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────
@@ -1095,6 +1178,7 @@ export async function initFeed() {
   }
   await loadData();
   renderFeed();
+  healFeedPushDevice();     // тихо полагодити push-пристрій, якщо є підписки (див. нижче)
 
   // Перезавантаження при поверненні на вкладку (напр. після входу — з'явиться
   // композер/дзвіночок, оновляться мої лайки/підписки).

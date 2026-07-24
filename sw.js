@@ -1,7 +1,7 @@
 // sw.js — CSTL LIFE Service Worker
 // Кешує статичні файли для офлайн-роботи і швидкого завантаження
 
-const CACHE_NAME = 'cstl-20260724-1707';
+const CACHE_NAME = 'cstl-20260724-1824';
 
 // Precache (попереднє кешування) — статичні файли які не змінюються часто
 // index.html тут — як fallback для офлайну (на fetch використовується network-first)
@@ -163,6 +163,10 @@ self.addEventListener('push', e => {
           __cstl: 'push', pushType: data.type || null,
           title: data.title || '', body: data.body || '',
           threadId: data.thread_id ?? null, groupId: data.group_id ?? null,
+          // url — deep-link (напр. на новий пост «Стрічки»). Потрібен in-app банеру:
+          // при відкритому додатку системне сповіщення НЕ показуємо (нижче), тож без
+          // банера користувач не дізнався б про новий пост узагалі.
+          url: data.url || null,
         }); } catch (_) {} });
         // App is in foreground — skip system notification, in-app banner handles it
         if (list.some(c => c.visibilityState === 'visible')) return;
@@ -192,8 +196,11 @@ self.addEventListener('notificationclick', e => {
         // (P-9: раніше просто фокусувало, thread_id ігнорувався).
         for (const c of list) {
           if ('focus' in c) {
-            if (threadId != null || groupId != null) {
-              try { c.postMessage({ __cstl: 'notif-click', threadId, groupId }); } catch (_) {}
+            if (threadId != null || groupId != null || url) {
+              // url — deep-link на конкретний елемент (#/post/feed/<id> тощо). Раніше
+              // при ВІДКРИТОМУ додатку він ігнорувався: тап по сповіщенню про новий
+              // пост лише фокусував вікно і лишав користувача там, де він був.
+              try { c.postMessage({ __cstl: 'notif-click', threadId, groupId, url }); } catch (_) {}
             }
             return c.focus();
           }

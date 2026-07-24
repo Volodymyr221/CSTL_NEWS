@@ -2,6 +2,8 @@
 // Спільна логіка Web Push (VAPID) — раніше жила лише у buses.js (трекер рейсів),
 // Б8.1 виносить сюди щоб board-chat.js (P-5) міг перевикористати без дублювання.
 
+import { isIOS, isStandalone } from './utils.js';
+
 export const VAPID_PUBLIC_KEY = 'BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o';
 
 // Перетворює VAPID public key з Base64url у Uint8Array для pushManager.subscribe()
@@ -15,6 +17,22 @@ export function urlBase64ToUint8Array(b64) {
 // Чи здатний цей пристрій/браузер взагалі показувати push (iOS-PWA, дозвіл тощо).
 export function isPushCapable() {
   return ('Notification' in window) && ('serviceWorker' in navigator) && ('PushManager' in window);
+}
+
+// Чому сповіщення НЕ зможуть прийти — текст людською мовою, або null якщо все гаразд.
+// Спільне для дзвіночка Автобусів і дзвіночка сторінок «Стрічки»: стан дзвіночка має
+// бути чесний скрізь однаково — краще показати ⚠️ і пояснити, ніж вдавати що працює.
+export function pushBlockedMsg() {
+  // Обмеження Apple: у Safari-вкладці web-push не існує взагалі — лише у встановленій
+  // PWA (iOS 16.4+). Без цієї перевірки користувач тапає дзвіночок, нічого не відбувається
+  // і причина невідома. Ставимо ПЕРШОЮ: на iOS у вкладці навіть `Notification` часто нема,
+  // тож загальне «недоступні на цьому пристрої» ввело б в оману (пристрій якраз уміє).
+  if (isIOS() && !isStandalone()) {
+    return 'На iPhone сповіщення працюють лише у встановленому додатку: «Поділитися» → «На екран Домів»';
+  }
+  if (!isPushCapable()) return 'Сповіщення недоступні на цьому пристрої';
+  if (Notification.permission === 'denied') return 'Сповіщення вимкнені в налаштуваннях телефону — увімкни їх для CSTL LIFE';
+  return null;
 }
 
 // Порівнює два ключі застосунку (applicationServerKey) побайтно.

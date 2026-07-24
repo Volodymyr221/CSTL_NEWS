@@ -9,17 +9,13 @@
 //   • Android — нативне встановлення через beforeinstallprompt;
 //   • iOS — інструкція «Поділитись ⎋ → На головний екран».
 
+import { isIOS, isStandalone } from './utils.js';
+
 const SNOOZE_KEY  = 'cstl-install-snooze-v1';
 const SNOOZE_DAYS = 7;
 
-// Вже в PWA? (display-mode standalone — Android/desktop; navigator.standalone — iOS)
-function isStandalone() {
-  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches)
-      || window.navigator.standalone === true;
-}
-function isIOS() {
-  return /iphone|ipad|ipod/i.test(navigator.userAgent);
-}
+// isStandalone (вже в PWA?) / isIOS — спільні в core/utils.js (24.07): ті самі перевірки
+// потрібні дзвіночку сповіщень, тож живуть в одному місці, а не двома копіями.
 function snoozed() {
   try {
     const t = Number(localStorage.getItem(SNOOZE_KEY) || 0);

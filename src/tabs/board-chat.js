@@ -1275,7 +1275,10 @@ export async function openThreadById(threadId) {
 // ── P-8: банер вхідного push (chat) коли застосунок у фокусі — раніше нічого
 // візуально не показувалось, лише бейдж (легко пропустити). Тап → відкрити розмову.
 let _chatBannerTimer = null;
-function showChatPushBanner({ title, body, threadId }) {
+// In-app банер вхідного push (застосунок відкритий → системного сповіщення нема).
+// Обслуговує і чати (threadId → відкрити розмову), і сповіщення сторінок «Стрічки»
+// (url → deep-link на пост; hash підхоплює слухач hashchange в app.js).
+function showChatPushBanner({ title, body, threadId, url }) {
   let el = document.getElementById('chat-push-banner');
   if (!el) {
     el = document.createElement('div');
@@ -1284,7 +1287,12 @@ function showChatPushBanner({ title, body, threadId }) {
     document.body.appendChild(el);
   }
   el.innerHTML = `<div class="cpb-title">${escapeHtml(title || 'Нове повідомлення')}</div><div class="cpb-body">${escapeHtml(body || '')}</div>`;
-  el.onclick = () => { el.classList.remove('visible'); if (threadId != null) openThreadById(threadId); };
+  el.onclick = () => {
+    el.classList.remove('visible');
+    if (threadId != null) { openThreadById(threadId); return; }
+    const i = url ? String(url).indexOf('#') : -1;
+    if (i >= 0) location.hash = String(url).slice(i);   // → hashchange → handlePostHash (app.js)
+  };
   requestAnimationFrame(() => el.classList.add('visible'));
   clearTimeout(_chatBannerTimer);
   _chatBannerTimer = setTimeout(() => el.classList.remove('visible'), 4500);
@@ -1304,8 +1312,15 @@ export function initBoardChat() {
       if (e.data.__cstl === 'push') {
         refreshUnreadBadge();
         window.dispatchEvent(new CustomEvent('cstl-chat-refresh'));
-        if (e.data.pushType === 'chat' && document.visibilityState === 'visible') {
-          showChatPushBanner({ title: e.data.title, body: e.data.body, threadId: e.data.threadId });
+        // Банер для чатів І для сповіщень сторінок «Стрічки» (type:'page'): коли
+        // додаток відкритий, системного сповіщення нема — банер єдиний спосіб
+        // дізнатись про новий пост, не виходячи з застосунку.
+        if ((e.data.pushType === 'chat' || e.data.pushType === 'page')
+            && document.visibilityState === 'visible') {
+          showChatPushBanner({
+            title: e.data.title, body: e.data.body,
+            threadId: e.data.threadId, url: e.data.url,
+          });
         }
       } else if (e.data.__cstl === 'notif-click' && e.data.threadId != null) {
         openThreadById(e.data.threadId);
