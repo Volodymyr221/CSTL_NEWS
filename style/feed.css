@@ -216,6 +216,8 @@
 /* «⋯» лишається як було — прокручується з банером (щоб узгоджуватись зі своїм поповером). */
 .fd-screen-menu { right: 58px; }
 .fd-screen-back svg, .fd-bell svg, .fd-screen-menu svg { width: 21px; height: 21px; }
+/* Шеврон «‹» гострим кінцем зліва оптично зміщений — легкий зсув вліво центрує його. */
+.fd-screen-back svg { transform: translateX(-1.5px); }
 .fd-bell--on { background: #fff; color: var(--fd-accent); }
 /* Тап по банеру/аватару → перегляд фото на весь екран. */
 .fd-banner--view, .fd-screen-ava--view { cursor: pointer; }
