@@ -346,8 +346,8 @@
    сталу висоту скла вище). Якщо повертатись до цієї ідеї — спершу зрозуміти, ЧОМУ
    діапазон animation-range лягав інакше, ніж той самий діапазон у JS. */
 .fd-screen-back, .fd-bell, .fd-screen-menu {
-  /* back/bell — усередині .fd-screen-fixedbar (sticky), тож absolute відносно нього →
-     завжди на екрані при скролі. «⋯» — absolute у банері (прокручується). */
+  /* Усі три — усередині .fd-screen-fixedbar (sticky), тож absolute відносно нього →
+     завжди на екрані при скролі, і блок з аватаркою їх не накриває. */
   position: absolute; top: calc(10px + env(safe-area-inset-top, 0px)); z-index: 2;
   width: 38px; height: 38px; border-radius: 50%; border: 0; cursor: pointer;
   background: rgba(0,0,0,0.38); color: #fff; display: flex; align-items: center; justify-content: center;
@@ -355,7 +355,8 @@
 }
 .fd-screen-back { left: 12px; }
 .fd-bell { right: 12px; }
-/* «⋯» лишається як було — прокручується з банером (щоб узгоджуватись зі своїм поповером). */
+/* «⋯» — між «назад» і дзвіночком, у тому самому липкому барі (Вова 25.07). Раніше жила в
+   банері; коли банер став sticky, кнопка лишалась угорі, а її меню їхало вниз — роз'їзд. */
 .fd-screen-menu { right: 58px; }
 .fd-screen-back svg, .fd-bell svg, .fd-screen-menu svg { width: 21px; height: 21px; }
 /* Шеврон «‹» гострим кінцем зліва оптично зміщений — легкий зсув вліво центрує його. */
@@ -369,10 +370,11 @@
 .fd-banner--view, .fd-screen-ava--view { cursor: pointer; }
 /* Випадне меню «⋯» сторінки (адмін).
    🔑 ПРАВИЛО (Вова 25.07): «такі і подібні віконця мають відкриватися зверху всіх блоків
-   ЗАВЖДИ». Тому z-index 6 — вище за геть усе на екрані сторінки: блок з аватаркою (1),
-   sticky-заголовок (3), липкий бар back/dзвіночок (5). Сам елемент у розмітці лежить
-   прямим нащадком .fd-screen (див. feed.js) — інакше банер-sticky замикав би його
-   у своєму шарі і z-index не мав би сили. */
+   ЗАВЖДИ». Виконано не номером шару, а МІСЦЕМ У РОЗМІТЦІ: меню лежить у .fd-screen-fixedbar
+   (див. feed.js) — а той липкий бар і так малюється поверх усього на екрані (z-index 5 проти
+   блоку з аватаркою 1 і заголовка 3). z-index 6 усередині бару ставить меню над своїми ж
+   кнопками. Разом: меню не може опинитись під блоком, хоч би куди його доскролили, і воно
+   прибите разом із кнопкою «⋯» — вони не роз'їжджаються при скролі. */
 .fd-screen-menu-pop { position: absolute; z-index: 6; top: calc(52px + env(safe-area-inset-top, 0px));
   right: 12px; background: var(--fd-surface); border-radius: 12px; padding: 6px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.22); min-width: 190px; }

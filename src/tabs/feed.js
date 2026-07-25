@@ -726,27 +726,28 @@ async function openPageScreen(pageId, reopen = false) {
   const screen = document.createElement('div');
   screen.className = 'fd-screen';
   screen.innerHTML = `
+    <!-- 🔑 УСІ ТРИ КНОПКИ ШАПКИ — В ОДНОМУ ЛИПКОМУ БАРІ (Вова 25.07, вибір після IMG_3578).
+         Раніше «⋯» жила в банері, а її меню — окремо, і після переводу банера в sticky вони
+         роз'їхались: кнопка лишалась прибитою вгорі, а меню їхало вниз екрана. Тепер «⋯»
+         стоїть поруч із «назад» і дзвіночком, а меню — тут же: вони фізично не можуть
+         розійтися, і блок з аватаркою їх не накриває (бар малюється поверх нього).
+         Тому НЕ ПОТРІБНІ ні згасання іконки, ні окреме правило «зникни, коли меню наїхало» —
+         причина зникла, а не наслідки залатані. Лишилось одне правило: скрол закриває меню
+         (див. нижче), щоб воно не висіло, коли користувач поїхав читати пости. -->
     <div class="fd-screen-fixedbar">
       <button class="fd-screen-back" type="button">${IC_BACK}</button>
       <button class="fd-bell${bellClass(pageId)}" data-bell="${pageId}" type="button" aria-label="Сповіщення">
         ${subscribed ? IC_BELL_F : IC_BELL}
       </button>
+      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>
+      <div class="fd-screen-menu-pop" hidden>
+        <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button>
+        <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}Команда сторінки</button>
+      </div>` : ''}
     </div>
     <div class="fd-screen-top">
-      ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <div class="fd-banner${page.banner_url ? ' fd-banner--view' : ''}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
     </div>
-    <!-- 🔑 Поповер меню «⋯» лежить НЕ в банері, а поруч із ним (Вова 25.07, скрін IMG_3578:
-         меню відкривалось ПІД аватаркою). Банер тепер position:sticky, а sticky САМ ПО СОБІ
-         створює окремий шар (stacking context) — навіть без z-index. Усе, що всередині нього,
-         замикається в цьому шарі, тож z-index поповера вже не міг перебити блок з аватаркою.
-         Тут поповер — прямий нащадок .fd-screen, тож його z-index знову рахується нарівні
-         з рештою блоків. Позиція не змінилась: .fd-screen-top теж починався з нуля, а
-         absolute-нащадок скрол-контейнера так само їде разом зі скролом. -->
-    ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
-      <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button>
-      <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}Команда сторінки</button>
-    </div>` : ''}
     <div class="fd-screen-body">
       <div class="fd-screen-id">
         <span class="fd-screen-ava-wrap">
@@ -818,8 +819,21 @@ async function openPageScreen(pageId, reopen = false) {
   const menuBtn = screen.querySelector('.fd-screen-menu');
   const menuPop = screen.querySelector('.fd-screen-menu-pop');
   if (menuBtn && menuPop) {
-    menuBtn.addEventListener('click', e => { e.stopPropagation(); menuPop.hidden = !menuPop.hidden; });
+    let openedAt = 0;   // scrollTop у момент відкриття — від нього рахуємо «користувач поїхав»
+    menuBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      menuPop.hidden = !menuPop.hidden;
+      openedAt = screen.scrollTop;
+    });
     screen.addEventListener('click', () => { if (!menuPop.hidden) menuPop.hidden = true; });
+    // Скрол закриває меню (Вова 25.07: «щоб при скролі повернення назад воно не вісіло»).
+    // Поріг 6px, а не будь-який рух: меню відкривається пальцем, і випадкове тремтіння на
+    // 1-2px під час тапу не має його гасити. Перевірка дешева — одне порівняння чисел,
+    // жодних вимірювань розкладки на кадр.
+    screen.addEventListener('scroll', () => {
+      if (menuPop.hidden) return;
+      if (Math.abs(screen.scrollTop - openedAt) > 6) menuPop.hidden = true;
+    }, { passive: true });
   }
 
   // Sticky-заголовок (iOS-стиль): та сама назва+опис при скролі доходить доверху,
