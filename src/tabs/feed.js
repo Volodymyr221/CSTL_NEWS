@@ -77,6 +77,27 @@ function avatarHtml(url, name, cls) {
   return `<span class="${cls} ${cls}--ph">${letter}</span>`;
 }
 
+// ── Порядок спільнот у стрічці ──────────────────────────────────────────────
+// База віддає сторінки за датою створення (найстаріші перші), тож «Олицька міська
+// рада» — створена останньою — стояла в кінці. Вова: «Олицька міська рада постав
+// першим». Тут — явний список закріплених: вони йдуть попереду, решта зберігає
+// свій порядок за датою.
+// ⚠️ Це ТИМЧАСОВЕ місце для правила. Правильне — прапорець/номер порядку в самій
+// базі: тоді порядок можна міняти без релізу, і він однаковий для інших громад
+// при масштабуванні. Зробити не вийшло: доступ до Supabase у цій сесії не
+// авторизований. Поки правило тут — при ПЕРЕЙМЕНУВАННІ сторінки його треба
+// оновити (звіряємо за назвою, бо id при перестворенні сторінки змінився б).
+const PINNED_PAGES = ['олицька міська рада'];
+const pinKey = (s) => (s || '').toLowerCase().replace(/[«»"']/g, '').replace(/\s+/g, ' ').trim();
+function orderPages(list) {
+  const rank = (p) => {
+    const i = PINNED_PAGES.indexOf(pinKey(p.name));
+    return i === -1 ? PINNED_PAGES.length : i;      // не закріплена → після всіх закріплених
+  };
+  // Стабільне сортування: усередині однакового рангу порядок з бази (за датою) не змінюється.
+  return [...list].sort((a, b) => rank(a) - rank(b));
+}
+
 // ── Завантаження даних ──────────────────────────────────────────────────────
 async function loadData() {
   const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
@@ -88,7 +109,7 @@ async function loadData() {
     isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(new Set()),
     isLoggedIn() ? fetchMySubscriptions()   : Promise.resolve(new Set()),
   ]);
-  pages = pg; posts = ps; reactionMap = rx; commentMap = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
+  pages = orderPages(pg); posts = ps; reactionMap = rx; commentMap = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
 
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
