@@ -22,7 +22,7 @@ import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
-import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
+import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -617,19 +617,30 @@ function openComments(postId) {
   renderCommentSheet();
 
   // ── Клавіатура (iOS): підіймати ЛИШЕ нижню смугу вводу, верх листа лишати на місці ──
-  // Симптом раніше: фокус на полі → iOS автоскролив увесь лист угору, верх (заголовок)
-  // зникав. Причина: компоузер прибитий до низу, iOS «витягував» його з-під клавіатури,
-  // зсуваючи всю модалку. Фікс: рахуємо висоту клавіатури через visualViewport (видима
-  // область екрана) і пишемо її у CSS-змінну --kb → CSS росте padding-bottom листа, тож
-  // компоузер стає над клавіатурою, а зовнішній лист не рухається (верх стоїть).
+  // Два болі, які лікуємо (Вова: на 2-й фокус лист ховався за шапку + блимав):
+  //   1) БЕЗ замка скролу iOS на фокус скролить ДОКУМЕНТ, щоб показати поле, і тягне
+  //      position:fixed лист за собою (ховається за шапкою) + блимання. lockBodyScroll()
+  //      фіксує body → документ не скролиться, offsetTop visualViewport лишається 0.
+  //   2) висоту клавіатури беремо з visualViewport → пишемо у CSS-змінну --kb → CSS
+  //      росте padding-bottom листа: компоузер стає над клавіатурою, список стискається,
+  //      зовнішня висота листа (82svh) не міняється, тож ВЕРХ СТОЇТЬ.
+  // Той самий перевірений замок, що у чатах (core/chat-core.js) — тепер спільний.
   const comSheet = sheet.querySelector('.fd-com-sheet');
+  const kbInput = sheet.querySelector('.fd-com-input');
+  const unlockScroll = lockBodyScroll();
   const vv = window.visualViewport;
-  let kbRaf = 0;
+  let kbRaf = 0, kbFocused = false;
   const syncKb = () => {
-    const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-    comSheet.style.setProperty('--kb', kb + 'px');
+    // Лише коли поле У ФОКУСІ: під замком body значення vv.height буває «застряглим»
+    // після закриття клавіатури (як у chat-core) — без гейту лишався б зайвий відступ.
+    const raw = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    comSheet.style.setProperty('--kb', (kbFocused ? raw : 0) + 'px');
   };
   const onVV = () => { cancelAnimationFrame(kbRaf); kbRaf = requestAnimationFrame(syncKb); };
+  const onKbFocus = () => { kbFocused = true; onVV(); };
+  const onKbBlur  = () => { kbFocused = false; onVV(); };
+  kbInput?.addEventListener('focus', onKbFocus);
+  kbInput?.addEventListener('blur', onKbBlur);
   if (vv) { vv.addEventListener('resize', onVV); vv.addEventListener('scroll', onVV); }
 
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
@@ -649,6 +660,7 @@ function openComments(postId) {
   const close = () => {
     if (vv) { vv.removeEventListener('resize', onVV); vv.removeEventListener('scroll', onVV); }
     cancelAnimationFrame(kbRaf);
+    unlockScroll();   // повернути скрол сторінки (body був зафіксований під клавіатуру)
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
   };

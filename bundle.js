@@ -1982,6 +1982,26 @@
     const top = panel.getBoundingClientRect().top;
     return Math.max(window.innerHeight - top, 1);
   }
+  function lockBodyScroll() {
+    const b = document.body.style;
+    const scrollY = window.scrollY || 0;
+    const prev = { position: b.position, top: b.top, left: b.left, right: b.right, width: b.width, overflow: b.overflow };
+    b.position = "fixed";
+    b.top = `-${scrollY}px`;
+    b.left = "0";
+    b.right = "0";
+    b.width = "100%";
+    b.overflow = "hidden";
+    return () => {
+      b.position = prev.position;
+      b.top = prev.top;
+      b.left = prev.left;
+      b.right = prev.right;
+      b.width = prev.width;
+      b.overflow = prev.overflow;
+      window.scrollTo(0, scrollY);
+    };
+  }
 
   // src/core/modal.js
   var _active = null;
@@ -11332,16 +11352,28 @@ ${ev.description || ""}`
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
     const comSheet = sheet.querySelector(".fd-com-sheet");
+    const kbInput = sheet.querySelector(".fd-com-input");
+    const unlockScroll = lockBodyScroll();
     const vv = window.visualViewport;
-    let kbRaf = 0;
+    let kbRaf = 0, kbFocused = false;
     const syncKb = () => {
-      const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-      comSheet.style.setProperty("--kb", kb + "px");
+      const raw = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      comSheet.style.setProperty("--kb", (kbFocused ? raw : 0) + "px");
     };
     const onVV = () => {
       cancelAnimationFrame(kbRaf);
       kbRaf = requestAnimationFrame(syncKb);
     };
+    const onKbFocus = () => {
+      kbFocused = true;
+      onVV();
+    };
+    const onKbBlur = () => {
+      kbFocused = false;
+      onVV();
+    };
+    kbInput?.addEventListener("focus", onKbFocus);
+    kbInput?.addEventListener("blur", onKbBlur);
     if (vv) {
       vv.addEventListener("resize", onVV);
       vv.addEventListener("scroll", onVV);
@@ -11369,6 +11401,7 @@ ${ev.description || ""}`
         vv.removeEventListener("scroll", onVV);
       }
       cancelAnimationFrame(kbRaf);
+      unlockScroll();
       sheet.remove();
       if (openCommentSheet && openCommentSheet.back === sheet)
         openCommentSheet = null;
