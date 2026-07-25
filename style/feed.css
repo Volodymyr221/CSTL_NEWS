@@ -469,6 +469,22 @@
   border: 0; padding: 0; cursor: pointer; font-family: inherit; }
 /* Вкладена відповідь — відступ під аватар кореневого коментаря. */
 .fd-com-row--reply { margin-left: 44px; }
+/* ── Коментар, на який зараз відповідають ──────────────────────────────────────
+   Бордова рисочка ліворуч + мʼяка заливка. 🔑 Малюється ПСЕВДОЕЛЕМЕНТОМ поверх
+   свого місця, а не рамкою/відступами: рамка чи padding зрушили б рядок і весь
+   список смикнувся б у момент тапу «Відповісти». Тут розкладка не змінюється
+   взагалі — підкладка виходить за межі рядка від'ємними координатами. */
+.fd-com-row--replying { position: relative; }
+.fd-com-row--replying::before {
+  content: ''; position: absolute; left: -8px; right: -8px; top: -6px; bottom: -6px;
+  background: rgba(114, 47, 55, 0.06);
+  border-left: 3px solid var(--fd-accent);
+  border-radius: 8px;
+  animation: fd-com-hl 0.18s ease-out;
+}
+/* Вміст рядка — над підкладкою (без цього текст лишився б під нею). */
+.fd-com-row--replying > * { position: relative; }
+@keyframes fd-com-hl { from { opacity: 0 } to { opacity: 1 } }
 /* Контекст-бар «Відповідь для …» над компоузером.
    :not([hidden]) — щоб атрибут hidden реально ховав бар (інакше display:flex
    перебивав би [hidden]{display:none} з UA-стилю, і плашка не зникала). */
