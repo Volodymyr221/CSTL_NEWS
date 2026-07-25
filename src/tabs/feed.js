@@ -12,7 +12,7 @@ import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
-  fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount,
+  fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
   addPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
@@ -719,13 +719,24 @@ function applyCommentRemove(c) {
 
 // Завантажити коментарі поста (перша сторінка або старіші за «Показати попередні»).
 // older=true — домальовуємо старіші ЗВЕРХУ до вже показаних.
+// Розмір сторінки можна тимчасово зменшити з адреси: `#compages=2`. Потрібно, щоб
+// перевірити «Показати попередні коментарі» на живому телефоні — при звичайному
+// порозі 30 і теперішніх ~7 коментарях кнопка просто не з'явиться. Той самий підхід,
+// що вже є у `#kbdebug` (core/keyboard.js): діагностика вмикається адресою і НЕ
+// змінює поведінку для решти людей.
+function commentsPageSize() {
+  const m = /compages=(\d+)/.exec(location.hash || '');
+  const n = m ? Number(m[1]) : NaN;
+  return Number.isFinite(n) && n > 0 ? n : COMMENT_ROOTS_PAGE;
+}
+
 async function loadComments(postId, { older = false } = {}) {
   const prev = older ? (commentMap.get(postId) || []) : [];
   const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
   // Перше відкриття — заразом звіряємо лічильник із базою (див. fetchPostCommentCount:
   // кроковий +1/−1 може розійтись, якщо realtime-подія загубилась або прийшла двічі).
   const [{ comments, hasMore }, trueCount] = await Promise.all([
-    fetchPostComments(postId, { beforeTs }),
+    fetchPostComments(postId, { beforeTs, limit: commentsPageSize() }),
     older ? Promise.resolve(null) : fetchPostCommentCount(postId),
   ]);
   if (trueCount != null) commentCounts.set(postId, trueCount);

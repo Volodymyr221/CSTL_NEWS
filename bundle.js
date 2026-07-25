@@ -11602,11 +11602,16 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
       renderCommentSheet();
   }
+  function commentsPageSize() {
+    const m = /compages=(\d+)/.exec(location.hash || "");
+    const n = m ? Number(m[1]) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : COMMENT_ROOTS_PAGE;
+  }
   async function loadComments(postId, { older = false } = {}) {
     const prev = older ? commentMap.get(postId) || [] : [];
     const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
     const [{ comments, hasMore }, trueCount] = await Promise.all([
-      fetchPostComments(postId, { beforeTs }),
+      fetchPostComments(postId, { beforeTs, limit: commentsPageSize() }),
       older ? Promise.resolve(null) : fetchPostCommentCount(postId)
     ]);
     if (trueCount != null)
