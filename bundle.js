@@ -11439,6 +11439,10 @@ ${ev.description || ""}`
         </span>
       </div>
       <div class="fd-screen-title">
+        <!-- \u0421\u043A\u043B\u043E-\u0431\u043B\u044E\u0440 \u043E\u043A\u0440\u0435\u043C\u0438\u043C \u0435\u043B\u0435\u043C\u0435\u043D\u0442\u043E\u043C (\u0430 \u043D\u0435 ::before): \u0449\u043E\u0431 JS \u043F\u0438\u0441\u0430\u0432 \u0439\u043E\u0433\u043E \u043F\u0440\u043E\u0437\u043E\u0440\u0456\u0441\u0442\u044C
+             \u041F\u0420\u042F\u041C\u041E, \u0431\u0435\u0437 CSS-\u0437\u043C\u0456\u043D\u043D\u043E\u0457. \u0417\u043C\u0456\u043D\u043D\u0430 \u0437\u043D\u0435\u0446\u0456\u043D\u044E\u0432\u0430\u043B\u0430 \u0441\u0442\u0438\u043B\u0456 \u0432\u0441\u0456\u0454\u0457 \u0433\u0456\u043B\u043A\u0438 \u043D\u0430 \u043A\u043E\u0436\u0435\u043D
+             \u043A\u0430\u0434\u0440 \u0441\u043A\u0440\u043E\u043B\u0443 \u2014 \u0441\u0430\u043C\u0435 \u0446\u0435 \u0439 \u0434\u0430\u0432\u0430\u043B\u043E \u043C\u0456\u043A\u0440\u043E\u0440\u0438\u0432\u043A\u0438. -->
+        <i class="fd-screen-glass" aria-hidden="true"></i>
         <div class="fd-screen-title-in">
           <div class="fd-screen-name">${escapeHtml(page.name)}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ""}
@@ -11497,6 +11501,10 @@ ${ev.description || ""}`
       const RANGE = 60;
       const SETTLE = 0;
       const titleIn = title.querySelector(".fd-screen-title-in");
+      const glass = title.querySelector(".fd-screen-glass");
+      let pinScale = 0.78;
+      let tyMax = 8;
+      let lastP = -1;
       const ICON_ZONE = 68;
       const PIN_MAX = 0.86;
       const PIN_MIN = 0.7;
@@ -11510,28 +11518,39 @@ ${ev.description || ""}`
       const measurePin = () => {
         if (!titleIn)
           return;
-        const prevP = title.style.getPropertyValue("--p");
-        title.style.setProperty("--p", "0");
+        const prevT = titleIn.style.transform;
+        titleIn.style.transform = "none";
         const w = Math.max(
           widestLine(title.querySelector(".fd-screen-name")),
           widestLine(title.querySelector(".fd-screen-theme"))
         );
-        title.style.setProperty("--p", prevP || "0");
+        titleIn.style.transform = prevT;
         const avail = Math.max(window.innerWidth - ICON_ZONE * 2, 1);
         const fit = w > 0 ? avail / w : PIN_MAX;
-        const s = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
-        title.style.setProperty("--fd-pin-s", s.toFixed(3));
+        pinScale = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
+        title.style.setProperty("--fd-pin-s", pinScale.toFixed(3));
       };
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
         measurePin();
         if (titleIn)
           title.style.setProperty("--fd-th", `${titleIn.offsetHeight}px`);
+        const back = screen.querySelector(".fd-screen-back");
+        const topPx = back ? parseFloat(getComputedStyle(back).top) : 10;
+        tyMax = (Number.isFinite(topPx) ? topPx - 10 : 0) + 8;
+        lastP = -1;
       };
       const applyTitle = () => {
         tRaf = 0;
         const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE - SETTLE)) / RANGE));
-        title.style.setProperty("--p", p.toFixed(3));
+        if (p === lastP)
+          return;
+        lastP = p;
+        if (titleIn) {
+          titleIn.style.transform = `translate3d(0, ${(tyMax * p).toFixed(2)}px, 0) scale(${(1 - (1 - pinScale) * p).toFixed(4)})`;
+        }
+        if (glass)
+          glass.style.opacity = p.toFixed(3);
       };
       const onTitle = () => {
         if (!tRaf)
