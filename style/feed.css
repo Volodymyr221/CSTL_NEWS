@@ -442,11 +442,11 @@
   padding: 12px 0; margin-bottom: 0; }
 .fd-com-empty { color: var(--fd-muted); font-size: 14px; text-align: center; padding: 28px 20px; }
 .fd-com-row { display: flex; gap: 10px; align-items: flex-start; }
-.fd-com-ava { width: 34px; height: 34px; flex: none; }
+.fd-com-ava { width: 34px; height: 34px; flex: none; cursor: pointer; }
 .fd-com-body { flex: 1; min-width: 0; line-height: 1.4; }
 /* Імʼя жирним і текст — в один абзац, що переноситься (як в Instagram). */
 .fd-com-line { font-size: 14px; color: var(--fd-ink); word-break: break-word; }
-.fd-com-name { font-weight: 700; }
+.fd-com-name { font-weight: 700; cursor: pointer; }
 .fd-com-txt { font-weight: 400; }
 .fd-com-meta { display: flex; gap: 14px; align-items: center; margin-top: 3px; }
 .fd-com-time { font-size: 12px; color: var(--fd-muted); }
