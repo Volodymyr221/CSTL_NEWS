@@ -458,6 +458,14 @@ function patchLike(postId) {
 // перемальовувати його наживо. Один лист за раз.
 let openCommentSheet = null;
 let replyTarget = null;   // { parentId, name } — активна відповідь у відкритому листі
+// Гілки, у яких людина натиснула «Ще N відповідей». Тримаємо ТУТ, а не в DOM, бо
+// список перемальовується цілком щоразу, коли приходить чужий коментар (realtime) —
+// у DOM цей стан не пережив би перемалювання. Скидається при кожному відкритті листа:
+// зайшов у коментарі — гілки знову згорнуті (як у Facebook/Instagram).
+const expandedThreads = new Set();
+// Скільки відповідей видно до згортання (рішення Вови 25.07: «дві відповіді і далі
+// ховаються вже наступні»). Показуємо ПЕРШІ — розмова читається згори вниз.
+const REPLIES_VISIBLE = 2;
 
 // Українська відміна: 1 коментар · 2-4 коментарі · 5+ коментарів.
 function pluralComments(n) {
@@ -496,22 +504,54 @@ function commentRowHtml(c, reply = false) {
     </div>`;
 }
 
-// Впорядкувати коментарі у 2 рівні: кожен кореневий → одразу його відповіді (за часом).
-// Сироти (батька видалено/нема) показуємо як кореневі, щоб не зникали.
-function orderedComments(list) {
+// Українська відміна для кнопки згортання: 1 відповідь · 2-4 відповіді · 5+ відповідей.
+function pluralReplies(n) {
+  const d = n % 10, h = n % 100;
+  if (d === 1 && h !== 11) return 'відповідь';
+  if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return 'відповіді';
+  return 'відповідей';
+}
+
+// Розкласти плаский список коментарів на ГІЛКИ: кореневий + його відповіді (за часом).
+// Раніше повертався плаский масив рядків; тепер потрібні саме гілки, бо лінія-з'єднувач
+// малюється по межах гілки, а «Ще N відповідей» рахується в її середині.
+// Сироти (батька видалено) стають власними коренями, щоб не зникнути зі списку.
+function commentThreads(list) {
   const repliesByParent = new Map();
   for (const c of list) if (c.parent_id) {
     if (!repliesByParent.has(c.parent_id)) repliesByParent.set(c.parent_id, []);
     repliesByParent.get(c.parent_id).push(c);
   }
-  const out = [];
+  const threads = [];
+  const shown = new Set();
   for (const c of list) if (!c.parent_id) {
-    out.push({ c, reply: false });
-    for (const r of (repliesByParent.get(c.id) || [])) out.push({ c: r, reply: true });
+    const replies = repliesByParent.get(c.id) || [];
+    threads.push({ root: c, replies });
+    shown.add(c.id);
+    for (const r of replies) shown.add(r.id);
   }
-  const shown = new Set(out.map(o => o.c.id));
-  for (const c of list) if (!shown.has(c.id)) out.push({ c, reply: false });  // сироти
-  return out;
+  for (const c of list) if (!shown.has(c.id)) threads.push({ root: c, replies: [] });
+  return threads;
+}
+
+// Розмітка однієї гілки. Обгортка .fd-com-branch навколо КОЖНОЇ відповіді — не зайвий
+// рівень, а вимушений: лінія-гачок малюється псевдоелементом ::before, а на самому
+// рядку ::before уже зайнятий підсвіткою адресата (.fd-com-row--replying). Без обгортки
+// одне затерло б інше — саме тому гілка і підсвітка живуть на різних елементах.
+function threadHtml(t) {
+  const rows = [commentRowHtml(t.root, false)];
+  if (!t.replies.length) return `<div class="fd-com-thread">${rows.join('')}</div>`;
+
+  const expanded = expandedThreads.has(t.root.id);
+  const visible = expanded ? t.replies : t.replies.slice(0, REPLIES_VISIBLE);
+  const hidden = t.replies.length - visible.length;
+  const branches = visible.map(r => `<div class="fd-com-branch">${commentRowHtml(r, true)}</div>`);
+  if (hidden > 0) branches.push(
+    `<div class="fd-com-branch"><button class="fd-com-more" data-more-parent="${t.root.id}" type="button">Ще ${hidden} ${pluralReplies(hidden)}</button></div>`
+  );
+  // --branched вмикає стовбур уздовж кореневого коментаря. Клас, а не CSS :has(),
+  // навмисно: :has() з'явився лише в iOS 15.4, а лінія має бути в усіх однаково.
+  return `<div class="fd-com-thread fd-com-thread--branched">${rows.join('')}<div class="fd-com-replies">${branches.join('')}</div></div>`;
 }
 
 // Оновити ♥ і текст «N вподобань» конкретного коментаря (без перемалювання списку).
@@ -558,7 +598,7 @@ function renderCommentSheet() {
   const list = commentMap.get(postId) || [];
   if (titleEl) titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : 'Коментарі';
   listEl.innerHTML = list.length
-    ? orderedComments(list).map(o => commentRowHtml(o.c, o.reply)).join('')
+    ? commentThreads(list).map(threadHtml).join('')
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
 }
 
@@ -622,6 +662,7 @@ function openComments(postId) {
   const replyBar = sheet.querySelector('.fd-com-replybar');
   const replyTo = sheet.querySelector('.fd-com-replyto');
   replyTarget = null;
+  expandedThreads.clear();   // нове відкриття листа — гілки знову згорнуті (як у FB/IG)
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
 
@@ -677,10 +718,33 @@ function openComments(postId) {
   };
   sheet.addEventListener('click', e => { if (e.target === sheet) close(); });
 
-  // Дії в листі: лайк коментаря (♥) + «Відповісти» + видалення свого.
+  // Розгорнути гілку («Ще N відповідей»).
+  //   1) scrollTop знімаємо і повертаємо. ⚠️ Чесно: це СТРАХОВКА, а не рушій фіксу —
+  //      заміряно, що при заміні innerHTML браузер утримує позицію сам, поки вміст
+  //      лише росте (а тут він лише росте). Потрібна вона на випадок, коли між двома
+  //      рендерами realtime щось видалив і стара позиція вийшла за новий максимум.
+  //      Головне ж тут інше: нові рядки вставляються НИЖЧЕ кнопки, тому все, що вище
+  //      неї, фізично не може зрушити — саме це й перевіряє тест.
+  //   2) щойно показані рядки м'яко проявляються: порівнюємо набір id ДО і ПІСЛЯ
+  //      і вішаємо клас лише на нові. Анімувати висоту списку НЕ можна — саме вона
+  //      дає ривок прокрутки, через який ми вже відкочували роботу 25.07.
+  const expandThread = (rootId) => {
+    const st = listEl.scrollTop;
+    const before = new Set([...listEl.querySelectorAll('[data-com-id]')].map(el => el.dataset.comId));
+    expandedThreads.add(rootId);
+    renderCommentSheet();
+    listEl.scrollTop = st;
+    listEl.querySelectorAll('[data-com-id]').forEach(el => {
+      if (!before.has(el.dataset.comId)) el.closest('.fd-com-branch')?.classList.add('fd-com-branch--in');
+    });
+  };
+
+  // Дії в листі: лайк коментаря (♥) + «Відповісти» + «Ще N відповідей» + видалення свого.
   listEl.addEventListener('click', async e => {
     const like = e.target.closest('[data-com-like]');
     if (like) { toggleCommentLike(Number(like.dataset.comLike)); return; }
+    const more = e.target.closest('[data-more-parent]');
+    if (more) { expandThread(Number(more.dataset.moreParent)); return; }
     const rep = e.target.closest('[data-reply-parent]');
     if (rep) {
       const uid = rep.dataset.replyUid;
@@ -710,6 +774,9 @@ function openComments(postId) {
     const res = await addPageComment(postId, currentUserId(), text, parentId);
     sendBtn.disabled = false;
     if (res.ok) {
+      // Відповів у згорнуту гілку — розгортаємо її ДО перемалювання, інакше власна
+      // відповідь сховалась би під «Ще N», і вийшло б «я написав, а нічого не з'явилось».
+      if (parentId) expandedThreads.add(parentId);
       applyCommentUpsert(res.comment);   // одразу показати свій (realtime продублює — дедуп)
       input.value = '';
       clearReply();
