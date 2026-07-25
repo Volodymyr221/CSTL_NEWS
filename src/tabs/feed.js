@@ -362,8 +362,33 @@ function renderFeed() {
 function layoutCircles() {
   const el = document.querySelector('#feed-circles .fd-circles');
   if (!el) return;
+  // ⚠️ Міряти ОБОВ'ЯЗКОВО у розгорнутому стані. Колонки реально звужуються при
+  // згортанні (--sh), тож якщо міряти під час скролу вниз, смуга «вміститься» і
+  // розкладка вибереться хибна. Тому на час заміру глушимо --sh на самій смузі.
+  el.style.setProperty('--sh', '0');
   el.classList.remove('is-fit');                        // міряємо натуральну ширину
   if (el.scrollWidth <= el.clientWidth + 1) el.classList.add('is-fit');
+  planCollapsedPad(el);
+  el.style.removeProperty('--sh');                      // повертаємо успадкований від топбару
+}
+
+// Наскільки розсунути бічні відступи смуги, коли назви згорнуті (Вова 25.07,
+// скріни IMG_3570/3571): «остання іконка повинна мати такий самий відступ, як перша
+// з лівої частини… а відступ між самими іконками рівномірний між усіма».
+// Рахуємо ОДИН раз на рендер і поворот екрана — далі все робить CSS-розкладка.
+// Якщо щільний ряд не вміщається — 0, тобто ряд від лівого краю і останні визирають.
+const CIRCLE_RING = 62;   // діаметр кільця (.fd-circle-ring) = ширина колонки у згорнутому
+const CIRCLE_PAD  = 16;   // базовий бічний відступ смуги
+const CIRCLE_GAP  = 18;   // проміжок між колонками (.fd-circles gap)
+function planCollapsedPad(el) {
+  const n = el.querySelectorAll('.fd-circle').length;
+  if (!n) return;
+  // .is-fit — це space-evenly: воно вже саме дає однакові відступи з обох боків,
+  // тож додаткове поле там лише подвоїло б центрування.
+  const inner = el.clientWidth - CIRCLE_PAD * 2;
+  const tight = n * CIRCLE_RING + (n - 1) * CIRCLE_GAP;
+  const pad = (!el.classList.contains('is-fit') && tight <= inner) ? (inner - tight) / 2 : 0;
+  el.style.setProperty('--fit-pad', `${pad.toFixed(1)}px`);
 }
 
 // ⛔ ВІДКОЧЕНО 25.07: спроба з'їжджати кружечки у щільний ряд при згортанні назв

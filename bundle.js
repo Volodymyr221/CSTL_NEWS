@@ -11104,9 +11104,24 @@ ${ev.description || ""}`
     const el = document.querySelector("#feed-circles .fd-circles");
     if (!el)
       return;
+    el.style.setProperty("--sh", "0");
     el.classList.remove("is-fit");
     if (el.scrollWidth <= el.clientWidth + 1)
       el.classList.add("is-fit");
+    planCollapsedPad(el);
+    el.style.removeProperty("--sh");
+  }
+  var CIRCLE_RING = 62;
+  var CIRCLE_PAD = 16;
+  var CIRCLE_GAP = 18;
+  function planCollapsedPad(el) {
+    const n = el.querySelectorAll(".fd-circle").length;
+    if (!n)
+      return;
+    const inner = el.clientWidth - CIRCLE_PAD * 2;
+    const tight = n * CIRCLE_RING + (n - 1) * CIRCLE_GAP;
+    const pad2 = !el.classList.contains("is-fit") && tight <= inner ? (inner - tight) / 2 : 0;
+    el.style.setProperty("--fit-pad", `${pad2.toFixed(1)}px`);
   }
   async function toggleLike(postId) {
     if (!isLoggedIn()) {
