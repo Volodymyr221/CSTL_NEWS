@@ -364,7 +364,17 @@ function layoutCircles() {
   if (!el) return;
   el.classList.remove('is-fit');                        // міряємо натуральну ширину
   if (el.scrollWidth <= el.clientWidth + 1) el.classList.add('is-fit');
-  planCollapsedCircles(el);
+  measureCircles(el);
+  applyCirclePositions(el);
+  // Смугу можна гортати пальцем убік — тоді цілі треба перерахувати (див. нижче, чому).
+  if (!el.dataset.dxWired) {
+    el.dataset.dxWired = '1';
+    let raf = 0;
+    el.addEventListener('scroll', () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => { raf = 0; applyCirclePositions(el); });
+    }, { passive: true });
+  }
 }
 
 // ── Куди їдуть кружечки, коли назви згортаються (Вова 25.07, скріни IMG_3570/3571) ──
@@ -377,28 +387,59 @@ function layoutCircles() {
 // «не геть близько до екрану, а трошечки відступ», решта щільніше, а остання «трохи
 // виглядає за рамки екрану — щоб було видно, що там є щось за рамками».
 //
-// ЯК: рахуємо цільове положення КОЖНОГО кільця один раз (тут, на рендер і поворот) і
-// віддаємо CSS як --dx. Далі кільце їде туди ЗСУВОМ, пропорційно --sh. Зсув не змінює
-// розкладку — браузер не перераховує її на кожен кадр, тому рух без ривків. Зміна
-// ширини колонок дала б той самий вигляд, але з перерахунком розкладки щокадру.
+// ЯК: цільове положення кільця віддаємо CSS як --dx, і кільце їде туди ЗСУВОМ пропорційно
+// --sh. Зсув не змінює розкладку — браузер не перераховує її щокадру, тому рух без ривків.
+// Зміна ширини колонок дала б той самий вигляд, але з перерахунком розкладки на кожен кадр.
+//
+// 🔑 ЧОМУ ЦІЛІ РАХУЮТЬСЯ ВІДНОСНО ЕКРАНА, А НЕ ВМІСТУ (виправлено 25.07 — питання Вови
+// «це може потім нам поламати якусь логіку, коли буде багато спільнот?» — так, ламало):
+// смуга лишається прокручуваною по СТАРІЙ розкладці (широкі колонки з назвами), а кільця
+// малюються щільно. Якщо рахувати цілі у координатах вмісту, прокрутка й позиції
+// розходяться: на 8 спільнотах, прокручених до кінця, після згортання було видно 2 іконки
+// і 288px порожнечі справа. Тому: цілі рахуємо у координатах ЕКРАНА, а прокрутку смуги
+// перекладаємо у ЧАСТКУ пройденого шляху — тоді щільний ряд теж доходить рівно до свого
+// кінця, без порожнечі. Через це потрібен перерахунок при горизонтальному гортанні.
 const CIRCLE_RING = 62;   // діаметр кільця (.fd-circle-ring)
 const CIRCLE_PAD  = 16;   // бічний відступ смуги (.fd-circles padding)
 const CIRCLE_GAP  = 18;   // проміжок між кільцями у згорнутому стані
-function planCollapsedCircles(el) {
+let _circleGeom = null;   // {items, ringNow[]} — вимір розкладки; оновлюється на рендер/поворот
+
+// Дорога частина (читання розкладки) — лише на рендер і поворот екрана.
+function measureCircles(el) {
   const items = [...el.querySelectorAll('.fd-circle')];
-  if (!items.length) return;
-  // Міряємо БЕЗ зсуву — інакше поточний зсув потрапив би у власний розрахунок.
-  items.forEach(it => it.style.setProperty('--dx', '0px'));
-  const inner = el.clientWidth - CIRCLE_PAD * 2;
-  const width = items.length * CIRCLE_RING + (items.length - 1) * CIRCLE_GAP;
-  // Вміщається → центруємо групу (відступи зліва й справа однакові).
-  // Не вміщається → від сталого відступу зліва; решта визирає за край = підказка «гортай».
-  const startX = width <= inner ? CIRCLE_PAD + (inner - width) / 2 : CIRCLE_PAD;
+  if (!items.length) { _circleGeom = null; return; }
+  items.forEach(it => it.style.setProperty('--dx', '0px'));   // міряємо БЕЗ власного зсуву
   const base = el.getBoundingClientRect().left - el.scrollLeft;
-  items.forEach((it, i) => {
+  const ringNow = items.map(it => {
     const r = it.getBoundingClientRect();
-    const ringNow = r.left - base + (r.width - CIRCLE_RING) / 2;   // де кільце стоїть зараз
-    it.style.setProperty('--dx', `${(startX + i * (CIRCLE_RING + CIRCLE_GAP) - ringNow).toFixed(1)}px`);
+    return r.left - base + (r.width - CIRCLE_RING) / 2;       // положення кільця у вмісті
+  });
+  _circleGeom = { items, ringNow };
+}
+
+// Дешева частина (лише арифметика) — на рендер, поворот і горизонтальне гортання смуги.
+function applyCirclePositions(el) {
+  if (!_circleGeom || !_circleGeom.items.length) return;
+  const { items, ringNow } = _circleGeom;
+  const n = items.length;
+  const inner = el.clientWidth - CIRCLE_PAD * 2;
+  const width = n * CIRCLE_RING + (n - 1) * CIRCLE_GAP;
+  let startX;
+  if (width <= inner) {
+    // Вміщається → група ВІДЦЕНТРОВАНА в екрані: відступ зліва = відступ справа.
+    startX = CIRCLE_PAD + (inner - width) / 2;
+  } else {
+    // Не вміщається → щільний ряд гортається разом зі смугою: скільки частки шляху
+    // пройдено у старій розкладці, стільки ж проходить і він. Тому в кінці остання
+    // іконка стає рівно біля правого краю, а не лишає порожнечу.
+    const maxOpen = Math.max(1, el.scrollWidth - el.clientWidth);
+    const f = Math.min(1, Math.max(0, el.scrollLeft / maxOpen));
+    startX = CIRCLE_PAD - f * (width - inner);
+  }
+  const sl = el.scrollLeft;   // цілі рахуємо в екрані → переводимо у координати вмісту
+  items.forEach((it, i) => {
+    it.style.setProperty('--dx',
+      `${(sl + startX + i * (CIRCLE_RING + CIRCLE_GAP) - ringNow[i]).toFixed(1)}px`);
   });
 }
 
