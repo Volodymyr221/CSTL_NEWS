@@ -11776,9 +11776,9 @@ ${ev.description || ""}`
       <div class="fd-comp-as">
         <div class="fd-comp-as-label">\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u044F\u043A</div>
         <button class="fd-comp-as-btn${showAuthor ? "" : " is-on"}" data-as="page" type="button">
-          <span class="fd-comp-as-dot"></span>${escapeHtml(page.name || "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430")}</button>
+          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430")}</span></button>
         <button class="fd-comp-as-btn${showAuthor ? " is-on" : ""}" data-as="me" type="button">
-          <span class="fd-comp-as-dot"></span>\u0412\u0456\u0434 \u0441\u0435\u0431\u0435</button>
+          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">\u0412\u0456\u0434 \u0441\u0435\u0431\u0435</span></button>
       </div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>

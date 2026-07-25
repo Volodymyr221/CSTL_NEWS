@@ -1070,9 +1070,9 @@ function openComposer(pageId, editPost = null) {
       <div class="fd-comp-as">
         <div class="fd-comp-as-label">Публікувати як</div>
         <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
-          <span class="fd-comp-as-dot"></span>${escapeHtml(page.name || 'Спільнота')}</button>
+          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || 'Спільнота')}</span></button>
         <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
-          <span class="fd-comp-as-dot"></span>Від себе</button>
+          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">Від себе</span></button>
       </div>
       <div class="fd-comp-bar">
         <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
