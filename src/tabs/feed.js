@@ -688,6 +688,10 @@ async function openPageScreen(pageId, reopen = false) {
         </span>
       </div>
       <div class="fd-screen-title">
+        <!-- Скло-блюр окремим елементом (а не ::before): щоб JS писав його прозорість
+             ПРЯМО, без CSS-змінної. Змінна знецінювала стилі всієї гілки на кожен
+             кадр скролу — саме це й давало мікроривки. -->
+        <i class="fd-screen-glass" aria-hidden="true"></i>
         <div class="fd-screen-title-in">
           <div class="fd-screen-name">${escapeHtml(page.name)}</div>
           ${page.theme ? `<div class="fd-screen-theme">${escapeHtml(page.theme)}</div>` : ''}
@@ -764,6 +768,10 @@ async function openPageScreen(pageId, reopen = false) {
                                                       // збігається з тим, як назва стає нерухомою вгорі.
                                                       // Дьоргання нема бо висота розчеплена (transform, не потік).
     const titleIn = title.querySelector('.fd-screen-title-in');
+    const glass   = title.querySelector('.fd-screen-glass');
+    let pinScale = 0.78;   // цільовий масштаб у піні — рахує measurePin(), не кадр
+    let tyMax = 8;         // на скільки текст опускається у піні (safe-area + 8), теж наперед
+    let lastP = -1;        // останній записаний прогрес — щоб не писати те саме двічі
     // Поріг піну міряємо ОДИН раз (не щокадру getBoundingClientRect — то reflow і сіпання):
     // scroll-позиція, де верх назви дійде до верху екрана.
     // Заразом віддаємо склу реальну висоту заголовка (--fd-th): у довгих назв це 3 рядки
@@ -790,17 +798,17 @@ async function openPageScreen(pageId, reopen = false) {
     const measurePin = () => {
       if (!titleIn) return;
       // Рядки міряються у ЕКРАННИХ координатах, тобто вже із застосованим зменшенням.
-      // Тому на час заміру знімаємо його (--p:0) і одразу повертаємо — в межах одного
-      // кадру, на екрані не видно. Робиться лише при відкритті сторінки і при повороті.
-      const prevP = title.style.getPropertyValue('--p');
-      title.style.setProperty('--p', '0');
+      // Тому на час заміру знімаємо його і одразу повертаємо — в межах одного кадру,
+      // на екрані не видно. Робиться лише при відкритті сторінки і при повороті.
+      const prevT = titleIn.style.transform;
+      titleIn.style.transform = 'none';
       const w = Math.max(widestLine(title.querySelector('.fd-screen-name')),
                          widestLine(title.querySelector('.fd-screen-theme')));
-      title.style.setProperty('--p', prevP || '0');
+      titleIn.style.transform = prevT;
       const avail = Math.max(window.innerWidth - ICON_ZONE * 2, 1);
       const fit = w > 0 ? avail / w : PIN_MAX;
-      const s = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
-      title.style.setProperty('--fd-pin-s', s.toFixed(3));
+      pinScale = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
+      title.style.setProperty('--fd-pin-s', pinScale.toFixed(3));   // висоту скла рахує CSS — рідко, не на кадр
     };
     // ⛔ Спробу перевести це на scroll-driven animation відкочено 25.07 — вона зсувала
     // МІСЦЕ зменшення (стискалось раніше, ніж заголовок доїжджав доверху). Прогрес знову
@@ -809,11 +817,30 @@ async function openPageScreen(pageId, reopen = false) {
       pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
       measurePin();   // спершу масштаб — від нього залежить і висота скла нижче
       if (titleIn) title.style.setProperty('--fd-th', `${titleIn.offsetHeight}px`);
+      // Безпечну зону читаємо з уже застосованого стилю кнопки «назад»
+      // (top: 10px + env(safe-area-inset-top)) — щоб на кадрі не розв'язувати env().
+      const back = screen.querySelector('.fd-screen-back');
+      const topPx = back ? parseFloat(getComputedStyle(back).top) : 10;
+      tyMax = (Number.isFinite(topPx) ? topPx - 10 : 0) + 8;
+      lastP = -1;   // сталі змінились (поворот екрана) → наступний кадр мусить перезаписати
     };
+    // 🔑 НА КАДР — МІНІМУМ РОБОТИ (Вова 25.07: «ще ніби ривками»). Було: запис CSS-змінної
+    // --p, від якої залежали і transform, і прозорість скла → браузер щокадру знецінював
+    // стилі всієї гілки заголовка і наново розв'язував env() + два calc(). Стало: усе
+    // стале пораховано наперед (tyMax, pinScale), а на кадр — два прямі записи в елементи,
+    // обидва з тих, що малює відеокарта (зсув+масштаб і прозорість). Плюс якщо прогрес
+    // не змінився (а поза 60-піксельним відрізком він завжди рівно 0 або 1) — не пишемо
+    // взагалі. Поведінка та сама: ті самі числа, той самий момент фіксу.
     const applyTitle = () => {
       tRaf = 0;
       const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE - SETTLE)) / RANGE));  // лише scrollTop — дешево
-      title.style.setProperty('--p', p.toFixed(3));
+      if (p === lastP) return;            // нічого не змінилось — не чіпаємо стилі
+      lastP = p;
+      if (titleIn) {
+        titleIn.style.transform =
+          `translate3d(0, ${(tyMax * p).toFixed(2)}px, 0) scale(${(1 - (1 - pinScale) * p).toFixed(4)})`;
+      }
+      if (glass) glass.style.opacity = p.toFixed(3);
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
     screen.addEventListener('scroll', onTitle, { passive: true });
