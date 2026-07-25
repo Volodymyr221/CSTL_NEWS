@@ -479,10 +479,18 @@ function pluralComments(n) {
   return 'коментарів';
 }
 
-// Рядок коментаря у стилі Instagram: аватар · (імʼя жирним + текст в один абзац) ·
-// мета-рядок (час · «Відповісти» · «Видалити» на своєму) · праворуч ♥ і лічильник
-// ПІД сердечком (як в Instagram). reply=true → вкладена відповідь (відступ).
-// Відповідь чіпляється до кореневого коментаря (parent_id||id) — 2 рівні.
+// Рядок коментаря — три поверхи, як у Facebook і Instagram (звірено зі скрінами Вови
+// IMG_3607/IMG_3608, 25.07):
+//   1) імʼя жирним + час сірим ПОРУЧ
+//   2) текст коментаря ОКРЕМИМ рядком під ними
+//   3) «Відповісти» / «Видалити» знизу
+// Праворуч — ♥ і лічильник під сердечком.
+//
+// ⚠️ РАНІШЕ ТУТ БУЛО ІНАКШЕ і в коментарі стояло «імʼя + текст в один абзац (як в
+// Instagram)». Це застаріло: обидві мережі відтоді розвели імʼя і текст по різних
+// рядках. Вова: «чому коментар знаходиться навпроти імені? Ми ж говорили, що зверху
+// імʼя, під іменем коментар». Тримаємо як у зразку — не повертати «в один абзац».
+// reply=true → вкладена відповідь. Відповідь чіпляється до кореня (parent_id||id) — 2 рівні.
 function commentRowHtml(c, reply = false) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
@@ -506,8 +514,9 @@ function commentRowHtml(c, reply = false) {
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -527,7 +536,14 @@ function pluralReplies(n) {
 // Розкласти плаский список коментарів на ГІЛКИ: кореневий + його відповіді (за часом).
 // Раніше повертався плаский масив рядків; тепер потрібні саме гілки, бо лінія-з'єднувач
 // малюється по межах гілки, а «Ще N відповідей» рахується в її середині.
-// Сироти (батька видалено) стають власними коренями, щоб не зникнути зі списку.
+//
+// ⚠️ ПРАВИЛО «ОДНА СІТКА» (Вова, 25.07): «якщо видаляється головний коментар, а йому
+// відповідало 10 користувачів, має видалитися вся сітка». Тому відповідь на видалений
+// коментар НЕ показуємо — раніше вона виринала у стрічці як самостійний коментар, і це
+// було протилежне правило. Основну роботу робить база (тригер каскадного мʼякого
+// видалення, scripts/supabase_comment_cascade.sql) — сюди такі відповіді просто не
+// доїжджають. Ця перевірка — другий рубіж на випадок гонки: realtime міг принести
+// видалення кореня раніше, ніж відповідей, і тоді на секунду вигулькнув би «сирота».
 function commentThreads(list) {
   const repliesByParent = new Map();
   for (const c of list) if (c.parent_id) {
@@ -535,14 +551,9 @@ function commentThreads(list) {
     repliesByParent.get(c.parent_id).push(c);
   }
   const threads = [];
-  const shown = new Set();
   for (const c of list) if (!c.parent_id) {
-    const replies = repliesByParent.get(c.id) || [];
-    threads.push({ root: c, replies });
-    shown.add(c.id);
-    for (const r of replies) shown.add(r.id);
+    threads.push({ root: c, replies: repliesByParent.get(c.id) || [] });
   }
-  for (const c of list) if (!shown.has(c.id)) threads.push({ root: c, replies: [] });
   return threads;
 }
 

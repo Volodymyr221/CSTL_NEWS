@@ -453,12 +453,19 @@
 .fd-com-row { display: flex; gap: 10px; align-items: flex-start; }
 .fd-com-ava { width: 34px; height: 34px; flex: none; cursor: pointer; }
 .fd-com-body { flex: 1; min-width: 0; line-height: 1.4; }
-/* Імʼя жирним і текст — в один абзац, що переноситься (як в Instagram). */
-.fd-com-line { font-size: 14px; color: var(--fd-ink); word-break: break-word; }
-.fd-com-name { font-weight: 700; cursor: pointer; }
+/* ── Три поверхи коментаря (як у FB/IG, звірено зі скрінами Вови 25.07) ──────────
+   1) шапка: імʼя + час поруч · 2) текст окремим рядком · 3) дії знизу.
+   ⚠️ Раніше імʼя і текст були В ОДНОМУ абзаці — Вова вказав, що це не збігається
+   з обома зразками. Не повертати «в один абзац». */
+.fd-com-head { display: flex; align-items: baseline; gap: 6px; flex-wrap: wrap; }
+/* Імʼя не має виштовхувати час за екран: довге стискається трикрапкою, час лишається
+   видимим (у нього flex: none). baseline вирівнює їх по лінії шрифту, а не по коробці. */
+.fd-com-name { font-weight: 700; cursor: pointer; font-size: 14px; color: var(--fd-ink);
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.fd-com-line { font-size: 14px; color: var(--fd-ink); word-break: break-word; margin-top: 1px; }
 .fd-com-txt { font-weight: 400; }
 .fd-com-meta { display: flex; gap: 14px; align-items: center; margin-top: 3px; }
-.fd-com-time { font-size: 12px; color: var(--fd-muted); }
+.fd-com-time { font-size: 12px; color: var(--fd-muted); flex: none; }
 .fd-com-del { font-size: 12px; color: var(--fd-muted); background: none; border: 0; padding: 0;
   cursor: pointer; font-family: inherit; }
 /* ♥ лайк коментаря + лічильник ПІД сердечком, справа (як в Instagram). */
