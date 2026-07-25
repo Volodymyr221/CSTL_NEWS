@@ -11330,6 +11330,21 @@ ${ev.description || ""}`
     replyTarget = null;
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
+    const comSheet = sheet.querySelector(".fd-com-sheet");
+    const vv = window.visualViewport;
+    let kbRaf = 0;
+    const syncKb = () => {
+      const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      comSheet.style.setProperty("--kb", kb + "px");
+    };
+    const onVV = () => {
+      cancelAnimationFrame(kbRaf);
+      kbRaf = requestAnimationFrame(syncKb);
+    };
+    if (vv) {
+      vv.addEventListener("resize", onVV);
+      vv.addEventListener("scroll", onVV);
+    }
     const clearReply = () => {
       replyTarget = null;
       replyBar.hidden = true;
@@ -11348,6 +11363,11 @@ ${ev.description || ""}`
           el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
       });
     const close = () => {
+      if (vv) {
+        vv.removeEventListener("resize", onVV);
+        vv.removeEventListener("scroll", onVV);
+      }
+      cancelAnimationFrame(kbRaf);
       sheet.remove();
       if (openCommentSheet && openCommentSheet.back === sheet)
         openCommentSheet = null;

@@ -613,6 +613,22 @@ function openComments(postId) {
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
 
+  // ── Клавіатура (iOS): підіймати ЛИШЕ нижню смугу вводу, верх листа лишати на місці ──
+  // Симптом раніше: фокус на полі → iOS автоскролив увесь лист угору, верх (заголовок)
+  // зникав. Причина: компоузер прибитий до низу, iOS «витягував» його з-під клавіатури,
+  // зсуваючи всю модалку. Фікс: рахуємо висоту клавіатури через visualViewport (видима
+  // область екрана) і пишемо її у CSS-змінну --kb → CSS росте padding-bottom листа, тож
+  // компоузер стає над клавіатурою, а зовнішній лист не рухається (верх стоїть).
+  const comSheet = sheet.querySelector('.fd-com-sheet');
+  const vv = window.visualViewport;
+  let kbRaf = 0;
+  const syncKb = () => {
+    const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    comSheet.style.setProperty('--kb', kb + 'px');
+  };
+  const onVV = () => { cancelAnimationFrame(kbRaf); kbRaf = requestAnimationFrame(syncKb); };
+  if (vv) { vv.addEventListener('resize', onVV); vv.addEventListener('scroll', onVV); }
+
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
   const setReply = (parentId, name) => {
     replyTarget = { parentId, name };
@@ -628,6 +644,8 @@ function openComments(postId) {
   });
 
   const close = () => {
+    if (vv) { vv.removeEventListener('resize', onVV); vv.removeEventListener('scroll', onVV); }
+    cancelAnimationFrame(kbRaf);
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
   };
