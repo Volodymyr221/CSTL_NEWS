@@ -23,6 +23,7 @@ import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
+import { attachKeyboardSheet } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -616,49 +617,16 @@ function openComments(postId) {
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
 
-  // ── Клавіатура (iOS): верх листа стоїть, підіймається лише смуга вводу ──────────
-  // 🔑 ІСТОРІЯ ПОМИЛКИ (Вова 25.07: «верх з'їжджає, він не зафіксований»). Перша версія
-  // спиралась на хибну засновку: «замок body → документ не скролиться → offsetTop
-  // visualViewport лишається 0». НЕВІРНО: Safari на iOS зсуває ВИДИМУ область
-  // (visual viewport) окремо від скролу документа. Оверлей .fd-sheet-back прибитий до
-  // inset:0 РОЗМІТКИ сторінки — тож разом зі зсувом видимої області він їхав угору,
-  // і верх листа лізв під шапку. Замок body цьому не заважає взагалі.
-  // РІШЕННЯ — та сама перевірена механіка, що вже роками стоїть у чатах
-  // (core/chat-core.js setupKeyboardResize, board-discussions.js), з ДВОХ частин:
-  //   1) оверлей приклеюємо до ВИДИМОЇ області: top = vv.offsetTop, height = vv.height.
-  //      Тепер він завжди рівно там, де користувач бачить, хай як Safari зсуває сторінку.
-  //   2) лист коротшає рівно на висоту клавіатури (--kb → CSS height: 82svh − kb).
-  //      Низ сідає над клавіатурою, список (flex:1) стискається, а ВЕРХ лишається на
-  //      тому самому пікселі екрана: (видима висота) − (82svh − kb) = сталa величина.
-  // Замок скролу lockBodyScroll() лишаємо — він гасить смикання документа під пальцем.
+  // ── Клавіатура: уся механіка живе у core/keyboard.js (спільна для всіх аркушів) ──
+  // Там же — історія трьох невдалих спроб і чому цей підхід інший: він нічого не
+  // рахує через svh/innerHeight, а ВИМІРЮЄ, де верх аркуша стоїть у спокої, і тримає
+  // цей вимір як інваріант. Замок скролу лишаємо — він гасить смикання документа.
   const comSheet = sheet.querySelector('.fd-com-sheet');
   const kbInput = sheet.querySelector('.fd-com-input');
   const unlockScroll = lockBodyScroll();
-  const vv = window.visualViewport;
-  let kbRaf = 0, kbFocused = false;
-  const syncKb = () => {
-    // Висота клавіатури = наскільки видима область нижча за вікно. offsetTop сюди НЕ
-    // входить (його повністю бере на себе top оверлея) — саме на цьому й був баг.
-    const kb = vv ? Math.max(0, window.innerHeight - vv.height) : 0;
-    // «Відкрита» лише коли поле У ФОКУСІ і область помітно менша (поріг 80px, як у
-    // чатах): під замком body vv.height буває «застряглим» після закриття клавіатури.
-    const open = !!vv && kbFocused && kb > 80;
-    if (open) {
-      sheet.style.top    = vv.offsetTop + 'px';
-      sheet.style.bottom = 'auto';            // inset:0 задав і bottom — знімаємо, щоб діяла height
-      sheet.style.height = vv.height + 'px';
-    } else {
-      sheet.style.top = ''; sheet.style.bottom = ''; sheet.style.height = '';
-    }
-    comSheet.classList.toggle('fd-com-sheet--kb', open);
-    comSheet.style.setProperty('--kb', (open ? kb : 0) + 'px');
-  };
-  const onVV = () => { cancelAnimationFrame(kbRaf); kbRaf = requestAnimationFrame(syncKb); };
-  const onKbFocus = () => { kbFocused = true; onVV(); };
-  const onKbBlur  = () => { kbFocused = false; onVV(); };
-  kbInput?.addEventListener('focus', onKbFocus);
-  kbInput?.addEventListener('blur', onKbBlur);
-  if (vv) { vv.addEventListener('resize', onVV); vv.addEventListener('scroll', onVV); }
+  const detachKb = attachKeyboardSheet(sheet, comSheet, {
+    input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
+  });
 
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
   const setReply = (parentId, name) => {
@@ -675,8 +643,7 @@ function openComments(postId) {
   });
 
   const close = () => {
-    if (vv) { vv.removeEventListener('resize', onVV); vv.removeEventListener('scroll', onVV); }
-    cancelAnimationFrame(kbRaf);
+    detachKb();       // зняти слухачі клавіатури і повернути оверлею/аркушу CSS-розкладку
     unlockScroll();   // повернути скрол сторінки (body був зафіксований під клавіатуру)
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
