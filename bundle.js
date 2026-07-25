@@ -10070,6 +10070,103 @@ ${ev.description || ""}`
     });
   }
 
+  // src/core/keyboard.js
+  function kbDebugOn() {
+    try {
+      return location.hash.includes("kbdebug") || localStorage.getItem("kbdebug") === "1";
+    } catch {
+      return false;
+    }
+  }
+  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "" } = {}) {
+    const vv = window.visualViewport;
+    const dbg = kbDebugOn() ? createDebugPanel() : null;
+    if (!vv) return () => dbg?.remove();
+    const top0 = Math.max(0, overlay.clientHeight - sheet.offsetHeight);
+    const h0 = vv.height;
+    let raf = 0, focused = false, applied = false;
+    const apply = () => {
+      const kb = Math.max(0, h0 - vv.height);
+      const open = focused && kb > 80;
+      if (open) {
+        overlay.style.top = vv.offsetTop + "px";
+        overlay.style.left = vv.offsetLeft + "px";
+        overlay.style.right = "auto";
+        overlay.style.bottom = "auto";
+        overlay.style.width = vv.width + "px";
+        overlay.style.height = vv.height + "px";
+        sheet.style.height = Math.max(minHeight, vv.height - top0) + "px";
+        applied = true;
+      } else if (applied || !open) {
+        overlay.style.top = "";
+        overlay.style.left = "";
+        overlay.style.right = "";
+        overlay.style.bottom = "";
+        overlay.style.width = "";
+        overlay.style.height = "";
+        sheet.style.height = "";
+        applied = false;
+      }
+      if (kbClass) sheet.classList.toggle(kbClass, open);
+      dbg?.update({ open, kb, top0, h0, vv, sheet, overlay });
+    };
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(apply);
+    };
+    const onFocus = () => {
+      focused = true;
+      schedule();
+    };
+    const onBlur = () => {
+      focused = false;
+      schedule();
+    };
+    input?.addEventListener("focus", onFocus);
+    input?.addEventListener("blur", onBlur);
+    vv.addEventListener("resize", schedule);
+    vv.addEventListener("scroll", schedule);
+    if (dbg) schedule();
+    return () => {
+      cancelAnimationFrame(raf);
+      input?.removeEventListener("focus", onFocus);
+      input?.removeEventListener("blur", onBlur);
+      vv.removeEventListener("resize", schedule);
+      vv.removeEventListener("scroll", schedule);
+      overlay.style.top = "";
+      overlay.style.left = "";
+      overlay.style.right = "";
+      overlay.style.bottom = "";
+      overlay.style.width = "";
+      overlay.style.height = "";
+      sheet.style.height = "";
+      if (kbClass) sheet.classList.remove(kbClass);
+      dbg?.remove();
+    };
+  }
+  function createDebugPanel() {
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;left:6px;top:6px;z-index:99999;background:rgba(0,0,0,.82);color:#0f0;font:11px/1.35 ui-monospace,Menlo,monospace;padding:6px 8px;border-radius:8px;white-space:pre;pointer-events:none;max-width:92vw";
+    document.body.appendChild(el);
+    const ver = document.querySelector(".deploy-stamp")?.textContent?.trim() || "(\u0432\u0435\u0440\u0441\u0456\u0457 \u043D\u0435\u043C\u0430)";
+    const mode = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone ? "\u0414\u041E\u0414\u0410\u0422\u041E\u041A (standalone)" : "\u0431\u0440\u0430\u0443\u0437\u0435\u0440";
+    return {
+      update({ open, kb, top0, h0, vv, sheet, overlay }) {
+        const r = sheet.getBoundingClientRect();
+        el.textContent = `${ver}  \xB7  ${mode}
+\u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0430: ${open ? "\u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0410" : "\u0437\u0430\u043A\u0440\u0438\u0442\u0430"}  kb=${Math.round(kb)}
+vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}
+window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}
+scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(top0)}
+\u0430\u0440\u043A\u0443\u0448: top=${Math.round(r.top)} h=${Math.round(r.height)}
+\u043E\u0432\u0435\u0440\u043B\u0435\u0439: top=${overlay.style.top || "\u2014"} h=${overlay.style.height || "\u2014"}`;
+      },
+      remove() {
+        el.remove();
+      }
+    };
+  }
+
   // src/tabs/feed.js
   var IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
   var IC_HEART_F = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.9" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -10576,41 +10673,11 @@ ${ev.description || ""}`
     const comSheet = sheet.querySelector(".fd-com-sheet");
     const kbInput = sheet.querySelector(".fd-com-input");
     const unlockScroll = lockBodyScroll();
-    const vv = window.visualViewport;
-    let kbRaf = 0, kbFocused = false;
-    const syncKb = () => {
-      const kb = vv ? Math.max(0, window.innerHeight - vv.height) : 0;
-      const open = !!vv && kbFocused && kb > 80;
-      if (open) {
-        sheet.style.top = vv.offsetTop + "px";
-        sheet.style.bottom = "auto";
-        sheet.style.height = vv.height + "px";
-      } else {
-        sheet.style.top = "";
-        sheet.style.bottom = "";
-        sheet.style.height = "";
-      }
-      comSheet.classList.toggle("fd-com-sheet--kb", open);
-      comSheet.style.setProperty("--kb", (open ? kb : 0) + "px");
-    };
-    const onVV = () => {
-      cancelAnimationFrame(kbRaf);
-      kbRaf = requestAnimationFrame(syncKb);
-    };
-    const onKbFocus = () => {
-      kbFocused = true;
-      onVV();
-    };
-    const onKbBlur = () => {
-      kbFocused = false;
-      onVV();
-    };
-    kbInput?.addEventListener("focus", onKbFocus);
-    kbInput?.addEventListener("blur", onKbBlur);
-    if (vv) {
-      vv.addEventListener("resize", onVV);
-      vv.addEventListener("scroll", onVV);
-    }
+    const detachKb = attachKeyboardSheet(sheet, comSheet, {
+      input: kbInput,
+      minHeight: 180,
+      kbClass: "fd-com-sheet--kb"
+    });
     const clearReply = () => {
       replyTarget = null;
       replyBar.hidden = true;
@@ -10627,11 +10694,7 @@ ${ev.description || ""}`
       if (el) el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
     });
     const close = () => {
-      if (vv) {
-        vv.removeEventListener("resize", onVV);
-        vv.removeEventListener("scroll", onVV);
-      }
-      cancelAnimationFrame(kbRaf);
+      detachKb();
       unlockScroll();
       sheet.remove();
       if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
