@@ -17,6 +17,26 @@
 --    І будь-хто міг би підробити згадку, просто набравши її руками. Тримаємо посилання
 --    на користувача, а імʼя підставляємо живим при показі (як уже робить liveName).
 
+-- ── 0. Спільний секрет «база ↔ Edge-функція» ────────────────────────────────
+-- Уже має існувати з supabase_page_push.sql (накатано 24.07). Дублюємо створення і
+-- вставку, щоб цей файл був самодостатнім: без секрету тригер мовчки нічого не слав би,
+-- і шукати причину довелося б у логах.
+create table if not exists public.app_secrets (
+  name       text primary key,
+  value      text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.app_secrets enable row level security;
+drop policy if exists "service reads app secrets" on public.app_secrets;
+create policy "service reads app secrets" on public.app_secrets for all
+  using (auth.role() = 'service_role') with check (auth.role() = 'service_role');
+
+-- Наявний секрет НЕ перезаписуємо: інакше зламалися б сповіщення про нові пости,
+-- які вже ним користуються.
+insert into public.app_secrets (name, value)
+values ('page_push_secret', encode(gen_random_bytes(32), 'hex'))
+on conflict (name) do nothing;
+
 -- ── 1. Кому адресована відповідь ────────────────────────────────────────────
 alter table public.page_comments
   add column if not exists reply_to_uid uuid references public.profiles(uid) on delete set null;
