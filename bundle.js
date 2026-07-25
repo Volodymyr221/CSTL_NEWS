@@ -478,8 +478,6 @@
   }
   function looksLikeSpam(text) {
     const t = String(text || "").trim();
-    if (t.length === 1)
-      return true;
     if (/(.)\1{5,}/.test(t))
       return true;
     const letters = t.replace(/[^а-яіїєґa-zА-ЯІЇЄҐA-Z]/g, "");
@@ -502,7 +500,7 @@
     }
   }
   var LS_MSG_RATE = "cstl-msg-rate-v1";
-  var FLOOD_MAX = 5;
+  var FLOOD_MAX = 8;
   var FLOOD_WINDOW = 15e3;
   function lastMap(st) {
     return st && st.last && typeof st.last === "object" ? st.last : {};
@@ -11839,6 +11837,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const text = input.value.trim();
       if (!text)
         return;
+      const parentId = replyTarget ? replyTarget.parentId : null;
+      const replyToUid = replyTarget && replyTarget.uid && replyTarget.uid !== currentUserId() ? replyTarget.uid : null;
       if (containsProfanity(text)) {
         showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
@@ -11847,7 +11847,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0438\u0439", 4e3, "error");
         return;
       }
-      const rateScope = `feed:${postId}`;
+      const rateScope = `feed:${postId}:${replyToUid || "root"}`;
       if (isDuplicateMsg(text, rateScope)) {
         showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
         return;
@@ -11863,8 +11863,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       }
       sendBtn.disabled = true;
-      const parentId = replyTarget ? replyTarget.parentId : null;
-      const replyToUid = replyTarget && replyTarget.uid && replyTarget.uid !== currentUserId() ? replyTarget.uid : null;
       const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
       sendBtn.disabled = false;
       if (res.ok) {
