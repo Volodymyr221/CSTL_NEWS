@@ -693,8 +693,10 @@ function renderCommentSheet() {
   const more = commentPaging.get(postId)?.hasMore
     ? `<button class="fd-com-more fd-com-more--older" type="button" data-com-older="${postId}">Показати попередні коментарі</button>`
     : '';
+  // Обгортка .fd-com-inner тримає колонку рядків і гарантує невеликий запас ходу
+  // прокрутки навіть коли коментарів мало (див. коментар до неї у style/feed.css).
   listEl.innerHTML = list.length
-    ? more + commentThreads(list).map(threadHtml).join('')
+    ? `<div class="fd-com-inner">${more}${commentThreads(list).map(threadHtml).join('')}</div>`
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
 }
 
