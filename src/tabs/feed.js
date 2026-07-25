@@ -23,7 +23,7 @@ import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
-import { attachKeyboardSheet } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
+import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 
 // ── Іконки (вектор, у стилі додатку) ────────────────────────────────────────
 const IC_HEART_O = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M19.5 12.6l-7.5 7.4-7.5-7.4a5 5 0 0 1 7.1-7.1l.4.4.4-.4a5 5 0 0 1 7.1 7.1z"/></svg>';
@@ -646,15 +646,7 @@ function openComments(postId) {
   // Підтягнути адресата у видиму зону — ТІЛЬКИ якщо його не видно (зайвий рух гірший
   // за його відсутність). Міряємо в межах самого списку: клавіатура його вже стиснула,
   // тож «видима зона» = висота списку. Запас 12px, щоб рядок не липнув до краю.
-  const revealRow = (id) => {
-    const row = listEl.querySelector(`[data-com-id="${id}"]`);
-    if (!row) return;
-    const lr = listEl.getBoundingClientRect(), rr = row.getBoundingClientRect();
-    const under = rr.bottom - (lr.bottom - 12);      // наскільки заліз під низ
-    const above = (lr.top + 12) - rr.top;            // наскільки вийшов за верх
-    if (under <= 0 && above <= 0) return;            // видно повністю — не чіпаємо
-    listEl.scrollBy({ top: under > 0 ? under : -above, behavior: 'smooth' });
-  };
+  const revealRow = (id) => revealInScroller(listEl, listEl.querySelector(`[data-com-id="${id}"]`));
   const revealReply = () => { if (replyTarget) revealRow(replyTarget.commentId); };
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; paintReply(); };
   if (openCommentSheet) openCommentSheet.clearReply = clearReply;   // щоб realtime міг скинути режим

@@ -10097,7 +10097,18 @@ ${ev.description || ""}`
       f.el.scrollTop = f.top;
     });
   }
-  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "" } = {}) {
+  function revealInScroller(scroller, el, pad2 = 12) {
+    if (!scroller || !el) return 0;
+    const sr = scroller.getBoundingClientRect(), er = el.getBoundingClientRect();
+    const under = er.bottom - (sr.bottom - pad2);
+    const above = sr.top + pad2 - er.top;
+    if (under <= 0 && above <= 0) return 0;
+    const by = under > 0 ? under : -above;
+    if (Math.abs(by) < 1) return 0;
+    scroller.scrollBy({ top: by, behavior: "smooth" });
+    return by;
+  }
+  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "", onOpen } = {}) {
     const vv = window.visualViewport;
     const dbg = kbDebugOn() ? createDebugPanel() : null;
     const unfreeze = freezeBackground(overlay);
@@ -10106,7 +10117,7 @@ ${ev.description || ""}`
       dbg?.remove();
     };
     const h0 = vv.height;
-    let raf = 0, focused = false, applied = false, top0 = null;
+    let raf = 0, focused = false, applied = false, wasOpen = false, top0 = null;
     const measureTop0 = () => {
       const oh = overlay.clientHeight, sh = sheet.offsetHeight;
       if (!oh || !sh) return;
@@ -10136,6 +10147,13 @@ ${ev.description || ""}`
         applied = false;
       }
       if (kbClass) sheet.classList.toggle(kbClass, open);
+      if (open && !wasOpen) {
+        try {
+          onOpen?.();
+        } catch (_) {
+        }
+      }
+      wasOpen = open;
       dbg?.update({ open, kb, top0, h0, vv, sheet, overlay });
     };
     const schedule = () => {
@@ -10571,11 +10589,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const mine = c.author_uid && c.author_uid === currentUserId();
     const lr = comReactMap.get(c.id) || { count: 0, my: false };
     const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : "";
-    return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
+    const replying = replyTarget && replyTarget.commentId === c.id ? " fd-com-row--replying" : "";
+    return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -10672,6 +10691,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const arr = commentMap.get(c.post_id);
     if (!arr) return;
     commentMap.set(c.post_id, arr.filter((x) => x.id !== c.id));
+    if (replyTarget && replyTarget.commentId === c.id) openCommentSheet?.clearReply?.();
     if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
     patchCommentCount(c.post_id);
   }
@@ -10704,15 +10724,28 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const unlockScroll = lockBodyScroll();
     let detachKb = () => {
     };
+    const paintReply = () => {
+      listEl.querySelectorAll(".fd-com-row--replying").forEach((r) => r.classList.remove("fd-com-row--replying"));
+      if (!replyTarget) return;
+      listEl.querySelector(`[data-com-id="${replyTarget.commentId}"]`)?.classList.add("fd-com-row--replying");
+    };
+    const revealRow = (id) => revealInScroller(listEl, listEl.querySelector(`[data-com-id="${id}"]`));
+    const revealReply = () => {
+      if (replyTarget) revealRow(replyTarget.commentId);
+    };
     const clearReply = () => {
       replyTarget = null;
       replyBar.hidden = true;
+      paintReply();
     };
-    const setReply = (parentId, name) => {
-      replyTarget = { parentId, name };
+    if (openCommentSheet) openCommentSheet.clearReply = clearReply;
+    const setReply = (parentId, name, commentId) => {
+      replyTarget = { parentId, name, commentId };
       replyTo.textContent = `\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0434\u043B\u044F ${name}`;
       replyBar.hidden = false;
+      paintReply();
       sheet.querySelector(".fd-com-input")?.focus();
+      requestAnimationFrame(revealReply);
     };
     sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
     if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
@@ -10737,7 +10770,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const rep = e.target.closest("[data-reply-parent]");
       if (rep) {
         const uid = rep.dataset.replyUid;
-        setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C");
+        setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C", Number(rep.dataset.replyId));
         return;
       }
       const del = e.target.closest("[data-del-com]");
@@ -10772,6 +10805,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         input.value = "";
         clearReply();
         input.focus();
+        requestAnimationFrame(() => revealRow(res.comment?.id));
       } else {
         alert("\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E: " + (res.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430"));
       }
@@ -10786,7 +10820,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       // клавіатура: тільки після DOM
       input: kbInput,
       minHeight: 180,
-      kbClass: "fd-com-sheet--kb"
+      kbClass: "fd-com-sheet--kb",
+      // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
+      // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
+      onOpen: revealReply
     });
     requestAnimationFrame(() => sheet.classList.add("open"));
   }

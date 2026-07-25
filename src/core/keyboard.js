@@ -60,6 +60,25 @@ function freezeBackground(overlay) {
   });
 }
 
+// ── Дотягнути рядок у видиму зону скролера ──────────────────────────────────────
+// Використовує список коментарів: коли відповідаєш на коментар, який клавіатура
+// закрила, його треба показати. Правило: рухаємо ЛИШЕ якщо рядок реально не видно —
+// зайвий рух дратує сильніше за його відсутність. pad — запас, щоб рядок не липнув
+// до краю. Повертає, наскільки прокрутили (0 — нічого не робили): зручно для тестів.
+export function revealInScroller(scroller, el, pad = 12) {
+  if (!scroller || !el) return 0;
+  const sr = scroller.getBoundingClientRect(), er = el.getBoundingClientRect();
+  const under = er.bottom - (sr.bottom - pad);   // заліз під низ
+  const above = (sr.top + pad) - er.top;         // вийшов за верх
+  if (under <= 0 && above <= 0) return 0;        // видно повністю
+  const by = under > 0 ? under : -above;
+  // Субпіксельний залишок після плавної прокрутки (частки пікселя) — не привід
+  // смикати список ще раз. Поріг 1px: людина такого не бачить, а зайвий рух бачить.
+  if (Math.abs(by) < 1) return 0;
+  scroller.scrollBy({ top: by, behavior: 'smooth' });
+  return by;
+}
+
 // Прив'язує нижній аркуш до клавіатури.
 //   overlay — фіксований контейнер на весь екран (.fd-sheet-back)
 //   sheet   — сам аркуш усередині нього (.fd-sheet), притиснутий донизу
