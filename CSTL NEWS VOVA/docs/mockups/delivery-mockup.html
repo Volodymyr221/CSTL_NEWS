@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CSTL LIFE · Доставка — макет усього ланцюжка</title>
+<style>
+/* ==========================================================================
+   CSTL LIFE · ДОСТАВКА — макет
+   Чотири поверхні одного замовлення: клієнт → заклад → кур'єр → адмін.
+   Світла тема, великі тап-зони, спільні кольори статусів на всіх поверхнях.
+   Це макет вигляду, не робочий прототип: JS немає, дані статичні.
+   ========================================================================== */
+
+:root{
+  /* поверхні */
+  --bg:#F2F2F5;
+  --surface:#FFFFFF;
+  --surface-2:#F7F7FA;
+  --surface-3:#EEEFF3;
+
+  /* текст */
+  --ink:#0B0F16;
+  --ink-2:#565D6B;
+  --ink-3:#8A909C;
+
+  /* лінії */
+  --line:rgba(11,15,22,.08);
+  --line-2:rgba(11,15,22,.15);
+
+  /* бренди двох поверхонь */
+  --cstl:#722F37;              /* CSTL LIFE — те саме бордо, що на сайті */
+  --cstl-soft:rgba(114,47,55,.10);
+  --rocket:#E8480F;            /* Rocket Delivery — вогонь, приглушений під біле тло */
+  --rocket-soft:rgba(232,72,15,.10);
+
+  /* СПІЛЬНІ КОЛЬОРИ СТАТУСІВ — однакові на всіх чотирьох поверхнях.
+     Це і є та «спільна ДНК», про яку йшлося: скін різний, статус читається однаково. */
+  --s-new:#0A6FEF;    --s-new-soft:rgba(10,111,239,.10);
+  --s-cook:#E07800;   --s-cook-soft:rgba(224,120,0,.11);
+  --s-ready:#00897B;  --s-ready-soft:rgba(0,137,123,.11);
+  --s-go:#8B45D6;     --s-go-soft:rgba(139,69,214,.11);
+  --s-done:#12874A;   --s-done-soft:rgba(18,135,74,.11);
+  --s-bad:#D32F2A;    --s-bad-soft:rgba(211,47,42,.11);
+
+  --r:20px;
+  --r-sm:13px;
+  --shadow:0 1px 2px rgba(11,15,22,.05), 0 10px 30px -18px rgba(11,15,22,.35);
+  --shadow-lg:0 2px 6px rgba(11,15,22,.06), 0 30px 70px -30px rgba(11,15,22,.5);
+  --font:-apple-system,BlinkMacSystemFont,'SF Pro Text','Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  background:var(--bg);color:var(--ink);font-family:var(--font);
+  -webkit-font-smoothing:antialiased;line-height:1.45;
+  padding:0 0 100px;
+}
+.num{font-variant-numeric:tabular-nums;letter-spacing:-.01em;}
+
+/* ---------- каркас документа ---------- */
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px;}
+
+.doc-head{padding:64px 0 34px;}
+.doc-kicker{
+  display:inline-flex;align-items:center;gap:8px;
+  font-size:12px;font-weight:600;letter-spacing:.6px;text-transform:uppercase;
+  color:var(--cstl);background:var(--cstl-soft);
+  padding:6px 12px;border-radius:100px;margin-bottom:18px;
+}
+.doc-head h1{
+  font-size:clamp(30px,5vw,46px);line-height:1.1;letter-spacing:-.03em;font-weight:700;
+  margin-bottom:14px;max-width:16ch;
+}
+.doc-head p{font-size:17px;color:var(--ink-2);max-width:62ch;}
+.doc-head p + p{margin-top:12px;}
+
+.doc-nav{
+  position:sticky;top:0;z-index:50;
+  background:rgba(242,242,245,.82);backdrop-filter:blur(18px) saturate(1.6);
+  -webkit-backdrop-filter:blur(18px) saturate(1.6);
+  border-bottom:1px solid var(--line);
+  margin-bottom:44px;
+}
+.doc-nav-in{
+  max-width:1240px;margin:0 auto;padding:11px 20px;
+  display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;
+}
+.doc-nav-in::-webkit-scrollbar{display:none;}
+.doc-nav a{
+  flex:0 0 auto;text-decoration:none;color:var(--ink-2);
+  font-size:13.5px;font-weight:550;padding:7px 13px;border-radius:100px;
+  white-space:nowrap;transition:.15s;
+}
+.doc-nav a:hover{background:var(--surface);color:var(--ink);}
+
+section{margin-bottom:76px;scroll-margin-top:70px;}
+.sec-head{margin-bottom:26px;}
+.sec-num{
+  font-size:12px;font-weight:700;letter-spacing:1px;color:var(--ink-3);
+  text-transform:uppercase;margin-bottom:8px;
+}
+.sec-head h2{font-size:clamp(23px,3.4vw,32px);letter-spacing:-.025em;font-weight:700;margin-bottom:10px;}
+.sec-head p{font-size:16px;color:var(--ink-2);max-width:70ch;}
+
+.callout{
+  background:var(--surface);border:1px solid var(--line);border-left:3px solid var(--cstl);
+  border-radius:var(--r-sm);padding:16px 18px;margin:22px 0;
+  font-size:15px;color:var(--ink-2);
+}
+.callout strong{color:var(--ink);font-weight:650;}
+.callout--warn{border-left-color:var(--s-bad);}
+.callout--ok{border-left-color:var(--s-done);}
+
+/* ---------- статусні пігулки (спільні) ---------- */
+.st{
+  display:inline-flex;align-items:center;gap:6px;
+  font-size:12px;font-weight:650;padding:5px 11px;border-radius:100px;
+  white-space:nowrap;letter-spacing:-.01em;
+}
+.st::before{content:"";width:6px;height:6px;border-radius:50%;background:currentColor;}
+.st-new{color:var(--s-new);background:var(--s-new-soft);}
+.st-cook{color:var(--s-cook);background:var(--s-cook-soft);}
+.st-ready{color:var(--s-ready);background:var(--s-ready-soft);}
+.st-go{color:var(--s-go);background:var(--s-go-soft);}
+.st-done{color:var(--s-done);background:var(--s-done-soft);}
+.st-bad{color:var(--s-bad);background:var(--s-bad-soft);}
+.st-dim{color:var(--ink-3);background:var(--surface-3);}
+
+/* ---------- легенда статусів ---------- */
+.legend{
+  display:flex;flex-wrap:wrap;gap:10px;
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r);padding:18px 20px;box-shadow:var(--shadow);
+}
+
+/* ---------- ланцюжок статусів ---------- */
+.flow{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.flow-row{
+  display:grid;grid-template-columns:200px 150px 1fr;gap:18px;align-items:center;
+  padding:15px 22px;border-bottom:1px solid var(--line);position:relative;
+}
+.flow-row:last-child{border-bottom:none;}
+.flow-row:nth-child(odd){background:var(--surface-2);}
+.flow-owner{font-size:13px;font-weight:650;color:var(--ink);}
+.flow-owner small{display:block;font-weight:450;color:var(--ink-3);font-size:11.5px;}
+.flow-note{font-size:13.5px;color:var(--ink-2);}
+.flow-head{
+  display:grid;grid-template-columns:200px 150px 1fr;gap:18px;
+  padding:13px 22px;background:var(--ink);color:#fff;
+  font-size:11.5px;font-weight:600;letter-spacing:.8px;text-transform:uppercase;
+}
+@media(max-width:800px){
+  .flow-row,.flow-head{grid-template-columns:1fr;gap:7px;}
+  .flow-head{display:none;}
+  .flow-row{padding:16px 18px;}
+}
+
+/* ---------- телефонні рамки ---------- */
+.screens{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(330px,1fr));
+  gap:34px 26px;align-items:start;
+}
+.screen-cap{margin-bottom:13px;}
+.screen-cap h4{font-size:15.5px;font-weight:650;letter-spacing:-.015em;margin-bottom:4px;}
+.screen-cap p{font-size:13.5px;color:var(--ink-2);}
+.screen-cap .tagline{
+  display:inline-block;font-size:11px;font-weight:650;letter-spacing:.5px;
+  text-transform:uppercase;color:var(--ink-3);margin-bottom:6px;
+}
+
+.phone{
+  width:100%;max-width:376px;margin:0 auto;
+  background:#0B0F16;border-radius:46px;padding:11px;
+  box-shadow:var(--shadow-lg);
+}
+.phone-screen{
+  background:var(--surface-2);border-radius:36px;overflow:hidden;
+  height:722px;display:flex;flex-direction:column;position:relative;
+}
+.sbar{
+  height:46px;flex:0 0 auto;display:flex;align-items:flex-end;justify-content:space-between;
+  padding:0 26px 6px;font-size:13px;font-weight:650;position:relative;
+}
+.sbar::after{
+  content:"";position:absolute;top:7px;left:50%;transform:translateX(-50%);
+  width:86px;height:23px;background:#0B0F16;border-radius:14px;
+}
+.pbody{flex:1;overflow-y:auto;padding:6px 18px 18px;scrollbar-width:none;}
+.pbody::-webkit-scrollbar{display:none;}
+.pbody--flush{padding-left:0;padding-right:0;}
+
+/* верхній бар усередині телефона */
+.nav{
+  display:flex;align-items:center;gap:12px;padding:6px 0 16px;
+}
+.nav-btn{
+  width:36px;height:36px;flex:0 0 auto;border-radius:50%;
+  background:var(--surface);border:1px solid var(--line);
+  display:flex;align-items:center;justify-content:center;
+}
+.nav-title{font-size:17px;font-weight:650;letter-spacing:-.02em;flex:1;}
+.nav-title small{display:block;font-size:12px;font-weight:450;color:var(--ink-3);letter-spacing:0;}
+
+/* таб-бар */
+.tabbar{
+  flex:0 0 auto;display:flex;border-top:1px solid var(--line);
+  background:rgba(255,255,255,.86);backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);padding:8px 4px 20px;
+}
+.tab{
+  flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;
+  font-size:10.5px;font-weight:600;color:var(--ink-3);
+}
+.tab.on{color:var(--tab-on,var(--cstl));}
+
+/* ---------- будівельні блоки інтерфейсу ---------- */
+.card{
+  background:var(--surface);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:15px;
+}
+.card + .card{margin-top:10px;}
+.card-flat{background:var(--surface);border-radius:var(--r-sm);padding:15px;}
+
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.row + .row{margin-top:9px;}
+
+.h-sec{
+  font-size:11.5px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--ink-3);margin:20px 0 10px;
+}
+.h-sec:first-child{margin-top:4px;}
+
+.big{font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1.1;}
+.mid{font-size:19px;font-weight:650;letter-spacing:-.02em;}
+.lbl{font-size:12.5px;color:var(--ink-3);}
+.mut{font-size:13px;color:var(--ink-2);}
+.tiny{font-size:11.5px;color:var(--ink-3);}
+
+/* кнопки — мінімум 54px висоти, це головне правило кур'єрського екрана */
+.btn{
+  display:flex;align-items:center;justify-content:center;gap:9px;
+  min-height:54px;border-radius:15px;border:none;
+  font-family:inherit;font-size:16px;font-weight:650;letter-spacing:-.01em;
+  width:100%;cursor:default;
+}
+.btn-cstl{background:var(--cstl);color:#fff;}
+.btn-rocket{background:var(--rocket);color:#fff;}
+.btn-dark{background:var(--ink);color:#fff;}
+.btn-ok{background:var(--s-done);color:#fff;}
+.btn-ghost{background:var(--surface);color:var(--ink);border:1px solid var(--line-2);}
+.btn-danger{background:transparent;color:var(--s-bad);border:1px solid rgba(211,47,42,.3);}
+.btn-sm{min-height:42px;font-size:14px;border-radius:12px;width:auto;padding:0 17px;}
+.btn-off{opacity:.35;}
+.btn + .btn{margin-top:9px;}
+
+/* товар у меню */
+.item{display:flex;gap:12px;align-items:center;padding:11px 0;border-bottom:1px solid var(--line);}
+.item:last-child{border-bottom:none;}
+.item-pic{
+  width:62px;height:62px;flex:0 0 auto;border-radius:12px;
+  background:linear-gradient(135deg,#F6DCC8,#E9BBA0);
+}
+.item-pic.b{background:linear-gradient(135deg,#D9E7F3,#B6CFE4);}
+.item-pic.c{background:linear-gradient(135deg,#DCEBD8,#B4D3AC);}
+.item-body{flex:1;min-width:0;}
+.item-name{font-size:14.5px;font-weight:600;letter-spacing:-.01em;}
+.item-desc{font-size:12px;color:var(--ink-3);margin-top:2px;}
+.item-price{font-size:15px;font-weight:650;margin-top:5px;}
+.plus{
+  width:34px;height:34px;flex:0 0 auto;border-radius:50%;
+  background:var(--cstl);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:20px;font-weight:400;line-height:1;
+}
+.qty{
+  display:flex;align-items:center;gap:11px;background:var(--surface-3);
+  border-radius:100px;padding:5px 6px;
+}
+.qty span{min-width:16px;text-align:center;font-size:14px;font-weight:650;}
+.qty i{
+  width:26px;height:26px;border-radius:50%;background:var(--surface);
+  display:flex;align-items:center;justify-content:center;font-style:normal;font-size:16px;
+}
+
+/* трекер статусів — вертикальний, для клієнта */
+.track{padding-left:4px;}
+.trow{display:flex;gap:14px;position:relative;padding-bottom:20px;}
+.trow:last-child{padding-bottom:0;}
+.tdot{
+  width:26px;height:26px;flex:0 0 auto;border-radius:50%;
+  background:var(--surface-3);color:var(--ink-3);
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;font-weight:700;position:relative;z-index:1;
+}
+.trow:not(:last-child)::before{
+  content:"";position:absolute;left:12.5px;top:26px;bottom:0;
+  width:2px;background:var(--surface-3);
+}
+.trow.done .tdot{background:var(--s-done);color:#fff;}
+.trow.done:not(:last-child)::before{background:var(--s-done);}
+.trow.now .tdot{background:var(--s-go);color:#fff;box-shadow:0 0 0 5px var(--s-go-soft);}
+.tbody{flex:1;padding-top:2px;}
+.tname{font-size:14.5px;font-weight:600;letter-spacing:-.01em;}
+.trow:not(.done):not(.now) .tname{color:var(--ink-3);font-weight:500;}
+.ttime{font-size:12px;color:var(--ink-3);margin-top:1px;}
+
+/* горизонтальний степер — для кур'єра */
+.hstep{display:flex;gap:5px;margin-bottom:16px;}
+.hstep div{
+  flex:1;height:5px;border-radius:100px;background:var(--surface-3);
+}
+.hstep div.on{background:var(--rocket);}
+.hstep-lbl{
+  display:flex;justify-content:space-between;font-size:10.5px;
+  color:var(--ink-3);font-weight:600;margin-bottom:18px;letter-spacing:-.01em;
+}
+.hstep-lbl span.on{color:var(--rocket);}
+
+/* карта-заглушка */
+.map{
+  height:150px;border-radius:var(--r-sm);position:relative;overflow:hidden;
+  background:
+    linear-gradient(rgba(255,255,255,.55),rgba(255,255,255,.55)),
+    repeating-linear-gradient(0deg,#DDE3EA 0 1px,transparent 1px 26px),
+    repeating-linear-gradient(90deg,#DDE3EA 0 1px,transparent 1px 26px),
+    #EDF1F5;
+  border:1px solid var(--line);
+}
+.map::after{
+  content:"";position:absolute;left:16%;top:70%;width:64%;height:2px;
+  background:var(--s-go);transform:rotate(-27deg);transform-origin:left center;
+  border-radius:2px;opacity:.75;
+}
+.pin{
+  position:absolute;width:15px;height:15px;border-radius:50%;
+  border:3px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);
+}
+.pin.a{background:var(--rocket);left:14%;top:68%;}
+.pin.b{background:var(--s-done);left:76%;top:22%;}
+.map-badge{
+  position:absolute;right:10px;bottom:10px;
+  background:rgba(255,255,255,.94);backdrop-filter:blur(10px);
+  border-radius:100px;padding:6px 13px;font-size:12.5px;font-weight:650;
+  box-shadow:0 2px 10px rgba(0,0,0,.1);
+}
+
+/* фото-підтвердження */
+.photo{
+  border:1.5px dashed var(--line-2);border-radius:var(--r-sm);
+  padding:22px 16px;text-align:center;background:var(--surface);
+}
+.photo-done{
+  border-style:solid;border-color:var(--s-done);background:var(--s-done-soft);
+}
+
+/* сегментований перемикач */
+.seg{display:flex;background:var(--surface-3);border-radius:11px;padding:3px;gap:3px;}
+.seg div{
+  flex:1;text-align:center;font-size:13px;font-weight:600;padding:8px 4px;border-radius:9px;
+  color:var(--ink-2);
+}
+.seg div.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.09);}
+
+/* перемикач on/off */
+.sw{width:50px;height:30px;border-radius:100px;background:var(--surface-3);position:relative;flex:0 0 auto;}
+.sw::after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.2);}
+.sw.on{background:var(--s-done);}
+.sw.on::after{left:23px;}
+
+/* аватар */
+.av{
+  width:38px;height:38px;border-radius:50%;flex:0 0 auto;
+  background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:650;letter-spacing:-.02em;
+}
+.av-lg{width:70px;height:70px;font-size:23px;}
+
+/* ---------- адмінські панелі (широкі) ---------- */
+.panel{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);overflow:hidden;margin-bottom:26px;
+}
+.panel-head{
+  padding:20px 24px;border-bottom:1px solid var(--line);
+  display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;
+}
+.panel-head h3{font-size:18px;font-weight:650;letter-spacing:-.02em;}
+.panel-head p{font-size:13px;color:var(--ink-3);margin-top:2px;}
+.panel-body{padding:22px 24px;}
+
+.kpis{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+  gap:1px;background:var(--line);
+}
+.kpi{background:var(--surface);padding:19px 22px;}
+.kpi-l{font-size:12px;color:var(--ink-3);font-weight:550;margin-bottom:7px;}
+.kpi-v{font-size:27px;font-weight:700;letter-spacing:-.035em;line-height:1;}
+.kpi-s{font-size:12px;color:var(--ink-3);margin-top:6px;}
+.kpi-v.good{color:var(--s-done);}
+.kpi-v.bad{color:var(--s-bad);}
+.kpi-v.brand{color:var(--rocket);}
+
+.tbl-scroll{overflow-x:auto;}
+table{width:100%;border-collapse:collapse;font-size:13.5px;min-width:620px;}
+th{
+  text-align:left;font-size:11px;font-weight:700;letter-spacing:.7px;text-transform:uppercase;
+  color:var(--ink-3);padding:12px 24px;border-bottom:1px solid var(--line);white-space:nowrap;
+}
+td{padding:13px 24px;border-bottom:1px solid var(--line);vertical-align:middle;}
+tr:last-child td{border-bottom:none;}
+.cell-name{display:flex;align-items:center;gap:10px;font-weight:600;}
+
+/* ---------- порівняльна таблиця в кінці ---------- */
+.cmp{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r);
+  box-shadow:var(--shadow);overflow:hidden;
+}
+.cmp-row{
+  display:grid;grid-template-columns:1fr 1fr;gap:0;border-bottom:1px solid var(--line);
+}
+.cmp-row:last-child{border-bottom:none;}
+.cmp-row > div{padding:17px 22px;font-size:14px;}
+.cmp-row > div:first-child{border-right:1px solid var(--line);background:var(--surface-2);color:var(--ink-2);}
+.cmp-head{font-size:11.5px;font-weight:700;letter-spacing:.8px;text-transform:uppercase;}
+.cmp-head > div{background:var(--ink) !important;color:#fff !important;border-right-color:rgba(255,255,255,.15) !important;}
+@media(max-width:700px){
+  .cmp-row{grid-template-columns:1fr;}
+  .cmp-row > div:first-child{border-right:none;border-bottom:1px solid var(--line);}
+  .cmp-head{display:none;}
+}
+
+.principles{
+  display:grid;grid-template-columns:repeat(auto-fit,minmax(255px,1fr));gap:16px;
+}
+.principle{
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--r-sm);
+  padding:20px;
+}
+.principle h4{font-size:15px;font-weight:650;letter-spacing:-.015em;margin-bottom:7px;}
+.principle p{font-size:13.5px;color:var(--ink-2);}
+.principle-n{
+  font-size:11px;font-weight:700;color:var(--rocket);letter-spacing:1px;margin-bottom:9px;
+}
+
+footer{
+  border-top:1px solid var(--line);margin-top:70px;padding-top:26px;
+  font-size:13px;color:var(--ink-3);
+}
+</style>
+</head>
+<body>
+
+<!-- ======================================================================
+     ШАПКА
+     ====================================================================== -->
+<div class="wrap">
+  <div class="doc-head">
+    <div class="doc-kicker">Макет · версія 1 · 25.07.2026</div>
+    <h1>Доставка в CSTL LIFE: увесь ланцюжок</h1>
+    <p>Чотири поверхні одного й того самого замовлення: <strong>клієнт</strong> замовляє, <strong>заклад</strong> готує, <strong>кур'єр</strong> везе, <strong>адмін</strong> рахує гроші. Усі читають і пишуть в одну таблицю <code>orders</code>.</p>
+    <p>Макет зроблено на основі прототипу Rocket Delivery. Головні відмінності: додано поверхню закладу (без неї кур'єр приїздить до неготової кухні), повний набір скасувань і збоїв, окремий цикл здачі готівки та економіка з ненульовою маржею платформи.</p>
+  </div>
+</div>
+
+<!-- ======================================================================
+     НАВІГАЦІЯ
+     ====================================================================== -->
+<nav class="doc-nav">
+  <div class="doc-nav-in">
+    <a href="#flow">Ланцюжок статусів</a>
+    <a href="#client">1 · Клієнт</a>
+    <a href="#biz">2 · Заклад</a>
+    <a href="#courier">3 · Кур'єр</a>
+    <a href="#admin">4 · Адмін</a>
+    <a href="#design">Принципи дизайну</a>
+    <a href="#diff">Що змінено проти прототипу</a>
+  </div>
+</nav>
+
+<div class="wrap">
+
+<!-- ======================================================================
+     ЛАНЦЮЖОК СТАТУСІВ
+     ====================================================================== -->
+<section id="flow">
+  <div class="sec-head">
+    <div class="sec-num">Основа</div>
+    <h2>Ланцюжок статусів — це і є весь інтеграційний контракт</h2>
+    <p>Немає жодного API між CSTL LIFE і кур'єрським застосунком. Є одна таблиця замовлень і домовленість: який статус існує, <strong>хто саме має право його поставити</strong> і що при цьому бачить клієнт. Домовились про це — далі кожна сторона пише свою поверхню незалежно.</p>
+  </div>
+
+  <div class="legend" style="margin-bottom:26px;">
+    <span class="st st-new">нове</span>
+    <span class="st st-cook">готується</span>
+    <span class="st st-ready">готово до забору</span>
+    <span class="st st-go">в дорозі</span>
+    <span class="st st-done">доставлено</span>
+    <span class="st st-bad">скасовано / збій</span>
+    <span class="tiny" style="align-self:center;margin-left:6px;">← ці шість кольорів однакові на всіх чотирьох поверхнях</span>
+  </div>
+
+  <div class="flow">
+    <div class="flow-head"><div>Статус</div><div>Хто ставить</div><div>Що при цьому відбувається</div></div>
+
+    <div class="flow-row">
+      <div><span class="st st-new">створено</span></div>
+      <div class="flow-owner">Клієнт<small>CSTL LIFE</small></div>
+      <div class="flow-note">Оформив і обрав оплату. Гроші ще не списані, якщо оплата онлайн — тільки заблоковані.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-cook">прийнято закладом</span></div>
+      <div class="flow-owner">Заклад<small>кабінет закладу</small></div>
+      <div class="flow-note">Заклад підтверджує і <strong>ставить час готовності</strong>. Саме звідси рахується все інше. Може й відхилити — тоді гроші розблоковуються.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-cook">готується</span></div>
+      <div class="flow-owner">Заклад</div>
+      <div class="flow-note">Клієнт бачить «буде готово о 19:40». Скасувати замовлення після цього моменту вже не можна — продукти в роботі.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-ready">готово до забору</span></div>
+      <div class="flow-owner">Заклад</div>
+      <div class="flow-note"><strong>Тільки тепер</strong> замовлення падає в чергу кур'єрів. У прототипі воно падало одразу після оплати — кур'єр приїздив до порожньої кухні.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-go">призначено кур'єру</span></div>
+      <div class="flow-owner">Кур'єр або адмін</div>
+      <div class="flow-note">Кур'єр бере сам. Якщо за 3 хвилини ніхто не взяв — сигнал адміну, він призначає вручну.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-go">забрав у закладі</span></div>
+      <div class="flow-owner">Кур'єр</div>
+      <div class="flow-note">З цієї миті відповідальність за замовлення на кур'єрі. Якщо оплата готівкою — на нього ж вішається сума до здачі.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-go">в дорозі</span></div>
+      <div class="flow-owner">Кур'єр</div>
+      <div class="flow-note">Клієнту показується орієнтовний час. Стає доступною кнопка «Подзвонити кур'єру».</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-done">доставлено</span></div>
+      <div class="flow-owner">Кур'єр</div>
+      <div class="flow-note"><strong>Тільки з фото.</strong> Без фото кнопка не активна. Кур'єру нараховується 35₴, платформі — 15₴.</div>
+    </div>
+
+    <div class="flow-row">
+      <div><span class="st st-done">готівку здано</span></div>
+      <div class="flow-owner">Кур'єр → Заклад<small>підтверджують удвох</small></div>
+      <div class="flow-note"><strong>Окремий цикл, якого не було зовсім.</strong> Кур'єр тисне «здав», заклад підтверджує «отримав». Розбіжність автоматично стає зафіксованим боргом, а не усною суперечкою.</div>
+    </div>
+  </div>
+
+  <div class="sec-head" style="margin:34px 0 18px;">
+    <h2 style="font-size:20px;">Бічні гілки — те, чого в прототипі не було взагалі</h2>
+    <p>Це не рідкісні випадки. У доставці збій — це буденність, і саме на ньому ламаються системи, спроєктовані «по щасливому шляху».</p>
+  </div>
+
+  <div class="flow">
+    <div class="flow-head"><div>Гілка</div><div>Хто запускає</div><div>Що має статись</div></div>
+    <div class="flow-row">
+      <div><span class="st st-bad">скасовано клієнтом</span></div>
+      <div class="flow-owner">Клієнт</div>
+      <div class="flow-note">Дозволено <strong>тільки до статусу «готується»</strong>. Онлайн-оплата розблоковується автоматично.</div>
+    </div>
+    <div class="flow-row">
+      <div><span class="st st-bad">відхилено закладом</span></div>
+      <div class="flow-owner">Заклад</div>
+      <div class="flow-note">Обов'язкова причина (немає продукту / завантажені / зачинено). Клієнту — push і повне повернення.</div>
+    </div>
+    <div class="flow-row">
+      <div><span class="st st-bad">клієнт не відповідає</span></div>
+      <div class="flow-owner">Кур'єр</div>
+      <div class="flow-note">Кур'єр не вирішує сам. Піднімає прапорець → адмін бачить у дашборді й дзвонить. Замовлення завмирає, а не зникає.</div>
+    </div>
+    <div class="flow-row">
+      <div><span class="st st-bad">повернуто в чергу</span></div>
+      <div class="flow-owner">Кур'єр</div>
+      <div class="flow-note">Зламався скутер. Замовлення повертається в чергу з позначкою «повторне» і піднімається вгору списку.</div>
+    </div>
+    <div class="flow-row">
+      <div><span class="st st-dim">прострочено</span></div>
+      <div class="flow-owner">Система</div>
+      <div class="flow-note">Автоматично, якщо факт перевищив обіцяний час більш ніж на 15 хвилин. Головна метрика якості — без неї не видно, що сервіс погіршується.</div>
+    </div>
+  </div>
+
+  <div class="callout callout--warn">
+    <strong>Одне технічне правило, яке варто закріпити одразу:</strong> статус міняється тільки функцією на сервері, яка перевіряє «чи має право саме цей користувач саме на цей перехід». Не прямим записом у таблицю з телефона. Інакше кур'єр зможе позначити «доставлено» чуже замовлення, а клієнт — скасувати вже приготовану їжу.
+  </div>
+</section>
+
+
+<!-- ======================================================================
+     1. КЛІЄНТ
+     ====================================================================== -->
+<section id="client">
+  <div class="sec-head">
+    <div class="sec-num">Поверхня 1</div>
+    <h2>Клієнт — усередині CSTL LIFE</h2>
+    <p>Бордо <code>#722F37</code>, тобто той самий бренд, що і вся решта застосунку. Замовлення живе в Кабінеті жителя поруч із оголошеннями й повідомленнями — окремого «додатку доставки» для мешканця не існує.</p>
+  </div>
+
+  <div class="screens">
+
+    <!-- A1 меню закладу -->
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Клієнт · 1</span>
+        <h4>Картка закладу</h4>
+        <p>Це сторінка у Стрічці, яка вміє продавати. Не нова сутність — розширена наявна.</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>19:12</span><span>LTE 100%</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-btn">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0B0F16" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div class="nav-title">Суші-бар «Токіо»<small>Олика · відкрито до 22:00</small></div>
+          </div>
+
+          <div class="card" style="display:flex;align-items:center;gap:12px;">
+            <div class="av" style="background:var(--cstl);">Т</div>
+            <div style="flex:1;">
+              <div class="row"><span class="mut" style="font-weight:600;">Доставка 30–40 хв</span><span class="st st-ready">відкрито</span></div>
+              <div class="tiny" style="margin-top:3px;">вул. Незалежності, 12 · 50₴ доставка</div>
+            </div>
+          </div>
+
+          <div class="h-sec">Роли та сети</div>
+          <div class="card-flat" style="padding:4px 15px;">
+            <div class="item">
+              <div class="item-pic"></div>
+              <div class="item-body">
+                <div class="item-name">Філадельфія класична</div>
+                <div class="item-desc">лосось, вершковий сир · 8 шт</div>
+                <div class="item-price num">285 ₴</div>
+              </div>
+              <div class="qty"><i>−</i><span class="num">1</span><i>+</i></div>
+            </div>
+            <div class="item">
+              <div class="item-pic b"></div>
+              <div class="item-body">
+                <div class="item-name">Каліфорнія з крабом</div>
+                <div class="item-desc">краб, авокадо, ікра тобіко · 8 шт</div>
+                <div class="item-price num">240 ₴</div>
+              </div>
+              <div class="plus">+</div>
+            </div>
+            <div class="item">
+              <div class="item-pic c"></div>
+              <div class="item-body">
+                <div class="item-name">Сет «Дракон»</div>
+                <div class="item-desc">32 шт · на компанію</div>
+                <div class="item-price num">520 ₴</div>
+              </div>
+              <div class="plus">+</div>
+            </div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <div class="btn btn-cstl">
+              <span>Кошик · 1 позиція</span>
+              <span class="num" style="opacity:.75;">285 ₴</span>
+            </div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- A2 чекаут -->
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Клієнт · 2</span>
+        <h4>Оформлення</h4>
+        <p>Найважливіший екран для села: адреса — це <strong>точка на мапі плюс орієнтир</strong>, а не рядок «вул. Шкільна, 4».</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>19:14</span><span>LTE 100%</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-btn">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0B0F16" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div class="nav-title">Оформлення</div>
+          </div>
+
+          <div class="h-sec">Куди везти</div>
+          <div class="map" style="height:118px;">
+            <div class="pin b" style="left:48%;top:44%;"></div>
+          </div>
+          <div class="card" style="margin-top:9px;">
+            <div class="row"><span class="mut" style="font-weight:600;">вул. Шкільна, 4</span><span class="tiny" style="color:var(--cstl);font-weight:650;">Змінити</span></div>
+            <div class="tiny" style="margin-top:6px;line-height:1.4;">Орієнтир: зелені ворота навпроти магазину, домофону немає — дзвоніть</div>
+          </div>
+
+          <div class="h-sec">Оплата</div>
+          <div class="seg">
+            <div class="on">Картка онлайн</div>
+            <div>Готівка кур'єру</div>
+          </div>
+
+          <div class="h-sec">Разом</div>
+          <div class="card">
+            <div class="row"><span class="mut">Філадельфія класична × 1</span><span class="num mut">285 ₴</span></div>
+            <div class="row"><span class="mut">Доставка</span><span class="num mut">50 ₴</span></div>
+            <div class="row" style="border-top:1px solid var(--line);padding-top:11px;margin-top:12px;">
+              <span style="font-weight:650;">До сплати</span><span class="big num">335 ₴</span>
+            </div>
+          </div>
+
+          <div class="tiny" style="margin:12px 0 16px;line-height:1.45;">
+            Заклад підтвердить замовлення протягом кількох хвилин і назве час готовності. Скасувати можна безкоштовно, доки не почали готувати.
+          </div>
+
+          <div class="btn btn-cstl">Замовити</div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- A3 статус -->
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Клієнт · 3</span>
+        <h4>Статус замовлення</h4>
+        <p>Час і статус замість живої мапи. Від закладу до найдальшої хати в Олиці — сім хвилин: мапа тут коштує дорожче, ніж дає.</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>19:41</span><span>LTE 98%</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-btn">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0B0F16" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div class="nav-title">Замовлення<small class="num">RD-260725-016</small></div>
+          </div>
+
+          <div class="card" style="text-align:center;padding:22px 15px;">
+            <div class="lbl">Орієнтовно у вас</div>
+            <div class="big num" style="font-size:40px;margin:6px 0 4px;">19:52</div>
+            <span class="st st-go">в дорозі</span>
+          </div>
+
+          <div class="h-sec">Хід замовлення</div>
+          <div class="card">
+            <div class="track">
+              <div class="trow done">
+                <div class="tdot">✓</div>
+                <div class="tbody"><div class="tname">Заклад прийняв</div><div class="ttime num">19:15</div></div>
+              </div>
+              <div class="trow done">
+                <div class="tdot">✓</div>
+                <div class="tbody"><div class="tname">Приготували</div><div class="ttime num">19:38</div></div>
+              </div>
+              <div class="trow done">
+                <div class="tdot">✓</div>
+                <div class="tbody"><div class="tname">Кур'єр забрав</div><div class="ttime num">19:41 · Олег</div></div>
+              </div>
+              <div class="trow now">
+                <div class="tdot">●</div>
+                <div class="tbody"><div class="tname">Їде до вас</div><div class="ttime">лишилось близько 8 хвилин</div></div>
+              </div>
+              <div class="trow">
+                <div class="tdot">4</div>
+                <div class="tbody"><div class="tname">Доставлено</div></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card" style="display:flex;align-items:center;gap:12px;">
+            <div class="av">ОК</div>
+            <div style="flex:1;">
+              <div style="font-size:14.5px;font-weight:600;">Олег Коваль</div>
+              <div class="tiny">Електроскутер · борт 07</div>
+            </div>
+            <div style="width:44px;height:44px;border-radius:50%;background:var(--s-done);display:flex;align-items:center;justify-content:center;">
+              <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C11.6 21 3 12.4 3 1.9c0-.5.4-.9 1-.9h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.3 2.2z"/></svg>
+            </div>
+          </div>
+
+          <div class="row" style="margin-top:16px;">
+            <span class="mut">Оплачено карткою</span><span class="num" style="font-weight:650;">335 ₴</span>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <!-- A4 мої замовлення -->
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Клієнт · 4</span>
+        <h4>Мої замовлення</h4>
+        <p>Живе в Кабінеті жителя, який уже є. Тут же — скасовані, щоб історія була чесною.</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>19:55</span><span>LTE 97%</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-btn">
+              <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0B0F16" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg>
+            </div>
+            <div class="nav-title">Мої замовлення</div>
+          </div>
+
+          <div class="h-sec">Активне</div>
+          <div class="card" style="border-color:var(--s-go);">
+            <div class="row"><span class="num tiny">RD-260725-016</span><span class="st st-go">в дорозі</span></div>
+            <div style="font-size:14.5px;font-weight:600;margin-top:8px;">Суші-бар «Токіо»</div>
+            <div class="tiny" style="margin-top:2px;">Філадельфія класична × 1</div>
+            <div class="row" style="margin-top:12px;"><span class="mut">Буде о 19:52</span><span class="num" style="font-weight:650;">335 ₴</span></div>
+          </div>
+
+          <div class="h-sec">Раніше</div>
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260722-004</span><span class="st st-done">доставлено</span></div>
+            <div style="font-size:14.5px;font-weight:600;margin-top:8px;">Аптека «Здоров'я»</div>
+            <div class="row" style="margin-top:10px;"><span class="tiny">22.07 · 14:20 · за 19 хв</span><span class="num mut">210 ₴</span></div>
+            <div style="margin-top:12px;"><div class="btn btn-ghost btn-sm" style="width:100%;">Повторити замовлення</div></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260719-011</span><span class="st st-bad">скасовано</span></div>
+            <div style="font-size:14.5px;font-weight:600;margin-top:8px;">Суші-бар «Токіо»</div>
+            <div class="tiny" style="margin-top:4px;line-height:1.4;">Заклад відхилив: закінчився лосось. Гроші повернулись 19.07.</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+
+  <div class="callout">
+    <strong>Що з цього ще не існує в CSTL LIFE:</strong> каталог товарів, кошик, оформлення, платежі, адреса з координатами. Це приблизно дві третини всієї роботи по доставці — і вона на нашому боці, не на кур'єрському. Кур'єрський застосунок — фініш ланцюжка, а не сам ланцюжок.
+  </div>
+</section>
+
+
+<!-- ======================================================================
+     2. ЗАКЛАД
+     ====================================================================== -->
+<section id="biz">
+  <div class="sec-head">
+    <div class="sec-num">Поверхня 2</div>
+    <h2>Заклад — ланка, якої в прототипі не було</h2>
+    <p>Це кабінет власника сторінки у Стрічці, а не окремий застосунок. Роль уже існує: <code>page_admins</code>. Без цієї поверхні кур'єр отримує замовлення в момент оплати і приїздить до кухні, яка ще навіть не почала готувати.</p>
+  </div>
+
+  <div class="screens">
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Заклад · 1</span>
+        <h4>Нове замовлення</h4>
+        <p>Один екран — одне рішення. Прийняти з часом готовності або відхилити з причиною.</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>19:14</span><span>Wi-Fi</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-title">Нове замовлення<small>Суші-бар «Токіо»</small></div>
+            <span class="st st-new">нове</span>
+          </div>
+
+          <div class="card" style="border-color:var(--s-new);">
+            <div class="row"><span class="num tiny">RD-260725-016</span><span class="tiny">19:14</span></div>
+            <div style="margin-top:12px;">
+              <div class="row"><span style="font-size:15px;font-weight:600;">Філадельфія класична</span><span class="num mid">× 1</span></div>
+            </div>
+            <div class="row" style="border-top:1px solid var(--line);padding-top:11px;margin-top:12px;">
+              <span class="mut">Сума замовлення</span><span class="num" style="font-weight:650;">285 ₴</span>
+            </div>
+            <div class="row"><span class="mut">Оплата</span><span class="st st-done" style="font-size:11.5px;">картка · вже оплачено</span></div>
+          </div>
+
+          <div class="h-sec">Коли буде готово</div>
+          <div class="seg">
+            <div>15 хв</div><div class="on">25 хв</div><div>40 хв</div><div>інше</div>
+          </div>
+          <div class="tiny" style="margin-top:9px;">Клієнт побачить «буде готово о 19:39». Кур'єру замовлення покажеться за 5 хвилин до цього часу.</div>
+
+          <div style="margin-top:20px;">
+            <div class="btn btn-ok">Прийняти · готово о 19:39</div>
+            <div class="btn btn-danger">Не можемо виконати</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Заклад · 2</span>
+        <h4>Кухня — що в роботі</h4>
+        <p>Один список, відсортований за часом готовності. Прострочене підсвічене — його видно з іншого кінця кухні.</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>19:38</span><span>Wi-Fi</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-title">Кухня<small>4 замовлення в роботі</small></div>
+          </div>
+
+          <div class="card" style="border-color:var(--s-bad);border-width:1.5px;">
+            <div class="row"><span class="num tiny">RD-260725-013</span><span class="st st-bad">+6 хв запізнення</span></div>
+            <div style="font-size:14.5px;font-weight:600;margin-top:7px;">Сет «Дракон» × 1</div>
+            <div class="tiny" style="margin-top:2px;">мало бути готово о 19:32</div>
+            <div style="margin-top:12px;"><div class="btn btn-ok btn-sm" style="width:100%;">Готово до забору</div></div>
+          </div>
+
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-016</span><span class="st st-cook">готується</span></div>
+            <div style="font-size:14.5px;font-weight:600;margin-top:7px;">Філадельфія класична × 1</div>
+            <div class="tiny" style="margin-top:2px;">о 19:39 · лишилась хвилина</div>
+            <div style="margin-top:12px;"><div class="btn btn-ok btn-sm" style="width:100%;">Готово до забору</div></div>
+          </div>
+
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-017</span><span class="st st-cook">готується</span></div>
+            <div style="font-size:14.5px;font-weight:600;margin-top:7px;">Каліфорнія × 2</div>
+            <div class="tiny" style="margin-top:2px;">о 19:50</div>
+          </div>
+
+          <div class="h-sec">Чекають кур'єра</div>
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-012</span><span class="st st-ready">готово · 4 хв</span></div>
+            <div class="tiny" style="margin-top:6px;">Кур'єр Олег К. вже їде · буде о 19:42</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Заклад · 3</span>
+        <h4>Каса — звірка готівки</h4>
+        <p>Друга половина циклу, якого не було. Заклад підтверджує отримання; розбіжність стає зафіксованим боргом.</p>
+      </div>
+      <div class="phone"><div class="phone-screen">
+        <div class="sbar"><span>22:05</span><span>Wi-Fi</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-title">Каса<small>п'ятниця, 25.07</small></div>
+          </div>
+
+          <div class="card">
+            <div class="lbl">Кур'єри мають привезти</div>
+            <div class="big num" style="margin:5px 0 3px;">1 850 ₴</div>
+            <div class="tiny">за 5 замовлень готівкою</div>
+          </div>
+
+          <div class="h-sec">Очікує підтвердження</div>
+          <div class="card" style="border-color:var(--s-cook);">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <div class="av">ОК</div>
+              <div style="flex:1;">
+                <div style="font-size:14.5px;font-weight:600;">Олег Коваль</div>
+                <div class="tiny">позначив «здав» о 22:01 · 3 замовлення</div>
+              </div>
+              <div class="num mid">1 130 ₴</div>
+            </div>
+            <div style="margin-top:13px;">
+              <div class="btn btn-ok btn-sm" style="width:100%;">Підтвердити 1 130 ₴</div>
+              <div class="btn btn-ghost btn-sm" style="width:100%;">Сума не збіглась</div>
+            </div>
+          </div>
+
+          <div class="h-sec">Ще в дорозі</div>
+          <div class="card">
+            <div style="display:flex;align-items:center;gap:11px;">
+              <div class="av">ІП</div>
+              <div style="flex:1;">
+                <div style="font-size:14.5px;font-weight:600;">Ірина Панчук</div>
+                <div class="tiny">на лінії · 2 замовлення готівкою</div>
+              </div>
+              <div class="num mid">720 ₴</div>
+            </div>
+          </div>
+
+          <div class="h-sec">Зведення за тиждень</div>
+          <div class="card">
+            <div class="row"><span class="mut">Виторг через застосунок</span><span class="num" style="font-weight:650;">66 200 ₴</span></div>
+            <div class="row"><span class="mut">З них готівкою</span><span class="num mut">38 900 ₴</span></div>
+            <div class="row"><span class="mut">Комісія платформи</span><span class="num mut">2 130 ₴</span></div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ======================================================================
+     3. КУР'ЄР
+     ====================================================================== -->
+<section id="courier">
+  <div class="sec-head">
+    <div class="sec-num">Поверхня 3</div>
+    <h2>Кур'єр — світла тема, велика кнопка, одна дія</h2>
+    <p>Тут я свідомо розійшовся з прототипом. Кур'єр працює на вулиці, на сонці, в русі, часто в рукавичках. Темний екран у липні о другій дня не читається; білий з чорним текстом — читається. Тому: <strong>світле тло, шрифт від 15px, головна кнопка на всю ширину висотою 54px, одна дія на екран</strong>. Фірмовий вогонь Rocket лишився, але як акцент, а не як тло.</p>
+  </div>
+
+  <div class="screens">
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Кур'єр · 1</span>
+        <h4>Черга</h4>
+        <p>Тільки те, що вже <strong>готове</strong>. Заробіток кур'єра видно одразу — це головне число дня.</p>
+      </div>
+      <div class="phone"><div class="phone-screen" style="--tab-on:var(--rocket);">
+        <div class="sbar"><span>19:40</span><span>LTE 84%</span></div>
+        <div class="pbody">
+          <div class="row" style="padding:6px 0 16px;">
+            <div>
+              <div class="mid">Привіт, Олег</div>
+              <div class="tiny">Електроскутер · борт 07</div>
+            </div>
+            <span class="st st-done">на лінії</span>
+          </div>
+
+          <div class="card" style="display:flex;text-align:center;">
+            <div style="flex:1;">
+              <div class="mid num">6</div><div class="tiny">доставок</div>
+            </div>
+            <div style="flex:1;border-left:1px solid var(--line);border-right:1px solid var(--line);">
+              <div class="mid num" style="color:var(--rocket);">210 ₴</div><div class="tiny">заробіток</div>
+            </div>
+            <div style="flex:1;">
+              <div class="mid num">2</div><div class="tiny">у черзі</div>
+            </div>
+          </div>
+
+          <div class="h-sec">Готові до забору · 2</div>
+
+          <div class="card" style="border-color:var(--rocket);">
+            <div class="row"><span class="num tiny">RD-260725-016</span><span class="st st-ready">готово 1 хв тому</span></div>
+            <div style="font-size:15px;font-weight:650;margin-top:9px;">Суші-бар «Токіо»</div>
+            <div class="mut" style="margin-top:3px;">→ вул. Шкільна, 4 · 1.2 км</div>
+            <div class="row" style="margin-top:13px;">
+              <div>
+                <span class="mid num" style="color:var(--rocket);">+35 ₴</span>
+                <span class="tiny" style="margin-left:6px;">оплачено карткою</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;"><div class="btn btn-rocket">Взяти замовлення</div></div>
+          </div>
+
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-013</span><span class="st st-bad">чекає 7 хв</span></div>
+            <div style="font-size:15px;font-weight:650;margin-top:9px;">Суші-бар «Токіо»</div>
+            <div class="mut" style="margin-top:3px;">→ вул. Соборна, 18 · 2.4 км</div>
+            <div class="row" style="margin-top:13px;">
+              <div>
+                <span class="mid num" style="color:var(--rocket);">+35 ₴</span>
+                <span class="tiny" style="margin-left:6px;">готівка 520 ₴</span>
+              </div>
+            </div>
+            <div style="margin-top:12px;"><div class="btn btn-ghost">Взяти разом із першим</div></div>
+          </div>
+
+          <div class="tiny" style="margin-top:12px;line-height:1.45;">
+            Два замовлення з одного закладу можна взяти в одну поїздку — застосунок сам вибудує порядок адрес.
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab on">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            Черга
+          </div>
+          <div class="tab">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+            Активне
+          </div>
+          <div class="tab">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Історія
+          </div>
+          <div class="tab">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>
+            Профіль
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Кур'єр · 2</span>
+        <h4>Активна доставка</h4>
+        <p>Орієнтир написаний великим — у селі він важливіший за номер будинку. Телефон клієнта — одним тапом.</p>
+      </div>
+      <div class="phone"><div class="phone-screen" style="--tab-on:var(--rocket);">
+        <div class="sbar"><span>19:44</span><span>LTE 82%</span></div>
+        <div class="pbody">
+          <div class="row" style="padding:6px 0 14px;">
+            <span class="num tiny">RD-260725-016</span>
+            <span class="st st-go">в дорозі</span>
+          </div>
+
+          <div class="hstep"><div class="on"></div><div class="on"></div><div class="on"></div><div></div></div>
+          <div class="hstep-lbl">
+            <span>Взяв</span><span>Забрав</span><span class="on">В дорозі</span><span>Доставив</span>
+          </div>
+
+          <div class="map">
+            <div class="pin a"></div><div class="pin b"></div>
+            <div class="map-badge num">1.2 км · ~6 хв</div>
+          </div>
+
+          <div class="card" style="margin-top:11px;">
+            <div class="lbl">Адреса доставки</div>
+            <div style="font-size:19px;font-weight:650;letter-spacing:-.02em;margin-top:3px;">вул. Шкільна, 4</div>
+            <div class="mut" style="margin-top:7px;line-height:1.45;background:var(--s-cook-soft);color:var(--s-cook);padding:9px 11px;border-radius:10px;font-weight:600;">
+              Зелені ворота навпроти магазину. Домофону немає — дзвоніть.
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row">
+              <div>
+                <div class="lbl">Марія</div>
+                <div class="num" style="font-size:16px;font-weight:650;margin-top:2px;">+380 63 214 88 01</div>
+              </div>
+              <div style="width:46px;height:46px;border-radius:50%;background:var(--s-done);display:flex;align-items:center;justify-content:center;">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="#fff"><path d="M6.6 10.8c1.4 2.8 3.8 5.1 6.6 6.6l2.2-2.2c.3-.3.7-.4 1-.2 1.2.4 2.4.6 3.6.6.6 0 1 .4 1 1V20c0 .6-.4 1-1 1C11.6 21 3 12.4 3 1.9c0-.5.4-.9 1-.9h3.5c.6 0 1 .4 1 1 0 1.3.2 2.5.6 3.6.1.4 0 .8-.2 1l-2.3 2.2z"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="row"><span class="mut">Взяти з клієнта</span><span class="mid num" style="color:var(--s-done);">0 ₴</span></div>
+            <div class="tiny" style="margin-top:5px;">Оплачено карткою — грошей не беремо</div>
+          </div>
+
+          <div style="margin-top:16px;">
+            <div class="btn btn-rocket">Я на місці</div>
+            <div class="btn btn-danger">Не можу доставити</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+            Черга
+          </div>
+          <div class="tab on">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>
+            Активне
+          </div>
+          <div class="tab">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+            Історія
+          </div>
+          <div class="tab">
+            <svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>
+            Профіль
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Кур'єр · 3</span>
+        <h4>Завершення з фото</h4>
+        <p>Поки фото немає — кнопка сіра й не натискається. Це єдиний доказ у спорі «а мені нічого не привезли».</p>
+      </div>
+      <div class="phone"><div class="phone-screen" style="--tab-on:var(--rocket);">
+        <div class="sbar"><span>19:51</span><span>LTE 81%</span></div>
+        <div class="pbody">
+          <div class="row" style="padding:6px 0 14px;">
+            <span class="num tiny">RD-260725-016</span>
+            <span class="st st-go">на місці</span>
+          </div>
+
+          <div class="hstep"><div class="on"></div><div class="on"></div><div class="on"></div><div></div></div>
+          <div class="hstep-lbl"><span>Взяв</span><span>Забрав</span><span class="on">На місці</span><span>Доставив</span></div>
+
+          <div class="h-sec">Крок 1 · Фото передачі</div>
+          <div class="photo">
+            <div style="width:46px;height:46px;border-radius:50%;background:var(--rocket-soft);display:flex;align-items:center;justify-content:center;margin:0 auto 11px;">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#E8480F" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M3 8.5A2.5 2.5 0 015.5 6h1.7l1.1-1.8h6.4L15.8 6h2.7A2.5 2.5 0 0121 8.5v9a2.5 2.5 0 01-2.5 2.5h-13A2.5 2.5 0 013 17.5z"/><circle cx="12" cy="13" r="3.6"/></svg>
+            </div>
+            <div style="font-size:14.5px;font-weight:600;margin-bottom:5px;">Сфотографуй замовлення в руках клієнта</div>
+            <div class="tiny" style="line-height:1.45;">Без фото завершити не вийде — це захист і для тебе, і для клієнта</div>
+            <div style="margin-top:14px;"><div class="btn btn-rocket btn-sm" style="width:100%;">Зробити фото</div></div>
+          </div>
+
+          <div class="h-sec">Крок 2 · Готівка</div>
+          <div class="card">
+            <div class="row"><span class="mut">Взяти з клієнта</span><span class="mid num">0 ₴</span></div>
+            <div class="tiny" style="margin-top:5px;">Оплачено карткою</div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <div class="btn btn-ok btn-off">Замовлення доставлено</div>
+            <div class="tiny" style="text-align:center;margin-top:9px;">Спершу додай фото</div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Черга</div>
+          <div class="tab on"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Активне</div>
+          <div class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Історія</div>
+          <div class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>Профіль</div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Кур'єр · 4</span>
+        <h4>Збій доставки</h4>
+        <p>Кур'єр не вирішує сам і не «губить» замовлення. Він піднімає прапорець — далі вирішує адмін.</p>
+      </div>
+      <div class="phone"><div class="phone-screen" style="--tab-on:var(--rocket);">
+        <div class="sbar"><span>19:57</span><span>LTE 80%</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-btn"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#0B0F16" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 18l-6-6 6-6"/></svg></div>
+            <div class="nav-title">Що сталось?<small class="num">RD-260725-016</small></div>
+          </div>
+
+          <div class="card"><div class="row"><span style="font-size:15px;font-weight:600;">Клієнт не відповідає</span><span class="tiny">→</span></div></div>
+          <div class="card"><div class="row"><span style="font-size:15px;font-weight:600;">Не можу знайти адресу</span><span class="tiny">→</span></div></div>
+          <div class="card"><div class="row"><span style="font-size:15px;font-weight:600;">Клієнт відмовився від замовлення</span><span class="tiny">→</span></div></div>
+          <div class="card"><div class="row"><span style="font-size:15px;font-weight:600;">Проблема зі скутером</span><span class="tiny">→</span></div></div>
+
+          <div class="card" style="background:var(--s-cook-soft);border-color:transparent;margin-top:18px;">
+            <div style="font-size:14px;font-weight:600;color:var(--s-cook);margin-bottom:5px;">Що буде далі</div>
+            <div class="tiny" style="color:var(--ink-2);line-height:1.5;">
+              Адмін одразу побачить це в дашборді й подзвонить клієнту. Замовлення не закривається і не зникає — воно чекає рішення. Твій заробіток за цю поїздку зберігається.
+            </div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <div class="btn btn-ghost">Повернутись до доставки</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Кур'єр · 5</span>
+        <h4>Кінець зміни — здача готівки</h4>
+        <p>Найважливіший екран, якого не було зовсім. Поки готівка не здана — зміна не закрита.</p>
+      </div>
+      <div class="phone"><div class="phone-screen" style="--tab-on:var(--rocket);">
+        <div class="sbar"><span>22:01</span><span>LTE 62%</span></div>
+        <div class="pbody">
+          <div class="nav">
+            <div class="nav-title">Здача готівки<small>п'ятниця, 25.07</small></div>
+          </div>
+
+          <div class="card" style="border-color:var(--s-cook);text-align:center;padding:20px 15px;">
+            <div class="lbl">Маєш здати в «Токіо»</div>
+            <div class="big num" style="font-size:38px;margin:5px 0 4px;">1 130 ₴</div>
+            <div class="tiny">за 3 замовлення готівкою</div>
+          </div>
+
+          <div class="h-sec">Із чого складається</div>
+          <div class="card">
+            <div class="row"><span class="tiny num">RD-260725-013</span><span class="num" style="font-weight:600;">520 ₴</span></div>
+            <div class="row"><span class="tiny num">RD-260725-009</span><span class="num" style="font-weight:600;">380 ₴</span></div>
+            <div class="row"><span class="tiny num">RD-260725-004</span><span class="num" style="font-weight:600;">230 ₴</span></div>
+          </div>
+
+          <div class="card" style="margin-top:14px;">
+            <div class="row"><span class="mut">Твій заробіток за день</span><span class="num mid" style="color:var(--rocket);">210 ₴</span></div>
+            <div class="tiny" style="margin-top:5px;line-height:1.45;">Заробіток нараховується окремо і виплачується в п'ятницю. Готівка клієнтів — гроші закладу, вони не твої.</div>
+          </div>
+
+          <div style="margin-top:18px;">
+            <div class="btn btn-dark">Здав 1 130 ₴ у заклад</div>
+            <div class="tiny" style="text-align:center;margin-top:9px;line-height:1.45;">Заклад підтвердить суму зі свого боку. Після підтвердження зміна закриється.</div>
+          </div>
+        </div>
+      </div></div>
+    </div>
+
+    <div>
+      <div class="screen-cap">
+        <span class="tagline">Кур'єр · 6</span>
+        <h4>Історія та заробіток</h4>
+        <p>Кур'єр має бачити свої гроші щодня, а не дізнаватись суму в п'ятницю.</p>
+      </div>
+      <div class="phone"><div class="phone-screen" style="--tab-on:var(--rocket);">
+        <div class="sbar"><span>22:06</span><span>LTE 61%</span></div>
+        <div class="pbody">
+          <div class="nav"><div class="nav-title">Історія</div></div>
+
+          <div class="seg" style="margin-bottom:15px;"><div class="on">Тиждень</div><div>Місяць</div></div>
+
+          <div class="card" style="text-align:center;padding:20px 15px;">
+            <div class="lbl">Нараховано за 21–25.07</div>
+            <div class="big num" style="font-size:38px;margin:5px 0 4px;color:var(--rocket);">840 ₴</div>
+            <div class="tiny">24 доставки · виплата в п'ятницю</div>
+          </div>
+
+          <div class="card" style="display:flex;text-align:center;">
+            <div style="flex:1;"><div class="mid num">22 хв</div><div class="tiny">середній час</div></div>
+            <div style="flex:1;border-left:1px solid var(--line);"><div class="mid num" style="color:var(--s-done);">100%</div><div class="tiny">доставлено</div></div>
+          </div>
+
+          <div class="h-sec">Сьогодні · 6 доставок</div>
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-016</span><span class="st st-done">доставлено</span></div>
+            <div class="row" style="margin-top:7px;"><span class="tiny">19:41 → 19:52 · 11 хв · картка</span><span class="num" style="font-weight:650;">+35 ₴</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-013</span><span class="st st-done">доставлено</span></div>
+            <div class="row" style="margin-top:7px;"><span class="tiny">19:12 → 19:38 · 26 хв · готівка</span><span class="num" style="font-weight:650;">+35 ₴</span></div>
+          </div>
+          <div class="card">
+            <div class="row"><span class="num tiny">RD-260725-009</span><span class="st st-done">доставлено</span></div>
+            <div class="row" style="margin-top:7px;"><span class="tiny">18:30 → 18:49 · 19 хв · готівка</span><span class="num" style="font-weight:650;">+35 ₴</span></div>
+          </div>
+        </div>
+        <div class="tabbar">
+          <div class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h10"/></svg>Черга</div>
+          <div class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s7-5.6 7-11a7 7 0 10-14 0c0 5.4 7 11 7 11z"/><circle cx="12" cy="10" r="2.4"/></svg>Активне</div>
+          <div class="tab on"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>Історія</div>
+          <div class="tab"><svg width="21" height="21" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1.2-3.6 4-5.4 7.5-5.4s6.3 1.8 7.5 5.4"/></svg>Профіль</div>
+        </div>
+      </div></div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ======================================================================
+     4. АДМІН
+     ====================================================================== -->
+<section id="admin">
+  <div class="sec-head">
+    <div class="sec-num">Поверхня 4</div>
+    <h2>Адмін — гроші, якість і проблеми</h2>
+    <p>Головна відмінність від прототипу: тут видно <strong>маржу платформи</strong>, <strong>середній час доставки</strong> і <strong>непідтверджену готівку</strong>. Без цих трьох чисел адмінка гарна, але не відповідає на питання «чи ми заробляємо і чи не псується сервіс».</p>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div><h3>Дашборд дня</h3><p>п'ятниця, 25.07 · 22:10</p></div>
+      <span class="st st-done">3 кур'єри на лінії</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Доставлено сьогодні</div><div class="kpi-v num">38</div><div class="kpi-s">з 41 замовлення</div></div>
+      <div class="kpi"><div class="kpi-l">Середній час доставки</div><div class="kpi-v num">24 хв</div><div class="kpi-s">від «готово» до клієнта</div></div>
+      <div class="kpi"><div class="kpi-l">Прострочено</div><div class="kpi-v num bad">2</div><div class="kpi-s">більш ніж +15 хв</div></div>
+      <div class="kpi"><div class="kpi-l">Готівка не підтверджена</div><div class="kpi-v num bad">720 ₴</div><div class="kpi-s">Ірина П. ще на лінії</div></div>
+      <div class="kpi"><div class="kpi-l">Заробіток платформи</div><div class="kpi-v num good">570 ₴</div><div class="kpi-s">38 × 15 ₴ комісії</div></div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div><h3>Потребує уваги</h3><p>Те, що система не змогла вирішити сама</p></div>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <tr><th>Замовлення</th><th>Що сталось</th><th>Кур'єр</th><th>Скільки висить</th><th></th></tr>
+        <tr>
+          <td class="num">RD-260725-021</td>
+          <td><span class="st st-bad">клієнт не відповідає</span></td>
+          <td><div class="cell-name"><div class="av" style="width:28px;height:28px;font-size:11px;">ОК</div>Олег К.</div></td>
+          <td class="num">4 хв</td>
+          <td><span class="btn btn-dark btn-sm">Подзвонити</span></td>
+        </tr>
+        <tr>
+          <td class="num">RD-260725-019</td>
+          <td><span class="st st-cook">ніхто не взяв 5 хв</span></td>
+          <td class="mut">—</td>
+          <td class="num">5 хв</td>
+          <td><span class="btn btn-dark btn-sm">Призначити</span></td>
+        </tr>
+        <tr>
+          <td class="num">RD-260725-013</td>
+          <td><span class="st st-bad">запізнення +18 хв</span></td>
+          <td><div class="cell-name"><div class="av" style="width:28px;height:28px;font-size:11px;">ІП</div>Ірина П.</div></td>
+          <td class="mut">доставлено</td>
+          <td><span class="btn btn-ghost btn-sm">Розібрати</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div><h3>Готівка та звірка</h3><p>Хто скільки взяв, скільки здав і скільки винен</p></div>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <tr><th>Кур'єр</th><th>Замовлень готівкою</th><th>Зібрано</th><th>Здано</th><th>Різниця</th><th>Статус</th></tr>
+        <tr>
+          <td><div class="cell-name"><div class="av" style="width:30px;height:30px;font-size:11px;">ОК</div>Олег Коваль</div></td>
+          <td class="num">3</td><td class="num">1 130 ₴</td><td class="num">1 130 ₴</td>
+          <td class="num" style="color:var(--s-done);font-weight:650;">0 ₴</td>
+          <td><span class="st st-done">звірено</span></td>
+        </tr>
+        <tr>
+          <td><div class="cell-name"><div class="av" style="width:30px;height:30px;font-size:11px;">ІП</div>Ірина Панчук</div></td>
+          <td class="num">2</td><td class="num">720 ₴</td><td class="mut">—</td>
+          <td class="num" style="color:var(--s-cook);font-weight:650;">720 ₴</td>
+          <td><span class="st st-cook">на лінії</span></td>
+        </tr>
+        <tr>
+          <td><div class="cell-name"><div class="av" style="width:30px;height:30px;font-size:11px;">НБ</div>Назар Бойко</div></td>
+          <td class="num">4</td><td class="num">1 640 ₴</td><td class="num">1 590 ₴</td>
+          <td class="num" style="color:var(--s-bad);font-weight:650;">−50 ₴</td>
+          <td><span class="st st-bad">розбіжність</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div><h3>Економіка за тиждень</h3><p>21.07 – 25.07 · усі заклади</p></div>
+      <span class="st st-dim">комісія 15 ₴ з доставки</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="kpi-l">Замовлень</div><div class="kpi-v num">142</div></div>
+      <div class="kpi"><div class="kpi-l">Зібрано за доставку</div><div class="kpi-v num">7 100 ₴</div><div class="kpi-s">142 × 50 ₴</div></div>
+      <div class="kpi"><div class="kpi-l">Виплатимо кур'єрам</div><div class="kpi-v num">−4 970 ₴</div><div class="kpi-s">142 × 35 ₴</div></div>
+      <div class="kpi"><div class="kpi-l">Лишається платформі</div><div class="kpi-v num good">2 130 ₴</div><div class="kpi-s">до витрат на скутери й сервіси</div></div>
+    </div>
+    <div class="panel-body" style="border-top:1px solid var(--line);">
+      <div class="callout callout--warn" style="margin:0;">
+        <strong>Це найважливіше число всього макета — і воно поки що вигадане.</strong> У прототипі Rocket Delivery уся доставка (50 ₴) віддавалась кур'єру, а в аналітиці та сама сума показувалась як «наша комісія». Тобто платформа заробляла нуль і при цьому платила за скутери, ремонт, Google Maps і базу. Тут для прикладу поставлено 35 ₴ кур'єру / 15 ₴ платформі. <strong>Реальний розподіл — рішення Вови,</strong> і воно має бути свідомим.
+      </div>
+    </div>
+  </div>
+
+  <div class="panel">
+    <div class="panel-head">
+      <div><h3>Кур'єри та зарплата</h3><p>Тиждень 21.07 – 25.07</p></div>
+      <span class="btn btn-dark btn-sm">Створити кур'єра</span>
+    </div>
+    <div class="tbl-scroll">
+      <table>
+        <tr><th>Кур'єр</th><th>Логін</th><th>Доставок</th><th>Середній час</th><th>Прострочень</th><th>До виплати</th><th>Статус</th></tr>
+        <tr>
+          <td><div class="cell-name"><div class="av" style="width:30px;height:30px;font-size:11px;">ОК</div>Олег Коваль</div></td>
+          <td class="num mut">rd-oleh-07</td><td class="num">24</td><td class="num">22 хв</td>
+          <td class="num" style="color:var(--s-done);">0</td>
+          <td class="num" style="font-weight:650;">840 ₴</td>
+          <td><span class="btn btn-dark btn-sm">Виплатити</span></td>
+        </tr>
+        <tr>
+          <td><div class="cell-name"><div class="av" style="width:30px;height:30px;font-size:11px;">ІП</div>Ірина Панчук</div></td>
+          <td class="num mut">rd-iryna-03</td><td class="num">19</td><td class="num">27 хв</td>
+          <td class="num" style="color:var(--s-bad);">2</td>
+          <td class="num" style="font-weight:650;">665 ₴</td>
+          <td><span class="st st-done">виплачено</span></td>
+        </tr>
+        <tr>
+          <td><div class="cell-name"><div class="av" style="width:30px;height:30px;font-size:11px;">НБ</div>Назар Бойко</div></td>
+          <td class="num mut">rd-nazar-11</td><td class="num">16</td><td class="num">31 хв</td>
+          <td class="num" style="color:var(--s-bad);">3</td>
+          <td class="num" style="font-weight:650;">560 ₴</td>
+          <td><span class="btn btn-dark btn-sm">Виплатити</span></td>
+        </tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================================================================
+     ПРИНЦИПИ ДИЗАЙНУ
+     ====================================================================== -->
+<section id="design">
+  <div class="sec-head">
+    <div class="sec-num">Дизайн</div>
+    <h2>Шість правил, за якими зроблено цей макет</h2>
+  </div>
+
+  <div class="principles">
+    <div class="principle">
+      <div class="principle-n">01</div>
+      <h4>Різні скіни, спільні статуси</h4>
+      <p>Клієнтська частина лишається бордовою, як увесь CSTL LIFE. Кур'єрська — з вогняним акцентом Rocket. Але шість кольорів статусів однакові скрізь: «доставлено» зелене і в клієнта, і в кур'єра, і в адмінці. Це і є спільна ДНК замість спільного вигляду.</p>
+    </div>
+    <div class="principle">
+      <div class="principle-n">02</div>
+      <h4>Світле, а не темне</h4>
+      <p>Темна тема виглядає ефектно на презентації і провалюється на вулиці о другій дня. Кур'єр працює на сонці — виграє білий фон із чорним текстом і великою кнопкою.</p>
+    </div>
+    <div class="principle">
+      <div class="principle-n">03</div>
+      <h4>Одна дія на екран</h4>
+      <p>У кур'єра завжди рівно одна головна кнопка на всю ширину, висота 54px. Другорядне — тьмяне й дрібніше. Він тисне не дивлячись, в рукавичках, на ходу.</p>
+    </div>
+    <div class="principle">
+      <div class="principle-n">04</div>
+      <h4>Типографіка замість кольору</h4>
+      <p>Це і є Apple-логіка: ієрархію тримає розмір і вага шрифту, а колір з'являється тільки там, де потрібна дія або статус. У прототипі кольору було багато, і через це жоден не читався як важливий.</p>
+    </div>
+    <div class="principle">
+      <div class="principle-n">05</div>
+      <h4>Цифри — крупно й моноширинно</h4>
+      <p>Суми, час, відстані вирівняні по розрядах (tabular numerals). Кур'єр і адмін читають цифри частіше, ніж слова — вони мають зчитуватись за пів секунди.</p>
+    </div>
+    <div class="principle">
+      <div class="principle-n">06</div>
+      <h4>Мапа там, де вона потрібна</h4>
+      <p>У кур'єра мапа є — йому їхати. У клієнта її немає: в Олиці від закладу до найдальшої хати сім хвилин, і час прибуття корисніший за живу точку. Це заразом знімає проблему з батареєю телефона кур'єра.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ======================================================================
+     ЩО ЗМІНЕНО
+     ====================================================================== -->
+<section id="diff">
+  <div class="sec-head">
+    <div class="sec-num">Підсумок</div>
+    <h2>Що змінено проти прототипу Rocket Delivery</h2>
+    <p>Прототип Діми зроблено якісно — логіка проходиться, статуси перемикаються, фото додається. Нижче не критика виконання, а те, що видно тільки з боку платформи, звідки приходять замовлення.</p>
+  </div>
+
+  <div class="cmp">
+    <div class="cmp-row cmp-head"><div>Було в прототипі</div><div>Стало в макеті</div></div>
+
+    <div class="cmp-row">
+      <div>Замовлення падає кур'єру одразу після оплати</div>
+      <div><strong>Заклад — окрема поверхня.</strong> Кур'єр бачить замовлення тільки коли воно готове (або за 5 хвилин до готовності).</div>
+    </div>
+    <div class="cmp-row">
+      <div>Скасувань немає взагалі</div>
+      <div><strong>П'ять бічних гілок:</strong> скасування клієнтом, відмова закладу, клієнт не відповідає, повернення в чергу, автопозначка простроченого.</div>
+    </div>
+    <div class="cmp-row">
+      <div>Кур'єр веде рівно одне замовлення (<code>if(active) return</code>)</div>
+      <div><strong>Кілька замовлень в одну поїздку</strong> з того самого закладу — в макеті кнопка «Взяти разом із першим».</div>
+    </div>
+    <div class="cmp-row">
+      <div>Готівка «очікується», факт здачі ніде не фіксується</div>
+      <div><strong>Повний цикл:</strong> кур'єр тисне «здав» → заклад підтверджує → різниця автоматично стає зафіксованим боргом.</div>
+    </div>
+    <div class="cmp-row">
+      <div>50 ₴ доставки → 50 ₴ кур'єру, і та сама сума показана як «наша комісія»</div>
+      <div><strong>Розподіл видно явно:</strong> 35 ₴ кур'єру, 15 ₴ платформі. Числа умовні — головне, що поле існує і рахується.</div>
+    </div>
+    <div class="cmp-row">
+      <div>Адреса — рядок тексту</div>
+      <div><strong>Точка на мапі + орієнтир</strong>, і орієнтир показано кур'єру великим. У селі це важливіше за номер будинку.</div>
+    </div>
+    <div class="cmp-row">
+      <div>Телефону клієнта немає</div>
+      <div><strong>Телефон одним тапом</strong> — але тільки призначеному кур'єру і тільки поки замовлення активне.</div>
+    </div>
+    <div class="cmp-row">
+      <div>Метрик якості немає</div>
+      <div><strong>Середній час доставки, прострочення, відсоток успішних</strong> — по кожному кур'єру й по закладу. Головна метрика доставки.</div>
+    </div>
+    <div class="cmp-row">
+      <div>Жива мапа з кур'єром у клієнта, екран увімкнений усю зміну</div>
+      <div><strong>Статус і час замість мапи.</strong> Знімає посадку батареї, перегрів на сонці та найкрихкіше місце всієї конструкції.</div>
+    </div>
+    <div class="cmp-row">
+      <div>Логіни й паролі кур'єрів у коді застосунку</div>
+      <div><strong>Звичайний вхід через Supabase Auth</strong>, обліковий запис створює адмін. Власну систему паролів не пишемо.</div>
+    </div>
+  </div>
+
+  <div class="callout callout--ok">
+    <strong>Що можна запускати не чекаючи суші-бару.</strong> Дошка оголошень у CSTL LIFE уже працює. Людина продала комод — кур'єр відвіз. Це той самий ланцюжок статусів, але без каталогу, кошика й платежів — тобто перший реальний вантаж можливий значно раніше, ніж буде готова вся торгова частина.
+  </div>
+</section>
+
+<footer>
+  <div class="wrap" style="padding:0;">
+    CSTL LIFE · макет доставки, версія 1 · 25.07.2026 · зроблено на основі брифу та прототипу Rocket Delivery.<br>
+    Це макет вигляду й логіки, а не робочий застосунок: дані статичні, кнопки не діють.
+  </div>
+</footer>
+
+</div><!-- /wrap -->
+</body>
+</html>
