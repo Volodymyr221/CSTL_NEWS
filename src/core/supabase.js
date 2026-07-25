@@ -1067,7 +1067,7 @@ export async function setPageReaction(postId, userKey, on) {
 // Тоді запит із цією колонкою впав би і зник би ВЕСЬ список коментарів. Тому пробуємо
 // з колонкою, а на «немає такої колонки» повторюємо без неї — згадок просто не буде,
 // доки міграцію не накатано. Прибрати цей запасний шлях можна після накатування.
-const COMMENT_COLS = 'id, post_id, author_uid, text, created_at, deleted_at, parent_id';
+const COMMENT_COLS = 'id, post_id, author_uid, text, created_at, deleted_at, parent_id, edited_at';
 function noSuchColumn(error) {
   return error && (error.code === '42703' || /reply_to_uid/.test(error.message || ''));
 }
@@ -1158,6 +1158,17 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
   // відповідь має надсилатись — просто без згадки. Інакше кнопка «Відповісти» була б
   // зламана в усіх до моменту, поки Вова накатає SQL.
   if (replyToUid && noSuchColumn(error)) ({ data, error } = await send(base));
+  return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+}
+
+// Правка свого коментаря. Шлемо ЛИШЕ текст: позначку «змінено» (edited_at) ставить
+// сама база у тригері page_comments_guard_update — тож підробити «не редаговано»
+// неможливо, а клієнту нема чого про неї знати. Там же текст проганяється через
+// антиспам: до 25.07 редагування було обхідним шляхом для матюків.
+export async function editPageComment(commentId, text) {
+  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  const { data, error } = await supa.from('page_comments')
+    .update({ text }).eq('id', commentId).select(`${COMMENT_COLS}, reply_to_uid`).single();
   return error ? { ok: false, error: error.message } : { ok: true, comment: data };
 }
 

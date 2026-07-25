@@ -514,10 +514,19 @@
   min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fd-com-line { font-size: 14px; color: var(--fd-ink); word-break: break-word; margin-top: 1px; }
 .fd-com-txt { font-weight: 400; }
-.fd-com-meta { display: flex; gap: 14px; align-items: center; margin-top: 3px; }
+/* flex-wrap — обов'язковий з появою третьої дії («Редагувати», 25.07). Без нього
+   на вузькому екрані (iPhone SE, 320px) три написи не вміщались у тіло ВІДПОВІДІ
+   (вона вужча на відступ гілки) і вилазили за край на 20px: список отримував
+   горизонтальний перебір, а «Видалити» обрізалось (overflow-x: hidden). З переносом
+   зайва дія просто спускається на другий рядок. row-gap менший за колонковий —
+   вертикально дії мають стояти щільніше, ніж горизонтально. */
+.fd-com-meta { display: flex; flex-wrap: wrap; gap: 14px; row-gap: 3px;
+  align-items: center; margin-top: 3px; }
 .fd-com-time { font-size: 12px; color: var(--fd-muted); flex: none; }
-.fd-com-del { font-size: 12px; color: var(--fd-muted); background: none; border: 0; padding: 0;
-  cursor: pointer; font-family: inherit; }
+/* «Редагувати» — той самий вигляд, що «Видалити»: обидві дії однакової ваги і
+   стоять поруч у мета-рядку, тож виділяти одну з них не за що. */
+.fd-com-del, .fd-com-edit { font-size: 12px; color: var(--fd-muted); background: none; border: 0;
+  padding: 0; cursor: pointer; font-family: inherit; }
 /* ♥ лайк коментаря + лічильник ПІД сердечком, справа (як в Instagram). */
 .fd-com-likewrap { flex: none; display: flex; flex-direction: column; align-items: center;
   margin-top: 5px; min-width: 26px; }
@@ -578,6 +587,9 @@
    font-weight як у тексту — виділяє КОЛІР, а не жирність, інакше згадка перетягувала б
    увагу з самої відповіді. */
 .fd-com-mention { color: var(--fd-accent); cursor: pointer; }
+/* «змінено» біля часу — тим самим сірим, що й час: це службова примітка, а не
+   акцент. Курсив відрізняє її від часу, щоб два сірі слова поруч не зливались. */
+.fd-com-edited { font-style: italic; }
 /* «Ще N відповідей» — сірим, як другорядні дії поруч (час, «Відповісти»). */
 .fd-com-more { font-size: 13px; font-weight: 600; color: var(--fd-muted);
   background: none; border: 0; padding: 2px 0; cursor: pointer; font-family: inherit; }

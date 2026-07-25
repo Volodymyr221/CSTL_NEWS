@@ -1406,7 +1406,7 @@
     const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
     return error ? { ok: false, error: error.message } : { ok: true };
   }
-  var COMMENT_COLS = "id, post_id, author_uid, text, created_at, deleted_at, parent_id";
+  var COMMENT_COLS = "id, post_id, author_uid, text, created_at, deleted_at, parent_id, edited_at";
   function noSuchColumn(error) {
     return error && (error.code === "42703" || /reply_to_uid/.test(error.message || ""));
   }
@@ -1474,6 +1474,12 @@
     let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
     if (replyToUid && noSuchColumn(error))
       ({ data, error } = await send(base));
+    return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  }
+  async function editPageComment(commentId, text) {
+    if (!supa)
+      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    const { data, error } = await supa.from("page_comments").update({ text }).eq("id", commentId).select(`${COMMENT_COLS}, reply_to_uid`).single();
     return error ? { ok: false, error: error.message } : { ok: true, comment: data };
   }
   async function deletePageComment(commentId) {
@@ -11406,6 +11412,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   }
   var openCommentSheet = null;
   var replyTarget = null;
+  var editTarget = null;
   var expandedThreads = /* @__PURE__ */ new Set();
   var REPLIES_VISIBLE = 2;
   function pluralComments(n) {
@@ -11437,12 +11444,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : "";
     const replying = replyTarget && replyTarget.commentId === c.id ? " fd-com-row--replying" : "";
     const mention = c.reply_to_uid ? `<span class="fd-com-mention"${nameUid(c.reply_to_uid)} data-av-uid="${escapeHtml(c.reply_to_uid)}">${liveName("", c.reply_to_uid, "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>, ` : "";
+    const edited = c.edited_at ? ` \xB7 <span class="fd-com-edited">\u0437\u043C\u0456\u043D\u0435\u043D\u043E</span>` : "";
     return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
-        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}</span></div>
+        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
         <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button><button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -11709,13 +11717,39 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (replyTarget)
         revealRow(replyTarget.commentId);
     };
+    const input0 = () => sheet.querySelector(".fd-com-input");
     const clearReply = () => {
       replyTarget = null;
       replyBar.hidden = true;
       paintReply();
+      if (editTarget) {
+        editTarget = null;
+        const el = input0();
+        if (el) {
+          el.value = "";
+          el.placeholder = "\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026";
+        }
+      }
     };
     if (openCommentSheet)
       openCommentSheet.clearReply = clearReply;
+    const startEdit = (id) => {
+      const c = (commentMap.get(postId) || []).find((x) => x.id === id);
+      if (!c)
+        return;
+      replyTarget = null;
+      paintReply();
+      editTarget = { id };
+      replyTo.textContent = "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u043D\u043D\u044F \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u044F";
+      replyBar.hidden = false;
+      const el = input0();
+      if (el) {
+        el.value = c.text;
+        el.placeholder = "\u0417\u043C\u0456\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442\u2026";
+        el.focus();
+      }
+      requestAnimationFrame(() => revealRow(id));
+    };
     const setReply = (parentId, name, commentId, uid) => {
       replyTarget = { parentId, name, commentId, uid };
       replyTo.textContent = `\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0434\u043B\u044F ${name}`;
@@ -11819,6 +11853,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C", Number(rep.dataset.replyId), uid || null);
         return;
       }
+      const ed = e.target.closest("[data-edit-com]");
+      if (ed) {
+        startEdit(Number(ed.dataset.editCom));
+        return;
+      }
       const del = e.target.closest("[data-del-com]");
       if (!del)
         return;
@@ -11837,6 +11876,28 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const text = input.value.trim();
       if (!text)
         return;
+      if (editTarget) {
+        if (containsProfanity(text)) {
+          showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
+          return;
+        }
+        if (looksLikeSpam(text)) {
+          showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C", 4e3, "error");
+          return;
+        }
+        const id = editTarget.id;
+        sendBtn.disabled = true;
+        const res2 = await editPageComment(id, text);
+        sendBtn.disabled = false;
+        if (res2.ok) {
+          applyCommentUpsert(res2.comment);
+          clearReply();
+          requestAnimationFrame(() => revealRow(id));
+        } else {
+          showToast(commentErrorText(res2.error), 4e3, "error");
+        }
+        return;
+      }
       const parentId = replyTarget ? replyTarget.parentId : null;
       const replyToUid = replyTarget && replyTarget.uid && replyTarget.uid !== currentUserId() ? replyTarget.uid : null;
       if (containsProfanity(text)) {
