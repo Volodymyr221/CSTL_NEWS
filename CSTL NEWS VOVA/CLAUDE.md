@@ -185,7 +185,7 @@ main отримує мердж-коміт
 | `scripts/supabase_pages_reactions_auth.sql` | RLS: лайки постів «Стрічки» тільки авторизованим (`user_id=auth.uid()`) + `replica identity full` (realtime DELETE). |
 | `scripts/supabase_page_comment_reactions.sql` | Таблиця `page_comment_reactions` — ♥ лайки коментарів «Стрічки» (тільки авторизовані) + RLS + realtime. |
 | `scripts/supabase_page_comment_replies.sql` | Колонка `parent_id` у `page_comments` — відповіді на коментарі (2 рівні). |
-| `scripts/supabase_comment_push.sql` | ⏸️ **ЧЕКАЄ НАКАТУВАННЯ ВОВОЮ.** Колонка `reply_to_uid` (згадка «Віктор,»), посилена RLS (згадувати можна лише учасника цього поста — інакше спам-канал), журнал `page_comment_push_log`, стан накопичення `page_comment_push_state`, тригер на новий коментар, добіг `pg_cron`. Інструкція → `scripts/README_comment_push.md`. |
+| `scripts/supabase_comment_push.sql` | ✅ **НАКАТАНО 25.07.** Колонка `reply_to_uid` (згадка «Віктор,»), посилена RLS (згадувати можна лише учасника цього поста — інакше спам-канал), журнал `page_comment_push_log`, стан накопичення `page_comment_push_state`, тригер на новий коментар, добіг `pg_cron`. Інструкція → `scripts/README_comment_push.md`. |
 | `scripts/README_comment_push.md` | Покрокова інструкція для Вови: як накатати схему і задеплоїти `send-comment-push` (з `--no-verify-jwt`), як перевірити наживо. |
 | `src/tabs/buses.js` | Розклад автобусів + відстеження рейсів + push |
 | `src/tabs/board.js` | Дошка громади: оголошення/обговорення, реакції, коментарі, закладки, FAB |
@@ -193,7 +193,7 @@ main отримує мердж-коміт
 | `style/*.css` | Стилі по модулях (account.css, messages.css, community.css…) — підключені в `style.css` |
 | `supabase/functions/send-bus-push/` | Edge Function: push про автобусні рейси (cron щохв) |
 | `supabase/functions/send-chat-push/` | **Фаза Б:** Edge Function: push про нове повідомлення чату |
-| `supabase/functions/send-comment-push/` | ⏸️ **ЧЕКАЄ ДЕПЛОЮ.** Сповіщення про коментарі «Стрічки»: відповідь тобі — завжди й одразу; адмінам сторінки — перше одразу, далі 10 хв тиші і зведене «Ще N коментарів». Добіг `pg_cron` дошле накопичене, якщо обговорення стихло. |
+| `supabase/functions/send-comment-push/` | ✅ **НА ПРОДІ 25.07** (v1, `verify_jwt: false` — базі нема чим показати токен людини, вона доводить себе секретом). Сповіщення про коментарі «Стрічки»: відповідь тобі — завжди й одразу; адмінам сторінки — перше одразу, далі 10 хв тиші і зведене «Ще N коментарів». Добіг `pg_cron` дошле накопичене, якщо обговорення стихло. |
 | `scripts/*.sql` | SQL міграцій Supabase (profiles, chat, RLS, saved_posts) — застосовані в БД |
 | `.mcp.json` | Конфіг MCP Supabase (write-enabled; читається на старті сесії) |
 | `data/community.json` | Офіційні оголошення (для дошки громади) + контакти |
