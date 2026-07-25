@@ -487,6 +487,43 @@
       return true;
     return false;
   }
+  function lsGet(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function lsSet(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  var LS_MSG_RATE = "cstl-msg-rate-v1";
+  var FLOOD_MAX = 5;
+  var FLOOD_WINDOW = 15e3;
+  function lastMap(st) {
+    return st && st.last && typeof st.last === "object" ? st.last : {};
+  }
+  function isDuplicateMsg(text, scope = "default") {
+    return lastMap(lsGet(LS_MSG_RATE, {}))[scope] === text;
+  }
+  function isFlooding() {
+    const now = Date.now();
+    const times = (lsGet(LS_MSG_RATE, {}).times || []).filter((t) => now - t < FLOOD_WINDOW);
+    return times.length >= FLOOD_MAX;
+  }
+  function recordSentMsg(text, scope = "default") {
+    const now = Date.now();
+    const st = lsGet(LS_MSG_RATE, {});
+    const times = (st.times || []).filter((t) => now - t < FLOOD_WINDOW);
+    times.push(now);
+    const last = lastMap(st);
+    last[scope] = text;
+    lsSet(LS_MSG_RATE, { last, times });
+  }
   function isStandalone() {
     return window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   }
@@ -1375,24 +1412,61 @@
   function noSuchColumn(error) {
     return error && (error.code === "42703" || /reply_to_uid/.test(error.message || ""));
   }
-  async function fetchPageComments() {
+  async function fetchPageCommentCounts() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const q = (cols) => supa.from("page_comments").select(cols).is("deleted_at", null).order("created_at", { ascending: true });
-    let { data, error } = await q(`${COMMENT_COLS}, reply_to_uid`);
-    if (noSuchColumn(error))
-      ({ data, error } = await q(COMMENT_COLS));
+    const { data, error } = await supa.from("page_comment_counts").select("post_id, n");
     if (error) {
-      console.warn("[supabase] fetchPageComments:", error.message);
+      console.warn("[supabase] fetchPageCommentCounts:", error.message);
       return /* @__PURE__ */ new Map();
     }
-    const map = /* @__PURE__ */ new Map();
-    for (const c of data || []) {
-      if (!map.has(c.post_id))
-        map.set(c.post_id, []);
-      map.get(c.post_id).push(c);
+    return new Map((data || []).map((r) => [r.post_id, r.n]));
+  }
+  async function fetchPostCommentCount(postId) {
+    if (!supa)
+      return null;
+    const { data, error } = await supa.from("page_comment_counts").select("n").eq("post_id", postId).maybeSingle();
+    if (error) {
+      console.warn("[supabase] fetchPostCommentCount:", error.message);
+      return null;
     }
-    return map;
+    return data ? data.n : 0;
+  }
+  var COMMENT_ROOTS_PAGE = 30;
+  async function fetchPostComments(postId, { beforeTs = null, limit = COMMENT_ROOTS_PAGE } = {}) {
+    if (!supa)
+      return { comments: [], hasMore: false };
+    const cols = `${COMMENT_COLS}, reply_to_uid`;
+    const rootsQ = (c) => {
+      let q = supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).is("parent_id", null).order("created_at", { ascending: false }).limit(limit + 1);
+      if (beforeTs)
+        q = q.lt("created_at", beforeTs);
+      return q;
+    };
+    let { data: roots, error } = await rootsQ(cols);
+    if (noSuchColumn(error))
+      ({ data: roots, error } = await rootsQ(COMMENT_COLS));
+    if (error) {
+      console.warn("[supabase] fetchPostComments (\u043A\u043E\u0440\u0435\u043D\u0435\u0432\u0456):", error.message);
+      return { comments: [], hasMore: false };
+    }
+    roots = roots || [];
+    const hasMore = roots.length > limit;
+    if (hasMore)
+      roots = roots.slice(0, limit);
+    if (!roots.length)
+      return { comments: [], hasMore: false };
+    const ids = roots.map((r) => r.id);
+    const repQ = (c) => supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).in("parent_id", ids);
+    let { data: replies, error: repErr } = await repQ(cols);
+    if (noSuchColumn(repErr))
+      ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
+    if (repErr) {
+      console.warn("[supabase] fetchPostComments (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456):", repErr.message);
+      replies = [];
+    }
+    const comments = [...roots, ...replies || []].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return { comments, hasMore };
   }
   async function addPageComment(postId, uid, text, parentId = null, replyToUid = null) {
     if (!supa)
@@ -4503,20 +4577,6 @@
     return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
   }
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
-  function lsGet(key, fallback) {
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  function lsSet(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-    }
-  }
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
   }
@@ -4579,24 +4639,7 @@
       return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
-  var LS_MSG_RATE = "cstl-msg-rate-v1";
-  var FLOOD_MAX = 5;
-  var FLOOD_WINDOW = 15e3;
-  function isDuplicateMsg(text) {
-    return lsGet(LS_MSG_RATE, {}).last === text;
-  }
-  function isFlooding() {
-    const now = Date.now();
-    const times = (lsGet(LS_MSG_RATE, {}).times || []).filter((t) => now - t < FLOOD_WINDOW);
-    return times.length >= FLOOD_MAX;
-  }
-  function recordSentMsg(text) {
-    const now = Date.now();
-    const st = lsGet(LS_MSG_RATE, {});
-    const times = (st.times || []).filter((t) => now - t < FLOOD_WINDOW);
-    times.push(now);
-    lsSet(LS_MSG_RATE, { last: text, times });
-  }
+  var RATE_SCOPE = "disc";
   function msgWord(n) {
     const mod10 = n % 10, mod100 = n % 100;
     if (mod10 === 1 && mod100 !== 11)
@@ -5290,7 +5333,7 @@
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4e3, "error");
         return;
       }
-      if (isDuplicateMsg(text)) {
+      if (isDuplicateMsg(text, RATE_SCOPE)) {
         showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
         return;
       }
@@ -5298,7 +5341,7 @@
         showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434", 3500);
         return;
       }
-      recordSentMsg(text);
+      recordSentMsg(text, RATE_SCOPE);
       if (_discEditing && _discEditing.post_id === postId) {
         const target = _discEditing;
         const l0 = commentsByPost.get(postId) || [];
@@ -10977,6 +11020,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
   var commentMap = /* @__PURE__ */ new Map();
+  var commentCounts = /* @__PURE__ */ new Map();
+  var commentPaging = /* @__PURE__ */ new Map();
   var comReactMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
@@ -11011,7 +11056,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       fetchPages(),
       fetchPagePosts(null, 60),
       fetchPageReactions(currentUserId()),
-      fetchPageComments(),
+      fetchPageCommentCounts(),
       fetchPageCommentReactions(currentUserId()),
       isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
       isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
@@ -11019,10 +11064,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     pages = orderPages(pg);
     posts = ps;
     reactionMap = rx;
-    commentMap = cm;
+    commentCounts = cm;
     comReactMap = cr;
     myPageIds = mine;
     mySubs = subs;
+    commentMap = /* @__PURE__ */ new Map();
+    commentPaging = /* @__PURE__ */ new Map();
     const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
     if (uids.length)
       await fetchAvatars(uids);
@@ -11366,6 +11413,20 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
     return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
   }
+  function commentErrorText(err) {
+    const e = String(err || "");
+    if (/нецензурн/i.test(e))
+      return "\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430";
+    if (/повтори символів|беззмістовн/i.test(e))
+      return "\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C";
+    if (/щойно це написали/i.test(e))
+      return "\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438";
+    if (/занадто швидко/i.test(e))
+      return "\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434";
+    if (/порожній/i.test(e))
+      return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439";
+    return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
+  }
   function commentRowHtml(c, reply = false) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
@@ -11475,13 +11536,23 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return;
     const { postId, listEl, titleEl } = openCommentSheet;
     const list = commentMap.get(postId) || [];
+    const total = commentCounts.get(postId) ?? list.length;
     if (titleEl)
-      titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
-    listEl.innerHTML = list.length ? commentThreads(list).map(threadHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+      titleEl.textContent = total ? `${total} ${pluralComments(total)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    if (!commentMap.has(postId)) {
+      listEl.innerHTML = `<div class="fd-com-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>`;
+      return;
+    }
+    const more = commentPaging.get(postId)?.hasMore ? `<button class="fd-com-more fd-com-more--older" type="button" data-com-older="${postId}">\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</button>` : "";
+    listEl.innerHTML = list.length ? more + commentThreads(list).map(threadHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
   }
   function patchCommentCount(postId) {
-    const n = (commentMap.get(postId) || []).length;
+    const n = commentCounts.get(postId) || 0;
     document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
+  }
+  function bumpCommentCount(postId, delta) {
+    commentCounts.set(postId, Math.max(0, (commentCounts.get(postId) || 0) + delta));
+    patchCommentCount(postId);
   }
   function applyCommentUpsert(c) {
     if (!c)
@@ -11490,12 +11561,18 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       applyCommentRemove(c);
       return;
     }
-    const arr = commentMap.get(c.post_id) || [];
+    if (!commentMap.has(c.post_id)) {
+      bumpCommentCount(c.post_id, 1);
+      return;
+    }
+    const arr = commentMap.get(c.post_id);
     const idx = arr.findIndex((x) => x.id === c.id);
     if (idx >= 0)
       arr[idx] = c;
-    else
+    else {
       arr.push(c);
+      bumpCommentCount(c.post_id, 1);
+    }
     arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     commentMap.set(c.post_id, arr);
     const fresh = [c.author_uid, c.reply_to_uid].filter((u) => u && !cachedName(u));
@@ -11507,20 +11584,49 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     }
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
       renderCommentSheet();
-    patchCommentCount(c.post_id);
   }
   function applyCommentRemove(c) {
     if (!c)
       return;
     const arr = commentMap.get(c.post_id);
-    if (!arr)
+    if (!arr) {
+      bumpCommentCount(c.post_id, -1);
+      return;
+    }
+    if (!arr.some((x) => x.id === c.id))
       return;
     commentMap.set(c.post_id, arr.filter((x) => x.id !== c.id));
+    bumpCommentCount(c.post_id, -1);
     if (replyTarget && replyTarget.commentId === c.id)
       openCommentSheet?.clearReply?.();
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
       renderCommentSheet();
-    patchCommentCount(c.post_id);
+  }
+  function commentsPageSize() {
+    const m = /compages=(\d+)/.exec(location.hash || "");
+    const n = m ? Number(m[1]) : NaN;
+    return Number.isFinite(n) && n > 0 ? n : COMMENT_ROOTS_PAGE;
+  }
+  async function loadComments(postId, { older = false } = {}) {
+    const prev = older ? commentMap.get(postId) || [] : [];
+    const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
+    const [{ comments, hasMore }, trueCount] = await Promise.all([
+      fetchPostComments(postId, { beforeTs, limit: commentsPageSize() }),
+      older ? Promise.resolve(null) : fetchPostCommentCount(postId)
+    ]);
+    if (trueCount != null)
+      commentCounts.set(postId, trueCount);
+    const seen = new Set(prev.map((c) => c.id));
+    const merged = [...comments.filter((c) => !seen.has(c.id)), ...prev].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    commentMap.set(postId, merged);
+    const roots = merged.filter((c) => !c.parent_id);
+    commentPaging.set(postId, {
+      hasMore,
+      oldestTs: roots.length ? roots[0].created_at : null
+    });
+    const uids = [...new Set(merged.flatMap((c) => [c.author_uid, c.reply_to_uid]))].filter((u) => u && !cachedName(u));
+    if (uids.length)
+      await fetchAvatars(uids);
   }
   function openComments(postId, focusCommentId = null) {
     const myUid = currentUserId();
@@ -11545,13 +11651,27 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const replyTo = sheet.querySelector(".fd-com-replyto");
     replyTarget = null;
     expandedThreads.clear();
-    if (focusCommentId) {
-      const target = (commentMap.get(postId) || []).find((c) => c.id === focusCommentId);
-      if (target?.parent_id)
-        expandedThreads.add(target.parent_id);
-    }
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
+    loadComments(postId).then(() => {
+      if (!openCommentSheet || openCommentSheet.postId !== postId)
+        return;
+      if (focusCommentId) {
+        const target = (commentMap.get(postId) || []).find((c) => c.id === focusCommentId);
+        if (target?.parent_id)
+          expandedThreads.add(target.parent_id);
+      }
+      renderCommentSheet();
+      if (focusCommentId)
+        requestAnimationFrame(() => {
+          const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
+          if (!rowEl)
+            return;
+          rowEl.classList.add("fd-com-row--replying");
+          revealInScroller(listEl, rowEl, 12);
+          setTimeout(() => rowEl.classList.remove("fd-com-row--replying"), 2400);
+        });
+    });
     const comSheet = sheet.querySelector(".fd-com-sheet");
     const kbInput = sheet.querySelector(".fd-com-input");
     const unlockScroll = lockBodyScroll();
@@ -11584,12 +11704,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       requestAnimationFrame(revealReply);
     };
     sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
-    const needNames = [...new Set((commentMap.get(postId) || []).flatMap((c) => [c.author_uid, c.reply_to_uid]).filter((u) => u && !cachedName(u)))];
-    if (needNames.length)
-      fetchAvatars(needNames).then(() => {
-        if (openCommentSheet && openCommentSheet.postId === postId)
-          renderCommentSheet();
-      });
     if (myUid && !cachedName(myUid))
       fetchAvatars([myUid]).then(() => {
         const el = sheet.querySelector(".fd-com-myava");
@@ -11630,7 +11744,29 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         listEl.scrollTop += delta;
       revealInScroller(listEl, after);
     };
+    const loadOlder = async (btn) => {
+      const anchor = listEl.querySelector("[data-com-id]");
+      const anchorId = anchor?.dataset.comId;
+      const before = anchor?.getBoundingClientRect().top;
+      btn.disabled = true;
+      btn.textContent = "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026";
+      await loadComments(openCommentSheet.postId, { older: true });
+      if (!openCommentSheet)
+        return;
+      renderCommentSheet();
+      const after = anchorId && listEl.querySelector(`[data-com-id="${anchorId}"]`);
+      if (after && before != null) {
+        const delta = after.getBoundingClientRect().top - before;
+        if (Math.abs(delta) >= 1)
+          listEl.scrollTop += delta;
+      }
+    };
     listEl.addEventListener("click", async (e) => {
+      const older = e.target.closest("[data-com-older]");
+      if (older) {
+        await loadOlder(older);
+        return;
+      }
       const like = e.target.closest("[data-com-like]");
       if (like) {
         toggleCommentLike(Number(like.dataset.comLike));
@@ -11674,6 +11810,19 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
       }
+      if (looksLikeSpam(text)) {
+        showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0438\u0439", 4e3, "error");
+        return;
+      }
+      const rateScope = `feed:${postId}`;
+      if (isDuplicateMsg(text, rateScope)) {
+        showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
+        return;
+      }
+      if (isFlooding()) {
+        showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434", 3500);
+        return;
+      }
       if (!isLoggedIn()) {
         close();
         requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
@@ -11686,6 +11835,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
       sendBtn.disabled = false;
       if (res.ok) {
+        recordSentMsg(text, rateScope);
         if (parentId)
           expandedThreads.add(parentId);
         applyCommentUpsert(res.comment);
@@ -11694,7 +11844,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         input.focus();
         requestAnimationFrame(() => revealRow(res.comment?.id));
       } else {
-        alert("\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E: " + (res.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430"));
+        showToast(commentErrorText(res.error), 4e3, "error");
       }
     };
     sendBtn.addEventListener("click", send);
@@ -11714,15 +11864,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       onOpen: revealReply
     });
     requestAnimationFrame(() => sheet.classList.add("open"));
-    if (focusCommentId)
-      requestAnimationFrame(() => {
-        const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
-        if (!rowEl)
-          return;
-        rowEl.classList.add("fd-com-row--replying");
-        revealInScroller(listEl, rowEl, 12);
-        setTimeout(() => rowEl.classList.remove("fd-com-row--replying"), 2400);
-      });
   }
   function screenListHtml(tab, pagePosts) {
     if (tab === "events") {
