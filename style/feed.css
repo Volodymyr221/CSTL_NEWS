@@ -227,7 +227,15 @@
 .fd-screen.open { transform: translateX(0); }
 /* Висота 168 = 150 (видима частина) + 18 (радіус заокруглення .fd-screen-body): банер
    заходить ПІД заокруглені верхні кути блоку, тож у кутах за заокругленням не просвічує фон. */
-.fd-screen-top { position: relative; height: 168px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
+/* 🔑 БАНЕР СТОЇТЬ НА МІСЦІ (Вова 25.07): «банер при скролі не рухався, а нижній весь блок
+   з аватаркою ніби рухалися поверх банеру». sticky top:0 — банер прилипає до верху екрана,
+   а .fd-screen-body (z-index:1) наїжджає на нього своїм заокругленим краєм і тінню вгору.
+   ⚠️ z-index тут НЕ ставимо навмисно: із z-index банер став би окремим шаром (stacking
+   context) і замкнув би в собі поповер меню «⋯» (z-index:4) — той поїхав би ПІД блок.
+   Без z-index банер малюється раніше за блок (у блока z-index:1), а поповер лишається
+   на спільному рівні, як і був. Розкладка не змінюється: sticky не чіпає потік, тож
+   і -18px налягання блоку, і точка піну заголовка лишаються ті самі. */
+.fd-screen-top { position: sticky; top: 0; height: 168px; background: linear-gradient(135deg, #4a3138, var(--fd-accent)); }
 .fd-banner { position: absolute; inset: 0; }
 .fd-banner img { width: 100%; height: 100%; object-fit: cover; display: block; }
 /* Липкий бар back/bell: sticky top:0, height:0 — перший елемент .fd-screen, тримається
