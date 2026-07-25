@@ -11376,8 +11376,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -11402,18 +11403,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         repliesByParent.get(c.parent_id).push(c);
       }
     const threads = [];
-    const shown = /* @__PURE__ */ new Set();
     for (const c of list)
       if (!c.parent_id) {
-        const replies = repliesByParent.get(c.id) || [];
-        threads.push({ root: c, replies });
-        shown.add(c.id);
-        for (const r of replies)
-          shown.add(r.id);
+        threads.push({ root: c, replies: repliesByParent.get(c.id) || [] });
       }
-    for (const c of list)
-      if (!shown.has(c.id))
-        threads.push({ root: c, replies: [] });
     return threads;
   }
   function threadHtml(t) {
