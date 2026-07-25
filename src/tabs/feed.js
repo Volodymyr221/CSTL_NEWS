@@ -280,7 +280,10 @@ function eventBadgeHtml(post) {
 function postCardHtml(post) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
-  const cCount = (commentMap.get(post.id) || []).length;
+  // ⚠️ Саме commentCounts, а не довжина commentMap: у мапі лежать коментарі ЛИШЕ
+  // тих постів, чий лист уже відкривали. Читання звідти гасило лічильник на всіх
+  // картках (регрес 25.07 — Вова побачив порожню бульбашку одразу).
+  const cCount = commentCounts.get(post.id) || 0;
   // Підпис автора-людини — лише якщо пост опубліковано «від себе». Пости від імені
   // спільноти виглядають суто офіційно, без особистого імені (вибір у композері).
   // show_author за замовчуванням true → старі пости виглядають як раніше.
