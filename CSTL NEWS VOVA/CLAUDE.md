@@ -157,6 +157,7 @@ main отримує мердж-коміт
 | `style.css` | Всі стилі. Включно з `.deploy-stamp` (маленький сірий лічильник знизу). |
 | `sw.js` | Service Worker. **`CACHE_NAME` міняти при кожному деплої коду.** Кешування (з 21.06.2026): `index.html` + `bundle.js` + усі `*.css` → **network-first** з `{ cache: 'reload' }` (обхід HTTP-кешу браузера — інакше GitHub Pages `max-age` тримав старий код); картинки/`manifest.json` → cache-first. Кеш = fallback офлайн. |
 | `bundle.js` | Згенерований esbuild. **У git як робоча база** (варіант Б, див. Деплой). |
+| `admin.html` | **АДМІНКА — окрема самостійна сторінка** (~1600 рядків, свій HTML+CSS+JS, НЕ зібрана з `src/` і НЕ в `bundle.js`). Вхід прихований: **5 тапів на лого «CSTL LIFE»** у шапці → `./admin.html` (`initAdminShortcut()` у `src/app.js`). Розділи: Статті · Модерація · Оголошення · Опубліковані · Коментарі · Адміни · Витрати AI · Аналітика · Налаштування. Патерн: `menuItems()` (список пунктів) → `renderHomeGrid()` (сітка плиток) → `renderTabContent()` (роутер розділів) → `render<Розділ>(el)`. Дані тягне `loadAll()`. Завантаження картинок — `uploadArticlePhoto()`, бакет `community-photos`. **Додаєш новий розділ — торкаєшся рівно цих чотирьох місць.** |
 | `build.js` | Конфіг esbuild (8 рядків) |
 | `package.json` | Одна залежність: `esbuild` |
 | `logo.png` | Логотип для splash-заставки. У `STATIC_ASSETS` `sw.js`. |
