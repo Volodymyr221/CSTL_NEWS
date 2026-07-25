@@ -11241,7 +11241,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   function postCardHtml(post) {
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
-    const cCount = (commentMap.get(post.id) || []).length;
+    const cCount = commentCounts.get(post.id) || 0;
     const authorName = post.author_uid && post.show_author !== false ? liveName("", post.author_uid, "") : "";
     const imgs = postImages(post);
     const photo = galleryHtml(imgs, post.id);
