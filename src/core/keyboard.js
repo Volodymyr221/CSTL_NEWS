@@ -30,6 +30,36 @@ export function kbDebugOn() {
   } catch { return false; }
 }
 
+// ── Замок ФОНУ: тримає сторінку позаду аркуша нерухомою ─────────────────────────
+// 🔑 ЧОМУ ОКРЕМО ВІД lockBodyScroll (Вова 25.07: «задній фон катається»): у цьому
+// застосунку сторінка скролиться НЕ через body — у `style/base.css` прямим текстом:
+// «.app-main — справжній скролер (body заблокований overflow:hidden)». Тобто замок
+// body фіксував те, що й так не рухається, і від автоскролу iOS не захищав узагалі:
+// при фокусі в поле система прокручувала справжній скролер, і фон їхав під аркушем.
+// Морозимо саме реальні скролери — і ЛИШЕ ті, що поза аркушем, щоб список коментарів
+// усередині нього скролився як раніше.
+// Два рівні: overflow:hidden (забороняє жест) + повернення scrollTop у слухачі
+// (страховка від програмного автоскролу системи, який overflow не зупиняє).
+const SCROLLERS = '.app-main, .fd-screen';
+function freezeBackground(overlay) {
+  const frozen = Array.from(document.querySelectorAll(SCROLLERS))
+    .filter(el => !overlay.contains(el) && el.scrollHeight > el.clientHeight + 1)
+    .map(el => {
+      const top = el.scrollTop;
+      const onScroll = () => { if (el.scrollTop !== top) el.scrollTop = top; };
+      const prevOverflow = el.style.overflowY;
+      el.addEventListener('scroll', onScroll);
+      el.style.overflowY = 'hidden';
+      el.scrollTop = top;              // overflow:hidden міг скинути позицію
+      return { el, top, onScroll, prevOverflow };
+    });
+  return () => frozen.forEach(f => {
+    f.el.removeEventListener('scroll', f.onScroll);
+    f.el.style.overflowY = f.prevOverflow;
+    f.el.scrollTop = f.top;            // повертаємо рівно туди, де людина читала
+  });
+}
+
 // Прив'язує нижній аркуш до клавіатури.
 //   overlay — фіксований контейнер на весь екран (.fd-sheet-back)
 //   sheet   — сам аркуш усередині нього (.fd-sheet), притиснутий донизу
@@ -42,7 +72,10 @@ export function kbDebugOn() {
 export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = '' } = {}) {
   const vv = window.visualViewport;
   const dbg = kbDebugOn() ? createDebugPanel() : null;
-  if (!vv) return () => dbg?.remove();
+  // Фон морозимо ЗАВЖДИ, поки аркуш живий — навіть якщо visualViewport недоступний:
+  // саме автоскрол фону, а не висота аркуша, найпомітніше псує враження.
+  const unfreeze = freezeBackground(overlay);
+  if (!vv) return () => { unfreeze(); dbg?.remove(); };
 
   // h0 — висота видимої області без клавіатури (еталон, з яким порівнюємо далі).
   const h0 = vv.height;
@@ -102,6 +135,7 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
 
   return () => {
     cancelAnimationFrame(raf);
+    unfreeze();
     input?.removeEventListener('focus', onFocus);
     input?.removeEventListener('blur', onBlur);
     vv.removeEventListener('resize', schedule);

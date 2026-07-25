@@ -10078,10 +10078,33 @@ ${ev.description || ""}`
       return false;
     }
   }
+  var SCROLLERS = ".app-main, .fd-screen";
+  function freezeBackground(overlay) {
+    const frozen = Array.from(document.querySelectorAll(SCROLLERS)).filter((el) => !overlay.contains(el) && el.scrollHeight > el.clientHeight + 1).map((el) => {
+      const top = el.scrollTop;
+      const onScroll = () => {
+        if (el.scrollTop !== top) el.scrollTop = top;
+      };
+      const prevOverflow = el.style.overflowY;
+      el.addEventListener("scroll", onScroll);
+      el.style.overflowY = "hidden";
+      el.scrollTop = top;
+      return { el, top, onScroll, prevOverflow };
+    });
+    return () => frozen.forEach((f) => {
+      f.el.removeEventListener("scroll", f.onScroll);
+      f.el.style.overflowY = f.prevOverflow;
+      f.el.scrollTop = f.top;
+    });
+  }
   function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "" } = {}) {
     const vv = window.visualViewport;
     const dbg = kbDebugOn() ? createDebugPanel() : null;
-    if (!vv) return () => dbg?.remove();
+    const unfreeze = freezeBackground(overlay);
+    if (!vv) return () => {
+      unfreeze();
+      dbg?.remove();
+    };
     const h0 = vv.height;
     let raf = 0, focused = false, applied = false, top0 = null;
     const measureTop0 = () => {
@@ -10134,6 +10157,7 @@ ${ev.description || ""}`
     if (dbg) schedule();
     return () => {
       cancelAnimationFrame(raf);
+      unfreeze();
       input?.removeEventListener("focus", onFocus);
       input?.removeEventListener("blur", onBlur);
       vv.removeEventListener("resize", schedule);
