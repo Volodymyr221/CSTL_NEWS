@@ -569,8 +569,14 @@ function threadHtml(t) {
   const visible = expanded ? t.replies : t.replies.slice(0, REPLIES_VISIBLE);
   const hidden = t.replies.length - visible.length;
   const branches = visible.map(r => `<div class="fd-com-branch">${commentRowHtml(r, true)}</div>`);
+  // Кнопка-перемикач в кінці гілки. Ховати є ЧОГО лише коли відповідей більше за поріг —
+  // інакше «Сховати» згортало б у той самий вигляд, і кнопка була б обманом.
+  // Без неї розгортання було глухим кутом: розгорнув — і назад не згорнеш (скарга Вови).
   if (hidden > 0) branches.push(
     `<div class="fd-com-branch"><button class="fd-com-more" data-more-parent="${t.root.id}" type="button">Ще ${hidden} ${pluralReplies(hidden)}</button></div>`
+  );
+  else if (expanded && t.replies.length > REPLIES_VISIBLE) branches.push(
+    `<div class="fd-com-branch"><button class="fd-com-more" data-less-parent="${t.root.id}" type="button">Сховати відповіді</button></div>`
   );
   // --branched вмикає стовбур уздовж кореневого коментаря. Клас, а не CSS :has(),
   // навмисно: :has() з'явився лише в iOS 15.4, а лінія має бути в усіх однаково.
@@ -780,12 +786,38 @@ function openComments(postId, focusCommentId = null) {
     });
   };
 
-  // Дії в листі: лайк коментаря (♥) + «Відповісти» + «Ще N відповідей» + видалення свого.
+  // Згорнути гілку («Сховати відповіді»). ⚠️ ТУТ утримання позиції справді необхідне,
+  // на відміну від розгортання: вміст МЕНШАЄ, тож стара прокрутка виходить за новий
+  // максимум — браузер зрізає її сам, і список смикається.
+  //
+  // 🔑 Тримаємось за САМУ КНОПКУ, а не за корінь гілки. Спершу пробував корінь — і це
+  // не працює за побудовою: кнопка стоїть у кінці гілки, тож людина прокрутила донизу,
+  // а після згортання прокрутці просто НЕМА КУДИ рухатись, щоб повернути далекий корінь
+  // на місце (заміряно: лишалась розбіжність 464px). Кнопка ж — це те місце, де щойно
+  // був палець, і саме її природно лишити під ним.
+  //
+  // Другий рубіж — revealInScroller: якщо прокрутка вперлась у межу і кнопка все одно
+  // виїхала, підтягуємо її у видиму зону. Інакше людина натисла б «Сховати» і не
+  // побачила результату своєї дії.
+  const collapseThread = (rootId) => {
+    const before = listEl.querySelector(`[data-less-parent="${rootId}"]`)?.getBoundingClientRect().top;
+    expandedThreads.delete(rootId);
+    renderCommentSheet();
+    const after = listEl.querySelector(`[data-more-parent="${rootId}"]`);
+    if (before == null || !after) return;
+    const delta = after.getBoundingClientRect().top - before;
+    if (Math.abs(delta) >= 1) listEl.scrollTop += delta;
+    revealInScroller(listEl, after);
+  };
+
+  // Дії в листі: лайк (♥) + «Відповісти» + «Ще N» / «Сховати відповіді» + видалення свого.
   listEl.addEventListener('click', async e => {
     const like = e.target.closest('[data-com-like]');
     if (like) { toggleCommentLike(Number(like.dataset.comLike)); return; }
     const more = e.target.closest('[data-more-parent]');
     if (more) { expandThread(Number(more.dataset.moreParent)); return; }
+    const less = e.target.closest('[data-less-parent]');
+    if (less) { collapseThread(Number(less.dataset.lessParent)); return; }
     const rep = e.target.closest('[data-reply-parent]');
     if (rep) {
       const uid = rep.dataset.replyUid;
