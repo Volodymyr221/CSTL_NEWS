@@ -112,11 +112,15 @@ function createDebugPanel() {
     'white-space:pre;pointer-events:none;max-width:92vw';
   document.body.appendChild(el);
   const ver = document.querySelector('.deploy-stamp')?.textContent?.trim() || '(версії нема)';
+  // Режим показу: у встановленому з головного екрана додатку (standalone) клавіатура
+  // на iOS поводиться інакше, ніж у вкладці Safari — це важлива змінна діагнозу.
+  const mode = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone
+    ? 'ДОДАТОК (standalone)' : 'браузер';
   return {
     update({ open, kb, top0, h0, vv, sheet, overlay }) {
       const r = sheet.getBoundingClientRect();
       el.textContent =
-        `${ver}\n` +
+        `${ver}  ·  ${mode}\n` +
         `клавіатура: ${open ? 'ВІДКРИТА' : 'закрита'}  kb=${Math.round(kb)}\n` +
         `vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}\n` +
         `window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}\n` +
