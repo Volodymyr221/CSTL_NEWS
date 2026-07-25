@@ -624,9 +624,9 @@ function openComments(postId) {
   const comSheet = sheet.querySelector('.fd-com-sheet');
   const kbInput = sheet.querySelector('.fd-com-input');
   const unlockScroll = lockBodyScroll();
-  const detachKb = attachKeyboardSheet(sheet, comSheet, {
-    input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
-  });
+  // ⚠️ Саме підключення — НИЖЧЕ, після appendChild: модулю треба міряти реальну
+  // розкладку, а поза документом браузер віддає нулі (та сама пастка, що у свайпу).
+  let detachKb = () => {};
 
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
   const setReply = (parentId, name) => {
@@ -696,6 +696,9 @@ function openComments(postId) {
   // документом браузер віддає порожнечу (через це фон спалахував чорним — див. sheet-motion.js).
   document.body.appendChild(sheet);
   attachSheetSwipe(sheet, sheet.querySelector('.fd-sheet'), listEl, close);   // свайп-закриття
+  detachKb = attachKeyboardSheet(sheet, comSheet, {                           // клавіатура: тільки після DOM
+    input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
+  });
   requestAnimationFrame(() => sheet.classList.add('open'));
 }
 

@@ -44,20 +44,31 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
   const dbg = kbDebugOn() ? createDebugPanel() : null;
   if (!vv) return () => dbg?.remove();
 
-  // top0 — де верх аркуша стоїть у СПОКОЇ, у координатах видимої області.
-  // clientHeight/offsetHeight — розкладка БЕЗ transform: аркуш у цей момент може
-  // їхати вгору анімацією в'їзду (translateY), і getBoundingClientRect збрехав би.
-  const top0 = Math.max(0, overlay.clientHeight - sheet.offsetHeight);
   // h0 — висота видимої області без клавіатури (еталон, з яким порівнюємо далі).
   const h0 = vv.height;
 
-  let raf = 0, focused = false, applied = false;
+  let raf = 0, focused = false, applied = false, top0 = null;
+
+  // top0 — де верх аркуша стоїть у СПОКОЇ, у координатах видимої області.
+  // ⚠️ ПАСТКА, В ЯКУ Я ВЖЕ НАСТУПИВ (Вова: «верх під'їжджає до шапки»): якщо міряти
+  // в момент підключення, елемента може ще НЕ БУТИ в документі — браузер тоді віддає
+  // нулі, top0 виходить 0, і аркуш розтягується на всю видиму область. Тому міряємо
+  // ЛІНИВО і лише поки самі не чіпали розміри (`!applied`) — тоді вимір завжди
+  // актуальний. Нулі не приймаємо: краще не робити нічого, ніж зробити за хибним.
+  // clientHeight/offsetHeight — розкладка БЕЗ transform: аркуш може їхати анімацією
+  // в'їзду (translateY), і getBoundingClientRect збрехав би.
+  const measureTop0 = () => {
+    const oh = overlay.clientHeight, sh = sheet.offsetHeight;
+    if (!oh || !sh) return;                  // поза документом або ще без розкладки
+    top0 = Math.max(0, oh - sh);
+  };
 
   const apply = () => {
-    const kb = Math.max(0, h0 - vv.height);       // скільки з'їла клавіатура
+    if (!applied) measureTop0();             // поки не втручались — вимір дійсний
+    const kb = Math.max(0, h0 - vv.height);  // скільки з'їла клавіатура
     // «Відкрита» лише при фокусі в полі І помітному зменшенні (поріг 80px): без
     // гейта фокуса vv.height буває «застряглим» після закриття клавіатури.
-    const open = focused && kb > 80;
+    const open = focused && kb > 80 && top0 !== null;
     if (open) {
       // 1) оверлей — рівно на видиму область, хай як Safari зсунув сторінку
       overlay.style.top    = vv.offsetTop + 'px';
