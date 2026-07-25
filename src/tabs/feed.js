@@ -13,7 +13,7 @@ import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
-  addPageComment, deletePageComment, fetchMyEditablePageIds,
+  addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
@@ -489,6 +489,7 @@ function patchLike(postId) {
 // перемальовувати його наживо. Один лист за раз.
 let openCommentSheet = null;
 let replyTarget = null;   // { parentId, name } — активна відповідь у відкритому листі
+let editTarget = null;    // { id } — коментар, який зараз редагують (взаємовиключно з відповіддю)
 // Гілки, у яких людина натиснула «Ще N відповідей». Тримаємо ТУТ, а не в DOM, бо
 // список перемальовується цілком щоразу, коли приходить чужий коментар (realtime) —
 // у DOM цей стан не пережив би перемалювання. Скидається при кожному відкритті листа:
@@ -550,12 +551,16 @@ function commentRowHtml(c, reply = false) {
   const mention = c.reply_to_uid
     ? `<span class="fd-com-mention"${nameUid(c.reply_to_uid)} data-av-uid="${escapeHtml(c.reply_to_uid)}">${liveName('', c.reply_to_uid, 'Житель')}</span>, `
     : '';
+  // «змінено» біля часу — як у Facebook. Позначку ставить БАЗА при правці тексту
+  // (тригер page_comments_guard_update), тож підробити її з клієнта не вийде:
+  // мовчки переписати вже прочитаний людьми коментар не можна.
+  const edited = c.edited_at ? ` · <span class="fd-com-edited">змінено</span>` : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}</span></div>
+        <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
         <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">Редагувати</button><button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -891,8 +896,33 @@ function openComments(postId, focusCommentId = null) {
   // тож «видима зона» = висота списку. Запас 12px, щоб рядок не липнув до краю.
   const revealRow = (id) => revealInScroller(listEl, listEl.querySelector(`[data-com-id="${id}"]`));
   const revealReply = () => { if (replyTarget) revealRow(replyTarget.commentId); };
-  const clearReply = () => { replyTarget = null; replyBar.hidden = true; paintReply(); };
+  // Вихід із режиму відповіді АБО правки — одна кнопка ✕ на тій самій смузі.
+  // Окремої смуги для правки не заводив: це той самий за змістом стан «зараз пишу
+  // не новий коментар, а щось конкретне», і два схожі елементи поруч плутали б.
+  const input0 = () => sheet.querySelector('.fd-com-input');
+  const clearReply = () => {
+    replyTarget = null; replyBar.hidden = true; paintReply();
+    if (editTarget) {                       // виходимо з правки — повертаємо порожнє поле
+      editTarget = null;
+      const el = input0(); if (el) { el.value = ''; el.placeholder = 'Додати коментар…'; }
+    }
+  };
   if (openCommentSheet) openCommentSheet.clearReply = clearReply;   // щоб realtime міг скинути режим
+
+  // Увійти в режим правки свого коментаря: текст лягає в поле, смуга показує
+  // «Редагування», ✕ скасовує. Кнопка надсилання та сама — вона вже означає
+  // «підтвердити те, що в полі».
+  const startEdit = (id) => {
+    const c = (commentMap.get(postId) || []).find(x => x.id === id);
+    if (!c) return;
+    replyTarget = null; paintReply();       // правка і відповідь — взаємовиключні
+    editTarget = { id };
+    replyTo.textContent = 'Редагування коментаря';
+    replyBar.hidden = false;
+    const el = input0();
+    if (el) { el.value = c.text; el.placeholder = 'Змініть текст…'; el.focus(); }
+    requestAnimationFrame(() => revealRow(id));
+  };
   const setReply = (parentId, name, commentId, uid) => {
     replyTarget = { parentId, name, commentId, uid };
     replyTo.textContent = `Відповідь для ${name}`;
@@ -1015,6 +1045,8 @@ function openComments(postId, focusCommentId = null) {
       setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель', Number(rep.dataset.replyId), uid || null);
       return;
     }
+    const ed = e.target.closest('[data-edit-com]');
+    if (ed) { startEdit(Number(ed.dataset.editCom)); return; }
     const del = e.target.closest('[data-del-com]');
     if (!del) return;
     const id = Number(del.dataset.delCom);
@@ -1029,6 +1061,29 @@ function openComments(postId, focusCommentId = null) {
   const send = async () => {
     const text = input.value.trim();
     if (!text) return;
+
+    // ── Режим ПРАВКИ ─────────────────────────────────────────────────────────
+    // Перевірки на матюк і сміттєвий набір лишаються (сервер їх теж проганяє при
+    // редагуванні — інакше правка була б обхідним шляхом). А от дубль і флуд тут
+    // НЕ рахуємо: виправити описку — не «написати те саме вдруге», і лічильник
+    // швидкості за це карати не має.
+    if (editTarget) {
+      if (containsProfanity(text)) { showToast('🚫 Коментар містить заборонені слова', 3500, 'error'); return; }
+      if (looksLikeSpam(text))     { showToast('🚫 Коментар схожий на спам', 4000, 'error'); return; }
+      const id = editTarget.id;
+      sendBtn.disabled = true;
+      const res = await editPageComment(id, text);
+      sendBtn.disabled = false;
+      if (res.ok) {
+        applyCommentUpsert(res.comment);   // realtime продублює — дедуп за id
+        clearReply();                      // вийти з правки + очистити поле
+        requestAnimationFrame(() => revealRow(id));
+      } else {
+        showToast(commentErrorText(res.error), 4000, 'error');
+      }
+      return;
+    }
+
     const parentId = replyTarget ? replyTarget.parentId : null;
     // Кому адресована відповідь. Собі самому згадку не ставимо — вона виглядала б безглуздо
     // («Віктор, …» у відповіді самого Віктора) і породила б сповіщення самому собі.
