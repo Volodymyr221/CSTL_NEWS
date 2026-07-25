@@ -11107,24 +11107,60 @@ ${ev.description || ""}`
     el.classList.remove("is-fit");
     if (el.scrollWidth <= el.clientWidth + 1)
       el.classList.add("is-fit");
-    planCollapsedCircles(el);
+    measureCircles(el);
+    applyCirclePositions(el);
+    if (!el.dataset.dxWired) {
+      el.dataset.dxWired = "1";
+      let raf = 0;
+      el.addEventListener("scroll", () => {
+        if (raf)
+          return;
+        raf = requestAnimationFrame(() => {
+          raf = 0;
+          applyCirclePositions(el);
+        });
+      }, { passive: true });
+    }
   }
   var CIRCLE_RING = 62;
   var CIRCLE_PAD = 16;
   var CIRCLE_GAP = 18;
-  function planCollapsedCircles(el) {
+  var _circleGeom = null;
+  function measureCircles(el) {
     const items = [...el.querySelectorAll(".fd-circle")];
-    if (!items.length)
+    if (!items.length) {
+      _circleGeom = null;
       return;
+    }
     items.forEach((it) => it.style.setProperty("--dx", "0px"));
-    const inner = el.clientWidth - CIRCLE_PAD * 2;
-    const width = items.length * CIRCLE_RING + (items.length - 1) * CIRCLE_GAP;
-    const startX = width <= inner ? CIRCLE_PAD + (inner - width) / 2 : CIRCLE_PAD;
     const base = el.getBoundingClientRect().left - el.scrollLeft;
-    items.forEach((it, i) => {
+    const ringNow = items.map((it) => {
       const r = it.getBoundingClientRect();
-      const ringNow = r.left - base + (r.width - CIRCLE_RING) / 2;
-      it.style.setProperty("--dx", `${(startX + i * (CIRCLE_RING + CIRCLE_GAP) - ringNow).toFixed(1)}px`);
+      return r.left - base + (r.width - CIRCLE_RING) / 2;
+    });
+    _circleGeom = { items, ringNow };
+  }
+  function applyCirclePositions(el) {
+    if (!_circleGeom || !_circleGeom.items.length)
+      return;
+    const { items, ringNow } = _circleGeom;
+    const n = items.length;
+    const inner = el.clientWidth - CIRCLE_PAD * 2;
+    const width = n * CIRCLE_RING + (n - 1) * CIRCLE_GAP;
+    let startX;
+    if (width <= inner) {
+      startX = CIRCLE_PAD + (inner - width) / 2;
+    } else {
+      const maxOpen = Math.max(1, el.scrollWidth - el.clientWidth);
+      const f = Math.min(1, Math.max(0, el.scrollLeft / maxOpen));
+      startX = CIRCLE_PAD - f * (width - inner);
+    }
+    const sl = el.scrollLeft;
+    items.forEach((it, i) => {
+      it.style.setProperty(
+        "--dx",
+        `${(sl + startX + i * (CIRCLE_RING + CIRCLE_GAP) - ringNow[i]).toFixed(1)}px`
+      );
     });
   }
   async function toggleLike(postId) {
