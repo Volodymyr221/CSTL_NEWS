@@ -1371,10 +1371,17 @@
     const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
     return error ? { ok: false, error: error.message } : { ok: true };
   }
+  var COMMENT_COLS = "id, post_id, author_uid, text, created_at, deleted_at, parent_id";
+  function noSuchColumn(error) {
+    return error && (error.code === "42703" || /reply_to_uid/.test(error.message || ""));
+  }
   async function fetchPageComments() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at, parent_id").is("deleted_at", null).order("created_at", { ascending: true });
+    const q = (cols) => supa.from("page_comments").select(cols).is("deleted_at", null).order("created_at", { ascending: true });
+    let { data, error } = await q(`${COMMENT_COLS}, reply_to_uid`);
+    if (noSuchColumn(error))
+      ({ data, error } = await q(COMMENT_COLS));
     if (error) {
       console.warn("[supabase] fetchPageComments:", error.message);
       return /* @__PURE__ */ new Map();
@@ -1387,10 +1394,14 @@
     }
     return map;
   }
-  async function addPageComment(postId, uid, text, parentId = null) {
+  async function addPageComment(postId, uid, text, parentId = null, replyToUid = null) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
+    const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
+    const send = (row) => supa.from("page_comments").insert(row).select().single();
+    let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
+    if (replyToUid && noSuchColumn(error))
+      ({ data, error } = await send(base));
     return error ? { ok: false, error: error.message } : { ok: true, comment: data };
   }
   async function deletePageComment(commentId) {
@@ -11236,7 +11247,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       prompt("\u0421\u043A\u043E\u043F\u0456\u044E\u0439\u0442\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F:", url);
     }
   }
-  async function focusFeedPost(id) {
+  async function focusFeedPost(id, commentId = null) {
     window.switchTab?.("shotam");
     if (!loaded) {
       await loadData2();
@@ -11249,6 +11260,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         el.scrollIntoView({ behavior: "smooth", block: "center" });
         el.classList.add("fd-card--flash");
         setTimeout(() => el.classList.remove("fd-card--flash"), 1600);
+        if (commentId)
+          openComments(id, commentId);
         return;
       }
       if (++tries < 8) {
@@ -11359,10 +11372,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const lr = comReactMap.get(c.id) || { count: 0, my: false };
     const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : "";
     const replying = replyTarget && replyTarget.commentId === c.id ? " fd-com-row--replying" : "";
+    const mention = c.reply_to_uid ? `<span class="fd-com-mention"${nameUid(c.reply_to_uid)} data-av-uid="${escapeHtml(c.reply_to_uid)}">${liveName("", c.reply_to_uid, "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>, ` : "";
     return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
         <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <div class="fd-com-likewrap">
@@ -11487,8 +11501,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       arr.push(c);
     arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     commentMap.set(c.post_id, arr);
-    if (c.author_uid && !cachedName(c.author_uid)) {
-      fetchAvatars([c.author_uid]).then(() => {
+    const fresh = [c.author_uid, c.reply_to_uid].filter((u) => u && !cachedName(u));
+    if (fresh.length) {
+      fetchAvatars(fresh).then(() => {
         if (openCommentSheet && openCommentSheet.postId === c.post_id)
           renderCommentSheet();
       });
@@ -11510,7 +11525,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       renderCommentSheet();
     patchCommentCount(c.post_id);
   }
-  function openComments(postId) {
+  function openComments(postId, focusCommentId = null) {
     const myUid = currentUserId();
     const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
     const sheet = document.createElement("div");
@@ -11533,6 +11548,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const replyTo = sheet.querySelector(".fd-com-replyto");
     replyTarget = null;
     expandedThreads.clear();
+    if (focusCommentId) {
+      const target = (commentMap.get(postId) || []).find((c) => c.id === focusCommentId);
+      if (target?.parent_id)
+        expandedThreads.add(target.parent_id);
+    }
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
     const comSheet = sheet.querySelector(".fd-com-sheet");
@@ -11558,8 +11578,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     };
     if (openCommentSheet)
       openCommentSheet.clearReply = clearReply;
-    const setReply = (parentId, name, commentId) => {
-      replyTarget = { parentId, name, commentId };
+    const setReply = (parentId, name, commentId, uid) => {
+      replyTarget = { parentId, name, commentId, uid };
       replyTo.textContent = `\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C \u0434\u043B\u044F ${name}`;
       replyBar.hidden = false;
       paintReply();
@@ -11567,6 +11587,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       requestAnimationFrame(revealReply);
     };
     sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
+    const needNames = [...new Set((commentMap.get(postId) || []).flatMap((c) => [c.author_uid, c.reply_to_uid]).filter((u) => u && !cachedName(u)))];
+    if (needNames.length)
+      fetchAvatars(needNames).then(() => {
+        if (openCommentSheet && openCommentSheet.postId === postId)
+          renderCommentSheet();
+      });
     if (myUid && !cachedName(myUid))
       fetchAvatars([myUid]).then(() => {
         const el = sheet.querySelector(".fd-com-myava");
@@ -11609,7 +11635,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const rep = e.target.closest("[data-reply-parent]");
       if (rep) {
         const uid = rep.dataset.replyUid;
-        setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C", Number(rep.dataset.replyId));
+        setReply(Number(rep.dataset.replyParent), uid && cachedName(uid) || "\u0416\u0438\u0442\u0435\u043B\u044C", Number(rep.dataset.replyId), uid || null);
         return;
       }
       const del = e.target.closest("[data-del-com]");
@@ -11642,7 +11668,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       }
       sendBtn.disabled = true;
       const parentId = replyTarget ? replyTarget.parentId : null;
-      const res = await addPageComment(postId, currentUserId(), text, parentId);
+      const replyToUid = replyTarget && replyTarget.uid && replyTarget.uid !== currentUserId() ? replyTarget.uid : null;
+      const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
       sendBtn.disabled = false;
       if (res.ok) {
         if (parentId)
@@ -11673,6 +11700,15 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       onOpen: revealReply
     });
     requestAnimationFrame(() => sheet.classList.add("open"));
+    if (focusCommentId)
+      requestAnimationFrame(() => {
+        const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
+        if (!rowEl)
+          return;
+        rowEl.classList.add("fd-com-row--replying");
+        revealInScroller(listEl, rowEl, 12);
+        setTimeout(() => rowEl.classList.remove("fd-com-row--replying"), 2400);
+      });
   }
   function screenListHtml(tab, pagePosts) {
     if (tab === "events") {
@@ -13927,14 +13963,14 @@ END:VEVENT`
     openThreadById(Number(m[1]));
   }
   function handlePostHash() {
-    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc|news)\/(\d+)/);
+    const m = (location.hash || "").match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+))?/);
     if (!m)
       return;
     history.replaceState(null, "", location.pathname + location.search);
-    const [, source, id] = m;
+    const [, source, id, commentId] = m;
     const n = Number(id);
     if (source === "feed")
-      focusFeedPost(n);
+      focusFeedPost(n, commentId ? Number(commentId) : null);
     else if (source === "board" || source === "disc")
       openBoardItemById(n);
     else if (source === "news")

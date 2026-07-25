@@ -216,12 +216,14 @@ function handleThreadHash() {
 // 6b додає board (оголошення Дошки), disc (Обговорення), news (стаття Новин).
 // Той самий hash-патерн (GitHub Pages — статичний хостинг, без справжніх шляхів).
 function handlePostHash() {
-  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc|news)\/(\d+)/);
+  // ?c=<id> — сповіщення про коментар: відкрити не просто пост, а й лист коментарів
+  // із підсвіченим рядком. Хвіст необовʼязковий, тож старі посилання працюють як досі.
+  const m = (location.hash || '').match(/^#\/post\/(feed|board|disc|news)\/(\d+)(?:\?c=(\d+))?/);
   if (!m) return;
   history.replaceState(null, '', location.pathname + location.search);
-  const [, source, id] = m;
+  const [, source, id, commentId] = m;
   const n = Number(id);
-  if      (source === 'feed')              focusFeedPost(n);
+  if      (source === 'feed')              focusFeedPost(n, commentId ? Number(commentId) : null);
   else if (source === 'board' || source === 'disc') openBoardItemById(n);
   else if (source === 'news')              openArticleById(n);
 }

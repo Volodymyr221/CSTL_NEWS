@@ -516,6 +516,11 @@
   content: ''; position: absolute; left: -28px; top: 33px; bottom: -16px;
   border-left: 2px solid var(--fd-divider); pointer-events: none;
 }
+/* Згадка адресата на початку відповіді: «Віктор,» — у кольорі бренду, клікабельна.
+   Без підкреслення: у стрічці це не посилання «кудись», а імʼя людини (як у Facebook).
+   font-weight як у тексту — виділяє КОЛІР, а не жирність, інакше згадка перетягувала б
+   увагу з самої відповіді. */
+.fd-com-mention { color: var(--fd-accent); cursor: pointer; }
 /* «Ще N відповідей» — сірим, як другорядні дії поруч (час, «Відповісти»). */
 .fd-com-more { font-size: 13px; font-weight: 600; color: var(--fd-muted);
   background: none; border: 0; padding: 2px 0; cursor: pointer; font-family: inherit; }

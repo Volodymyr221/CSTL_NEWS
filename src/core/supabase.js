@@ -1062,12 +1062,22 @@ export async function setPageReaction(postId, userKey, on) {
 }
 
 // Коментарі постів → Map post_id → comments[] (невидалені, за часом).
+// ⚠️ РОЗГОРТАННЯ БЕЗ ПРОСТОЮ: колонку reply_to_uid додає окрема міграція
+// (scripts/supabase_comment_push.sql), і код може опинитись на сайті РАНІШЕ за неї.
+// Тоді запит із цією колонкою впав би і зник би ВЕСЬ список коментарів. Тому пробуємо
+// з колонкою, а на «немає такої колонки» повторюємо без неї — згадок просто не буде,
+// доки міграцію не накатано. Прибрати цей запасний шлях можна після накатування.
+const COMMENT_COLS = 'id, post_id, author_uid, text, created_at, deleted_at, parent_id';
+function noSuchColumn(error) {
+  return error && (error.code === '42703' || /reply_to_uid/.test(error.message || ''));
+}
+
 export async function fetchPageComments() {
   if (!supa) return new Map();
-  const { data, error } = await supa.from('page_comments')
-    .select('id, post_id, author_uid, text, created_at, deleted_at, parent_id')
-    .is('deleted_at', null)
-    .order('created_at', { ascending: true });
+  const q = (cols) => supa.from('page_comments').select(cols)
+    .is('deleted_at', null).order('created_at', { ascending: true });
+  let { data, error } = await q(`${COMMENT_COLS}, reply_to_uid`);
+  if (noSuchColumn(error)) ({ data, error } = await q(COMMENT_COLS));
   if (error) { console.warn('[supabase] fetchPageComments:', error.message); return new Map(); }
   const map = new Map();
   for (const c of (data || [])) {
@@ -1077,10 +1087,19 @@ export async function fetchPageComments() {
   return map;
 }
 
-export async function addPageComment(postId, uid, text, parentId = null) {
+// replyToUid — кому адресована відповідь («Віктор,» на початку + сповіщення саме йому).
+// Зберігаємо посилання на людину, а не текст: імʼя підставляється живим при показі.
+// Підробити не вийде — RLS пускає лише того, хто вже писав під ЦИМ постом
+// (scripts/supabase_comment_push.sql), інакше згадка стала б каналом для спаму.
+export async function addPageComment(postId, uid, text, parentId = null, replyToUid = null) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.from('page_comments')
-    .insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
+  const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
+  const send = (row) => supa.from('page_comments').insert(row).select().single();
+  let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
+  // Те саме розгортання без простою, що у fetchPageComments: поки міграції немає,
+  // відповідь має надсилатись — просто без згадки. Інакше кнопка «Відповісти» була б
+  // зламана в усіх до моменту, поки Вова накатає SQL.
+  if (replyToUid && noSuchColumn(error)) ({ data, error } = await send(base));
   return error ? { ok: false, error: error.message } : { ok: true, comment: data };
 }
 

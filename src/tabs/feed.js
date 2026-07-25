@@ -333,7 +333,10 @@ async function sharePost(id) {
 
 // Відкрити пост за deep-link: перемкнути на «Стрічку», прокрутити до нього + підсвітити.
 // Якщо поста ще нема в DOM (не долетів рендер / не в перших 60) — відкрити його сторінку.
-export async function focusFeedPost(id) {
+// commentId — прийшли зі сповіщення про коментар: мало показати пост, треба ще й
+// відкрити лист коментарів і підсвітити той самий рядок. Інакше людина тапає
+// «Вам відповіли» і опиняється просто біля поста, шукаючи відповідь очима.
+export async function focusFeedPost(id, commentId = null) {
   window.switchTab?.('shotam');
   if (!loaded) { await loadData(); renderFeed(); }
   let tries = 0;
@@ -343,6 +346,7 @@ export async function focusFeedPost(id) {
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.add('fd-card--flash');
       setTimeout(() => el.classList.remove('fd-card--flash'), 1600);
+      if (commentId) openComments(id, commentId);
       return;
     }
     if (++tries < 8) { requestAnimationFrame(tryFocus); return; }
@@ -491,10 +495,18 @@ function commentRowHtml(c, reply = false) {
   // список перемальовується цілком щоразу, коли приходить чужий коментар (realtime),
   // і без цього підсвітка зникала б посеред набору відповіді.
   const replying = replyTarget && replyTarget.commentId === c.id ? ' fd-com-row--replying' : '';
+  // Згадка адресата: «Віктор,» на початку відповіді — без собачки, клікабельна, у кольорі
+  // бренду (рішення Вови 25.07). Тримаємо uid, а не текст: імʼя підставляється ЖИВИМ через
+  // liveName, тож після перейменування старі відповіді показують нове імʼя, а підробити
+  // згадку набором тексту неможливо. data-av-uid — той самий делегат, що відкриває картку
+  // профілю з аватара й імені, тож нової механіки тапу не додається.
+  const mention = c.reply_to_uid
+    ? `<span class="fd-com-mention"${nameUid(c.reply_to_uid)} data-av-uid="${escapeHtml(c.reply_to_uid)}">${liveName('', c.reply_to_uid, 'Житель')}</span>, `
+    : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
         <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
@@ -619,8 +631,9 @@ function applyCommentUpsert(c) {
   arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   commentMap.set(c.post_id, arr);
   // Автор ще не в кеші імен — дотягнути ім'я/аватар і перемалювати після цього.
-  if (c.author_uid && !cachedName(c.author_uid)) {
-    fetchAvatars([c.author_uid]).then(() => {
+  const fresh = [c.author_uid, c.reply_to_uid].filter(u => u && !cachedName(u));
+  if (fresh.length) {
+    fetchAvatars(fresh).then(() => {
       if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
     });
   }
@@ -640,7 +653,9 @@ function applyCommentRemove(c) {
   patchCommentCount(c.post_id);
 }
 
-function openComments(postId) {
+// focusCommentId — прийшли зі сповіщення: після відкриття підсвітити і дотягнути
+// саме той коментар (сама підсвітка — той самий клас, що й у режимі відповіді).
+function openComments(postId, focusCommentId = null) {
   const myUid = currentUserId();
   const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
   const sheet = document.createElement('div');
@@ -663,6 +678,12 @@ function openComments(postId) {
   const replyTo = sheet.querySelector('.fd-com-replyto');
   replyTarget = null;
   expandedThreads.clear();   // нове відкриття листа — гілки знову згорнуті (як у FB/IG)
+  // ⚠️ Розкриваємо гілку ПІСЛЯ clear() — інакше очищення затерло б її. Потрібний
+  // коментар може лежати під «Ще N», і тоді підсвічувати й гортати не було б до чого.
+  if (focusCommentId) {
+    const target = (commentMap.get(postId) || []).find(c => c.id === focusCommentId);
+    if (target?.parent_id) expandedThreads.add(target.parent_id);
+  }
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
 
@@ -691,8 +712,8 @@ function openComments(postId) {
   const revealReply = () => { if (replyTarget) revealRow(replyTarget.commentId); };
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; paintReply(); };
   if (openCommentSheet) openCommentSheet.clearReply = clearReply;   // щоб realtime міг скинути режим
-  const setReply = (parentId, name, commentId) => {
-    replyTarget = { parentId, name, commentId };
+  const setReply = (parentId, name, commentId, uid) => {
+    replyTarget = { parentId, name, commentId, uid };
     replyTo.textContent = `Відповідь для ${name}`;
     replyBar.hidden = false;
     paintReply();
@@ -704,6 +725,15 @@ function openComments(postId) {
   // Окремий гачок на перемалювання НЕ потрібен: клас підсвітки ставить сам
   // commentRowHtml за станом replyTarget, тож він відновлюється разом зі списком.
   sheet.querySelector('.fd-com-replyx').addEventListener('click', clearReply);
+  // Імена учасників розмови: і авторів коментарів, і АДРЕСАТІВ відповідей. Без другого
+  // згадка «Віктор,» показувала б «Житель» — імені просто не було б у кеші, бо на старті
+  // тягнуться лише автори постів. Тягнемо одним запитом і лише те, чого бракує.
+  const needNames = [...new Set((commentMap.get(postId) || [])
+    .flatMap(c => [c.author_uid, c.reply_to_uid]).filter(u => u && !cachedName(u)))];
+  if (needNames.length) fetchAvatars(needNames).then(() => {
+    if (openCommentSheet && openCommentSheet.postId === postId) renderCommentSheet();
+  });
+
   // Свій аватар/ім'я для компоузера могли бути не в кеші — дотягнути й оновити.
   if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
     const el = sheet.querySelector('.fd-com-myava');
@@ -750,7 +780,7 @@ function openComments(postId) {
       const uid = rep.dataset.replyUid;
       // parent — корінь гілки (відповіді у 2 рівні), commentId — САМЕ той рядок, на
       // якому натиснули: підсвічувати треба його, а не корінь.
-      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель', Number(rep.dataset.replyId));
+      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель', Number(rep.dataset.replyId), uid || null);
       return;
     }
     const del = e.target.closest('[data-del-com]');
@@ -771,7 +801,11 @@ function openComments(postId) {
     if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
     sendBtn.disabled = true;
     const parentId = replyTarget ? replyTarget.parentId : null;
-    const res = await addPageComment(postId, currentUserId(), text, parentId);
+    // Кому адресована відповідь. Собі самому згадку не ставимо — вона виглядала б безглуздо
+    // («Віктор, …» у відповіді самого Віктора) і породила б сповіщення самому собі.
+    const replyToUid = replyTarget && replyTarget.uid && replyTarget.uid !== currentUserId()
+      ? replyTarget.uid : null;
+    const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
     sendBtn.disabled = false;
     if (res.ok) {
       // Відповів у згорнуту гілку — розгортаємо її ДО перемалювання, інакше власна
@@ -800,6 +834,18 @@ function openComments(postId) {
     onOpen: revealReply,
   });
   requestAnimationFrame(() => sheet.classList.add('open'));
+
+  // Прийшли зі сповіщення — показати саме той коментар. Клас підсвітки той самий, що
+  // й у режимі відповіді, тож нового вигляду не вигадуємо. Знімаємо через 2.4с: це
+  // підказка «ось воно», а не стан — залишена назавжди, вона плутала б із режимом
+  // відповіді. Клас чіпляємо до DOM напряму, без replyTarget: людина ще нічого не пише.
+  if (focusCommentId) requestAnimationFrame(() => {
+    const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
+    if (!rowEl) return;
+    rowEl.classList.add('fd-com-row--replying');
+    revealInScroller(listEl, rowEl, 12);
+    setTimeout(() => rowEl.classList.remove('fd-com-row--replying'), 2400);
+  });
 }
 
 // ── Екран сторінки (Екран 2) ────────────────────────────────────────────────
