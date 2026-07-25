@@ -487,6 +487,43 @@
       return true;
     return false;
   }
+  function lsGet(key, fallback) {
+    try {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function lsSet(key, value) {
+    try {
+      localStorage.setItem(key, JSON.stringify(value));
+    } catch {
+    }
+  }
+  var LS_MSG_RATE = "cstl-msg-rate-v1";
+  var FLOOD_MAX = 5;
+  var FLOOD_WINDOW = 15e3;
+  function lastMap(st) {
+    return st && st.last && typeof st.last === "object" ? st.last : {};
+  }
+  function isDuplicateMsg(text, scope = "default") {
+    return lastMap(lsGet(LS_MSG_RATE, {}))[scope] === text;
+  }
+  function isFlooding() {
+    const now = Date.now();
+    const times = (lsGet(LS_MSG_RATE, {}).times || []).filter((t) => now - t < FLOOD_WINDOW);
+    return times.length >= FLOOD_MAX;
+  }
+  function recordSentMsg(text, scope = "default") {
+    const now = Date.now();
+    const st = lsGet(LS_MSG_RATE, {});
+    const times = (st.times || []).filter((t) => now - t < FLOOD_WINDOW);
+    times.push(now);
+    const last = lastMap(st);
+    last[scope] = text;
+    lsSet(LS_MSG_RATE, { last, times });
+  }
   function isStandalone() {
     return window.matchMedia && window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
   }
@@ -4503,20 +4540,6 @@
     return `${liked ? HEART_FILLED_SVG : HEART_OUTLINE_SVG} <span class="bd-chat-like-count">${getLikeCount(postId)}</span>`;
   }
   var LS_CHAT_SEEN = "cstl-chat-seen-v1";
-  function lsGet(key, fallback) {
-    try {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : fallback;
-    } catch {
-      return fallback;
-    }
-  }
-  function lsSet(key, value) {
-    try {
-      localStorage.setItem(key, JSON.stringify(value));
-    } catch {
-    }
-  }
   function getComments(postId) {
     return commentsByPost.get(postId) || [];
   }
@@ -4579,24 +4602,7 @@
       return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
-  var LS_MSG_RATE = "cstl-msg-rate-v1";
-  var FLOOD_MAX = 5;
-  var FLOOD_WINDOW = 15e3;
-  function isDuplicateMsg(text) {
-    return lsGet(LS_MSG_RATE, {}).last === text;
-  }
-  function isFlooding() {
-    const now = Date.now();
-    const times = (lsGet(LS_MSG_RATE, {}).times || []).filter((t) => now - t < FLOOD_WINDOW);
-    return times.length >= FLOOD_MAX;
-  }
-  function recordSentMsg(text) {
-    const now = Date.now();
-    const st = lsGet(LS_MSG_RATE, {});
-    const times = (st.times || []).filter((t) => now - t < FLOOD_WINDOW);
-    times.push(now);
-    lsSet(LS_MSG_RATE, { last: text, times });
-  }
+  var RATE_SCOPE = "disc";
   function msgWord(n) {
     const mod10 = n % 10, mod100 = n % 100;
     if (mod10 === 1 && mod100 !== 11)
@@ -5290,7 +5296,7 @@
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4e3, "error");
         return;
       }
-      if (isDuplicateMsg(text)) {
+      if (isDuplicateMsg(text, RATE_SCOPE)) {
         showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
         return;
       }
@@ -5298,7 +5304,7 @@
         showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434", 3500);
         return;
       }
-      recordSentMsg(text);
+      recordSentMsg(text, RATE_SCOPE);
       if (_discEditing && _discEditing.post_id === postId) {
         const target = _discEditing;
         const l0 = commentsByPost.get(postId) || [];
@@ -11366,6 +11372,20 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
     return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
   }
+  function commentErrorText(err) {
+    const e = String(err || "");
+    if (/нецензурн/i.test(e))
+      return "\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430";
+    if (/повтори символів|беззмістовн/i.test(e))
+      return "\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C";
+    if (/щойно це написали/i.test(e))
+      return "\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438";
+    if (/занадто швидко/i.test(e))
+      return "\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434";
+    if (/порожній/i.test(e))
+      return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439";
+    return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
+  }
   function commentRowHtml(c, reply = false) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
@@ -11674,6 +11694,19 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
       }
+      if (looksLikeSpam(text)) {
+        showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0438\u0439", 4e3, "error");
+        return;
+      }
+      const rateScope = `feed:${postId}`;
+      if (isDuplicateMsg(text, rateScope)) {
+        showToast("\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438", 3e3);
+        return;
+      }
+      if (isFlooding()) {
+        showToast("\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434", 3500);
+        return;
+      }
       if (!isLoggedIn()) {
         close();
         requireAuth("\u0437\u0430\u043B\u0438\u0448\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440", () => {
@@ -11686,6 +11719,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
       sendBtn.disabled = false;
       if (res.ok) {
+        recordSentMsg(text, rateScope);
         if (parentId)
           expandedThreads.add(parentId);
         applyCommentUpsert(res.comment);
@@ -11694,7 +11728,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         input.focus();
         requestAnimationFrame(() => revealRow(res.comment?.id));
       } else {
-        alert("\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E: " + (res.error || "\u043D\u0435\u0432\u0456\u0434\u043E\u043C\u0430 \u043F\u043E\u043C\u0438\u043B\u043A\u0430"));
+        showToast(commentErrorText(res.error), 4e3, "error");
       }
     };
     sendBtn.addEventListener("click", send);

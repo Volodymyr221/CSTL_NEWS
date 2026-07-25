@@ -6,7 +6,8 @@
 // Дата-шар — у core/supabase.js (pages/page_posts/page_reactions/page_comments/
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
-import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea } from '../core/utils.js';
+import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea,
+         looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -479,6 +480,18 @@ function pluralComments(n) {
   return 'коментарів';
 }
 
+// Помилка бази → людська підказка. Тригер trg_page_comments_antispam повертає
+// технічний текст («antispam: нецензурна лексика»), який людині нічого не пояснює.
+function commentErrorText(err) {
+  const e = String(err || '');
+  if (/нецензурн/i.test(e))                return '🚫 Коментар містить заборонені слова';
+  if (/повтори символів|беззмістовн/i.test(e)) return '🚫 Коментар схожий на спам';
+  if (/щойно це написали/i.test(e))        return 'Ви щойно це написали';
+  if (/занадто швидко/i.test(e))           return 'Занадто швидко — зачекайте кілька секунд';
+  if (/порожній/i.test(e))                 return 'Коментар порожній';
+  return 'Коментар не надіслано — спробуй ще раз';
+}
+
 // Рядок коментаря — три поверхи, як у Facebook і Instagram (звірено зі скрінами Вови
 // IMG_3607/IMG_3608, 25.07):
 //   1) імʼя жирним + час сірим ПОРУЧ
@@ -840,7 +853,17 @@ function openComments(postId, focusCommentId = null) {
   const send = async () => {
     const text = input.value.trim();
     if (!text) return;
+    // Фільтр матюків / спаму / дубля / флуду — блокуємо ДО відправки, тими самими
+    // перевірками що й Обговорення (core/utils.js). Раніше тут стояла лише перша
+    // з чотирьох, тож набір «фффф», повтор того самого і флуд проходили вільно.
+    // scope дубля — НА ПОСТ: «Дякую» під двома різними постами не є повтором.
+    // Рівно так само рахує серверний тригер trg_page_comments_antispam; якщо ці
+    // два правила розійдуться, людина побачить «надіслано», а база відхилить.
     if (containsProfanity(text)) { showToast('🚫 Коментар містить заборонені слова', 3500, 'error'); return; }
+    if (looksLikeSpam(text))     { showToast('🚫 Коментар схожий на спам і не надісланий', 4000, 'error'); return; }
+    const rateScope = `feed:${postId}`;
+    if (isDuplicateMsg(text, rateScope)) { showToast('Ви щойно це написали', 3000); return; }
+    if (isFlooding())                    { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
     if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
     sendBtn.disabled = true;
     const parentId = replyTarget ? replyTarget.parentId : null;
@@ -851,6 +874,9 @@ function openComments(postId, focusCommentId = null) {
     const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
     sendBtn.disabled = false;
     if (res.ok) {
+      // Лічильник флуду ведемо ЛИШЕ після успішної відправки — інакше невдала
+      // спроба (пропав інтернет) з'їдала б ліміт людині ні за що.
+      recordSentMsg(text, rateScope);
       // Відповів у згорнуту гілку — розгортаємо її ДО перемалювання, інакше власна
       // відповідь сховалась би під «Ще N», і вийшло б «я написав, а нічого не з'явилось».
       if (parentId) expandedThreads.add(parentId);
@@ -860,7 +886,10 @@ function openComments(postId, focusCommentId = null) {
       input.focus();                     // клавіатура лишається відкритою (як в Instagram)
       requestAnimationFrame(() => revealRow(res.comment?.id));   // показати щойно надіслане
     } else {
-      alert('Коментар не надіслано: ' + (res.error || 'невідома помилка'));  // без тихого провалу
+      // Сервер — другий рубіж (хтось міг обійти клієнта через API, або списки
+      // слів на двох рівнях розійшлись). Показуємо людську підказку, а не сирий
+      // текст помилки бази: «antispam: нецензурна лексика» нікому нічого не каже.
+      showToast(commentErrorText(res.error), 4000, 'error');   // без тихого провалу
     }
   };
   sendBtn.addEventListener('click', send);

@@ -15,7 +15,8 @@
 // board.js імпортує ЗВІДСИ (один напрямок): renderChatCard, openChatModal,
 // FAB-дії, handleLikeClick, attach*-ініціалізатори, handleDiscussionsAuthChange.
 
-import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle, autoGrowTextarea } from '../core/utils.js';
+import { escapeHtml, formatTime, postTime, showToast, containsProfanity, looksLikeSpam, avatarCircle, autoGrowTextarea,
+         lsGet, lsSet, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
 import { requireAuth, isLoggedIn, currentUserId, currentUserName } from '../core/auth.js';
 import {
   isSupabaseReady,
@@ -79,15 +80,7 @@ function likeBtnInner(postId) {
 
 const LS_CHAT_SEEN = 'cstl-chat-seen-v1';  // { postId: timestamp останнього перегляду теми (ms) }
 
-function lsGet(key, fallback) {
-  try {
-    const v = localStorage.getItem(key);
-    return v ? JSON.parse(v) : fallback;
-  } catch { return fallback; }
-}
-function lsSet(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
-}
+// lsGet/lsSet тепер спільні (core/utils.js) — ними користується і антифлуд «Стрічки».
 
 // ── Коментарі (з Supabase, in-memory map) ───────────────────────────────────
 
@@ -147,27 +140,11 @@ function newMsgLabel(n) {
 }
 
 // ── Антиспам/антифлуд для коментарів чату (per-device) ──────────────────────
-const LS_MSG_RATE = 'cstl-msg-rate-v1';  // { last: 'текст', times: [ts, ts, ...] }
-const FLOOD_MAX = 5;       // максимум повідомлень
-const FLOOD_WINDOW = 15000; // за 15 секунд
-// Чи це дубль попереднього надісланого повідомлення
-function isDuplicateMsg(text) {
-  return lsGet(LS_MSG_RATE, {}).last === text;
-}
-// Чи користувач шле занадто швидко (флуд)
-function isFlooding() {
-  const now = Date.now();
-  const times = (lsGet(LS_MSG_RATE, {}).times || []).filter(t => now - t < FLOOD_WINDOW);
-  return times.length >= FLOOD_MAX;
-}
-// Зафіксувати що повідомлення надіслано (після проходження перевірок)
-function recordSentMsg(text) {
-  const now = Date.now();
-  const st = lsGet(LS_MSG_RATE, {});
-  const times = (st.times || []).filter(t => now - t < FLOOD_WINDOW);
-  times.push(now);
-  lsSet(LS_MSG_RATE, { last: text, times });
-}
+// Механізм переїхав у core/utils.js (спільний зі «Стрічкою»). Тут лишається
+// лише scope: для Обговорень він ОДИН на всі теми — рівно як було раніше і як
+// рахує серверний тригер comments_antispam (останнє повідомлення автора взагалі,
+// без прив'язки до теми). Розійтись цим двом не можна.
+const RATE_SCOPE = 'disc';
 
 // Відмінювання слова «повідомлення» за числом (1 / 2-4 / 5+, з урахуванням 11-14)
 function msgWord(n) {
@@ -858,9 +835,9 @@ export function attachDiscussionsDelegation() {
     // Фільтр матюків / спаму / флуду — блокуємо ДО відправки
     if (containsProfanity(text)) { showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error'); return; }
     if (looksLikeSpam(text))     { showToast('🚫 Повідомлення схоже на спам і не надіслане', 4000, 'error'); return; }
-    if (isDuplicateMsg(text))    { showToast('Ви щойно це написали', 3000); return; }
-    if (isFlooding())            { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
-    recordSentMsg(text);
+    if (isDuplicateMsg(text, RATE_SCOPE)) { showToast('Ви щойно це написали', 3000); return; }
+    if (isFlooding())                     { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
+    recordSentMsg(text, RATE_SCOPE);
 
     // П7 — режим РЕДАГУВАННЯ: міняємо існуючий коментар (оптимістично + відкат)
     if (_discEditing && _discEditing.post_id === postId) {

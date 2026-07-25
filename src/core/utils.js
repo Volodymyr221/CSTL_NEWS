@@ -395,6 +395,64 @@ export function looksLikeSpam(text) {
   return false;
 }
 
+// ── localStorage (спільні читання/запис) ─────────────────────────────────────
+export function lsGet(key, fallback) {
+  try {
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : fallback;
+  } catch { return fallback; }
+}
+export function lsSet(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
+// ── Антифлуд і дублі (per-device) ────────────────────────────────────────────
+// Раніше ці три функції жили ВСЕРЕДИНІ board-discussions.js і були доступні
+// лише Обговоренням. Через це коментарі «Стрічки» не мали ні захисту від дубля,
+// ні від флуду — хоча код був написаний і працював поруч. Винесено сюди, щоб
+// обидва місця користувались одним механізмом, а не двома копіями.
+//
+// ДВА ЛІЧИЛЬНИКИ, НАВМИСНО РІЗНІ ЗА ОХОПЛЕННЯМ:
+//   times — швидкість письма, ОДНА на весь застосунок (інакше можна було б
+//           флудити по 5 повідомлень у кожну тему окремо і не впертись у ліміт);
+//   last  — останній текст, ОКРЕМО НА scope. «Дякую» під двома різними постами
+//           стрічки — не дубль; те саме під тим самим постом — дубль.
+// scope мусить збігатися з правилом на сервері, інакше людина побачить
+// «надіслано», а база мовчки відхилить (Обговорення = один спільний scope,
+// «Стрічка» = scope на пост — так само як у тригерах).
+const LS_MSG_RATE = 'cstl-msg-rate-v1';   // { last: { scope: 'текст' }, times: [ts, …] }
+const FLOOD_MAX = 5;                      // максимум повідомлень
+const FLOOD_WINDOW = 15000;               // за 15 секунд
+
+// Старий формат зберігав last рядком (один глобальний). Читаємо обидва, щоб
+// оновлення застосунку не спіткнулось об дані, які вже лежать на телефоні.
+function lastMap(st) {
+  return (st && st.last && typeof st.last === 'object') ? st.last : {};
+}
+
+// Чи це дубль попереднього надісланого в цьому ж місці
+export function isDuplicateMsg(text, scope = 'default') {
+  return lastMap(lsGet(LS_MSG_RATE, {}))[scope] === text;
+}
+
+// Чи людина пише занадто швидко (флуд) — рахується по всьому застосунку
+export function isFlooding() {
+  const now = Date.now();
+  const times = (lsGet(LS_MSG_RATE, {}).times || []).filter(t => now - t < FLOOD_WINDOW);
+  return times.length >= FLOOD_MAX;
+}
+
+// Зафіксувати що повідомлення надіслано (викликати ПІСЛЯ проходження перевірок)
+export function recordSentMsg(text, scope = 'default') {
+  const now = Date.now();
+  const st = lsGet(LS_MSG_RATE, {});
+  const times = (st.times || []).filter(t => now - t < FLOOD_WINDOW);
+  times.push(now);
+  const last = lastMap(st);
+  last[scope] = text;
+  lsSet(LS_MSG_RATE, { last, times });
+}
+
 
 // ── Середовище запуску (PWA / iOS) ───────────────────────────────────────────
 // Спільне джерело правди: раніше ті самі перевірки дублювались у install-banner.js,
