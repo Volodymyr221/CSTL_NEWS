@@ -441,8 +441,14 @@
 .fd-com-sheet--kb { padding-bottom: 8px; }
 .fd-com-title { text-align: center; margin-bottom: 0; padding-bottom: 10px;
   border-bottom: 1px solid var(--fd-divider); }
-.fd-com-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
-  padding: 12px 0; margin-bottom: 0; }
+/* Бічний відступ 10px — це «поле» для підкладки підсвіченого коментаря (вона виступає
+   на 8px). 🔑 Без нього підкладка вилазила за межі списку: у кореневих коментарів
+   рисочку ліворуч ОБРІЗАЛО (її не було видно), а сам список отримував горизонтальну
+   прокрутку — коментарі «плавали» вбік (скарга Вови 25.07, IMG_3604/3606).
+   overflow-x: hidden — страховка: коли overflow-y не visible, друга вісь однаково
+   перестає бути visible, тож краще явно заборонити, ніж отримати скрол. */
+.fd-com-list { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;
+  gap: 16px; padding: 12px 10px; margin-bottom: 0; }
 .fd-com-empty { color: var(--fd-muted); font-size: 14px; text-align: center; padding: 28px 20px; }
 .fd-com-row { display: flex; gap: 10px; align-items: flex-start; }
 .fd-com-ava { width: 34px; height: 34px; flex: none; cursor: pointer; }
@@ -488,8 +494,16 @@
 /* Контекст-бар «Відповідь для …» над компоузером.
    :not([hidden]) — щоб атрибут hidden реально ховав бар (інакше display:flex
    перебивав би [hidden]{display:none} з UA-стилю, і плашка не зникала). */
+/* Смуга «Відповідь для Імʼя» — прилегла до поля вводу, тож має читатись як частина
+   НИЗУ, а не як черговий коментар. Раніше зливалася зі списком (скарга Вови).
+   Відділяємо трьома дрібницями: власне тло (щоб список під нею не просвічував),
+   лінія-волосинка згори і мʼяка тінь угору — так само, як «шов» під шапкою. */
 .fd-com-replybar:not([hidden]) { display: flex; align-items: center; justify-content: space-between;
-  padding: 6px 4px 8px; font-size: 13px; color: var(--fd-muted); }
+  padding: 8px 4px 8px; font-size: 13px; color: var(--fd-muted);
+  background: var(--fd-surface);
+  border-top: 1px solid var(--fd-divider);
+  box-shadow: 0 -6px 12px -6px rgba(22, 24, 28, 0.16);
+  position: relative; z-index: 1; }
 .fd-com-replyx { flex: none; width: 24px; height: 24px; padding: 0; border: 0; background: none;
   cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
 .fd-com-replyx svg { width: 15px; height: 15px; }
