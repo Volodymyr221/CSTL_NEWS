@@ -735,11 +735,18 @@ async function openPageScreen(pageId, reopen = false) {
     <div class="fd-screen-top">
       ${canEdit ? `<button class="fd-screen-menu" type="button" aria-label="Меню сторінки">${IC_DOTS}</button>` : ''}
       <div class="fd-banner${page.banner_url ? ' fd-banner--view' : ''}">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}</div>
-      ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
-        <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button>
-        <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}Команда сторінки</button>
-      </div>` : ''}
     </div>
+    <!-- 🔑 Поповер меню «⋯» лежить НЕ в банері, а поруч із ним (Вова 25.07, скрін IMG_3578:
+         меню відкривалось ПІД аватаркою). Банер тепер position:sticky, а sticky САМ ПО СОБІ
+         створює окремий шар (stacking context) — навіть без z-index. Усе, що всередині нього,
+         замикається в цьому шарі, тож z-index поповера вже не міг перебити блок з аватаркою.
+         Тут поповер — прямий нащадок .fd-screen, тож його z-index знову рахується нарівні
+         з рештою блоків. Позиція не змінилась: .fd-screen-top теж починався з нуля, а
+         absolute-нащадок скрол-контейнера так само їде разом зі скролом. -->
+    ${canEdit ? `<div class="fd-screen-menu-pop" hidden>
+      <button class="fd-screen-menu-item" data-edit-page="${pageId}" type="button">${IC_EDIT}Редагувати сторінку</button>
+      <button class="fd-screen-menu-item" data-team-page="${pageId}" type="button">${IC_USERS}Команда сторінки</button>
+    </div>` : ''}
     <div class="fd-screen-body">
       <div class="fd-screen-id">
         <span class="fd-screen-ava-wrap">
