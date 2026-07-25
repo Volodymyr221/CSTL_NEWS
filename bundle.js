@@ -11421,6 +11421,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       branches.push(
         `<div class="fd-com-branch"><button class="fd-com-more" data-more-parent="${t.root.id}" type="button">\u0429\u0435 ${hidden} ${pluralReplies(hidden)}</button></div>`
       );
+    else if (expanded && t.replies.length > REPLIES_VISIBLE)
+      branches.push(
+        `<div class="fd-com-branch"><button class="fd-com-more" data-less-parent="${t.root.id}" type="button">\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456</button></div>`
+      );
     return `<div class="fd-com-thread fd-com-thread--branched">${rows.join("")}<div class="fd-com-replies">${branches.join("")}</div></div>`;
   }
   function patchCommentLike(id) {
@@ -11614,6 +11618,18 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           el.closest(".fd-com-branch")?.classList.add("fd-com-branch--in");
       });
     };
+    const collapseThread = (rootId) => {
+      const before = listEl.querySelector(`[data-less-parent="${rootId}"]`)?.getBoundingClientRect().top;
+      expandedThreads.delete(rootId);
+      renderCommentSheet();
+      const after = listEl.querySelector(`[data-more-parent="${rootId}"]`);
+      if (before == null || !after)
+        return;
+      const delta = after.getBoundingClientRect().top - before;
+      if (Math.abs(delta) >= 1)
+        listEl.scrollTop += delta;
+      revealInScroller(listEl, after);
+    };
     listEl.addEventListener("click", async (e) => {
       const like = e.target.closest("[data-com-like]");
       if (like) {
@@ -11623,6 +11639,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const more = e.target.closest("[data-more-parent]");
       if (more) {
         expandThread(Number(more.dataset.moreParent));
+        return;
+      }
+      const less = e.target.closest("[data-less-parent]");
+      if (less) {
+        collapseThread(Number(less.dataset.lessParent));
         return;
       }
       const rep = e.target.closest("[data-reply-parent]");
