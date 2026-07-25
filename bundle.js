@@ -10818,6 +10818,15 @@ ${ev.description || ""}`
       return `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy">`;
     return `<span class="${cls} ${cls}--ph">${letter}</span>`;
   }
+  var PINNED_PAGES = ["\u043E\u043B\u0438\u0446\u044C\u043A\u0430 \u043C\u0456\u0441\u044C\u043A\u0430 \u0440\u0430\u0434\u0430"];
+  var pinKey = (s) => (s || "").toLowerCase().replace(/[«»"']/g, "").replace(/\s+/g, " ").trim();
+  function orderPages(list) {
+    const rank = (p) => {
+      const i = PINNED_PAGES.indexOf(pinKey(p.name));
+      return i === -1 ? PINNED_PAGES.length : i;
+    };
+    return [...list].sort((a, b) => rank(a) - rank(b));
+  }
   async function loadData2() {
     const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([
       fetchPages(),
@@ -10828,7 +10837,7 @@ ${ev.description || ""}`
       isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
       isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
     ]);
-    pages = pg;
+    pages = orderPages(pg);
     posts = ps;
     reactionMap = rx;
     commentMap = cm;
