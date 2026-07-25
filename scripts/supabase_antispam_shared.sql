@@ -129,11 +129,12 @@ begin
     raise exception 'antispam: %', reason using errcode = 'check_violation';
   end if;
 
-  -- Рейт-ліміт і дубль — як було: 5 повідомлень / 15с + блок точного повтору.
+  -- Рейт-ліміт і дубль: 8 повідомлень / 15с + блок точного повтору.
+  -- Було 5 — послаблено 25.07 разом зі «Стрічкою», щоб межі не розходились.
   if NEW.sender_uid is not null then
     select count(*) into recent from public.comments
      where sender_uid = NEW.sender_uid and created_at > now() - interval '15 seconds';
-    if recent >= 5 then
+    if recent >= 8 then
       raise exception 'antispam: занадто швидко (зачекайте кілька секунд)' using errcode = 'check_violation';
     end if;
 
@@ -171,16 +172,20 @@ begin
 
   select count(*) into recent from public.page_comments
    where author_uid = NEW.author_uid and created_at > now() - interval '15 seconds';
-  if recent >= 5 then
+  if recent >= 8 then
     raise exception 'antispam: занадто швидко (зачекайте кілька секунд)' using errcode = 'check_violation';
   end if;
 
-  -- ВІДМІННІСТЬ ВІД ДОШКИ (навмисна): дубль рахується В МЕЖАХ ОДНОГО ПОСТА.
-  -- У стрічці нормально написати «Дякую» під двома різними постами поспіль —
-  -- глобальна перевірка «останнього повідомлення», як на Дошці, блокувала б
-  -- живу людину. Повтор того самого під ТИМ САМИМ постом — уже спам.
+  -- ВІДМІННІСТЬ ВІД ДОШКИ (навмисна): дубль рахується в межах ПОСТ + АДРЕСАТ.
+  -- У стрічці нормально написати «Дякую» під двома різними постами, і так само
+  -- нормально подякувати ДВОМ РІЗНИМ людям під ОДНИМ постом — на це впоролось
+  -- живе тестування (Вова 25.07). Спам — те саме слово ТІЙ САМІЙ людині вдруге.
+  -- `is not distinct from` — щоб null (кореневий коментар) порівнювався з null,
+  -- а не давав невизначеність, за якої умова ніколи не спрацьовує.
   select text into lasttext from public.page_comments
-   where author_uid = NEW.author_uid and post_id = NEW.post_id
+   where author_uid = NEW.author_uid
+     and post_id = NEW.post_id
+     and reply_to_uid is not distinct from NEW.reply_to_uid
    order by created_at desc limit 1;
   if lasttext is not null and lasttext = txt then
     raise exception 'antispam: ви щойно це написали' using errcode = 'check_violation';

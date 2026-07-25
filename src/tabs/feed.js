@@ -1027,24 +1027,27 @@ function openComments(postId, focusCommentId = null) {
   const send = async () => {
     const text = input.value.trim();
     if (!text) return;
-    // Фільтр матюків / спаму / дубля / флуду — блокуємо ДО відправки, тими самими
-    // перевірками що й Обговорення (core/utils.js). Раніше тут стояла лише перша
-    // з чотирьох, тож набір «фффф», повтор того самого і флуд проходили вільно.
-    // scope дубля — НА ПОСТ: «Дякую» під двома різними постами не є повтором.
-    // Рівно так само рахує серверний тригер trg_page_comments_antispam; якщо ці
-    // два правила розійдуться, людина побачить «надіслано», а база відхилить.
-    if (containsProfanity(text)) { showToast('🚫 Коментар містить заборонені слова', 3500, 'error'); return; }
-    if (looksLikeSpam(text))     { showToast('🚫 Коментар схожий на спам і не надісланий', 4000, 'error'); return; }
-    const rateScope = `feed:${postId}`;
-    if (isDuplicateMsg(text, rateScope)) { showToast('Ви щойно це написали', 3000); return; }
-    if (isFlooding())                    { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
-    if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
-    sendBtn.disabled = true;
     const parentId = replyTarget ? replyTarget.parentId : null;
     // Кому адресована відповідь. Собі самому згадку не ставимо — вона виглядала б безглуздо
     // («Віктор, …» у відповіді самого Віктора) і породила б сповіщення самому собі.
     const replyToUid = replyTarget && replyTarget.uid && replyTarget.uid !== currentUserId()
       ? replyTarget.uid : null;
+    // Фільтр матюків / спаму / дубля / флуду — блокуємо ДО відправки, тими самими
+    // перевірками що й Обговорення (core/utils.js).
+    //
+    // scope дубля — ПОСТ + АДРЕСАТ. Вова 25.07: «якщо я відповідаю одній людині на
+    // коментар "дякую" і другій людині хочу теж написати "дякую" то не можу, бо це
+    // спам розцінюється». Подякувати двом різним людям — нормальна поведінка;
+    // спам — це те саме слово ТІЙ САМІЙ людині вдруге.
+    // Рівно так само рахує серверний тригер trg_page_comments_antispam; якщо ці
+    // два правила розійдуться, людина побачить «надіслано», а база відхилить.
+    if (containsProfanity(text)) { showToast('🚫 Коментар містить заборонені слова', 3500, 'error'); return; }
+    if (looksLikeSpam(text))     { showToast('🚫 Коментар схожий на спам і не надісланий', 4000, 'error'); return; }
+    const rateScope = `feed:${postId}:${replyToUid || 'root'}`;
+    if (isDuplicateMsg(text, rateScope)) { showToast('Ви щойно це написали', 3000); return; }
+    if (isFlooding())                    { showToast('Занадто швидко — зачекайте кілька секунд', 3500); return; }
+    if (!isLoggedIn()) { close(); requireAuth('залишити коментар', () => {}); return; }
+    sendBtn.disabled = true;
     const res = await addPageComment(postId, currentUserId(), text, parentId, replyToUid);
     sendBtn.disabled = false;
     if (res.ok) {
