@@ -229,12 +229,21 @@
      БІЛЬШЕ з двох: висота за вмістом АБО сталий мінімум по геометрії іконок
      (10px їхній відступ згори + 38px сама іконка + 26px відступ під ними, з яких
      12px суцільного скла і 14px згасання). Коротка назва → працює мінімум (як було
-     до адаптивності); дві-три рядки → вміст переважає і скло тягнеться нижче. */
+     до адаптивності); дві-три рядки → вміст переважає і скло тягнеться нижче.
+     🔑 ВИСОТА СТАЛА, МІНЯЄТЬСЯ ЛИШЕ ПРОЗОРІСТЬ (Вова 25.07: «трошки ривками»). Раніше
+     висота множилась на --p, тобто РОСЛА щокадру — а це перерахунок розкладки і, головне,
+     ПЕРЕМАЛЬОВКА розмиття (backdrop-filter) на новому розмірі кожен кадр. На iPhone це
+     найдорожча операція в усьому ефекті. Тепер скло завжди повної висоти і просто
+     проявляється прозорістю — а прозорість малює відеокарта, без перерахунків. */
+  /* pointer-events:none — ОБОВ'ЯЗКОВО відколи висота стала сталою: скло тепер існує
+     завжди (просто прозоре), і без цього його невидима коробка перехоплювала б тапи
+     по кнопках «Дописи/Події» під нею. Раніше при --p=0 висота була 0 і питання не було. */
   content: ''; position: absolute; top: 0; left: 0; right: 0; z-index: -1; opacity: var(--p, 0);
-  height: calc(max(
+  pointer-events: none;
+  height: max(
       env(safe-area-inset-top, 0px) + (0.5 + 0.5 * var(--fd-pin-s, 0.78)) * var(--fd-th, 74px) + 22px,
       env(safe-area-inset-top, 0px) + 10px + 38px + 26px
-    ) * var(--p, 0));
+    );
   background: rgba(236, 238, 241, 0.72);
   -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
   -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 14px), transparent);
@@ -254,6 +263,37 @@
              scale(calc(1 - (1 - var(--fd-pin-s, 0.78)) * var(--p, 0)));
   transform-origin: center center; will-change: transform;
 }
+
+/* ── Зменшення заголовка НА РІВНІ СИСТЕМИ (Вова 25.07: «щоб геть плавно, як в нативному») ──
+   ПРОБЛЕМА: доти прогрес --p рахував JavaScript на кожну подію скролу. На iPhone
+   інерційний скрол (палець відпущено, сторінка летить сама) обробляє окремий потік,
+   і JS фізично не встигає за кожним кадром — звідси мікроступінчастість. Жоден
+   «оптимізований» JS цього не лікує: він завжди на крок позаду прокрутки.
+   РІШЕННЯ: прив'язати анімацію до самої прокрутки (scroll-driven animation) — тоді її
+   програє та сама підсистема, що рухає сторінку, кадр-у-кадр, без JS взагалі.
+   Саме так робить рідний iOS зі своїм великим заголовком.
+   Межі діапазону (--fd-a0/--fd-a1) один раз рахує feed.js — під час скролу JS мовчить.
+   Телефон без підтримки просто не побачить цей блок і працюватиме як досі (через --p). */
+@supports (animation-timeline: scroll()) {
+  .fd-screen-title-in {
+    animation: fd-pin-shrink linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: var(--fd-a0, 0px) var(--fd-a1, 60px);
+  }
+  .fd-screen-title::before {
+    animation: fd-pin-glass linear both;
+    animation-timeline: scroll(nearest);
+    animation-range: var(--fd-a0, 0px) var(--fd-a1, 60px);
+  }
+}
+/* Лише кінцевий кадр: початковий = базовий стиль елемента (той самий вигляд у спокої). */
+@keyframes fd-pin-shrink {
+  to {
+    transform: translateY(calc(env(safe-area-inset-top, 0px) + 8px))
+               scale(var(--fd-pin-s, 0.78));
+  }
+}
+@keyframes fd-pin-glass { to { opacity: 1; } }
 .fd-screen-back, .fd-bell, .fd-screen-menu {
   /* back/bell — усередині .fd-screen-fixedbar (sticky), тож absolute відносно нього →
      завжди на екрані при скролі. «⋯» — absolute у банері (прокручується). */

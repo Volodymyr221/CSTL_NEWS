@@ -11522,11 +11522,17 @@ ${ev.description || ""}`
         const s = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
         title.style.setProperty("--fd-pin-s", s.toFixed(3));
       };
+      const NATIVE_PIN = typeof CSS !== "undefined" && CSS.supports && CSS.supports("animation-timeline", "scroll()");
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
         measurePin();
         if (titleIn)
           title.style.setProperty("--fd-th", `${titleIn.offsetHeight}px`);
+        if (NATIVE_PIN) {
+          const a0 = Math.max(0, pinAt - RANGE - SETTLE);
+          title.style.setProperty("--fd-a0", `${a0}px`);
+          title.style.setProperty("--fd-a1", `${a0 + RANGE}px`);
+        }
       };
       const applyTitle = () => {
         tRaf = 0;
@@ -11537,14 +11543,17 @@ ${ev.description || ""}`
         if (!tRaf)
           tRaf = requestAnimationFrame(applyTitle);
       };
-      screen.addEventListener("scroll", onTitle, { passive: true });
+      if (!NATIVE_PIN)
+        screen.addEventListener("scroll", onTitle, { passive: true });
       window.addEventListener("resize", () => {
         measure();
-        onTitle();
+        if (!NATIVE_PIN)
+          onTitle();
       });
       requestAnimationFrame(() => {
         measure();
-        applyTitle();
+        if (!NATIVE_PIN)
+          applyTitle();
       });
     }
     document.body.appendChild(screen);
