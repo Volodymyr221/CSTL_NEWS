@@ -11181,10 +11181,11 @@ ${ev.description || ""}`
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
     const lr = comReactMap.get(c.id) || { count: 0, my: false };
+    const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : "";
     return `<div class="fd-com-row${reply ? " fd-com-row--reply" : ""}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ""}>
-      <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
+      <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, "fd-com-ava-img")}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
         <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <div class="fd-com-likewrap">
@@ -11330,6 +11331,21 @@ ${ev.description || ""}`
     replyTarget = null;
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
+    const comSheet = sheet.querySelector(".fd-com-sheet");
+    const vv = window.visualViewport;
+    let kbRaf = 0;
+    const syncKb = () => {
+      const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+      comSheet.style.setProperty("--kb", kb + "px");
+    };
+    const onVV = () => {
+      cancelAnimationFrame(kbRaf);
+      kbRaf = requestAnimationFrame(syncKb);
+    };
+    if (vv) {
+      vv.addEventListener("resize", onVV);
+      vv.addEventListener("scroll", onVV);
+    }
     const clearReply = () => {
       replyTarget = null;
       replyBar.hidden = true;
@@ -11348,6 +11364,11 @@ ${ev.description || ""}`
           el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
       });
     const close = () => {
+      if (vv) {
+        vv.removeEventListener("resize", onVV);
+        vv.removeEventListener("scroll", onVV);
+      }
+      cancelAnimationFrame(kbRaf);
       sheet.remove();
       if (openCommentSheet && openCommentSheet.back === sheet)
         openCommentSheet = null;

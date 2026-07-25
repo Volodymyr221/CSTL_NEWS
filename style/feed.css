@@ -427,18 +427,26 @@
 
 /* Коментарі — лист у стилі Instagram: висока панель, список скролиться,
    компоузер закріплений унизу. */
-.fd-com-sheet { display: flex; flex-direction: column; height: 82svh; overflow: hidden; }
+.fd-com-sheet { display: flex; flex-direction: column; height: 82svh; overflow: hidden;
+  /* Клавіатура (iOS): --kb = висота клавіатури (пише feed.js через visualViewport).
+     padding-bottom росте на неї → компоузер (нижня смуга вводу) підіймається над
+     клавіатурою, а список (flex:1) стискається. Верх (ручка+заголовок) СТОЇТЬ, бо
+     зовнішня висота листа 82svh не змінюється (box-sizing:border-box — padding
+     з'їдає внутрішній простір, не збільшує висоту). max(): без клавіатури — звичайний
+     відступ 16px+safe-area; з клавіатурою — 8px над нею (safe-area ховається клавіатурою). */
+  --kb: 0px;
+  padding-bottom: max(calc(16px + env(safe-area-inset-bottom, 0px)), calc(var(--kb) + 8px)); }
 .fd-com-title { text-align: center; margin-bottom: 0; padding-bottom: 10px;
   border-bottom: 1px solid var(--fd-divider); }
 .fd-com-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;
   padding: 12px 0; margin-bottom: 0; }
 .fd-com-empty { color: var(--fd-muted); font-size: 14px; text-align: center; padding: 28px 20px; }
 .fd-com-row { display: flex; gap: 10px; align-items: flex-start; }
-.fd-com-ava { width: 34px; height: 34px; flex: none; }
+.fd-com-ava { width: 34px; height: 34px; flex: none; cursor: pointer; }
 .fd-com-body { flex: 1; min-width: 0; line-height: 1.4; }
 /* Імʼя жирним і текст — в один абзац, що переноситься (як в Instagram). */
 .fd-com-line { font-size: 14px; color: var(--fd-ink); word-break: break-word; }
-.fd-com-name { font-weight: 700; }
+.fd-com-name { font-weight: 700; cursor: pointer; }
 .fd-com-txt { font-weight: 400; }
 .fd-com-meta { display: flex; gap: 14px; align-items: center; margin-top: 3px; }
 .fd-com-time { font-size: 12px; color: var(--fd-muted); }

@@ -474,10 +474,13 @@ function commentRowHtml(c, reply = false) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
   const lr = comReactMap.get(c.id) || { count: 0, my: false };
+  // data-av-uid на аватарі й імені → тап відкриває картку профілю (делегат
+  // initProfileCardTaps у profile-card.js слухає [data-av-uid] на document).
+  const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
-      <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
+      <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
         <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
@@ -613,6 +616,22 @@ function openComments(postId) {
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
 
+  // ── Клавіатура (iOS): підіймати ЛИШЕ нижню смугу вводу, верх листа лишати на місці ──
+  // Симптом раніше: фокус на полі → iOS автоскролив увесь лист угору, верх (заголовок)
+  // зникав. Причина: компоузер прибитий до низу, iOS «витягував» його з-під клавіатури,
+  // зсуваючи всю модалку. Фікс: рахуємо висоту клавіатури через visualViewport (видима
+  // область екрана) і пишемо її у CSS-змінну --kb → CSS росте padding-bottom листа, тож
+  // компоузер стає над клавіатурою, а зовнішній лист не рухається (верх стоїть).
+  const comSheet = sheet.querySelector('.fd-com-sheet');
+  const vv = window.visualViewport;
+  let kbRaf = 0;
+  const syncKb = () => {
+    const kb = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
+    comSheet.style.setProperty('--kb', kb + 'px');
+  };
+  const onVV = () => { cancelAnimationFrame(kbRaf); kbRaf = requestAnimationFrame(syncKb); };
+  if (vv) { vv.addEventListener('resize', onVV); vv.addEventListener('scroll', onVV); }
+
   const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
   const setReply = (parentId, name) => {
     replyTarget = { parentId, name };
@@ -628,6 +647,8 @@ function openComments(postId) {
   });
 
   const close = () => {
+    if (vv) { vv.removeEventListener('resize', onVV); vv.removeEventListener('scroll', onVV); }
+    cancelAnimationFrame(kbRaf);
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
   };
