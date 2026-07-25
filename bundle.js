@@ -11542,6 +11542,7 @@ ${ev.description || ""}`
       const SETTLE = 0;
       const titleIn = title.querySelector(".fd-screen-title-in");
       const glass = title.querySelector(".fd-screen-glass");
+      const dots = screen.querySelector(".fd-screen-menu");
       let pinScale = 0.78;
       let tyMax = 8;
       let lastP = -1;
@@ -11591,6 +11592,10 @@ ${ev.description || ""}`
         }
         if (glass)
           glass.style.opacity = p.toFixed(3);
+        if (dots) {
+          dots.style.opacity = (1 - p).toFixed(3);
+          dots.style.pointerEvents = p > 0.99 ? "none" : "";
+        }
       };
       const onTitle = () => {
         if (!tRaf)

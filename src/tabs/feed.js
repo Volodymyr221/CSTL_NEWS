@@ -849,6 +849,11 @@ async function openPageScreen(pageId, reopen = false) {
                                                       // Дьоргання нема бо висота розчеплена (transform, не потік).
     const titleIn = title.querySelector('.fd-screen-title-in');
     const glass   = title.querySelector('.fd-screen-glass');
+    // «⋯» згасає РАЗОМ із приходом назви у шапку (Вова 25.07: «вона займає місце у верхній
+    // шапці, треба щоб назва спільноти заміняла його або щоб воно пропадало»). Беремо той
+    // самий прогрес p, що вже рахується для назви — тож вони не можуть розсинхронізуватись,
+    // і жодного нового обробника скролу чи заміру на кадр не додається.
+    const dots = screen.querySelector('.fd-screen-menu');
     let pinScale = 0.78;   // цільовий масштаб у піні — рахує measurePin(), не кадр
     let tyMax = 8;         // на скільки текст опускається у піні (safe-area + 8), теж наперед
     let lastP = -1;        // останній записаний прогрес — щоб не писати те саме двічі
@@ -921,6 +926,12 @@ async function openPageScreen(pageId, reopen = false) {
           `translate3d(0, ${(tyMax * p).toFixed(2)}px, 0) scale(${(1 - (1 - pinScale) * p).toFixed(4)})`;
       }
       if (glass) glass.style.opacity = p.toFixed(3);
+      if (dots) {
+        dots.style.opacity = (1 - p).toFixed(3);
+        // Прозора кнопка все одно ловила б тапи — тому в піні її ще й вимикаємо.
+        // Поріг 0.99, а не 1: на дробових прогресах (0.997) вона вже невидима.
+        dots.style.pointerEvents = p > 0.99 ? 'none' : '';
+      }
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
     screen.addEventListener('scroll', onTitle, { passive: true });
