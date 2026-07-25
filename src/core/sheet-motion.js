@@ -162,3 +162,33 @@ export function centeredRemaining(panel) {
   const top = panel.getBoundingClientRect().top;
   return Math.max(window.innerHeight - top, 1);
 }
+
+// ── Замок скролу сторінки під час відкритого аркуша з полем вводу ──────────────
+// ЧОМУ: коли у position:fixed модалці фокусуєш <input>, iOS намагається скролити
+// ДОКУМЕНТ, щоб показати поле над клавіатурою, і тягне за собою всю фіксовану модалку —
+// вона «ховається за шапкою» + блимає. Якщо body зафіксувати (position:fixed), документ
+// скролитись не може: visualViewport.offsetTop лишається 0, і клавіатуру можна чисто
+// компенсувати відступом. Це той самий перевірений приклад, що вже стоїть у чатах
+// (core/chat-core.js setupKeyboardResize) — тут винесений у спільне, щоб будь-який
+// нижній аркуш із полем вводу (коментарі, майбутні) використовував ОДНУ механіку.
+// Повертає функцію-розблокування (викликати при закритті аркуша).
+export function lockBodyScroll() {
+  const b = document.body.style;
+  const scrollY = window.scrollY || 0;
+  const prev = { position: b.position, top: b.top, left: b.left, right: b.right, width: b.width, overflow: b.overflow };
+  b.position = 'fixed';
+  b.top      = `-${scrollY}px`;
+  b.left     = '0';
+  b.right    = '0';
+  b.width    = '100%';
+  b.overflow = 'hidden';
+  return () => {
+    b.position = prev.position;
+    b.top      = prev.top;
+    b.left     = prev.left;
+    b.right    = prev.right;
+    b.width    = prev.width;
+    b.overflow = prev.overflow;
+    window.scrollTo(0, scrollY);
+  };
+}
