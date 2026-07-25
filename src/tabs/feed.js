@@ -220,27 +220,43 @@ function openViewer(images, startIdx) {
 // шапки (перші ~64px) закриває ЗАВЖДИ; у тілі — лише коли скрол угорі (інакше це
 // звичайний скрол). back = .fd-sheet-back; panel = .fd-sheet; scroller = елемент,
 // що реально скролиться (для листа коментарів — сам список, інакше сам panel).
-function attachSheetSwipe(back, panel, scroller, doClose) {
+// grip — елемент, з якого ДОЗВОЛЕНО починати жест закриття. Якщо переданий, у решті
+// аркуша свайп не працює взагалі: там лише прокрутка.
+//
+// 🔑 НАВІЩО (Вова 25.07, про лист коментарів): «свайпом і взагалі не міг закрити…
+// тільки в рамках шапки, тобто де ця рисочка і зверху пише "7 коментарів"». Стара
+// поведінка хапала жест із будь-якого місця, щойно список був прокручений догори
+// (умова `scroller.scrollTop > 0` нижче) — а на верхівці списку людина опиняється
+// постійно, тож кожен рух «прогорнути вгору» ризикував закрити весь лист.
+//
+// Для решти аркушів (пост, сторінка, композер) grip не передається — поведінка та сама,
+// що була: там немає довгого списку, і закриття з будь-якого місця зручне.
+function attachSheetSwipe(back, panel, scroller, doClose, { grip = null } = {}) {
   scroller = scroller || panel;
+  const zone = grip || panel;          // де жест ПОЧИНАЄТЬСЯ і живуть слухачі
   let startY = 0, dragging = false, dy = 0, travel = 1;
   const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
   // Затемнення тут — САМ контейнер .fd-sheet-back, усередині якого лежить аркуш,
   // тож режим 'bg' (міняємо альфу кольору фону). Гасити прозорість не можна —
   // разом із фоном загас би й аркуш.
   const fade = createBackdropFade(back, 'bg');
-  panel.addEventListener('touchstart', e => {
+  zone.addEventListener('touchstart', e => {
     const y = e.touches[0].clientY;
-    const inHeader = (y - panel.getBoundingClientRect().top) < 64;
-    if (!inHeader && scroller.scrollTop > 0) return;   // це скрол тіла, не закриття
+    if (!grip) {                                       // старий режим: увесь аркуш
+      const inHeader = (y - panel.getBoundingClientRect().top) < 64;
+      if (!inHeader && scroller.scrollTop > 0) return; // це скрол тіла, не закриття
+    }
     startY = y; dragging = true; dy = 0;
     travel = Math.max(panel.offsetHeight || 1, 1);     // повний шлях аркуша — міряємо раз за жест
     drag.start(y);
   }, { passive: true });
-  panel.addEventListener('touchmove', e => {
+  zone.addEventListener('touchmove', e => {
     if (!dragging) return;
     dy = e.touches[0].clientY - startY;
     if (dy <= 0) { panel.style.transform = ''; fade?.track(0); return; }   // тягнуть вгору — нативному скролу
-    if (scroller.scrollTop > 0) {                            // ще прокручено — не хапаємо
+    // Перевірка прокрутки потрібна лише в старому режимі: у шапці прокручувати нічого,
+    // тож і віддавати жест нема кому.
+    if (!grip && scroller.scrollTop > 0) {                   // ще прокручено — не хапаємо
       panel.style.transform = ''; fade?.track(0);
       startY = e.touches[0].clientY; drag.start(startY); dy = 0; return;
     }
@@ -250,7 +266,7 @@ function attachSheetSwipe(back, panel, scroller, doClose) {
     fade?.track(dy / travel);                                // фон світлішає разом з рухом
     drag.move(e.touches[0].clientY);
   }, { passive: false });
-  panel.addEventListener('touchend', () => {
+  zone.addEventListener('touchend', () => {
     if (!dragging) return;
     dragging = false;
     // Доїзд рахує sheet-motion: кидок закриває навіть коротким рухом, а час
@@ -773,8 +789,10 @@ function openComments(postId, focusCommentId = null) {
   sheet.className = 'fd-sheet-back';
   sheet.innerHTML = `
     <div class="fd-sheet fd-com-sheet">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title fd-com-title">Коментарі</div>
+      <div class="fd-com-grip">
+        <div class="fd-sheet-handle"></div>
+        <div class="fd-sheet-title fd-com-title">Коментарі</div>
+      </div>
       <div class="fd-com-list"></div>
       <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
       <div class="fd-com-compose">
@@ -1015,7 +1033,22 @@ function openComments(postId, focusCommentId = null) {
   // Спершу в DOM, ТОДІ дротуємо жест: обробники читають реальні стилі елемента, а поза
   // документом браузер віддає порожнечу (через це фон спалахував чорним — див. sheet-motion.js).
   document.body.appendChild(sheet);
-  attachSheetSwipe(sheet, sheet.querySelector('.fd-sheet'), listEl, close);   // свайп-закриття
+  // Свайп-закриття ТІЛЬКИ за шапку (рисочка + «7 коментарів»). Усередині списку
+  // жест не існує — там лише прокрутка (Вова 25.07).
+  const gripEl = sheet.querySelector('.fd-com-grip');
+  attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl });
+  // Шапка лежить ПОВЕРХ списку (щоб коментарі їхали під неї), тож у списку треба
+  // звільнити під неї місце зверху. Висоту саме ВИМІРЮЄМО, а не прописуємо числом:
+  // вона залежить від шрифту й міжрядкового інтервалу пристрою, і будь-яка формула
+  // рано чи пізно розійшлась би з дійсністю (той самий принцип, що в core/keyboard.js).
+  const padTop = () => {
+    const h = gripEl.offsetHeight;
+    if (h) listEl.style.paddingTop = `${h + 12}px`;   // 12px — рідний верхній відступ списку
+  };
+  padTop();
+  // Заголовок міняється («Коментарі» → «7 коментарів») і в 1-2 слова може перенестись
+  // на другий рядок — тоді висота шапки інша. Стежимо, а не міряємо один раз.
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(padTop).observe(gripEl);
   detachKb = attachKeyboardSheet(sheet, comSheet, {                           // клавіатура: тільки після DOM
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
     // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
