@@ -616,25 +616,42 @@ function openComments(postId) {
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
   renderCommentSheet();
 
-  // ── Клавіатура (iOS): підіймати ЛИШЕ нижню смугу вводу, верх листа лишати на місці ──
-  // Два болі, які лікуємо (Вова: на 2-й фокус лист ховався за шапку + блимав):
-  //   1) БЕЗ замка скролу iOS на фокус скролить ДОКУМЕНТ, щоб показати поле, і тягне
-  //      position:fixed лист за собою (ховається за шапкою) + блимання. lockBodyScroll()
-  //      фіксує body → документ не скролиться, offsetTop visualViewport лишається 0.
-  //   2) висоту клавіатури беремо з visualViewport → пишемо у CSS-змінну --kb → CSS
-  //      росте padding-bottom листа: компоузер стає над клавіатурою, список стискається,
-  //      зовнішня висота листа (82svh) не міняється, тож ВЕРХ СТОЇТЬ.
-  // Той самий перевірений замок, що у чатах (core/chat-core.js) — тепер спільний.
+  // ── Клавіатура (iOS): верх листа стоїть, підіймається лише смуга вводу ──────────
+  // 🔑 ІСТОРІЯ ПОМИЛКИ (Вова 25.07: «верх з'їжджає, він не зафіксований»). Перша версія
+  // спиралась на хибну засновку: «замок body → документ не скролиться → offsetTop
+  // visualViewport лишається 0». НЕВІРНО: Safari на iOS зсуває ВИДИМУ область
+  // (visual viewport) окремо від скролу документа. Оверлей .fd-sheet-back прибитий до
+  // inset:0 РОЗМІТКИ сторінки — тож разом зі зсувом видимої області він їхав угору,
+  // і верх листа лізв під шапку. Замок body цьому не заважає взагалі.
+  // РІШЕННЯ — та сама перевірена механіка, що вже роками стоїть у чатах
+  // (core/chat-core.js setupKeyboardResize, board-discussions.js), з ДВОХ частин:
+  //   1) оверлей приклеюємо до ВИДИМОЇ області: top = vv.offsetTop, height = vv.height.
+  //      Тепер він завжди рівно там, де користувач бачить, хай як Safari зсуває сторінку.
+  //   2) лист коротшає рівно на висоту клавіатури (--kb → CSS height: 82svh − kb).
+  //      Низ сідає над клавіатурою, список (flex:1) стискається, а ВЕРХ лишається на
+  //      тому самому пікселі екрана: (видима висота) − (82svh − kb) = сталa величина.
+  // Замок скролу lockBodyScroll() лишаємо — він гасить смикання документа під пальцем.
   const comSheet = sheet.querySelector('.fd-com-sheet');
   const kbInput = sheet.querySelector('.fd-com-input');
   const unlockScroll = lockBodyScroll();
   const vv = window.visualViewport;
   let kbRaf = 0, kbFocused = false;
   const syncKb = () => {
-    // Лише коли поле У ФОКУСІ: під замком body значення vv.height буває «застряглим»
-    // після закриття клавіатури (як у chat-core) — без гейту лишався б зайвий відступ.
-    const raw = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-    comSheet.style.setProperty('--kb', (kbFocused ? raw : 0) + 'px');
+    // Висота клавіатури = наскільки видима область нижча за вікно. offsetTop сюди НЕ
+    // входить (його повністю бере на себе top оверлея) — саме на цьому й був баг.
+    const kb = vv ? Math.max(0, window.innerHeight - vv.height) : 0;
+    // «Відкрита» лише коли поле У ФОКУСІ і область помітно менша (поріг 80px, як у
+    // чатах): під замком body vv.height буває «застряглим» після закриття клавіатури.
+    const open = !!vv && kbFocused && kb > 80;
+    if (open) {
+      sheet.style.top    = vv.offsetTop + 'px';
+      sheet.style.bottom = 'auto';            // inset:0 задав і bottom — знімаємо, щоб діяла height
+      sheet.style.height = vv.height + 'px';
+    } else {
+      sheet.style.top = ''; sheet.style.bottom = ''; sheet.style.height = '';
+    }
+    comSheet.classList.toggle('fd-com-sheet--kb', open);
+    comSheet.style.setProperty('--kb', (open ? kb : 0) + 'px');
   };
   const onVV = () => { cancelAnimationFrame(kbRaf); kbRaf = requestAnimationFrame(syncKb); };
   const onKbFocus = () => { kbFocused = true; onVV(); };
