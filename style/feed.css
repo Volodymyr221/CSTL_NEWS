@@ -471,6 +471,15 @@
 .fd-com-list { flex: 1; overflow-y: auto; overflow-x: hidden; display: flex; flex-direction: column;
   gap: 16px; padding: 12px 10px; margin-bottom: 0; }
 .fd-com-empty { color: var(--fd-muted); font-size: 14px; text-align: center; padding: 28px 20px; }
+/* «Спробувати ще раз» у стані помилки завантаження. Пігулка в кольорі бренду —
+   щоб дія читалась як дія, а не як частина сірого пояснення над нею.
+   min-height 44px — мінімальна ціль для пальця за рекомендацією Apple; без неї
+   кнопка виходила 36px і в неї доводилось цілитись. */
+.fd-com-retry { display: inline-flex; align-items: center; justify-content: center;
+  margin-top: 14px; padding: 0 20px; min-height: 44px;
+  border: 1px solid var(--fd-accent); border-radius: 22px; background: none;
+  color: var(--fd-accent); font-family: inherit; font-size: 14px; font-weight: 600;
+  cursor: pointer; }
 .fd-com-row { display: flex; gap: 10px; align-items: flex-start; }
 .fd-com-ava { width: 34px; height: 34px; flex: none; cursor: pointer; }
 .fd-com-body { flex: 1; min-width: 0; line-height: 1.4; }

@@ -1106,8 +1106,12 @@ export const COMMENT_ROOTS_PAGE = 30;
 // beforeTs — час найстарішого вже завантаженого кореня («Показати попередні»).
 // Повертає { comments, hasMore } — comments уже відсортовані від старіших до
 // новіших, тобто в тому порядку, в якому їх малює лист.
+// ⚠️ Повертає `error`, а НЕ порожній список: порожньо і «не змогли завантажити» —
+// це різні речі, і плутати їх не можна. Порожній список малюється як «Ще немає
+// коментарів. Будьте першим!», тож обрив зв'язку на секунду виглядав би для людини
+// як зникнення всіх 40 коментарів під постом сільради.
 export async function fetchPostComments(postId, { beforeTs = null, limit = COMMENT_ROOTS_PAGE } = {}) {
-  if (!supa) return { comments: [], hasMore: false };
+  if (!supa) return { comments: [], hasMore: false, error: 'Supabase не підключений' };
   const cols = `${COMMENT_COLS}, reply_to_uid`;
 
   // +1 понад ліміт — дешевий спосіб дізнатись, чи є ще старіші, без окремого count.
@@ -1120,7 +1124,7 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
   };
   let { data: roots, error } = await rootsQ(cols);
   if (noSuchColumn(error)) ({ data: roots, error } = await rootsQ(COMMENT_COLS));
-  if (error) { console.warn('[supabase] fetchPostComments (кореневі):', error.message); return { comments: [], hasMore: false }; }
+  if (error) { console.warn('[supabase] fetchPostComments (кореневі):', error.message); return { comments: [], hasMore: false, error: error.message }; }
 
   roots = roots || [];
   const hasMore = roots.length > limit;
@@ -1132,7 +1136,9 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
     .eq('post_id', postId).is('deleted_at', null).in('parent_id', ids);
   let { data: replies, error: repErr } = await repQ(cols);
   if (noSuchColumn(repErr)) ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
-  if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); replies = []; }
+  // Відповіді теж вважаємо помилкою, а не «їх просто нема»: показати коріння без
+  // гілок — це та сама брехня, тільки тихіша (людина подумає, що їй не відповіли).
+  if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); return { comments: [], hasMore: false, error: repErr.message }; }
 
   const comments = [...roots, ...(replies || [])]
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));

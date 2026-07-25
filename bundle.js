@@ -1435,7 +1435,7 @@
   var COMMENT_ROOTS_PAGE = 30;
   async function fetchPostComments(postId, { beforeTs = null, limit = COMMENT_ROOTS_PAGE } = {}) {
     if (!supa)
-      return { comments: [], hasMore: false };
+      return { comments: [], hasMore: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const cols = `${COMMENT_COLS}, reply_to_uid`;
     const rootsQ = (c) => {
       let q = supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).is("parent_id", null).order("created_at", { ascending: false }).limit(limit + 1);
@@ -1448,7 +1448,7 @@
       ({ data: roots, error } = await rootsQ(COMMENT_COLS));
     if (error) {
       console.warn("[supabase] fetchPostComments (\u043A\u043E\u0440\u0435\u043D\u0435\u0432\u0456):", error.message);
-      return { comments: [], hasMore: false };
+      return { comments: [], hasMore: false, error: error.message };
     }
     roots = roots || [];
     const hasMore = roots.length > limit;
@@ -1463,7 +1463,7 @@
       ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
     if (repErr) {
       console.warn("[supabase] fetchPostComments (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456):", repErr.message);
-      replies = [];
+      return { comments: [], hasMore: false, error: repErr.message };
     }
     const comments = [...roots, ...replies || []].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     return { comments, hasMore };
@@ -11022,6 +11022,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var commentMap = /* @__PURE__ */ new Map();
   var commentCounts = /* @__PURE__ */ new Map();
   var commentPaging = /* @__PURE__ */ new Map();
+  var commentError = /* @__PURE__ */ new Map();
   var comReactMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
@@ -11070,6 +11071,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     mySubs = subs;
     commentMap = /* @__PURE__ */ new Map();
     commentPaging = /* @__PURE__ */ new Map();
+    commentError = /* @__PURE__ */ new Map();
     const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
     if (uids.length)
       await fetchAvatars(uids);
@@ -11542,6 +11544,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const total = commentCounts.get(postId) ?? list.length;
     if (titleEl)
       titleEl.textContent = total ? `${total} ${pluralComments(total)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    if (!commentMap.has(postId) && commentError.has(postId)) {
+      listEl.innerHTML = `<div class="fd-com-empty">
+        \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456.<br>\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0437\u0432'\u044F\u0437\u043E\u043A.
+        <button class="fd-com-retry" type="button" data-com-retry="${postId}">\u0421\u043F\u0440\u043E\u0431\u0443\u0432\u0430\u0442\u0438 \u0449\u0435 \u0440\u0430\u0437</button>
+      </div>`;
+      return;
+    }
     if (!commentMap.has(postId)) {
       listEl.innerHTML = `<div class="fd-com-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>`;
       return;
@@ -11613,10 +11622,18 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   async function loadComments(postId, { older = false } = {}) {
     const prev = older ? commentMap.get(postId) || [] : [];
     const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
-    const [{ comments, hasMore }, trueCount] = await Promise.all([
+    const [{ comments, hasMore, error }, trueCount] = await Promise.all([
       fetchPostComments(postId, { beforeTs, limit: commentsPageSize() }),
       older ? Promise.resolve(null) : fetchPostCommentCount(postId)
     ]);
+    if (error) {
+      if (older || commentMap.has(postId))
+        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0437\u0432'\u044F\u0437\u043E\u043A", 3500, "error");
+      else
+        commentError.set(postId, true);
+      return false;
+    }
+    commentError.delete(postId);
     if (trueCount != null)
       commentCounts.set(postId, trueCount);
     const seen = new Set(prev.map((c) => c.id));
@@ -11630,6 +11647,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const uids = [...new Set(merged.flatMap((c) => [c.author_uid, c.reply_to_uid]))].filter((u) => u && !cachedName(u));
     if (uids.length)
       await fetchAvatars(uids);
+    return true;
   }
   function openComments(postId, focusCommentId = null) {
     const myUid = currentUserId();
@@ -11767,6 +11785,16 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       }
     };
     listEl.addEventListener("click", async (e) => {
+      const retry = e.target.closest("[data-com-retry]");
+      if (retry) {
+        const id2 = Number(retry.dataset.comRetry);
+        commentError.delete(id2);
+        renderCommentSheet();
+        await loadComments(id2);
+        if (openCommentSheet && openCommentSheet.postId === id2)
+          renderCommentSheet();
+        return;
+      }
       const older = e.target.closest("[data-com-older]");
       if (older) {
         await loadOlder(older);

@@ -54,6 +54,7 @@ let reactionMap = new Map();  // post_id → { count, my }
 let commentMap = new Map();   // post_id → завантажені comments[] (лише для відкритих постів)
 let commentCounts = new Map();// post_id → скільки коментарів усього (для лічильника під карткою)
 let commentPaging = new Map();// post_id → { hasMore, oldestTs } — стан «Показати попередні»
+let commentError = new Map(); // post_id → true, якщо остання спроба завантажити впала
 let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
@@ -106,7 +107,7 @@ async function loadData() {
   pages = orderPages(pg); posts = ps; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
   // Самі коментарі не завантажені — вони тягнуться при відкритті листа. Скидаємо
   // кеш, щоб після оновлення стрічки не показати вчорашню гілку.
-  commentMap = new Map(); commentPaging = new Map();
+  commentMap = new Map(); commentPaging = new Map(); commentError = new Map();
 
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
@@ -668,6 +669,21 @@ function renderCommentSheet() {
   const total = commentCounts.get(postId) ?? list.length;
   if (titleEl) titleEl.textContent = total ? `${total} ${pluralComments(total)}` : 'Коментарі';
 
+  // ⚠️ ТРИ РІЗНІ СТАНИ, які раніше зливались в один порожній список:
+  //   є дані           → показуємо їх (навіть якщо остання спроба оновити впала);
+  //   даних нема + збій → екран помилки з кнопкою;
+  //   даних нема, збою нема → ще вантажиться.
+  // «Порожньо» (перший коментар) — лише всередині першої гілки, коли дані ПРИЙШЛИ
+  // і їх справді нуль. Без цього поділу обрив зв'язку показував «Ще немає
+  // коментарів. Будьте першим!» — тобто під постом із 40 коментарями людина бачила,
+  // що всі вони зникли, а вона перша.
+  if (!commentMap.has(postId) && commentError.has(postId)) {
+    listEl.innerHTML = `<div class="fd-com-empty">
+        Не вдалося завантажити коментарі.<br>Перевір зв'язок.
+        <button class="fd-com-retry" type="button" data-com-retry="${postId}">Спробувати ще раз</button>
+      </div>`;
+    return;
+  }
   if (!commentMap.has(postId)) {                       // ще вантажиться
     listEl.innerHTML = `<div class="fd-com-empty">Завантаження…</div>`;
     return;
@@ -754,10 +770,23 @@ async function loadComments(postId, { older = false } = {}) {
   const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
   // Перше відкриття — заразом звіряємо лічильник із базою (див. fetchPostCommentCount:
   // кроковий +1/−1 може розійтись, якщо realtime-подія загубилась або прийшла двічі).
-  const [{ comments, hasMore }, trueCount] = await Promise.all([
+  const [{ comments, hasMore, error }, trueCount] = await Promise.all([
     fetchPostComments(postId, { beforeTs, limit: commentsPageSize() }),
     older ? Promise.resolve(null) : fetchPostCommentCount(postId),
   ]);
+
+  // Запит упав. Порожнім списком НЕ підміняємо (див. fetchPostComments) і вже
+  // завантажене не витираємо: при обриві зв'язку на дозавантаженні старіших те, що
+  // людина вже читала, має лишитись на екрані.
+  if (error) {
+    // Екран помилки — ЛИШЕ коли показати нема чого. Якщо коментарі вже на екрані
+    // (дозавантаження старіших або повторне відкриття поста), перекривати їх
+    // помилкою гірше, ніж лишити прочитане на місці й сказати про збій тостом.
+    if (older || commentMap.has(postId)) showToast('Не вдалося завантажити — перевір зв\'язок', 3500, 'error');
+    else commentError.set(postId, true);
+    return false;
+  }
+  commentError.delete(postId);
   if (trueCount != null) commentCounts.set(postId, trueCount);
 
   // Дедуп за id: поки тривав запит, realtime міг уже покласти сюди свіжий коментар.
@@ -778,6 +807,7 @@ async function loadComments(postId, { older = false } = {}) {
   const uids = [...new Set(merged.flatMap(c => [c.author_uid, c.reply_to_uid]))]
     .filter(u => u && !cachedName(u));
   if (uids.length) await fetchAvatars(uids);
+  return true;
 }
 
 // focusCommentId — прийшли зі сповіщення: після відкриття підсвітити і дотягнути
@@ -958,6 +988,15 @@ function openComments(postId, focusCommentId = null) {
 
   // Дії в листі: лайк (♥) + «Відповісти» + «Ще N» / «Сховати відповіді» + видалення свого.
   listEl.addEventListener('click', async e => {
+    const retry = e.target.closest('[data-com-retry]');
+    if (retry) {
+      const id = Number(retry.dataset.comRetry);
+      commentError.delete(id);
+      renderCommentSheet();                    // «Завантаження…» замість помилки
+      await loadComments(id);
+      if (openCommentSheet && openCommentSheet.postId === id) renderCommentSheet();
+      return;
+    }
     const older = e.target.closest('[data-com-older]');
     if (older) { await loadOlder(older); return; }
     const like = e.target.closest('[data-com-like]');
