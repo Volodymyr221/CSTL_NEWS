@@ -367,8 +367,13 @@
 .fd-bell--warn { color: #B45309; }
 /* Тап по банеру/аватару → перегляд фото на весь екран. */
 .fd-banner--view, .fd-screen-ava--view { cursor: pointer; }
-/* Випадне меню «⋯» сторінки (адмін). */
-.fd-screen-menu-pop { position: absolute; z-index: 4; top: calc(52px + env(safe-area-inset-top, 0px));
+/* Випадне меню «⋯» сторінки (адмін).
+   🔑 ПРАВИЛО (Вова 25.07): «такі і подібні віконця мають відкриватися зверху всіх блоків
+   ЗАВЖДИ». Тому z-index 6 — вище за геть усе на екрані сторінки: блок з аватаркою (1),
+   sticky-заголовок (3), липкий бар back/dзвіночок (5). Сам елемент у розмітці лежить
+   прямим нащадком .fd-screen (див. feed.js) — інакше банер-sticky замикав би його
+   у своєму шарі і z-index не мав би сили. */
+.fd-screen-menu-pop { position: absolute; z-index: 6; top: calc(52px + env(safe-area-inset-top, 0px));
   right: 12px; background: var(--fd-surface); border-radius: 12px; padding: 6px;
   box-shadow: 0 8px 28px rgba(0,0,0,0.22); min-width: 190px; }
 .fd-screen-menu-item { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 12px;
