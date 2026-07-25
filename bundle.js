@@ -1322,7 +1322,7 @@
   async function fetchPages() {
     if (!supa)
       return [];
-    const { data, error } = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system").order("created_at", { ascending: true });
+    const { data, error } = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system, sort_order").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchPages:", error.message);
       return [];
@@ -10818,14 +10818,8 @@ ${ev.description || ""}`
       return `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy">`;
     return `<span class="${cls} ${cls}--ph">${letter}</span>`;
   }
-  var PINNED_PAGES = ["\u043E\u043B\u0438\u0446\u044C\u043A\u0430 \u043C\u0456\u0441\u044C\u043A\u0430 \u0440\u0430\u0434\u0430"];
-  var pinKey = (s) => (s || "").toLowerCase().replace(/[«»"']/g, "").replace(/\s+/g, " ").trim();
   function orderPages(list) {
-    const rank = (p) => {
-      const i = PINNED_PAGES.indexOf(pinKey(p.name));
-      return i === -1 ? PINNED_PAGES.length : i;
-    };
-    return [...list].sort((a, b) => rank(a) - rank(b));
+    return [...list].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0));
   }
   async function loadData2() {
     const [pg, ps, rx, cm, cr, mine, subs] = await Promise.all([

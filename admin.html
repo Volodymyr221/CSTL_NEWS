@@ -478,6 +478,9 @@ let admins         = [];
 let comments       = [];
 let articles       = [];      // чернетки/готове до публікації (cms_articles)
 let articleDraft   = null;    // null = список; об'єкт = форма створення/редагування
+let communities    = [];      // спільноти-канали «Стрічки» (pages), відсортовані за sort_order
+let ownerCounts    = {};      // page_id → кількість власників/адмінів (для підпису в списку)
+let communityEdit  = null;    // page_id який зараз редагуємо (null = ніхто)
 
 // ── ENTRY: перевіряємо сесію, або рендеримо login ──────────────────────
 async function init() {
@@ -714,18 +717,25 @@ VALUES ('${escapeHtml(currentUser.email)}', 'Імʼя');</code>
 async function loadAll() {
   // Дошкові дані — лише адмінам (у редактора RLS їх однаково не віддасть).
   if (isAdmin) {
-    const [pending, published, ann, ad, com] = await Promise.all([
+    const [pending, published, ann, ad, com, pg, padm] = await Promise.all([
       supa.from('posts').select('*').eq('status', 'pending').order('created_at', { ascending: false }),
       supa.from('posts').select('*').eq('status', 'published').order('published_at', { ascending: false, nullsLast: true }).limit(200),
       supa.from('announcements').select('*').order('created_at', { ascending: false }),
       supa.from('admins').select('*').order('created_at', { ascending: true }),
       supa.from('comments').select('id, post_id, author, text, created_at').order('created_at', { ascending: false }).limit(200),
+      // Спільноти-канали «Стрічки» — за порядком sort_order (керується тут же).
+      supa.from('pages').select('id, name, theme, avatar_url, banner_url, sort_order, is_system')
+          .order('sort_order', { ascending: true }).order('created_at', { ascending: true }),
+      supa.from('page_admins').select('page_id'),   // для підрахунку власників на картці
     ]);
     pendingPosts   = pending.data   || [];
     publishedPosts = published.data || [];
     announcements  = ann.data       || [];
     admins         = ad.data        || [];
     comments       = com.data       || [];
+    communities    = pg.data        || [];
+    ownerCounts    = {};
+    (padm.data || []).forEach(r => { ownerCounts[r.page_id] = (ownerCounts[r.page_id] || 0) + 1; });
   }
   // Статті — адмінам і редакторам із дозволом створення.
   if (isAdmin || editorPerms.canCreate) {
@@ -744,6 +754,8 @@ const ICO_FILE_TEXT = '<svg width="16" height="16" xmlns="http://www.w3.org/2000
 const ICO_COIN = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 12a9 9 0 1 0 18 0a9 9 0 1 0 -18 0" /> <path d="M14.8 9a2 2 0 0 0 -1.8 -1h-2a2 2 0 1 0 0 4h2a2 2 0 1 1 0 4h-2a2 2 0 0 1 -1.8 -1" /> <path d="M12 7v10" /> </svg>';
 const ICO_CHART_BAR = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M3 13a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v6a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -6" /> <path d="M15 9a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -10" /> <path d="M9 5a1 1 0 0 1 1 -1h4a1 1 0 0 1 1 1v14a1 1 0 0 1 -1 1h-4a1 1 0 0 1 -1 -1l0 -14" /> <path d="M4 20h14" /> </svg>';
 const ICO_SETTINGS = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M10.325 4.317c.426 -1.756 2.924 -1.756 3.35 0a1.724 1.724 0 0 0 2.573 1.066c1.543 -.94 3.31 .826 2.37 2.37a1.724 1.724 0 0 0 1.065 2.572c1.756 .426 1.756 2.924 0 3.35a1.724 1.724 0 0 0 -1.066 2.573c.94 1.543 -.826 3.31 -2.37 2.37a1.724 1.724 0 0 0 -2.572 1.065c-.426 1.756 -2.924 1.756 -3.35 0a1.724 1.724 0 0 0 -2.573 -1.066c-1.543 .94 -3.31 -.826 -2.37 -2.37a1.724 1.724 0 0 0 -1.065 -2.572c-1.756 -.426 -1.756 -2.924 0 -3.35a1.724 1.724 0 0 0 1.066 -2.573c-.94 -1.543 .826 -3.31 2.37 -2.37c1 .608 2.296 .07 2.572 -1.065" /> <path d="M9 12a3 3 0 1 0 6 0a3 3 0 0 0 -6 0" /> </svg>';
+// Спільноти-канали «Стрічки» (кружечки-сторінки) — іконка «broadcast/канал».
+const ICO_COMMUNITY = '<svg width="16" height="16" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"> <path d="M12 12m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0" /> <path d="M16.24 7.76a6 6 0 0 1 0 8.49m-8.48 -.01a6 6 0 0 1 0 -8.49m11.31 -2.83a10 10 0 0 1 0 14.14m-14.14 0a10 10 0 0 1 0 -14.14" /> </svg>';
 
 // ── APP VIEW: таби ────────────────────────────────────────────────────
 // Пункти меню — один список для сітки (головний екран) і для назви в шапці
@@ -757,6 +769,7 @@ function menuItems() {
     { id: 'announcements', icon: ICO_SPEAKERPHONE,   label: 'Оголошення',   show: isAdmin,     count: () => 0 },
     { id: 'published',     icon: ICO_CHECK,          label: 'Опубліковані', show: isAdmin,     count: () => publishedPosts.length },
     { id: 'comments',      icon: ICO_MESSAGE_CIRCLE, label: 'Коментарі',    show: isAdmin,     count: () => comments.length },
+    { id: 'communities',   icon: ICO_COMMUNITY,      label: 'Спільноти',    show: isAdmin,     count: () => communities.length },
     { id: 'admins',        icon: ICO_USERS,          label: 'Адміни',       show: isAdmin,     count: () => admins.length },
     { id: 'spend',         icon: ICO_COIN,           label: 'Витрати AI',   show: isAdmin,     count: () => 0 },
     { id: 'analytics',     icon: ICO_CHART_BAR,      label: 'Аналітика',    show: isAdmin,     count: () => 0 },
@@ -813,6 +826,7 @@ function renderTabContent() {
   if (activeTab === 'pending')        return renderPending(el);
   if (activeTab === 'published')      return renderPublished(el);
   if (activeTab === 'comments')       return renderCommentsModeration(el);
+  if (activeTab === 'communities')    return renderCommunities(el);
   if (activeTab === 'announcements')  return renderAnnouncements(el);
   if (activeTab === 'admins')         return renderAdmins(el);
   if (activeTab === 'spend')          return renderSpend(el);
@@ -1488,6 +1502,266 @@ function renderAnnouncements(el) {
 }
 
 // ── TAB 3: адміни ─────────────────────────────────────────────────────
+// ── TAB: Спільноти (канали «Стрічки») ─────────────────────────────────
+// Створення / порядок кружечків / видалення спільнот + керування власниками.
+// База (RLS + RPC): scripts/supabase_pages_admin.sql. Форма — за зразком
+// renderAdmins/renderArticleForm; аватар/банер — uploadCommunityImage (бакет
+// community-photos, як uploadArticlePhoto). profiles закриті RLS, тому власник
+// по email іде через RPC admin_create_community / admin_find_uid_by_email.
+let ccDraft = { avatar_url: null, banner_url: null };
+
+async function uploadCommunityImage(file) {
+  const safe = (file.name || 'img').replace(/[^\w.\-]/g, '_');
+  const path = `communities/${currentUser.id}/${Date.now()}_${safe}`;
+  const { error } = await supa.storage.from('community-photos').upload(path, file, { upsert: false });
+  if (error) { showToast('Не вдалося завантажити фото: ' + error.message, 4000); return null; }
+  const { data } = supa.storage.from('community-photos').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
+
+// Прив'язати <input type=file> до прев'ю і зберегти URL у target[field].
+function bindCommunityUpload(inputId, prevId, target, field, isAvatar) {
+  const inp = document.getElementById(inputId);
+  if (!inp) return;
+  inp.addEventListener('change', async e => {
+    const file = e.target.files[0]; if (!file) return;
+    const prev = document.getElementById(prevId);
+    if (prev) prev.innerHTML = 'Завантаження…';
+    const url = await uploadCommunityImage(file);
+    if (url) {
+      target[field] = url;
+      if (prev) prev.innerHTML = `<img src="${url}" style="height:${isAvatar ? 54 : 90}px;border-radius:${isAvatar ? '50%' : '8px'};object-fit:cover;display:block;margin:6px 0">`;
+    } else if (prev) prev.innerHTML = '<span style="color:#c33">Не вдалося</span>';
+  });
+}
+
+// Укр. відмінювання «власник» за кількістю.
+function pluralOwners(n) {
+  const a = n % 10, b = n % 100;
+  if (a === 1 && b !== 11) return 'власник';
+  if (a >= 2 && a <= 4 && (b < 10 || b >= 20)) return 'власники';
+  return 'власників';
+}
+
+// Розшифровка помилок RPC у людську мову.
+function ccErr(error) {
+  const m = (error.message || '') + ' ' + (error.details || '') + ' ' + (error.hint || '');
+  if (m.includes('EMAIL_NOT_FOUND')) return 'Жителя з таким email не знайдено (він має бути зареєстрований у додатку)';
+  if (m.includes('EMPTY_NAME'))      return 'Вкажи назву спільноти';
+  if (m.includes('NOT_ADMIN'))       return 'Немає прав адміна';
+  if (m.includes('NO_OWNER'))        return 'Признач хоча б одного власника';
+  return 'Помилка: ' + (error.message || 'невідома');
+}
+
+// Рядок спільноти у списку (аватар · назва · тема/власники · дії · стрілки порядку).
+function ccRow(p, i) {
+  const n = ownerCounts[p.id] || 0;
+  const av = p.avatar_url
+    ? `<img src="${escapeHtml(p.avatar_url)}" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex:none">`
+    : `<div style="width:44px;height:44px;border-radius:50%;background:#eee;display:flex;align-items:center;justify-content:center;flex:none;color:#999;font-weight:700">${escapeHtml((p.name || '?').slice(0, 1).toUpperCase())}</div>`;
+  const first = i === 0, last = i === communities.length - 1;
+  return `<article class="card" style="display:flex;align-items:center;gap:12px">
+    ${av}
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600">${escapeHtml(p.name)}${p.is_system ? ' <span class="badge" style="background:#e0e0e0;color:#555">системна</span>' : ''}</div>
+      <div style="font-size:13px;color:#666">${escapeHtml(p.theme || '—')} · ${n} ${pluralOwners(n)}</div>
+      <div style="margin-top:6px;display:flex;gap:6px">
+        <button class="btn" data-cc-edit="${p.id}" style="padding:5px 10px;font-size:13px">✏ Редагувати</button>
+        <button class="btn btn--delete" data-cc-del="${p.id}" data-cc-name="${escapeHtml(p.name)}" style="padding:5px 10px;font-size:13px">🗑 Видалити</button>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:4px;flex:none">
+      <button class="btn" data-cc-move="up"   data-cc-id="${p.id}" ${first ? 'disabled' : ''} style="padding:4px 9px${first ? ';opacity:.3' : ''}">⬆</button>
+      <button class="btn" data-cc-move="down" data-cc-id="${p.id}" ${last ? 'disabled' : ''} style="padding:4px 9px${last ? ';opacity:.3' : ''}">⬇</button>
+    </div>
+  </article>`;
+}
+
+async function moveCommunity(id, dir) {
+  const idx = communities.findIndex(p => p.id === id);
+  if (idx === -1) return;
+  const swapIdx = dir === 'up' ? idx - 1 : idx + 1;
+  if (swapIdx < 0 || swapIdx >= communities.length) return;
+  const a = communities[idx], b = communities[swapIdx];
+  let sa = a.sort_order, sb = b.sort_order;
+  if (sa === sb) { sa = idx + 1; sb = swapIdx + 1; }   // старі дані (0/0) — рознести за індексом
+  const [r1, r2] = await Promise.all([
+    supa.from('pages').update({ sort_order: sb }).eq('id', a.id),
+    supa.from('pages').update({ sort_order: sa }).eq('id', b.id),
+  ]);
+  if (r1.error || r2.error) return showToast('Не вдалося змінити порядок', 3500);
+  await loadAll(); renderApp();
+}
+
+async function deleteCommunity(id, name) {
+  if (!confirm(`Видалити спільноту «${name}»?\n\nРАЗОМ З НЕЮ НАЗАВЖДИ зникнуть УСІ її пости, коментарі, лайки та підписки. Це не можна відмінити.`)) return;
+  const { error } = await supa.from('pages').delete().eq('id', id);
+  if (error) return showToast('Не вдалося видалити: ' + error.message, 4500);
+  showToast('Спільноту видалено');
+  communityEdit = null;
+  await loadAll(); renderApp();
+}
+
+function renderCommunities(el) {
+  if (communityEdit != null) return renderCommunityEdit(el);
+
+  el.innerHTML = `
+    <form class="add-form" id="cc-form">
+      <div class="add-form-title">+ Створити нову спільноту</div>
+      <input class="input" id="cc-name"  type="text" placeholder="Назва спільноти *" autocomplete="off">
+      <input class="input" id="cc-theme" type="text" placeholder="Тема / категорія (напр. Культура)" autocomplete="off">
+
+      <div style="display:flex;gap:12px;margin:6px 0">
+        <label style="flex:1;font-size:13px;color:#555">Аватар (кружечок)
+          <div id="cc-avatar-prev"></div>
+          <input class="input" id="cc-avatar" type="file" accept="image/*" style="margin-top:4px">
+        </label>
+        <label style="flex:1;font-size:13px;color:#555">Банер (шапка)
+          <div id="cc-banner-prev"></div>
+          <input class="input" id="cc-banner" type="file" accept="image/*" style="margin-top:4px">
+        </label>
+      </div>
+
+      <div class="section-title" style="margin-top:8px">Власники (хоча б один)</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:14px;margin:4px 0">
+        <input type="checkbox" id="cc-self" checked>
+        Я маю доступ (${escapeHtml(currentUser.email)})
+      </label>
+      <input class="input" id="cc-owner-email" type="email" placeholder="Додати власника по email (опційно)" autocomplete="off">
+      <p style="font-size:12px;color:#999;margin:2px 0 8px">Порожнє → власником стаю я. Email → цей житель теж власник (має бути зареєстрований у додатку).</p>
+
+      <button class="btn btn--primary" type="submit" id="cc-submit">Створити спільноту</button>
+    </form>
+
+    <div class="section-title">Спільноти (${communities.length}) <span style="font-weight:400;color:#999;font-size:12px">· порядок = кружечки у стрічці</span></div>
+    <div id="cc-list">${communities.map((p, i) => ccRow(p, i)).join('') || '<p style="color:#999">Ще нема жодної спільноти.</p>'}</div>
+  `;
+
+  ccDraft = { avatar_url: null, banner_url: null };
+  bindCommunityUpload('cc-avatar', 'cc-avatar-prev', ccDraft, 'avatar_url', true);
+  bindCommunityUpload('cc-banner', 'cc-banner-prev', ccDraft, 'banner_url', false);
+
+  document.getElementById('cc-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name  = document.getElementById('cc-name').value.trim();
+    const theme = document.getElementById('cc-theme').value.trim();
+    const self  = document.getElementById('cc-self').checked;
+    const email = document.getElementById('cc-owner-email').value.trim();
+    if (!name) return showToast('Вкажи назву спільноти');
+    if (!self && !email) return showToast('Признач хоча б одного власника: постав галочку або впиши email');
+    const btn = document.getElementById('cc-submit');
+    btn.disabled = true; btn.textContent = 'Створюю…';
+    const { error } = await supa.rpc('admin_create_community', {
+      p_name: name, p_theme: theme || null,
+      p_avatar_url: ccDraft.avatar_url, p_banner_url: ccDraft.banner_url,
+      p_self_owner: self, p_owner_email: email || null,
+    });
+    btn.disabled = false; btn.textContent = 'Створити спільноту';
+    if (error) return showToast(ccErr(error), 4500);
+    showToast('Спільноту створено ✓');
+    await loadAll(); renderApp();
+  });
+
+  el.querySelectorAll('[data-cc-move]').forEach(b => b.addEventListener('click', () => moveCommunity(+b.dataset.ccId, b.dataset.ccMove)));
+  el.querySelectorAll('[data-cc-edit]').forEach(b => b.addEventListener('click', () => { communityEdit = +b.dataset.ccEdit; renderApp(); }));
+  el.querySelectorAll('[data-cc-del]').forEach(b => b.addEventListener('click', () => deleteCommunity(+b.dataset.ccDel, b.dataset.ccName)));
+}
+
+// Рядок власника в екрані редагування.
+function cceOwnerRow(o) {
+  const roleBadge = o.role === 'owner'
+    ? '<span class="badge" style="background:#C5E1A5;color:#2e5e1f">власник</span>'
+    : '<span class="badge">адмін</span>';
+  return `<article class="card" style="display:flex;align-items:center;gap:10px;padding:10px 12px">
+    <div style="flex:1;min-width:0">
+      <div style="font-weight:600">${escapeHtml(o.name || '—')} ${roleBadge}</div>
+      <div style="font-size:13px;color:#666">${escapeHtml(o.email || o.uid)}</div>
+    </div>
+    <button class="btn btn--delete" data-cco-del="${escapeHtml(o.uid)}" style="padding:5px 10px;font-size:13px">🗑</button>
+  </article>`;
+}
+
+async function renderCommunityEdit(el) {
+  const p = communities.find(c => c.id === communityEdit);
+  if (!p) { communityEdit = null; return renderCommunities(el); }
+  el.innerHTML = '<p style="color:#999">Завантаження…</p>';
+  const { data: owners } = await supa.rpc('admin_page_owners', { p_page_id: p.id });
+  const ed = { avatar_url: p.avatar_url, banner_url: p.banner_url };
+
+  el.innerHTML = `
+    <button class="btn" id="cce-back" style="margin-bottom:12px">← До списку спільнот</button>
+    <form class="add-form" id="cce-form">
+      <div class="add-form-title">✏ Редагувати «${escapeHtml(p.name)}»</div>
+      <input class="input" id="cce-name"  type="text" value="${escapeHtml(p.name)}" autocomplete="off">
+      <input class="input" id="cce-theme" type="text" value="${escapeHtml(p.theme || '')}" placeholder="Тема / категорія" autocomplete="off">
+      <div style="display:flex;gap:12px;margin:6px 0">
+        <label style="flex:1;font-size:13px;color:#555">Аватар
+          <div id="cce-avatar-prev">${p.avatar_url ? `<img src="${escapeHtml(p.avatar_url)}" style="height:54px;border-radius:50%;object-fit:cover;display:block;margin:6px 0">` : ''}</div>
+          <input class="input" id="cce-avatar" type="file" accept="image/*">
+        </label>
+        <label style="flex:1;font-size:13px;color:#555">Банер
+          <div id="cce-banner-prev">${p.banner_url ? `<img src="${escapeHtml(p.banner_url)}" style="height:54px;border-radius:8px;object-fit:cover;display:block;margin:6px 0">` : ''}</div>
+          <input class="input" id="cce-banner" type="file" accept="image/*">
+        </label>
+      </div>
+      <button class="btn btn--primary" type="submit">Зберегти зміни</button>
+    </form>
+
+    <div class="section-title">Власники</div>
+    <div id="cce-owners">${(owners || []).map(o => cceOwnerRow(o)).join('') || '<p style="color:#c33">Нема власників — додай нижче</p>'}</div>
+    <form class="add-form" id="cce-owner-form" style="margin-top:10px">
+      <div class="add-form-title" style="font-size:14px">+ Додати власника</div>
+      <input class="input" id="cce-owner-email" type="email" placeholder="email жителя" autocomplete="off">
+      <button class="btn btn--primary" type="submit">Додати</button>
+    </form>
+  `;
+
+  bindCommunityUpload('cce-avatar', 'cce-avatar-prev', ed, 'avatar_url', true);
+  bindCommunityUpload('cce-banner', 'cce-banner-prev', ed, 'banner_url', false);
+
+  document.getElementById('cce-back').addEventListener('click', () => { communityEdit = null; renderApp(); });
+
+  document.getElementById('cce-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const name = document.getElementById('cce-name').value.trim();
+    if (!name) return showToast('Назва не може бути порожня');
+    const patch = {
+      name,
+      theme: document.getElementById('cce-theme').value.trim() || null,
+      avatar_url: ed.avatar_url, banner_url: ed.banner_url,
+    };
+    const { error } = await supa.from('pages').update(patch).eq('id', p.id);
+    if (error) return showToast('Не вдалося зберегти: ' + error.message, 4500);
+    showToast('Збережено ✓');
+    await loadAll(); renderApp();
+  });
+
+  document.getElementById('cce-owner-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('cce-owner-email').value.trim();
+    if (!email) return;
+    const { data: uid, error } = await supa.rpc('admin_find_uid_by_email', { p_email: email });
+    if (error) return showToast(ccErr(error), 4000);
+    if (!uid) return showToast('Жителя з таким email не знайдено', 4000);
+    const { error: e2 } = await supa.from('page_admins').insert({ page_id: p.id, uid, role: 'owner' });
+    if (e2) {
+      if (e2.code === '23505') return showToast('Цей житель вже власник');
+      return showToast('Помилка: ' + e2.message, 4000);
+    }
+    showToast('Власника додано ✓');
+    renderApp();   // communityEdit лишається → перерендер екрана з новим власником
+  });
+
+  el.querySelectorAll('[data-cco-del]').forEach(b => b.addEventListener('click', async () => {
+    const uid = b.dataset.ccoDel;
+    if (!confirm('Прибрати цього власника зі спільноти? Він втратить право писати від її імені.')) return;
+    const { error } = await supa.from('page_admins').delete().eq('page_id', p.id).eq('uid', uid);
+    if (error) return showToast('Помилка: ' + error.message, 4000);
+    showToast('Прибрано');
+    renderApp();
+  }));
+}
+
 function renderAdmins(el) {
   el.innerHTML = `
     <form class="add-form" id="admin-form">

@@ -1012,7 +1012,8 @@ export async function fetchAnalyticsSummary(periodDays = 7) {
 export async function fetchPages() {
   if (!supa) return [];
   const { data, error } = await supa.from('pages')
-    .select('id, name, theme, avatar_url, banner_url, is_system')
+    .select('id, name, theme, avatar_url, banner_url, is_system, sort_order')
+    .order('sort_order', { ascending: true })
     .order('created_at', { ascending: true });
   if (error) { console.warn('[supabase] fetchPages:', error.message); return []; }
   return data || [];
