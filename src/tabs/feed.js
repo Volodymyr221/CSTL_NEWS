@@ -478,11 +478,16 @@ function commentRowHtml(c, reply = false) {
   // data-av-uid на аватарі й імені → тап відкриває картку профілю (делегат
   // initProfileCardTaps у profile-card.js слухає [data-av-uid] на document).
   const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : '';
-  return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
+  // data-com-id — щоб було за що вхопитись підсвітці й підтягуванню (раніше рядок не
+  // мав ідентифікатора взагалі). Клас --replying ставиться ТУТ, а не лише в DOM:
+  // список перемальовується цілком щоразу, коли приходить чужий коментар (realtime),
+  // і без цього підсвітка зникала б посеред набору відповіді.
+  const replying = replyTarget && replyTarget.commentId === c.id ? ' fd-com-row--replying' : '';
+  return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}${replying}" data-com-id="${c.id}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
       <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
         <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -588,6 +593,9 @@ function applyCommentRemove(c) {
   const arr = commentMap.get(c.post_id);
   if (!arr) return;
   commentMap.set(c.post_id, arr.filter(x => x.id !== c.id));
+  // Адресата відповіді видалили (сам автор або інший адмін) поки ми писали — режим
+  // відповіді тихо скидаємо: підсвічувати нема що, і смуга «Відповідь для…» брехала б.
+  if (replyTarget && replyTarget.commentId === c.id) openCommentSheet?.clearReply?.();
   if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
   patchCommentCount(c.post_id);
 }
@@ -628,13 +636,40 @@ function openComments(postId) {
   // розкладку, а поза документом браузер віддає нулі (та сама пастка, що у свайпу).
   let detachKb = () => {};
 
-  const clearReply = () => { replyTarget = null; replyBar.hidden = true; };
-  const setReply = (parentId, name) => {
-    replyTarget = { parentId, name };
+  // Підсвітка адресата: знімаємо з усіх, ставимо потрібному. Через DOM, а не
+  // перемалюванням списку — інакше збився б скрол просто від тапу «Відповісти».
+  const paintReply = () => {
+    listEl.querySelectorAll('.fd-com-row--replying').forEach(r => r.classList.remove('fd-com-row--replying'));
+    if (!replyTarget) return;
+    listEl.querySelector(`[data-com-id="${replyTarget.commentId}"]`)?.classList.add('fd-com-row--replying');
+  };
+  // Підтягнути адресата у видиму зону — ТІЛЬКИ якщо його не видно (зайвий рух гірший
+  // за його відсутність). Міряємо в межах самого списку: клавіатура його вже стиснула,
+  // тож «видима зона» = висота списку. Запас 12px, щоб рядок не липнув до краю.
+  const revealRow = (id) => {
+    const row = listEl.querySelector(`[data-com-id="${id}"]`);
+    if (!row) return;
+    const lr = listEl.getBoundingClientRect(), rr = row.getBoundingClientRect();
+    const under = rr.bottom - (lr.bottom - 12);      // наскільки заліз під низ
+    const above = (lr.top + 12) - rr.top;            // наскільки вийшов за верх
+    if (under <= 0 && above <= 0) return;            // видно повністю — не чіпаємо
+    listEl.scrollBy({ top: under > 0 ? under : -above, behavior: 'smooth' });
+  };
+  const revealReply = () => { if (replyTarget) revealRow(replyTarget.commentId); };
+  const clearReply = () => { replyTarget = null; replyBar.hidden = true; paintReply(); };
+  if (openCommentSheet) openCommentSheet.clearReply = clearReply;   // щоб realtime міг скинути режим
+  const setReply = (parentId, name, commentId) => {
+    replyTarget = { parentId, name, commentId };
     replyTo.textContent = `Відповідь для ${name}`;
     replyBar.hidden = false;
+    paintReply();
     sheet.querySelector('.fd-com-input')?.focus();
+    // Перший прохід — поки клавіатура ще їде; другий (після її появи) робить
+    // onKeyboard нижче, коли список уже стиснувся до реального розміру.
+    requestAnimationFrame(revealReply);
   };
+  // Окремий гачок на перемалювання НЕ потрібен: клас підсвітки ставить сам
+  // commentRowHtml за станом replyTarget, тож він відновлюється разом зі списком.
   sheet.querySelector('.fd-com-replyx').addEventListener('click', clearReply);
   // Свій аватар/ім'я для компоузера могли бути не в кеші — дотягнути й оновити.
   if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
@@ -657,7 +692,9 @@ function openComments(postId) {
     const rep = e.target.closest('[data-reply-parent]');
     if (rep) {
       const uid = rep.dataset.replyUid;
-      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель');
+      // parent — корінь гілки (відповіді у 2 рівні), commentId — САМЕ той рядок, на
+      // якому натиснули: підсвічувати треба його, а не корінь.
+      setReply(Number(rep.dataset.replyParent), (uid && cachedName(uid)) || 'Житель', Number(rep.dataset.replyId));
       return;
     }
     const del = e.target.closest('[data-del-com]');
@@ -684,7 +721,8 @@ function openComments(postId) {
       applyCommentUpsert(res.comment);   // одразу показати свій (realtime продублює — дедуп)
       input.value = '';
       clearReply();
-      input.focus();
+      input.focus();                     // клавіатура лишається відкритою (як в Instagram)
+      requestAnimationFrame(() => revealRow(res.comment?.id));   // показати щойно надіслане
     } else {
       alert('Коментар не надіслано: ' + (res.error || 'невідома помилка'));  // без тихого провалу
     }
@@ -698,6 +736,9 @@ function openComments(postId) {
   attachSheetSwipe(sheet, sheet.querySelector('.fd-sheet'), listEl, close);   // свайп-закриття
   detachKb = attachKeyboardSheet(sheet, comSheet, {                           // клавіатура: тільки після DOM
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
+    // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
+    // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
+    onOpen: revealReply,
   });
   requestAnimationFrame(() => sheet.classList.add('open'));
 }
