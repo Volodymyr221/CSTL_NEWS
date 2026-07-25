@@ -427,15 +427,22 @@
 
 /* Коментарі — лист у стилі Instagram: висока панель, список скролиться,
    компоузер закріплений унизу. */
-.fd-com-sheet { display: flex; flex-direction: column; height: 82svh; overflow: hidden;
+.fd-com-sheet { display: flex; flex-direction: column; overflow: hidden;
   /* Клавіатура (iOS): --kb = висота клавіатури (пише feed.js через visualViewport).
-     padding-bottom росте на неї → компоузер (нижня смуга вводу) підіймається над
-     клавіатурою, а список (flex:1) стискається. Верх (ручка+заголовок) СТОЇТЬ, бо
-     зовнішня висота листа 82svh не змінюється (box-sizing:border-box — padding
-     з'їдає внутрішній простір, не збільшує висоту). max(): без клавіатури — звичайний
-     відступ 16px+safe-area; з клавіатурою — 8px над нею (safe-area ховається клавіатурою). */
+     У цей час оверлей .fd-sheet-back прибитий до ВИДИМОЇ області (top=vv.offsetTop,
+     height=vv.height) — та сама механіка, що в чатах (core/chat-core.js). Лист коротшає
+     рівно на клавіатуру: низ сідає над нею, список (flex:1) стискається, а ВЕРХ
+     лишається на тому самому пікселі екрана — (видима висота) − (82svh − kb) стала.
+     max(180px) — запобіжник від схлопування, коли клавіатура вища за сам лист (малий
+     екран + велика клавіатура): 180px — це ручка+заголовок+смуга вводу і ще один
+     коментар. У цьому крайньому випадку верх свідомо зсувається — інакше листа не
+     було б видно взагалі. max-height:100% — щоб лист ніколи не виліз за видиму область. */
   --kb: 0px;
-  padding-bottom: max(calc(16px + env(safe-area-inset-bottom, 0px)), calc(var(--kb) + 8px)); }
+  height: max(180px, calc(82svh - var(--kb)));
+  max-height: 100%;
+  padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+/* Клавіатура відкрита: safe-area знизу накрита нею — лишаємо рівно 8px до клавіатури. */
+.fd-com-sheet--kb { padding-bottom: 8px; }
 .fd-com-title { text-align: center; margin-bottom: 0; padding-bottom: 10px;
   border-bottom: 1px solid var(--fd-divider); }
 .fd-com-list { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 16px;

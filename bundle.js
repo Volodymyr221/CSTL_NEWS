@@ -15,13 +15,10 @@
     return layer;
   }
   function closeLayer(layer, opts = {}) {
-    if (!layer || layer.closed)
-      return;
+    if (!layer || layer.closed) return;
     const go = () => {
-      if (stack[stack.length - 1] === layer)
-        history.back();
-      else
-        finish(layer);
+      if (stack[stack.length - 1] === layer) history.back();
+      else finish(layer);
     };
     if (opts.animate && typeof layer.animateOut === "function") {
       layer.animating = true;
@@ -36,10 +33,8 @@
   }
   function finish(layer) {
     const i = stack.indexOf(layer);
-    if (i >= 0)
-      stack.splice(i, 1);
-    if (layer.closed)
-      return;
+    if (i >= 0) stack.splice(i, 1);
+    if (layer.closed) return;
     layer.closed = true;
     try {
       layer.close();
@@ -49,29 +44,22 @@
   }
   window.addEventListener("popstate", () => {
     const top = stack[stack.length - 1];
-    if (top)
-      finish(top);
+    if (top) finish(top);
   });
 
   // src/core/utils.js
   function formatTime(value) {
-    if (!value)
-      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
+    if (!value) return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
     const ts = typeof value === "string" ? new Date(value).getTime() : value;
-    if (!ts || isNaN(ts))
-      return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
+    if (!ts || isNaN(ts)) return "\u043D\u0435\u0434\u0430\u0432\u043D\u043E";
     const diff = Date.now() - ts;
-    if (diff < 6e4)
-      return "\u0449\u043E\u0439\u043D\u043E";
-    if (diff < 36e5)
-      return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
-    if (diff < 864e5)
-      return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
+    if (diff < 6e4) return "\u0449\u043E\u0439\u043D\u043E";
+    if (diff < 36e5) return Math.floor(diff / 6e4) + " \u0445\u0432 \u0442\u043E\u043C\u0443";
+    if (diff < 864e5) return Math.floor(diff / 36e5) + " \u0433\u043E\u0434 \u0442\u043E\u043C\u0443";
     return new Date(ts).toLocaleDateString("uk-UA", { day: "numeric", month: "long" });
   }
   function postTime(p) {
-    if (!p)
-      return null;
+    if (!p) return null;
     return p.ts || p.published_at || p.created_at || null;
   }
   function escapeHtml(s) {
@@ -84,8 +72,7 @@
       return `<span class="${cls} ${cls}--img"${idAttr}><img src="${escapeHtml(safeUrl)}" alt="" loading="lazy"></span>`;
     }
     const a = String(name || "").trim();
-    if (!a)
-      return `<span class="${cls} ${cls}--anon"${idAttr}>\u{1F464}</span>`;
+    if (!a) return `<span class="${cls} ${cls}--anon"${idAttr}>\u{1F464}</span>`;
     const letter = a.charAt(0).toUpperCase();
     const hue = a.charCodeAt(0) * 47 % 360;
     return `<span class="${cls}" style="background:hsl(${hue}deg 62% 74%)"${idAttr}>${escapeHtml(letter)}</span>`;
@@ -112,8 +99,7 @@
     });
   }
   function autoGrowTextarea(el) {
-    if (!el)
-      return;
+    if (!el) return;
     const fit = () => {
       el.style.height = "auto";
       el.style.height = el.scrollHeight + "px";
@@ -163,8 +149,7 @@
   var OLYKA_COORDS = { lat: 50.7333, lon: 25.8167 };
   var _coordsPromise = null;
   function getCoords() {
-    if (_coordsPromise)
-      return _coordsPromise;
+    if (_coordsPromise) return _coordsPromise;
     _coordsPromise = new Promise((resolve) => {
       if (!navigator.geolocation) {
         resolve({ ...OLYKA_COORDS, city: "\u041E\u043B\u0438\u043A\u0430" });
@@ -203,8 +188,7 @@
         await navigator.share(shareData);
         return true;
       } catch (err) {
-        if (err && err.name === "AbortError")
-          return false;
+        if (err && err.name === "AbortError") return false;
       }
     }
     try {
@@ -231,8 +215,7 @@
     toast._hideTimer = setTimeout(() => toast.classList.remove("visible"), duration);
   }
   function openPhotoLightbox(url) {
-    if (!url)
-      return;
+    if (!url) return;
     const ov = document.createElement("div");
     ov.className = "pm-lightbox";
     ov.innerHTML = `<img src="${escapeHtml(url)}" alt="\u0444\u043E\u0442\u043E">`;
@@ -438,23 +421,18 @@
     const norm = normalizeForFilter(text);
     const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
     for (const w of words) {
-      if (PROFANITY_EXACT.has(w))
-        return true;
-      if (PROFANITY_STEMS.some((s) => w.startsWith(s)))
-        return true;
+      if (PROFANITY_EXACT.has(w)) return true;
+      if (PROFANITY_STEMS.some((s) => w.startsWith(s))) return true;
     }
     const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
-    if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
-      return true;
+    if (PROFANITY_SQUASH.some((s) => squashed.includes(s))) return true;
     const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1"));
     for (const one of ["i", "l"]) {
       const v = latinBase.replace(/1/g, one);
       for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
-        if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
-          return true;
+        if (PROFANITY_LATIN.some((s) => w.startsWith(s))) return true;
       }
-      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s)))
-        return true;
+      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s))) return true;
     }
     return false;
   }
@@ -463,8 +441,7 @@
     const doy = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / 864e5);
     const decl = -23.44 * rad * Math.cos(2 * Math.PI / 365 * (doy + 10));
     const cosH = (Math.cos(90.833 * rad) - Math.sin(lat * rad) * Math.sin(decl)) / (Math.cos(lat * rad) * Math.cos(decl));
-    if (cosH < -1 || cosH > 1)
-      return null;
+    if (cosH < -1 || cosH > 1) return null;
     const H = Math.acos(cosH) / rad;
     const B = 2 * Math.PI * (doy - 81) / 364;
     const eot = 9.87 * Math.sin(2 * B) - 7.53 * Math.cos(B) - 1.5 * Math.sin(B);
@@ -478,13 +455,10 @@
   }
   function looksLikeSpam(text) {
     const t = String(text || "").trim();
-    if (t.length === 1)
-      return true;
-    if (/(.)\1{5,}/.test(t))
-      return true;
+    if (t.length === 1) return true;
+    if (/(.)\1{5,}/.test(t)) return true;
     const letters = t.replace(/[^а-яіїєґa-zА-ЯІЇЄҐA-Z]/g, "");
-    if (letters.length >= 12 && !/[аеиіоуяюєїёauoiey]/i.test(letters))
-      return true;
+    if (letters.length >= 12 && !/[аеиіоуяюєїёauoiey]/i.test(letters)) return true;
     return false;
   }
   function isStandalone() {
@@ -515,20 +489,17 @@
     return supa !== null;
   }
   async function isTeamMember() {
-    if (!supa)
-      return false;
+    if (!supa) return false;
     try {
       const { data, error } = await supa.rpc("is_team_member");
-      if (error)
-        return false;
+      if (error) return false;
       return data === true;
     } catch {
       return false;
     }
   }
   async function fetchPublishedPosts() {
-    if (!supa)
-      return null;
+    if (!supa) return null;
     const { data, error } = await supa.from("posts").select("*").eq("status", "published").order("bumped_at", { ascending: false, nullsLast: true }).limit(200);
     if (error) {
       console.warn("[supabase] fetchPublishedPosts error:", error.message);
@@ -537,8 +508,7 @@
     return data;
   }
   async function submitPost(payload) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const { data, error } = await supa.rpc("submit_board_post", { payload });
     if (error) {
       console.warn("[supabase] submitPost error:", error);
@@ -550,8 +520,7 @@
     return { ok: true, status: data && data.status || "pending" };
   }
   async function submitDiscussion(payload) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const nowIso = (/* @__PURE__ */ new Date()).toISOString();
     const row = {
       ...payload,
@@ -568,8 +537,7 @@
     return { ok: true };
   }
   async function fetchPublishedAnnouncements() {
-    if (!supa)
-      return null;
+    if (!supa) return null;
     const { data, error } = await supa.from("announcements").select("*").eq("status", "published").order("pinned", { ascending: false }).order("published_at", { ascending: false, nullsLast: true }).limit(50);
     if (error) {
       console.warn("[supabase] fetchPublishedAnnouncements error:", error.message);
@@ -591,8 +559,7 @@
     }
   }
   async function fetchAllReactions(anonId) {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
+    if (!supa) return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("reactions").select("post_id, user_id, emoji");
     if (error) {
       console.warn("[supabase] fetchAllReactions error:", error.message);
@@ -600,32 +567,26 @@
     }
     const map = /* @__PURE__ */ new Map();
     for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { counts: {}, my: null });
+      if (!map.has(r.post_id)) map.set(r.post_id, { counts: {}, my: null });
       const e = map.get(r.post_id);
       e.counts[r.emoji] = (e.counts[r.emoji] || 0) + 1;
-      if (r.user_id === anonId)
-        e.my = r.emoji;
+      if (r.user_id === anonId) e.my = r.emoji;
     }
     return map;
   }
   async function setReaction(postId, userId, emoji) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (emoji == null) {
       const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId);
-      if (error2)
-        return { ok: false, error: error2.message };
+      if (error2) return { ok: false, error: error2.message };
       return { ok: true };
     }
     const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" });
-    if (error)
-      return { ok: false, error: error.message };
+    if (error) return { ok: false, error: error.message };
     return { ok: true };
   }
   async function fetchAllComments() {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
+    if (!supa) return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("comments").select("id, post_id, author, text, created_at, sender_uid, reply_to_id, edited_at, deleted_at, client_tag").order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchAllComments error:", error.message);
@@ -633,60 +594,48 @@
     }
     const map = /* @__PURE__ */ new Map();
     for (const c of data || []) {
-      if (!map.has(c.post_id))
-        map.set(c.post_id, []);
+      if (!map.has(c.post_id)) map.set(c.post_id, []);
       map.get(c.post_id).push(c);
     }
     return map;
   }
   async function addComment(postId, author, text, senderUid, { replyToId = null, clientTag = null } = {}) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const row = { post_id: postId, author: author || null, text };
-    if (senderUid)
-      row.sender_uid = senderUid;
-    if (replyToId)
-      row.reply_to_id = replyToId;
-    if (clientTag)
-      row.client_tag = clientTag;
+    if (senderUid) row.sender_uid = senderUid;
+    if (replyToId) row.reply_to_id = replyToId;
+    if (clientTag) row.client_tag = clientTag;
     try {
       const { data, error } = await withTimeout(supa.from("comments").insert(row).select().single());
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       return { ok: true, comment: data };
     } catch (e) {
       return { ok: false, error: e.message };
     }
   }
   async function editComment(commentId, text) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     try {
       const { data, error } = await withTimeout(supa.from("comments").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       return { ok: true, comment: data };
     } catch (e) {
       return { ok: false, error: e.message };
     }
   }
   async function deleteComment(commentId) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     try {
       const { data, error } = await withTimeout(supa.from("comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: "" }).eq("id", commentId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       return { ok: true, comment: data };
     } catch (e) {
       return { ok: false, error: e.message };
     }
   }
   async function uploadPhotoToStorage(blob, folder = "") {
-    if (!supa)
-      return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    if (!blob)
-      return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
+    if (!supa) return { url: null, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!blob) return { url: null, error: "\u041F\u043E\u0440\u043E\u0436\u043D\u0456\u0439 blob" };
     const ext = blob.type && blob.type.split("/")[1] || "jpg";
     const rand = Math.random().toString(36).slice(2, 10);
     const path = `${folder}${getAnonId()}/${Date.now()}-${rand}.${ext}`;
@@ -719,8 +668,7 @@
   }
   async function fetchAvatars(uids) {
     const need = [...new Set(uids)].filter((u) => u && !_avatarCache.has(u));
-    if (!supa || !need.length)
-      return;
+    if (!supa || !need.length) return;
     try {
       const { data, error } = await supa.rpc("get_avatars", { uids: need });
       if (error) {
@@ -730,30 +678,25 @@
       (data || []).forEach((r) => {
         if (r && r.uid) {
           _avatarCache.set(r.uid, r.avatar_url || "");
-          if (r.name)
-            _nameCache.set(r.uid, r.name);
+          if (r.name) _nameCache.set(r.uid, r.name);
         }
       });
       need.forEach((u) => {
-        if (!_avatarCache.has(u))
-          _avatarCache.set(u, "");
+        if (!_avatarCache.has(u)) _avatarCache.set(u, "");
       });
     } catch (_) {
       need.forEach((u) => _avatarCache.set(u, ""));
     }
   }
   async function hydrateAvatars(root) {
-    if (!root || !root.querySelectorAll)
-      return;
+    if (!root || !root.querySelectorAll) return;
     const els2 = [...root.querySelectorAll("[data-av-circle][data-av-uid]")].filter((e) => !e.dataset.avDone);
-    if (!els2.length)
-      return;
+    if (!els2.length) return;
     await fetchAvatars(els2.map((e) => e.dataset.avUid));
     els2.forEach((el) => {
       el.dataset.avDone = "1";
       const url = cachedAvatar(el.dataset.avUid);
-      if (!url)
-        return;
+      if (!url) return;
       const base = el.classList[0];
       el.classList.add(base + "--img");
       el.style.background = "none";
@@ -761,34 +704,28 @@
     });
   }
   async function hydrateNames(root) {
-    if (!root || !root.querySelectorAll)
-      return;
+    if (!root || !root.querySelectorAll) return;
     const els2 = [...root.querySelectorAll("[data-name-uid]")].filter((e) => !e.dataset.nameDone);
-    if (!els2.length)
-      return;
+    if (!els2.length) return;
     await fetchAvatars(els2.map((e) => e.dataset.nameUid));
     els2.forEach((el) => {
       el.dataset.nameDone = "1";
       const nm = cachedName(el.dataset.nameUid);
-      if (nm)
-        el.textContent = nm;
+      if (nm) el.textContent = nm;
     });
   }
   async function fetchPublicProfile(uid) {
-    if (!supa || !uid)
-      return null;
+    if (!supa || !uid) return null;
     try {
       const { data, error } = await supa.rpc("get_public_profile", { p_uid: uid });
-      if (error)
-        return null;
+      if (error) return null;
       return (Array.isArray(data) ? data[0] : data) || null;
     } catch (_) {
       return null;
     }
   }
   async function fetchMyPosts(uid) {
-    if (!supa || !uid)
-      return [];
+    if (!supa || !uid) return [];
     const { data, error } = await supa.from("posts").select("*").eq("owner_uid", uid).neq("type", "chat").order("created_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyPosts:", error.message);
@@ -797,8 +734,7 @@
     return data || [];
   }
   async function bumpPost(postId) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("bump_post", { p_id: postId });
     if (error) {
       console.warn("[supabase] bumpPost:", error.message);
@@ -807,8 +743,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function closePost(postId) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("close_post", { p_id: postId });
     if (error) {
       console.warn("[supabase] closePost:", error.message);
@@ -817,8 +752,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function deleteMyPost(postId) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("delete_my_post", { p_id: postId });
     if (error) {
       console.warn("[supabase] deleteMyPost:", error.message);
@@ -827,8 +761,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function restorePost(postId) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("restore_post", { p_id: postId });
     if (error) {
       console.warn("[supabase] restorePost:", error.message);
@@ -837,8 +770,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function updateBoardPost(postId, payload) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const { data, error } = await supa.rpc("update_board_post", { p_id: postId, payload });
     if (error) {
       console.warn("[supabase] updateBoardPost error:", error);
@@ -850,8 +782,7 @@
     return { ok: true, status: data && data.status || "pending" };
   }
   async function fetchMyGroups() {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     const { data, error } = await supa.from("chat_groups").select("*").order("last_message_at", { ascending: false, nullsFirst: false }).order("created_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyGroups:", error.message);
@@ -860,8 +791,7 @@
     return data || [];
   }
   async function createGroup({ name, description = null, type = "locality", emoji = null, gradient = null }) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("create_group", {
       p_name: name,
       p_description: description,
@@ -876,8 +806,7 @@
     return { ok: true, id: data };
   }
   async function createGroupInvite(groupId, requiresApproval = false) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("create_group_invite", { p_gid: groupId, p_requires_approval: requiresApproval });
     if (error) {
       console.warn("[supabase] createGroupInvite:", error.message);
@@ -886,8 +815,7 @@
     return { ok: true, token: data };
   }
   async function getGroupByInvite(token) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("get_group_by_invite", { p_token: token });
     if (error) {
       console.warn("[supabase] getGroupByInvite:", error.message);
@@ -896,8 +824,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function joinGroupByToken(token) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("join_group_by_token", { p_token: token });
     if (error) {
       console.warn("[supabase] joinGroupByToken:", error.message);
@@ -906,8 +833,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function leaveGroup(groupId) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("leave_group", { p_gid: groupId });
     if (error) {
       console.warn("[supabase] leaveGroup:", error.message);
@@ -916,8 +842,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function approveMember(groupId, uid) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("approve_member", { p_gid: groupId, p_uid: uid });
     if (error) {
       console.warn("[supabase] approveMember:", error.message);
@@ -926,8 +851,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function rejectMember(groupId, uid) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("reject_member", { p_gid: groupId, p_uid: uid });
     if (error) {
       console.warn("[supabase] rejectMember:", error.message);
@@ -936,8 +860,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function transferGroupOwner(groupId, uid) {
-    if (!supa)
-      return { ok: false, error: "no_supa" };
+    if (!supa) return { ok: false, error: "no_supa" };
     const { data, error } = await supa.rpc("transfer_group_owner", { p_gid: groupId, p_uid: uid });
     if (error) {
       console.warn("[supabase] transferGroupOwner:", error.message);
@@ -946,8 +869,7 @@
     return data || { ok: false, error: "no_data" };
   }
   async function fetchGroupMembers(groupId) {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     const { data, error } = await supa.from("chat_group_members").select("*").eq("group_id", groupId);
     if (error) {
       console.warn("[supabase] fetchGroupMembers:", error.message);
@@ -956,11 +878,9 @@
     return data || [];
   }
   async function fetchGroupMessages(groupId, sinceTs = null) {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     let q = supa.from("chat_group_messages").select("*").eq("group_id", groupId);
-    if (sinceTs)
-      q = q.gt("created_at", sinceTs);
+    if (sinceTs) q = q.gt("created_at", sinceTs);
     const { data, error } = await q.order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchGroupMessages:", error.message);
@@ -969,19 +889,14 @@
     return data || [];
   }
   async function sendGroupMessage({ groupId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     const row = { group_id: groupId, sender_uid: senderUid, text: text || null };
-    if (photoUrl)
-      row.photo_url = photoUrl;
-    if (replyToId)
-      row.reply_to_id = replyToId;
-    if (clientTag)
-      row.client_tag = clientTag;
+    if (photoUrl) row.photo_url = photoUrl;
+    if (replyToId) row.reply_to_id = replyToId;
+    if (clientTag) row.client_tag = clientTag;
     try {
       const { data, error } = await withTimeout(supa.from("chat_group_messages").insert(row).select().single());
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       supa.functions.invoke("send-group-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-group-push:", e?.message));
       return { ok: true, message: data };
     } catch (e) {
@@ -989,9 +904,8 @@
     }
   }
   function subscribeGroupMessages(groupId, onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel(`group-${groupId}`).on(
       "postgres_changes",
       { event: "*", schema: "public", table: "chat_group_messages", filter: `group_id=eq.${groupId}` },
@@ -1000,8 +914,7 @@
     return () => supa.removeChannel(ch);
   }
   async function fetchMyThreads(uid) {
-    if (!supa || !uid)
-      return [];
+    if (!supa || !uid) return [];
     const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos, author, contact, location, published_at, created_at)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyThreads:", error.message);
@@ -1011,38 +924,32 @@
   }
   async function fetchThreadStates(uid) {
     const map = /* @__PURE__ */ new Map();
-    if (!supa || !uid)
-      return map;
+    if (!supa || !uid) return map;
     const { data, error } = await supa.from("thread_user_state").select("thread_id, archived, hidden, cleared_at").eq("uid", uid);
     if (error) {
       console.warn("[supabase] fetchThreadStates:", error.message);
       return map;
     }
-    for (const r of data || [])
-      map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden, cleared_at: r.cleared_at || null });
+    for (const r of data || []) map.set(r.thread_id, { archived: !!r.archived, hidden: !!r.hidden, cleared_at: r.cleared_at || null });
     return map;
   }
   async function setThreadState(uid, threadId, patch) {
-    if (!supa || !uid)
-      return { ok: false, error: "no-supa" };
+    if (!supa || !uid) return { ok: false, error: "no-supa" };
     const row = { uid, thread_id: threadId, updated_at: (/* @__PURE__ */ new Date()).toISOString(), ...patch };
     try {
       const { error } = await withTimeout(
         supa.from("thread_user_state").upsert(row, { onConflict: "uid,thread_id" })
       );
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       return { ok: true };
     } catch (e) {
       return { ok: false, error: e.message };
     }
   }
   async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     const { data: existing } = await supa.from("threads").select("*").eq("post_id", postId).eq("buyer_uid", buyerUid).maybeSingle();
-    if (existing)
-      return { ok: true, thread: existing };
+    if (existing) return { ok: true, thread: existing };
     const { data, error } = await supa.from("threads").insert({
       post_id: postId,
       author_uid: authorUid,
@@ -1050,16 +957,13 @@
       author_name: authorName || null,
       buyer_name: buyerName || null
     }).select().single();
-    if (error)
-      return { ok: false, error: error.message };
+    if (error) return { ok: false, error: error.message };
     return { ok: true, thread: data };
   }
   async function fetchMessages(threadId, sinceTs = null) {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     let q = supa.from("messages").select("*").eq("thread_id", threadId);
-    if (sinceTs)
-      q = q.gt("created_at", sinceTs);
+    if (sinceTs) q = q.gt("created_at", sinceTs);
     const { data, error } = await q.order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchMessages:", error.message);
@@ -1068,8 +972,7 @@
     return data || [];
   }
   async function fetchThreadClearedAt(uid, threadId) {
-    if (!supa || !uid)
-      return null;
+    if (!supa || !uid) return null;
     const { data } = await supa.from("thread_user_state").select("cleared_at").eq("uid", uid).eq("thread_id", threadId).maybeSingle();
     return data?.cleared_at || null;
   }
@@ -1081,79 +984,65 @@
     ]);
   }
   async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     const row = { thread_id: threadId, sender_uid: senderUid, text: text || null };
-    if (photoUrl)
-      row.photo_url = photoUrl;
-    if (replyToId)
-      row.reply_to_id = replyToId;
-    if (clientTag)
-      row.client_tag = clientTag;
+    if (photoUrl) row.photo_url = photoUrl;
+    if (replyToId) row.reply_to_id = replyToId;
+    if (clientTag) row.client_tag = clientTag;
     let data, error;
     try {
       ({ data, error } = await withTimeout(supa.from("messages").insert(row).select().single()));
     } catch (e) {
       return { ok: false, error: e.message };
     }
-    if (error)
-      return { ok: false, error: error.message };
+    if (error) return { ok: false, error: error.message };
     const preview = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
     await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: preview }).eq("id", threadId);
     supa.functions.invoke("send-chat-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-chat-push:", e?.message));
     return { ok: true, message: data };
   }
   async function editMessage(messageId, text) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     try {
       const { data, error } = await withTimeout(supa.from("messages").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", messageId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       return { ok: true, message: data };
     } catch (e) {
       return { ok: false, error: e.message };
     }
   }
   async function deleteMessage(messageId) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     try {
       const { data, error } = await withTimeout(supa.from("messages").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null }).eq("id", messageId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
+      if (error) return { ok: false, error: error.message };
       return { ok: true, message: data };
     } catch (e) {
       return { ok: false, error: e.message };
     }
   }
   async function markThreadRead(threadId, uid) {
-    if (!supa || !uid)
-      return;
+    if (!supa || !uid) return;
     await supa.from("messages").update({ read_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("thread_id", threadId).neq("sender_uid", uid).is("read_at", null);
   }
   async function fetchUnreadByThread(uid) {
     const map = /* @__PURE__ */ new Map();
-    if (!supa || !uid)
-      return map;
+    if (!supa || !uid) return map;
     const { data: th } = await supa.from("threads").select("id").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
     const ids = (th || []).map((t) => t.id);
-    if (!ids.length)
-      return map;
+    if (!ids.length) return map;
     const { data: states } = await supa.from("thread_user_state").select("thread_id, cleared_at").eq("uid", uid).not("cleared_at", "is", null);
     const clearedMap = new Map((states || []).map((s) => [s.thread_id, s.cleared_at]));
     const { data } = await supa.from("messages").select("thread_id, created_at").in("thread_id", ids).neq("sender_uid", uid).is("read_at", null);
     for (const m of data || []) {
       const cl = clearedMap.get(m.thread_id);
-      if (cl && new Date(m.created_at) <= new Date(cl))
-        continue;
+      if (cl && new Date(m.created_at) <= new Date(cl)) continue;
       map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
     }
     return map;
   }
   async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
-    if (!supa || !uid)
-      return { ok: false };
+    if (!supa || !uid) return { ok: false };
     const { error } = await supa.from("user_push_devices").upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: "uid,endpoint" });
     if (error) {
       console.warn("[supabase] saveUserPushDevice:", error.message);
@@ -1162,9 +1051,8 @@
     return { ok: true };
   }
   function subscribeThreadMessages(threadId, onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel(`thread-${threadId}`).on(
       "postgres_changes",
       { event: "*", schema: "public", table: "messages", filter: `thread_id=eq.${threadId}` },
@@ -1173,28 +1061,24 @@
     return () => supa.removeChannel(ch);
   }
   function subscribeMyThreads(onChange, channelName = "my-threads") {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel(channelName).on("postgres_changes", { event: "*", schema: "public", table: "messages" }, (p) => onChange(p)).on("postgres_changes", { event: "*", schema: "public", table: "threads" }, (p) => onChange(p)).subscribe();
     return () => supa.removeChannel(ch);
   }
   async function fetchSavedPostIds(uid) {
     const set = /* @__PURE__ */ new Set();
-    if (!supa || !uid)
-      return set;
+    if (!supa || !uid) return set;
     const { data, error } = await supa.from("saved_posts").select("post_id").eq("uid", uid);
     if (error) {
       console.warn("[supabase] fetchSavedPostIds:", error.message);
       return set;
     }
-    for (const r of data || [])
-      set.add(r.post_id);
+    for (const r of data || []) set.add(r.post_id);
     return set;
   }
   async function addSavedPost(uid, postId) {
-    if (!supa || !uid)
-      return { ok: false };
+    if (!supa || !uid) return { ok: false };
     const { error } = await supa.from("saved_posts").upsert({ uid, post_id: postId }, { onConflict: "uid,post_id" });
     if (error) {
       console.warn("[supabase] addSavedPost:", error.message);
@@ -1203,8 +1087,7 @@
     return { ok: true };
   }
   async function removeSavedPost(uid, postId) {
-    if (!supa || !uid)
-      return { ok: false };
+    if (!supa || !uid) return { ok: false };
     const { error } = await supa.from("saved_posts").delete().eq("uid", uid).eq("post_id", postId);
     if (error) {
       console.warn("[supabase] removeSavedPost:", error.message);
@@ -1213,8 +1096,7 @@
     return { ok: true };
   }
   async function fetchTrackedRoutesFromDB(uid, todayISO) {
-    if (!supa || !uid)
-      return [];
+    if (!supa || !uid) return [];
     const { data, error } = await supa.from("push_subscriptions").select("route_id, route_name, boarding_stop, alighting_stop, track_date, dep_time, notified_dep, notified_warning, notified_canc").eq("user_uuid", uid).gte("track_date", todayISO);
     if (error) {
       console.warn("[supabase] fetchTrackedRoutesFromDB:", error.message);
@@ -1224,8 +1106,7 @@
     const out = [];
     for (const r of data || []) {
       const key = `${r.route_id}|${r.track_date}|${r.boarding_stop || ""}|${r.alighting_stop || ""}`;
-      if (seen.has(key))
-        continue;
+      if (seen.has(key)) continue;
       seen.add(key);
       out.push({
         routeId: r.route_id,
@@ -1246,20 +1127,17 @@
     return out;
   }
   async function savePushSubscription(payload) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     const { error } = await supa.from("push_subscriptions").insert(payload);
     if (error) {
-      if (error.code === "23505")
-        return { ok: true };
+      if (error.code === "23505") return { ok: true };
       console.warn("[supabase] savePushSubscription:", error.message);
       return { ok: false, error: error.message };
     }
     return { ok: true };
   }
   async function deletePushSubscription(endpoint, routeId, trackDate) {
-    if (!supa)
-      return { ok: false, error: "no-supa" };
+    if (!supa) return { ok: false, error: "no-supa" };
     const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
     if (error) {
       console.warn("[supabase] deletePushSubscription:", error.message);
@@ -1268,9 +1146,8 @@
     return { ok: true };
   }
   function subscribeReactions(onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel("reactions-watch").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "reactions" },
@@ -1279,9 +1156,8 @@
     return () => supa.removeChannel(ch);
   }
   function subscribeComments(onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel("comments-watch").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "comments" },
@@ -1290,9 +1166,8 @@
     return () => supa.removeChannel(ch);
   }
   function subscribePageComments(onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel("page-comments-watch").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "page_comments" },
@@ -1301,9 +1176,8 @@
     return () => supa.removeChannel(ch);
   }
   function subscribePageReactions(onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel("page-reactions-watch").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "page_reactions" },
@@ -1312,16 +1186,13 @@
     return () => supa.removeChannel(ch);
   }
   function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
-    if (!supa || !visitorId)
-      return;
+    if (!supa || !visitorId) return;
     supa.from("analytics_events").insert({ visitor_id: visitorId, event_type: type, tab, meta }).then(({ error }) => {
-      if (error)
-        console.warn("[supabase] logEvent:", error.message);
+      if (error) console.warn("[supabase] logEvent:", error.message);
     });
   }
   async function fetchPages() {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     const { data, error } = await supa.from("pages").select("id, name, theme, avatar_url, banner_url, is_system, sort_order").order("sort_order", { ascending: true }).order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchPages:", error.message);
@@ -1330,11 +1201,9 @@
     return data || [];
   }
   async function fetchPagePosts(pageId = null, limit = 60) {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
-    if (pageId != null)
-      q = q.eq("page_id", pageId);
+    if (pageId != null) q = q.eq("page_id", pageId);
     const { data, error } = await q;
     if (error) {
       console.warn("[supabase] fetchPagePosts:", error.message);
@@ -1343,8 +1212,7 @@
     return data || [];
   }
   async function fetchPageReactions(userKey) {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
+    if (!supa) return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("page_reactions").select("post_id, user_id");
     if (error) {
       console.warn("[supabase] fetchPageReactions:", error.message);
@@ -1352,18 +1220,15 @@
     }
     const map = /* @__PURE__ */ new Map();
     for (const r of data || []) {
-      if (!map.has(r.post_id))
-        map.set(r.post_id, { count: 0, my: false });
+      if (!map.has(r.post_id)) map.set(r.post_id, { count: 0, my: false });
       const e = map.get(r.post_id);
       e.count++;
-      if (r.user_id === userKey)
-        e.my = true;
+      if (r.user_id === userKey) e.my = true;
     }
     return map;
   }
   async function setPageReaction(postId, userKey, on) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!on) {
       const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey);
       return error2 ? { ok: false, error: error2.message } : { ok: true };
@@ -1372,8 +1237,7 @@
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   async function fetchPageComments() {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
+    if (!supa) return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("page_comments").select("id, post_id, author_uid, text, created_at, deleted_at, parent_id").is("deleted_at", null).order("created_at", { ascending: true });
     if (error) {
       console.warn("[supabase] fetchPageComments:", error.message);
@@ -1381,27 +1245,23 @@
     }
     const map = /* @__PURE__ */ new Map();
     for (const c of data || []) {
-      if (!map.has(c.post_id))
-        map.set(c.post_id, []);
+      if (!map.has(c.post_id)) map.set(c.post_id, []);
       map.get(c.post_id).push(c);
     }
     return map;
   }
   async function addPageComment(postId, uid, text, parentId = null) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const { data, error } = await supa.from("page_comments").insert({ post_id: postId, author_uid: uid, text, parent_id: parentId }).select().single();
     return error ? { ok: false, error: error.message } : { ok: true, comment: data };
   }
   async function deletePageComment(commentId) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const { error } = await supa.from("page_comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId);
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   async function fetchPageCommentReactions(userKey) {
-    if (!supa)
-      return /* @__PURE__ */ new Map();
+    if (!supa) return /* @__PURE__ */ new Map();
     const { data, error } = await supa.from("page_comment_reactions").select("comment_id, user_id");
     if (error) {
       console.warn("[supabase] fetchPageCommentReactions:", error.message);
@@ -1409,18 +1269,15 @@
     }
     const map = /* @__PURE__ */ new Map();
     for (const r of data || []) {
-      if (!map.has(r.comment_id))
-        map.set(r.comment_id, { count: 0, my: false });
+      if (!map.has(r.comment_id)) map.set(r.comment_id, { count: 0, my: false });
       const e = map.get(r.comment_id);
       e.count++;
-      if (r.user_id === userKey)
-        e.my = true;
+      if (r.user_id === userKey) e.my = true;
     }
     return map;
   }
   async function setPageCommentReaction(commentId, uid, on) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!on) {
       const { error: error2 } = await supa.from("page_comment_reactions").delete().eq("comment_id", commentId).eq("user_id", uid);
       return error2 ? { ok: false, error: error2.message } : { ok: true };
@@ -1429,9 +1286,8 @@
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   function subscribePageCommentReactions(onChange) {
-    if (!supa)
-      return () => {
-      };
+    if (!supa) return () => {
+    };
     const ch = supa.channel("page-comment-reactions-watch").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "page_comment_reactions" },
@@ -1440,8 +1296,7 @@
     return () => supa.removeChannel(ch);
   }
   async function fetchMyEditablePageIds() {
-    if (!supa)
-      return /* @__PURE__ */ new Set();
+    if (!supa) return /* @__PURE__ */ new Set();
     const { data, error } = await supa.from("page_admins").select("page_id");
     if (error) {
       console.warn("[supabase] page_admins:", error.message);
@@ -1450,8 +1305,7 @@
     return new Set((data || []).map((r) => r.page_id));
   }
   async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : imageUrls ? [imageUrls] : [];
     const { data, error } = await supa.from("page_posts").insert({
       page_id: pageId,
@@ -1467,34 +1321,28 @@
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function updatePagePost(postId, patch) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
     return error ? { ok: false, error: error.message } : { ok: true, post: data };
   }
   async function deletePagePost(postId) {
-    if (!supa)
-      return { ok: false };
+    if (!supa) return { ok: false };
     const { error } = await supa.from("page_posts").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", postId);
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   async function updatePage(pageId, patch) {
-    if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+    if (!supa) return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const { data, error } = await supa.from("pages").update(patch).eq("id", pageId).select("id, name, theme, avatar_url, banner_url, is_system").single();
     return error ? { ok: false, error: error.message } : { ok: true, page: data };
   }
   async function fetchMySubscriptions() {
-    if (!supa)
-      return /* @__PURE__ */ new Set();
+    if (!supa) return /* @__PURE__ */ new Set();
     const { data, error } = await supa.from("page_subscriptions").select("page_id");
-    if (error)
-      return /* @__PURE__ */ new Set();
+    if (error) return /* @__PURE__ */ new Set();
     return new Set((data || []).map((r) => r.page_id));
   }
   async function setPageSubscription(pageId, uid, on) {
-    if (!supa)
-      return { ok: false };
+    if (!supa) return { ok: false };
     if (!on) {
       const { error: error2 } = await supa.from("page_subscriptions").delete().eq("page_id", pageId).eq("uid", uid);
       return error2 ? { ok: false, error: error2.message } : { ok: true };
@@ -1503,8 +1351,7 @@
     return error ? { ok: false, error: error.message } : { ok: true };
   }
   function notifyNewPagePost(postId) {
-    if (!supa || !postId)
-      return;
+    if (!supa || !postId) return;
     supa.functions.invoke("send-page-push", { body: { post_id: postId } }).then(({ data, error }) => {
       if (error) {
         console.warn("[push] send-page-push \u043F\u043E\u043C\u0438\u043B\u043A\u0430:", error.message);
@@ -1514,8 +1361,7 @@
     }).catch((e) => console.warn("[push] send-page-push \u0432\u043F\u0430\u043B\u0430:", e?.message));
   }
   async function fetchPageModerators(pageId) {
-    if (!supa)
-      return [];
+    if (!supa) return [];
     const { data, error } = await supa.rpc("list_page_moderators", { p_page_id: pageId });
     if (error) {
       console.warn("[supabase] list_page_moderators:", error.message);
@@ -1524,8 +1370,7 @@
     return data || [];
   }
   async function addPageModerator(pageId, email) {
-    if (!supa)
-      return "error";
+    if (!supa) return "error";
     const { data, error } = await supa.rpc("add_page_moderator", { p_page_id: pageId, p_email: email });
     if (error) {
       console.warn("[supabase] add_page_moderator:", error.message);
@@ -1534,8 +1379,7 @@
     return data || "error";
   }
   async function removePageModerator(pageId, uid) {
-    if (!supa)
-      return "error";
+    if (!supa) return "error";
     const { data, error } = await supa.rpc("remove_page_moderator", { p_page_id: pageId, p_uid: uid });
     if (error) {
       console.warn("[supabase] remove_page_moderator:", error.message);
@@ -1562,8 +1406,7 @@
     return _profileAvatar || "";
   }
   function currentUserName() {
-    if (_profileName)
-      return _profileName;
+    if (_profileName) return _profileName;
     const m = _user && _user.user_metadata;
     return m && (m.name || m.full_name) || "\u0416\u0438\u0442\u0435\u043B\u044C";
   }
@@ -1571,8 +1414,7 @@
     _listeners.push(cb);
     return () => {
       const i = _listeners.indexOf(cb);
-      if (i >= 0)
-        _listeners.splice(i, 1);
+      if (i >= 0) _listeners.splice(i, 1);
     };
   }
   function emitAuthChange() {
@@ -1584,19 +1426,16 @@
     });
   }
   async function warmProfile() {
-    if (!_user || _profileName)
-      return;
+    if (!_user || _profileName) return;
     try {
       await getProfile();
-      if (_profileName)
-        emitAuthChange();
+      if (_profileName) emitAuthChange();
     } catch (_) {
     }
   }
   async function initAuth() {
     const supa2 = getSupabase();
-    if (!supa2)
-      return;
+    if (!supa2) return;
     try {
       const { data } = await supa2.auth.getSession();
       _user = data && data.session ? data.session.user : null;
@@ -1619,13 +1458,11 @@
     }
     const redirectTo = window.location.origin + window.location.pathname;
     const { error } = await supa2.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-    if (error)
-      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438: " + error.message, 4e3, "error");
+    if (error) showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438: " + error.message, 4e3, "error");
   }
   async function signOut() {
     const supa2 = getSupabase();
-    if (!supa2)
-      return;
+    if (!supa2) return;
     await supa2.auth.signOut();
     _user = null;
     _profileName = null;
@@ -1643,28 +1480,22 @@
   }
   async function getProfile() {
     const supa2 = getSupabase();
-    if (!supa2 || !_user)
-      return null;
+    if (!supa2 || !_user) return null;
     const { data, error } = await supa2.from("profiles").select("*").eq("uid", _user.id).maybeSingle();
     if (error) {
       console.warn("[auth] getProfile:", error.message);
       return null;
     }
-    if (data && data.name)
-      _profileName = data.name;
-    if (data && "avatar_url" in data)
-      _profileAvatar = data.avatar_url || null;
+    if (data && data.name) _profileName = data.name;
+    if (data && "avatar_url" in data) _profileAvatar = data.avatar_url || null;
     return data;
   }
   var PROFILE_FIELDS = ["name", "birth_date", "surname", "phone", "settlement", "street", "bio", "avatar_url"];
   async function saveProfile(fields = {}) {
     const supa2 = getSupabase();
-    if (!supa2 || !_user)
-      return { ok: false, error: "\u043D\u0435 \u0437\u0430\u043B\u043E\u0433\u0456\u043D\u0435\u043D\u043E" };
+    if (!supa2 || !_user) return { ok: false, error: "\u043D\u0435 \u0437\u0430\u043B\u043E\u0433\u0456\u043D\u0435\u043D\u043E" };
     const row = { uid: _user.id, email: _user.email || null };
-    for (const k of PROFILE_FIELDS)
-      if (k in fields)
-        row[k] = fields[k] === "" ? null : fields[k];
+    for (const k of PROFILE_FIELDS) if (k in fields) row[k] = fields[k] === "" ? null : fields[k];
     let partial = false;
     let { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
     if (error && /column|schema/i.test(error.message)) {
@@ -1677,12 +1508,9 @@
       };
       ({ error } = await supa2.from("profiles").upsert(core, { onConflict: "uid" }));
     }
-    if (error)
-      return { ok: false, error: error.message };
-    if (row.name)
-      _profileName = row.name;
-    if (!partial && "avatar_url" in row)
-      _profileAvatar = row.avatar_url || null;
+    if (error) return { ok: false, error: error.message };
+    if (row.name) _profileName = row.name;
+    if (!partial && "avatar_url" in row) _profileAvatar = row.avatar_url || null;
     return { ok: true, partial };
   }
 
@@ -1693,40 +1521,33 @@
     });
   }
   function setupSW() {
-    if (!("serviceWorker" in navigator))
-      return;
+    if (!("serviceWorker" in navigator)) return;
     const hadController = !!navigator.serviceWorker.controller;
     let _reloading = false;
     let _swReg = null;
     const doReload = () => {
-      if (_reloading)
-        return;
+      if (_reloading) return;
       _reloading = true;
       window.location.replace(window.location.href);
     };
     navigator.serviceWorker.addEventListener("controllerchange", () => {
-      if (!hadController)
-        return;
+      if (!hadController) return;
       doReload();
     });
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && _swReg)
-        _swReg.update();
+      if (document.visibilityState === "visible" && _swReg) _swReg.update();
     });
     window.addEventListener("pageshow", (e) => {
-      if (e.persisted && _swReg)
-        _swReg.update();
+      if (e.persisted && _swReg) _swReg.update();
     });
     navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" }).then((reg) => {
       _swReg = reg;
       reg.update();
       reg.addEventListener("updatefound", () => {
         const sw = reg.installing;
-        if (!sw)
-          return;
+        if (!sw) return;
         sw.addEventListener("statechange", () => {
-          if (sw.state === "activated" && hadController)
-            doReload();
+          if (sw.state === "activated" && hadController) doReload();
         });
       });
     }).catch(() => {
@@ -1756,26 +1577,16 @@
   var WX_CLOUDY = "data:image/svg+xml;base64,PHN2ZyB2aWV3Qm94PSIwIDAgMTI4IDEyOCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGcgaWQ9ImNsb3VkeSIgY2xpcC1wYXRoPSJ1cmwoI2NsaXAwXzIwNDVfMjg4MTgpIj4KPGcgaWQ9IlNreSI+CjxnIGlkPSJDbG91ZHMiPgo8ZyBpZD0iQ2xvdWQiPgo8cGF0aCBpZD0iQ2xvdWRfMiIgZmlsbC1ydWxlPSJldmVub2RkIiBjbGlwLXJ1bGU9ImV2ZW5vZGQiIGQ9Ik01NC44MzcxIDQ4LjIxMTVDNTEuMDczOSA0NS45NDgzIDQ2LjM0NTcgNDUuNzgyNiA0Mi40NDE1IDQ3LjY2NjRDNDEuODgzNyA0Ny45MzU1IDQxLjM0MjggNDguMjQ2NSA0MC44MjM5IDQ4LjU5OTFDMzYuNjgyNiA1MS40MTMzIDM0LjQ5OTggNTYuNTE1MSAzNS4zNDk5IDYxLjQ1NEMyOC4zOTA3IDYyLjc2ODkgMjMuMzkzNiA2OS4zNDEyIDI0LjA2MTQgNzYuNDA3NkMyNC43MjkzIDgzLjQ3NCAzMC44Njc4IDg5LjAwMTEgMzcuOTUxOSA4OUMzNy45NTE2IDg5IDM3Ljk1MjIgODkgMzcuOTUxOSA4OUg5MC45NzY3QzkxLjg2MDggODkgOTIuNzI3MyA4OC45MDggOTMuNTY2OSA4OC43MzMzQzk1LjA1MzEgODguNDIzOSA5Ni40NTQ3IDg3Ljg1NSA5Ny43MTk2IDg3LjA3NzRDOTkuMzEzMSA4Ni4wOTc5IDEwMC42ODkgODQuNzg3IDEwMS43NDQgODMuMjQ2NUMxMDIuMzIgODIuNDA0OSAxMDIuODAxIDgxLjQ5NDcgMTAzLjE2OCA4MC41MzI0QzEwMy43MDUgNzkuMTI1IDEwNCA3Ny42MDYzIDEwNCA3Ni4wMjgxQzEwNCA3NS45MTM4IDEwMy45OTggNzUuNzk5NyAxMDMuOTk1IDc1LjY4NjFDMTAzLjg0IDY5LjkwMDYgOTkuNzQzNCA2NS4wMzY2IDk0LjM5MDYgNjMuNTQ0N0M5My4xMTU4IDYzLjE4OTQgOTEuNzY5NyA2My4wMjUzIDkwLjM4ODYgNjMuMDg1NkM5MC43MjExIDYxLjc1MiA5MC45MDE3IDYwLjQwNjkgOTAuOTQwOSA1OS4wNzA2QzkxLjE3MTYgNTEuMTg2MSA4Ni40NzY0IDQzLjYwNjcgNzkuMDA4NSA0MC40ODIzQzcwLjI2NDggMzYuODI0IDU5LjgyNzQgNDAuMTM4IDU0LjgzNzEgNDguMjExNVpNOTAuOTc2NyA4NC45OTczQzk1Ljg2NDkgODQuOTk3MyAxMDAgODAuODc4OCAxMDAgNzYuMDI4MUMxMDAgNzEuNjUzMSA5Ni42NDk4IDY3LjkxNzggOTIuNDIxNiA2Ny4yMDAzQzkyLjExOTYgNjcuMTQ5MSA5MS44MTMxIDY3LjExMzIgOTEuNTAzIDY3LjA5MzdDOTEuMTkyOSA2Ny4wNzQxIDkwLjg3OTMgNjcuMDcwOCA5MC41NjI5IDY3LjA4NDZMODcuODg2NiA2Ny4yMDE0Qzg3LjI1NjIgNjcuMjI5IDg2LjY0OTcgNjYuOTU3MSA4Ni4yNTA1IDY2LjQ2ODFDODUuODUxMyA2NS45NzkgODUuNzA2MiA2NS4zMzAxIDg1Ljg1OSA2NC43MTc0TDg2LjUwNzYgNjIuMTE2NUM4Ni42MjA5IDYxLjY2MjIgODYuNzExNyA2MS4yMDYgODYuNzgwOCA2MC43NDkxQzg3LjgxNzIgNTMuODk1OSA4My45NTg1IDQ2Ljg5MTcgNzcuNDY1NiA0NC4xNzUyQzcwLjUyNDYgNDEuMjcxMiA2Mi4xODg0IDQzLjkyNzQgNTguMjM5IDUwLjMxNzFMNTcuMjAwMyA1MS45OTc1QzU3LjIwMDEgNTEuOTk4IDU3LjE5OTggNTEuOTk4NCA1Ny4xOTk1IDUxLjk5ODlDNTYuNjIzNCA1Mi45Mjk0IDU1LjQwNjkgNTMuMjI0MSA1NC40NjkyIDUyLjY2MDJMNTIuNzc2NyA1MS42NDI0QzQ5LjgxMTYgNDkuODU5MiA0NS45MzE5IDQ5Ljk2NjQgNDMuMDcxIDUxLjkxMDVDNDIuNzE0NyA1Mi4xNTI2IDQyLjM3OTMgNTIuNDE5OSA0Mi4wNjY0IDUyLjcwODhDMzkuODc1NiA1NC43MzEyIDM4Ljc4MjQgNTcuODE1MiAzOS4yOTE4IDYwLjc3NDVMMzkuNjI1OSA2Mi43MTU0QzM5LjYyNiA2Mi43MTU4IDM5LjYyNiA2Mi43MTYyIDM5LjYyNjEgNjIuNzE2NkMzOS44MTA3IDYzLjc5MjggMzkuMDk5MSA2NC44MTg1IDM4LjAyNjkgNjUuMDIxNkMzOC4wMjY2IDY1LjAyMTcgMzguMDI3MSA2NS4wMjE2IDM4LjAyNjkgNjUuMDIxNkwzNi4wOTIgNjUuMzg3MkMzMS4xNDEzIDY2LjMyMjYgMjcuNTcyNCA3MS4wNDQ5IDI4LjA0MzcgNzYuMDMwN0MyOC41MTUyIDgxLjAxOTkgMzIuOTA5MiA4NC45OTgzIDM3Ljk1MTkgODQuOTk3M0g5MC45NzY3WiIgZmlsbD0iI0U2RUZGQyIvPgo8L2c+CjwvZz4KPC9nPgo8L2c+CjxkZWZzPgo8Y2xpcFBhdGggaWQ9ImNsaXAwXzIwNDVfMjg4MTgiPgo8cmVjdCB3aWR0aD0iMTI4IiBoZWlnaHQ9IjEyOCIgZmlsbD0id2hpdGUiLz4KPC9jbGlwUGF0aD4KPC9kZWZzPgo8L3N2Zz4=";
   function weatherCodeInfo(code) {
     const img = (src, alt) => `<img class="wx-ic" src="${src}" alt="${alt}">`;
-    if (code === 0)
-      return { icon: img(WX_CLEAR_DAY, "\u042F\u0441\u043D\u043E"), text: "\u042F\u0441\u043D\u043E" };
-    if (code <= 2)
-      return { icon: img(WX_PARTLY_CLOUDY, "\u041C\u0456\u043D\u043B\u0438\u0432\u0430 \u0445\u043C\u0430\u0440\u043D\u0456\u0441\u0442\u044C"), text: "\u041C\u0456\u043D\u043B\u0438\u0432\u0430 \u0445\u043C\u0430\u0440\u043D\u0456\u0441\u0442\u044C" };
-    if (code === 3)
-      return { icon: img(WX_OVERCAST, "\u0425\u043C\u0430\u0440\u043D\u043E"), text: "\u0425\u043C\u0430\u0440\u043D\u043E" };
-    if (code <= 48)
-      return { icon: img(WX_FOG, "\u0422\u0443\u043C\u0430\u043D"), text: "\u0422\u0443\u043C\u0430\u043D" };
-    if (code <= 55)
-      return { icon: img(WX_DRIZZLE, "\u041C\u0440\u044F\u043A\u0430"), text: "\u041C\u0440\u044F\u043A\u0430" };
-    if (code <= 65)
-      return { icon: img(WX_RAIN, "\u0414\u043E\u0449"), text: "\u0414\u043E\u0449" };
-    if (code <= 77)
-      return { icon: img(WX_SNOW, "\u0421\u043D\u0456\u0433"), text: "\u0421\u043D\u0456\u0433" };
-    if (code <= 82)
-      return { icon: img(WX_RAIN, "\u0417\u043B\u0438\u0432\u0438"), text: "\u0417\u043B\u0438\u0432\u0438" };
-    if (code <= 86)
-      return { icon: img(WX_SNOW_SHOWERS, "\u0421\u043D\u0456\u0433\u043E\u0432\u0456 \u0437\u043B\u0438\u0432\u0438"), text: "\u0421\u043D\u0456\u0433\u043E\u0432\u0456 \u0437\u043B\u0438\u0432\u0438" };
-    if (code >= 95)
-      return { icon: img(WX_THUNDERSTORMS, "\u0413\u0440\u043E\u0437\u0430"), text: "\u0413\u0440\u043E\u0437\u0430" };
+    if (code === 0) return { icon: img(WX_CLEAR_DAY, "\u042F\u0441\u043D\u043E"), text: "\u042F\u0441\u043D\u043E" };
+    if (code <= 2) return { icon: img(WX_PARTLY_CLOUDY, "\u041C\u0456\u043D\u043B\u0438\u0432\u0430 \u0445\u043C\u0430\u0440\u043D\u0456\u0441\u0442\u044C"), text: "\u041C\u0456\u043D\u043B\u0438\u0432\u0430 \u0445\u043C\u0430\u0440\u043D\u0456\u0441\u0442\u044C" };
+    if (code === 3) return { icon: img(WX_OVERCAST, "\u0425\u043C\u0430\u0440\u043D\u043E"), text: "\u0425\u043C\u0430\u0440\u043D\u043E" };
+    if (code <= 48) return { icon: img(WX_FOG, "\u0422\u0443\u043C\u0430\u043D"), text: "\u0422\u0443\u043C\u0430\u043D" };
+    if (code <= 55) return { icon: img(WX_DRIZZLE, "\u041C\u0440\u044F\u043A\u0430"), text: "\u041C\u0440\u044F\u043A\u0430" };
+    if (code <= 65) return { icon: img(WX_RAIN, "\u0414\u043E\u0449"), text: "\u0414\u043E\u0449" };
+    if (code <= 77) return { icon: img(WX_SNOW, "\u0421\u043D\u0456\u0433"), text: "\u0421\u043D\u0456\u0433" };
+    if (code <= 82) return { icon: img(WX_RAIN, "\u0417\u043B\u0438\u0432\u0438"), text: "\u0417\u043B\u0438\u0432\u0438" };
+    if (code <= 86) return { icon: img(WX_SNOW_SHOWERS, "\u0421\u043D\u0456\u0433\u043E\u0432\u0456 \u0437\u043B\u0438\u0432\u0438"), text: "\u0421\u043D\u0456\u0433\u043E\u0432\u0456 \u0437\u043B\u0438\u0432\u0438" };
+    if (code >= 95) return { icon: img(WX_THUNDERSTORMS, "\u0413\u0440\u043E\u0437\u0430"), text: "\u0413\u0440\u043E\u0437\u0430" };
     return { icon: img(WX_CLOUDY, "\u2014"), text: "\u2014" };
   }
 
@@ -1783,8 +1594,7 @@
   async function initWeather() {
     const iconEl = document.getElementById("weather-icon");
     const tempEl = document.getElementById("weather-temp");
-    if (!iconEl || !tempEl)
-      return;
+    if (!iconEl || !tempEl) return;
     const ac = new AbortController();
     const timeoutId = setTimeout(() => ac.abort(), 5e3);
     try {
@@ -1805,8 +1615,7 @@
     } catch {
       clearTimeout(timeoutId);
       const widget = document.getElementById("weather-widget");
-      if (widget)
-        widget.style.visibility = "hidden";
+      if (widget) widget.style.visibility = "hidden";
     }
   }
 
@@ -1815,17 +1624,14 @@
     let lastErr = "";
     for (let attempt = 0; attempt <= retries; attempt++) {
       const res = await uploadPhotoToStorage(blob, folder);
-      if (res.url)
-        return { url: res.url, error: null };
+      if (res.url) return { url: res.url, error: null };
       lastErr = res.error || "upload";
-      if (attempt < retries)
-        await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
+      if (attempt < retries) await new Promise((r) => setTimeout(r, 400 * (attempt + 1)));
     }
     return { url: null, error: lastErr };
   }
   async function uploadImageReliable(file, { folder = "", square = false, maxDim = 1600, quality = 0.82, retries = 2 } = {}) {
-    if (!file)
-      return { url: null, error: "\u043D\u0435\u043C\u0430 \u0444\u0430\u0439\u043B\u0443" };
+    if (!file) return { url: null, error: "\u043D\u0435\u043C\u0430 \u0444\u0430\u0439\u043B\u0443" };
     let blob;
     try {
       blob = square ? await squareImageBlob(file, maxDim) : await compressImage(file, maxDim, quality);
@@ -1869,8 +1675,7 @@
   var SHEET_EASE = "cubic-bezier(0.32, 0.72, 0, 1)";
   var clamp01 = (v) => Math.min(1, Math.max(0, v));
   function createBackdropFade(el, mode = "opacity") {
-    if (!el)
-      return null;
+    if (!el) return null;
     const isBg = mode === "bg";
     const prop = isBg ? "background-color" : "opacity";
     let base = null;
@@ -1878,21 +1683,17 @@
       const cs = getComputedStyle(el);
       if (isBg) {
         const m = (cs.backgroundColor || "").match(/[\d.]+/g);
-        if (!m || m.length < 3)
-          return null;
+        if (!m || m.length < 3) return null;
         return { rgb: [m[0], m[1], m[2]], a: m[3] !== void 0 ? +m[3] : 1 };
       }
       const o = parseFloat(cs.opacity);
       return Number.isFinite(o) ? { o } : null;
     };
     const setK = (k) => {
-      if (!base)
-        return;
+      if (!base) return;
       const kk = clamp01(k);
-      if (isBg)
-        el.style.backgroundColor = `rgba(${base.rgb[0]}, ${base.rgb[1]}, ${base.rgb[2]}, ${(base.a * kk).toFixed(3)})`;
-      else
-        el.style.opacity = (base.o * kk).toFixed(3);
+      if (isBg) el.style.backgroundColor = `rgba(${base.rgb[0]}, ${base.rgb[1]}, ${base.rgb[2]}, ${(base.a * kk).toFixed(3)})`;
+      else el.style.opacity = (base.o * kk).toFixed(3);
     };
     const clearInline = () => {
       el.style.opacity = "";
@@ -1903,25 +1704,20 @@
       track(p) {
         if (!base) {
           base = readBase();
-          if (!base)
-            return;
+          if (!base) return;
         }
         el.style.transition = "none";
         setK(1 - (1 - BACK_MIN) * clamp01(p));
       },
       // Доїзд разом із панеллю: за ТОЙ САМИЙ час, тож фон і панель рухаються як одне ціле.
       settle(dismiss, ms) {
-        if (!base)
-          return;
+        if (!base) return;
         el.style.transition = `${prop} ${ms}ms linear`;
-        if (dismiss)
-          setK(0);
-        else
-          clearInline();
+        if (dismiss) setK(0);
+        else clearInline();
         setTimeout(() => {
           el.style.transition = "";
-          if (dismiss)
-            clearInline();
+          if (dismiss) clearInline();
           base = null;
         }, ms + 30);
       }
@@ -1938,8 +1734,7 @@
       move(pos) {
         const t = performance.now();
         const dt = t - lastT;
-        if (dt <= 0)
-          return;
+        if (dt <= 0) return;
         v = v * 0.6 + (pos - lastPos) / dt * 0.4;
         lastPos = pos;
         lastT = t;
@@ -1967,12 +1762,10 @@
     panel.style.transition = `transform ${ms}ms ${SHEET_EASE}`;
     panel.style.transform = dismiss ? dismissTransform : restTransform;
     backdrop?.settle(dismiss, ms);
-    if (dismiss)
-      onDismiss?.(ms);
-    else
-      setTimeout(() => {
-        panel.style.transition = "";
-      }, ms);
+    if (dismiss) onDismiss?.(ms);
+    else setTimeout(() => {
+      panel.style.transition = "";
+    }, ms);
     return dismiss;
   }
   function sheetRemaining(panel, dy) {
@@ -2036,13 +1829,11 @@
     const panel = wrap.querySelector(".app-modal-sheet, .app-modal-card");
     const closeBtn = wrap.querySelector(".app-modal-close");
     const onKey = (e) => {
-      if (e.key === "Escape")
-        close();
+      if (e.key === "Escape") close();
     };
     document.addEventListener("keydown", onKey);
     function close() {
-      if (_active?.el !== wrap)
-        return;
+      if (_active?.el !== wrap) return;
       _active = null;
       onClose?.();
       wrap.classList.remove("open");
@@ -2059,8 +1850,7 @@
       panel.addEventListener("touchstart", (e) => {
         const y = e.touches[0].clientY;
         const inHeader = y - panel.getBoundingClientRect().top < 64;
-        if (!inHeader && panel.scrollTop > 0)
-          return;
+        if (!inHeader && panel.scrollTop > 0) return;
         startY = y;
         dragging = true;
         dy = 0;
@@ -2068,8 +1858,7 @@
         drag.start(y);
       }, { passive: true });
       panel.addEventListener("touchmove", (e) => {
-        if (!dragging)
-          return;
+        if (!dragging) return;
         dy = e.touches[0].clientY - startY;
         if (dy <= 0) {
           panel.style.transform = "";
@@ -2091,8 +1880,7 @@
         drag.move(e.touches[0].clientY);
       }, { passive: false });
       panel.addEventListener("touchend", () => {
-        if (!dragging)
-          return;
+        if (!dragging) return;
         dragging = false;
         finishSwipe({
           panel,
@@ -2258,39 +2046,28 @@
   var PENCIL_ICON_SVG = ICONS.pencil;
   var PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   function renderPreviewLoc(loc) {
-    if (!loc)
-      return "";
+    if (!loc) return "";
     const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
     return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
   }
   function maskUaPhone(v) {
     let d = String(v || "").replace(/\D/g, "");
-    if (d.startsWith("380"))
-      d = d.slice(3);
-    else if ("380".startsWith(d))
-      d = "";
-    else if (d.startsWith("0"))
-      d = d.slice(1);
+    if (d.startsWith("380")) d = d.slice(3);
+    else if ("380".startsWith(d)) d = "";
+    else if (d.startsWith("0")) d = d.slice(1);
     d = d.slice(0, 9);
     let out = "+380";
-    if (d.length)
-      out += " " + d.slice(0, 2);
-    if (d.length > 2)
-      out += " " + d.slice(2, 5);
-    if (d.length > 5)
-      out += " " + d.slice(5, 7);
-    if (d.length > 7)
-      out += " " + d.slice(7, 9);
+    if (d.length) out += " " + d.slice(0, 2);
+    if (d.length > 2) out += " " + d.slice(2, 5);
+    if (d.length > 5) out += " " + d.slice(5, 7);
+    if (d.length > 7) out += " " + d.slice(7, 9);
     return out;
   }
   function phoneDigits(v) {
     let d = String(v || "").replace(/\D/g, "");
-    if (d.startsWith("380"))
-      d = d.slice(3);
-    else if ("380".startsWith(d))
-      d = "";
-    else if (d.startsWith("0"))
-      d = d.slice(1);
+    if (d.startsWith("380")) d = d.slice(3);
+    else if ("380".startsWith(d)) d = "";
+    else if (d.startsWith("0")) d = d.slice(1);
     return Math.min(d.length, 9);
   }
   function firstNameOnly(full) {
@@ -2301,8 +2078,7 @@
     return firstNameOnly(currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
   }
   function openBoardModal(opts = {}) {
-    if (document.querySelector(".app-modal--board-compose"))
-      return;
+    if (document.querySelector(".app-modal--board-compose")) return;
     const editPost = opts.editPost || null;
     const isEdit = !!editPost;
     const submitLabel = isEdit ? "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0437\u043C\u0456\u043D\u0438" : "\u041E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438";
@@ -2345,8 +2121,7 @@
       variant: "sheet",
       className: "app-modal--board-compose",
       onClose: () => state.photos.forEach((p) => {
-        if (p && p.startsWith("blob:"))
-          URL.revokeObjectURL(p);
+        if (p && p.startsWith("blob:")) URL.revokeObjectURL(p);
       })
     });
     const sheetEl = wrap.querySelector(".app-modal-sheet");
@@ -2448,8 +2223,7 @@
         const idx = parseInt(slot.dataset.idx, 10);
         input.addEventListener("change", async () => {
           const file = input.files[0];
-          if (!file)
-            return;
+          if (!file) return;
           let blob;
           try {
             blob = await compressImage(file, 800, 0.78);
@@ -2492,8 +2266,7 @@
           if (slot.classList.contains("filled")) {
             e.preventDefault();
             const old = state.photos[idx];
-            if (old && old.startsWith("blob:"))
-              URL.revokeObjectURL(old);
+            if (old && old.startsWith("blob:")) URL.revokeObjectURL(old);
             state.photos[idx] = null;
             slot.classList.remove("filled", "uploading");
             slot.style.backgroundImage = "";
@@ -2508,8 +2281,7 @@
     }
     function updateSubmitState() {
       const btn = wrap.querySelector(".cm-board-submit");
-      if (!btn)
-        return;
+      if (!btn) return;
       if (state.uploadingCount > 0) {
         btn.disabled = true;
         btn.textContent = `\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u0444\u043E\u0442\u043E\u2026`;
@@ -2553,15 +2325,13 @@
         if (p && p.phone && phoneDigits(state.contact) === 0) {
           state.contact = maskUaPhone(p.phone);
           const cEl = dynamicEl.querySelector("#bm-contact");
-          if (cEl)
-            cEl.value = state.contact;
+          if (cEl) cEl.value = state.contact;
         }
         const nm = firstNameOnly(p && p.name || currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
         if (nm !== state.author) {
           state.author = nm;
           const el = dynamicEl.querySelector("#bm-author-fixed");
-          if (el)
-            el.textContent = `\u{1F464} ${nm}`;
+          if (el) el.textContent = `\u{1F464} ${nm}`;
         }
         renderPreview();
       }).catch(() => {
@@ -2723,8 +2493,7 @@
     return api;
   }
   function closeScreen(api) {
-    if (!api || api._closed)
-      return;
+    if (!api || api._closed) return;
     api._closed = true;
     api._cleanup.forEach((fn) => {
       try {
@@ -2740,8 +2509,7 @@
       newTop.screen.style.display = "";
       newTop.backdrop.style.display = "";
     }
-    if (!_openScreens.length)
-      document.body.classList.remove("modal-open");
+    if (!_openScreens.length) document.body.classList.remove("modal-open");
     setTimeout(() => {
       api.screen.remove();
       api.backdrop.remove();
@@ -2752,8 +2520,7 @@
   }
   function clockTime(ts) {
     const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
+    if (isNaN(d.getTime())) return "";
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
   var MONTHS_GEN = [
@@ -2772,32 +2539,26 @@
   ];
   function dayLabel(ts) {
     const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
+    if (isNaN(d.getTime())) return "";
     const now = /* @__PURE__ */ new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const dayMs = 864e5;
-    if (d.getTime() >= startOfToday)
-      return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    if (d.getTime() >= startOfToday - dayMs)
-      return "\u0412\u0447\u043E\u0440\u0430";
+    if (d.getTime() >= startOfToday) return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (d.getTime() >= startOfToday - dayMs) return "\u0412\u0447\u043E\u0440\u0430";
     const base = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
     return d.getFullYear() === now.getFullYear() ? base : `${base} ${d.getFullYear()}`;
   }
   function threadListTime(ts) {
     const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
+    if (isNaN(d.getTime())) return "";
     const now = /* @__PURE__ */ new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const dayMs = 864e5;
     if (d.getTime() >= startOfToday) {
       return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
     }
-    if (d.getTime() >= startOfToday - dayMs)
-      return "\u0412\u0447\u043E\u0440\u0430";
-    if (d.getFullYear() === now.getFullYear())
-      return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+    if (d.getTime() >= startOfToday - dayMs) return "\u0412\u0447\u043E\u0440\u0430";
+    if (d.getFullYear() === now.getFullYear()) return `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
   }
   function setupKeyboardResize(screen) {
@@ -2827,8 +2588,7 @@
       document.body.style.overflow = prevBody.overflow;
       window.scrollTo(0, scrollY);
     };
-    if (!vv)
-      return unlock;
+    if (!vv) return unlock;
     const input = screen.querySelector(".pm-input");
     let wasOpen = false, focused = false;
     const apply = () => {
@@ -2933,8 +2693,7 @@
       }, 500);
     }, { passive: true });
     container.addEventListener("touchmove", (e) => {
-      if (!target)
-        return;
+      if (!target) return;
       const t = e.touches[0];
       const dx = t.clientX - startX, dy = t.clientY - startY;
       if (!lockDir && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
@@ -2950,15 +2709,13 @@
     }, { passive: false });
     container.addEventListener("touchend", (e) => {
       clearLP();
-      if (!target)
-        return;
+      if (!target) return;
       const b = target;
       target = null;
       const dx = (e.changedTouches[0] ? e.changedTouches[0].clientX : startX) - startX;
       resetTransform(b);
       hideReveal();
-      if (!longFired && lockDir === "h" && dx < -SWIPE_TRIGGER)
-        onAction(b.dataset.msg, "reply");
+      if (!longFired && lockDir === "h" && dx < -SWIPE_TRIGGER) onAction(b.dataset.msg, "reply");
     }, { passive: false });
     container.addEventListener("contextmenu", (e) => {
       const b = e.target.closest(".pm-bubble");
@@ -2984,35 +2741,25 @@
     if (isIOS() && !isStandalone()) {
       return "\u041D\u0430 iPhone \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043F\u0440\u0430\u0446\u044E\u044E\u0442\u044C \u043B\u0438\u0448\u0435 \u0443 \u0432\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D\u043E\u043C\u0443 \u0434\u043E\u0434\u0430\u0442\u043A\u0443: \xAB\u041F\u043E\u0434\u0456\u043B\u0438\u0442\u0438\u0441\u044F\xBB \u2192 \xAB\u041D\u0430 \u0435\u043A\u0440\u0430\u043D \u0414\u043E\u043C\u0456\u0432\xBB";
     }
-    if (!isPushCapable())
-      return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
-    if (Notification.permission === "denied")
-      return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0457\u0445 \u0434\u043B\u044F CSTL LIFE";
+    if (!isPushCapable()) return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0456 \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 \u043F\u0440\u0438\u0441\u0442\u0440\u043E\u0457";
+    if (Notification.permission === "denied") return "\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0457\u0445 \u0434\u043B\u044F CSTL LIFE";
     return null;
   }
   function pushKeysEqual(a, b) {
-    if (!a || !b)
-      return false;
+    if (!a || !b) return false;
     const ua = new Uint8Array(a);
     const ub = new Uint8Array(b);
-    if (ua.length !== ub.length)
-      return false;
-    for (let i = 0; i < ua.length; i++)
-      if (ua[i] !== ub[i])
-        return false;
+    if (ua.length !== ub.length) return false;
+    for (let i = 0; i < ua.length; i++) if (ua[i] !== ub[i]) return false;
     return true;
   }
   async function ensurePushSubscription() {
-    if (!isPushCapable())
-      return null;
+    if (!isPushCapable()) return null;
     try {
       let perm = Notification.permission;
-      if (perm === "denied")
-        return null;
-      if (perm === "default")
-        perm = await Notification.requestPermission();
-      if (perm !== "granted")
-        return null;
+      if (perm === "denied") return null;
+      if (perm === "default") perm = await Notification.requestPermission();
+      if (perm !== "granted") return null;
       const reg = await navigator.serviceWorker.ready;
       const appKey = urlBase64ToUint8Array(VAPID_PUBLIC_KEY);
       let sub = await reg.pushManager.getSubscription();
@@ -3043,8 +2790,7 @@
   var BOOKMARK_OUTLINE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   function otherName(thread) {
     const me = currentUserId();
-    if (me && me === thread.author_uid)
-      return thread.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
+    if (me && me === thread.author_uid) return thread.buyer_name || "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C";
     return thread.author_name || "\u041F\u0440\u043E\u0434\u0430\u0432\u0435\u0446\u044C";
   }
   function otherUid(thread) {
@@ -3202,8 +2948,7 @@
           lastDay = day;
         }
         const mine = m.sender_uid === me;
-        if (curGroup && curGroup.mine === mine)
-          curGroup.msgs.push(m);
+        if (curGroup && curGroup.mine === mine) curGroup.msgs.push(m);
         else {
           flush();
           curGroup = { mine, msgs: [m] };
@@ -3224,8 +2969,7 @@
           requestAnimationFrame(() => scrollBottom(true));
         }
         streamEl.querySelectorAll(".pm-bubble-photo").forEach((img) => {
-          if (!img.complete)
-            img.addEventListener("load", () => scrollBottom(!firstRender), { once: true });
+          if (!img.complete) img.addEventListener("load", () => scrollBottom(!firstRender), { once: true });
         });
       }
       messages.forEach((m) => seen.add(msgKey(m)));
@@ -3274,15 +3018,13 @@
         scrollBottom(true);
         const imgs = streamEl.querySelectorAll(".pm-bubble-photo");
         const last = imgs[imgs.length - 1];
-        if (last && !last.complete)
-          last.addEventListener("load", () => scrollBottom(true), { once: true });
+        if (last && !last.complete) last.addEventListener("load", () => scrollBottom(true), { once: true });
       }
     };
     const replaceOne = (m) => {
       msgById.set(m.id, m);
       let el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(m.id))}"]`);
-      if (!el && m.client_tag)
-        el = streamEl.querySelector(`.pm-bubble[data-tag="${CSS.escape(String(m.client_tag))}"]`);
+      if (!el && m.client_tag) el = streamEl.querySelector(`.pm-bubble[data-tag="${CSS.escape(String(m.client_tag))}"]`);
       if (!el) {
         renderStream();
         return;
@@ -3293,8 +3035,7 @@
     };
     const jumpToMessage = (id) => {
       const el = streamEl.querySelector(`.pm-bubble[data-msg="${CSS.escape(String(id))}"]`);
-      if (!el)
-        return;
+      if (!el) return;
       el.scrollIntoView({ behavior: "smooth", block: "center" });
       el.classList.remove("pm-bubble--flash");
       void el.offsetWidth;
@@ -3305,11 +3046,9 @@
     const msgKey = (m) => m.client_tag || m.id;
     let firstRender = true;
     const upsertMessage = (row) => {
-      if (!row)
-        return "none";
+      if (!row) return "none";
       let idx = messages.findIndex((m) => m.id === row.id);
-      if (idx < 0 && row.client_tag)
-        idx = messages.findIndex((m) => m.client_tag && m.client_tag === row.client_tag);
+      if (idx < 0 && row.client_tag) idx = messages.findIndex((m) => m.client_tag && m.client_tag === row.client_tag);
       if (idx >= 0) {
         const o = messages[idx];
         const same = o.id === row.id && o.text === row.text && o.photo_url === row.photo_url && o.deleted_at === row.deleted_at && o.edited_at === row.edited_at && o.read_at === row.read_at;
@@ -3323,8 +3062,7 @@
     const submitText = async () => {
       const text = input.value.trim();
       if (editing) {
-        if (!text)
-          return;
+        if (!text) return;
         if (containsProfanity(text)) {
           showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
           return;
@@ -3358,8 +3096,7 @@
     };
     const sendText = async (raw) => {
       const text = (raw || "").trim();
-      if (!text)
-        return;
+      if (!text) return;
       if (containsProfanity(text)) {
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
@@ -3383,8 +3120,7 @@
       replaceOne(res.message);
     };
     const sendPhoto = async (file) => {
-      if (!file)
-        return;
+      if (!file) return;
       const replyId = replyTo ? replyTo.id : null;
       clearCompose();
       const localUrl = URL.createObjectURL(file);
@@ -3412,15 +3148,13 @@
         pre.onload = pre.onerror = resolve;
         pre.src = up.url;
       });
-      if (api._closed)
-        return;
+      if (api._closed) return;
       upsertMessage(res.message);
       replaceOne(res.message);
       URL.revokeObjectURL(localUrl);
     };
     const openMsgActions = (m) => {
-      if (m.deleted_at)
-        return;
+      if (m.deleted_at) return;
       const mine = m.sender_uid === me;
       const sheet = document.createElement("div");
       sheet.className = "pm-actions-back";
@@ -3436,22 +3170,19 @@
       sheet.addEventListener("click", async (e) => {
         const b = e.target.closest("[data-act]");
         if (!b) {
-          if (e.target === sheet)
-            close();
+          if (e.target === sheet) close();
           return;
         }
         close();
         const act = b.dataset.act;
-        if (act === "reply")
-          startReply(m);
+        if (act === "reply") startReply(m);
         else if (act === "copy") {
           try {
             await navigator.clipboard.writeText(m.text || "");
             showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
           } catch (_) {
           }
-        } else if (act === "edit")
-          startEdit(m);
+        } else if (act === "edit") startEdit(m);
         else if (act === "delete") {
           const idx = messages.findIndex((x) => x.id === m.id);
           const prevMsg = idx >= 0 ? messages[idx] : null;
@@ -3473,11 +3204,9 @@
       api.screen.appendChild(sheet);
     };
     const clearedAt = await fetchThreadClearedAt(me, thread.id);
-    if (api._closed)
-      return api;
+    if (api._closed) return api;
     messages = await fetchMessages(thread.id, clearedAt);
-    if (api._closed)
-      return api;
+    if (api._closed) return api;
     messages.forEach((m) => seen.add(msgKey(m)));
     renderStream();
     setTimeout(() => scrollBottom(false), 50);
@@ -3490,14 +3219,11 @@
       }
     }
     const chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
-      if (!row)
-        return;
+      if (!row) return;
       if (type === "INSERT") {
         const st = upsertMessage(row);
-        if (st === "add")
-          appendOne(row);
-        else if (st === "update")
-          replaceOne(row);
+        if (st === "add") appendOne(row);
+        else if (st === "update") replaceOne(row);
         if (row.sender_uid !== me) {
           _readThreads.add(thread.id);
           markThreadRead(thread.id, me).finally(refreshUnreadBadge);
@@ -3516,8 +3242,7 @@
         chatUnsub();
       } catch (_) {
       }
-      if (_chatUnsub === chatUnsub)
-        _chatUnsub = null;
+      if (_chatUnsub === chatUnsub) _chatUnsub = null;
     });
     api._cleanup.push(refreshUnreadBadge);
     form.addEventListener("submit", (e) => {
@@ -3525,8 +3250,7 @@
       submitText();
     });
     api.screen.querySelector("#pm-composebar-x")?.addEventListener("click", () => {
-      if (editing)
-        input.value = "";
+      if (editing) input.value = "";
       clearCompose();
     });
     const attachBtn = api.screen.querySelector("#pm-attach");
@@ -3537,8 +3261,7 @@
       fileEl.click();
     });
     fileEl.addEventListener("change", () => {
-      if (fileEl.files && fileEl.files[0])
-        sendPhoto(fileEl.files[0]);
+      if (fileEl.files && fileEl.files[0]) sendPhoto(fileEl.files[0]);
       fileEl.value = "";
     });
     streamEl.addEventListener("click", (e) => {
@@ -3553,21 +3276,16 @@
         return;
       }
       const ph = e.target.closest("[data-photo]");
-      if (ph)
-        openPhoto(ph.dataset.photo);
+      if (ph) openPhoto(ph.dataset.photo);
     });
     setupBubbleGestures(streamEl, (id, kind) => {
       const m = msgById.get(Number(id)) || msgById.get(id);
-      if (!m)
-        return;
-      if (kind === "reply")
-        startReply(m);
-      else if (kind === "menu")
-        openMsgActions(m);
+      if (!m) return;
+      if (kind === "reply") startReply(m);
+      else if (kind === "menu") openMsgActions(m);
     });
     api.screen.querySelector("[data-pm-ctx]")?.addEventListener("click", (e) => {
-      if (e.target.closest(".pm-ctx-call"))
-        return;
+      if (e.target.closest(".pm-ctx-call")) return;
       window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
     });
     api.screen.querySelector(".pm-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
@@ -3605,8 +3323,7 @@
         fetchUnreadByThread(me),
         fetchThreadStates(me)
       ]);
-      if (api._closed)
-        return;
+      if (api._closed) return;
       const ICON_ARCHIVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9 13l3 3 3-3"/></svg>';
       const ICON_UNARCHIVE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8"/><path d="M9 15l3-3 3 3"/></svg>';
       const ICON_TRASH = ACT_ICONS.delete;
@@ -3623,17 +3340,12 @@
         const q = query.trim().toLowerCase();
         const list = threads.filter((t) => {
           const s = stOf(t.id);
-          if (s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at)))
-            return false;
+          if (s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at))) return false;
           if (filter === "archive") {
-            if (!s.archived)
-              return false;
-          } else if (s.archived)
-            return false;
-          if (filter === "unread" && !(unread.get(t.id) > 0))
-            return false;
-          if (!q)
-            return true;
+            if (!s.archived) return false;
+          } else if (s.archived) return false;
+          if (filter === "unread" && !(unread.get(t.id) > 0)) return false;
+          if (!q) return true;
           const hay = `${otherName(t)} ${threadPostTitle(t)} ${t.last_message_text || ""}`.toLowerCase();
           return hay.includes(q);
         });
@@ -3689,16 +3401,14 @@
       });
       chipsEl.addEventListener("click", (e) => {
         const btn = e.target.closest("[data-filter]");
-        if (!btn)
-          return;
+        if (!btn) return;
         filter = btn.dataset.filter;
         chipsEl.querySelectorAll(".pm-chip").forEach((c) => c.classList.toggle("pm-chip--active", c === btn));
         renderThreads();
       });
       let openRow = null, suppressClick = false;
       const closeOpenRow = () => {
-        if (!openRow)
-          return;
+        if (!openRow) return;
         const c = openRow.querySelector(".pm-thread");
         if (c) {
           c.style.transition = "";
@@ -3721,11 +3431,9 @@
         sY = e.touches[0].clientY;
       }, { passive: true });
       threadsEl.addEventListener("touchmove", (e) => {
-        if (!swCard)
-          return;
+        if (!swCard) return;
         const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
-        if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
-          swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (swLock === "h") {
           e.preventDefault();
           swCard.style.transition = "none";
@@ -3735,13 +3443,11 @@
         }
       }, { passive: false });
       threadsEl.addEventListener("touchend", (e) => {
-        if (!swCard)
-          return;
+        if (!swCard) return;
         const c = swCard, r = swRow, lock = swLock;
         swCard = null;
         swRow = null;
-        if (lock !== "h")
-          return;
+        if (lock !== "h") return;
         suppressClick = true;
         setTimeout(() => {
           suppressClick = false;
@@ -3751,16 +3457,14 @@
         const wasOpen = r === openRow;
         const open = wasOpen ? dx < 60 : dx < -70;
         if (open) {
-          if (openRow && openRow !== r)
-            closeOpenRow();
+          if (openRow && openRow !== r) closeOpenRow();
           c.style.transform = "translateX(-140px)";
           r.classList.add("pm-thread-row--open");
           openRow = r;
         } else {
           c.style.transform = "";
           r.classList.remove("pm-thread-row--open");
-          if (openRow === r)
-            openRow = null;
+          if (openRow === r) openRow = null;
         }
       }, { passive: false });
       const applyThreadState = async (id, patch) => {
@@ -3793,23 +3497,19 @@
           return;
         }
         const btn = e.target.closest("[data-thread]");
-        if (!btn)
-          return;
-        if (suppressClick)
-          return;
+        if (!btn) return;
+        if (suppressClick) return;
         if (openRow) {
           closeOpenRow();
           return;
         }
         const t = threads.find((x) => String(x.id) === btn.dataset.thread);
-        if (t)
-          openChat(t, t.post);
+        if (t) openChat(t, t.post);
       });
       let refreshTimer = null;
       const refresh = async () => {
         const [t, u, s] = await Promise.all([fetchMyThreads(me), fetchUnreadByThread(me), fetchThreadStates(me)]);
-        if (api._closed)
-          return;
+        if (api._closed) return;
         threads = t;
         unread = u;
         states = s;
@@ -3818,19 +3518,16 @@
         renderThreads();
       };
       const unsub = subscribeMyThreads(() => {
-        if (refreshTimer)
-          clearTimeout(refreshTimer);
+        if (refreshTimer) clearTimeout(refreshTimer);
         refreshTimer = setTimeout(refresh, 250);
       }, "pm-threads-list");
       const onPushRefresh = () => {
-        if (refreshTimer)
-          clearTimeout(refreshTimer);
+        if (refreshTimer) clearTimeout(refreshTimer);
         refreshTimer = setTimeout(refresh, 120);
       };
       window.addEventListener("cstl-chat-refresh", onPushRefresh);
       api._cleanup.push(() => {
-        if (refreshTimer)
-          clearTimeout(refreshTimer);
+        if (refreshTimer) clearTimeout(refreshTimer);
         unsub();
         window.removeEventListener("cstl-chat-refresh", onPushRefresh);
       });
@@ -3844,8 +3541,7 @@
   };
   function adDate(p) {
     const ms = p.bumped_at && new Date(p.bumped_at).getTime() || p.ts || p.published_at && new Date(p.published_at).getTime() || p.created_at && new Date(p.created_at).getTime() || 0;
-    if (!ms)
-      return "";
+    if (!ms) return "";
     const d = new Date(ms);
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
   }
@@ -3882,12 +3578,10 @@
         fetchMyThreads(me),
         fetchUnreadByThread(me)
       ]);
-      if (api._closed)
-        return;
+      if (api._closed) return;
       const byPost = /* @__PURE__ */ new Map();
       threads.filter((t) => t.author_uid === me).forEach((t) => {
-        if (!byPost.has(t.post_id))
-          byPost.set(t.post_id, []);
+        if (!byPost.has(t.post_id)) byPost.set(t.post_id, []);
         byPost.get(t.post_id).push(t);
       });
       const unreadFor = (postId) => (byPost.get(postId) || []).reduce((s, t) => s + (unread.get(t.id) || 0), 0);
@@ -3947,8 +3641,7 @@
       }
       let openRow = null, suppressClick = false;
       const closeOpenRow = () => {
-        if (!openRow)
-          return;
+        if (!openRow) return;
         const c = openRow.querySelector(".pm-ad");
         if (c) {
           c.style.transition = "";
@@ -3974,16 +3667,14 @@
       render2();
       api.screen.querySelectorAll(".pm-ad-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
-          if (tab.dataset.filter === filter)
-            return;
+          if (tab.dataset.filter === filter) return;
           filter = tab.dataset.filter;
           api.screen.querySelectorAll(".pm-ad-tab").forEach((t) => t.classList.toggle("active", t === tab));
           render2();
         });
       });
       const onPostUpdated = () => {
-        if (!api._closed)
-          render2();
+        if (!api._closed) render2();
       };
       window.addEventListener("cstl-post-updated", onPostUpdated);
       api._cleanup.push(() => window.removeEventListener("cstl-post-updated", onPostUpdated));
@@ -4003,11 +3694,9 @@
         sY = e.touches[0].clientY;
       }, { passive: true });
       listEl.addEventListener("touchmove", (e) => {
-        if (!swCard)
-          return;
+        if (!swCard) return;
         const dx = e.touches[0].clientX - sX, dy = e.touches[0].clientY - sY;
-        if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10))
-          swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+        if (!swLock && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) swLock = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
         if (swLock === "h") {
           e.preventDefault();
           swCard.style.transition = "none";
@@ -4018,13 +3707,11 @@
         }
       }, { passive: false });
       listEl.addEventListener("touchend", (e) => {
-        if (!swCard)
-          return;
+        if (!swCard) return;
         const c = swCard, r = swRow, lock = swLock;
         swCard = null;
         swRow = null;
-        if (lock !== "h")
-          return;
+        if (lock !== "h") return;
         suppressClick = true;
         setTimeout(() => {
           suppressClick = false;
@@ -4035,22 +3722,19 @@
         const wasOpen = r === openRow;
         const open = wasOpen ? dx < 60 : dx < -70;
         if (open) {
-          if (openRow && openRow !== r)
-            closeOpenRow();
+          if (openRow && openRow !== r) closeOpenRow();
           c.style.transform = `translateX(${-w}px)`;
           r.classList.add("pm-ad-row--open");
           openRow = r;
         } else {
           c.style.transform = "";
           r.classList.remove("pm-ad-row--open");
-          if (openRow === r)
-            openRow = null;
+          if (openRow === r) openRow = null;
         }
       }, { passive: false });
       const syncMenuRow = (menu) => {
         const row = menu.closest(".pm-ad-row");
-        if (row)
-          row.classList.toggle("pm-ad-row--menu-open", !menu.hidden);
+        if (row) row.classList.toggle("pm-ad-row--menu-open", !menu.hidden);
       };
       const closeMenus = (except) => api.screen.querySelectorAll(".pm-ad-menu").forEach((m) => {
         if (m !== except) {
@@ -4059,8 +3743,7 @@
         }
       });
       listEl.addEventListener("click", async (e) => {
-        if (suppressClick)
-          return;
+        if (suppressClick) return;
         if (openRow) {
           const actInOpen = e.target.closest("[data-act]");
           if (!actInOpen || !openRow.contains(actInOpen)) {
@@ -4084,8 +3767,7 @@
           const r = await bumpPost(Number(bumpBtn.dataset.bump));
           if (r.ok) {
             const p = posts2.find((x) => String(x.id) === bumpBtn.dataset.bump);
-            if (p)
-              p.bumped_at = r.bumped_at || (/* @__PURE__ */ new Date()).toISOString();
+            if (p) p.bumped_at = r.bumped_at || (/* @__PURE__ */ new Date()).toISOString();
             showToast("\u{1F53C} \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u043E \u0432\u0433\u043E\u0440\u0443", 2500);
             render2();
           } else if (r.error === "cooldown") {
@@ -4093,8 +3775,7 @@
             const m = Math.max(1, Math.ceil((r.seconds_left || 0) % 3600 / 60));
             showToast(`\u041F\u0456\u0434\u043D\u044F\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u0440\u0430\u0437 \u043D\u0430 3 \u0433\u043E\u0434. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0447\u0435\u0440\u0435\u0437 ${h > 0 ? h + " \u0433\u043E\u0434" : m + " \u0445\u0432"}.`, 3500);
             const p = posts2.find((x) => String(x.id) === bumpBtn.dataset.bump);
-            if (p)
-              p.bumped_at = new Date(Date.now() - (BUMP_COOLDOWN_MS - (r.seconds_left || 0) * 1e3)).toISOString();
+            if (p) p.bumped_at = new Date(Date.now() - (BUMP_COOLDOWN_MS - (r.seconds_left || 0) * 1e3)).toISOString();
             render2();
           } else {
             showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0456\u0434\u043D\u044F\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
@@ -4113,57 +3794,48 @@
           const id = Number(act.dataset.id);
           if (act.dataset.act === "edit") {
             const p = posts2.find((x) => x.id === id);
-            if (p)
-              openBoardModal({ editPost: p });
+            if (p) openBoardModal({ editPost: p });
             return;
           }
           if (act.dataset.act === "close") {
             const r = await closePost(id);
             if (r.ok) {
               const p = posts2.find((x) => x.id === id);
-              if (p)
-                p.status = "closed";
+              if (p) p.status = "closed";
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E \u2014 \u0443 \u0410\u0440\u0445\u0456\u0432\u0456", 2800);
               render2();
               window.dispatchEvent(new Event("cstl-posts-changed"));
-            } else
-              showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+            } else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0435\u0440\u0448\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
           } else if (act.dataset.act === "restore") {
             const r = await restorePost(id);
             if (r.ok) {
               const p = posts2.find((x) => x.id === id);
-              if (p)
-                p.status = "published";
+              if (p) p.status = "published";
               showToast("\u21A9\uFE0F \u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u043E \u0432 \u0430\u043A\u0442\u0438\u0432\u043D\u0456", 2800);
               render2();
               window.dispatchEvent(new Event("cstl-posts-changed"));
             } else if (r.error === "not_restorable") {
               showToast("\u041F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438 \u043C\u043E\u0436\u043D\u0430 \u043B\u0438\u0448\u0435 \u0437\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u0456 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 3e3);
-            } else
-              showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+            } else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u043E\u0432\u0435\u0440\u043D\u0443\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
           } else if (act.dataset.act === "delete") {
-            if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438? \u0420\u043E\u0437\u043C\u043E\u0432\u0438 \u043F\u043E \u043D\u044C\u043E\u043C\u0443 \u0442\u0435\u0436 \u0437\u043D\u0438\u043A\u043D\u0443\u0442\u044C."))
-              return;
+            if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u043D\u0430\u0437\u0430\u0432\u0436\u0434\u0438? \u0420\u043E\u0437\u043C\u043E\u0432\u0438 \u043F\u043E \u043D\u044C\u043E\u043C\u0443 \u0442\u0435\u0436 \u0437\u043D\u0438\u043A\u043D\u0443\u0442\u044C.")) return;
             const r = await deleteMyPost(id);
             if (r.ok) {
               posts2 = posts2.filter((x) => x.id !== id);
               showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2500);
               render2();
-            } else
-              showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
+            } else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 3e3);
           }
           return;
         }
         const open = e.target.closest("[data-open-ad]");
         if (open) {
           const p = posts2.find((x) => String(x.id) === open.dataset.openAd);
-          if (p)
-            window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
+          if (p) window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
         }
       });
       api.screen.addEventListener("click", (e) => {
-        if (!e.target.closest(".pm-ad-menu") && !e.target.closest("[data-menu]"))
-          closeMenus(null);
+        if (!e.target.closest(".pm-ad-menu") && !e.target.closest("[data-menu]")) closeMenus(null);
       });
     });
   }
@@ -4211,8 +3883,7 @@
         e.stopPropagation();
         const id = Number(un.dataset.unsave);
         const me = currentUserId();
-        if (me)
-          await removeSavedPost(me, id);
+        if (me) await removeSavedPost(me, id);
         list = list.filter((p) => p.id !== id);
         opts.onRemove?.(id);
         render2();
@@ -4222,8 +3893,7 @@
       const open = e.target.closest("[data-open-ad]");
       if (open) {
         const p = list.find((x) => String(x.id) === open.dataset.openAd);
-        if (p)
-          window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
+        if (p) window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
       }
     });
   }
@@ -4275,8 +3945,7 @@
       return;
     }
     const map = await fetchUnreadByThread(currentUserId());
-    for (const id of _readThreads)
-      map.delete(id);
+    for (const id of _readThreads) map.delete(id);
     const chats = map.size;
     if (chats <= 0) {
       hideAll();
@@ -4303,16 +3972,12 @@
   }
   async function registerChatPushDevice() {
     try {
-      if (!isLoggedIn())
-        return;
-      if (!("serviceWorker" in navigator) || !("PushManager" in window))
-        return;
-      if (Notification.permission !== "granted")
-        return;
+      if (!isLoggedIn()) return;
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      if (Notification.permission !== "granted") return;
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      if (!sub)
-        return;
+      if (!sub) return;
       const j = sub.toJSON();
       await saveUserPushDevice({
         uid: currentUserId(),
@@ -4325,12 +3990,10 @@
     }
   }
   async function ensureChatPush() {
-    if (!isLoggedIn())
-      return;
+    if (!isLoggedIn()) return;
     try {
       const sub = await ensurePushSubscription();
-      if (!sub)
-        return;
+      if (!sub) return;
       const j = sub.toJSON();
       await saveUserPushDevice({
         uid: currentUserId(),
@@ -4343,12 +4006,10 @@
     }
   }
   async function openThreadById(threadId) {
-    if (!isLoggedIn() || threadId == null)
-      return;
+    if (!isLoggedIn() || threadId == null) return;
     const threads = await fetchMyThreads(currentUserId());
     const thread = threads.find((t) => String(t.id) === String(threadId));
-    if (thread)
-      openChat(thread, thread.post);
+    if (thread) openChat(thread, thread.post);
   }
   var _chatBannerTimer = null;
   function showChatPushBanner({ title, body, threadId, url }) {
@@ -4367,8 +4028,7 @@
         return;
       }
       const i = url ? String(url).indexOf("#") : -1;
-      if (i >= 0)
-        location.hash = String(url).slice(i);
+      if (i >= 0) location.hash = String(url).slice(i);
     };
     requestAnimationFrame(() => el.classList.add("visible"));
     clearTimeout(_chatBannerTimer);
@@ -4379,8 +4039,7 @@
     refreshUnreadBadge();
     if ("serviceWorker" in navigator && navigator.serviceWorker) {
       navigator.serviceWorker.addEventListener("message", (e) => {
-        if (!e.data)
-          return;
+        if (!e.data) return;
         if (e.data.__cstl === "push") {
           refreshUnreadBadge();
           window.dispatchEvent(new CustomEvent("cstl-chat-refresh"));
@@ -4407,14 +4066,13 @@
         }
         _threadsUnsub = null;
       }
-      if (isLoggedIn())
-        _threadsUnsub = subscribeMyThreads((p) => {
-          const row = p && p.new;
-          if (row && row.thread_id != null && row.sender_uid && row.sender_uid !== currentUserId()) {
-            _readThreads.delete(row.thread_id);
-          }
-          refreshUnreadBadge();
-        });
+      if (isLoggedIn()) _threadsUnsub = subscribeMyThreads((p) => {
+        const row = p && p.new;
+        if (row && row.thread_id != null && row.sender_uid && row.sender_uid !== currentUserId()) {
+          _readThreads.delete(row.thread_id);
+        }
+        refreshUnreadBadge();
+      });
     });
   }
 
@@ -4434,8 +4092,7 @@
   }
   function toggleSaved(postId) {
     const uid = currentUserId();
-    if (!uid)
-      return;
+    if (!uid) return;
     if (savedIds.has(postId)) {
       savedIds.delete(postId);
       removeSavedPost(uid, postId);
@@ -4465,8 +4122,7 @@
   // src/tabs/board-discussions.js
   var _getPosts = () => [];
   function initDiscussionsEngine({ getPosts }) {
-    if (getPosts)
-      _getPosts = getPosts;
+    if (getPosts) _getPosts = getPosts;
   }
   var COMMENT_ICON_SVG = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
   var USERS_ICON_SVG = ICONS.users;
@@ -4476,10 +4132,8 @@
   var LIKE_EMOJI = "\u2764\uFE0F";
   var reactionsByPost = /* @__PURE__ */ new Map();
   function setDiscussionsData(comments, reactions) {
-    if (comments)
-      commentsByPost = comments;
-    if (reactions)
-      reactionsByPost = reactions;
+    if (comments) commentsByPost = comments;
+    if (reactions) reactionsByPost = reactions;
   }
   function getLikeCount(postId) {
     return reactionsByPost.get(postId)?.counts?.[LIKE_EMOJI] || 0;
@@ -4518,8 +4172,7 @@
   }
   function clockTime2(ts) {
     const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
+    if (isNaN(d.getTime())) return "";
     return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
   }
   var CHAT_MONTHS_GEN = [
@@ -4538,17 +4191,13 @@
   ];
   function chatDayLabel(ts) {
     const d = new Date(ts);
-    if (isNaN(d.getTime()))
-      return "";
+    if (isNaN(d.getTime())) return "";
     const now = /* @__PURE__ */ new Date();
     const sToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
     const day = 864e5;
-    if (d.getTime() >= sToday)
-      return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
-    if (d.getTime() >= sToday - day)
-      return "\u0412\u0447\u043E\u0440\u0430";
-    if (d.getFullYear() === now.getFullYear())
-      return `${d.getDate()} ${CHAT_MONTHS_GEN[d.getMonth()]}`;
+    if (d.getTime() >= sToday) return "\u0421\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (d.getTime() >= sToday - day) return "\u0412\u0447\u043E\u0440\u0430";
+    if (d.getFullYear() === now.getFullYear()) return `${d.getDate()} ${CHAT_MONTHS_GEN[d.getMonth()]}`;
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
   }
   function getChatSeen(postId) {
@@ -4562,10 +4211,8 @@
   }
   function newMsgLabel(n) {
     const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return "\u043D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
-    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14))
-      return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (m10 === 1 && m100 !== 11) return "\u043D\u043E\u0432\u0435 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return "\u043D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043D\u043E\u0432\u0438\u0445 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
   var LS_MSG_RATE = "cstl-msg-rate-v1";
@@ -4588,10 +4235,8 @@
   }
   function msgWord(n) {
     const mod10 = n % 10, mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11)
-      return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14))
-      return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (mod10 === 1 && mod100 !== 11) return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F";
     return "\u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C";
   }
   function authorAvatar(author, uid) {
@@ -4617,8 +4262,7 @@
     let html = "";
     let group = null;
     const flush = () => {
-      if (!group)
-        return;
+      if (!group) return;
       if (group.mine) {
         html += `<div class="pm-group pm-group--mine pm-group--disc">${group.bubbles.join("")}</div>`;
       } else {
@@ -4635,8 +4279,7 @@
         lastDay = day;
       }
       const isNew = dividerTs > 0 && t > dividerTs;
-      if (!isNew)
-        hadOld = true;
+      if (!isNew) hadOld = true;
       if (isNew && hadOld && !dividerPlaced) {
         flush();
         html += '<div class="bd-chat-divider" data-chat-divider><span>\u041D\u043E\u0432\u0456 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F</span></div>';
@@ -4645,8 +4288,7 @@
       const mine = isMyComment(c);
       const author = c.author || "\u0416\u0438\u0442\u0435\u043B\u044C";
       const key = mine ? "__me" : c.sender_uid || author;
-      if (group && group.key === key)
-        group.bubbles.push(renderDiscBubble(c));
+      if (group && group.key === key) group.bubbles.push(renderDiscBubble(c));
       else {
         flush();
         group = { key, mine, author, uid: c.sender_uid || "", bubbles: [renderDiscBubble(c)] };
@@ -4657,19 +4299,16 @@
   }
   function scrollChatToBottom() {
     const body = document.getElementById("bd-chat-modal-body");
-    if (body)
-      body.scrollTop = body.scrollHeight;
+    if (body) body.scrollTop = body.scrollHeight;
   }
   function chatBodyNearBottom() {
     const body = document.getElementById("bd-chat-modal-body");
-    if (!body)
-      return true;
+    if (!body) return true;
     return body.scrollHeight - body.scrollTop - body.clientHeight < 80;
   }
   function scrollChatToNewOrBottom() {
     const body = document.getElementById("bd-chat-modal-body");
-    if (!body)
-      return;
+    if (!body) return;
     const div = body.querySelector("[data-chat-divider]");
     if (div) {
       body.scrollTop += div.getBoundingClientRect().top - body.getBoundingClientRect().top - 60;
@@ -4679,19 +4318,16 @@
   }
   function showChatPill(n) {
     const pill = _chatModalEl?.querySelector(".bd-chat-newpill");
-    if (!pill)
-      return;
+    if (!pill) return;
     pill.querySelector(".bd-chat-newpill-n").textContent = `${n} ${newMsgLabel(n)}`;
     pill.hidden = false;
   }
   function hideChatPill() {
     const pill = _chatModalEl?.querySelector(".bd-chat-newpill");
-    if (pill)
-      pill.hidden = true;
+    if (pill) pill.hidden = true;
   }
   function updateChatHeaderCount(postId) {
-    if (postId !== _chatOpenPostId)
-      return;
+    if (postId !== _chatOpenPostId) return;
     const el = document.getElementById("bd-chat-reply-count");
     if (el) {
       const n = activeComments(postId).length;
@@ -4705,8 +4341,7 @@
   var _chatDividerTs = 0;
   var _chatUnseen = 0;
   function onChatEsc(e) {
-    if (e.key === "Escape")
-      closeChatModal();
+    if (e.key === "Escape") closeChatModal();
   }
   function openDiscSheet(opts) {
     const bodyHtml = `<div class="disc-sheet-title">${escapeHtml(opts.title)}</div>${opts.bodyHtml}`;
@@ -4835,8 +4470,7 @@
     });
   }
   function openChatModal(post) {
-    if (_chatModalEl)
-      return;
+    if (_chatModalEl) return;
     _chatOpenPostId = post.id;
     _chatDividerTs = getChatSeen(post.id);
     _chatUnseen = 0;
@@ -4924,14 +4558,12 @@
     setupBubbleGestures(bodyEl, onDiscBubbleAction);
     modal.querySelector("#bd-compose-x")?.addEventListener("click", () => {
       const input2 = modal.querySelector("[data-comment-input]");
-      if (_discEditing && input2)
-        input2.value = "";
+      if (_discEditing && input2) input2.value = "";
       clearDiscCompose();
     });
     bodyEl?.addEventListener("click", (e) => {
       const jump = e.target.closest("[data-jump]");
-      if (!jump)
-        return;
+      if (!jump) return;
       const b = bodyEl.querySelector(`.pm-bubble[data-msg="${jump.dataset.jump}"]`);
       if (b) {
         b.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -4987,16 +4619,13 @@
       modal.style.willChange = "transform";
     }, { passive: true });
     dragZone.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
+      if (!dragging) return;
       curY = Math.max(0, e.touches[0].clientY - startY);
       drag.move(e.touches[0].clientY);
-      if (!rafId)
-        rafId = requestAnimationFrame(applyDrag);
+      if (!rafId) rafId = requestAnimationFrame(applyDrag);
     }, { passive: true });
     const endDrag = () => {
-      if (!dragging)
-        return;
+      if (!dragging) return;
       dragging = false;
       if (rafId) {
         cancelAnimationFrame(rafId);
@@ -5019,23 +4648,19 @@
     dragZone.addEventListener("touchcancel", endDrag);
   }
   function closeChatModal(opts = {}) {
-    if (!_chatModalEl)
-      return;
+    if (!_chatModalEl) return;
     const modal = _chatModalEl;
     const backdrop = document.querySelector(".bd-chat-backdrop");
-    if (_chatOpenPostId != null)
-      setChatSeen(_chatOpenPostId, Date.now());
+    if (_chatOpenPostId != null) setChatSeen(_chatOpenPostId, Date.now());
     const bodyEl = modal.querySelector("#bd-chat-modal-body");
-    if (bodyEl && _chatScrollHandler)
-      bodyEl.removeEventListener("scroll", _chatScrollHandler);
+    if (bodyEl && _chatScrollHandler) bodyEl.removeEventListener("scroll", _chatScrollHandler);
     _chatScrollHandler = null;
     _chatOpenPostId = null;
     _chatDividerTs = 0;
     _chatUnseen = 0;
     _chatModalEl = null;
     modal.classList.remove("visible");
-    if (!opts.keepTransform)
-      modal.style.transform = "";
+    if (!opts.keepTransform) modal.style.transform = "";
     backdrop?.classList.remove("visible");
     document.body.classList.remove("modal-open");
     document.removeEventListener("keydown", onChatEsc);
@@ -5054,19 +4679,15 @@
   }
   function refreshChatCardPreview(postId) {
     const card = document.querySelector(`.bd-card--chat[data-chat-open="${postId}"]`);
-    if (!card)
-      return;
+    if (!card) return;
     const post = _getPosts().find((p) => p.id === postId);
-    if (post)
-      card.outerHTML = renderChatCard(post);
+    if (post) card.outerHTML = renderChatCard(post);
   }
   function rerenderCommentsBlock(postId) {
     const wrap = document.querySelector(`[data-comments-for="${postId}"]`);
-    if (!wrap)
-      return;
+    if (!wrap) return;
     const post = _getPosts().find((p) => p.id === postId);
-    if (!post)
-      return;
+    if (!post) return;
     wrap.outerHTML = chatMessagesHtml(post);
     hydrateAvatars(document.querySelector(`[data-comments-for="${postId}"]`));
     hydrateNames(document.querySelector(`[data-comments-for="${postId}"]`));
@@ -5083,17 +4704,13 @@
   }
   function showDiscCompose(title, text, mode) {
     const bar = document.getElementById("bd-compose");
-    if (!bar)
-      return;
+    if (!bar) return;
     const ic = document.getElementById("bd-compose-ic");
-    if (ic)
-      ic.innerHTML = mode === "edit" ? ACT_ICONS.edit : ACT_ICONS.reply;
+    if (ic) ic.innerHTML = mode === "edit" ? ACT_ICONS.edit : ACT_ICONS.reply;
     const t = document.getElementById("bd-compose-title");
-    if (t)
-      t.textContent = title;
+    if (t) t.textContent = title;
     const x = document.getElementById("bd-compose-text");
-    if (x)
-      x.textContent = (text || "").slice(0, 90);
+    if (x) x.textContent = (text || "").slice(0, 90);
     bar.hidden = false;
     _chatModalEl?.querySelector("[data-comment-input]")?.focus();
   }
@@ -5101,8 +4718,7 @@
     _discReplyTo = null;
     _discEditing = null;
     const bar = document.getElementById("bd-compose");
-    if (bar)
-      bar.hidden = true;
+    if (bar) bar.hidden = true;
   }
   function startDiscReply(c) {
     _discEditing = null;
@@ -5121,16 +4737,12 @@
   }
   function onDiscBubbleAction(id, kind) {
     const c = findDiscComment(id);
-    if (!c)
-      return;
-    if (kind === "reply")
-      startDiscReply(c);
-    else if (kind === "menu")
-      openDiscActions(c);
+    if (!c) return;
+    if (kind === "reply") startDiscReply(c);
+    else if (kind === "menu") openDiscActions(c);
   }
   function openDiscActions(c) {
-    if (c.deleted_at)
-      return;
+    if (c.deleted_at) return;
     const mine = isMyComment(c);
     const sheet = document.createElement("div");
     sheet.className = "pm-actions-back";
@@ -5146,24 +4758,20 @@
     sheet.addEventListener("click", async (e) => {
       const b = e.target.closest("[data-act]");
       if (!b) {
-        if (e.target === sheet)
-          close();
+        if (e.target === sheet) close();
         return;
       }
       close();
       const act = b.dataset.act;
-      if (act === "reply")
-        startDiscReply(c);
+      if (act === "reply") startDiscReply(c);
       else if (act === "copy") {
         try {
           await navigator.clipboard.writeText(c.text || "");
           showToast("\u0421\u043A\u043E\u043F\u0456\u0439\u043E\u0432\u0430\u043D\u043E");
         } catch (_) {
         }
-      } else if (act === "edit")
-        startDiscEdit(c);
-      else if (act === "delete")
-        doDiscDelete(c);
+      } else if (act === "edit") startDiscEdit(c);
+      else if (act === "delete") doDiscDelete(c);
     });
     (_chatModalEl || document.body).appendChild(sheet);
   }
@@ -5250,13 +4858,11 @@
   }
   var _delegationAttached = false;
   function attachDiscussionsDelegation() {
-    if (_delegationAttached)
-      return;
+    if (_delegationAttached) return;
     _delegationAttached = true;
     document.addEventListener("submit", async (e) => {
       const form = e.target.closest("[data-comment-form]");
-      if (!form)
-        return;
+      if (!form) return;
       e.preventDefault();
       e.stopPropagation();
       const postId = Number(form.dataset.commentForm);
@@ -5297,8 +4903,7 @@
           l0[i0] = { ...l0[i0], text, edited_at: (/* @__PURE__ */ new Date()).toISOString() };
           commentsByPost.set(postId, l0);
         }
-        if (input)
-          input.value = "";
+        if (input) input.value = "";
         clearDiscCompose();
         rerenderCommentsBlock(postId);
         const res = await editComment(target.id, text);
@@ -5337,8 +4942,7 @@
       const list = commentsByPost.get(postId) || [];
       list.push(tempComment);
       commentsByPost.set(postId, list);
-      if (input)
-        input.value = "";
+      if (input) input.value = "";
       clearDiscCompose();
       rerenderCommentsBlock(postId);
       input?.focus();
@@ -5361,8 +4965,7 @@
   }
   function onCommentRealtimeEvent(payload) {
     const postId = (payload.new || payload.old || {}).post_id;
-    if (!postId)
-      return;
+    if (!postId) return;
     const prevCount = getComments(postId).length;
     fetchAllComments().then((fresh) => {
       commentsByPost = fresh;
@@ -5379,8 +4982,7 @@
           if (near) {
             scrollChatToBottom();
           } else {
-            if (body)
-              body.scrollTop = prevTop;
+            if (body) body.scrollTop = prevTop;
             const delta = Math.max(0, getComments(postId).length - prevCount);
             if (delta > 0 && postId === _chatOpenPostId) {
               _chatUnseen += delta;
@@ -5395,8 +4997,7 @@
   }
   function onReactionRealtimeEvent(payload) {
     const postId = (payload.new || payload.old || {}).post_id;
-    if (!postId)
-      return;
+    if (!postId) return;
     const uid = currentUserId();
     fetchAllReactions(uid || getAnonId()).then((fresh) => {
       reactionsByPost = fresh;
@@ -5405,8 +5006,7 @@
   }
   var _realtimeAttached = false;
   function attachDiscussionsRealtime() {
-    if (_realtimeAttached || !isSupabaseReady())
-      return;
+    if (_realtimeAttached || !isSupabaseReady()) return;
     _realtimeAttached = true;
     subscribeComments(onCommentRealtimeEvent);
     subscribeReactions(onReactionRealtimeEvent);
@@ -5415,8 +5015,7 @@
     if (_chatOpenPostId != null) {
       const post = _getPosts().find((p) => p.id === _chatOpenPostId);
       closeChatModal();
-      if (post)
-        openChatModal(post);
+      if (post) openChatModal(post);
     }
   }
 
@@ -5426,18 +5025,15 @@
   }
   function pluralAds(n) {
     const d = n % 10, dd = n % 100;
-    if (d === 1 && dd !== 11)
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
-    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14))
-      return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    if (d === 1 && dd !== 11) return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
+    if (d >= 2 && d <= 4 && (dd < 12 || dd > 14)) return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F";
     return "\u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C";
   }
   var PHONE_ICON_SVG = ICONS.phone;
   var MSG_ICON_SVG = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>';
   var PIN_ICON_SVG2 = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
   function renderLoc(loc) {
-    if (!loc)
-      return "";
+    if (!loc) return "";
     const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
     return `<span class="cm-board-loc">${PIN_ICON_SVG2}${escapeHtml(label)}</span>`;
   }
@@ -5459,13 +5055,11 @@
   }
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
   function wasBumped(p) {
-    if (!p || !p.bumped_at)
-      return false;
+    if (!p || !p.bumped_at) return false;
     const bumpMs = new Date(p.bumped_at).getTime();
     const t = postTime(p);
     const origMs = typeof t === "number" ? t : t ? new Date(t).getTime() : 0;
-    if (!bumpMs || !origMs)
-      return false;
+    if (!bumpMs || !origMs) return false;
     return bumpMs - origMs > 6e4;
   }
   function renderPostTime(p) {
@@ -5542,8 +5136,7 @@
   `;
   }
   function openPhotoLightbox2(photos, startIdx) {
-    if (!photos || !photos.length)
-      return;
+    if (!photos || !photos.length) return;
     const wrap = document.createElement("div");
     wrap.className = "cm-photo-lightbox";
     wrap.innerHTML = `
@@ -5557,8 +5150,7 @@
     const track = wrap.querySelector(".cm-photo-lightbox-track");
     const countEl = wrap.querySelector(".cm-photo-lightbox-count");
     const updateCount = () => {
-      if (!countEl || !track.clientWidth)
-        return;
+      if (!countEl || !track.clientWidth) return;
       const i = Math.round(track.scrollLeft / track.clientWidth);
       countEl.textContent = `${i + 1} / ${photos.length}`;
     };
@@ -5575,13 +5167,11 @@
     };
     wrap.querySelector(".cm-photo-lightbox-close").addEventListener("click", close);
     wrap.addEventListener("click", (e) => {
-      if (e.target === wrap)
-        close();
+      if (e.target === wrap) close();
     });
   }
   function renderCard(post) {
-    if (post.type === "chat")
-      return renderChatCard(post);
+    if (post.type === "chat") return renderChatCard(post);
     return renderBoardCard(post);
   }
   function renderFab() {
@@ -5643,18 +5233,15 @@
     const savedIds2 = activeType === "saved" ? getSavedIds() : null;
     return allPosts.filter((p) => {
       if (activeType === "saved") {
-        if (!savedIds2.has(p.id) || p.type === "chat")
-          return false;
+        if (!savedIds2.has(p.id) || p.type === "chat") return false;
       } else if (p.type !== activeType) {
         return false;
       }
       if (activeType === "board" && activeCategory !== "all") {
-        if (p.category !== activeCategory)
-          return false;
+        if (p.category !== activeCategory) return false;
       }
       if (activeType === "board" && activeLocation !== COMMUNITY_ALL && !opts.ignoreLocation) {
-        if (p.location !== activeLocation && !isCommunityWide(p.location))
-          return false;
+        if (p.location !== activeLocation && !isCommunityWide(p.location)) return false;
       }
       if (q) {
         const hay = [
@@ -5663,15 +5250,13 @@
           p.author,
           ...p.tags || []
         ].filter(Boolean).join(" ").toLowerCase();
-        if (!hay.includes(q))
-          return false;
+        if (!hay.includes(q)) return false;
       }
       return true;
     });
   }
   function getBoardDisplayCount() {
-    if (activeType !== "board" || activeLocation === COMMUNITY_ALL)
-      return getFilteredPosts().length;
+    if (activeType !== "board" || activeLocation === COMMUNITY_ALL) return getFilteredPosts().length;
     const narrow = getFilteredPosts();
     const hasOwn = narrow.some((p) => p.location === activeLocation);
     return hasOwn ? narrow.length : getFilteredPosts({ ignoreLocation: true }).length;
@@ -5737,8 +5322,7 @@
   }
   function updateAdCount() {
     const el = document.getElementById("bd-count");
-    if (!el || activeType !== "board")
-      return;
+    if (!el || activeType !== "board") return;
     const n = getBoardDisplayCount();
     el.textContent = `${n} ${pluralAds(n)}`;
   }
@@ -5779,8 +5363,7 @@
   }
   async function renderBoard() {
     const el = getBoardRoot();
-    if (!el)
-      return;
+    if (!el) return;
     if (isSupabaseReady()) {
       const uid = currentUserId();
       const [posts2, anns, comments, saved, reactions] = await Promise.all([
@@ -5817,8 +5400,7 @@
   }
   function renderAll() {
     const el = getBoardRoot();
-    if (!el)
-      return;
+    if (!el) return;
     const hasCork = activeType === "board";
     el.innerHTML = `
     ${hasCork ? `
@@ -5840,14 +5422,12 @@
     const fabBtn = document.getElementById("board-trigger");
     const fabBack = document.getElementById("board-fab-backdrop");
     const closeFab = () => {
-      if (!fab)
-        return;
+      if (!fab) return;
       fab.classList.remove("open");
       fabBtn?.setAttribute("aria-expanded", "false");
     };
     const toggleFab = () => {
-      if (!fab)
-        return;
+      if (!fab) return;
       const open = fab.classList.toggle("open");
       fabBtn?.setAttribute("aria-expanded", open ? "true" : "false");
     };
@@ -5898,8 +5478,7 @@
           openThreadsList();
           return;
         }
-        if (act === "mine")
-          openMyAds();
+        if (act === "mine") openMyAds();
       });
     });
     const searchInput = document.getElementById("bd-search-input");
@@ -5918,8 +5497,7 @@
     const wireMenuButton = (btnId, menuId, onPick) => {
       const btn = document.getElementById(btnId);
       const menu = document.getElementById(menuId);
-      if (!btn || !menu)
-        return;
+      if (!btn || !menu) return;
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const wasHidden = menu.hasAttribute("hidden");
@@ -5946,13 +5524,11 @@
     if (!_boardMenusWired) {
       _boardMenusWired = true;
       document.addEventListener("click", (e) => {
-        if (e.target.closest(".bd-cat-filter-wrap") || e.target.closest(".bd-loc-filter"))
-          return;
+        if (e.target.closest(".bd-cat-filter-wrap") || e.target.closest(".bd-loc-filter")) return;
         closeBoardMenus();
       });
       document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape")
-          closeBoardMenus();
+        if (e.key === "Escape") closeBoardMenus();
       });
       document.querySelector(".app-main")?.addEventListener("scroll", closeBoardMenus, { passive: true });
     }
@@ -5969,11 +5545,9 @@
   }
   function renderBodyOnly() {
     const el = getBoardRoot();
-    if (!el)
-      return;
+    if (!el) return;
     const body = document.getElementById("bd-body");
-    if (!body)
-      return renderAll();
+    if (!body) return renderAll();
     body.innerHTML = renderBody();
     updateAdCount();
     body.querySelectorAll(".cm-board-call").forEach((btn) => {
@@ -5987,16 +5561,14 @@
   var _boardCollapseRef = null;
   var _boardTabHookSet = false;
   function openAdModalStandalone(post) {
-    if (!post)
-      return;
+    if (!post) return;
     const backdrop = document.createElement("div");
     backdrop.className = "board-backdrop";
     backdrop.style.zIndex = "2599";
     const modal = document.createElement("article");
     modal.className = "cm-board-note cm-board-modal-note cm-board-modal--sheet";
     modal.style.zIndex = "2600";
-    if (post.id != null)
-      modal.dataset.postId = post.id;
+    if (post.id != null) modal.dataset.postId = post.id;
     modal.innerHTML = renderAdModal(post);
     document.body.appendChild(backdrop);
     document.body.appendChild(modal);
@@ -6004,8 +5576,7 @@
     hydrateNames(modal);
     let closed = false;
     const close = () => {
-      if (closed)
-        return;
+      if (closed) return;
       closed = true;
       modal.classList.remove("visible");
       backdrop.classList.remove("visible");
@@ -6047,12 +5618,10 @@
       swiping = false;
       travel = centeredRemaining(modal);
       drag.start(sY);
-      if (canSwipe)
-        modal.style.transition = "none";
+      if (canSwipe) modal.style.transition = "none";
     }, { passive: true });
     modal.addEventListener("touchmove", (e) => {
-      if (!canSwipe)
-        return;
+      if (!canSwipe) return;
       const dy = e.touches[0].clientY - sY;
       const dx = e.touches[0].clientX - sX;
       if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
@@ -6071,8 +5640,7 @@
       drag.move(e.touches[0].clientY);
     }, { passive: false });
     modal.addEventListener("touchend", (e) => {
-      if (!canSwipe)
-        return;
+      if (!canSwipe) return;
       const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
       finishSwipe({
         panel: modal,
@@ -6093,21 +5661,18 @@
   }
   function initBoardNoteExpand(root) {
     const backdrop = root.querySelector("#board-backdrop");
-    if (!backdrop)
-      return;
+    if (!backdrop) return;
     let activeNote = null;
     let activeModal = null;
     let isAnimating = false;
     const DURATION = 240;
     const expand = (note) => {
-      if (isAnimating || activeNote)
-        return;
+      if (isAnimating || activeNote) return;
       isAnimating = true;
       const modal = document.createElement("article");
       modal.className = note.className + " cm-board-modal-note";
       const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
-      if (note.dataset.postId)
-        modal.dataset.postId = note.dataset.postId;
+      if (note.dataset.postId) modal.dataset.postId = note.dataset.postId;
       modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
@@ -6148,12 +5713,10 @@
         swiping = false;
         travel = centeredRemaining(modal);
         drag.start(sY);
-        if (canSwipe)
-          modal.style.transition = "none";
+        if (canSwipe) modal.style.transition = "none";
       }, { passive: true });
       modal.addEventListener("touchmove", (e) => {
-        if (!canSwipe)
-          return;
+        if (!canSwipe) return;
         const dy = e.touches[0].clientY - sY;
         const dx = e.touches[0].clientX - sX;
         if (!swiping && Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10) {
@@ -6172,8 +5735,7 @@
         drag.move(e.touches[0].clientY);
       }, { passive: false });
       modal.addEventListener("touchend", (e) => {
-        if (!canSwipe)
-          return;
+        if (!canSwipe) return;
         const dy = (e.changedTouches[0] ? e.changedTouches[0].clientY : sY) - sY;
         finishSwipe({
           panel: modal,
@@ -6199,8 +5761,7 @@
       }, DURATION);
     };
     const collapse = () => {
-      if (!activeNote || !activeModal || isAnimating)
-        return;
+      if (!activeNote || !activeModal || isAnimating) return;
       isAnimating = true;
       const note = activeNote;
       const modal = activeModal;
@@ -6218,10 +5779,8 @@
     root.querySelectorAll(".cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)").forEach((note) => {
       note.addEventListener("click", (e) => {
         e.stopPropagation();
-        if (isAnimating)
-          return;
-        if (!activeNote)
-          expand(note);
+        if (isAnimating) return;
+        if (!activeNote) expand(note);
       });
     });
     backdrop.addEventListener("click", collapse);
@@ -6229,23 +5788,20 @@
     if (!_boardTabHookSet) {
       _boardTabHookSet = true;
       window.addEventListener("cstl-tab-changed", () => {
-        if (_boardCollapseRef)
-          _boardCollapseRef();
+        if (_boardCollapseRef) _boardCollapseRef();
       });
     }
   }
   var _delegationAttached2 = false;
   function attachBoardDelegation() {
-    if (_delegationAttached2)
-      return;
+    if (_delegationAttached2) return;
     _delegationAttached2 = true;
     document.addEventListener("click", (e) => {
       const chatCard = e.target.closest("[data-chat-open]");
       if (chatCard && !e.target.closest(".bd-chat-modal") && !e.target.closest("[data-save-id]") && !e.target.closest("[data-share-board]") && !e.target.closest("[data-like-id]")) {
         const id = Number(chatCard.dataset.chatOpen);
         const post = allPosts.find((p) => p.id === id);
-        if (post)
-          openChatModal(post);
+        if (post) openChatModal(post);
         return;
       }
       const msgBtn = e.target.closest("[data-open-chat]");
@@ -6254,10 +5810,8 @@
         const holder = msgBtn.closest("[data-post-id]");
         const id = holder ? Number(holder.dataset.postId) : null;
         const post = id != null ? allPosts.find((p) => p.id === id) : null;
-        if (post)
-          startChatFromPost(post);
-        else
-          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", 2500);
+        if (post) startChatFromPost(post);
+        else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", 2500);
         return;
       }
       if (e.target.closest("[data-comment-form]") || e.target.closest("[data-comment-input]")) {
@@ -6307,16 +5861,13 @@
   }
   function openDiscussions() {
     const boardEl = document.getElementById("board-content");
-    if (boardEl)
-      boardEl.innerHTML = "";
+    if (boardEl) boardEl.innerHTML = "";
     discOpen = true;
     activeType = "chat";
     activeCategory = "all";
     searchQuery = "";
-    if (allPosts && allPosts.length)
-      renderAll();
-    else
-      renderBoard();
+    if (allPosts && allPosts.length) renderAll();
+    else renderBoard();
   }
   function closeDiscussions() {
     discOpen = false;
@@ -6324,13 +5875,11 @@
     activeCategory = "all";
     searchQuery = "";
     const c = document.getElementById("disc-content");
-    if (c)
-      c.innerHTML = "";
+    if (c) c.innerHTML = "";
     renderAll();
   }
   function setBoardActiveType(type) {
-    if (!type)
-      return;
+    if (!type) return;
     if (type === "chat") {
       window.switchTab("discussions");
       return;
@@ -6348,8 +5897,7 @@
       }
     }
     const post = allPosts.find((p) => p.id === postId);
-    if (post)
-      openChatModal(post);
+    if (post) openChatModal(post);
   }
   async function openBoardItemById(postId) {
     if (!allPosts.length) {
@@ -6359,8 +5907,7 @@
       }
     }
     const post = allPosts.find((p) => p.id === postId);
-    if (!post)
-      return;
+    if (!post) return;
     if (post.type === "chat") {
       window.switchTab?.("discussions");
       openChatModal(post);
@@ -6372,28 +5919,22 @@
   var BOARD_BODY_GAP = 12;
   function syncBoardBodyOffset() {
     const root = getBoardRoot();
-    if (!root)
-      return;
+    if (!root) return;
     const controls = root.querySelector(".bd-controls");
     const body = root.querySelector(".bd-body");
-    if (!controls || !body)
-      return;
-    if (controls.classList.contains("bd-controls--collapsed"))
-      return;
+    if (!controls || !body) return;
+    if (controls.classList.contains("bd-controls--collapsed")) return;
     const h = controls.offsetHeight;
-    if (h > 0)
-      body.style.paddingTop = h + BOARD_BODY_GAP + "px";
+    if (h > 0) body.style.paddingTop = h + BOARD_BODY_GAP + "px";
   }
   function fitBoardAuthors() {
     const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
     const range = document.createRange();
     document.querySelectorAll(".cm-board-foot").forEach((foot) => {
-      if (!foot.clientWidth)
-        return;
+      if (!foot.clientWidth) return;
       const nameEl = foot.querySelector(".cm-board-foot-who .cm-board-author--card");
       const actions = foot.querySelector(".cm-board-foot-actions");
-      if (!nameEl)
-        return;
+      if (!nameEl) return;
       const fcs = getComputedStyle(foot);
       const gap = parseFloat(fcs.columnGap) || parseFloat(fcs.gap) || 0;
       const avail = foot.clientWidth - (actions ? actions.offsetWidth : 0) - gap - PAD;
@@ -6420,11 +5961,9 @@
   }
   var _headerCollapseWired = false;
   function setupHeaderCollapse() {
-    if (_headerCollapseWired)
-      return;
+    if (_headerCollapseWired) return;
     const main = document.querySelector(".app-main");
-    if (!main)
-      return;
+    if (!main) return;
     _headerCollapseWired = true;
     const TOP_ZONE = 90;
     const HIDE_AFTER = 80;
@@ -6434,15 +5973,13 @@
     let collapsed = false;
     let ticking = false;
     const setCollapsed = (v) => {
-      if (v === collapsed)
-        return;
+      if (v === collapsed) return;
       collapsed = v;
       getBoardRoot()?.querySelector(".bd-controls")?.classList.toggle("bd-controls--collapsed", v);
     };
     const apply = () => {
       ticking = false;
-      if (main.dataset.tab !== "board")
-        return;
+      if (main.dataset.tab !== "board") return;
       const y = main.scrollTop;
       const dy = y - lastY;
       lastY = y;
@@ -6454,13 +5991,11 @@
       if (dy > 0) {
         accDown += dy;
         accUp = 0;
-        if (accDown >= HIDE_AFTER)
-          setCollapsed(true);
+        if (accDown >= HIDE_AFTER) setCollapsed(true);
       } else if (dy < 0) {
         accUp -= dy;
         accDown = 0;
-        if (accUp >= SHOW_AFTER)
-          setCollapsed(false);
+        if (accUp >= SHOW_AFTER) setCollapsed(false);
       }
     };
     main.addEventListener("scroll", () => {
@@ -6482,32 +6017,27 @@
     renderBoard();
     window.addEventListener("cstl-open-ad", (e) => {
       const p = e.detail && e.detail.post;
-      if (p)
-        openAdModalStandalone(p);
+      if (p) openAdModalStandalone(p);
     });
     window.addEventListener("cstl-posts-changed", () => renderBoard());
     window.addEventListener("cstl-tab-changed", () => {
       const tab = document.querySelector(".app-main")?.dataset.tab;
-      if (tab === "discussions" && !discOpen)
-        openDiscussions();
-      else if (tab !== "discussions" && discOpen)
-        closeDiscussions();
+      if (tab === "discussions" && !discOpen) openDiscussions();
+      else if (tab !== "discussions" && discOpen) closeDiscussions();
       if (tab === "board" && activeLocation !== COMMUNITY_ALL) {
         activeLocation = COMMUNITY_ALL;
         renderAll();
       }
-      if (tab === "board")
-        requestAnimationFrame(() => {
-          syncBoardBodyOffset();
-          fitBoardAuthors();
-        });
+      if (tab === "board") requestAnimationFrame(() => {
+        syncBoardBodyOffset();
+        fitBoardAuthors();
+      });
     });
     setupHeaderCollapse();
     onAuthChange(() => {
       if (!isLoggedIn()) {
         setSavedIds(/* @__PURE__ */ new Set());
-        if (activeType === "saved")
-          activeType = "board";
+        if (activeType === "saved") activeType = "board";
       }
       renderBoard();
       handleDiscussionsAuthChange();
@@ -6527,10 +6057,8 @@
   function toggleSavedArticle(id) {
     const ids = getSavedArticleIds();
     const idx = ids.indexOf(id);
-    if (idx === -1)
-      ids.push(id);
-    else
-      ids.splice(idx, 1);
+    if (idx === -1) ids.push(id);
+    else ids.splice(idx, 1);
     localStorage.setItem(SAVED_KEY, JSON.stringify(ids));
     return idx === -1;
   }
@@ -6591,8 +6119,7 @@
   }
   function handleImgError(e) {
     const img = e.target;
-    if (!img || img.tagName !== "IMG")
-      return;
+    if (!img || img.tagName !== "IMG") return;
     const ph = document.createElement("div");
     ph.className = img.className + " img-fallback";
     ph.textContent = "\u{1F3F0}";
@@ -6602,8 +6129,7 @@
     if (!articles || articles.length === 0) {
       return '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     }
-    if (opts.compact)
-      return articles.map(renderRow).join("");
+    if (opts.compact) return articles.map(renderRow).join("");
     return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
   }
   async function ensureNewsLoaded() {
@@ -6668,23 +6194,19 @@
   }
   function renderArticleBody(content) {
     const raw = content || "";
-    if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br)\b/i.test(raw))
-      return raw;
+    if (/<(p|h2|h3|ul|ol|li|strong|em|blockquote|br)\b/i.test(raw)) return raw;
     const text = decodeEntities(raw);
     const paragraphs = text.split(/\n\n+/).map((p) => p.trim()).filter(Boolean);
-    if (!paragraphs.length)
-      return "";
+    if (!paragraphs.length) return "";
     return paragraphs.map((p) => `<p class="article-p">${escapeHtml(p)}</p>`).join("");
   }
   function openArticle(id) {
     const article = allArticles.find((a) => a.id === id);
-    if (!article)
-      return;
+    if (!article) return;
     const modal = document.getElementById("article-modal");
     const modalContent = document.getElementById("article-modal-content");
     const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
+    if (!modal || !modalContent) return;
     const sourceHtml = article.sourceUrl ? `<a class="article-byline-link" href="${escapeHtml(article.sourceUrl)}" target="_blank" rel="noopener">${escapeHtml(article.source)}</a>` : `<span>${escapeHtml(article.source)}</span>`;
     const rawText = article.content && article.content.length > (article.excerpt || "").length ? article.content : article.excerpt || article.content || "";
     const bodyHtml = renderArticleBody(rawText);
@@ -6727,19 +6249,14 @@
     const shareBtn = document.getElementById("modal-share-btn");
     const remindBtn = document.getElementById("modal-remind-btn");
     const saveBtn = document.getElementById("modal-save-btn");
-    if (shareBtn)
-      shareBtn.innerHTML = ICONS.share;
-    if (remindBtn)
-      remindBtn.innerHTML = ICONS.bell;
-    if (saveBtn)
-      saveBtn.innerHTML = ICONS.bookmark;
-    if (shareBtn)
-      shareBtn.onclick = () => sharePost({
-        title: article.title,
-        url: deepLink("news", article.id)
-      });
-    if (remindBtn)
-      remindBtn.hidden = true;
+    if (shareBtn) shareBtn.innerHTML = ICONS.share;
+    if (remindBtn) remindBtn.innerHTML = ICONS.bell;
+    if (saveBtn) saveBtn.innerHTML = ICONS.bookmark;
+    if (shareBtn) shareBtn.onclick = () => sharePost({
+      title: article.title,
+      url: deepLink("news", article.id)
+    });
+    if (remindBtn) remindBtn.hidden = true;
     if (saveBtn) {
       saveBtn.hidden = false;
       saveBtn.classList.toggle("modal-icon-btn--active", getSavedArticleIds().includes(article.id));
@@ -6763,8 +6280,7 @@
 
   // src/core/bus-schedule.js
   function toMinutes(hhmm) {
-    if (!hhmm || typeof hhmm !== "string")
-      return 0;
+    if (!hhmm || typeof hhmm !== "string") return 0;
     const [h, m] = hhmm.split(":").map(Number);
     return h * 60 + m;
   }
@@ -6778,11 +6294,9 @@
   }
   function getStopMins(route, stopName) {
     const stop = route.stops.find((s) => s.name === stopName);
-    if (!stop)
-      return null;
+    if (!stop) return null;
     const totalKm = route.stops[route.stops.length - 1].km;
-    if (totalKm === 0)
-      return toMinutes(route.departure_time);
+    if (totalKm === 0) return toMinutes(route.departure_time);
     return toMinutes(route.departure_time) + Math.round(stop.km / totalKm * route.duration_min);
   }
   function getStopHHMM(route, stopName) {
@@ -6792,12 +6306,9 @@
   function getRouteState(route, nowMin = nowMinutes()) {
     const fromMin = getStopMins(route, route.stops[0].name);
     const toMin = getStopMins(route, route.stops[route.stops.length - 1].name);
-    if (fromMin === null || toMin === null)
-      return "waiting";
-    if (nowMin < fromMin)
-      return "waiting";
-    if (nowMin > toMin)
-      return "past";
+    if (fromMin === null || toMin === null) return "waiting";
+    if (nowMin < fromMin) return "waiting";
+    if (nowMin > toMin) return "past";
     return "enroute";
   }
   function getCurrentPosition(route, nowMin = nowMinutes()) {
@@ -6805,10 +6316,8 @@
     const first = stops[0].name;
     const last = stops[stops.length - 1].name;
     const state = getRouteState(route, nowMin);
-    if (state === "waiting")
-      return { current: first, next: stops[1]?.name || last };
-    if (state === "past")
-      return { current: last, next: null };
+    if (state === "waiting") return { current: first, next: stops[1]?.name || last };
+    if (state === "past") return { current: last, next: null };
     let current = first, next = last, currentIdx = 0;
     for (let i = 0; i < stops.length; i++) {
       const m = getStopMins(route, stops[i].name);
@@ -6817,8 +6326,7 @@
         currentIdx = i;
       }
     }
-    if (currentIdx < stops.length - 1)
-      next = stops[currentIdx + 1].name;
+    if (currentIdx < stops.length - 1) next = stops[currentIdx + 1].name;
     return { current, next };
   }
   function getRouteTimings(route, nowMin = nowMinutes()) {
@@ -6847,10 +6355,8 @@
     };
   }
   function formatCountdownUpper(mins) {
-    if (mins == null)
-      return "";
-    if (mins < 60)
-      return `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412`;
+    if (mins == null) return "";
+    if (mins < 60) return `\u0427\u0415\u0420\u0415\u0417 ${mins} \u0425\u0412`;
     const h = Math.floor(mins / 60), m = mins % 60;
     return m ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
   }
@@ -6878,14 +6384,12 @@
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   }
   function getDayData() {
-    if (busData?.days)
-      return busData.days[busDay] || { routes: [], fetchedAt: "", fetchedTime: "" };
-    if (busDay === getTodayISO())
-      return {
-        routes: busData?.routes || [],
-        fetchedAt: busData?.verifiedAt || "",
-        fetchedTime: busData?.verifiedTime || ""
-      };
+    if (busData?.days) return busData.days[busDay] || { routes: [], fetchedAt: "", fetchedTime: "" };
+    if (busDay === getTodayISO()) return {
+      routes: busData?.routes || [],
+      fetchedAt: busData?.verifiedAt || "",
+      fetchedTime: busData?.verifiedTime || ""
+    };
     return { routes: [], fetchedAt: "", fetchedTime: "" };
   }
   function isViewingToday() {
@@ -6913,8 +6417,7 @@
     return `<div class="bus-list-title">\u0420\u041E\u0417\u041A\u041B\u0410\u0414 \u0410\u0412\u0422\u041E\u0411\u0423\u0421\u041D\u0418\u0425 \u041C\u0410\u0420\u0428\u0420\u0423\u0422\u0406\u0412<span class="bus-list-date-sub">${formatBusDayTitle()}</span><span class="bus-list-updated-sub">${updatedStr}</span></div>`;
   }
   function getTimingsForDisplay(route) {
-    if (isViewingToday())
-      return getRouteTimings(route);
+    if (isViewingToday()) return getRouteTimings(route);
     const base = getRouteTimings(route);
     return { ...base, state: "waiting", progress: 0, minsToDeparture: null, minsToArrival: null };
   }
@@ -6924,20 +6427,16 @@
   function loadPrefs() {
     try {
       const p = JSON.parse(localStorage.getItem(PREFS_KEY));
-      if (p?.from)
-        fromStop = p.from;
-      if (p?.to)
-        toStop = p.to;
+      if (p?.from) fromStop = p.from;
+      if (p?.to) toStop = p.to;
     } catch {
     }
   }
   async function subscribeToPush(routeId, routeName, boardingStop, alightingStop, trackDate, depTime) {
-    if (trackDate < getTodayISO())
-      return;
+    if (trackDate < getTodayISO()) return;
     try {
       const sub = await ensurePushSubscription();
-      if (!sub)
-        return;
+      if (!sub) return;
       const subJson = sub.toJSON();
       const payload = {
         // uid залогіненого жителя (Етап 2). RLS-перепис вимагає user_uuid = auth.uid()::text.
@@ -6969,14 +6468,12 @@
     }
   }
   async function unsubscribeFromPush(routeId, trackDate) {
-    if (trackDate < getTodayISO())
-      return;
+    if (trackDate < getTodayISO()) return;
     let endpoint = null;
     try {
       const reg = await navigator.serviceWorker.ready;
       const sub = await reg.pushManager.getSubscription();
-      if (!sub)
-        return;
+      if (!sub) return;
       endpoint = sub.endpoint;
       let res = await deletePushSubscription(endpoint, routeId, trackDate);
       if (!res.ok) {
@@ -6990,8 +6487,7 @@
       }
     } catch (err) {
       console.warn("[push] unsubscribe error:", err);
-      if (endpoint)
-        addPendingUnsub(endpoint, routeId, trackDate);
+      if (endpoint) addPendingUnsub(endpoint, routeId, trackDate);
     }
   }
   function loadPendingUnsub() {
@@ -7003,10 +6499,8 @@
     }
   }
   function savePendingUnsub(list) {
-    if (list.length)
-      localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
-    else
-      localStorage.removeItem(PENDING_UNSUB_KEY);
+    if (list.length) localStorage.setItem(PENDING_UNSUB_KEY, JSON.stringify(list));
+    else localStorage.removeItem(PENDING_UNSUB_KEY);
   }
   function addPendingUnsub(endpoint, routeId, trackDate) {
     const list = loadPendingUnsub();
@@ -7021,18 +6515,14 @@
   async function flushPendingUnsub() {
     const today = getTodayISO();
     const list = loadPendingUnsub();
-    if (!list.length)
-      return;
+    if (!list.length) return;
     const remaining = [];
     for (const p of list) {
-      if (p.trackDate < today)
-        continue;
+      if (p.trackDate < today) continue;
       const reTracked = trackedRoutes.some((t) => t.routeId === p.routeId && t.trackDate === p.trackDate);
-      if (reTracked)
-        continue;
+      if (reTracked) continue;
       const res = await deletePushSubscription(p.endpoint, p.routeId, p.trackDate);
-      if (!res.ok)
-        remaining.push(p);
+      if (!res.ok) remaining.push(p);
     }
     savePendingUnsub(remaining);
   }
@@ -7052,24 +6542,20 @@
       } else {
         trackedRoutes = [];
       }
-      if (!trackedRoutes.length)
-        localStorage.removeItem(trackKey());
+      if (!trackedRoutes.length) localStorage.removeItem(trackKey());
     } catch {
       trackedRoutes = [];
     }
   }
   function saveTrackedRoute() {
     if (isLoggedIn()) {
-      if (!trackedRoutes.length)
-        localStorage.removeItem(trackKey());
-      else
-        localStorage.setItem(trackKey(), JSON.stringify({ routes: trackedRoutes }));
+      if (!trackedRoutes.length) localStorage.removeItem(trackKey());
+      else localStorage.setItem(trackKey(), JSON.stringify({ routes: trackedRoutes }));
     }
     window.dispatchEvent(new CustomEvent("cstl-bus-track-changed"));
   }
   async function hydrateTrackedFromDB() {
-    if (!isLoggedIn())
-      return;
+    if (!isLoggedIn()) return;
     try {
       const rows = await fetchTrackedRoutesFromDB(currentUserId(), getTodayISO());
       let added = false;
@@ -7080,16 +6566,14 @@
           added = true;
         }
       }
-      if (added)
-        saveTrackedRoute();
+      if (added) saveTrackedRoute();
     } catch (e) {
       console.warn("[bus] hydrateTrackedFromDB:", e && e.message);
     }
   }
   function removeTrackedEntry(entry) {
     const idx = trackedRoutes.indexOf(entry);
-    if (idx !== -1)
-      trackedRoutes.splice(idx, 1);
+    if (idx !== -1) trackedRoutes.splice(idx, 1);
     saveTrackedRoute();
   }
   function findTrackedEntry(routeId, boardingStop, alightingStop, date) {
@@ -7115,8 +6599,7 @@
   }
   function showBanner(label, route, isSubroute = false, entry = null) {
     const banner = document.getElementById("bus-track-banner");
-    if (!banner)
-      return;
+    if (!banner) return;
     _bannerEntry = entry;
     const lEl = banner.querySelector(".btb-label");
     const rEl = banner.querySelector(".btb-route");
@@ -7158,12 +6641,10 @@
   }
   function updateBannerBell() {
     const banner = document.getElementById("bus-track-banner");
-    if (!banner)
-      return;
+    if (!banner) return;
     const bell = banner.querySelector(".btb-bell");
     const hint = banner.querySelector(".btb-hint");
-    if (!bell || !hint || !_bannerEntry)
-      return;
+    if (!bell || !hint || !_bannerEntry) return;
     const notify = _bannerEntry.notify !== false;
     const blocked = notify && !!pushBlockedMsg();
     bell.classList.remove("sr-bell--on", "sr-bell--off", "sr-bell--warn");
@@ -7195,8 +6676,7 @@
     _bannerEntry = null;
   }
   function fmtMins(m) {
-    if (m < 60)
-      return `${m} \u0445\u0432`;
+    if (m < 60) return `${m} \u0445\u0432`;
     const h = Math.floor(m / 60), min = m % 60;
     return min ? `${h} \u0433\u043E\u0434 ${min} \u0445\u0432` : `${h} \u0433\u043E\u0434`;
   }
@@ -7226,8 +6706,7 @@
     const today = getTodayISO();
     const before = trackedRoutes.length;
     trackedRoutes = trackedRoutes.filter((t) => t.trackDate >= today);
-    if (before !== trackedRoutes.length)
-      saveTrackedRoute();
+    if (before !== trackedRoutes.length) saveTrackedRoute();
     if (!trackedRoutes.length) {
       hideBanner();
       return;
@@ -7239,16 +6718,14 @@
   }
   function checkSingleTracked(tracked, forceInitial) {
     const today = getTodayISO();
-    if (tracked.notify === false)
-      return;
+    if (tracked.notify === false) return;
     if (tracked.trackDate > today) {
       if (!tracked.notifiedFuture) {
         tracked.notifiedFuture = true;
         saveTrackedRoute();
         const dayRoutes2 = (busData?.days?.[tracked.trackDate] || {}).routes || [];
         const route2 = dayRoutes2.find((r) => r.id === tracked.routeId);
-        if (!route2)
-          return;
+        if (!route2) return;
         const { heading: heading2, subDefault: subDefault2 } = buildBannerTexts(route2, tracked);
         showBanner(subDefault2, heading2, true, tracked);
       }
@@ -7260,8 +6737,7 @@
     }
     const dayRoutes = (busData?.days ? busData.days[tracked.trackDate] || {} : busData || {}).routes || [];
     const route = dayRoutes.find((r) => r.id === tracked.routeId);
-    if (!route)
-      return;
+    if (!route) return;
     const { heading, subDefault } = buildBannerTexts(route, tracked);
     if (route.status === "cancelled") {
       if (!tracked.notifiedCanc) {
@@ -7303,19 +6779,17 @@
               forceShow = true;
               saveTrackedRoute();
             }
-            if (forceShow)
-              showBanner(
-                minsToBoard <= 15 ? `\u0414\u043E ${tracked.boardingStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
-                heading,
-                false,
-                tracked
-              );
+            if (forceShow) showBanner(
+              minsToBoard <= 15 ? `\u0414\u043E ${tracked.boardingStop.toUpperCase()} \u0437\u0430 ${fmtMins(minsToBoard)}` : "\u0412 \u0434\u043E\u0440\u043E\u0437\u0456",
+              heading,
+              false,
+              tracked
+            );
             return;
           }
         }
       }
-      if (forceShow)
-        showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading, false, tracked);
+      if (forceShow) showBanner("\u0412\u0436\u0435 \u0432 \u0434\u043E\u0440\u043E\u0437\u0456", heading, false, tracked);
       return;
     }
     if (state === "waiting" && timings.minsToDeparture !== null) {
@@ -7325,76 +6799,61 @@
         forceShow = true;
         saveTrackedRoute();
       }
-      if (forceShow)
-        showBanner(
-          m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
-          heading,
-          false,
-          tracked
-        );
+      if (forceShow) showBanner(
+        m <= 15 ? `\u0412\u0456\u0434\u043F\u0440\u0430\u0432\u043B\u044F\u0454\u0442\u044C\u0441\u044F \u0447\u0435\u0440\u0435\u0437 ${fmtMins(m)}` : `\u0427\u0435\u0440\u0435\u0437 ${fmtMins(m)}`,
+        heading,
+        false,
+        tracked
+      );
       return;
     }
-    if (forceShow)
-      showBanner(subDefault, heading, true, tracked);
+    if (forceShow) showBanner(subDefault, heading, true, tracked);
   }
   function getSegmentPrice(route, fromName, toName) {
     const f = route.stops.find((s) => s.name === fromName);
     const t = route.stops.find((s) => s.name === toName);
-    if (!f || !t)
-      return null;
+    if (!f || !t) return null;
     const diff = Math.abs((t.price_from_start || 0) - (f.price_from_start || 0));
     return diff > 0 ? diff.toFixed(2) : null;
   }
   function getEffectiveFrom(route) {
     if (fromStop) {
       const match = route.stops.find((s) => normalizeStopName(s.name) === normalizeStopName(fromStop));
-      if (match)
-        return match.name;
+      if (match) return match.name;
     }
     return route.stops[0].name;
   }
   function getEffectiveTo(route) {
     if (toStop) {
       const match = route.stops.find((s) => normalizeStopName(s.name) === normalizeStopName(toStop));
-      if (match)
-        return match.name;
+      if (match) return match.name;
     }
     return route.stops[route.stops.length - 1].name;
   }
   function matchesSearch(route) {
-    if (!fromStop && !toStop)
-      return true;
+    if (!fromStop && !toStop) return true;
     const stops = route.stops;
     const fStop = fromStop ? stops.find((s) => normalizeStopName(s.name) === normalizeStopName(fromStop)) : null;
     const tStop = toStop ? stops.find((s) => normalizeStopName(s.name) === normalizeStopName(toStop)) : null;
-    if (fromStop && !fStop)
-      return false;
-    if (toStop && !tStop)
-      return false;
-    if (fromStop && toStop && fStop.km > tStop.km)
-      return false;
+    if (fromStop && !fStop) return false;
+    if (toStop && !tStop) return false;
+    if (fromStop && toStop && fStop.km > tStop.km) return false;
     return true;
   }
   function isPastRoute(route) {
-    if (busDay < getTodayISO())
-      return true;
-    if (!isViewingToday())
-      return false;
+    if (busDay < getTodayISO()) return true;
+    if (!isViewingToday()) return false;
     const state = getRouteState(route);
-    if (state === "past")
-      return true;
-    if (route.status === "cancelled" && state !== "waiting")
-      return true;
+    if (state === "past") return true;
+    if (route.status === "cancelled" && state !== "waiting") return true;
     if (state === "enroute" && fromStop) {
       const boardMins = getStopMins(route, getEffectiveFrom(route));
-      if (boardMins !== null && nowMinutes() > boardMins)
-        return true;
+      if (boardMins !== null && nowMinutes() > boardMins) return true;
     }
     return false;
   }
   function getFilteredRoutes() {
-    if (!busData)
-      return [];
+    if (!busData) return [];
     return (getDayData().routes || []).filter(matchesSearch).sort((a, b) => {
       const aM = getStopMins(a, getEffectiveFrom(a)) || 0;
       const bM = getStopMins(b, getEffectiveFrom(b)) || 0;
@@ -7403,15 +6862,12 @@
   }
   function findNextRoute() {
     const all = getFilteredRoutes();
-    if (!isViewingToday())
-      return all.find((r) => r.status !== "cancelled") || null;
+    if (!isViewingToday()) return all.find((r) => r.status !== "cancelled") || null;
     const enroute = all.filter((r) => {
-      if (getRouteState(r) !== "enroute")
-        return false;
+      if (getRouteState(r) !== "enroute") return false;
       if (fromStop) {
         const boardMins = getStopMins(r, getEffectiveFrom(r));
-        if (boardMins !== null && nowMinutes() > boardMins)
-          return false;
+        if (boardMins !== null && nowMinutes() > boardMins) return false;
       }
       return true;
     });
@@ -7431,26 +6887,22 @@
       if (trackedForDay.length) {
         const trackedIds = new Set(trackedForDay.map((t) => t.routeId));
         const tracked = all.filter((r) => trackedIds.has(r.id) && r.status !== "cancelled");
-        if (tracked.length)
-          return tracked;
+        if (tracked.length) return tracked;
       }
       if (selectedRouteId) {
         const sel = all.find((r) => r.id === selectedRouteId && r.status !== "cancelled");
-        if (sel)
-          return [sel];
+        if (sel) return [sel];
       }
       const first = all.find((r) => r.status !== "cancelled") || all[0] || null;
       return first ? [first] : [];
     }
     const result = all.filter((r) => {
-      if (r.status === "cancelled")
-        return false;
+      if (r.status === "cancelled") return false;
       const state = getRouteState(r);
       if (state === "enroute") {
         if (fromStop) {
           const boardMins = getStopMins(r, getEffectiveFrom(r));
-          if (boardMins !== null && nowMinutes() > boardMins)
-            return false;
+          if (boardMins !== null && nowMinutes() > boardMins) return false;
         }
         return true;
       }
@@ -7470,8 +6922,7 @@
         activeList.unshift(activeList.splice(ti, 1)[0]);
       } else if (ti === -1) {
         const tr = all.find((r) => r.id === rid && r.status !== "cancelled");
-        if (tr)
-          activeList.unshift(tr);
+        if (tr) activeList.unshift(tr);
       }
     });
     return activeList;
@@ -7480,8 +6931,7 @@
     return name.replace(/\s+пов\.$/, "").trim();
   }
   function getAllStops() {
-    if (!busData)
-      return [];
+    if (!busData) return [];
     const seen = /* @__PURE__ */ new Set();
     (getDayData().routes || []).forEach((r) => r.stops.forEach((s) => seen.add(normalizeStopName(s.name))));
     return [...seen].sort((a, b) => a.localeCompare(b, "uk"));
@@ -7490,15 +6940,13 @@
     activeField = field;
     const panel = document.getElementById("bus-search-panel");
     const dd = document.getElementById("bs-dropdown");
-    if (!dd || !panel)
-      return;
+    if (!dd || !panel) return;
     const rect = panel.getBoundingClientRect();
     dd.style.top = rect.bottom + "px";
     renderDropdownItems("");
     dd.hidden = false;
     const filterEl = document.getElementById("bs-dd-filter");
-    if (filterEl)
-      setTimeout(() => filterEl.focus(), 80);
+    if (filterEl) setTimeout(() => filterEl.focus(), 80);
   }
   function buildDropdownListHtml(query) {
     const all = getAllStops();
@@ -7515,8 +6963,7 @@
   }
   function attachDropdownListListeners() {
     const dd = document.getElementById("bs-dropdown");
-    if (!dd)
-      return;
+    if (!dd) return;
     document.getElementById("bs-dd-clear")?.addEventListener("click", () => {
       selectStop("", activeField);
     });
@@ -7527,15 +6974,13 @@
   }
   function updateDropdownList(query) {
     const list = document.querySelector("#bs-dropdown .bs-dd-list");
-    if (!list)
-      return;
+    if (!list) return;
     list.innerHTML = buildDropdownListHtml(query);
     attachDropdownListListeners();
   }
   function renderDropdownItems(query) {
     const dd = document.getElementById("bs-dropdown");
-    if (!dd)
-      return;
+    if (!dd) return;
     const title = activeField === "from" ? "\u0417\u0432\u0456\u0434\u043A\u0438 \u0457\u0434\u0435\u0442\u0435?" : "\u041A\u0443\u0434\u0438 \u0457\u0434\u0435\u0442\u0435?";
     dd.innerHTML = `
     <div class="bs-dd-head">
@@ -7560,20 +7005,17 @@
   function closeDropdown() {
     activeField = null;
     const dd = document.getElementById("bs-dropdown");
-    if (dd)
-      dd.hidden = true;
+    if (dd) dd.hidden = true;
   }
   function selectStop(stop, field) {
     if (field === "from") {
       fromStop = stop;
       const inp = document.getElementById("bs-from-input");
-      if (inp)
-        inp.value = stop;
+      if (inp) inp.value = stop;
     } else {
       toStop = stop;
       const inp = document.getElementById("bs-to-input");
-      if (inp)
-        inp.value = stop;
+      if (inp) inp.value = stop;
     }
     closeDropdown();
     showAll = false;
@@ -7713,15 +7155,13 @@
   }
   function renderSmartRow() {
     const el = document.getElementById("bus-smart-row");
-    if (!el)
-      return;
+    if (!el) return;
     const routes = findActiveRoutes();
     if (!routes.length) {
       el.innerHTML = buildEmptyHeroCard(emptyHeroMessage());
       return;
     }
-    if (smartRowIndex >= routes.length)
-      smartRowIndex = 0;
+    if (smartRowIndex >= routes.length) smartRowIndex = 0;
     const route = routes[smartRowIndex];
     const timings = getTimingsForDisplay(route);
     const seg = getTrackedSegmentForHero(route.id, route);
@@ -7733,8 +7173,7 @@
     }, { passive: true });
     card.addEventListener("touchend", (e) => {
       const dx = e.changedTouches[0].clientX - touchStartX;
-      if (Math.abs(dx) < 40)
-        return;
+      if (Math.abs(dx) < 40) return;
       smartRowIndex = dx < 0 ? (smartRowIndex + 1) % routes.length : (smartRowIndex - 1 + routes.length) % routes.length;
       switchHeroCard();
     }, { passive: true });
@@ -7761,8 +7200,7 @@
   }
   function switchHeroCard() {
     const el = document.getElementById("bus-smart-row");
-    if (!el)
-      return;
+    if (!el) return;
     const card = el.querySelector(".bhv4");
     if (!card) {
       renderSmartRow();
@@ -7781,8 +7219,7 @@
         renderRouteList();
         return;
       }
-      if (smartRowIndex >= routes.length)
-        smartRowIndex = 0;
+      if (smartRowIndex >= routes.length) smartRowIndex = 0;
       const route = routes[smartRowIndex];
       const timings = getTimingsForDisplay(route);
       const seg = getTrackedSegmentForHero(route.id, route);
@@ -7843,8 +7280,7 @@
           }
         } else {
           nameEl.textContent = `${routeA.toUpperCase()} \u2192 ${routeB.toUpperCase()}`;
-          if (existingFull)
-            existingFull.remove();
+          if (existingFull) existingFull.remove();
         }
       }
       const capsuleEl = card.querySelector(".bhv4-capsule-inner");
@@ -7896,8 +7332,7 @@
           return `<span class="bhv4-dot${passed ? " bhv4-dot--passed" : ""}" style="left:${dp.toFixed(1)}%"></span>`;
         }).join("");
         const track = mapOuter.querySelector(".bhv4-track");
-        if (track)
-          track.innerHTML = `<div class="bhv4-fill" style="width:${pct}%"></div>${dotsHtml}${movingDot}`;
+        if (track) track.innerHTML = `<div class="bhv4-fill" style="width:${pct}%"></div>${dotsHtml}${movingDot}`;
       }
       renderRouteList();
       card.querySelectorAll(".bhv4-dyn").forEach((d) => {
@@ -7911,8 +7346,7 @@
   }
   function renderRouteList() {
     const el = document.getElementById("bus-list");
-    if (!el)
-      return;
+    if (!el) return;
     const all = getFilteredRoutes();
     const future = all.filter((r) => !isPastRoute(r));
     const past = all.filter((r) => isPastRoute(r));
@@ -7982,14 +7416,10 @@
         const isNextS = isEnroute && s.name === liveNextStop;
         const t = getStopHHMM(route, s.name);
         let cls = "bs-stop-row";
-        if (isFrom)
-          cls += " hl hl--from";
-        else if (isTo)
-          cls += " hl hl--to";
-        if (isCurrent)
-          cls += " bs-stop--current";
-        if (isNextS)
-          cls += " bs-stop--next";
+        if (isFrom) cls += " hl hl--from";
+        else if (isTo) cls += " hl hl--to";
+        if (isCurrent) cls += " bs-stop--current";
+        if (isNextS) cls += " bs-stop--next";
         const prefixHtml = isCurrent ? '<span class="bs-stop-icon bs-stop-icon--current"></span>' : isNextS && !isTo ? '<span class="bs-stop-icon bs-stop-icon--next">\u25B7</span>' : isFrom ? '<span class="bs-stop-icon bs-stop-icon--from">\u25CF</span>' : isTo ? '<span class="bs-stop-icon bs-stop-icon--to"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z"/><circle cx="12" cy="9" r="2.5" fill="currentColor" stroke="none"/></svg></span>' : "";
         const priceHtml = "";
         return `
@@ -8020,10 +7450,8 @@
       return `
       <div class="bus-card${isPast ? " past" : ""}${isNext ? " next" : ""}${isSelectable ? " selectable" : ""}${isEnroute ? " enroute" : ""}" data-route-id="${escapeHtml(route.id)}">
         ${(() => {
-        if (isEnroute)
-          return '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>';
-        if (route.status === "cancelled")
-          return '<span class="bs-live-corner"><span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span></span>';
+        if (isEnroute) return '<span class="bs-live-corner"><span class="bs-live-label">\u0412 \u0414\u041E\u0420\u041E\u0417\u0406</span><span class="bs-live-dot"></span></span>';
+        if (route.status === "cancelled") return '<span class="bs-live-corner"><span class="bs-status cancelled">\u0421\u043A\u0430\u0441\u043E\u0432\u0430\u043D\u043E</span></span>';
         if (isViewingToday() && !isPast && route.status !== "cancelled") {
           const minsLeft = getRouteTimings(route).minsToDeparture;
           if (minsLeft !== null && minsLeft <= 15 && minsLeft > 0) {
@@ -8080,8 +7508,7 @@
       cards = toRender.map(buildCard).join("");
     }
     const updRow = document.getElementById("buses-updated-row");
-    if (updRow && busData)
-      updRow.innerHTML = buildSourceHtml();
+    if (updRow && busData) updRow.innerHTML = buildSourceHtml();
     const dd = getDayData();
     const updatedStr2 = dd.fetchedTime ? `\u041E\u043D\u043E\u0432\u043B\u0435\u043D\u043E: ${escapeHtml(dd.fetchedTime)} | ${escapeHtml(dd.fetchedAt)}` : "\u0414\u0430\u043D\u0456 \u043E\u043D\u043E\u0432\u043B\u044E\u044E\u0442\u044C\u0441\u044F...";
     el.innerHTML = buildListTitleHtml(updatedStr2) + cards + toggleHtml + noMoreHtml;
@@ -8089,10 +7516,8 @@
       btn.addEventListener("click", (e) => {
         e.stopPropagation();
         const id = btn.dataset.id;
-        if (expandedIds.has(id))
-          expandedIds.delete(id);
-        else
-          expandedIds.add(id);
+        if (expandedIds.has(id)) expandedIds.delete(id);
+        else expandedIds.add(id);
         renderRouteList();
       });
     });
@@ -8155,8 +7580,7 @@
           saveTrackedRoute();
           subscribeToPush(rid, route?.name || "", segFrom, segTo, busDay, depTime);
           const blocked = pushBlockedMsg();
-          if (blocked)
-            showToast(`\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E. ${blocked}`);
+          if (blocked) showToast(`\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E. ${blocked}`);
           checkTrackNotifications(true);
         }
         renderSmartRow();
@@ -8167,8 +7591,7 @@
       el.querySelectorAll(".bus-card.selectable").forEach((card) => {
         card.addEventListener("click", () => {
           const rid = card.dataset.routeId;
-          if (!rid)
-            return;
+          if (!rid) return;
           selectedRouteId = rid;
           renderSmartRow();
           renderRouteList();
@@ -8198,8 +7621,7 @@
   }
   function renderWeekStrip() {
     const el = document.getElementById("bus-week-strip");
-    if (!el)
-      return;
+    if (!el) return;
     const todayISO = getTodayISO();
     const dayNames = ["\u041F\u043D", "\u0412\u0442", "\u0421\u0440", "\u0427\u0442", "\u041F\u0442", "\u0421\u0431", "\u041D\u0434"];
     function pageHtml(page) {
@@ -8225,8 +7647,7 @@
     track.style.transform = `translateX(-${weekPage * 50}%)`;
     el.querySelectorAll(".bus-week-day").forEach((btn) => {
       btn.addEventListener("click", () => {
-        if (track.dataset.swiped === "1")
-          return;
+        if (track.dataset.swiped === "1") return;
         busDay = btn.dataset.iso;
         showAll = false;
         smartRowIndex = 0;
@@ -8260,8 +7681,7 @@
       if (isHorizSwipe === null && (Math.abs(dx) > 4 || Math.abs(dy) > 4)) {
         isHorizSwipe = Math.abs(dx) > Math.abs(dy);
       }
-      if (!isHorizSwipe)
-        return;
+      if (!isHorizSwipe) return;
       e.preventDefault();
       const clamped = weekPage === 0 ? Math.min(dx, 0) : Math.max(dx, 0);
       track.style.transform = `translateX(calc(-${weekPage * 50}% + ${clamped}px))`;
@@ -8279,15 +7699,13 @@
         );
       }
       setTimeout(() => {
-        if (track.isConnected)
-          track.dataset.swiped = "0";
+        if (track.isConnected) track.dataset.swiped = "0";
       }, 350);
     }, { passive: true });
   }
   function renderSearchPanel() {
     const el = document.getElementById("bus-search-panel");
-    if (!el)
-      return;
+    if (!el) return;
     const hasFilter = fromStop || toStop;
     el.innerHTML = `
     <div class="bs-search-row">
@@ -8336,34 +7754,28 @@
       renderRouteList();
     });
     const page = document.getElementById("page-buses");
-    if (page)
-      page.classList.toggle("filter-active", !!(fromStop || toStop));
+    if (page) page.classList.toggle("filter-active", !!(fromStop || toStop));
   }
   function buildSourceHtml() {
-    if (!busData?.source)
-      return "";
+    if (!busData?.source) return "";
     return `<a href="https://vopas.com.ua" target="_blank" rel="noopener" class="buses-updated-link">${escapeHtml(busData.source)}</a>`;
   }
   var SR_BELL_ON_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>';
   var SR_BELL_OFF_SVG = '<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M13.73 21a2 2 0 0 1-3.46 0"/><path d="M18.63 13A17.89 17.89 0 0 1 18 8"/><path d="M6.26 6.26A5.86 5.86 0 0 0 6 8c0 7-3 9-3 9h14"/><path d="M18 8a6 6 0 0 0-9.33-5"/><line x1="1" y1="1" x2="23" y2="23"/></svg>';
   function savedRouteDayLabel(trackDate) {
     const today = getTodayISO();
-    if (trackDate === today)
-      return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
+    if (trackDate === today) return "\u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456";
     const [y, m, d] = today.split("-").map(Number);
     const tm = new Date(y, m - 1, d + 1);
     const tomorrow = `${tm.getFullYear()}-${String(tm.getMonth() + 1).padStart(2, "0")}-${String(tm.getDate()).padStart(2, "0")}`;
-    if (trackDate === tomorrow)
-      return "\u0437\u0430\u0432\u0442\u0440\u0430";
+    if (trackDate === tomorrow) return "\u0437\u0430\u0432\u0442\u0440\u0430";
     const [, mm, dd] = trackDate.split("-");
     return `${dd}.${mm}`;
   }
   function pageForDate(iso) {
     const toIso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    if (getWeekDays(0).some((d) => toIso(d) === iso))
-      return 0;
-    if (getWeekDays(1).some((d) => toIso(d) === iso))
-      return 1;
+    if (getWeekDays(0).some((d) => toIso(d) === iso)) return 0;
+    if (getWeekDays(1).some((d) => toIso(d) === iso)) return 1;
     return 0;
   }
   function openSavedRouteOnBuses(rid, date, from, to) {
@@ -8378,8 +7790,7 @@
     renderRouteList();
     requestAnimationFrame(() => {
       const card = document.querySelector(`[data-route-id="${CSS.escape(rid)}"]`);
-      if (!card)
-        return;
+      if (!card) return;
       card.scrollIntoView({ behavior: "smooth", block: "center" });
       card.classList.add("bus-card--flash");
       setTimeout(() => card.classList.remove("bus-card--flash"), 1500);
@@ -8404,8 +7815,7 @@
   }
   function toggleRouteReminders(rid, date, from, to) {
     const entry = findTrackedEntry(rid, from || null, to || null, date);
-    if (!entry)
-      return;
+    if (!entry) return;
     if (entry.notify === false && !isLoggedIn()) {
       requireAuth("\u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F", () => {
       });
@@ -8434,14 +7844,12 @@
       return;
     }
     const entry = findTrackedEntry(rid, from || null, to || null, date);
-    if (!entry)
-      return;
+    if (!entry) return;
     await subscribeToPush(rid, entry.title || "", from || null, to || null, date, entry.depTime || null);
     updateBannerBell();
   }
   function selfHealPushSubscriptions() {
-    if (!isPushCapable() || Notification.permission !== "granted")
-      return;
+    if (!isPushCapable() || Notification.permission !== "granted") return;
     const today = getTodayISO();
     for (const t of trackedRoutes) {
       if (t.notify !== false && t.trackDate >= today) {
@@ -8464,8 +7872,7 @@
   }
   async function initBuses() {
     const el = document.getElementById("buses-content");
-    if (!el)
-      return;
+    if (!el) return;
     loadPrefs();
     loadTrackedRoute();
     selfHealPushSubscriptions();
@@ -8506,8 +7913,7 @@
       }, { passive: true });
       banner.addEventListener("touchmove", (e) => {
         const dy = e.touches[0].clientY - _swipeStartY;
-        if (dy > 0)
-          banner.style.transform = `translateX(-50%) translateY(${dy}px) scale(1)`;
+        if (dy > 0) banner.style.transform = `translateX(-50%) translateY(${dy}px) scale(1)`;
       }, { passive: true });
       const _onBannerRelease = (dy) => {
         if (dy > 40) {
@@ -8536,40 +7942,36 @@
         _onBannerRelease(0);
       });
       const _btbBell = banner.querySelector(".btb-bell");
-      if (_btbBell)
-        _btbBell.addEventListener("click", async (e) => {
-          e.stopPropagation();
-          if (!_bannerEntry)
-            return;
-          const from = _bannerEntry.boardingStop || null;
-          const to = _bannerEntry.alightingStop || null;
-          if (_btbBell.classList.contains("sr-bell--warn")) {
-            await requestPushForSavedRoute(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
-          } else {
-            toggleRouteReminders(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
-          }
-          updateBannerBell();
-          if (_bannerHideTimer) {
-            clearTimeout(_bannerHideTimer);
-          }
-          _bannerHideTimer = setTimeout(() => {
-            hideBanner();
-            _bannerHideTimer = null;
-          }, 4e3);
-        });
+      if (_btbBell) _btbBell.addEventListener("click", async (e) => {
+        e.stopPropagation();
+        if (!_bannerEntry) return;
+        const from = _bannerEntry.boardingStop || null;
+        const to = _bannerEntry.alightingStop || null;
+        if (_btbBell.classList.contains("sr-bell--warn")) {
+          await requestPushForSavedRoute(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+        } else {
+          toggleRouteReminders(_bannerEntry.routeId, _bannerEntry.trackDate, from, to);
+        }
+        updateBannerBell();
+        if (_bannerHideTimer) {
+          clearTimeout(_bannerHideTimer);
+        }
+        _bannerHideTimer = setTimeout(() => {
+          hideBanner();
+          _bannerHideTimer = null;
+        }, 4e3);
+      });
     }
     document.addEventListener("click", (e) => {
       const dd = document.getElementById("bs-dropdown");
-      if (!dd || dd.hidden)
-        return;
+      if (!dd || dd.hidden) return;
       if (!dd.contains(e.target) && e.target.id !== "bs-from-input" && e.target.id !== "bs-to-input") {
         closeDropdown();
       }
     }, true);
     try {
       const res = await fetch(`./data/schedule.json?v=${Math.floor(Date.now() / 6e4)}`);
-      if (!res.ok)
-        throw new Error(res.status);
+      if (!res.ok) throw new Error(res.status);
       busData = await res.json();
       const STOP_ALIASES = { "\u0413\u0430\u0440\u0430\u0434\u0436\u0430": "\u0413\u0430\u0440\u0430\u0437\u0434\u0436\u0430", "\u0425\u043E\u0440\u043B\u0443\u043F\u0438 \u043F\u043E\u0432.": "\u0425\u0440\u043E\u043C\u044F\u043A\u0456\u0432" };
       const normalizeStop = (name) => STOP_ALIASES[name] || name;
@@ -8599,8 +8001,7 @@
     renderSmartRow();
     renderRouteList();
     setTimeout(() => checkTrackNotifications(), 4200);
-    if (timerInterval)
-      clearInterval(timerInterval);
+    if (timerInterval) clearInterval(timerInterval);
     timerInterval = setInterval(() => {
       renderSmartRow();
       renderRouteList();
@@ -8620,8 +8021,7 @@
     { key: "boards", icon: ICONS.pin, label: "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", needsAuth: true }
   ];
   function closeHub() {
-    if (!_sheet)
-      return;
+    if (!_sheet) return;
     const s = _sheet, b = _backdrop;
     _sheet = null;
     _backdrop = null;
@@ -8654,8 +8054,7 @@
     const data = { articles: [], buses: [], chats: [], boards: [], loggedIn: isLoggedIn(), postsError: false };
     try {
       const artIds = [...getSavedArticleIds()].reverse();
-      if (artIds.length)
-        data.articles = await getArticlesByIds(artIds);
+      if (artIds.length) data.articles = await getArticlesByIds(artIds);
     } catch (e) {
       console.warn("[saved-hub] articles", e);
     }
@@ -8670,8 +8069,7 @@
         if (ids.length) {
           const supa2 = getSupabase();
           const { data: posts2, error } = await supa2.from("posts").select("*").in("id", ids).order("created_at", { ascending: false });
-          if (error)
-            throw error;
+          if (error) throw error;
           data.chats = (posts2 || []).filter((p) => p.type === "chat");
           data.boards = (posts2 || []).filter((p) => p.type !== "chat");
         }
@@ -8686,8 +8084,7 @@
     const rows = CATS.map((c) => {
       const count = _data[c.key].length;
       const locked = c.needsAuth && !_data.loggedIn;
-      if (!count && !locked)
-        return "";
+      if (!count && !locked) return "";
       return `
       <button class="shub-cat-row" type="button" data-shub-cat="${c.key}">
         <span class="shub-cat-ic">${c.icon}</span>
@@ -8731,13 +8128,11 @@
   }
   function render() {
     const bodyEl = _sheet?.querySelector("#shub-body");
-    if (!bodyEl)
-      return;
+    if (!bodyEl) return;
     bodyEl.innerHTML = _view === "categories" ? categoriesScreenHtml() : categoryScreenHtml(_view);
   }
   function openSavedHub() {
-    if (_sheet)
-      return;
+    if (_sheet) return;
     _view = "categories";
     _backdrop = document.createElement("div");
     _backdrop.className = "board-backdrop shub-backdrop";
@@ -8782,8 +8177,7 @@
         return;
       }
       const card = e.target.closest("[data-shub-open]");
-      if (!card)
-        return;
+      if (!card) return;
       const id = Number(card.dataset.shubOpen);
       const type = card.dataset.shubType;
       closeHub();
@@ -8811,8 +8205,7 @@
   function refreshAccountButtons() {
     const av = isLoggedIn() ? currentAvatarUrl() : "";
     document.querySelectorAll("[data-account-btn]").forEach((btn) => {
-      if (!btn.dataset.defaultHtml)
-        btn.dataset.defaultHtml = btn.innerHTML;
+      if (!btn.dataset.defaultHtml) btn.dataset.defaultHtml = btn.innerHTML;
       btn.innerHTML = av ? `<span class="account-btn-av"><img src="${escapeHtml(av)}" alt="" loading="lazy"></span>` : btn.dataset.defaultHtml;
       btn.classList.toggle("account-btn--in", isLoggedIn());
       btn.classList.toggle("account-btn--av", !!av);
@@ -8842,8 +8235,7 @@
   }
   function openProfile() {
     const u = currentUser();
-    if (!u)
-      return;
+    if (!u) return;
     const defaultName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
     const wrap = openModal2(`
     <h2 class="acc-title">\u0420\u0430\u0434\u0456 \u0432\u0430\u0441 \u0431\u0430\u0447\u0438\u0442\u0438!</h2>
@@ -8862,8 +8254,7 @@
         return;
       }
       closeModal2();
-      if (withDate)
-        showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
+      if (withDate) showToast("\u041F\u0440\u043E\u0444\u0456\u043B\u044C \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
     };
     wrap.querySelector("#acc-save").addEventListener("click", () => finish2(true));
     wrap.querySelector("#acc-later").addEventListener("click", () => finish2(false));
@@ -8897,8 +8288,7 @@
   var _cabLayer = null;
   function removeCabinet() {
     const c = document.getElementById("acc-cab");
-    if (!c)
-      return;
+    if (!c) return;
     c.classList.remove("open");
     document.body.classList.remove("modal-open");
     setTimeout(() => c.remove(), 240);
@@ -8913,8 +8303,7 @@
   }
   async function openAccount() {
     const u = currentUser();
-    if (!u)
-      return;
+    if (!u) return;
     const p = await getProfile() || {};
     const email = u.email || "";
     const gName = u.user_metadata && (u.user_metadata.full_name || u.user_metadata.name) || "";
@@ -9018,8 +8407,7 @@
       avBox.classList.add("acc-av--loading");
       try {
         const res = await saveProfile({ avatar_url: null });
-        if (!res.ok)
-          throw new Error(res.error || "save");
+        if (!res.ok) throw new Error(res.error || "save");
         val.avatar_url = "";
         avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url: "", cls: "acc-av" });
         updateHeaderBtn();
@@ -9058,17 +8446,14 @@
     avFile.addEventListener("change", async () => {
       const file = avFile.files && avFile.files[0];
       avFile.value = "";
-      if (!file)
-        return;
+      if (!file) return;
       avBtn.disabled = true;
       avBox.classList.add("acc-av--loading");
       try {
         const { url, error } = await uploadImageReliable(file, { folder: "avatars/", square: true, maxDim: 256 });
-        if (!url)
-          throw new Error(error || "upload");
+        if (!url) throw new Error(error || "upload");
         const res = await saveProfile({ avatar_url: url });
-        if (!res.ok)
-          throw new Error(res.error || "save");
+        if (!res.ok) throw new Error(res.error || "save");
         val.avatar_url = url;
         avBox.innerHTML = avatarCircle({ name: cab.querySelector("#acc-hero-name").textContent, url, cls: "acc-av" });
         updateHeaderBtn();
@@ -9111,12 +8496,9 @@
     cab.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => {
       const go = b.dataset.go;
       closeCabinet();
-      if (go === "myads")
-        openMyAds();
-      else if (go === "msgs")
-        openThreadsList();
-      else if (go === "saved")
-        openSavedHub();
+      if (go === "myads") openMyAds();
+      else if (go === "msgs") openThreadsList();
+      else if (go === "saved") openSavedHub();
     }));
     cab.querySelectorAll("[data-notif]").forEach((t) => t.addEventListener("click", () => {
       const k = t.dataset.notif;
@@ -9131,30 +8513,24 @@
     });
   }
   function onHeaderClick() {
-    if (isLoggedIn())
-      openAccount();
-    else
-      openJoin();
+    if (isLoggedIn()) openAccount();
+    else openJoin();
   }
   function initAccountUI() {
     document.addEventListener("click", (e) => {
-      if (e.target.closest("[data-account-btn]"))
-        onHeaderClick();
+      if (e.target.closest("[data-account-btn]")) onHeaderClick();
     });
     updateHeaderBtn();
     document.addEventListener("cstl-need-login", (e) => {
-      if (isLoggedIn())
-        return;
+      if (isLoggedIn()) return;
       openJoin(e.detail && e.detail.actionLabel);
     });
     onAuthChange(async (user) => {
       updateHeaderBtn();
-      if (!user || _newUserChecked)
-        return;
+      if (!user || _newUserChecked) return;
       _newUserChecked = true;
       const profile = await getProfile();
-      if (!profile)
-        openProfile();
+      if (!profile) openProfile();
     });
   }
 
@@ -9218,13 +8594,11 @@
   }
   function openShotamModal(id) {
     const ev = allEvents.find((e) => e.id === id);
-    if (!ev)
-      return;
+    if (!ev) return;
     const modal = document.getElementById("article-modal");
     const modalContent = document.getElementById("article-modal-content");
     const modalMetaTags = document.getElementById("modalMetaTags");
-    if (!modal || !modalContent)
-      return;
+    if (!modal || !modalContent) return;
     const catC = catColor3(ev.category);
     if (modalMetaTags) {
       modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
@@ -9249,14 +8623,13 @@
     const shareBtn = document.getElementById("modal-share-btn");
     const remindBtn = document.getElementById("modal-remind-btn");
     const saveBtn = document.getElementById("modal-save-btn");
-    if (shareBtn)
-      shareBtn.onclick = () => sharePost({
-        title: ev.title,
-        text: `\u{1F4C5} ${ev.title}
+    if (shareBtn) shareBtn.onclick = () => sharePost({
+      title: ev.title,
+      text: `\u{1F4C5} ${ev.title}
 ${when}${ev.location ? " \xB7 " + ev.location : ""}
 
 ${ev.description || ""}`
-      });
+    });
     if (remindBtn) {
       remindBtn.hidden = false;
       remindBtn.onclick = () => {
@@ -9268,8 +8641,7 @@ ${ev.description || ""}`
         downloadIcs(ev);
       };
     }
-    if (saveBtn)
-      saveBtn.hidden = true;
+    if (saveBtn) saveBtn.hidden = true;
     modal.classList.add("open");
     document.body.style.overflow = "hidden";
     document.body.classList.add("modal-open");
@@ -9280,12 +8652,10 @@ ${ev.description || ""}`
   var cmBusEntries = [];
   var CM_TRACK_KEY = "bus_track_v2";
   function loadCmTracked(todayISO) {
-    if (!isLoggedIn())
-      return [];
+    if (!isLoggedIn()) return [];
     try {
       const d = JSON.parse(localStorage.getItem(CM_TRACK_KEY + ":" + currentUserId()));
-      if (d?.routes?.length)
-        return d.routes.filter((t) => t.trackDate >= todayISO);
+      if (d?.routes?.length) return d.routes.filter((t) => t.trackDate >= todayISO);
     } catch {
     }
     return [];
@@ -9309,13 +8679,11 @@ ${ev.description || ""}`
   var _wxData = null;
   function setWeatherTitle(cityName) {
     const headerEl = document.querySelector(".cm-block--weather .cm-block-title");
-    if (headerEl && cityName)
-      headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
+    if (headerEl && cityName) headerEl.textContent = `\u041F\u043E\u0433\u043E\u0434\u0430 \u0432 ${cityName}`;
   }
   async function renderWeatherBlock() {
     const el = document.getElementById("cm-weather-content");
-    if (!el)
-      return;
+    if (!el) return;
     try {
       const { lat, lon, city: knownCity } = await getCoords();
       const [weatherRes, cityName] = await Promise.all([
@@ -9426,20 +8794,16 @@ ${ev.description || ""}`
     </svg>`;
   }
   function openWeatherDayModal(dayIndex) {
-    if (!_wxData || !_wxData.hourly)
-      return;
+    if (!_wxData || !_wxData.hourly) return;
     const daily = _wxData.daily;
     const hourly = _wxData.hourly;
     const dateStr = daily.time[dayIndex];
-    if (!dateStr)
-      return;
+    if (!dateStr) return;
     const idxs = [];
     hourly.time.forEach((t, i) => {
-      if (t.startsWith(dateStr))
-        idxs.push(i);
+      if (t.startsWith(dateStr)) idxs.push(i);
     });
-    if (!idxs.length)
-      return;
+    if (!idxs.length) return;
     const tempPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.temperature_2m[i] }));
     const precipPts = idxs.map((i) => ({ h: +hourly.time[i].slice(11, 13), v: hourly.precipitation_probability?.[i] ?? 0 }));
     const iconPts = idxs.map((i) => weatherCodeInfo(hourly.weather_code?.[i] ?? 0).icon);
@@ -9495,8 +8859,7 @@ ${ev.description || ""}`
   }
   function wireWeatherScrubber(overlay, { tempPts, precipPts, iconPts, initialIdx }) {
     const n = tempPts.length;
-    if (!n)
-      return;
+    if (!n) return;
     const gTemp = wxGeom(tempPts);
     const wraps = [...overlay.querySelectorAll(".wx-chart-svg-wrap")];
     function place(idx) {
@@ -9529,10 +8892,8 @@ ${ev.description || ""}`
         e.preventDefault();
       });
       wrap.addEventListener("pointermove", (e) => {
-        if (e.pressure === 0 && e.buttons === 0)
-          return;
-        if (!wrap.hasPointerCapture(e.pointerId))
-          return;
+        if (e.pressure === 0 && e.buttons === 0) return;
+        if (!wrap.hasPointerCapture(e.pointerId)) return;
         place(idxFromX(wrap, e.clientX));
       });
       const end = (e) => {
@@ -9544,41 +8905,34 @@ ${ev.description || ""}`
       wrap.addEventListener("pointerup", end);
       wrap.addEventListener("pointercancel", end);
     });
-    if (initialIdx != null)
-      place(initialIdx);
+    if (initialIdx != null) place(initialIdx);
   }
   function wireWeatherSwipe(overlay, close) {
     const sheet = overlay.querySelector(".app-modal-sheet");
-    if (!sheet)
-      return;
+    if (!sheet) return;
     let startY = 0, dragging = false, travel = 1;
     const drag = createDragTracker();
     const fade = createBackdropFade(overlay.querySelector(".app-modal-backdrop"));
     sheet.addEventListener("touchstart", (e) => {
-      if (e.target.closest(".wx-chart-svg-wrap"))
-        return;
-      if (sheet.scrollTop > 2)
-        return;
+      if (e.target.closest(".wx-chart-svg-wrap")) return;
+      if (sheet.scrollTop > 2) return;
       startY = e.touches[0].clientY;
       dragging = true;
       travel = Math.max(sheet.offsetHeight || 1, 1);
       drag.start(startY);
     }, { passive: true });
     sheet.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
+      if (!dragging) return;
       const dy = e.touches[0].clientY - startY;
       if (dy > 0) {
         sheet.style.transition = "none";
         sheet.style.transform = `translateY(${dy}px)`;
         fade?.track(dy / travel);
-      } else
-        fade?.track(0);
+      } else fade?.track(0);
       drag.move(e.touches[0].clientY);
     }, { passive: true });
     sheet.addEventListener("touchend", (e) => {
-      if (!dragging)
-        return;
+      if (!dragging) return;
       dragging = false;
       const dy = e.changedTouches[0].clientY - startY;
       finishSwipe({
@@ -9594,8 +8948,7 @@ ${ev.description || ""}`
   }
   async function renderBusBlock() {
     const el = document.getElementById("cm-bus-content");
-    if (!el)
-      return;
+    if (!el) return;
     try {
       const res = await fetch("./data/schedule.json");
       const data = await res.json();
@@ -9609,25 +8962,20 @@ ${ev.description || ""}`
       const seen = /* @__PURE__ */ new Set();
       const add = (route, dateISO) => {
         const key = dateISO + "|" + route.id;
-        if (seen.has(key))
-          return;
+        if (seen.has(key)) return;
         seen.add(key);
         entries.push({ route, dateISO });
       };
       for (const t of loadCmTracked(todayISO)) {
         const r = dayRoutes(t.trackDate).find((x) => x.id === t.routeId && x.status !== "cancelled");
-        if (!r)
-          continue;
-        if (t.trackDate === todayISO && getRouteState(r) === "past")
-          continue;
+        if (!r) continue;
+        if (t.trackDate === todayISO && getRouteState(r) === "past") continue;
         add(r, t.trackDate);
       }
       dayRoutes(todayISO).filter((r) => {
-        if (r.status === "cancelled")
-          return false;
+        if (r.status === "cancelled") return false;
         const state = getRouteState(r);
-        if (state === "enroute")
-          return true;
+        if (state === "enroute") return true;
         if (state === "waiting") {
           const t = getRouteTimings(r);
           return t.minsToDeparture !== null && t.minsToDeparture <= 90;
@@ -9636,21 +8984,18 @@ ${ev.description || ""}`
       }).sort((a, b) => depMins(a) - depMins(b)).forEach((r) => add(r, todayISO));
       if (!entries.some((e) => e.dateISO === todayISO)) {
         const next = dayRoutes(todayISO).filter((r) => r.status !== "cancelled" && getRouteState(r) === "waiting").sort((a, b) => (getRouteTimings(a).minsToDeparture ?? Infinity) - (getRouteTimings(b).minsToDeparture ?? Infinity))[0];
-        if (next)
-          add(next, todayISO);
+        if (next) add(next, todayISO);
       }
       if (!entries.length) {
         const tom = dayRoutes(tomorrowISO).filter((r) => r.status !== "cancelled").sort((a, b) => depMins(a) - depMins(b))[0];
-        if (tom)
-          add(tom, tomorrowISO);
+        if (tom) add(tom, tomorrowISO);
       }
       cmBusEntries = entries;
       if (!cmBusEntries.length) {
         el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
         return;
       }
-      if (cmBusIndex >= cmBusEntries.length)
-        cmBusIndex = 0;
+      if (cmBusIndex >= cmBusEntries.length) cmBusIndex = 0;
       renderCmBusCard(el);
     } catch {
       el.innerHTML = '<div class="cm-block-empty">\u0420\u043E\u0437\u043A\u043B\u0430\u0434 \u0442\u0438\u043C\u0447\u0430\u0441\u043E\u0432\u043E \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0438\u0439</div>';
@@ -9671,16 +9016,14 @@ ${ev.description || ""}`
     "\u0433\u0440\u0443\u0434\u043D\u044F"
   ];
   function cmDayLabel(dateISO, todayISO, tomorrowISO) {
-    if (dateISO === todayISO)
-      return "";
+    if (dateISO === todayISO) return "";
     const [y, m, d] = dateISO.split("-").map(Number);
     const prefix = dateISO === tomorrowISO ? "\u0417\u0430\u0432\u0442\u0440\u0430" : "";
     const datePart = `${d} ${CM_MONTHS[m - 1]}`;
     return prefix ? `${prefix} \xB7 ${datePart}` : datePart;
   }
   function renderCmBusCard(el) {
-    if (!el || !cmBusEntries.length)
-      return;
+    if (!el || !cmBusEntries.length) return;
     const { route, dateISO } = cmBusEntries[cmBusIndex];
     const todayISO = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
     const tomorrow = /* @__PURE__ */ new Date();
@@ -9693,25 +9036,21 @@ ${ev.description || ""}`
     el.innerHTML = labelHtml + buildHeroCard(route, timings, cmBusIndex, cmBusEntries.length);
     let touchStartX = 0, touchMoved = false;
     const card = el.querySelector(".bhv4") || el.lastElementChild;
-    if (!card)
-      return;
+    if (!card) return;
     card.addEventListener("touchstart", (e) => {
       touchStartX = e.touches[0].clientX;
       touchMoved = false;
     }, { passive: true });
     card.addEventListener("touchend", (e) => {
       const dx = e.changedTouches[0].clientX - touchStartX;
-      if (Math.abs(dx) < 40)
-        return;
+      if (Math.abs(dx) < 40) return;
       touchMoved = true;
       cmBusIndex = dx < 0 ? (cmBusIndex + 1) % cmBusEntries.length : (cmBusIndex - 1 + cmBusEntries.length) % cmBusEntries.length;
       switchCmBusCard(el);
     }, { passive: true });
     card.addEventListener("click", () => {
-      if (touchMoved)
-        return;
-      if (typeof window.switchTab === "function")
-        window.switchTab("buses");
+      if (touchMoved) return;
+      if (typeof window.switchTab === "function") window.switchTab("buses");
       openSavedRouteOnBuses(route.id, dateISO, null, null);
     });
     el.querySelectorAll(".bhv4-dot-nav").forEach((dot) => {
@@ -9782,8 +9121,7 @@ ${ev.description || ""}`
   }
   async function renderBoardBlock() {
     const el = document.getElementById("cm-board-content");
-    if (!el)
-      return;
+    if (!el) return;
     bwStopAuto();
     try {
       let posts2 = [], usedSupabase = false;
@@ -9825,16 +9163,14 @@ ${ev.description || ""}`
           }
         }
         if (e.target.closest("[data-bw-more]") || e.target.closest("[data-bw-head]")) {
-          if (typeof window.switchTab === "function")
-            window.switchTab("board");
+          if (typeof window.switchTab === "function") window.switchTab("board");
         }
       });
       const strip = el.querySelector("#cmbw-strip");
       if (strip) {
         const snapTargets = () => {
           const kids = [...strip.children];
-          if (!kids.length)
-            return [];
+          if (!kids.length) return [];
           const base = kids[0].offsetLeft;
           return kids.filter((_, i) => i % 2 === 0).map((c) => Math.max(0, c.offsetLeft - base - 12));
         };
@@ -9847,16 +9183,14 @@ ${ev.description || ""}`
         const padL = parseFloat(getComputedStyle(strip).paddingLeft) || 0;
         const updateFx = () => {
           const kids = [...strip.children];
-          if (!kids.length)
-            return;
+          if (!kids.length) return;
           const base = kids[0].offsetLeft;
           const viewL = strip.scrollLeft, viewR = viewL + strip.clientWidth;
           kids.forEach((c) => {
             const l = c.offsetLeft - base + padL;
             const vis = Math.max(0, Math.min(l + c.offsetWidth, viewR) - Math.max(l, viewL));
             const frac = Math.min(1, vis / c.offsetWidth);
-            if (c.firstElementChild)
-              c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
+            if (c.firstElementChild) c.firstElementChild.style.transform = `scale(${(0.87 + 0.13 * frac).toFixed(3)})`;
           });
           if (dotEls.length) {
             const targets = snapTargets();
@@ -9873,8 +9207,7 @@ ${ev.description || ""}`
         };
         let fxRaf = 0;
         strip.addEventListener("scroll", () => {
-          if (fxRaf)
-            return;
+          if (fxRaf) return;
           fxRaf = requestAnimationFrame(() => {
             fxRaf = 0;
             updateFx();
@@ -9887,11 +9220,9 @@ ${ev.description || ""}`
               bwStopAuto();
               return;
             }
-            if (document.hidden)
-              return;
+            if (document.hidden) return;
             const targets = snapTargets();
-            if (!targets.length)
-              return;
+            if (!targets.length) return;
             const max = strip.scrollWidth - strip.clientWidth;
             const next = targets.find((t) => t > strip.scrollLeft + 8);
             strip.scrollTo({ left: next === void 0 || next > max + 8 ? 0 : Math.min(next, max), behavior: "smooth" });
@@ -9908,16 +9239,14 @@ ${ev.description || ""}`
           };
           strip.addEventListener("touchstart", pauseAuto, { passive: true });
           strip.addEventListener("pointerdown", pauseAuto);
-          if (dotsWrap)
-            dotsWrap.addEventListener("click", (e) => {
-              const d = e.target.closest("[data-bw-dot]");
-              if (!d)
-                return;
-              e.stopPropagation();
-              pauseAuto();
-              const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
-              strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
-            });
+          if (dotsWrap) dotsWrap.addEventListener("click", (e) => {
+            const d = e.target.closest("[data-bw-dot]");
+            if (!d) return;
+            e.stopPropagation();
+            pauseAuto();
+            const t = snapTargets()[Number(d.dataset.bwDot)] || 0;
+            strip.scrollTo({ left: Math.min(t, strip.scrollWidth - strip.clientWidth), behavior: "smooth" });
+          });
           startAuto();
         }
       }
@@ -9927,10 +9256,8 @@ ${ev.description || ""}`
   }
   function pluralUA(n, one, few, many) {
     const m10 = n % 10, m100 = n % 100;
-    if (m10 === 1 && m100 !== 11)
-      return one;
-    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20))
-      return few;
+    if (m10 === 1 && m100 !== 11) return one;
+    if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
     return many;
   }
   function eventCountdown(ev, now) {
@@ -9939,24 +9266,18 @@ ${ev.description || ""}`
     todayDay.setHours(0, 0, 0, 0);
     const dayDiff = Math.round((eventDay - todayDay) / 864e5);
     if (dayDiff === 0) {
-      if (!ev.time)
-        return "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406";
+      if (!ev.time) return "\u0421\u042C\u041E\u0413\u041E\u0414\u041D\u0406";
       const dt = /* @__PURE__ */ new Date(ev.date + "T" + ev.time + ":00");
       const diffMs = dt - now;
-      if (diffMs <= 0)
-        return "\u0417\u0410\u0420\u0410\u0417";
-      if (diffMs < 60 * 6e4)
-        return `\u0427\u0415\u0420\u0415\u0417 ${Math.max(1, Math.floor(diffMs / 6e4))} \u0425\u0412`;
+      if (diffMs <= 0) return "\u0417\u0410\u0420\u0410\u0417";
+      if (diffMs < 60 * 6e4) return `\u0427\u0415\u0420\u0415\u0417 ${Math.max(1, Math.floor(diffMs / 6e4))} \u0425\u0412`;
       const h = Math.floor(diffMs / 36e5);
       const m = Math.floor(diffMs % 36e5 / 6e4);
       return m > 0 ? `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414 ${m} \u0425\u0412` : `\u0427\u0415\u0420\u0415\u0417 ${h} \u0413\u041E\u0414`;
     }
-    if (dayDiff === 1)
-      return "\u0417\u0410\u0412\u0422\u0420\u0410";
-    if (dayDiff < 7)
-      return `\u0427\u0415\u0420\u0415\u0417 ${dayDiff} ${pluralUA(dayDiff, "\u0414\u0415\u041D\u042C", "\u0414\u041D\u0406", "\u0414\u041D\u0406\u0412")}`;
-    if (dayDiff < 14)
-      return "\u0427\u0415\u0420\u0415\u0417 \u0422\u0418\u0416\u0414\u0415\u041D\u042C";
+    if (dayDiff === 1) return "\u0417\u0410\u0412\u0422\u0420\u0410";
+    if (dayDiff < 7) return `\u0427\u0415\u0420\u0415\u0417 ${dayDiff} ${pluralUA(dayDiff, "\u0414\u0415\u041D\u042C", "\u0414\u041D\u0406", "\u0414\u041D\u0406\u0412")}`;
+    if (dayDiff < 14) return "\u0427\u0415\u0420\u0415\u0417 \u0422\u0418\u0416\u0414\u0415\u041D\u042C";
     if (dayDiff < 30) {
       const w = Math.floor(dayDiff / 7);
       return `\u0427\u0415\u0420\u0415\u0417 ${w} ${pluralUA(w, "\u0422\u0418\u0416\u0414\u0415\u041D\u042C", "\u0422\u0418\u0416\u041D\u0406", "\u0422\u0418\u0416\u041D\u0406\u0412")}`;
@@ -9966,8 +9287,7 @@ ${ev.description || ""}`
   }
   async function renderEventBlock() {
     const el = document.getElementById("cm-event-content");
-    if (!el)
-      return;
+    if (!el) return;
     if (_evTimer) {
       clearInterval(_evTimer);
       _evTimer = null;
@@ -10069,16 +9389,14 @@ ${ev.description || ""}`
     el.querySelectorAll(".evh-card[data-ev-id]").forEach((card) => {
       card.addEventListener("click", () => {
         const id = Number(card.dataset.evId);
-        if (Number.isFinite(id))
-          openShotamModal(id);
+        if (Number.isFinite(id)) openShotamModal(id);
       });
     });
     startEvRotator(el);
   }
   function updateEvPosition(el) {
     const track = el.querySelector(".cm-ev-track");
-    if (track)
-      track.style.transform = `translateX(-${_evIdx * 100}%)`;
+    if (track) track.style.transform = `translateX(-${_evIdx * 100}%)`;
     el.querySelectorAll(".cm-ev-dot").forEach((d, i) => d.classList.toggle("active", i === _evIdx));
   }
   function startEvRotator(el) {
@@ -10086,8 +9404,7 @@ ${ev.description || ""}`
       clearInterval(_evTimer);
       _evTimer = null;
     }
-    if (_evItems.length < 2)
-      return;
+    if (_evItems.length < 2) return;
     _evTimer = setInterval(() => {
       if (!document.getElementById("cm-ev-carousel")) {
         clearInterval(_evTimer);
@@ -10111,8 +9428,7 @@ ${ev.description || ""}`
   };
   async function renderContactsBlock() {
     const el = document.getElementById("cm-contacts-content");
-    if (!el)
-      return;
+    if (!el) return;
     try {
       const res = await fetch("./data/community.json");
       const data = await res.json();
@@ -10168,10 +9484,8 @@ ${ev.description || ""}`
   var CM_NEWS_FILTERS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
   var cmNewsGeo = "\u0413\u0440\u043E\u043C\u0430\u0434\u0430";
   function cmNewsMatch(a) {
-    if (cmNewsGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
-      return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
-    if (cmNewsGeo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442")
-      return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
+    if (cmNewsGeo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430") return a.geo === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430" || a.geo === "\u041E\u043B\u0438\u043A\u0430";
+    if (cmNewsGeo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442") return a.geo === "\u0423\u043A\u0440\u0430\u0457\u043D\u0430" || a.geo === "\u0421\u0432\u0456\u0442";
     return a.geo === cmNewsGeo;
   }
   function paintCmNews(el, arts) {
@@ -10191,13 +9505,11 @@ ${ev.description || ""}`
   }
   async function renderCommunityNews() {
     const el = document.getElementById("cm-news-content");
-    if (!el)
-      return;
+    if (!el) return;
     const arts = await ensureNewsLoaded();
     paintCmNews(el, arts);
     const section = document.querySelector(".cm-block--news");
-    if (!section || section.dataset.wired)
-      return;
+    if (!section || section.dataset.wired) return;
     section.dataset.wired = "1";
     section.addEventListener("click", (e) => {
       const chip = e.target.closest("[data-cm-geo]");
@@ -10209,19 +9521,16 @@ ${ev.description || ""}`
       const card = e.target.closest("[data-article-id]");
       if (card) {
         const id = Number(card.dataset.articleId);
-        if (Number.isFinite(id))
-          openArticle(id);
+        if (Number.isFinite(id)) openArticle(id);
       }
     });
     const EDGE = 30;
     let feedArmed = false;
     const feedNow = () => section.querySelector(".cm-news-feed");
     section.addEventListener("touchstart", (e) => {
-      if (e.touches.length !== 1)
-        return;
+      if (e.touches.length !== 1) return;
       const feed = feedNow();
-      if (!feed)
-        return;
+      if (!feed) return;
       const r = feed.getBoundingClientRect();
       const t = e.touches[0];
       const inFeedY = t.clientY >= r.top && t.clientY <= r.bottom;
@@ -10232,11 +9541,9 @@ ${ev.description || ""}`
       }
     }, { passive: true });
     const releaseFeed = () => {
-      if (!feedArmed)
-        return;
+      if (!feedArmed) return;
       const feed = feedNow();
-      if (feed)
-        feed.style.overflowY = "";
+      if (feed) feed.style.overflowY = "";
       feedArmed = false;
     };
     section.addEventListener("touchend", releaseFeed, { passive: true });
@@ -10253,8 +9560,7 @@ ${ev.description || ""}`
   var EVENING_LEAD_MS = 2 * 60 * 60 * 1e3;
   function isDaytime(now = /* @__PURE__ */ new Date()) {
     const t = sunTimes(now);
-    if (!t)
-      return true;
+    if (!t) return true;
     return now >= t.sunrise && now.getTime() < t.sunset.getTime() - EVENING_LEAD_MS;
   }
   function heroSet() {
@@ -10268,13 +9574,11 @@ ${ev.description || ""}`
   function syncHeroCaption() {
     const sub = document.querySelector(".cm-hero-sub");
     const it = heroSet()[_heroIndex];
-    if (sub && it)
-      sub.textContent = it.caption;
+    if (sub && it) sub.textContent = it.caption;
   }
   function showHeroSlide(idx) {
     const wrap = document.querySelector(".cm-hero");
-    if (!wrap)
-      return;
+    if (!wrap) return;
     const n = heroSet().length;
     _heroIndex = (idx + n) % n;
     wrap.querySelectorAll(".cm-hero-img").forEach((img, i) => {
@@ -10283,8 +9587,7 @@ ${ev.description || ""}`
     syncHeroCaption();
   }
   function startHeroRotator() {
-    if (_heroInterval)
-      clearInterval(_heroInterval);
+    if (_heroInterval) clearInterval(_heroInterval);
     _heroIndex = 0;
     _heroIsDay = isDaytime();
     _heroInterval = setInterval(() => {
@@ -10309,34 +9612,27 @@ ${ev.description || ""}`
   function getGreeting() {
     const h = (/* @__PURE__ */ new Date()).getHours();
     let hello;
-    if (h >= 5 && h < 11)
-      hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A";
-    else if (h >= 11 && h < 17)
-      hello = "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C";
-    else if (h >= 17 && h < 22)
-      hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440";
-    else
-      hello = "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456";
+    if (h >= 5 && h < 11) hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0440\u0430\u043D\u043E\u043A";
+    else if (h >= 11 && h < 17) hello = "\u0414\u043E\u0431\u0440\u0438\u0434\u0435\u043D\u044C";
+    else if (h >= 17 && h < 22) hello = "\u0414\u043E\u0431\u0440\u0438\u0439 \u0432\u0435\u0447\u0456\u0440";
+    else hello = "\u0414\u043E\u0431\u0440\u043E\u0457 \u043D\u043E\u0447\u0456";
     let who = "\u0433\u0440\u043E\u043C\u0430\u0434\u043E";
     if (isLoggedIn()) {
       const name = (currentUserName() || "").trim().split(/\s+/)[0];
-      if (name && name !== "\u0416\u0438\u0442\u0435\u043B\u044C")
-        who = name;
+      if (name && name !== "\u0416\u0438\u0442\u0435\u043B\u044C") who = name;
     }
     return { text: `${hello}, ${who}!` };
   }
   function updateGreetingName() {
     const el = document.querySelector(".cm-greeting-text");
-    if (el)
-      el.textContent = getGreeting().text;
+    if (el) el.textContent = getGreeting().text;
     fitGreeting();
   }
   var GREET_FONT_MAX = 27;
   var GREET_FONT_MIN = 19;
   function fitGreeting() {
     const el = document.querySelector(".cm-greeting-text");
-    if (!el)
-      return;
+    if (!el) return;
     let size = GREET_FONT_MAX;
     el.style.fontSize = size + "px";
     while (size > GREET_FONT_MIN && el.scrollWidth > el.clientWidth) {
@@ -10352,8 +9648,7 @@ ${ev.description || ""}`
   }
   function renderSkeleton() {
     const el = document.getElementById("cm-content");
-    if (!el)
-      return;
+    if (!el) return;
     const greeting = getGreeting();
     const todayStr = formatTodayHeader();
     el.innerHTML = `
@@ -10486,11 +9781,9 @@ ${ev.description || ""}`
   var _greetingWired = false;
   var _focusWired = false;
   function initCenterFocus() {
-    if (_focusWired)
-      return;
+    if (_focusWired) return;
     const main = document.querySelector(".app-main");
-    if (!main)
-      return;
+    if (!main) return;
     const allowMotion = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     _focusWired = true;
     let raf = null;
@@ -10506,20 +9799,17 @@ ${ev.description || ""}`
     };
     const apply = () => {
       raf = null;
-      if (main.dataset.tab !== "community")
-        return;
+      if (main.dataset.tab !== "community") return;
       const vh = main.clientHeight;
       const viewCenter = vh / 2;
       const sec = document.getElementById("cm-sec-head");
       const hdr = document.querySelector(".app-header");
       if (sec) {
         const pinY = hdr ? hdr.getBoundingClientRect().bottom : 56;
-        if (_stickyTop === null)
-          _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
+        if (_stickyTop === null) _stickyTop = parseFloat(getComputedStyle(sec).top) || 0;
         const pinLine = pinY + _stickyTop;
         const secTop = sec.getBoundingClientRect().top;
-        if (main.scrollTop < 4)
-          _secRestTop = secTop;
+        if (main.scrollTop < 4) _secRestTop = secTop;
         const startY = _secRestTop != null ? _secRestTop : secTop;
         const progColor = Math.max(0, Math.min(1, (startY - secTop) / Math.max(1, startY - pinLine)));
         const START = 0.4;
@@ -10537,8 +9827,7 @@ ${ev.description || ""}`
         }
         sec.classList.toggle("cm-sec-head--stuck", prog >= 0.4);
       }
-      if (!allowMotion)
-        return;
+      if (!allowMotion) return;
       let best = null, bestDist = Infinity;
       document.querySelectorAll("#cm-content .cm-block").forEach((b) => {
         const r = b.getBoundingClientRect();
@@ -10562,15 +9851,12 @@ ${ev.description || ""}`
         }
       });
       document.querySelectorAll("#cm-content .cm-block--focus").forEach((b) => {
-        if (b !== best)
-          b.classList.remove("cm-block--focus");
+        if (b !== best) b.classList.remove("cm-block--focus");
       });
-      if (best)
-        best.classList.add("cm-block--focus");
+      if (best) best.classList.add("cm-block--focus");
     };
     const onScroll = () => {
-      if (!raf)
-        raf = requestAnimationFrame(apply);
+      if (!raf) raf = requestAnimationFrame(apply);
     };
     main.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("resize", onScroll);
@@ -10597,15 +9883,12 @@ ${ev.description || ""}`
   }
   function attachSwitchTabDelegation() {
     const root = document.getElementById("cm-content");
-    if (!root)
-      return;
+    if (!root) return;
     root.addEventListener("click", (e) => {
       const target = e.target.closest("[data-switch-tab]");
-      if (!target)
-        return;
+      if (!target) return;
       const tab = target.dataset.switchTab;
-      if (tab && typeof window.switchTab === "function")
-        window.switchTab(tab);
+      if (tab && typeof window.switchTab === "function") window.switchTab(tab);
     });
   }
 
@@ -10679,8 +9962,7 @@ ${ev.description || ""}`
         frame.style.left = fx + "px";
         frame.style.top = fy + "px";
         minScale = Math.max(fw / img.naturalWidth, fh / img.naturalHeight);
-        if (scale < minScale)
-          scale = minScale;
+        if (scale < minScale) scale = minScale;
         zoomEl.min = String(minScale);
         zoomEl.max = String(minScale * 4);
         zoomEl.value = String(scale);
@@ -10734,8 +10016,7 @@ ${ev.description || ""}`
           clampAndDraw();
           return;
         }
-        if (!dragging || !e.touches.length)
-          return;
+        if (!dragging || !e.touches.length) return;
         const t = e.touches[0];
         tx += t.clientX - lastX;
         ty += t.clientY - lastY;
@@ -10757,12 +10038,10 @@ ${ev.description || ""}`
       });
       let done = false;
       const cropLayer = openLayer(() => {
-        if (!done)
-          finish2(null);
+        if (!done) finish2(null);
       });
       const finish2 = (blob) => {
-        if (done)
-          return;
+        if (done) return;
         done = true;
         closeLayer(cropLayer);
         back.remove();
@@ -10818,24 +10097,18 @@ ${ev.description || ""}`
   var loaded = false;
   function relTime(iso) {
     const t = new Date(iso).getTime();
-    if (!Number.isFinite(t))
-      return "";
+    if (!Number.isFinite(t)) return "";
     const diff = Math.floor((Date.now() - t) / 1e3);
-    if (diff < 60)
-      return "\u0449\u043E\u0439\u043D\u043E";
-    if (diff < 3600)
-      return `${Math.floor(diff / 60)} \u0445\u0432`;
-    if (diff < 86400)
-      return `${Math.floor(diff / 3600)} \u0433\u043E\u0434`;
-    if (diff < 172800)
-      return "\u0432\u0447\u043E\u0440\u0430";
+    if (diff < 60) return "\u0449\u043E\u0439\u043D\u043E";
+    if (diff < 3600) return `${Math.floor(diff / 60)} \u0445\u0432`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)} \u0433\u043E\u0434`;
+    if (diff < 172800) return "\u0432\u0447\u043E\u0440\u0430";
     const d = new Date(t);
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
   }
   function avatarHtml(url, name, cls) {
     const letter = escapeHtml((name || "?").trim().charAt(0).toUpperCase() || "?");
-    if (url)
-      return `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy">`;
+    if (url) return `<img class="${cls}" src="${escapeHtml(url)}" alt="" loading="lazy">`;
     return `<span class="${cls} ${cls}--ph">${letter}</span>`;
   }
   function orderPages(list) {
@@ -10859,13 +10132,11 @@ ${ev.description || ""}`
     myPageIds = mine;
     mySubs = subs;
     const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
-    if (uids.length)
-      await fetchAvatars(uids);
+    if (uids.length) await fetchAvatars(uids);
     loaded = true;
   }
   function circlesHtml() {
-    if (!pages.length)
-      return "";
+    if (!pages.length) return "";
     return `<div class="fd-circles">${pages.map((p) => `
     <button class="fd-circle" data-open-page="${p.id}" type="button">
       <span class="fd-circle-ring">${avatarHtml(p.avatar_url, p.name, "fd-circle-ava")}</span>
@@ -10873,15 +10144,12 @@ ${ev.description || ""}`
     </button>`).join("")}</div>`;
   }
   function postImages(post) {
-    if (Array.isArray(post.image_urls) && post.image_urls.length)
-      return post.image_urls;
-    if (post.image_url)
-      return [post.image_url];
+    if (Array.isArray(post.image_urls) && post.image_urls.length) return post.image_urls;
+    if (post.image_url) return [post.image_url];
     return [];
   }
   function galleryHtml(images, postId) {
-    if (!images.length)
-      return "";
+    if (!images.length) return "";
     if (images.length === 1) {
       return `<div class="fd-photo fd-photo--single" data-view="${postId}" data-idx="0"><img src="${escapeHtml(images[0])}" alt="" loading="lazy"></div>`;
     }
@@ -10896,29 +10164,23 @@ ${ev.description || ""}`
   var PHOTO_MIN_AR = 3 / 4;
   function applyPhotoRatio(box, img) {
     const w = img.naturalWidth, h = img.naturalHeight;
-    if (!w || !h)
-      return;
+    if (!w || !h) return;
     box.style.setProperty("--fd-ar", Math.max(w / h, PHOTO_MIN_AR).toFixed(4));
   }
   function wirePhotoRatios(root) {
     root.querySelectorAll(".fd-photo--single, .fd-gallery").forEach((box) => {
-      if (box.dataset.arWired)
-        return;
+      if (box.dataset.arWired) return;
       box.dataset.arWired = "1";
       const img = box.querySelector("img");
-      if (!img)
-        return;
-      if (img.complete)
-        applyPhotoRatio(box, img);
-      else
-        img.addEventListener("load", () => applyPhotoRatio(box, img), { once: true });
+      if (!img) return;
+      if (img.complete) applyPhotoRatio(box, img);
+      else img.addEventListener("load", () => applyPhotoRatio(box, img), { once: true });
     });
   }
   function wireGalleries(root) {
     wirePhotoRatios(root);
     root.querySelectorAll(".fd-gallery").forEach((g) => {
-      if (g.dataset.wired)
-        return;
+      if (g.dataset.wired) return;
       g.dataset.wired = "1";
       const track = g.querySelector(".fd-gal-track");
       const dots = g.querySelectorAll(".fd-gal-dot");
@@ -10926,8 +10188,7 @@ ${ev.description || ""}`
       track.addEventListener("scroll", () => {
         const i = Math.round(track.scrollLeft / track.clientWidth);
         dots.forEach((d, k) => d.classList.toggle("on", k === i));
-        if (cur)
-          cur.textContent = String(i + 1);
+        if (cur) cur.textContent = String(i + 1);
       }, { passive: true });
       track.scrollLeft = 0;
       requestAnimationFrame(() => {
@@ -10937,8 +10198,7 @@ ${ev.description || ""}`
     });
   }
   function openViewer(images, startIdx) {
-    if (!images.length)
-      return;
+    if (!images.length) return;
     const ov = document.createElement("div");
     ov.className = "fd-viewer";
     ov.innerHTML = `
@@ -10951,8 +10211,7 @@ ${ev.description || ""}`
     const close = () => closeLayer(layer);
     ov.querySelector(".fd-viewer-close").addEventListener("click", close);
     ov.addEventListener("click", (e) => {
-      if (e.target === ov || e.target.classList.contains("fd-viewer-slide"))
-        close();
+      if (e.target === ov || e.target.classList.contains("fd-viewer-slide")) close();
     });
     document.body.appendChild(ov);
     document.body.style.overflow = "hidden";
@@ -10967,8 +10226,7 @@ ${ev.description || ""}`
     panel.addEventListener("touchstart", (e) => {
       const y = e.touches[0].clientY;
       const inHeader = y - panel.getBoundingClientRect().top < 64;
-      if (!inHeader && scroller.scrollTop > 0)
-        return;
+      if (!inHeader && scroller.scrollTop > 0) return;
       startY = y;
       dragging = true;
       dy = 0;
@@ -10976,8 +10234,7 @@ ${ev.description || ""}`
       drag.start(y);
     }, { passive: true });
     panel.addEventListener("touchmove", (e) => {
-      if (!dragging)
-        return;
+      if (!dragging) return;
       dy = e.touches[0].clientY - startY;
       if (dy <= 0) {
         panel.style.transform = "";
@@ -10999,8 +10256,7 @@ ${ev.description || ""}`
       drag.move(e.touches[0].clientY);
     }, { passive: false });
     panel.addEventListener("touchend", () => {
-      if (!dragging)
-        return;
+      if (!dragging) return;
       dragging = false;
       finishSwipe({
         panel,
@@ -11018,8 +10274,7 @@ ${ev.description || ""}`
     });
   }
   function eventBadgeHtml(post) {
-    if (!post.event_date)
-      return "";
+    if (!post.event_date) return "";
     const when = formatEventDate(post.event_date) + (post.event_time ? ` \xB7 ${escapeHtml(post.event_time)}` : "");
     const past = post.event_date < todayKey();
     const loc = post.event_location ? `<span class="fd-evb-loc">${escapeHtml(post.event_location)}</span>` : "";
@@ -11102,8 +10357,7 @@ ${ev.description || ""}`
         return;
       }
       const post = posts.find((p) => p.id === id);
-      if (post)
-        openPageScreen(post.page_id);
+      if (post) openPageScreen(post.page_id);
     };
     requestAnimationFrame(tryFocus);
   }
@@ -11114,8 +10368,7 @@ ${ev.description || ""}`
       circlesEl.innerHTML = circlesHtml();
       layoutCircles();
     }
-    if (!listEl)
-      return;
+    if (!listEl) return;
     if (!posts.length) {
       listEl.innerHTML = `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
       return;
@@ -11125,12 +10378,10 @@ ${ev.description || ""}`
   }
   function layoutCircles() {
     const el = document.querySelector("#feed-circles .fd-circles");
-    if (!el)
-      return;
+    if (!el) return;
     el.style.setProperty("--sh", "0");
     el.classList.remove("is-fit");
-    if (el.scrollWidth <= el.clientWidth + 1)
-      el.classList.add("is-fit");
+    if (el.scrollWidth <= el.clientWidth + 1) el.classList.add("is-fit");
     planCollapsedPad(el);
     el.style.removeProperty("--sh");
   }
@@ -11139,8 +10390,7 @@ ${ev.description || ""}`
   var CIRCLE_GAP = 18;
   function planCollapsedPad(el) {
     const n = el.querySelectorAll(".fd-circle").length;
-    if (!n)
-      return;
+    if (!n) return;
     const inner = el.clientWidth - CIRCLE_PAD * 2;
     const tight = n * CIRCLE_RING + (n - 1) * CIRCLE_GAP;
     const pad2 = !el.classList.contains("is-fit") && tight <= inner ? (inner - tight) / 2 : 0;
@@ -11165,17 +10415,12 @@ ${ev.description || ""}`
   }
   function applyReactionEvent(payload) {
     const row = payload.new || payload.old;
-    if (!row || row.post_id == null)
-      return;
-    if (row.user_id === currentUserId())
-      return;
+    if (!row || row.post_id == null) return;
+    if (row.user_id === currentUserId()) return;
     const rx = reactionMap.get(row.post_id) || { count: 0, my: false };
-    if (payload.eventType === "INSERT")
-      rx.count += 1;
-    else if (payload.eventType === "DELETE")
-      rx.count = Math.max(0, rx.count - 1);
-    else
-      return;
+    if (payload.eventType === "INSERT") rx.count += 1;
+    else if (payload.eventType === "DELETE") rx.count = Math.max(0, rx.count - 1);
+    else return;
     reactionMap.set(row.post_id, rx);
     patchLike(row.post_id);
   }
@@ -11191,10 +10436,8 @@ ${ev.description || ""}`
   var replyTarget = null;
   function pluralComments(n) {
     const d = n % 10, h = n % 100;
-    if (d === 1 && h !== 11)
-      return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440";
-    if (d >= 2 && d <= 4 && (h < 12 || h > 14))
-      return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    if (d === 1 && h !== 11) return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440";
+    if (d >= 2 && d <= 4 && (h < 12 || h > 14)) return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
     return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
   }
   function commentRowHtml(c, reply = false) {
@@ -11216,23 +10459,17 @@ ${ev.description || ""}`
   }
   function orderedComments(list) {
     const repliesByParent = /* @__PURE__ */ new Map();
-    for (const c of list)
-      if (c.parent_id) {
-        if (!repliesByParent.has(c.parent_id))
-          repliesByParent.set(c.parent_id, []);
-        repliesByParent.get(c.parent_id).push(c);
-      }
+    for (const c of list) if (c.parent_id) {
+      if (!repliesByParent.has(c.parent_id)) repliesByParent.set(c.parent_id, []);
+      repliesByParent.get(c.parent_id).push(c);
+    }
     const out = [];
-    for (const c of list)
-      if (!c.parent_id) {
-        out.push({ c, reply: false });
-        for (const r of repliesByParent.get(c.id) || [])
-          out.push({ c: r, reply: true });
-      }
+    for (const c of list) if (!c.parent_id) {
+      out.push({ c, reply: false });
+      for (const r of repliesByParent.get(c.id) || []) out.push({ c: r, reply: true });
+    }
     const shown = new Set(out.map((o) => o.c.id));
-    for (const c of list)
-      if (!shown.has(c.id))
-        out.push({ c, reply: false });
+    for (const c of list) if (!shown.has(c.id)) out.push({ c, reply: false });
     return out;
   }
   function patchCommentLike(id) {
@@ -11264,27 +10501,20 @@ ${ev.description || ""}`
   }
   function applyCommentReactionEvent(payload) {
     const row = payload.new || payload.old;
-    if (!row || row.comment_id == null)
-      return;
-    if (row.user_id === currentUserId())
-      return;
+    if (!row || row.comment_id == null) return;
+    if (row.user_id === currentUserId()) return;
     const lr = comReactMap.get(row.comment_id) || { count: 0, my: false };
-    if (payload.eventType === "INSERT")
-      lr.count += 1;
-    else if (payload.eventType === "DELETE")
-      lr.count = Math.max(0, lr.count - 1);
-    else
-      return;
+    if (payload.eventType === "INSERT") lr.count += 1;
+    else if (payload.eventType === "DELETE") lr.count = Math.max(0, lr.count - 1);
+    else return;
     comReactMap.set(row.comment_id, lr);
     patchCommentLike(row.comment_id);
   }
   function renderCommentSheet() {
-    if (!openCommentSheet)
-      return;
+    if (!openCommentSheet) return;
     const { postId, listEl, titleEl } = openCommentSheet;
     const list = commentMap.get(postId) || [];
-    if (titleEl)
-      titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    if (titleEl) titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
     listEl.innerHTML = list.length ? orderedComments(list).map((o) => commentRowHtml(o.c, o.reply)).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
   }
   function patchCommentCount(postId) {
@@ -11292,39 +10522,31 @@ ${ev.description || ""}`
     document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
   }
   function applyCommentUpsert(c) {
-    if (!c)
-      return;
+    if (!c) return;
     if (c.deleted_at) {
       applyCommentRemove(c);
       return;
     }
     const arr = commentMap.get(c.post_id) || [];
     const idx = arr.findIndex((x) => x.id === c.id);
-    if (idx >= 0)
-      arr[idx] = c;
-    else
-      arr.push(c);
+    if (idx >= 0) arr[idx] = c;
+    else arr.push(c);
     arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     commentMap.set(c.post_id, arr);
     if (c.author_uid && !cachedName(c.author_uid)) {
       fetchAvatars([c.author_uid]).then(() => {
-        if (openCommentSheet && openCommentSheet.postId === c.post_id)
-          renderCommentSheet();
+        if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
       });
     }
-    if (openCommentSheet && openCommentSheet.postId === c.post_id)
-      renderCommentSheet();
+    if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
     patchCommentCount(c.post_id);
   }
   function applyCommentRemove(c) {
-    if (!c)
-      return;
+    if (!c) return;
     const arr = commentMap.get(c.post_id);
-    if (!arr)
-      return;
+    if (!arr) return;
     commentMap.set(c.post_id, arr.filter((x) => x.id !== c.id));
-    if (openCommentSheet && openCommentSheet.postId === c.post_id)
-      renderCommentSheet();
+    if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
     patchCommentCount(c.post_id);
   }
   function openComments(postId) {
@@ -11357,8 +10579,19 @@ ${ev.description || ""}`
     const vv = window.visualViewport;
     let kbRaf = 0, kbFocused = false;
     const syncKb = () => {
-      const raw = vv ? Math.max(0, window.innerHeight - vv.height - vv.offsetTop) : 0;
-      comSheet.style.setProperty("--kb", (kbFocused ? raw : 0) + "px");
+      const kb = vv ? Math.max(0, window.innerHeight - vv.height) : 0;
+      const open = !!vv && kbFocused && kb > 80;
+      if (open) {
+        sheet.style.top = vv.offsetTop + "px";
+        sheet.style.bottom = "auto";
+        sheet.style.height = vv.height + "px";
+      } else {
+        sheet.style.top = "";
+        sheet.style.bottom = "";
+        sheet.style.height = "";
+      }
+      comSheet.classList.toggle("fd-com-sheet--kb", open);
+      comSheet.style.setProperty("--kb", (open ? kb : 0) + "px");
     };
     const onVV = () => {
       cancelAnimationFrame(kbRaf);
@@ -11389,12 +10622,10 @@ ${ev.description || ""}`
       sheet.querySelector(".fd-com-input")?.focus();
     };
     sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
-    if (myUid && !cachedName(myUid))
-      fetchAvatars([myUid]).then(() => {
-        const el = sheet.querySelector(".fd-com-myava");
-        if (el)
-          el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
-      });
+    if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
+      const el = sheet.querySelector(".fd-com-myava");
+      if (el) el.innerHTML = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
+    });
     const close = () => {
       if (vv) {
         vv.removeEventListener("resize", onVV);
@@ -11403,12 +10634,10 @@ ${ev.description || ""}`
       cancelAnimationFrame(kbRaf);
       unlockScroll();
       sheet.remove();
-      if (openCommentSheet && openCommentSheet.back === sheet)
-        openCommentSheet = null;
+      if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
     };
     sheet.addEventListener("click", (e) => {
-      if (e.target === sheet)
-        close();
+      if (e.target === sheet) close();
     });
     listEl.addEventListener("click", async (e) => {
       const like = e.target.closest("[data-com-like]");
@@ -11423,23 +10652,18 @@ ${ev.description || ""}`
         return;
       }
       const del = e.target.closest("[data-del-com]");
-      if (!del)
-        return;
+      if (!del) return;
       const id = Number(del.dataset.delCom);
-      if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440?"))
-        return;
+      if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440?")) return;
       const res = await deletePageComment(id);
-      if (res.ok)
-        applyCommentRemove({ id, post_id: postId });
-      else
-        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
+      if (res.ok) applyCommentRemove({ id, post_id: postId });
+      else alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
     });
     const input = sheet.querySelector(".fd-com-input");
     const sendBtn = sheet.querySelector(".fd-com-send");
     const send = async () => {
       const text = input.value.trim();
-      if (!text)
-        return;
+      if (!text) return;
       if (containsProfanity(text)) {
         showToast("\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
@@ -11465,8 +10689,7 @@ ${ev.description || ""}`
     };
     sendBtn.addEventListener("click", send);
     input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter")
-        send();
+      if (e.key === "Enter") send();
     });
     document.body.appendChild(sheet);
     attachSheetSwipe(sheet, sheet.querySelector(".fd-sheet"), listEl, close);
@@ -11482,8 +10705,7 @@ ${ev.description || ""}`
   }
   async function openPageScreen(pageId, reopen = false) {
     const page = pages.find((p) => p.id === pageId);
-    if (!page)
-      return;
+    if (!page) return;
     const canEdit = myPageIds.has(pageId);
     const subscribed = mySubs.has(pageId);
     const pagePosts = posts.filter((p) => p.page_id === pageId);
@@ -11545,8 +10767,7 @@ ${ev.description || ""}`
     const closeScreen2 = () => closeLayer(layer, { animate: 240 });
     screen.querySelector(".fd-screen-back").addEventListener("click", closeScreen2);
     const composeBtn = screen.querySelector(".fd-compose-open");
-    if (composeBtn)
-      composeBtn.addEventListener("click", () => openComposer(pageId));
+    if (composeBtn) composeBtn.addEventListener("click", () => openComposer(pageId));
     screen.querySelectorAll("[data-team-page]").forEach((b) => b.addEventListener("click", () => openPageTeam(pageId)));
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
@@ -11559,10 +10780,8 @@ ${ev.description || ""}`
       wireCards(screen);
       wireGalleries(screen);
     }));
-    if (page.banner_url)
-      screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
-    if (page.avatar_url)
-      screen.querySelector(".fd-screen-ava--view")?.addEventListener("click", () => openViewer([page.avatar_url], 0));
+    if (page.banner_url) screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
+    if (page.avatar_url) screen.querySelector(".fd-screen-ava--view")?.addEventListener("click", () => openViewer([page.avatar_url], 0));
     const menuBtn = screen.querySelector(".fd-screen-menu");
     const menuPop = screen.querySelector(".fd-screen-menu-pop");
     if (menuBtn && menuPop) {
@@ -11573,14 +10792,11 @@ ${ev.description || ""}`
         openedAt = screen.scrollTop;
       });
       screen.addEventListener("click", () => {
-        if (!menuPop.hidden)
-          menuPop.hidden = true;
+        if (!menuPop.hidden) menuPop.hidden = true;
       });
       screen.addEventListener("scroll", () => {
-        if (menuPop.hidden)
-          return;
-        if (Math.abs(screen.scrollTop - openedAt) > 6)
-          menuPop.hidden = true;
+        if (menuPop.hidden) return;
+        if (Math.abs(screen.scrollTop - openedAt) > 6) menuPop.hidden = true;
       }, { passive: true });
     }
     const title = screen.querySelector(".fd-screen-title");
@@ -11598,15 +10814,13 @@ ${ev.description || ""}`
       const PIN_MAX = 0.86;
       const PIN_MIN = 0.7;
       const widestLine = (el) => {
-        if (!el)
-          return 0;
+        if (!el) return 0;
         const r = document.createRange();
         r.selectNodeContents(el);
         return [...r.getClientRects()].reduce((w, x) => Math.max(w, x.width), 0);
       };
       const measurePin = () => {
-        if (!titleIn)
-          return;
+        if (!titleIn) return;
         const prevT = titleIn.style.transform;
         titleIn.style.transform = "none";
         const w = Math.max(
@@ -11622,8 +10836,7 @@ ${ev.description || ""}`
       const measure = () => {
         pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
         measurePin();
-        if (titleIn)
-          title.style.setProperty("--fd-th", `${titleIn.offsetHeight}px`);
+        if (titleIn) title.style.setProperty("--fd-th", `${titleIn.offsetHeight}px`);
         const back = screen.querySelector(".fd-screen-back");
         const topPx = back ? parseFloat(getComputedStyle(back).top) : 10;
         tyMax = (Number.isFinite(topPx) ? topPx - 10 : 0) + 8;
@@ -11632,22 +10845,19 @@ ${ev.description || ""}`
       const applyTitle = () => {
         tRaf = 0;
         const p = Math.min(1, Math.max(0, (screen.scrollTop - (pinAt - RANGE - SETTLE)) / RANGE));
-        if (p === lastP)
-          return;
+        if (p === lastP) return;
         lastP = p;
         if (titleIn) {
           titleIn.style.transform = `translate3d(0, ${(tyMax * p).toFixed(2)}px, 0) scale(${(1 - (1 - pinScale) * p).toFixed(4)})`;
         }
-        if (glass)
-          glass.style.opacity = p.toFixed(3);
+        if (glass) glass.style.opacity = p.toFixed(3);
         if (dots) {
           dots.style.opacity = (1 - p).toFixed(3);
           dots.style.pointerEvents = p > 0.99 ? "none" : "";
         }
       };
       const onTitle = () => {
-        if (!tRaf)
-          tRaf = requestAnimationFrame(applyTitle);
+        if (!tRaf) tRaf = requestAnimationFrame(applyTitle);
       };
       screen.addEventListener("scroll", onTitle, { passive: true });
       window.addEventListener("resize", () => {
@@ -11663,13 +10873,11 @@ ${ev.description || ""}`
     requestAnimationFrame(() => screen.classList.add("open"));
   }
   function bellClass(pageId) {
-    if (!mySubs.has(pageId))
-      return "";
+    if (!mySubs.has(pageId)) return "";
     return pushBlockedMsg() ? " fd-bell--on fd-bell--warn" : " fd-bell--on";
   }
   function paintBell(btn, pageId) {
-    if (!btn)
-      return;
+    if (!btn) return;
     btn.className = `fd-bell${bellClass(pageId)}`;
     btn.innerHTML = mySubs.has(pageId) ? IC_BELL_F : IC_BELL;
     const why = mySubs.has(pageId) ? pushBlockedMsg() : null;
@@ -11683,18 +10891,14 @@ ${ev.description || ""}`
     }
     const on = !mySubs.has(pageId);
     const devicePromise = on ? registerFeedPushDevice() : null;
-    if (on)
-      mySubs.add(pageId);
-    else
-      mySubs.delete(pageId);
+    if (on) mySubs.add(pageId);
+    else mySubs.delete(pageId);
     const btn = screen.querySelector(".fd-bell");
     paintBell(btn, pageId);
     const res = await setPageSubscription(pageId, currentUserId(), on);
     if (!res.ok) {
-      if (on)
-        mySubs.delete(pageId);
-      else
-        mySubs.add(pageId);
+      if (on) mySubs.delete(pageId);
+      else mySubs.add(pageId);
       paintBell(btn, pageId);
       showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
       return;
@@ -11702,17 +10906,14 @@ ${ev.description || ""}`
     if (devicePromise) {
       const okDevice = await devicePromise;
       paintBell(btn, pageId);
-      if (!okDevice)
-        showToast(pushBlockedMsg() || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
-      else
-        showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E");
+      if (!okDevice) showToast(pushBlockedMsg() || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0443\u0442\u0438 \u0441\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
+      else showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0443\u0432\u0456\u043C\u043A\u043D\u0435\u043D\u043E");
     }
   }
   async function registerFeedPushDevice() {
     try {
       const sub = await ensurePushSubscription();
-      if (!sub)
-        return false;
+      if (!sub) return false;
       const j = sub.toJSON();
       await saveUserPushDevice({
         uid: currentUserId(),
@@ -11728,12 +10929,9 @@ ${ev.description || ""}`
   }
   async function healFeedPushDevice() {
     try {
-      if (!isLoggedIn() || !mySubs.size)
-        return;
-      if (pushBlockedMsg())
-        return;
-      if (Notification.permission !== "granted")
-        return;
+      if (!isLoggedIn() || !mySubs.size) return;
+      if (pushBlockedMsg()) return;
+      if (Notification.permission !== "granted") return;
       await registerFeedPushDevice();
     } catch (e) {
       console.warn("[feed] healFeedPushDevice:", e && e.message);
@@ -11741,8 +10939,7 @@ ${ev.description || ""}`
   }
   function openPageTeam(pageId) {
     const page = pages.find((p) => p.id === pageId);
-    if (!page)
-      return;
+    if (!page) return;
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
@@ -11762,8 +10959,7 @@ ${ev.description || ""}`
     </div>`;
     const close = () => back.remove();
     back.addEventListener("click", (e) => {
-      if (e.target === back)
-        close();
+      if (e.target === back) close();
     });
     const listEl = back.querySelector(".fd-team-list");
     const render2 = (rows) => {
@@ -11785,10 +10981,8 @@ ${ev.description || ""}`
     reload();
     listEl.addEventListener("click", async (e) => {
       const btn = e.target.closest("[data-del]");
-      if (!btn)
-        return;
-      if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044E \u043B\u044E\u0434\u0438\u043D\u0443 \u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438?"))
-        return;
+      if (!btn) return;
+      if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044E \u043B\u044E\u0434\u0438\u043D\u0443 \u0437\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438?")) return;
       btn.disabled = true;
       const res = await removePageModerator(pageId, btn.dataset.del);
       if (res === "ok") {
@@ -11820,15 +11014,12 @@ ${ev.description || ""}`
         emailEl.value = "";
         showToast("\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0434\u043E\u0434\u0430\u043D\u043E");
         reload();
-      } else if (res === "not_found")
-        showToast("\u0410\u043A\u0430\u0443\u043D\u0442\u0430 \u0437 \u0442\u0430\u043A\u043E\u044E \u043F\u043E\u0448\u0442\u043E\u044E \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u043B\u044E\u0434\u0438\u043D\u0430 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0447\u0435\u0440\u0435\u0437 Google");
+      } else if (res === "not_found") showToast("\u0410\u043A\u0430\u0443\u043D\u0442\u0430 \u0437 \u0442\u0430\u043A\u043E\u044E \u043F\u043E\u0448\u0442\u043E\u044E \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u043B\u044E\u0434\u0438\u043D\u0430 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0447\u0435\u0440\u0435\u0437 Google");
       else if (res === "already") {
         emailEl.value = "";
         showToast("\u0426\u044F \u043B\u044E\u0434\u0438\u043D\u0430 \u0432\u0436\u0435 \u0432 \u043A\u043E\u043C\u0430\u043D\u0434\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438");
-      } else if (res === "bad_email")
-        showToast("\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043F\u043E\u0448\u0442\u0443 \u2014 \u0437\u0434\u0430\u0454\u0442\u044C\u0441\u044F, \u0443 \u043D\u0456\u0439 \u043F\u043E\u043C\u0438\u043B\u043A\u0430");
-      else
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
+      } else if (res === "bad_email") showToast("\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u043F\u043E\u0448\u0442\u0443 \u2014 \u0437\u0434\u0430\u0454\u0442\u044C\u0441\u044F, \u0443 \u043D\u0456\u0439 \u043F\u043E\u043C\u0438\u043B\u043A\u0430");
+      else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
     });
     document.body.appendChild(back);
     attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
@@ -11837,8 +11028,7 @@ ${ev.description || ""}`
   var MAX_PHOTOS = 10;
   function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
-    if (!page)
-      return;
+    if (!page) return;
     const edit = !!editPost;
     let existing = edit ? postImages(editPost).slice() : [];
     let files = [];
@@ -11883,8 +11073,7 @@ ${ev.description || ""}`
       back.remove();
     };
     back.addEventListener("click", (e) => {
-      if (e.target === back)
-        close();
+      if (e.target === back) close();
     });
     const eventBox = back.querySelector(".fd-comp-event");
     back.querySelectorAll(".fd-comp-type-btn").forEach((btn) => btn.addEventListener("click", () => {
@@ -11913,8 +11102,7 @@ ${ev.description || ""}`
     };
     fileInput.addEventListener("change", () => {
       for (const f of fileInput.files) {
-        if (existing.length + files.length >= MAX_PHOTOS)
-          break;
+        if (existing.length + files.length >= MAX_PHOTOS) break;
         files.push(f);
         previewUrls.push(URL.createObjectURL(f));
       }
@@ -11929,8 +11117,7 @@ ${ev.description || ""}`
         return;
       }
       const x = e.target.closest("[data-rm]");
-      if (!x)
-        return;
+      if (!x) return;
       const i = Number(x.dataset.rm);
       URL.revokeObjectURL(previewUrls[i]);
       files.splice(i, 1);
@@ -11952,8 +11139,7 @@ ${ev.description || ""}`
         eventFields.event_time = back.querySelector(".fd-comp-etime").value || null;
         eventFields.event_location = back.querySelector(".fd-comp-eloc").value.trim() || null;
       }
-      if (!text && !existing.length && !files.length)
-        return;
+      if (!text && !existing.length && !files.length) return;
       if (text && containsProfanity(text)) {
         showToast("\u{1F6AB} \u041F\u043E\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
@@ -11965,10 +11151,8 @@ ${ev.description || ""}`
         const failed = [];
         for (const f of files) {
           const up = await uploadImageReliable(f, { folder: "pages/", maxDim: 1600, quality: 0.82 });
-          if (up.url)
-            newUrls.push(up.url);
-          else
-            failed.push(up.error || "upload");
+          if (up.url) newUrls.push(up.url);
+          else failed.push(up.error || "upload");
         }
         if (failed.length) {
           sendBtn.disabled = false;
@@ -11983,8 +11167,7 @@ ${ev.description || ""}`
       if (res.ok) {
         if (edit) {
           const i = posts.findIndex((p) => p.id === editPost.id);
-          if (i >= 0)
-            posts[i] = res.post;
+          if (i >= 0) posts[i] = res.post;
         } else {
           posts.unshift(res.post);
           notifyNewPagePost(res.post.id);
@@ -12006,8 +11189,7 @@ ${ev.description || ""}`
   }
   function openPageEditor(pageId) {
     const page = pages.find((p) => p.id === pageId);
-    if (!page)
-      return;
+    if (!page) return;
     let bannerBlob = null, avatarBlob = null;
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
@@ -12035,8 +11217,7 @@ ${ev.description || ""}`
     </div>`;
     const close = () => back.remove();
     back.addEventListener("click", (e) => {
-      if (e.target === back)
-        close();
+      if (e.target === back) close();
     });
     const setPreview = (label, file) => {
       label.querySelector("img")?.remove();
@@ -12049,22 +11230,18 @@ ${ev.description || ""}`
     bInput.addEventListener("change", async () => {
       const f = bInput.files?.[0];
       bInput.value = "";
-      if (!f)
-        return;
+      if (!f) return;
       const cropped = await openCropper(f, { aspect: 2.3, title: "\u0411\u0430\u043D\u0435\u0440 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438" });
-      if (!cropped)
-        return;
+      if (!cropped) return;
       bannerBlob = cropped;
       setPreview(back.querySelector(".fd-edit-banner"), cropped);
     });
     aInput.addEventListener("change", async () => {
       const f = aInput.files?.[0];
       aInput.value = "";
-      if (!f)
-        return;
+      if (!f) return;
       const cropped = await openCropper(f, { aspect: 1, round: true, title: "\u0410\u0432\u0430\u0442\u0430\u0440 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438" });
-      if (!cropped)
-        return;
+      if (!cropped) return;
       avatarBlob = cropped;
       setPreview(back.querySelector(".fd-edit-avatar"), cropped);
     });
@@ -12094,11 +11271,9 @@ ${ev.description || ""}`
         patch.avatar_url = up.url;
       }
       const name = back.querySelector("[data-name]").value.trim();
-      if (name && name !== page.name)
-        patch.name = name;
+      if (name && name !== page.name) patch.name = name;
       const theme = back.querySelector("[data-theme]").value.trim();
-      if (theme !== (page.theme || ""))
-        patch.theme = theme;
+      if (theme !== (page.theme || "")) patch.theme = theme;
       if (!Object.keys(patch).length) {
         close();
         return;
@@ -12128,8 +11303,7 @@ ${ev.description || ""}`
   }
   function openPostMenu(postId) {
     const post = posts.find((p) => p.id === postId);
-    if (!post)
-      return;
+    if (!post) return;
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
     back.innerHTML = `
@@ -12145,15 +11319,13 @@ ${ev.description || ""}`
         return;
       }
       const item = e.target.closest("[data-act]");
-      if (!item)
-        return;
+      if (!item) return;
       if (item.dataset.act === "edit") {
         close();
         openComposer(post.page_id, post);
         return;
       }
-      if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0441\u0442?"))
-        return;
+      if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0441\u0442?")) return;
       const res = await deletePagePost(postId);
       if (!res.ok) {
         alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
@@ -12164,8 +11336,7 @@ ${ev.description || ""}`
       close();
       document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
       renderFeed();
-      if (hadScreen)
-        openPageScreen(post.page_id, true);
+      if (hadScreen) openPageScreen(post.page_id, true);
     });
     document.body.appendChild(back);
     attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
@@ -12196,8 +11367,7 @@ ${ev.description || ""}`
       const view = e.target.closest("[data-view]");
       if (view) {
         const post = posts.find((p) => p.id === Number(view.dataset.view));
-        if (post)
-          openViewer(postImages(post), Number(view.dataset.idx) || 0);
+        if (post) openViewer(postImages(post), Number(view.dataset.idx) || 0);
         return;
       }
       const openPage = e.target.closest("[data-open-page]");
@@ -12224,8 +11394,7 @@ ${ev.description || ""}`
           bar.style.setProperty("--sh", p.toFixed(3));
         };
         const onShrink = () => {
-          if (!shRaf)
-            shRaf = requestAnimationFrame(applyShrink);
+          if (!shRaf) shRaf = requestAnimationFrame(applyShrink);
         };
         main.addEventListener("scroll", onShrink, { passive: true });
         window.addEventListener("cstl-tab-changed", onShrink);
@@ -12233,10 +11402,8 @@ ${ev.description || ""}`
       }
       subscribePageComments((payload) => {
         const t = payload.eventType;
-        if (t === "DELETE")
-          applyCommentRemove(payload.old);
-        else
-          applyCommentUpsert(payload.new);
+        if (t === "DELETE") applyCommentRemove(payload.old);
+        else applyCommentUpsert(payload.new);
       });
       subscribePageReactions(applyReactionEvent);
       subscribePageCommentReactions(applyCommentReactionEvent);
@@ -12281,15 +11448,13 @@ ${ev.description || ""}`
   }
   function getTodaySchedule(queueId) {
     const queue = findQueue(queueId);
-    if (!queue)
-      return null;
+    if (!queue) return null;
     const key = todayKey();
     return queue.schedule[key] || queue.schedule[Object.keys(queue.schedule)[0]] || null;
   }
   function generateICS(street, queue) {
     const schedule = getTodaySchedule(queue.id);
-    if (!schedule)
-      return;
+    if (!schedule) return;
     const d = /* @__PURE__ */ new Date();
     const ymd = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}`;
     const events = [];
@@ -12297,8 +11462,7 @@ ${ev.description || ""}`
     while (i < 24) {
       if (schedule[i] === 0) {
         const start = i;
-        while (i < 24 && schedule[i] === 0)
-          i++;
+        while (i < 24 && schedule[i] === 0) i++;
         events.push(
           `BEGIN:VEVENT\r
 DTSTART:${ymd}T${pad(start)}0000\r
@@ -12344,8 +11508,7 @@ END:VEVENT`
     container.querySelectorAll(".pw-street-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
         selCity = findCity(btn.dataset.id);
-        if (!selCity)
-          return;
+        if (!selCity) return;
         if (selCity.streets.length === 1) {
           selStreet = selCity.streets[0];
           savePrefs2();
@@ -12387,14 +11550,12 @@ END:VEVENT`
   }
   function findPeriodStart(schedule, fromH) {
     let h = fromH;
-    while (h > 0 && schedule[h - 1] === schedule[fromH])
-      h--;
+    while (h > 0 && schedule[h - 1] === schedule[fromH]) h--;
     return h;
   }
   function findNextChange(schedule, fromH) {
     for (let h = fromH + 1; h < 24; h++) {
-      if (schedule[h] !== schedule[fromH])
-        return h;
+      if (schedule[h] !== schedule[fromH]) return h;
     }
     return null;
   }
@@ -12414,8 +11575,7 @@ END:VEVENT`
   `;
   }
   function renderHeroTimer(schedule) {
-    if (!schedule)
-      return '<p class="pw-empty">\u0414\u0430\u043D\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456</p>';
+    if (!schedule) return '<p class="pw-empty">\u0414\u0430\u043D\u0456 \u043D\u0430 \u0441\u044C\u043E\u0433\u043E\u0434\u043D\u0456 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456</p>';
     const now = /* @__PURE__ */ new Date();
     const curH = now.getHours();
     const curM = now.getMinutes();
@@ -12449,8 +11609,7 @@ END:VEVENT`
     if (nextH !== null) {
       const nextStatus = schedule[nextH];
       let afterNextH = nextH;
-      while (afterNextH < 24 && schedule[afterNextH] === nextStatus)
-        afterNextH++;
+      while (afterNextH < 24 && schedule[afterNextH] === nextStatus) afterNextH++;
       const nextDuration = afterNextH - nextH;
       const nextWord = nextStatus === 1 ? "\u0441\u0432\u0456\u0442\u043B\u0430" : nextStatus === 0 ? "\u0431\u0435\u0437 \u0441\u0432\u0456\u0442\u043B\u0430" : "\u043C\u043E\u0436\u043B\u0438\u0432\u0438\u0445 \u043F\u0435\u0440\u0435\u0431\u043E\u0457\u0432";
       nextPeriodHtml = `<div class="pw-hero-next">\u043F\u043E\u0442\u0456\u043C ${nextDuration} \u0433\u043E\u0434 ${nextWord}</div>`;
@@ -12470,8 +11629,7 @@ END:VEVENT`
   `;
   }
   function renderHorizontalTimeline(schedule) {
-    if (!schedule)
-      return "";
+    if (!schedule) return "";
     const now = /* @__PURE__ */ new Date();
     const curH = now.getHours();
     const curM = now.getMinutes();
@@ -12511,8 +11669,7 @@ END:VEVENT`
     d.setDate(d.getDate() + 1);
     const tomorrowKey = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
     const tomorrowSched = queue.schedule[tomorrowKey];
-    if (!tomorrowSched)
-      return "";
+    if (!tomorrowSched) return "";
     const hoursOff = tomorrowSched.filter((s) => s === 0).length;
     if (hoursOff === 0) {
       return `<div class="pw-tomorrow pw-tomorrow--good">\u2728 \u0417\u0430\u0432\u0442\u0440\u0430 \u2014 \u0441\u0432\u0456\u0442\u043B\u043E \u0446\u0456\u043B\u0438\u0439 \u0434\u0435\u043D\u044C</div>`;
@@ -12520,8 +11677,7 @@ END:VEVENT`
     let maxLen = 0, maxStart = -1, curLen = 0, curStart = -1;
     for (let h = 0; h < 24; h++) {
       if (tomorrowSched[h] === 0) {
-        if (curStart === -1)
-          curStart = h;
+        if (curStart === -1) curStart = h;
         curLen++;
         if (curLen > maxLen) {
           maxLen = curLen;
@@ -12542,8 +11698,7 @@ END:VEVENT`
   }
   function renderPowerPage() {
     const container = document.getElementById("power-content");
-    if (!container || !powerData)
-      return;
+    if (!container || !powerData) return;
     const upd = new Date(powerData._meta.last_updated);
     const updStr = `${pad(upd.getHours())}:${pad(upd.getMinutes())}`;
     const offlineBanner = !navigator.onLine ? `<div class="pw-offline-banner">\u26A1 \u041E\u0444\u043B\u0430\u0439\u043D \u2014 \u0434\u0430\u043D\u0456 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043E \u043E ${updStr}</div>` : "";
@@ -12684,16 +11839,13 @@ END:VEVENT`
       renderPowerPage();
     }).catch(() => {
       const el = document.getElementById("power-content");
-      if (el)
-        el.innerHTML = '<p class="pw-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0434\u0430\u043D\u0456 \u26A1</p>';
+      if (el) el.innerHTML = '<p class="pw-empty">\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0434\u0430\u043D\u0456 \u26A1</p>';
     });
     window.addEventListener("online", () => {
-      if (powerData)
-        renderPowerPage();
+      if (powerData) renderPowerPage();
     });
     window.addEventListener("offline", () => {
-      if (powerData)
-        renderPowerPage();
+      if (powerData) renderPowerPage();
     });
   }
 
@@ -12860,8 +12012,7 @@ END:VEVENT`
   }
   function openSidebar() {
     const { sidebar, overlay, toggle } = els();
-    if (!sidebar)
-      return;
+    if (!sidebar) return;
     overlay.hidden = false;
     requestAnimationFrame(() => {
       sidebar.classList.add("sidebar--open");
@@ -12874,21 +12025,18 @@ END:VEVENT`
   }
   function closeSidebar() {
     const { sidebar, overlay, toggle } = els();
-    if (!sidebar)
-      return;
+    if (!sidebar) return;
     sidebar.classList.remove("sidebar--open");
     overlay.classList.remove("sidebar-overlay--show");
     sidebar.setAttribute("aria-hidden", "true");
     toggle?.setAttribute("aria-expanded", "false");
     _open = false;
     setTimeout(() => {
-      if (!_open)
-        overlay.hidden = true;
+      if (!_open) overlay.hidden = true;
     }, 260);
   }
   function itemHtml(item) {
-    if (item.divider)
-      return '<div class="sidebar-divider"></div>';
+    if (item.divider) return '<div class="sidebar-divider"></div>';
     const hidden = item.team ? " hidden" : "";
     return `<button class="sidebar-item" type="button" data-nav="${item.id}"${hidden}>
     <span class="sidebar-item-icon">${item.icon}</span>
@@ -12897,8 +12045,7 @@ END:VEVENT`
   }
   function renderNav() {
     const { nav } = els();
-    if (!nav)
-      return;
+    if (!nav) return;
     const socialHtml = `
     <div class="sb-social-foot">
       ${SOCIAL.map((s) => `<a class="sb-social-btn" href="${s.url}" target="_blank" rel="noopener" aria-label="${s.label}">${s.icon}</a>`).join("")}
@@ -12913,8 +12060,7 @@ END:VEVENT`
   }
   function handleNav(id) {
     const item = NAV.find((n) => n.id === id);
-    if (!item)
-      return;
+    if (!item) return;
     closeSidebar();
     if (item.kind === "tab") {
       window.switchTab?.(item.tab);
@@ -12933,8 +12079,7 @@ END:VEVENT`
   }
   function openInfoModal(key) {
     const data = INFO[key];
-    if (!data)
-      return;
+    if (!data) return;
     openModal({
       title: data.title,
       bodyHtml: data.body,
@@ -12943,8 +12088,7 @@ END:VEVENT`
   }
   async function refreshCabinet() {
     const btn = document.querySelector('[data-nav="cabinet"]');
-    if (!btn)
-      return;
+    if (!btn) return;
     let team = false;
     try {
       team = await isTeamMember();
@@ -12955,15 +12099,13 @@ END:VEVENT`
   }
   function initSidebar() {
     const { toggle, close, overlay } = els();
-    if (!toggle)
-      return;
+    if (!toggle) return;
     renderNav();
     toggle.addEventListener("click", () => _open ? closeSidebar() : openSidebar());
     close?.addEventListener("click", closeSidebar);
     overlay?.addEventListener("click", closeSidebar);
     document.addEventListener("keydown", (e) => {
-      if (e.key === "Escape" && _open)
-        closeSidebar();
+      if (e.key === "Escape" && _open) closeSidebar();
     });
     onAuthChange(() => refreshCabinet());
     refreshCabinet();
@@ -12974,8 +12116,7 @@ END:VEVENT`
   var KEY = "cstl-legal-consent-v1";
   function initConsent() {
     try {
-      if (localStorage.getItem(KEY))
-        return;
+      if (localStorage.getItem(KEY)) return;
     } catch (_) {
       return;
     }
@@ -13020,20 +12161,16 @@ END:VEVENT`
   }
   var deferredPrompt = null;
   function initInstallBanner() {
-    if (isStandalone())
-      return;
+    if (isStandalone()) return;
     window.addEventListener("beforeinstallprompt", (e) => {
       e.preventDefault();
       deferredPrompt = e;
-      if (!snoozed())
-        setTimeout(() => showBanner2(false), 1200);
+      if (!snoozed()) setTimeout(() => showBanner2(false), 1200);
     });
-    if (isIOS() && !snoozed())
-      setTimeout(() => showBanner2(true), 2500);
+    if (isIOS() && !snoozed()) setTimeout(() => showBanner2(true), 2500);
   }
   function showBanner2(iosMode) {
-    if (isStandalone() || snoozed() || document.querySelector(".pwa-cta"))
-      return;
+    if (isStandalone() || snoozed() || document.querySelector(".pwa-cta")) return;
     const el = document.createElement("div");
     el.className = "pwa-cta";
     el.innerHTML = `
@@ -13109,8 +12246,7 @@ END:VEVENT`
       };
       const load = async () => {
         groups = await fetchMyGroups();
-        if (api._closed)
-          return;
+        if (api._closed) return;
         listEl.innerHTML = groups.length ? groups.map(groupRow).join("") : `<div class="pm-empty"><span class="pm-empty-ic">${ICONS.users}</span>\u0423 \u0432\u0430\u0441 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u0433\u0440\u0443\u043F.<br>\u0421\u0442\u0432\u043E\u0440\u0456\u0442\u044C \u0441\u0432\u043E\u044E \u0430\u0431\u043E \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0439\u0442\u0435\u0441\u044C \u0437\u0430 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F\u043C.</div>`;
       };
       await load();
@@ -13118,11 +12254,9 @@ END:VEVENT`
       api.screen.querySelector("[data-gr-join]")?.addEventListener("click", () => promptJoinByLink(load));
       listEl.addEventListener("click", (e) => {
         const row = e.target.closest("[data-group]");
-        if (!row)
-          return;
+        if (!row) return;
         const g = groups.find((x) => String(x.id) === row.dataset.group);
-        if (g)
-          openGroupChat(g);
+        if (g) openGroupChat(g);
       });
     });
   }
@@ -13146,8 +12280,7 @@ END:VEVENT`
     let emoji = EMOJIS[0];
     api.screen.querySelector("#gr-emoji").addEventListener("click", (e) => {
       const b = e.target.closest("[data-emoji]");
-      if (!b)
-        return;
+      if (!b) return;
       emoji = b.dataset.emoji;
       api.screen.querySelectorAll(".gr-emoji").forEach((x) => x.classList.toggle("active", x === b));
     });
@@ -13165,8 +12298,7 @@ END:VEVENT`
       if (r.ok) {
         showToast("\u2705 \u0413\u0440\u0443\u043F\u0443 \u0441\u0442\u0432\u043E\u0440\u0435\u043D\u043E", 2500);
         api.close();
-        if (onDone)
-          onDone();
+        if (onDone) onDone();
       } else {
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0441\u0442\u0432\u043E\u0440\u0438\u0442\u0438: " + (r.error || ""), 3500, "error");
         btn.disabled = false;
@@ -13179,8 +12311,7 @@ END:VEVENT`
   }
   function promptJoinByLink(onDone) {
     const raw = prompt("\u0412\u0441\u0442\u0430\u0432 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F-\u0437\u0430\u043F\u0440\u043E\u0448\u0435\u043D\u043D\u044F \u0430\u0431\u043E \u043A\u043E\u0434 \u0433\u0440\u0443\u043F\u0438:");
-    if (!raw)
-      return;
+    if (!raw) return;
     const m = String(raw).trim().match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
     if (!m) {
       showToast("\u041D\u0435 \u0441\u0445\u043E\u0436\u0435 \u043D\u0430 \u0434\u0456\u0439\u0441\u043D\u0435 \u043F\u043E\u0441\u0438\u043B\u0430\u043D\u043D\u044F", 3e3);
@@ -13207,10 +12338,8 @@ END:VEVENT`
       }
       const openGrp = async (gid) => {
         const grp = (await fetchMyGroups()).find((x) => x.id === gid);
-        if (grp)
-          openGroupChat(grp);
-        else
-          openGroupsList();
+        if (grp) openGroupChat(grp);
+        else openGroupsList();
       };
       if (g.my_status === "member") {
         showToast("\u0412\u0438 \u0432\u0436\u0435 \u0432 \u0446\u0456\u0439 \u0433\u0440\u0443\u043F\u0456", 2500);
@@ -13218,18 +12347,15 @@ END:VEVENT`
         return;
       }
       const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
-      if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note}`))
-        return;
+      if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note}`)) return;
       const r = await joinGroupByToken(token);
       if (r.ok && r.status === "member") {
         showToast("\u2705 \u0412\u0438 \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u043B\u0438\u0441\u044C", 2500);
         openGrp(r.group_id || g.id);
-        if (onDone)
-          onDone();
+        if (onDone) onDone();
       } else if (r.ok && r.status === "pending") {
         showToast("\u23F3 \u0417\u0430\u044F\u0432\u043A\u0443 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u0441\u0445\u0432\u0430\u043B\u0435\u043D\u043D\u044F \u0430\u0434\u043C\u0456\u043D\u0430", 4200);
-      } else
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C: " + (r.error || ""), 3500, "error");
+      } else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C: " + (r.error || ""), 3500, "error");
     })();
   }
   function consumePendingInvite() {
@@ -13238,8 +12364,7 @@ END:VEVENT`
       t = localStorage.getItem(PENDING_INVITE_KEY);
     } catch (_) {
     }
-    if (!t || !isLoggedIn())
-      return;
+    if (!t || !isLoggedIn()) return;
     try {
       localStorage.removeItem(PENDING_INVITE_KEY);
     } catch (_) {
@@ -13281,8 +12406,7 @@ END:VEVENT`
       };
       const render2 = async () => {
         const members = await fetchGroupMembers(group.id);
-        if (api._closed)
-          return;
+        if (api._closed) return;
         const myRole = (members.find((m) => m.uid === me) || {}).role;
         const isAdmin = myRole === "admin";
         const isOwner = group.owner_uid === me;
@@ -13316,10 +12440,8 @@ END:VEVENT`
           <div class="gr-mng-h">\u0423\u0447\u0430\u0441\u043D\u0438\u043A\u0438 (${active.length})</div>
           ${active.map((m) => {
           const acts = [];
-          if (isOwner && m.uid !== me)
-            acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C</button>`);
-          if (isAdmin && m.uid !== group.owner_uid && m.uid !== me)
-            acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`);
+          if (isOwner && m.uid !== me) acts.push(`<button class="gr-mbr-ok" type="button" data-makeowner="${m.uid}">\u0437\u0440\u043E\u0431\u0438\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u043E\u043C</button>`);
+          if (isAdmin && m.uid !== group.owner_uid && m.uid !== me) acts.push(`<button class="gr-mbr-no" type="button" data-reject="${m.uid}">\u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>`);
           const tag = m.uid === group.owner_uid ? ' <span class="gr-mbr-tag">\u0432\u043B\u0430\u0441\u043D\u0438\u043A</span>' : m.role === "admin" ? ' <span class="gr-mbr-tag">\u0430\u0434\u043C\u0456\u043D</span>' : "";
           return `<div class="gr-mbr"><span class="gr-mbr-name">${nm(m.uid)}${tag}</span>${acts.length ? `<span class="gr-mbr-acts">${acts.join("")}</span>` : ""}</div>`;
         }).join("")}
@@ -13340,44 +12462,37 @@ END:VEVENT`
           if (r.ok) {
             showToast("\u2705 \u0421\u0445\u0432\u0430\u043B\u0435\u043D\u043E", 2e3);
             render2();
-          } else
-            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          } else showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
           return;
         }
         const rj = e.target.closest("[data-reject]");
         if (rj) {
-          if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430?"))
-            return;
+          if (!confirm("\u041F\u0440\u0438\u0431\u0440\u0430\u0442\u0438 \u0446\u044C\u043E\u0433\u043E \u043A\u043E\u0440\u0438\u0441\u0442\u0443\u0432\u0430\u0447\u0430?")) return;
           const r = await rejectMember(group.id, rj.dataset.reject);
           if (r.ok) {
             showToast("\u0413\u043E\u0442\u043E\u0432\u043E", 2e3);
             render2();
-          } else
-            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          } else showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
           return;
         }
         const mo = e.target.closest("[data-makeowner]");
         if (mo) {
-          if (!confirm("\u041F\u0435\u0440\u0435\u0434\u0430\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0446\u044C\u043E\u043C\u0443 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0443? \u0412\u0438 \u0441\u0442\u0430\u043D\u0435\u0442\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0430\u0434\u043C\u0456\u043D\u043E\u043C."))
-            return;
+          if (!confirm("\u041F\u0435\u0440\u0435\u0434\u0430\u0442\u0438 \u0432\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u0446\u044C\u043E\u043C\u0443 \u0443\u0447\u0430\u0441\u043D\u0438\u043A\u0443? \u0412\u0438 \u0441\u0442\u0430\u043D\u0435\u0442\u0435 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0438\u043C \u0430\u0434\u043C\u0456\u043D\u043E\u043C.")) return;
           const r = await transferGroupOwner(group.id, mo.dataset.makeowner);
           if (r.ok) {
             group.owner_uid = mo.dataset.makeowner;
             showToast("\u2705 \u0412\u043B\u0430\u0441\u043D\u0438\u043A\u0430 \u043F\u0435\u0440\u0435\u0434\u0430\u043D\u043E", 2500);
             render2();
-          } else
-            showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
+          } else showToast("\u041F\u043E\u043C\u0438\u043B\u043A\u0430: " + (r.error || ""), 3e3);
           return;
         }
         if (e.target.closest("[data-leave]")) {
-          if (!confirm("\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438?"))
-            return;
+          if (!confirm("\u0412\u0438\u0439\u0442\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438?")) return;
           const r = await leaveGroup(group.id);
           if (r.ok) {
             showToast("\u0412\u0438 \u0432\u0438\u0439\u0448\u043B\u0438 \u0437 \u0433\u0440\u0443\u043F\u0438", 2500);
             api.close();
-          } else
-            showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0439\u0442\u0438: " + (r.error || ""), 3500, "error");
+          } else showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0439\u0442\u0438: " + (r.error || ""), 3500, "error");
         }
       });
     });
@@ -13424,15 +12539,13 @@ END:VEVENT`
       const members = await fetchGroupMembers(group.id);
       names = new Map(members.map((m) => [m.uid, firstName(m.name)]));
       (await fetchGroupMessages(group.id)).forEach(addMsg);
-      if (api._closed)
-        return;
+      if (api._closed) return;
       render2();
       api.screen.querySelector("[data-gr-manage]")?.addEventListener("click", () => openGroupManage(group));
       form.addEventListener("submit", async (e) => {
         e.preventDefault();
         const text = input.value.trim();
-        if (!text)
-          return;
+        if (!text) return;
         input.value = "";
         const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text });
         if (r.ok) {
@@ -13468,19 +12581,15 @@ END:VEVENT`
   // src/core/profile-card.js
   function pluralYears(n) {
     const d = n % 10, h = n % 100;
-    if (h >= 11 && h <= 14)
-      return "\u0440\u043E\u043A\u0456\u0432";
-    if (d === 1)
-      return "\u0440\u0456\u043A";
-    if (d >= 2 && d <= 4)
-      return "\u0440\u043E\u043A\u0438";
+    if (h >= 11 && h <= 14) return "\u0440\u043E\u043A\u0456\u0432";
+    if (d === 1) return "\u0440\u0456\u043A";
+    if (d >= 2 && d <= 4) return "\u0440\u043E\u043A\u0438";
     return "\u0440\u043E\u043A\u0456\u0432";
   }
   function joinDate(iso) {
     const dt = new Date(iso);
     const y = dt.getFullYear();
-    if (isNaN(dt.getTime()) || y <= 2e3)
-      return "";
+    if (isNaN(dt.getTime()) || y <= 2e3) return "";
     return `${MONTHS_GEN[dt.getMonth()]} ${y}`;
   }
   function cardHtml2(p) {
@@ -13488,10 +12597,8 @@ END:VEVENT`
     const url = p && p.avatar_url || cachedAvatar(p && p.uid) || "";
     const av = avatarCircle({ name, url, cls: "pcard-av" });
     const bits = [];
-    if (p && p.settlement)
-      bits.push(`${ICONS.pin}<span>${escapeHtml(p.settlement)}</span>`);
-    if (p && Number.isFinite(p.age) && p.age > 0)
-      bits.push(`<span>${p.age} ${pluralYears(p.age)}</span>`);
+    if (p && p.settlement) bits.push(`${ICONS.pin}<span>${escapeHtml(p.settlement)}</span>`);
+    if (p && Number.isFinite(p.age) && p.age > 0) bits.push(`<span>${p.age} ${pluralYears(p.age)}</span>`);
     const meta = bits.length ? `<div class="pcard-meta">${bits.join('<span class="pcard-dot">\xB7</span>')}</div>` : "";
     const badge = p && p.trusted ? `<div class="pcard-badge">${ICONS.check} \u0414\u043E\u0432\u0456\u0440\u0435\u043D\u0438\u0439 \u0430\u0432\u0442\u043E\u0440</div>` : "";
     const bioText = p && p.bio && p.bio.trim() ? p.bio.trim() : "";
@@ -13506,8 +12613,7 @@ END:VEVENT`
     </div>`;
   }
   async function openProfileCard(uid) {
-    if (!uid)
-      return;
+    if (!uid) return;
     const p = await fetchPublicProfile(uid);
     openModal({
       variant: "sheet",
@@ -13526,18 +12632,14 @@ END:VEVENT`
   }
   var _wired = false;
   function initProfileCardTaps() {
-    if (_wired)
-      return;
+    if (_wired) return;
     _wired = true;
     document.addEventListener("click", (e) => {
       const av = e.target.closest("[data-av-uid]");
-      if (!av)
-        return;
-      if (e.target.closest("[data-thread]"))
-        return;
+      if (!av) return;
+      if (e.target.closest("[data-thread]")) return;
       const uid = av.dataset.avUid;
-      if (uid)
-        openProfileCard(uid);
+      if (uid) openProfileCard(uid);
     });
   }
 
@@ -13545,14 +12647,11 @@ END:VEVENT`
   var currentTab = "community";
   var _analyticsDevice = /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent) ? "mobile" : "desktop";
   window.switchTab = function(tab) {
-    if (tab === "news" || tab === "events")
-      tab = "shotam";
-    if (tab === currentTab)
-      return;
+    if (tab === "news" || tab === "events") tab = "shotam";
+    if (tab === currentTab) return;
     const oldPage = document.getElementById(`page-${currentTab}`);
     const newPage = document.getElementById(`page-${tab}`);
-    if (!oldPage || !newPage)
-      return;
+    if (!oldPage || !newPage) return;
     const main = document.querySelector(".app-main");
     newPage.style.opacity = "0";
     newPage.style.display = "block";
@@ -13567,25 +12666,21 @@ END:VEVENT`
           oldPage.style.opacity = "";
           oldPage.style.transition = "";
           newPage.style.transition = "";
-          if (main)
-            main.scrollTop = 0;
+          if (main) main.scrollTop = 0;
         }, 220);
       });
     });
     document.querySelectorAll(".tab-item").forEach((t) => t.classList.remove("active"));
     const activeTab = document.querySelector(`.tab-item[data-tab="${tab}"]`);
-    if (activeTab)
-      activeTab.classList.add("active");
-    if (main)
-      main.dataset.tab = tab;
+    if (activeTab) activeTab.classList.add("active");
+    if (main) main.dataset.tab = tab;
     currentTab = tab;
     window.dispatchEvent(new CustomEvent("cstl-tab-changed"));
     logEvent(currentUserId() || getAnonId(), "tab_view", { tab, meta: { device: _analyticsDevice } });
   };
   window.closeArticleModal = function() {
     const modal = document.getElementById("article-modal");
-    if (modal)
-      modal.classList.remove("open");
+    if (modal) modal.classList.remove("open");
     document.body.style.overflow = "";
     document.body.classList.remove("modal-open");
     const inner = document.querySelector(".article-modal-inner");
@@ -13595,13 +12690,11 @@ END:VEVENT`
       inner.style.animation = "";
     }
     const metaTags = document.getElementById("modalMetaTags");
-    if (metaTags)
-      metaTags.innerHTML = "";
+    if (metaTags) metaTags.innerHTML = "";
   };
   function initModalSwipe() {
     const inner = document.querySelector(".article-modal-inner");
-    if (!inner)
-      return;
+    if (!inner) return;
     const handle = inner.querySelector(".modal-handle");
     let startY = 0;
     let isSwiping = false;
@@ -13628,14 +12721,12 @@ END:VEVENT`
       isSwiping = false;
     }, { passive: true });
     inner.addEventListener("touchmove", (e) => {
-      if (!startedOnHandle)
-        return;
+      if (!startedOnHandle) return;
       const dy = e.touches[0].clientY - startY;
       if (dy > 0) {
         e.preventDefault();
         isSwiping = true;
-        if (rafId)
-          cancelAnimationFrame(rafId);
+        if (rafId) cancelAnimationFrame(rafId);
         rafId = requestAnimationFrame(() => {
           inner.style.transform = `translateY(${dy}px)`;
           rafId = null;
@@ -13648,8 +12739,7 @@ END:VEVENT`
         rafId = null;
       }
       if (!startedOnHandle || !isSwiping) {
-        if (startedOnHandle)
-          reset();
+        if (startedOnHandle) reset();
         return;
       }
       isSwiping = false;
@@ -13679,8 +12769,7 @@ END:VEVENT`
   }
   function initAdminShortcut() {
     const logo = document.querySelector(".header-logo");
-    if (!logo)
-      return;
+    if (!logo) return;
     let taps = [];
     logo.style.cursor = "pointer";
     logo.addEventListener("click", () => {
@@ -13695,48 +12784,37 @@ END:VEVENT`
   }
   function initChatsHub() {
     const page = document.getElementById("page-chats");
-    if (!page)
-      return;
+    if (!page) return;
     page.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-chats]");
-      if (!btn)
-        return;
+      if (!btn) return;
       const k = btn.dataset.chats;
-      if (k === "messages")
-        openThreadsList();
-      else if (k === "discussions")
-        window.switchTab("discussions");
-      else if (k === "groups")
-        openGroupsList();
+      if (k === "messages") openThreadsList();
+      else if (k === "discussions") window.switchTab("discussions");
+      else if (k === "groups") openGroupsList();
     });
   }
   function handleInviteHash() {
     const m = (location.hash || "").match(/^#\/join\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
-    if (!m)
-      return;
+    if (!m) return;
     history.replaceState(null, "", location.pathname + location.search);
     openInviteJoin(m[1]);
   }
   function handleThreadHash() {
     const m = (location.hash || "").match(/^#\/thread\/(\d+)/);
-    if (!m)
-      return;
+    if (!m) return;
     history.replaceState(null, "", location.pathname + location.search);
     openThreadById(Number(m[1]));
   }
   function handlePostHash() {
     const m = (location.hash || "").match(/^#\/post\/(feed|board|disc|news)\/(\d+)/);
-    if (!m)
-      return;
+    if (!m) return;
     history.replaceState(null, "", location.pathname + location.search);
     const [, source, id] = m;
     const n = Number(id);
-    if (source === "feed")
-      focusFeedPost(n);
-    else if (source === "board" || source === "disc")
-      openBoardItemById(n);
-    else if (source === "news")
-      openArticleById(n);
+    if (source === "feed") focusFeedPost(n);
+    else if (source === "board" || source === "disc") openBoardItemById(n);
+    else if (source === "news") openArticleById(n);
   }
   function init() {
     bootApp();
@@ -13769,11 +12847,9 @@ END:VEVENT`
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.addEventListener("message", (e) => {
         const d = e.data;
-        if (!d || d.__cstl !== "notif-click" || !d.url)
-          return;
+        if (!d || d.__cstl !== "notif-click" || !d.url) return;
         const i = String(d.url).indexOf("#");
-        if (i < 0)
-          return;
+        if (i < 0) return;
         location.hash = String(d.url).slice(i);
         handlePostHash();
       });
