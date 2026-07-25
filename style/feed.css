@@ -151,15 +151,11 @@
 .fd-postmenu-item--danger { color: #c0392b; }
 
 /* Фото обрамлене тінню зверху (від шапки) і знизу (від блоку опису) — «налягання», глибина. */
-/* --fd-lap — на скільки блок опису НАЛЯГАЄ на фото знизу. Дорівнює радіусу заокруглення,
-   щоб у самих кутиках було видно ФОТО, а не сірий фон стрічки: блок опису білий, як і
-   картка, тож без налягання заокруглення було б просто невидиме. */
-.fd-card { --fd-lap: 14px; }
+/* 25.07: пробували заокруглити верхні кути блоку опису (радіус 14px + налягання на фото
+   на ті самі 14px) — Вова подивився наживо: «не гарно виглядає, поверни назад». Відкочено. */
 .fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: 0 5px 12px rgba(16, 18, 22, 0.10); }
 .fd-card-body { position: relative; z-index: 1; background: var(--fd-surface); }
-.fd-card-body--onphoto { box-shadow: 0 -5px 12px rgba(16, 18, 22, 0.11);
-  border-radius: var(--fd-lap) var(--fd-lap) 0 0;
-  margin-top: calc(-1 * var(--fd-lap)); }
+.fd-card-body--onphoto { box-shadow: 0 -5px 12px rgba(16, 18, 22, 0.11); }
 
 .fd-text { padding: 8px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
 
@@ -207,8 +203,7 @@
 .fd-gal-slide img { width: 100%; display: block; aspect-ratio: var(--fd-ar, 3 / 4); object-fit: cover; }
 .fd-gal-count { position: absolute; top: 10px; right: 10px; z-index: 2; background: rgba(0,0,0,0.62); color: #fff;
   font-size: 12px; padding: 3px 9px; border-radius: 12px; font-variant-numeric: tabular-nums; }
-/* Крапки підняті на висоту налягання блоку опису (--fd-lap) — інакше він їх накрив би. */
-.fd-gal-dots { position: absolute; bottom: calc(10px + var(--fd-lap, 0px)); left: 0; right: 0; z-index: 2; display: flex; gap: 5px; justify-content: center; pointer-events: none; }
+.fd-gal-dots { position: absolute; bottom: 10px; left: 0; right: 0; z-index: 2; display: flex; gap: 5px; justify-content: center; pointer-events: none; }
 .fd-gal-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.55); box-shadow: 0 0 2px rgba(0,0,0,0.4); transition: background 0.2s; }
 .fd-gal-dot.on { background: #fff; }
 
