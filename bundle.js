@@ -10082,12 +10082,17 @@ ${ev.description || ""}`
     const vv = window.visualViewport;
     const dbg = kbDebugOn() ? createDebugPanel() : null;
     if (!vv) return () => dbg?.remove();
-    const top0 = Math.max(0, overlay.clientHeight - sheet.offsetHeight);
     const h0 = vv.height;
-    let raf = 0, focused = false, applied = false;
+    let raf = 0, focused = false, applied = false, top0 = null;
+    const measureTop0 = () => {
+      const oh = overlay.clientHeight, sh = sheet.offsetHeight;
+      if (!oh || !sh) return;
+      top0 = Math.max(0, oh - sh);
+    };
     const apply = () => {
+      if (!applied) measureTop0();
       const kb = Math.max(0, h0 - vv.height);
-      const open = focused && kb > 80;
+      const open = focused && kb > 80 && top0 !== null;
       if (open) {
         overlay.style.top = vv.offsetTop + "px";
         overlay.style.left = vv.offsetLeft + "px";
@@ -10673,11 +10678,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const comSheet = sheet.querySelector(".fd-com-sheet");
     const kbInput = sheet.querySelector(".fd-com-input");
     const unlockScroll = lockBodyScroll();
-    const detachKb = attachKeyboardSheet(sheet, comSheet, {
-      input: kbInput,
-      minHeight: 180,
-      kbClass: "fd-com-sheet--kb"
-    });
+    let detachKb = () => {
+    };
     const clearReply = () => {
       replyTarget = null;
       replyBar.hidden = true;
@@ -10756,6 +10758,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     document.body.appendChild(sheet);
     attachSheetSwipe(sheet, sheet.querySelector(".fd-sheet"), listEl, close);
+    detachKb = attachKeyboardSheet(sheet, comSheet, {
+      // клавіатура: тільки після DOM
+      input: kbInput,
+      minHeight: 180,
+      kbClass: "fd-com-sheet--kb"
+    });
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
   function screenListHtml(tab, pagePosts) {
