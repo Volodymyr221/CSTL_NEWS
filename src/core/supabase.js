@@ -1072,19 +1072,71 @@ function noSuchColumn(error) {
   return error && (error.code === '42703' || /reply_to_uid/.test(error.message || ''));
 }
 
-export async function fetchPageComments() {
+// Скільки коментарів під кожним постом — САМІ ЧИСЛА, без текстів.
+// Раніше стрічка при кожному відкритті тягнула УСІ коментарі УСІХ постів одним
+// запитом лише заради лічильника «N коментарів» під карткою. При 37 коментарях
+// це непомітно, при кількох тисячах — сотні кілобайт мобільним інтернетом на
+// ровному місці. Тепер: список стрічки → числа (рядок на пост), самі коментарі
+// → тільки коли людина відкрила лист (як в Instagram).
+export async function fetchPageCommentCounts() {
   if (!supa) return new Map();
-  const q = (cols) => supa.from('page_comments').select(cols)
-    .is('deleted_at', null).order('created_at', { ascending: true });
-  let { data, error } = await q(`${COMMENT_COLS}, reply_to_uid`);
-  if (noSuchColumn(error)) ({ data, error } = await q(COMMENT_COLS));
-  if (error) { console.warn('[supabase] fetchPageComments:', error.message); return new Map(); }
-  const map = new Map();
-  for (const c of (data || [])) {
-    if (!map.has(c.post_id)) map.set(c.post_id, []);
-    map.get(c.post_id).push(c);
-  }
-  return map;
+  const { data, error } = await supa.from('page_comment_counts').select('post_id, n');
+  if (error) { console.warn('[supabase] fetchPageCommentCounts:', error.message); return new Map(); }
+  return new Map((data || []).map(r => [r.post_id, r.n]));
+}
+
+// Правдиве число коментарів ОДНОГО поста. Лічильник під карткою ведеться кроком
+// (+1 на новий, −1 на видалений), а будь-який кроковий лічильник рано чи пізно
+// може розійтись із дійсністю — realtime здатен принести подію двічі або не
+// принести взагалі, якщо на мить пропав зв'язок. Тому при кожному відкритті листа
+// число звіряється з базою: дрейф не накопичується, а сам зникає.
+export async function fetchPostCommentCount(postId) {
+  if (!supa) return null;
+  const { data, error } = await supa.from('page_comment_counts')
+    .select('n').eq('post_id', postId).maybeSingle();
+  if (error) { console.warn('[supabase] fetchPostCommentCount:', error.message); return null; }
+  return data ? data.n : 0;   // немає рядка = під постом немає живих коментарів
+}
+
+// Скільки кореневих коментарів тягнемо за раз. Гілка відповідей завжди йде
+// ЦІЛОЮ разом зі своїм коренем — інакше «Ще N відповідей» рахувало б неправду.
+export const COMMENT_ROOTS_PAGE = 30;
+
+// Коментарі ОДНОГО поста, сторінками по кореневих.
+// beforeTs — час найстарішого вже завантаженого кореня («Показати попередні»).
+// Повертає { comments, hasMore } — comments уже відсортовані від старіших до
+// новіших, тобто в тому порядку, в якому їх малює лист.
+export async function fetchPostComments(postId, { beforeTs = null, limit = COMMENT_ROOTS_PAGE } = {}) {
+  if (!supa) return { comments: [], hasMore: false };
+  const cols = `${COMMENT_COLS}, reply_to_uid`;
+
+  // +1 понад ліміт — дешевий спосіб дізнатись, чи є ще старіші, без окремого count.
+  const rootsQ = (c) => {
+    let q = supa.from('page_comments').select(c)
+      .eq('post_id', postId).is('deleted_at', null).is('parent_id', null)
+      .order('created_at', { ascending: false }).limit(limit + 1);
+    if (beforeTs) q = q.lt('created_at', beforeTs);
+    return q;
+  };
+  let { data: roots, error } = await rootsQ(cols);
+  if (noSuchColumn(error)) ({ data: roots, error } = await rootsQ(COMMENT_COLS));
+  if (error) { console.warn('[supabase] fetchPostComments (кореневі):', error.message); return { comments: [], hasMore: false }; }
+
+  roots = roots || [];
+  const hasMore = roots.length > limit;
+  if (hasMore) roots = roots.slice(0, limit);
+  if (!roots.length) return { comments: [], hasMore: false };
+
+  const ids = roots.map(r => r.id);
+  const repQ = (c) => supa.from('page_comments').select(c)
+    .eq('post_id', postId).is('deleted_at', null).in('parent_id', ids);
+  let { data: replies, error: repErr } = await repQ(cols);
+  if (noSuchColumn(repErr)) ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
+  if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); replies = []; }
+
+  const comments = [...roots, ...(replies || [])]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  return { comments, hasMore };
 }
 
 // replyToUid — кому адресована відповідь («Віктор,» на початку + сповіщення саме йому).
@@ -1096,7 +1148,7 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
   const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
   const send = (row) => supa.from('page_comments').insert(row).select().single();
   let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
-  // Те саме розгортання без простою, що у fetchPageComments: поки міграції немає,
+  // Те саме розгортання без простою, що у fetchPostComments: поки міграції немає,
   // відповідь має надсилатись — просто без згадки. Інакше кнопка «Відповісти» була б
   // зламана в усіх до моменту, поки Вова накатає SQL.
   if (replyToUid && noSuchColumn(error)) ({ data, error } = await send(base));

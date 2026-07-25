@@ -12,7 +12,8 @@ import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
   fetchPages, fetchPagePosts, fetchPageReactions, setPageReaction,
-  fetchPageComments, addPageComment, deletePageComment, fetchMyEditablePageIds,
+  fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount,
+  addPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
@@ -50,7 +51,9 @@ const IC_TRASH  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" st
 let pages = [];               // усі сторінки-канали
 let posts = [];               // пости стрічки (усіх сторінок)
 let reactionMap = new Map();  // post_id → { count, my }
-let commentMap = new Map();   // post_id → comments[]
+let commentMap = new Map();   // post_id → завантажені comments[] (лише для відкритих постів)
+let commentCounts = new Map();// post_id → скільки коментарів усього (для лічильника під карткою)
+let commentPaging = new Map();// post_id → { hasMore, oldestTs } — стан «Показати попередні»
 let comReactMap = new Map();  // comment_id → { count, my } (лайки коментарів, фаза 3b)
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
@@ -95,12 +98,15 @@ async function loadData() {
     fetchPages(),
     fetchPagePosts(null, 60),
     fetchPageReactions(currentUserId()),
-    fetchPageComments(),
+    fetchPageCommentCounts(),
     fetchPageCommentReactions(currentUserId()),
     isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(new Set()),
     isLoggedIn() ? fetchMySubscriptions()   : Promise.resolve(new Set()),
   ]);
-  pages = orderPages(pg); posts = ps; reactionMap = rx; commentMap = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
+  pages = orderPages(pg); posts = ps; reactionMap = rx; commentCounts = cm; comReactMap = cr; myPageIds = mine; mySubs = subs;
+  // Самі коментарі не завантажені — вони тягнуться при відкритті листа. Скидаємо
+  // кеш, щоб після оновлення стрічки не показати вчорашню гілку.
+  commentMap = new Map(); commentPaging = new Map();
 
   // Живі імена/аватари авторів-людей (для підпису «— Ім'я»).
   const uids = [...new Set(posts.map(p => p.author_uid).filter(Boolean))];
@@ -638,15 +644,35 @@ function renderCommentSheet() {
   if (!openCommentSheet) return;
   const { postId, listEl, titleEl } = openCommentSheet;
   const list = commentMap.get(postId) || [];
-  if (titleEl) titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : 'Коментарі';
+  // У заголовку — УСЬОГО коментарів під постом, а не скільки завантажено:
+  // при частковому завантаженні «3 коментарі» під постом, де їх 80, брехало б.
+  const total = commentCounts.get(postId) ?? list.length;
+  if (titleEl) titleEl.textContent = total ? `${total} ${pluralComments(total)}` : 'Коментарі';
+
+  if (!commentMap.has(postId)) {                       // ще вантажиться
+    listEl.innerHTML = `<div class="fd-com-empty">Завантаження…</div>`;
+    return;
+  }
+  // «Показати попередні» — зверху, як у Facebook/Instagram: старіші домальовуються
+  // над уже прочитаним, і місце, де людина читала, не стрибає.
+  const more = commentPaging.get(postId)?.hasMore
+    ? `<button class="fd-com-more fd-com-more--older" type="button" data-com-older="${postId}">Показати попередні коментарі</button>`
+    : '';
   listEl.innerHTML = list.length
-    ? commentThreads(list).map(threadHtml).join('')
+    ? more + commentThreads(list).map(threadHtml).join('')
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
 }
 
 function patchCommentCount(postId) {
-  const n = (commentMap.get(postId) || []).length;
+  const n = commentCounts.get(postId) || 0;
   document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach(el => el.textContent = n || '');
+}
+
+// Лічильник під карткою ведемо кроком (+1/−1), а не довжиною завантаженого масиву:
+// масив тепер буває частковим (сторінка коментарів), і його довжина ≠ усього.
+function bumpCommentCount(postId, delta) {
+  commentCounts.set(postId, Math.max(0, (commentCounts.get(postId) || 0) + delta));
+  patchCommentCount(postId);
 }
 
 // Додати/оновити коментар у мапі (дедуп за id → без подвоєння від оптимістичного
@@ -654,10 +680,15 @@ function patchCommentCount(postId) {
 function applyCommentUpsert(c) {
   if (!c) return;
   if (c.deleted_at) { applyCommentRemove(c); return; }
-  const arr = commentMap.get(c.post_id) || [];
+  // Пост не відкривали — коментарів у пам'яті нема. Масив НЕ створюємо: інакше
+  // вийшов би обрубок з одного коментаря, який при відкритті листа видали б за
+  // всю розмову. Оновлюємо лише лічильник під карткою.
+  if (!commentMap.has(c.post_id)) { bumpCommentCount(c.post_id, +1); return; }
+
+  const arr = commentMap.get(c.post_id);
   const idx = arr.findIndex(x => x.id === c.id);
-  if (idx >= 0) arr[idx] = c;                 // редагування наявного
-  else arr.push(c);                           // новий
+  if (idx >= 0) arr[idx] = c;                 // редагування наявного — лічильник не чіпаємо
+  else { arr.push(c); bumpCommentCount(c.post_id, +1); }   // новий
   arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   commentMap.set(c.post_id, arr);
   // Автор ще не в кеші імен — дотягнути ім'я/аватар і перемалювати після цього.
@@ -668,19 +699,55 @@ function applyCommentUpsert(c) {
     });
   }
   if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
-  patchCommentCount(c.post_id);
 }
 
 function applyCommentRemove(c) {
   if (!c) return;
   const arr = commentMap.get(c.post_id);
-  if (!arr) return;
+  if (!arr) { bumpCommentCount(c.post_id, -1); return; }   // пост не відкритий — лише лічильник
+  // Віднімаємо ЛИШЕ якщо коментар справді був у списку. Своє видалення прилітає
+  // двічі — з нашого ж коду і луною з realtime; без цієї перевірки лічильник
+  // з'їхав би на −1 за кожне власне видалення.
+  if (!arr.some(x => x.id === c.id)) return;
   commentMap.set(c.post_id, arr.filter(x => x.id !== c.id));
+  bumpCommentCount(c.post_id, -1);
   // Адресата відповіді видалили (сам автор або інший адмін) поки ми писали — режим
   // відповіді тихо скидаємо: підсвічувати нема що, і смуга «Відповідь для…» брехала б.
   if (replyTarget && replyTarget.commentId === c.id) openCommentSheet?.clearReply?.();
   if (openCommentSheet && openCommentSheet.postId === c.post_id) renderCommentSheet();
-  patchCommentCount(c.post_id);
+}
+
+// Завантажити коментарі поста (перша сторінка або старіші за «Показати попередні»).
+// older=true — домальовуємо старіші ЗВЕРХУ до вже показаних.
+async function loadComments(postId, { older = false } = {}) {
+  const prev = older ? (commentMap.get(postId) || []) : [];
+  const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
+  // Перше відкриття — заразом звіряємо лічильник із базою (див. fetchPostCommentCount:
+  // кроковий +1/−1 може розійтись, якщо realtime-подія загубилась або прийшла двічі).
+  const [{ comments, hasMore }, trueCount] = await Promise.all([
+    fetchPostComments(postId, { beforeTs }),
+    older ? Promise.resolve(null) : fetchPostCommentCount(postId),
+  ]);
+  if (trueCount != null) commentCounts.set(postId, trueCount);
+
+  // Дедуп за id: поки тривав запит, realtime міг уже покласти сюди свіжий коментар.
+  const seen = new Set(prev.map(c => c.id));
+  const merged = [...comments.filter(c => !seen.has(c.id)), ...prev]
+    .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+  commentMap.set(postId, merged);
+
+  // oldestTs рахуємо по КОРЕНЕВИХ — сторінка міряється ними, і час відповіді
+  // (вона завжди новіша за свій корінь) зрушив би межу не туди.
+  const roots = merged.filter(c => !c.parent_id);
+  commentPaging.set(postId, {
+    hasMore,
+    oldestTs: roots.length ? roots[0].created_at : null,
+  });
+
+  // Імена/аватари авторів цієї порції — інакше рядки покажуть «Житель».
+  const uids = [...new Set(merged.flatMap(c => [c.author_uid, c.reply_to_uid]))]
+    .filter(u => u && !cachedName(u));
+  if (uids.length) await fetchAvatars(uids);
 }
 
 // focusCommentId — прийшли зі сповіщення: після відкриття підсвітити і дотягнути
@@ -708,14 +775,34 @@ function openComments(postId, focusCommentId = null) {
   const replyTo = sheet.querySelector('.fd-com-replyto');
   replyTarget = null;
   expandedThreads.clear();   // нове відкриття листа — гілки знову згорнуті (як у FB/IG)
-  // ⚠️ Розкриваємо гілку ПІСЛЯ clear() — інакше очищення затерло б її. Потрібний
-  // коментар може лежати під «Ще N», і тоді підсвічувати й гортати не було б до чого.
-  if (focusCommentId) {
-    const target = (commentMap.get(postId) || []).find(c => c.id === focusCommentId);
-    if (target?.parent_id) expandedThreads.add(target.parent_id);
-  }
   openCommentSheet = { postId, back: sheet, listEl, titleEl };
-  renderCommentSheet();
+  renderCommentSheet();      // спершу «Завантаження…» — коментарів у пам'яті ще нема
+
+  // Коментарі тягнемо САМЕ ЗАРАЗ, а не при завантаженні стрічки: лист відкривають
+  // для одного поста, і немає сенсу возити з собою розмови всіх інших.
+  loadComments(postId).then(() => {
+    if (!openCommentSheet || openCommentSheet.postId !== postId) return;   // лист уже закрили
+    // ⚠️ Розкриваємо гілку ПІСЛЯ clear() і ПІСЛЯ завантаження — інакше очищення
+    // затерло б її, а до завантаження шукати не було б у чому. Потрібний коментар
+    // може лежати під «Ще N», і тоді підсвічувати й гортати не було б до чого.
+    if (focusCommentId) {
+      const target = (commentMap.get(postId) || []).find(c => c.id === focusCommentId);
+      if (target?.parent_id) expandedThreads.add(target.parent_id);
+    }
+    renderCommentSheet();
+    // Прийшли зі сповіщення — показати саме той коментар. Клас підсвітки той самий,
+    // що й у режимі відповіді, тож нового вигляду не вигадуємо. Знімаємо через 2.4с:
+    // це підказка «ось воно», а не стан — залишена назавжди, вона плутала б із
+    // режимом відповіді. Клас чіпляємо до DOM напряму, без replyTarget: людина ще
+    // нічого не пише.
+    if (focusCommentId) requestAnimationFrame(() => {
+      const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
+      if (!rowEl) return;
+      rowEl.classList.add('fd-com-row--replying');
+      revealInScroller(listEl, rowEl, 12);
+      setTimeout(() => rowEl.classList.remove('fd-com-row--replying'), 2400);
+    });
+  });
 
   // ── Клавіатура: уся механіка живе у core/keyboard.js (спільна для всіх аркушів) ──
   // Там же — історія трьох невдалих спроб і чому цей підхід інший: він нічого не
@@ -755,14 +842,9 @@ function openComments(postId, focusCommentId = null) {
   // Окремий гачок на перемалювання НЕ потрібен: клас підсвітки ставить сам
   // commentRowHtml за станом replyTarget, тож він відновлюється разом зі списком.
   sheet.querySelector('.fd-com-replyx').addEventListener('click', clearReply);
-  // Імена учасників розмови: і авторів коментарів, і АДРЕСАТІВ відповідей. Без другого
-  // згадка «Віктор,» показувала б «Житель» — імені просто не було б у кеші, бо на старті
-  // тягнуться лише автори постів. Тягнемо одним запитом і лише те, чого бракує.
-  const needNames = [...new Set((commentMap.get(postId) || [])
-    .flatMap(c => [c.author_uid, c.reply_to_uid]).filter(u => u && !cachedName(u)))];
-  if (needNames.length) fetchAvatars(needNames).then(() => {
-    if (openCommentSheet && openCommentSheet.postId === postId) renderCommentSheet();
-  });
+  // Імена учасників розмови (і авторів, і АДРЕСАТІВ відповідей — без других згадка
+  // «Віктор,» показувала б «Житель») тягне loadComments разом із самою порцією:
+  // окремий прохід тут дублював би той самий запит.
 
   // Свій аватар/ім'я для компоузера могли бути не в кеші — дотягнути й оновити.
   if (myUid && !cachedName(myUid)) fetchAvatars([myUid]).then(() => {
@@ -823,8 +905,29 @@ function openComments(postId, focusCommentId = null) {
     revealInScroller(listEl, after);
   };
 
+  // «Показати попередні коментарі» — домалювати старішу сторінку ЗВЕРХУ.
+  // Тримаємось за перший видимий рядок: нові вставляються над ним, і без цього
+  // список стрибнув би рівно на висоту дозавантаженого (та сама механіка, що у
+  // collapseThread — міряємо ДО і ПІСЛЯ та компенсуємо різницю прокруткою).
+  const loadOlder = async (btn) => {
+    const anchor = listEl.querySelector('[data-com-id]');
+    const anchorId = anchor?.dataset.comId;
+    const before = anchor?.getBoundingClientRect().top;
+    btn.disabled = true; btn.textContent = 'Завантаження…';
+    await loadComments(openCommentSheet.postId, { older: true });
+    if (!openCommentSheet) return;
+    renderCommentSheet();
+    const after = anchorId && listEl.querySelector(`[data-com-id="${anchorId}"]`);
+    if (after && before != null) {
+      const delta = after.getBoundingClientRect().top - before;
+      if (Math.abs(delta) >= 1) listEl.scrollTop += delta;
+    }
+  };
+
   // Дії в листі: лайк (♥) + «Відповісти» + «Ще N» / «Сховати відповіді» + видалення свого.
   listEl.addEventListener('click', async e => {
+    const older = e.target.closest('[data-com-older]');
+    if (older) { await loadOlder(older); return; }
     const like = e.target.closest('[data-com-like]');
     if (like) { toggleCommentLike(Number(like.dataset.comLike)); return; }
     const more = e.target.closest('[data-more-parent]');
@@ -907,17 +1010,8 @@ function openComments(postId, focusCommentId = null) {
   });
   requestAnimationFrame(() => sheet.classList.add('open'));
 
-  // Прийшли зі сповіщення — показати саме той коментар. Клас підсвітки той самий, що
-  // й у режимі відповіді, тож нового вигляду не вигадуємо. Знімаємо через 2.4с: це
-  // підказка «ось воно», а не стан — залишена назавжди, вона плутала б із режимом
-  // відповіді. Клас чіпляємо до DOM напряму, без replyTarget: людина ще нічого не пише.
-  if (focusCommentId) requestAnimationFrame(() => {
-    const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
-    if (!rowEl) return;
-    rowEl.classList.add('fd-com-row--replying');
-    revealInScroller(listEl, rowEl, 12);
-    setTimeout(() => rowEl.classList.remove('fd-com-row--replying'), 2400);
-  });
+  // (підсвітка коментаря зі сповіщення — вище, у колбеку loadComments: до
+  //  завантаження списку підсвічувати не було б чого)
 }
 
 // ── Екран сторінки (Екран 2) ────────────────────────────────────────────────

@@ -1412,24 +1412,61 @@
   function noSuchColumn(error) {
     return error && (error.code === "42703" || /reply_to_uid/.test(error.message || ""));
   }
-  async function fetchPageComments() {
+  async function fetchPageCommentCounts() {
     if (!supa)
       return /* @__PURE__ */ new Map();
-    const q = (cols) => supa.from("page_comments").select(cols).is("deleted_at", null).order("created_at", { ascending: true });
-    let { data, error } = await q(`${COMMENT_COLS}, reply_to_uid`);
-    if (noSuchColumn(error))
-      ({ data, error } = await q(COMMENT_COLS));
+    const { data, error } = await supa.from("page_comment_counts").select("post_id, n");
     if (error) {
-      console.warn("[supabase] fetchPageComments:", error.message);
+      console.warn("[supabase] fetchPageCommentCounts:", error.message);
       return /* @__PURE__ */ new Map();
     }
-    const map = /* @__PURE__ */ new Map();
-    for (const c of data || []) {
-      if (!map.has(c.post_id))
-        map.set(c.post_id, []);
-      map.get(c.post_id).push(c);
+    return new Map((data || []).map((r) => [r.post_id, r.n]));
+  }
+  async function fetchPostCommentCount(postId) {
+    if (!supa)
+      return null;
+    const { data, error } = await supa.from("page_comment_counts").select("n").eq("post_id", postId).maybeSingle();
+    if (error) {
+      console.warn("[supabase] fetchPostCommentCount:", error.message);
+      return null;
     }
-    return map;
+    return data ? data.n : 0;
+  }
+  var COMMENT_ROOTS_PAGE = 30;
+  async function fetchPostComments(postId, { beforeTs = null, limit = COMMENT_ROOTS_PAGE } = {}) {
+    if (!supa)
+      return { comments: [], hasMore: false };
+    const cols = `${COMMENT_COLS}, reply_to_uid`;
+    const rootsQ = (c) => {
+      let q = supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).is("parent_id", null).order("created_at", { ascending: false }).limit(limit + 1);
+      if (beforeTs)
+        q = q.lt("created_at", beforeTs);
+      return q;
+    };
+    let { data: roots, error } = await rootsQ(cols);
+    if (noSuchColumn(error))
+      ({ data: roots, error } = await rootsQ(COMMENT_COLS));
+    if (error) {
+      console.warn("[supabase] fetchPostComments (\u043A\u043E\u0440\u0435\u043D\u0435\u0432\u0456):", error.message);
+      return { comments: [], hasMore: false };
+    }
+    roots = roots || [];
+    const hasMore = roots.length > limit;
+    if (hasMore)
+      roots = roots.slice(0, limit);
+    if (!roots.length)
+      return { comments: [], hasMore: false };
+    const ids = roots.map((r) => r.id);
+    const repQ = (c) => supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).in("parent_id", ids);
+    let { data: replies, error: repErr } = await repQ(cols);
+    if (noSuchColumn(repErr))
+      ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
+    if (repErr) {
+      console.warn("[supabase] fetchPostComments (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456):", repErr.message);
+      replies = [];
+    }
+    const comments = [...roots, ...replies || []].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    return { comments, hasMore };
   }
   async function addPageComment(postId, uid, text, parentId = null, replyToUid = null) {
     if (!supa)
@@ -10983,6 +11020,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var posts = [];
   var reactionMap = /* @__PURE__ */ new Map();
   var commentMap = /* @__PURE__ */ new Map();
+  var commentCounts = /* @__PURE__ */ new Map();
+  var commentPaging = /* @__PURE__ */ new Map();
   var comReactMap = /* @__PURE__ */ new Map();
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
@@ -11017,7 +11056,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       fetchPages(),
       fetchPagePosts(null, 60),
       fetchPageReactions(currentUserId()),
-      fetchPageComments(),
+      fetchPageCommentCounts(),
       fetchPageCommentReactions(currentUserId()),
       isLoggedIn() ? fetchMyEditablePageIds() : Promise.resolve(/* @__PURE__ */ new Set()),
       isLoggedIn() ? fetchMySubscriptions() : Promise.resolve(/* @__PURE__ */ new Set())
@@ -11025,10 +11064,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     pages = orderPages(pg);
     posts = ps;
     reactionMap = rx;
-    commentMap = cm;
+    commentCounts = cm;
     comReactMap = cr;
     myPageIds = mine;
     mySubs = subs;
+    commentMap = /* @__PURE__ */ new Map();
+    commentPaging = /* @__PURE__ */ new Map();
     const uids = [...new Set(posts.map((p) => p.author_uid).filter(Boolean))];
     if (uids.length)
       await fetchAvatars(uids);
@@ -11495,13 +11536,23 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return;
     const { postId, listEl, titleEl } = openCommentSheet;
     const list = commentMap.get(postId) || [];
+    const total = commentCounts.get(postId) ?? list.length;
     if (titleEl)
-      titleEl.textContent = list.length ? `${list.length} ${pluralComments(list.length)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
-    listEl.innerHTML = list.length ? commentThreads(list).map(threadHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
+      titleEl.textContent = total ? `${total} ${pluralComments(total)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+    if (!commentMap.has(postId)) {
+      listEl.innerHTML = `<div class="fd-com-empty">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>`;
+      return;
+    }
+    const more = commentPaging.get(postId)?.hasMore ? `<button class="fd-com-more fd-com-more--older" type="button" data-com-older="${postId}">\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</button>` : "";
+    listEl.innerHTML = list.length ? more + commentThreads(list).map(threadHtml).join("") : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
   }
   function patchCommentCount(postId) {
-    const n = (commentMap.get(postId) || []).length;
+    const n = commentCounts.get(postId) || 0;
     document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
+  }
+  function bumpCommentCount(postId, delta) {
+    commentCounts.set(postId, Math.max(0, (commentCounts.get(postId) || 0) + delta));
+    patchCommentCount(postId);
   }
   function applyCommentUpsert(c) {
     if (!c)
@@ -11510,12 +11561,18 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       applyCommentRemove(c);
       return;
     }
-    const arr = commentMap.get(c.post_id) || [];
+    if (!commentMap.has(c.post_id)) {
+      bumpCommentCount(c.post_id, 1);
+      return;
+    }
+    const arr = commentMap.get(c.post_id);
     const idx = arr.findIndex((x) => x.id === c.id);
     if (idx >= 0)
       arr[idx] = c;
-    else
+    else {
       arr.push(c);
+      bumpCommentCount(c.post_id, 1);
+    }
     arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     commentMap.set(c.post_id, arr);
     const fresh = [c.author_uid, c.reply_to_uid].filter((u) => u && !cachedName(u));
@@ -11527,20 +11584,44 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     }
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
       renderCommentSheet();
-    patchCommentCount(c.post_id);
   }
   function applyCommentRemove(c) {
     if (!c)
       return;
     const arr = commentMap.get(c.post_id);
-    if (!arr)
+    if (!arr) {
+      bumpCommentCount(c.post_id, -1);
+      return;
+    }
+    if (!arr.some((x) => x.id === c.id))
       return;
     commentMap.set(c.post_id, arr.filter((x) => x.id !== c.id));
+    bumpCommentCount(c.post_id, -1);
     if (replyTarget && replyTarget.commentId === c.id)
       openCommentSheet?.clearReply?.();
     if (openCommentSheet && openCommentSheet.postId === c.post_id)
       renderCommentSheet();
-    patchCommentCount(c.post_id);
+  }
+  async function loadComments(postId, { older = false } = {}) {
+    const prev = older ? commentMap.get(postId) || [] : [];
+    const beforeTs = older ? commentPaging.get(postId)?.oldestTs || null : null;
+    const [{ comments, hasMore }, trueCount] = await Promise.all([
+      fetchPostComments(postId, { beforeTs }),
+      older ? Promise.resolve(null) : fetchPostCommentCount(postId)
+    ]);
+    if (trueCount != null)
+      commentCounts.set(postId, trueCount);
+    const seen = new Set(prev.map((c) => c.id));
+    const merged = [...comments.filter((c) => !seen.has(c.id)), ...prev].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    commentMap.set(postId, merged);
+    const roots = merged.filter((c) => !c.parent_id);
+    commentPaging.set(postId, {
+      hasMore,
+      oldestTs: roots.length ? roots[0].created_at : null
+    });
+    const uids = [...new Set(merged.flatMap((c) => [c.author_uid, c.reply_to_uid]))].filter((u) => u && !cachedName(u));
+    if (uids.length)
+      await fetchAvatars(uids);
   }
   function openComments(postId, focusCommentId = null) {
     const myUid = currentUserId();
@@ -11565,13 +11646,27 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const replyTo = sheet.querySelector(".fd-com-replyto");
     replyTarget = null;
     expandedThreads.clear();
-    if (focusCommentId) {
-      const target = (commentMap.get(postId) || []).find((c) => c.id === focusCommentId);
-      if (target?.parent_id)
-        expandedThreads.add(target.parent_id);
-    }
     openCommentSheet = { postId, back: sheet, listEl, titleEl };
     renderCommentSheet();
+    loadComments(postId).then(() => {
+      if (!openCommentSheet || openCommentSheet.postId !== postId)
+        return;
+      if (focusCommentId) {
+        const target = (commentMap.get(postId) || []).find((c) => c.id === focusCommentId);
+        if (target?.parent_id)
+          expandedThreads.add(target.parent_id);
+      }
+      renderCommentSheet();
+      if (focusCommentId)
+        requestAnimationFrame(() => {
+          const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
+          if (!rowEl)
+            return;
+          rowEl.classList.add("fd-com-row--replying");
+          revealInScroller(listEl, rowEl, 12);
+          setTimeout(() => rowEl.classList.remove("fd-com-row--replying"), 2400);
+        });
+    });
     const comSheet = sheet.querySelector(".fd-com-sheet");
     const kbInput = sheet.querySelector(".fd-com-input");
     const unlockScroll = lockBodyScroll();
@@ -11604,12 +11699,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       requestAnimationFrame(revealReply);
     };
     sheet.querySelector(".fd-com-replyx").addEventListener("click", clearReply);
-    const needNames = [...new Set((commentMap.get(postId) || []).flatMap((c) => [c.author_uid, c.reply_to_uid]).filter((u) => u && !cachedName(u)))];
-    if (needNames.length)
-      fetchAvatars(needNames).then(() => {
-        if (openCommentSheet && openCommentSheet.postId === postId)
-          renderCommentSheet();
-      });
     if (myUid && !cachedName(myUid))
       fetchAvatars([myUid]).then(() => {
         const el = sheet.querySelector(".fd-com-myava");
@@ -11650,7 +11739,29 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         listEl.scrollTop += delta;
       revealInScroller(listEl, after);
     };
+    const loadOlder = async (btn) => {
+      const anchor = listEl.querySelector("[data-com-id]");
+      const anchorId = anchor?.dataset.comId;
+      const before = anchor?.getBoundingClientRect().top;
+      btn.disabled = true;
+      btn.textContent = "\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026";
+      await loadComments(openCommentSheet.postId, { older: true });
+      if (!openCommentSheet)
+        return;
+      renderCommentSheet();
+      const after = anchorId && listEl.querySelector(`[data-com-id="${anchorId}"]`);
+      if (after && before != null) {
+        const delta = after.getBoundingClientRect().top - before;
+        if (Math.abs(delta) >= 1)
+          listEl.scrollTop += delta;
+      }
+    };
     listEl.addEventListener("click", async (e) => {
+      const older = e.target.closest("[data-com-older]");
+      if (older) {
+        await loadOlder(older);
+        return;
+      }
       const like = e.target.closest("[data-com-like]");
       if (like) {
         toggleCommentLike(Number(like.dataset.comLike));
@@ -11748,15 +11859,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       onOpen: revealReply
     });
     requestAnimationFrame(() => sheet.classList.add("open"));
-    if (focusCommentId)
-      requestAnimationFrame(() => {
-        const rowEl = listEl.querySelector(`[data-com-id="${focusCommentId}"]`);
-        if (!rowEl)
-          return;
-        rowEl.classList.add("fd-com-row--replying");
-        revealInScroller(listEl, rowEl, 12);
-        setTimeout(() => rowEl.classList.remove("fd-com-row--replying"), 2400);
-      });
   }
   function screenListHtml(tab, pagePosts) {
     if (tab === "events") {
