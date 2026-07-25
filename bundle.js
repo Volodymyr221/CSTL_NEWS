@@ -11171,23 +11171,26 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const track = ov.querySelector(".fd-viewer-track");
     track.scrollLeft = (startIdx || 0) * track.clientWidth;
   }
-  function attachSheetSwipe(back, panel, scroller, doClose) {
+  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null } = {}) {
     scroller = scroller || panel;
+    const zone = grip || panel;
     let startY = 0, dragging = false, dy = 0, travel = 1;
     const drag = createDragTracker();
     const fade = createBackdropFade(back, "bg");
-    panel.addEventListener("touchstart", (e) => {
+    zone.addEventListener("touchstart", (e) => {
       const y = e.touches[0].clientY;
-      const inHeader = y - panel.getBoundingClientRect().top < 64;
-      if (!inHeader && scroller.scrollTop > 0)
-        return;
+      if (!grip) {
+        const inHeader = y - panel.getBoundingClientRect().top < 64;
+        if (!inHeader && scroller.scrollTop > 0)
+          return;
+      }
       startY = y;
       dragging = true;
       dy = 0;
       travel = Math.max(panel.offsetHeight || 1, 1);
       drag.start(y);
     }, { passive: true });
-    panel.addEventListener("touchmove", (e) => {
+    zone.addEventListener("touchmove", (e) => {
       if (!dragging)
         return;
       dy = e.touches[0].clientY - startY;
@@ -11196,7 +11199,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         fade?.track(0);
         return;
       }
-      if (scroller.scrollTop > 0) {
+      if (!grip && scroller.scrollTop > 0) {
         panel.style.transform = "";
         fade?.track(0);
         startY = e.touches[0].clientY;
@@ -11210,7 +11213,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       fade?.track(dy / travel);
       drag.move(e.touches[0].clientY);
     }, { passive: false });
-    panel.addEventListener("touchend", () => {
+    zone.addEventListener("touchend", () => {
       if (!dragging)
         return;
       dragging = false;
@@ -11635,8 +11638,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     sheet.className = "fd-sheet-back";
     sheet.innerHTML = `
     <div class="fd-sheet fd-com-sheet">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title fd-com-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
+      <div class="fd-com-grip">
+        <div class="fd-sheet-handle"></div>
+        <div class="fd-sheet-title fd-com-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
+      </div>
       <div class="fd-com-list"></div>
       <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C">${IC_X}</button></div>
       <div class="fd-com-compose">
@@ -11853,7 +11858,16 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         send();
     });
     document.body.appendChild(sheet);
-    attachSheetSwipe(sheet, sheet.querySelector(".fd-sheet"), listEl, close);
+    const gripEl = sheet.querySelector(".fd-com-grip");
+    attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl });
+    const padTop = () => {
+      const h = gripEl.offsetHeight;
+      if (h)
+        listEl.style.paddingTop = `${h + 12}px`;
+    };
+    padTop();
+    if (typeof ResizeObserver !== "undefined")
+      new ResizeObserver(padTop).observe(gripEl);
     detachKb = attachKeyboardSheet(sheet, comSheet, {
       // клавіатура: тільки після DOM
       input: kbInput,
