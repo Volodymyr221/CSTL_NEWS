@@ -133,7 +133,18 @@
 .fd-list { padding: 0 0 12px; display: flex; flex-direction: column; gap: 8px; background: var(--fd-bg); }
 .fd-empty { text-align: center; color: var(--fd-muted); font-size: 14px; line-height: 1.6; padding: 44px 24px; }
 
-.fd-card { background: var(--fd-surface); box-shadow: 0 1px 2px rgba(16,18,22,0.05); }
+/* 🔑 ЗАОКРУГЛЕНІ КУТИ КАРТКИ (Вова 25.07): «на самих постах зверху по кутах трохи
+   заокруглити та знизу поста по кутах заокруглити». --fd-card-r — одне місце для правки.
+   ⚠️ Свідомо БЕЗ `overflow: hidden` на картці. Він виглядає простіше, але в Safari
+   позиційовані діти з z-index (а це саме .fd-card-head--onphoto і .fd-card-body)
+   вміють вилазити за заокруглений обріз — кути лишились би квадратними. Тому радіус
+   ставимо на самі кутові елементи; порядок у постi завжди сталий:
+   .fd-card-head (перший) → фото (посередині, кутів не торкається) → .fd-card-body (останній). */
+.fd-card { --fd-card-r: 14px; background: var(--fd-surface); box-shadow: 0 1px 2px rgba(16,18,22,0.05);
+  border-radius: var(--fd-card-r); }
+/* Своє тло має лише шапка НАД ФОТО — їй і потрібні верхні кути (див. .fd-card-head--onphoto
+   нижче). Без фото шапка прозора, і верхні кути малює сама картка. Низ завжди малює
+   .fd-card-body — у нього тло є в обох випадках. */
 .fd-card-head { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; cursor: pointer; }
 .fd-ava-wrap { width: 40px; height: 40px; flex: none; }
 .fd-ava--ph { font-size: 17px; }
@@ -153,8 +164,10 @@
 /* Фото обрамлене тінню зверху (від шапки) і знизу (від блоку опису) — «налягання», глибина. */
 /* 25.07: пробували заокруглити верхні кути блоку опису (радіус 14px + налягання на фото
    на ті самі 14px) — Вова подивився наживо: «не гарно виглядає, поверни назад». Відкочено. */
-.fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: 0 5px 12px rgba(16, 18, 22, 0.10); }
-.fd-card-body { position: relative; z-index: 1; background: var(--fd-surface); }
+.fd-card-head--onphoto { position: relative; z-index: 1; background: var(--fd-surface); box-shadow: 0 5px 12px rgba(16, 18, 22, 0.10);
+  border-radius: var(--fd-card-r) var(--fd-card-r) 0 0; }
+.fd-card-body { position: relative; z-index: 1; background: var(--fd-surface);
+  border-radius: 0 0 var(--fd-card-r) var(--fd-card-r); }
 .fd-card-body--onphoto { box-shadow: 0 -5px 12px rgba(16, 18, 22, 0.11); }
 
 .fd-text { padding: 8px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
