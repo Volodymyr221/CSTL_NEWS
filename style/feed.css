@@ -75,6 +75,10 @@
   flex: 0 0 auto; width: 96px; display: flex; flex-direction: column; align-items: center;
   gap: calc(6px - 6px * var(--sh)); background: none; border: 0; cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  /* Коли підписи згортаються (--sh), кільця з'їжджаються у щільний ряд: куди саме —
+     рахує feed.js один раз у planCollapsedCircles() і кладе в --dx. Тут лише зсув:
+     він НЕ змінює розкладку, тож браузер не перераховує її щокадру → рух без ривків. */
+  transform: translateX(calc(var(--dx, 0px) * var(--sh)));
 }
 /* Кільце НЕ звужується при скролі — розмір фіксований (рішення Вови): блок меншає
    лише за рахунок згасання назв, іконки лишаються рівномірними. */

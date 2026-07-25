@@ -364,6 +364,42 @@ function layoutCircles() {
   if (!el) return;
   el.classList.remove('is-fit');                        // міряємо натуральну ширину
   if (el.scrollWidth <= el.clientWidth + 1) el.classList.add('is-fit');
+  planCollapsedCircles(el);
+}
+
+// ── Куди їдуть кружечки, коли назви згортаються (Вова 25.07, скріни IMG_3570/3571) ──
+// ПРОБЛЕМА: колонка кружечка широка (96px) бо тримає ПІДПИС. Коли підпис зникає при
+// скролі, місце під нього лишається — кільця (62px) стоять із «повітрям» 52px між ними,
+// ніби підписи ще там. Вова: «виглядає так, ніби трохи за широко відступлене від краю».
+//
+// ЩО МАЄ БУТИ (дослівно): вміщаються всі → група ВІДЦЕНТРОВАНА, «перша іконка з лівої
+// частини має мати такий самий відступ, як остання з правої»; не вміщаються → перша
+// «не геть близько до екрану, а трошечки відступ», решта щільніше, а остання «трохи
+// виглядає за рамки екрану — щоб було видно, що там є щось за рамками».
+//
+// ЯК: рахуємо цільове положення КОЖНОГО кільця один раз (тут, на рендер і поворот) і
+// віддаємо CSS як --dx. Далі кільце їде туди ЗСУВОМ, пропорційно --sh. Зсув не змінює
+// розкладку — браузер не перераховує її на кожен кадр, тому рух без ривків. Зміна
+// ширини колонок дала б той самий вигляд, але з перерахунком розкладки щокадру.
+const CIRCLE_RING = 62;   // діаметр кільця (.fd-circle-ring)
+const CIRCLE_PAD  = 16;   // бічний відступ смуги (.fd-circles padding)
+const CIRCLE_GAP  = 18;   // проміжок між кільцями у згорнутому стані
+function planCollapsedCircles(el) {
+  const items = [...el.querySelectorAll('.fd-circle')];
+  if (!items.length) return;
+  // Міряємо БЕЗ зсуву — інакше поточний зсув потрапив би у власний розрахунок.
+  items.forEach(it => it.style.setProperty('--dx', '0px'));
+  const inner = el.clientWidth - CIRCLE_PAD * 2;
+  const width = items.length * CIRCLE_RING + (items.length - 1) * CIRCLE_GAP;
+  // Вміщається → центруємо групу (відступи зліва й справа однакові).
+  // Не вміщається → від сталого відступу зліва; решта визирає за край = підказка «гортай».
+  const startX = width <= inner ? CIRCLE_PAD + (inner - width) / 2 : CIRCLE_PAD;
+  const base = el.getBoundingClientRect().left - el.scrollLeft;
+  items.forEach((it, i) => {
+    const r = it.getBoundingClientRect();
+    const ringNow = r.left - base + (r.width - CIRCLE_RING) / 2;   // де кільце стоїть зараз
+    it.style.setProperty('--dx', `${(startX + i * (CIRCLE_RING + CIRCLE_GAP) - ringNow).toFixed(1)}px`);
+  });
 }
 
 // ── Лайк (тільки авторизованим) ─────────────────────────────────────────────
