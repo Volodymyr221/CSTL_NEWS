@@ -802,22 +802,13 @@ async function openPageScreen(pageId, reopen = false) {
       const s = Math.min(PIN_MAX, Math.max(PIN_MIN, fit));
       title.style.setProperty('--fd-pin-s', s.toFixed(3));
     };
-    // Чи вміє браузер прив'язувати анімацію до самої прокрутки. Якщо так — зменшення
-    // програє та сама підсистема, що рухає сторінку (як у рідному iOS), і JS під час
-    // скролу НЕ працює взагалі: він лише один раз віддає межі діапазону.
-    // Якщо ні (старіші iPhone) — лишається перевірений шлях через --p на кожен кадр.
-    const NATIVE_PIN = typeof CSS !== 'undefined' && CSS.supports &&
-                       CSS.supports('animation-timeline', 'scroll()');
+    // ⛔ Спробу перевести це на scroll-driven animation відкочено 25.07 — вона зсувала
+    // МІСЦЕ зменшення (стискалось раніше, ніж заголовок доїжджав доверху). Прогрес знову
+    // рахує JS: той самий діапазон, останнє зменшення рівно в момент піну.
     const measure = () => {
       pinAt = title.getBoundingClientRect().top - screen.getBoundingClientRect().top + screen.scrollTop;
       measurePin();   // спершу масштаб — від нього залежить і висота скла нижче
       if (titleIn) title.style.setProperty('--fd-th', `${titleIn.offsetHeight}px`);
-      if (NATIVE_PIN) {
-        // Той самий діапазон, що рахував JS: від (поріг піну − RANGE) до самого піну.
-        const a0 = Math.max(0, pinAt - RANGE - SETTLE);
-        title.style.setProperty('--fd-a0', `${a0}px`);
-        title.style.setProperty('--fd-a1', `${a0 + RANGE}px`);
-      }
     };
     const applyTitle = () => {
       tRaf = 0;
@@ -825,9 +816,9 @@ async function openPageScreen(pageId, reopen = false) {
       title.style.setProperty('--p', p.toFixed(3));
     };
     const onTitle = () => { if (!tRaf) tRaf = requestAnimationFrame(applyTitle); };
-    if (!NATIVE_PIN) screen.addEventListener('scroll', onTitle, { passive: true });
-    window.addEventListener('resize', () => { measure(); if (!NATIVE_PIN) onTitle(); });
-    requestAnimationFrame(() => { measure(); if (!NATIVE_PIN) applyTitle(); });
+    screen.addEventListener('scroll', onTitle, { passive: true });
+    window.addEventListener('resize', () => { measure(); onTitle(); });
+    requestAnimationFrame(() => { measure(); applyTitle(); });
   }
 
   document.body.appendChild(screen);
