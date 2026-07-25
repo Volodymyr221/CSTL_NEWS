@@ -474,10 +474,13 @@ function commentRowHtml(c, reply = false) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
   const lr = comReactMap.get(c.id) || { count: 0, my: false };
+  // data-av-uid на аватарі й імені → тап відкриває картку профілю (делегат
+  // initProfileCardTaps у profile-card.js слухає [data-av-uid] на document).
+  const av = c.author_uid ? ` data-av-uid="${escapeHtml(c.author_uid)}"` : '';
   return `<div class="fd-com-row${reply ? ' fd-com-row--reply' : ''}"${c.author_uid ? ` data-com-uid="${c.author_uid}"` : ''}>
-      <span class="fd-com-ava">${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
+      <span class="fd-com-ava"${av}>${avatarHtml(cachedAvatar(c.author_uid), nm, 'fd-com-ava-img')}</span>
       <div class="fd-com-body">
-        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
+        <div class="fd-com-line"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span> <span class="fd-com-txt">${escapeHtml(c.text)}</span></div>
         <div class="fd-com-meta"><span class="fd-com-time">${relTime(c.created_at)}</span><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
