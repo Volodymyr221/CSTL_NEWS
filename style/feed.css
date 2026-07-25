@@ -267,6 +267,11 @@
   transform: translateY(calc((env(safe-area-inset-top, 0px) + 8px) * var(--p, 0)))
              scale(calc(1 - (1 - var(--fd-pin-s, 0.78)) * var(--p, 0)));
   transform-origin: center center; will-change: transform;
+  /* min-width:0 — БЕЗ цього перенос довгого слова не працює взагалі: вміст flex-контейнера
+     за замовчуванням не стискається вужче за найдовше слово (min-width:auto), тож коробка
+     сама розтягується під нього і переносити стає «нема потреби». Саме через це назва
+     одним довгим словом вилазила за краї екрана. */
+  min-width: 0; max-width: 100%;
 }
 
 /* ⛔ ВІДКОЧЕНО 25.07: прив'язка зменшення до самої прокрутки (scroll-driven animation).
@@ -328,8 +333,16 @@
 .fd-screen-ava { display: block; width: 84px; height: 84px; border-radius: 50%; border: 4px solid var(--fd-bg);
   overflow: hidden; box-shadow: 0 0 18px rgba(0,0,0,0.20); }
 .fd-screen-ava-img--ph { font-size: 32px; }
-.fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; color: var(--fd-ink); }
-.fd-screen-theme { font-size: 13px; color: var(--fd-muted); margin-top: 3px; }
+/* overflow-wrap:break-word — назву спільноти вводить КОРИСТУВАЧ, і рано чи пізно хтось
+   введе одне довжелезне слово без пробілів. Таке слово не переноситься: рядок стає
+   ширшим за коробку, назва вилазить за краї, а в піні ще й залазить під іконки
+   «назад»/«дзвіночок» (перевірено: −27px на екрані 375px). Розрахунок масштабу теж
+   спирається на те, що найширший рядок вміщається в коробку. break-word ріже слово
+   лише коли інакше не влазить — звичайні назви від цього не змінюються. */
+.fd-screen-name { font-family: Georgia, serif; font-size: 20px; font-weight: 800; color: var(--fd-ink);
+  overflow-wrap: break-word; }
+.fd-screen-theme { font-size: 13px; color: var(--fd-muted); margin-top: 3px;
+  overflow-wrap: break-word; }
 
 .fd-compose-open {
   display: flex; align-items: center; gap: 10px; width: calc(100% - 24px); margin: 12px 12px 4px;
