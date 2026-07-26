@@ -623,30 +623,27 @@ export async function fetchThreadStates(uid) {
 export async function setThreadState(uid, threadId, patch) {
   if (!supa || !uid) return { ok: false, error: 'no-supa' };
   const row = { uid, thread_id: threadId, updated_at: new Date().toISOString(), ...patch };
-  try {
-    const { error } = await withTimeout(
-      supa.from('thread_user_state').upsert(row, { onConflict: 'uid,thread_id' })
-    );
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('thread_user_state').upsert(row, { onConflict: 'uid,thread_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Знайти або створити тред покупця на оголошенні. authorUid = власник посту.
 // authorName/buyerName зберігаємо денормалізовано (profiles приватний — див. SQL).
 export async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { data: existing } = await supa.from('threads')
+  // Вставка тут безпечна для повтору БЕЗ client_tag: у пари (пост, покупець) тред
+  // рівно один, і звірка — це той самий пошук, що вже стоїть першим рядком.
+  const find = () => supa.from('threads')
     .select('*').eq('post_id', postId).eq('buyer_uid', buyerUid).maybeSingle();
-  if (existing) return { ok: true, thread: existing };
-  const { data, error } = await supa.from('threads')
+  const found = await netCall(find, { retries: 1, timeout: NET_TIMEOUT });
+  if (found.ok && found.data) return { ok: true, thread: found.data };
+  const r = await netInsert(() => supa.from('threads')
     .insert({
       post_id: postId, author_uid: authorUid, buyer_uid: buyerUid,
       author_name: authorName || null, buyer_name: buyerName || null,
     })
-    .select().single();
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, thread: data };
+    .select().single(), { verify: find });
+  return r.ok ? { ok: true, thread: r.data } : { ok: false, error: r.error };
 }
 
 // Повідомлення треда (старі → нові).
@@ -737,7 +734,36 @@ export async function netCall(fn, { retries = 2, timeout = WRITE_TIMEOUT } = {})
   }
   const raw = String(last?.message || last || '');
   if (raw) console.warn('[netCall]', raw);          // технічне — у консоль, не людині
-  return { ok: false, data: null, error: netErrorText(last), raw };
+  // transient кажемо назовні: для ВСТАВКИ це різниця між «можна спробувати ще раз»
+  // і «база нас відхилила» (див. netInsert нижче).
+  return { ok: false, data: null, error: netErrorText(last), raw, transient: isTransientError(last) };
+}
+
+// ── ВСТАВКА — окремий випадок, повтор тут НЕ безпечний ───────────────────────
+// 🔑 ГОЛОВНА ДУМКА: обрив зв'язку буває двох видів, і на вигляд вони однакові.
+// (1) запит НЕ доїхав до бази — повтор безпечний і потрібний;
+// (2) запит доїхав, база записала, а ВІДПОВІДЬ загубилась по дорозі назад —
+//     повтор створить ДРУГИЙ коментар / ДРУГЕ повідомлення / ДРУГИЙ пост.
+// Клієнт відрізнити (1) від (2) не може. Тому питаємо базу: «цей рядок уже там?».
+//
+// verify — функція, що повертає запит-пошук за КЛІЄНТСЬКИМ ключем (`client_tag`,
+// uuid від клієнта). Немає ключа — немає чим звіряти → повтору не робимо взагалі:
+// краще «спробуй ще раз» людині, ніж тихий дубль у стрічці.
+//
+// Якщо звірка сама не доїхала — теж НЕ повторюємо. Не знаємо стану = не пишемо.
+export async function netInsert(fn, { verify = null, retries = 2, timeout = WRITE_TIMEOUT } = {}) {
+  let last = await netCall(fn, { retries: 0, timeout });
+  if (last.ok || !last.transient || !verify) return last;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    await new Promise(r => setTimeout(r, 500 * attempt));
+    const chk = await netCall(verify, { retries: 1, timeout: NET_TIMEOUT });
+    if (!chk.ok) return last;                       // не змогли перевірити — не дублюємо
+    if (chk.data) return { ok: true, data: chk.data, error: null, recovered: true };
+    last = await netCall(fn, { retries: 0, timeout });
+    if (last.ok || !last.transient) return last;
+  }
+  return last;
 }
 
 export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
@@ -746,11 +772,15 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
   if (photoUrl) row.photo_url = photoUrl;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  let data, error;
-  try {
-    ({ data, error } = await withTimeout(supa.from('messages').insert(row).select().single()));
-  } catch (e) { return { ok: false, error: e.message }; }
-  if (error) return { ok: false, error: error.message };
+  // Повтор при обриві — лише зі звіркою за client_tag, інакше людина отримає
+  // ДВА однакові повідомлення в розмові (див. netInsert).
+  const r = await netInsert(() => supa.from('messages').insert(row).select().single(), {
+    verify: clientTag
+      ? () => supa.from('messages').select('*').eq('thread_id', threadId).eq('client_tag', clientTag).maybeSingle()
+      : null,
+  });
+  if (!r.ok) return { ok: false, error: r.error };
+  const data = r.data;
   // Час+прев'ю треда тепер ставить тригер trg_touch_thread у БД (надійно).
   // Лишаємо клієнтський апдейт як підстраховку (ідемпотентно, не шкодить).
   const preview = text || (photoUrl ? '📷 Фото' : '');
@@ -766,32 +796,29 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
 // Редагування свого повідомлення (текст + позначка edited_at)
 export async function editMessage(messageId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('messages')
-      .update({ text, edited_at: new Date().toISOString() })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('messages')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 // М'яке видалення (soft-delete): лишаємо рядок, прибираємо вміст → плейсхолдер у UI
 export async function deleteMessage(messageId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('messages')
-      .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('messages')
+    .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 // Позначити вхідні повідомлення треда прочитаними (read_at).
+// Тихий запис: людині про нього не кажемо (вона не просила «позначити прочитаним»,
+// це побічна дія відкриття розмови). Але повтор потрібен — інакше при кліпанні
+// мережі бейдж непрочитаних лишається висіти на порожній розмові.
 export async function markThreadRead(threadId, uid) {
   if (!supa || !uid) return;
-  await supa.from('messages').update({ read_at: new Date().toISOString() })
-    .eq('thread_id', threadId).neq('sender_uid', uid).is('read_at', null);
+  await netCall(() => supa.from('messages').update({ read_at: new Date().toISOString() })
+    .eq('thread_id', threadId).neq('sender_uid', uid).is('read_at', null));
 }
 
 // Скільки непрочитаних повідомлень адресовано мені (для бейджа).
