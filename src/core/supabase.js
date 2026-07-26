@@ -787,6 +787,8 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
   const data = r.data;
   // Час+прев'ю треда тепер ставить тригер trg_touch_thread у БД (надійно).
   // Лишаємо клієнтський апдейт як підстраховку (ідемпотентно, не шкодить).
+  // Свідомо БЕЗ повтору: правду тут пише тригер, а зайві 1.5с бекофу на слабкому
+  // зв'язку відчувались би як «повідомлення довго надсилається» вже ПІСЛЯ успіху.
   const preview = text || (photoUrl ? '📷 Фото' : '');
   await supa.from('threads')
     .update({ last_message_at: new Date().toISOString(), last_message_text: preview })
@@ -1047,6 +1049,10 @@ export function subscribePageReactions(onChange) {
 
 // Записати подію. Fire-and-forget — НЕ блокує UI і НЕ кидає помилку викликачу
 // (аналітика ніколи не має зламати реальну дію користувача).
+// 🛑 СВІДОМО без ядра netCall/netInsert (не «недогляд», не чіпати без прохання):
+// це аналітика. Людині вона нічого не показує, тож людський текст помилки ні до чого,
+// а повтор при обриві накрутив би подію двічі й перекосив статистику в адмінці.
+// Ціна втраченої події при обриві — нуль; ціна дубля — брехлива цифра.
 export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
   if (!supa || !visitorId) return;
   supa.from('analytics_events')

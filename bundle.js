@@ -592,12 +592,8 @@
       published_at: nowIso,
       bumped_at: nowIso
     };
-    const { error } = await supa.from("posts").insert(row);
-    if (error) {
-      console.warn("[supabase] submitDiscussion error:", error);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
+    const r = await netInsert(() => supa.from("posts").insert(row));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   async function fetchPublishedAnnouncements() {
     if (!supa)
@@ -645,15 +641,11 @@
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (emoji == null) {
-      const { error: error2 } = await supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId);
-      if (error2)
-        return { ok: false, error: error2.message };
-      return { ok: true };
+      const r2 = await netCall(() => supa.from("reactions").delete().eq("post_id", postId).eq("user_id", userId));
+      return r2.ok ? { ok: true } : { ok: false, error: r2.error };
     }
-    const { error } = await supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" });
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true };
+    const r = await netCall(() => supa.from("reactions").upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: "post_id,user_id" }));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   async function fetchAllComments() {
     if (!supa)
@@ -681,38 +673,22 @@
       row.reply_to_id = replyToId;
     if (clientTag)
       row.client_tag = clientTag;
-    try {
-      const { data, error } = await withTimeout(supa.from("comments").insert(row).select().single());
-      if (error)
-        return { ok: false, error: error.message };
-      return { ok: true, comment: data };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const r = await netInsert(() => supa.from("comments").insert(row).select().single(), {
+      verify: clientTag ? () => supa.from("comments").select("*").eq("post_id", postId).eq("client_tag", clientTag).maybeSingle() : null
+    });
+    return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
   }
   async function editComment(commentId, text) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    try {
-      const { data, error } = await withTimeout(supa.from("comments").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
-      return { ok: true, comment: data };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const r = await netCall(() => supa.from("comments").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId).select().single());
+    return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
   }
   async function deleteComment(commentId) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    try {
-      const { data, error } = await withTimeout(supa.from("comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: "" }).eq("id", commentId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
-      return { ok: true, comment: data };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const r = await netCall(() => supa.from("comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: "" }).eq("id", commentId).select().single());
+    return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
   }
   async function uploadPhotoToStorage(blob, folder = "") {
     if (!supa)
@@ -730,7 +706,7 @@
     });
     if (uploadError) {
       console.warn("[supabase] uploadPhotoToStorage error:", uploadError.message);
-      return { url: null, error: uploadError.message };
+      return { url: null, error: netErrorText(uploadError) };
     }
     const { data } = supa.storage.from("community-photos").getPublicUrl(path);
     return { url: data?.publicUrl || null, error: null };
@@ -831,42 +807,34 @@
   async function bumpPost(postId) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("bump_post", { p_id: postId });
-    if (error) {
-      console.warn("[supabase] bumpPost:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("bump_post", { p_id: postId }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function closePost(postId) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("close_post", { p_id: postId });
-    if (error) {
-      console.warn("[supabase] closePost:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("close_post", { p_id: postId }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function deleteMyPost(postId) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("delete_my_post", { p_id: postId });
-    if (error) {
-      console.warn("[supabase] deleteMyPost:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("delete_my_post", { p_id: postId }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function restorePost(postId) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("restore_post", { p_id: postId });
-    if (error) {
-      console.warn("[supabase] restorePost:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("restore_post", { p_id: postId }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function updateBoardPost(postId, payload) {
     if (!supa)
@@ -891,88 +859,68 @@
   async function createGroup({ name, description = null, type = "locality", emoji = null, gradient = null }) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("create_group", {
+    const r = await netInsert(() => supa.rpc("create_group", {
       p_name: name,
       p_description: description,
       p_type: type,
       p_emoji: emoji,
       p_gradient: gradient
-    });
-    if (error) {
-      console.warn("[supabase] createGroup:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true, id: data };
+    }));
+    return r.ok ? { ok: true, id: r.data } : { ok: false, error: r.error };
   }
   async function createGroupInvite(groupId, requiresApproval = false) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("create_group_invite", { p_gid: groupId, p_requires_approval: requiresApproval });
-    if (error) {
-      console.warn("[supabase] createGroupInvite:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true, token: data };
+    const r = await netInsert(() => supa.rpc("create_group_invite", { p_gid: groupId, p_requires_approval: requiresApproval }));
+    return r.ok ? { ok: true, token: r.data } : { ok: false, error: r.error };
   }
   async function getGroupByInvite(token) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("get_group_by_invite", { p_token: token });
-    if (error) {
-      console.warn("[supabase] getGroupByInvite:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("get_group_by_invite", { p_token: token }), { timeout: NET_TIMEOUT });
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function joinGroupByToken(token) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("join_group_by_token", { p_token: token });
-    if (error) {
-      console.warn("[supabase] joinGroupByToken:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("join_group_by_token", { p_token: token }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function leaveGroup(groupId) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("leave_group", { p_gid: groupId });
-    if (error) {
-      console.warn("[supabase] leaveGroup:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("leave_group", { p_gid: groupId }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function approveMember(groupId, uid) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("approve_member", { p_gid: groupId, p_uid: uid });
-    if (error) {
-      console.warn("[supabase] approveMember:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("approve_member", { p_gid: groupId, p_uid: uid }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function rejectMember(groupId, uid) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("reject_member", { p_gid: groupId, p_uid: uid });
-    if (error) {
-      console.warn("[supabase] rejectMember:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("reject_member", { p_gid: groupId, p_uid: uid }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function transferGroupOwner(groupId, uid) {
     if (!supa)
       return { ok: false, error: "no_supa" };
-    const { data, error } = await supa.rpc("transfer_group_owner", { p_gid: groupId, p_uid: uid });
-    if (error) {
-      console.warn("[supabase] transferGroupOwner:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return data || { ok: false, error: "no_data" };
+    const r = await netCall(() => supa.rpc("transfer_group_owner", { p_gid: groupId, p_uid: uid }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    return r.data || { ok: false, error: "no_data" };
   }
   async function fetchGroupMembers(groupId) {
     if (!supa)
@@ -1007,15 +955,13 @@
       row.reply_to_id = replyToId;
     if (clientTag)
       row.client_tag = clientTag;
-    try {
-      const { data, error } = await withTimeout(supa.from("chat_group_messages").insert(row).select().single());
-      if (error)
-        return { ok: false, error: error.message };
-      supa.functions.invoke("send-group-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-group-push:", e?.message));
-      return { ok: true, message: data };
-    } catch (e) {
-      return { ok: false, error: e && e.message || "timeout" };
-    }
+    const r = await netInsert(() => supa.from("chat_group_messages").insert(row).select().single(), {
+      verify: clientTag ? () => supa.from("chat_group_messages").select("*").eq("group_id", groupId).eq("client_tag", clientTag).maybeSingle() : null
+    });
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    supa.functions.invoke("send-group-push", { body: { message_id: r.data.id } }).catch((e) => console.warn("[supabase] send-group-push:", e?.message));
+    return { ok: true, message: r.data };
   }
   function subscribeGroupMessages(groupId, onChange) {
     if (!supa)
@@ -1055,33 +1001,24 @@
     if (!supa || !uid)
       return { ok: false, error: "no-supa" };
     const row = { uid, thread_id: threadId, updated_at: (/* @__PURE__ */ new Date()).toISOString(), ...patch };
-    try {
-      const { error } = await withTimeout(
-        supa.from("thread_user_state").upsert(row, { onConflict: "uid,thread_id" })
-      );
-      if (error)
-        return { ok: false, error: error.message };
-      return { ok: true };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const r = await netCall(() => supa.from("thread_user_state").upsert(row, { onConflict: "uid,thread_id" }));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { data: existing } = await supa.from("threads").select("*").eq("post_id", postId).eq("buyer_uid", buyerUid).maybeSingle();
-    if (existing)
-      return { ok: true, thread: existing };
-    const { data, error } = await supa.from("threads").insert({
+    const find = () => supa.from("threads").select("*").eq("post_id", postId).eq("buyer_uid", buyerUid).maybeSingle();
+    const found = await netCall(find, { retries: 1, timeout: NET_TIMEOUT });
+    if (found.ok && found.data)
+      return { ok: true, thread: found.data };
+    const r = await netInsert(() => supa.from("threads").insert({
       post_id: postId,
       author_uid: authorUid,
       buyer_uid: buyerUid,
       author_name: authorName || null,
       buyer_name: buyerName || null
-    }).select().single();
-    if (error)
-      return { ok: false, error: error.message };
-    return { ok: true, thread: data };
+    }).select().single(), { verify: find });
+    return r.ok ? { ok: true, thread: r.data } : { ok: false, error: r.error };
   }
   async function fetchMessages(threadId, sinceTs = null) {
     if (!supa)
@@ -1156,7 +1093,24 @@
     const raw = String(last?.message || last || "");
     if (raw)
       console.warn("[netCall]", raw);
-    return { ok: false, data: null, error: netErrorText(last), raw };
+    return { ok: false, data: null, error: netErrorText(last), raw, rawError: last, transient: isTransientError(last) };
+  }
+  async function netInsert(fn, { verify = null, retries = 2, timeout = WRITE_TIMEOUT } = {}) {
+    let last = await netCall(fn, { retries: 0, timeout });
+    if (last.ok || !last.transient || !verify)
+      return last;
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      await new Promise((r) => setTimeout(r, 500 * attempt));
+      const chk = await netCall(verify, { retries: 1, timeout: NET_TIMEOUT });
+      if (!chk.ok)
+        return last;
+      if (chk.data)
+        return { ok: true, data: chk.data, error: null, recovered: true };
+      last = await netCall(fn, { retries: 0, timeout });
+      if (last.ok || !last.transient)
+        return last;
+    }
+    return last;
   }
   async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
     if (!supa)
@@ -1168,14 +1122,12 @@
       row.reply_to_id = replyToId;
     if (clientTag)
       row.client_tag = clientTag;
-    let data, error;
-    try {
-      ({ data, error } = await withTimeout(supa.from("messages").insert(row).select().single()));
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
-    if (error)
-      return { ok: false, error: error.message };
+    const r = await netInsert(() => supa.from("messages").insert(row).select().single(), {
+      verify: clientTag ? () => supa.from("messages").select("*").eq("thread_id", threadId).eq("client_tag", clientTag).maybeSingle() : null
+    });
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    const data = r.data;
     const preview = text || (photoUrl ? "\u{1F4F7} \u0424\u043E\u0442\u043E" : "");
     await supa.from("threads").update({ last_message_at: (/* @__PURE__ */ new Date()).toISOString(), last_message_text: preview }).eq("id", threadId);
     supa.functions.invoke("send-chat-push", { body: { message_id: data.id } }).catch((e) => console.warn("[supabase] send-chat-push:", e?.message));
@@ -1184,31 +1136,19 @@
   async function editMessage(messageId, text) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    try {
-      const { data, error } = await withTimeout(supa.from("messages").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", messageId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
-      return { ok: true, message: data };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const r = await netCall(() => supa.from("messages").update({ text, edited_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", messageId).select().single());
+    return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
   }
   async function deleteMessage(messageId) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    try {
-      const { data, error } = await withTimeout(supa.from("messages").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null }).eq("id", messageId).select().single());
-      if (error)
-        return { ok: false, error: error.message };
-      return { ok: true, message: data };
-    } catch (e) {
-      return { ok: false, error: e.message };
-    }
+    const r = await netCall(() => supa.from("messages").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString(), text: null, photo_url: null }).eq("id", messageId).select().single());
+    return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
   }
   async function markThreadRead(threadId, uid) {
     if (!supa || !uid)
       return;
-    await supa.from("messages").update({ read_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("thread_id", threadId).neq("sender_uid", uid).is("read_at", null);
+    await netCall(() => supa.from("messages").update({ read_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("thread_id", threadId).neq("sender_uid", uid).is("read_at", null));
   }
   async function fetchUnreadByThread(uid) {
     const map = /* @__PURE__ */ new Map();
@@ -1232,12 +1172,8 @@
   async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
     if (!supa || !uid)
       return { ok: false };
-    const { error } = await supa.from("user_push_devices").upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: "uid,endpoint" });
-    if (error) {
-      console.warn("[supabase] saveUserPushDevice:", error.message);
-      return { ok: false };
-    }
-    return { ok: true };
+    const r = await netCall(() => supa.from("user_push_devices").upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: "uid,endpoint" }));
+    return r.ok ? { ok: true } : { ok: false };
   }
   function subscribeThreadMessages(threadId, onChange) {
     if (!supa)
@@ -1273,22 +1209,14 @@
   async function addSavedPost(uid, postId) {
     if (!supa || !uid)
       return { ok: false };
-    const { error } = await supa.from("saved_posts").upsert({ uid, post_id: postId }, { onConflict: "uid,post_id" });
-    if (error) {
-      console.warn("[supabase] addSavedPost:", error.message);
-      return { ok: false };
-    }
-    return { ok: true };
+    const r = await netCall(() => supa.from("saved_posts").upsert({ uid, post_id: postId }, { onConflict: "uid,post_id" }));
+    return r.ok ? { ok: true } : { ok: false };
   }
   async function removeSavedPost(uid, postId) {
     if (!supa || !uid)
       return { ok: false };
-    const { error } = await supa.from("saved_posts").delete().eq("uid", uid).eq("post_id", postId);
-    if (error) {
-      console.warn("[supabase] removeSavedPost:", error.message);
-      return { ok: false };
-    }
-    return { ok: true };
+    const r = await netCall(() => supa.from("saved_posts").delete().eq("uid", uid).eq("post_id", postId));
+    return r.ok ? { ok: true } : { ok: false };
   }
   async function fetchTrackedRoutesFromDB(uid, todayISO) {
     if (!supa || !uid)
@@ -1326,24 +1254,18 @@
   async function savePushSubscription(payload) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { error } = await supa.from("push_subscriptions").insert(payload);
-    if (error) {
-      if (error.code === "23505")
-        return { ok: true };
-      console.warn("[supabase] savePushSubscription:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
+    const r = await netCall(() => supa.from("push_subscriptions").insert(payload));
+    if (r.ok)
+      return { ok: true };
+    if (r.rawError?.code === "23505")
+      return { ok: true };
+    return { ok: false, error: r.error };
   }
   async function deletePushSubscription(endpoint, routeId, trackDate) {
     if (!supa)
       return { ok: false, error: "no-supa" };
-    const { error } = await supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate);
-    if (error) {
-      console.warn("[supabase] deletePushSubscription:", error.message);
-      return { ok: false, error: error.message };
-    }
-    return { ok: true };
+    const r = await netCall(() => supa.from("push_subscriptions").delete().eq("endpoint", endpoint).eq("route_id", routeId).eq("track_date", trackDate));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   function subscribeReactions(onChange) {
     if (!supa)
@@ -1443,11 +1365,11 @@
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!on) {
-      const { error: error2 } = await supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey);
-      return error2 ? { ok: false, error: error2.message } : { ok: true };
+      const r2 = await netCall(() => supa.from("page_reactions").delete().eq("post_id", postId).eq("user_id", userKey));
+      return r2.ok ? { ok: true } : { ok: false, error: r2.error };
     }
-    const { error } = await supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" });
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from("page_reactions").upsert({ post_id: postId, user_id: userKey, emoji: "\u2764\uFE0F" }, { onConflict: "post_id,user_id" }));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   var COMMENT_COLS = "id, post_id, author_uid, text, created_at, deleted_at, parent_id, edited_at";
   function noSuchColumn(error) {
@@ -1526,22 +1448,22 @@
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
     const send = (row) => supa.from("page_comments").insert(row).select().single();
-    let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
-    if (replyToUid && noSuchColumn(error))
-      ({ data, error } = await send(base));
-    return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+    let r = await netInsert(() => send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base));
+    if (replyToUid && noSuchColumn(r.rawError))
+      r = await netInsert(() => send(base));
+    return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
   }
   async function editPageComment(commentId, text) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_comments").update({ text }).eq("id", commentId).select(`${COMMENT_COLS}, reply_to_uid`).single();
-    return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+    const r = await netCall(() => supa.from("page_comments").update({ text }).eq("id", commentId).select(`${COMMENT_COLS}, reply_to_uid`).single());
+    return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
   }
   async function deletePageComment(commentId) {
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { error } = await supa.from("page_comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from("page_comments").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", commentId));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   async function fetchPageCommentReactions(userKey) {
     if (!supa)
@@ -1566,11 +1488,11 @@
     if (!supa)
       return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
     if (!on) {
-      const { error: error2 } = await supa.from("page_comment_reactions").delete().eq("comment_id", commentId).eq("user_id", uid);
-      return error2 ? { ok: false, error: error2.message } : { ok: true };
+      const r2 = await netCall(() => supa.from("page_comment_reactions").delete().eq("comment_id", commentId).eq("user_id", uid));
+      return r2.ok ? { ok: true } : { ok: false, error: r2.error };
     }
-    const { error } = await supa.from("page_comment_reactions").upsert({ comment_id: commentId, user_id: uid }, { onConflict: "comment_id,user_id" });
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from("page_comment_reactions").upsert({ comment_id: commentId, user_id: uid }, { onConflict: "comment_id,user_id" }));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   function subscribePageCommentReactions(onChange) {
     if (!supa)
@@ -1609,7 +1531,7 @@
       event_time: event.event_time || null,
       event_location: event.event_location || null
     };
-    const r = await netCall(() => supa.from("page_posts").insert(row).select(POST_COLS).single());
+    const r = await netInsert(() => supa.from("page_posts").insert(row).select(POST_COLS).single());
     return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
   }
   async function updatePagePost(postId, patch) {
@@ -1642,11 +1564,11 @@
     if (!supa)
       return { ok: false };
     if (!on) {
-      const { error: error2 } = await supa.from("page_subscriptions").delete().eq("page_id", pageId).eq("uid", uid);
-      return error2 ? { ok: false, error: error2.message } : { ok: true };
+      const r2 = await netCall(() => supa.from("page_subscriptions").delete().eq("page_id", pageId).eq("uid", uid));
+      return r2.ok ? { ok: true } : { ok: false, error: r2.error };
     }
-    const { error } = await supa.from("page_subscriptions").upsert({ page_id: pageId, uid }, { onConflict: "page_id,uid" });
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from("page_subscriptions").upsert({ page_id: pageId, uid }, { onConflict: "page_id,uid" }));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   function notifyNewPagePost(postId) {
     if (!supa || !postId)
@@ -1672,22 +1594,14 @@
   async function addPageModerator(pageId, email) {
     if (!supa)
       return "error";
-    const { data, error } = await supa.rpc("add_page_moderator", { p_page_id: pageId, p_email: email });
-    if (error) {
-      console.warn("[supabase] add_page_moderator:", error.message);
-      return "error";
-    }
-    return data || "error";
+    const r = await netCall(() => supa.rpc("add_page_moderator", { p_page_id: pageId, p_email: email }));
+    return r.ok ? r.data || "error" : "error";
   }
   async function removePageModerator(pageId, uid) {
     if (!supa)
       return "error";
-    const { data, error } = await supa.rpc("remove_page_moderator", { p_page_id: pageId, p_uid: uid });
-    if (error) {
-      console.warn("[supabase] remove_page_moderator:", error.message);
-      return "error";
-    }
-    return data || "error";
+    const r = await netCall(() => supa.rpc("remove_page_moderator", { p_page_id: pageId, p_uid: uid }));
+    return r.ok ? r.data || "error" : "error";
   }
 
   // src/core/auth.js
@@ -1812,8 +1726,9 @@
       if (k in fields)
         row[k] = fields[k] === "" ? null : fields[k];
     let partial = false;
-    let { error } = await supa2.from("profiles").upsert(row, { onConflict: "uid" });
-    if (error && /column|schema/i.test(error.message)) {
+    let r = await netCall(() => supa2.from("profiles").upsert(row, { onConflict: "uid" }));
+    let error = r.ok ? null : r.rawError;
+    if (error && /column|schema/i.test(error.message || "")) {
       partial = true;
       const core = {
         uid: _user.id,
@@ -1821,10 +1736,11 @@
         name: row.name ?? null,
         birth_date: row.birth_date ?? null
       };
-      ({ error } = await supa2.from("profiles").upsert(core, { onConflict: "uid" }));
+      r = await netCall(() => supa2.from("profiles").upsert(core, { onConflict: "uid" }));
+      error = r.ok ? null : r.rawError;
     }
     if (error)
-      return { ok: false, error: error.message };
+      return { ok: false, error: r.error };
     if (row.name)
       _profileName = row.name;
     if (!partial && "avatar_url" in row)
@@ -5458,12 +5374,13 @@
       rerenderCommentsBlock(postId);
       input?.focus();
       if (isSupabaseReady()) {
-        const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId });
+        const tag = crypto.randomUUID && crypto.randomUUID() || String(Date.now()) + Math.random().toString(36).slice(2);
+        const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId, clientTag: tag });
         if (!result.ok) {
           const filtered = (commentsByPost.get(postId) || []).filter((c) => c.id !== tempComment.id);
           commentsByPost.set(postId, filtered);
           rerenderCommentsBlock(postId);
-          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F. \u0421\u043F\u0440\u043E\u0431\u0443\u0439\u0442\u0435 \u0449\u0435 \u0440\u0430\u0437.", 4e3, "error");
+          showToast(result.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
         } else if (result.comment) {
           const updated = (commentsByPost.get(postId) || []).map(
             (c) => c.id === tempComment.id ? result.comment : c
@@ -9140,7 +9057,7 @@
         updateHeaderBtn();
         showToast("\u0424\u043E\u0442\u043E \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 2200);
       } catch (err) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
+        showToast(err.message || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u0444\u043E\u0442\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
       } finally {
         avBtn.disabled = false;
         avBox.classList.remove("acc-av--loading");
@@ -9189,7 +9106,7 @@
         updateHeaderBtn();
         showToast("\u2705 \u0424\u043E\u0442\u043E \u043E\u043D\u043E\u0432\u043B\u0435\u043D\u043E", 2200);
       } catch (err) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E: " + err.message, 4e3, "error");
+        showToast(err.message || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u0444\u043E\u0442\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
       } finally {
         avBtn.disabled = false;
         avBox.classList.remove("acc-av--loading");
@@ -14197,12 +14114,13 @@ END:VEVENT`
         if (!text)
           return;
         input.value = "";
-        const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text });
+        const tag = crypto.randomUUID && crypto.randomUUID() || String(Date.now()) + Math.random().toString(36).slice(2);
+        const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text, clientTag: tag });
         if (r.ok) {
           addMsg(r.message);
           render2();
         } else {
-          showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438: " + (r.error || ""), 3e3, "error");
+          showToast(r.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 3e3, "error");
           input.value = text;
         }
       });

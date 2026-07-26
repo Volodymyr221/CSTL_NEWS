@@ -327,9 +327,12 @@ export function openGroupChat(group) {
       const text = input.value.trim();
       if (!text) return;
       input.value = '';
-      const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text });
+      // clientTag — див. коментар у board-discussions.js: без ключа повтор при обриві
+      // заборонений, бо дав би два однакові повідомлення в групі.
+      const tag = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+      const r = await sendGroupMessage({ groupId: group.id, senderUid: me, text, clientTag: tag });
       if (r.ok) { addMsg(r.message); render(); }
-      else { showToast('Не вдалося надіслати: ' + (r.error || ''), 3000, 'error'); input.value = text; }
+      else { showToast(r.error || 'Не вдалося надіслати — спробуй ще раз', 3000, 'error'); input.value = text; }
     });
 
     const unsub = subscribeGroupMessages(group.id, ({ type, row }) => {
