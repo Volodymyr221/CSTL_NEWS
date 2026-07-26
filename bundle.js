@@ -11767,7 +11767,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const list = commentMap.get(postId) || [];
     const total = commentCounts.get(postId) ?? list.length;
     if (titleEl)
-      titleEl.textContent = total ? `${total} ${pluralComments(total)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+      titleEl.textContent = commentTitleText(total);
     if (!commentMap.has(postId) && commentError.has(postId)) {
       listEl.innerHTML = `<div class="fd-com-empty">
         \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456.<br>\u041F\u0435\u0440\u0435\u0432\u0456\u0440 \u0437\u0432'\u044F\u0437\u043E\u043A.
@@ -11782,9 +11782,40 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const more = commentPaging.get(postId)?.hasMore ? `<button class="fd-com-more fd-com-more--older" type="button" data-com-older="${postId}">\u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u043F\u043E\u043F\u0435\u0440\u0435\u0434\u043D\u0456 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</button>` : "";
     listEl.innerHTML = list.length ? `<div class="fd-com-inner">${more}${commentThreads(list).map(threadHtml).join("")}</div>` : `<div class="fd-com-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432. \u0411\u0443\u0434\u044C\u0442\u0435 \u043F\u0435\u0440\u0448\u0438\u043C!</div>`;
   }
+  function commentTitleText(total) {
+    return total ? `${total} ${pluralComments(total)}` : "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456";
+  }
   function patchCommentCount(postId) {
     const n = commentCounts.get(postId) || 0;
     document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach((el) => el.textContent = n || "");
+    if (openCommentSheet && openCommentSheet.postId === postId && openCommentSheet.titleEl) {
+      openCommentSheet.titleEl.textContent = commentTitleText(n);
+    }
+  }
+  var COUNT_SYNC_DELAY = 400;
+  var countSyncTimers = /* @__PURE__ */ new Map();
+  function scheduleCountSync(postId) {
+    if (postId == null)
+      return;
+    clearTimeout(countSyncTimers.get(postId));
+    countSyncTimers.set(postId, setTimeout(async () => {
+      countSyncTimers.delete(postId);
+      const n = await fetchPostCommentCount(postId);
+      if (n == null)
+        return;
+      if (commentCounts.get(postId) !== n) {
+        commentCounts.set(postId, n);
+        patchCommentCount(postId);
+      }
+      const arr = commentMap.get(postId);
+      const partial = commentPaging.get(postId)?.hasMore;
+      if (openCommentSheet?.postId === postId && arr && !partial && arr.length !== n) {
+        loadComments(postId).then((ok) => {
+          if (ok !== false)
+            renderCommentSheet();
+        });
+      }
+    }, COUNT_SYNC_DELAY));
   }
   function bumpCommentCount(postId, delta) {
     commentCounts.set(postId, Math.max(0, (commentCounts.get(postId) || 0) + delta));
@@ -12967,6 +12998,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           applyCommentRemove(payload.old);
         else
           applyCommentUpsert(payload.new);
+        scheduleCountSync((payload.new || payload.old)?.post_id);
       });
       subscribePageReactions(applyReactionEvent);
       subscribePageCommentReactions(applyCommentReactionEvent);
