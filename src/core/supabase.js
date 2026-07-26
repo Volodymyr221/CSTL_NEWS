@@ -1186,16 +1186,42 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
   if (hasMore) roots = roots.slice(0, limit);
   if (!roots.length) return { comments: [], hasMore: false };
 
-  const ids = roots.map(r => r.id);
-  const repQ = (c) => supa.from('page_comments').select(c)
-    .eq('post_id', postId).is('deleted_at', null).in('parent_id', ids);
-  let { data: replies, error: repErr } = await repQ(cols);
-  if (noSuchColumn(repErr)) ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
-  // Відповіді теж вважаємо помилкою, а не «їх просто нема»: показати коріння без
-  // гілок — це та сама брехня, тільки тихіша (людина подумає, що їй не відповіли).
-  if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); return { comments: [], hasMore: false, error: repErr.message }; }
+  // ── Відповіді — ВГЛИБ, а не лише перший рівень ──────────────────────────────────
+  // 🔴 БАГ, ЯКИЙ ЖИВ ТУТ (Вова 26.07, скріни IMG_3652-3654): запит брав відповіді,
+  // чий батько є КОРЕНЕВИМ (`in('parent_id', ids)`), тобто вантажив рівно ДРУГИЙ рівень.
+  // Показ коментарів ми того ж дня зробили трирівневим — а завантаження лишилось
+  // дворівневим. Наслідок на живому пості: у базі 6 коментарів, на екрані 4;
+  // відповідь на відповідь було видно ЛИШЕ тому, хто саме сидів у застосунку і кому
+  // її принесла жива синхронізація. Вова написав «?», оновив сторінку — і воно зникло.
+  // Тому спускаємось по гілці, доки знаходяться нові: кожен крок — це відповіді на
+  // тих, кого щойно дістали.
+  // ⚠️ Глибина обмежена навмисно: показ усе одно зводить усе глибше третього рівня до
+  // предка 2-го рівня (`commentThreads` у feed.js), а обмеження — це ще й запобіжник
+  // від нескінченного циклу на битих даних (батько сам собі предок).
+  const MAX_REPLY_DEPTH = 8;
+  const replies = [];
+  const seen = new Set(roots.map(r => r.id));
+  let frontier = roots.map(r => r.id);
+  let repCols = cols;
+  for (let depth = 0; depth < MAX_REPLY_DEPTH && frontier.length; depth++) {
+    const repQ = (c) => supa.from('page_comments').select(c)
+      .eq('post_id', postId).is('deleted_at', null).in('parent_id', frontier);
+    let { data: batch, error: repErr } = await repQ(repCols);
+    // Розгортання без простою: поки міграції `reply_to_uid` немає — тягнемо без неї.
+    // Запам'ятовуємо вибір, щоб не бити в ту саму стіну на кожному наступному рівні.
+    if (noSuchColumn(repErr)) { repCols = COMMENT_COLS; ({ data: batch, error: repErr } = await repQ(repCols)); }
+    // Відповіді теж вважаємо помилкою, а не «їх просто нема»: показати коріння без
+    // гілок — це та сама брехня, тільки тихіша (людина подумає, що їй не відповіли).
+    if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); return { comments: [], hasMore: false, error: repErr.message }; }
+    // Дедуп за id — і водночас захист від зациклення: те, що вже бачили, не стає
+    // новим рубежем, тож цикл гарантовано завершується.
+    const fresh = (batch || []).filter(r => !seen.has(r.id));
+    fresh.forEach(r => seen.add(r.id));
+    replies.push(...fresh);
+    frontier = fresh.map(r => r.id);
+  }
 
-  const comments = [...roots, ...(replies || [])]
+  const comments = [...roots, ...replies]
     .sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
   return { comments, hasMore };
 }
