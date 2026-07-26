@@ -12166,6 +12166,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       new ResizeObserver(padTop).observe(gripEl);
     detachKb = attachKeyboardSheet(sheet.querySelector(".fd-sheet-vp"), comSheet, {
       // клавіатура: тільки після DOM
+      // kbClass тягне за собою і підкладку під системну панель iOS — вона зроблена
+      // тінню самого аркуша (`.fd-com-sheet--kb`), тож окремий клас на оверлей не потрібен.
       input: kbInput,
       minHeight: 180,
       kbClass: "fd-com-sheet--kb",

@@ -1264,6 +1264,8 @@ function openComments(postId, focusCommentId = null) {
   // ⚠️ Першим аргументом — ПРОЗОРИЙ .fd-sheet-vp, а НЕ затемнення. Модуль рухає те,
   // що йому дали; дай йому затемнення — і воно поїде разом з клавіатурою (баг Вови 25.07).
   detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {   // клавіатура: тільки після DOM
+    // kbClass тягне за собою і підкладку під системну панель iOS — вона зроблена
+    // тінню самого аркуша (`.fd-com-sheet--kb`), тож окремий клас на оверлей не потрібен.
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
     // Закриває зону під низом аркуша, крізь яку просвічувала сторінка (Вова 26.07,
     // скрін IMG_3645). Деталі — у `.fd-sheet-vp--kb::after` у style/feed.css.
