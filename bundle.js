@@ -1068,6 +1068,12 @@
       return "\u0421\u0435\u0430\u043D\u0441 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0432 \u2014 \u0443\u0432\u0456\u0439\u0434\u0438 \u0437\u043D\u043E\u0432\u0443";
     if (/нецензурн|заборонен/i.test(msg))
       return "\u{1F6AB} \u0422\u0435\u043A\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430";
+    if (/повтори символів|беззмістовн/i.test(msg))
+      return "\u{1F6AB} \u0422\u0435\u043A\u0441\u0442 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C";
+    if (/щойно це написали/i.test(msg))
+      return "\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438";
+    if (/порожній/i.test(msg))
+      return "\u0422\u0435\u043A\u0441\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439";
     if (/занадто швидко|rate/i.test(msg))
       return "\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434";
     return "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
@@ -1406,13 +1412,12 @@
         q = q.lt("created_at", beforeTs);
       return q;
     };
-    let { data: roots, error } = await rootsQ(cols);
-    if (noSuchColumn(error))
-      ({ data: roots, error } = await rootsQ(COMMENT_COLS));
-    if (error) {
-      console.warn("[supabase] fetchPostComments (\u043A\u043E\u0440\u0435\u043D\u0435\u0432\u0456):", error.message);
-      return { comments: [], hasMore: false, error: error.message };
-    }
+    let rr = await netCall(() => rootsQ(cols), { timeout: NET_TIMEOUT });
+    if (noSuchColumn(rr.rawError))
+      rr = await netCall(() => rootsQ(COMMENT_COLS), { timeout: NET_TIMEOUT });
+    if (!rr.ok)
+      return { comments: [], hasMore: false, error: rr.error };
+    let roots = rr.data;
     roots = roots || [];
     const hasMore = roots.length > limit;
     if (hasMore)
@@ -1426,16 +1431,14 @@
     let repCols = cols;
     for (let depth = 0; depth < MAX_REPLY_DEPTH && frontier.length; depth++) {
       const repQ = (c) => supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).in("parent_id", frontier);
-      let { data: batch, error: repErr } = await repQ(repCols);
-      if (noSuchColumn(repErr)) {
+      let rep = await netCall(() => repQ(repCols), { timeout: NET_TIMEOUT });
+      if (noSuchColumn(rep.rawError)) {
         repCols = COMMENT_COLS;
-        ({ data: batch, error: repErr } = await repQ(repCols));
+        rep = await netCall(() => repQ(repCols), { timeout: NET_TIMEOUT });
       }
-      if (repErr) {
-        console.warn("[supabase] fetchPostComments (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456):", repErr.message);
-        return { comments: [], hasMore: false, error: repErr.message };
-      }
-      const fresh = (batch || []).filter((r) => !seen.has(r.id));
+      if (!rep.ok)
+        return { comments: [], hasMore: false, error: rep.error };
+      const fresh = (rep.data || []).filter((r) => !seen.has(r.id));
       fresh.forEach((r) => seen.add(r.id));
       replies.push(...fresh);
       frontier = fresh.map((r) => r.id);
@@ -11516,18 +11519,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return "\u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456\u0432";
   }
   function commentErrorText(err) {
-    const e = String(err || "");
-    if (/нецензурн/i.test(e))
-      return "\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430";
-    if (/повтори символів|беззмістовн/i.test(e))
-      return "\u{1F6AB} \u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0441\u0445\u043E\u0436\u0438\u0439 \u043D\u0430 \u0441\u043F\u0430\u043C";
-    if (/щойно це написали/i.test(e))
-      return "\u0412\u0438 \u0449\u043E\u0439\u043D\u043E \u0446\u0435 \u043D\u0430\u043F\u0438\u0441\u0430\u043B\u0438";
-    if (/занадто швидко/i.test(e))
-      return "\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439\u0442\u0435 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434";
-    if (/порожній/i.test(e))
-      return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439";
-    return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
+    const human = netErrorText(err);
+    return human === "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437" ? "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437" : human;
   }
   function commentRowHtml(c, reply = false, replyTo = null) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";

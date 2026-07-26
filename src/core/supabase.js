@@ -712,6 +712,12 @@ export function netErrorText(err) {
   if (/duplicate|unique/i.test(msg))      return 'Це вже збережено';
   if (/JWT|token|session/i.test(msg))     return 'Сеанс застарів — увійди знову';
   if (/нецензурн|заборонен/i.test(msg))   return '🚫 Текст містить заборонені слова';
+  // Доменні відповіді серверного антиспаму (тригери `*_antispam` у базі). Були
+  // окремим словником у `feed.js` — через це той самий збій мав два різні тексти,
+  // і при переході коментарів на ядро точне формулювання підмінялось загальним.
+  if (/повтори символів|беззмістовн/i.test(msg)) return '🚫 Текст схожий на спам';
+  if (/щойно це написали/i.test(msg))     return 'Ви щойно це написали';
+  if (/порожній/i.test(msg))              return 'Текст порожній';
   if (/занадто швидко|rate/i.test(msg))   return 'Занадто швидко — зачекай кілька секунд';
   return 'Не вдалося зберегти — спробуй ще раз';
 }
@@ -1211,9 +1217,13 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
     if (beforeTs) q = q.lt('created_at', beforeTs);
     return q;
   };
-  let { data: roots, error } = await rootsQ(cols);
-  if (noSuchColumn(error)) ({ data: roots, error } = await rootsQ(COMMENT_COLS));
-  if (error) { console.warn('[supabase] fetchPostComments (кореневі):', error.message); return { comments: [], hasMore: false, error: error.message }; }
+  // Читання теж через ядро: коментарі — не дрібниця, а вміст екрана. Одна невдала
+  // спроба на слабкому зв'язку раніше давала «не вдалося завантажити» замість
+  // 40 коментарів під постом сільради. Повтор читання безпечний за визначенням.
+  let rr = await netCall(() => rootsQ(cols), { timeout: NET_TIMEOUT });
+  if (noSuchColumn(rr.rawError)) rr = await netCall(() => rootsQ(COMMENT_COLS), { timeout: NET_TIMEOUT });
+  if (!rr.ok) return { comments: [], hasMore: false, error: rr.error };
+  let roots = rr.data;
 
   roots = roots || [];
   const hasMore = roots.length > limit;
@@ -1240,16 +1250,16 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
   for (let depth = 0; depth < MAX_REPLY_DEPTH && frontier.length; depth++) {
     const repQ = (c) => supa.from('page_comments').select(c)
       .eq('post_id', postId).is('deleted_at', null).in('parent_id', frontier);
-    let { data: batch, error: repErr } = await repQ(repCols);
+    let rep = await netCall(() => repQ(repCols), { timeout: NET_TIMEOUT });
     // Розгортання без простою: поки міграції `reply_to_uid` немає — тягнемо без неї.
     // Запам'ятовуємо вибір, щоб не бити в ту саму стіну на кожному наступному рівні.
-    if (noSuchColumn(repErr)) { repCols = COMMENT_COLS; ({ data: batch, error: repErr } = await repQ(repCols)); }
+    if (noSuchColumn(rep.rawError)) { repCols = COMMENT_COLS; rep = await netCall(() => repQ(repCols), { timeout: NET_TIMEOUT }); }
     // Відповіді теж вважаємо помилкою, а не «їх просто нема»: показати коріння без
     // гілок — це та сама брехня, тільки тихіша (людина подумає, що їй не відповіли).
-    if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); return { comments: [], hasMore: false, error: repErr.message }; }
+    if (!rep.ok) return { comments: [], hasMore: false, error: rep.error };
     // Дедуп за id — і водночас захист від зациклення: те, що вже бачили, не стає
     // новим рубежем, тож цикл гарантовано завершується.
-    const fresh = (batch || []).filter(r => !seen.has(r.id));
+    const fresh = (rep.data || []).filter(r => !seen.has(r.id));
     fresh.forEach(r => seen.add(r.id));
     replies.push(...fresh);
     frontier = fresh.map(r => r.id);
