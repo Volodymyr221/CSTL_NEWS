@@ -9,7 +9,7 @@
 // Етап 2: гейтинг увімкнено в діях (подача оголошення, реакції, коментарі,
 // трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
-import { getSupabase } from './supabase.js';
+import { getSupabase, netErrorText } from './supabase.js';
 import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
@@ -76,7 +76,8 @@ export async function signInWithGoogle() {
   if (!supa) { showToast('Немає звʼязку з сервером', 3000, 'error'); return; }
   const redirectTo = window.location.origin + window.location.pathname;
   const { error } = await supa.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } });
-  if (error) showToast('Не вдалося увійти: ' + error.message, 4000, 'error');
+  // Сира помилка входу («Load failed» тощо) людині нічого не пояснює — через словник.
+  if (error) showToast(netErrorText(error), 4000, 'error');
 }
 
 export async function signOut() {

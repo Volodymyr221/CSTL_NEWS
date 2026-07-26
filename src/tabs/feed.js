@@ -1113,7 +1113,7 @@ function openComments(postId, focusCommentId = null) {
     if (!confirm('Видалити коментар?')) return;
     const res = await deletePageComment(id);
     if (res.ok) applyCommentRemove({ id, post_id: postId });   // realtime теж прийде — дедуп
-    else alert('Не вдалося видалити: ' + (res.error || ''));
+    else showToast(res.error || 'Не вдалося видалити — спробуй ще раз', 4000, 'error');
   });
 
   const input = sheet.querySelector('.fd-com-input');
@@ -1765,38 +1765,51 @@ function openComposer(pageId, editPost = null) {
     }
     if (!text && !existing.length && !files.length) return;
     if (text && containsProfanity(text)) { showToast('🚫 Пост містить заборонені слова', 3500, 'error'); return; }
+    // Офлайн видно ще ДО спроби — не мучимо людину очікуванням заради відомого результату.
+    if (navigator.onLine === false) {
+      showToast('Немає інтернету — текст збережено у формі, спробуй пізніше', 4000, 'error');
+      return;
+    }
     sendBtn.disabled = true; sendBtn.textContent = edit ? 'Зберігаю…' : 'Публікую…';
 
-    // Завантажуємо нові фото ПОСЛІДОВНО (по одному), не паралельно: на iOS PWA
-    // кілька одночасних upload у сховище падають «Load failed». Стиснення+повтор — у хелпері.
-    let newUrls = [];
-    if (files.length) {
-      const failed = [];
-      for (const f of files) {
-        const up = await uploadImageReliable(f, { folder: 'pages/', maxDim: 1600, quality: 0.82 });
-        if (up.url) newUrls.push(up.url);
-        else failed.push(up.error || 'upload');
+    // ⚠️ try/finally: кнопка оживає ЗАВЖДИ. Раніше при несподіваному виняткові вона
+    // лишалась «Зберігаю…» назавжди, і форма ставала непрацездатною (Вова, IMG_3635).
+    try {
+      // Завантажуємо нові фото ПОСЛІДОВНО (по одному), не паралельно: на iOS PWA
+      // кілька одночасних upload у сховище падають «Load failed». Стиснення+повтор — у хелпері.
+      let newUrls = [];
+      if (files.length) {
+        const failed = [];
+        for (const f of files) {
+          const up = await uploadImageReliable(f, { folder: 'pages/', maxDim: 1600, quality: 0.82 });
+          if (up.url) newUrls.push(up.url);
+          else failed.push(up.error || 'upload');
+        }
+        if (failed.length) {
+          // Тост, а не alert(): alert блокує малювання, і кнопка встигала «застигнути»
+          // у стані «Зберігаю…» ще до того, як браузер намалює її новий текст.
+          showToast(`Не завантажилось фото (${failed.length}) — спробуй ще раз`, 4000, 'error');
+          return;
+        }
       }
-      if (failed.length) {
-        sendBtn.disabled = false; sendBtn.textContent = CTA;
-        alert(`Не вдалося завантажити ${failed.length} фото: ${failed[0]}\nСпробуй ще раз.`);
-        return;
+      const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
+      const res = edit
+        ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields })
+        : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor);
+      if (res.ok) {
+        if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
+        else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
+        close();
+        document.querySelectorAll('.fd-screen').forEach(s => s.remove());
+        renderFeed();
+        openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
+      } else {
+        // Текст і фото лишаються у формі — людина просто тисне ще раз.
+        showToast(res.error || 'Не вдалося зберегти — спробуй ще раз', 4000, 'error');
       }
-    }
-    const finalUrls = [...existing, ...newUrls];   // наявні (залишені) + нові
-    const res = edit
-      ? await updatePagePost(editPost.id, { text: text || '', image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields })
-      : await createPagePost(pageId, currentUserId(), text || '', finalUrls, eventFields, showAuthor);
-    if (res.ok) {
-      if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
-      else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
-      close();
-      document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-      renderFeed();
-      openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
-    } else {
-      sendBtn.disabled = false; sendBtn.textContent = CTA;
-      alert((edit ? 'Не вдалося зберегти: ' : 'Не вдалося опублікувати: ') + (res.error || ''));
+    } finally {
+      // Форму могли вже закрити (успіх) — тоді кнопки в документі нема, і це не помилка.
+      if (sendBtn.isConnected) { sendBtn.disabled = false; sendBtn.textContent = CTA; }
     }
   });
 
@@ -1866,37 +1879,41 @@ function openPageEditor(pageId) {
 
   const saveBtn = back.querySelector('.fd-edit-save');
   saveBtn.addEventListener('click', async () => {
+    if (navigator.onLine === false) { showToast('Немає інтернету — спробуй пізніше', 4000, 'error'); return; }
     saveBtn.disabled = true; saveBtn.textContent = 'Зберігаю…';
-    const patch = {};
-    if (bannerBlob) {
-      // Сире телефонне фото падало «Load failed» — тепер стиснення+повтор через хелпер.
-      // Кадр уже обрізаний і стиснений кроппером (JPEG) → вантажимо як готовий blob.
-      const up = await uploadBlobWithRetry(bannerBlob, 'pages/');
-      if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Банер не завантажився: ' + (up.error || '')); return; }
-      patch.banner_url = up.url;
-    }
-    if (avatarBlob) {
-      const up = await uploadBlobWithRetry(avatarBlob, 'pages/');
-      if (!up.url) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; alert('Аватар не завантажився: ' + (up.error || '')); return; }
-      patch.avatar_url = up.url;
-    }
-    const name = back.querySelector('[data-name]').value.trim();
-    if (name && name !== page.name) patch.name = name;      // порожню назву не приймаємо
-    const theme = back.querySelector('[data-theme]').value.trim();
-    if (theme !== (page.theme || '')) patch.theme = theme;
-    if (!Object.keys(patch).length) { close(); return; }
+    try {
+      const patch = {};
+      if (bannerBlob) {
+        // Сире телефонне фото падало «Load failed» — тепер стиснення+повтор через хелпер.
+        // Кадр уже обрізаний і стиснений кроппером (JPEG) → вантажимо як готовий blob.
+        const up = await uploadBlobWithRetry(bannerBlob, 'pages/');
+        if (!up.url) { showToast('Банер не завантажився — спробуй ще раз', 4000, 'error'); return; }
+        patch.banner_url = up.url;
+      }
+      if (avatarBlob) {
+        const up = await uploadBlobWithRetry(avatarBlob, 'pages/');
+        if (!up.url) { showToast('Аватар не завантажився — спробуй ще раз', 4000, 'error'); return; }
+        patch.avatar_url = up.url;
+      }
+      const name = back.querySelector('[data-name]').value.trim();
+      if (name && name !== page.name) patch.name = name;      // порожню назву не приймаємо
+      const theme = back.querySelector('[data-theme]').value.trim();
+      if (theme !== (page.theme || '')) patch.theme = theme;
+      if (!Object.keys(patch).length) { close(); return; }
 
-    const res = await updatePage(pageId, patch);
-    if (res.ok) {
-      Object.assign(page, res.page);                         // оновити кеш сторінки
-      posts.forEach(p => { if (p.page_id === pageId && p.pages) { p.pages.avatar_url = page.avatar_url; p.pages.name = page.name; } });
-      close();
-      document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-      renderFeed();
-      openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
-    } else {
-      saveBtn.disabled = false; saveBtn.textContent = 'Зберегти';
-      alert('Не вдалося зберегти: ' + (res.error || ''));
+      const res = await updatePage(pageId, patch);
+      if (res.ok) {
+        Object.assign(page, res.page);                         // оновити кеш сторінки
+        posts.forEach(p => { if (p.page_id === pageId && p.pages) { p.pages.avatar_url = page.avatar_url; p.pages.name = page.name; } });
+        close();
+        document.querySelectorAll('.fd-screen').forEach(s => s.remove());
+        renderFeed();
+        openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
+      } else {
+        showToast(res.error || 'Не вдалося зберегти — спробуй ще раз', 4000, 'error');
+      }
+    } finally {
+      if (saveBtn.isConnected) { saveBtn.disabled = false; saveBtn.textContent = 'Зберегти'; }
     }
   });
 
@@ -1926,7 +1943,7 @@ function openPostMenu(postId) {
     // Видалення
     if (!confirm('Видалити пост?')) return;
     const res = await deletePagePost(postId);
-    if (!res.ok) { alert('Не вдалося видалити: ' + (res.error || '')); return; }
+    if (!res.ok) { showToast(res.error || 'Не вдалося видалити — спробуй ще раз', 4000, 'error'); return; }
     const hadScreen = !!document.querySelector('.fd-screen');
     posts = posts.filter(p => p.id !== postId);
     close();
