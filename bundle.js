@@ -14215,19 +14215,23 @@ END:VEVENT`
       setTimeout(reset, 300);
     });
   }
-  function initKbDebugShortcut() {
-    const stamp = document.querySelector(".deploy-stamp");
-    if (!stamp)
+  function onFiveTaps(el, action) {
+    if (!el)
       return;
     let taps = [];
-    stamp.style.cursor = "pointer";
-    stamp.addEventListener("click", () => {
+    el.style.cursor = "pointer";
+    el.addEventListener("click", () => {
       const now = Date.now();
       taps = taps.filter((t) => now - t < 2e3);
       taps.push(now);
       if (taps.length < 5)
         return;
       taps = [];
+      action();
+    });
+  }
+  function initKbDebugShortcut() {
+    onFiveTaps(document.querySelector(".header-logo"), () => {
       const on = localStorage.getItem("kbdebug") === "1";
       if (on)
         localStorage.removeItem("kbdebug");
@@ -14237,19 +14241,8 @@ END:VEVENT`
     });
   }
   function initAdminShortcut() {
-    const logo = document.querySelector(".header-logo");
-    if (!logo)
-      return;
-    let taps = [];
-    logo.style.cursor = "pointer";
-    logo.addEventListener("click", () => {
-      const now = Date.now();
-      taps = taps.filter((t) => now - t < 2e3);
-      taps.push(now);
-      if (taps.length >= 5) {
-        taps = [];
-        window.location.href = "./admin.html";
-      }
+    onFiveTaps(document.querySelector(".deploy-stamp"), () => {
+      window.location.href = "./admin.html";
     });
   }
   function initChatsHub() {

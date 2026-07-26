@@ -164,41 +164,44 @@ function initModalSwipe() {
 // Прихований доступ до адмінки: 5 тапів на лого «CSTL LIFE» у шапці
 // протягом 2 секунд → відкривається ./admin.html у тій самій PWA.
 // Адмін знає, звичайний юзер не зрозуміє.
-// Перемикач режиму діагностики клавіатури: 5 тапів по лічильнику версії внизу екрана.
-// НАВІЩО окремий жест: `#kbdebug` в адресі працює лише у вкладці Safari, а Вова тестує
-// у ВСТАНОВЛЕНОМУ додатку, де адресного рядка нема взагалі — і саме там клавіатура
-// поводиться інакше. Без цього діагностику на реальному місці не ввімкнути.
-// Лічильник (а не лого) — щоб не заважати 5 тапам по лого, які ведуть в адмінку.
-function initKbDebugShortcut() {
-  const stamp = document.querySelector('.deploy-stamp');
-  if (!stamp) return;
+// Спільний рахувальник 5 тапів (обидва приховані входи в шапці користуються ним).
+// Було двома майже однаковими копіями — злито в одну, щоб не розходились (HOT_RULE 8).
+// Вікно 2с: тапи, розсунуті в часі, не накопичуються у випадкове спрацювання.
+function onFiveTaps(el, action) {
+  if (!el) return;
   let taps = [];
-  stamp.style.cursor = 'pointer';
-  stamp.addEventListener('click', () => {
+  el.style.cursor = 'pointer';
+  el.addEventListener('click', () => {
     const now = Date.now();
     taps = taps.filter(t => now - t < 2000);
     taps.push(now);
     if (taps.length < 5) return;
     taps = [];
+    action();
+  });
+}
+
+// Перемикач режиму діагностики клавіатури — 5 тапів по НАЗВІ ДОДАТКУ «CSTL LIFE»
+// (шапка, зліва). Місце обрав Вова 26.07: «забери адмінку з тапу по назві додатку
+// зверху зліва в шапці та додай туди оці п'ять тапів щоб включити оцю діагностику».
+// НАВІЩО жест узагалі: `#kbdebug` в адресі працює лише у вкладці Safari, а тестування
+// йде у ВСТАНОВЛЕНОМУ додатку, де адресного рядка нема — і саме там клавіатура
+// поводиться інакше. Без цього діагностику на реальному місці не ввімкнути.
+function initKbDebugShortcut() {
+  onFiveTaps(document.querySelector('.header-logo'), () => {
     const on = localStorage.getItem('kbdebug') === '1';
     if (on) localStorage.removeItem('kbdebug'); else localStorage.setItem('kbdebug', '1');
     showToast(on ? 'Діагностика клавіатури ВИМКНЕНА' : 'Діагностика клавіатури УВІМКНЕНА — відкрий коментарі', 3500);
   });
 }
 
+// Вхід в адмінку переїхав з лого на ЛІЧИЛЬНИК ВЕРСІЇ (`.deploy-stamp` — сірий напис
+// по центру шапки). Вова просив звільнити лого під діагностику; сам вхід прибирати
+// не просив, а без нього адмінка стала б недосяжною у встановленому додатку (там
+// нема адресного рядка, щоб набрати ./admin.html руками). Тож не видалив, а переставив.
 function initAdminShortcut() {
-  const logo = document.querySelector('.header-logo');
-  if (!logo) return;
-  let taps = [];
-  logo.style.cursor = 'pointer';
-  logo.addEventListener('click', () => {
-    const now = Date.now();
-    taps = taps.filter(t => now - t < 2000);
-    taps.push(now);
-    if (taps.length >= 5) {
-      taps = [];
-      window.location.href = './admin.html';
-    }
+  onFiveTaps(document.querySelector('.deploy-stamp'), () => {
+    window.location.href = './admin.html';
   });
 }
 
@@ -279,8 +282,8 @@ function init() {
   initBoard();
   initChatsHub();
   initProfileCardTaps();   // тап по аватару → картка профілю
-  initAdminShortcut();
-  initKbDebugShortcut();   // 5 тапів по лічильнику версії → діагностика клавіатури
+  initAdminShortcut();     // 5 тапів по лічильнику версії → адмінка
+  initKbDebugShortcut();   // 5 тапів по назві «CSTL LIFE» → діагностика клавіатури
   handleInviteHash();                            // вступ за посиланням при відкритті
   window.addEventListener('hashchange', handleInviteHash);
   handleThreadHash();                              // P-9: холодний старт з нотифікації чату
