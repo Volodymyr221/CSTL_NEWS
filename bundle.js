@@ -12714,43 +12714,54 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     let postType = edit && editPost.event_date ? "event" : "post";
     let showAuthor = edit ? editPost.show_author !== false : false;
     const back = document.createElement("div");
-    back.className = "fd-sheet-back";
+    back.className = "fd-sheet-back fd-sheet-back--kbsafe";
     back.innerHTML = `
-    <div class="fd-sheet fd-composer">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">${edit ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" : "\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442"} \xB7 ${escapeHtml(page.name)}</div>
-      <div class="fd-comp-type">
-        <button class="fd-comp-type-btn${postType === "post" ? " is-on" : ""}" data-type="post"  type="button">\u0414\u043E\u043F\u0438\u0441</button>
-        <button class="fd-comp-type-btn${postType === "event" ? " is-on" : ""}" data-type="event" type="button">\u041F\u043E\u0434\u0456\u044F</button>
-      </div>
-      <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || "") : ""}</textarea>
-      <div class="fd-comp-event"${postType === "event" ? "" : " hidden"}>
-        <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F4C5} \u0414\u0430\u0442\u0430 \u043F\u043E\u0434\u0456\u0457</span>
-          <input class="fd-comp-date" type="date" value="${edit ? escapeHtml(editPost.event_date || "") : ""}"></label>
-        <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F550} \u0427\u0430\u0441 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)</span>
-          <input class="fd-comp-etime" type="time" value="${edit ? escapeHtml(editPost.event_time || "") : ""}"></label>
-        <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F4CD} \u041C\u0456\u0441\u0446\u0435 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)</span>
-          <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="\u041D\u0430\u043F\u0440. \u0426\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0430 \u043F\u043B\u043E\u0449\u0430, \u041E\u043B\u0438\u043A\u0430" value="${edit ? escapeHtml(editPost.event_location || "") : ""}"></label>
-      </div>
-      <div class="fd-comp-thumbs" hidden></div>
-      <div class="fd-comp-as">
-        <div class="fd-comp-as-label">\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u044F\u043A</div>
-        <button class="fd-comp-as-btn${showAuthor ? "" : " is-on"}" data-as="page" type="button">
-          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430")}</span></button>
-        <button class="fd-comp-as-btn${showAuthor ? " is-on" : ""}" data-as="me" type="button">
-          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">\u0412\u0456\u0434 \u0441\u0435\u0431\u0435</span></button>
-      </div>
-      <div class="fd-comp-bar">
-        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
-        <button class="fd-comp-send" type="button">${CTA}</button>
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
+      <div class="fd-sheet fd-composer">
+        <div class="fd-comp-head">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title">${edit ? "\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438" : "\u041D\u043E\u0432\u0438\u0439 \u043F\u043E\u0441\u0442"} \xB7 ${escapeHtml(page.name)}</div>
+          <div class="fd-comp-type">
+            <button class="fd-comp-type-btn${postType === "post" ? " is-on" : ""}" data-type="post"  type="button">\u0414\u043E\u043F\u0438\u0441</button>
+            <button class="fd-comp-type-btn${postType === "event" ? " is-on" : ""}" data-type="event" type="button">\u041F\u043E\u0434\u0456\u044F</button>
+          </div>
+        </div>
+        <div class="fd-comp-body">
+          <textarea class="fd-comp-text" placeholder="\u0429\u043E \u043D\u043E\u0432\u043E\u0433\u043E?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || "") : ""}</textarea>
+          <div class="fd-comp-event"${postType === "event" ? "" : " hidden"}>
+            <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F4C5} \u0414\u0430\u0442\u0430 \u043F\u043E\u0434\u0456\u0457</span>
+              <input class="fd-comp-date" type="date" value="${edit ? escapeHtml(editPost.event_date || "") : ""}"></label>
+            <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F550} \u0427\u0430\u0441 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)</span>
+              <input class="fd-comp-etime" type="time" value="${edit ? escapeHtml(editPost.event_time || "") : ""}"></label>
+            <label class="fd-comp-field"><span class="fd-comp-flab">\u{1F4CD} \u041C\u0456\u0441\u0446\u0435 (\u043D\u0435\u043E\u0431\u043E\u0432\u02BC\u044F\u0437\u043A\u043E\u0432\u043E)</span>
+              <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="\u041D\u0430\u043F\u0440. \u0426\u0435\u043D\u0442\u0440\u0430\u043B\u044C\u043D\u0430 \u043F\u043B\u043E\u0449\u0430, \u041E\u043B\u0438\u043A\u0430" value="${edit ? escapeHtml(editPost.event_location || "") : ""}"></label>
+          </div>
+          <div class="fd-comp-thumbs" hidden></div>
+          <div class="fd-comp-as">
+            <div class="fd-comp-as-label">\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u044F\u043A</div>
+            <button class="fd-comp-as-btn${showAuthor ? "" : " is-on"}" data-as="page" type="button">
+              <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || "\u0421\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0430")}</span></button>
+            <button class="fd-comp-as-btn${showAuthor ? " is-on" : ""}" data-as="me" type="button">
+              <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">\u0412\u0456\u0434 \u0441\u0435\u0431\u0435</span></button>
+          </div>
+        </div>
+        <div class="fd-comp-bar">
+          <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
+          <button class="fd-comp-send" type="button">${CTA}</button>
+        </div>
       </div>
     </div>`;
+    let detachKb = () => {
+    };
     const close = () => {
+      detachKb();
       previewUrls.forEach((u) => URL.revokeObjectURL(u));
       back.remove();
     };
+    const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
-      if (e.target === back)
+      if (e.target === back || e.target === vpEl)
         close();
     });
     const eventBox = back.querySelector(".fd-comp-event");
@@ -12779,12 +12790,17 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       thumbs.innerHTML = exHtml + nwHtml;
     };
     fileInput.addEventListener("change", () => {
+      let skipped = 0;
       for (const f of fileInput.files) {
-        if (existing.length + files.length >= MAX_PHOTOS)
-          break;
+        if (existing.length + files.length >= MAX_PHOTOS) {
+          skipped++;
+          continue;
+        }
         files.push(f);
         previewUrls.push(URL.createObjectURL(f));
       }
+      if (skipped)
+        showToast(`\u041C\u0430\u043A\u0441\u0438\u043C\u0443\u043C ${MAX_PHOTOS} \u0444\u043E\u0442\u043E \u2014 ${skipped} \u043D\u0435 \u0434\u043E\u0434\u0430\u0432`, 3500);
       fileInput.value = "";
       renderThumbs();
     });
@@ -12819,8 +12835,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         eventFields.event_time = back.querySelector(".fd-comp-etime").value || null;
         eventFields.event_location = back.querySelector(".fd-comp-eloc").value.trim() || null;
       }
-      if (!text && !existing.length && !files.length)
+      if (!text && !existing.length && !files.length) {
+        showToast(postType === "event" ? "\u0414\u043E\u0434\u0430\u0439 \u043E\u043F\u0438\u0441 \u0430\u0431\u043E \u0444\u043E\u0442\u043E \u0434\u043E \u043F\u043E\u0434\u0456\u0457" : "\u041D\u0430\u043F\u0438\u0448\u0438 \u0442\u0435\u043A\u0441\u0442 \u0430\u0431\u043E \u0434\u043E\u0434\u0430\u0439 \u0444\u043E\u0442\u043E", 3e3);
         return;
+      }
       if (text && containsProfanity(text)) {
         showToast("\u{1F6AB} \u041F\u043E\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
@@ -12873,8 +12891,43 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       }
     });
     document.body.appendChild(back);
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
-    autoGrowTextarea(back.querySelector(".fd-comp-text"));
+    const compSheet = back.querySelector(".fd-composer");
+    const headEl = back.querySelector(".fd-comp-head");
+    const bodyEl = back.querySelector(".fd-comp-body");
+    const textEl = back.querySelector(".fd-comp-text");
+    let closing = false;
+    const beginClose = () => {
+      if (closing)
+        return;
+      closing = true;
+      compSheet.classList.remove("fd-comp--anim");
+      compSheet.style.height = compSheet.offsetHeight + "px";
+    };
+    let animTimer = 0;
+    const kbAnim = () => {
+      compSheet.classList.add("fd-comp--anim");
+      clearTimeout(animTimer);
+      animTimer = setTimeout(() => compSheet.classList.remove("fd-comp--anim"), 300);
+    };
+    attachSheetSwipe(back, compSheet, bodyEl, close, {
+      grip: headEl,
+      onDismissStart: () => beginClose(),
+      keepVisibleOnDismiss: true
+      // лист має бути ВИДНО, поки він з'їжджає донизу
+    });
+    textEl?.addEventListener("focus", kbAnim);
+    textEl?.addEventListener("blur", () => {
+      if (!closing)
+        kbAnim();
+    });
+    detachKb = attachKeyboardSheet(back.querySelector(".fd-sheet-vp"), compSheet, {
+      input: textEl,
+      minHeight: 220,
+      kbClass: "fd-comp--kb",
+      overlayClass: "fd-sheet-vp--kb",
+      expandTop: readTopGap(compSheet)
+    });
+    autoGrowTextarea(textEl);
     requestAnimationFrame(() => back.classList.add("open"));
   }
   function openPageEditor(pageId) {

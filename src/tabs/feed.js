@@ -2064,39 +2064,68 @@ function openComposer(pageId, editPost = null) {
   let showAuthor = edit ? (editPost.show_author !== false) : false;
 
   const back = document.createElement('div');
-  back.className = 'fd-sheet-back';
+  // --kbsafe + шар-координати .fd-sheet-vp — те саме, що в листа коментарів: без них
+  // клавіатурний модуль не має чого рухати (він прибиває до видимої області САМЕ vp).
+  back.className = 'fd-sheet-back fd-sheet-back--kbsafe';
+  // 🔑 БУДОВА (перероблено 26.07 — скарга Вови, скріни IMG_3667/IMG_3668).
+  // БУЛО: усе одним списком усередині `.fd-sheet`, а він сам собі скролер
+  // (`overflow-y:auto; max-height:82svh`). Через це рисочка, заголовок і перемикач
+  // «Допис|Подія» їхали разом з текстом і зникали за екраном, а повернути їх скролом
+  // було неможливо. Дослівно: «шапка залишається поза екраном».
+  // СТАЛО: три яруси, як у листа коментарів —
+  //   .fd-comp-head  (нерухома шапка: рисочка + заголовок + перемикач)
+  //   .fd-comp-body  (ЄДИНИЙ скролер: текст, поля події, фото, «публікувати як»)
+  //   .fd-comp-bar   (нерухома нижня панель: фото + «Опублікувати»)
+  // Сам `.fd-composer` більше не скролиться взагалі (`overflow:hidden`).
   back.innerHTML = `
-    <div class="fd-sheet fd-composer">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">${edit ? 'Редагувати' : 'Новий пост'} · ${escapeHtml(page.name)}</div>
-      <div class="fd-comp-type">
-        <button class="fd-comp-type-btn${postType === 'post'  ? ' is-on' : ''}" data-type="post"  type="button">Допис</button>
-        <button class="fd-comp-type-btn${postType === 'event' ? ' is-on' : ''}" data-type="event" type="button">Подія</button>
-      </div>
-      <textarea class="fd-comp-text" placeholder="Що нового?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || '') : ''}</textarea>
-      <div class="fd-comp-event"${postType === 'event' ? '' : ' hidden'}>
-        <label class="fd-comp-field"><span class="fd-comp-flab">📅 Дата події</span>
-          <input class="fd-comp-date" type="date" value="${edit ? escapeHtml(editPost.event_date || '') : ''}"></label>
-        <label class="fd-comp-field"><span class="fd-comp-flab">🕐 Час (необовʼязково)</span>
-          <input class="fd-comp-etime" type="time" value="${edit ? escapeHtml(editPost.event_time || '') : ''}"></label>
-        <label class="fd-comp-field"><span class="fd-comp-flab">📍 Місце (необовʼязково)</span>
-          <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
-      </div>
-      <div class="fd-comp-thumbs" hidden></div>
-      <div class="fd-comp-as">
-        <div class="fd-comp-as-label">Публікувати як</div>
-        <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
-          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || 'Спільнота')}</span></button>
-        <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
-          <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">Від себе</span></button>
-      </div>
-      <div class="fd-comp-bar">
-        <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
-        <button class="fd-comp-send" type="button">${CTA}</button>
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
+      <div class="fd-sheet fd-composer">
+        <div class="fd-comp-head">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title">${edit ? 'Редагувати' : 'Новий пост'} · ${escapeHtml(page.name)}</div>
+          <div class="fd-comp-type">
+            <button class="fd-comp-type-btn${postType === 'post'  ? ' is-on' : ''}" data-type="post"  type="button">Допис</button>
+            <button class="fd-comp-type-btn${postType === 'event' ? ' is-on' : ''}" data-type="event" type="button">Подія</button>
+          </div>
+        </div>
+        <div class="fd-comp-body">
+          <textarea class="fd-comp-text" placeholder="Що нового?" maxlength="4000" rows="5">${edit ? escapeHtml(editPost.text || '') : ''}</textarea>
+          <div class="fd-comp-event"${postType === 'event' ? '' : ' hidden'}>
+            <label class="fd-comp-field"><span class="fd-comp-flab">📅 Дата події</span>
+              <input class="fd-comp-date" type="date" value="${edit ? escapeHtml(editPost.event_date || '') : ''}"></label>
+            <label class="fd-comp-field"><span class="fd-comp-flab">🕐 Час (необовʼязково)</span>
+              <input class="fd-comp-etime" type="time" value="${edit ? escapeHtml(editPost.event_time || '') : ''}"></label>
+            <label class="fd-comp-field"><span class="fd-comp-flab">📍 Місце (необовʼязково)</span>
+              <input class="fd-comp-eloc" type="text" maxlength="120" placeholder="Напр. Центральна площа, Олика" value="${edit ? escapeHtml(editPost.event_location || '') : ''}"></label>
+          </div>
+          <div class="fd-comp-thumbs" hidden></div>
+          <div class="fd-comp-as">
+            <div class="fd-comp-as-label">Публікувати як</div>
+            <button class="fd-comp-as-btn${showAuthor ? '' : ' is-on'}" data-as="page" type="button">
+              <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">${escapeHtml(page.name || 'Спільнота')}</span></button>
+            <button class="fd-comp-as-btn${showAuthor ? ' is-on' : ''}" data-as="me" type="button">
+              <span class="fd-comp-as-dot"></span><span class="fd-comp-as-txt">Від себе</span></button>
+          </div>
+        </div>
+        <div class="fd-comp-bar">
+          <label class="fd-comp-photo">${IC_IMG}<input type="file" accept="image/*" multiple hidden></label>
+          <button class="fd-comp-send" type="button">${CTA}</button>
+        </div>
       </div>
     </div>`;
-  const close = () => { previewUrls.forEach(u => URL.revokeObjectURL(u)); back.remove(); };
-  back.addEventListener('click', e => { if (e.target === back) close(); });
+  let detachKb = () => {};
+  const close = () => {
+    detachKb();                                        // зняти слухачі клавіатури, повернути CSS-розкладку
+    previewUrls.forEach(u => URL.revokeObjectURL(u));   // не тримати objectURL-и прев'ю
+    back.remove();
+  };
+  // Тап повз лист закриває.
+  // ⚠️ ПЕРЕВІРЯЄМО ОБИДВА ШАРИ — та сама пастка, що вже ловила нас у коментарях
+  // (регрес PR #631): після появи `.fd-sheet-vp` (fixed, inset:0) тап у затемнення
+  // потрапляє ВЖЕ В НЬОГО, і умова `e.target === back` перестає виконуватись.
+  const vpEl = back.querySelector('.fd-sheet-vp');
+  back.addEventListener('click', e => { if (e.target === back || e.target === vpEl) close(); });
 
   // Перемикач Допис/Подія — показує/ховає блок полів події.
   const eventBox = back.querySelector('.fd-comp-event');
@@ -2128,10 +2157,14 @@ function openComposer(pageId, editPost = null) {
     thumbs.innerHTML = exHtml + nwHtml;
   };
   fileInput.addEventListener('change', () => {
+    // 🔎 АУДИТ 26.07: раніше зайві фото просто відкидались `break`-ом — БЕЗ жодного слова.
+    // Людина вибрала 15 знімків, побачила 10 і не розуміє, куди поділись решта.
+    let skipped = 0;
     for (const f of fileInput.files) {
-      if (existing.length + files.length >= MAX_PHOTOS) break;
+      if (existing.length + files.length >= MAX_PHOTOS) { skipped++; continue; }
       files.push(f); previewUrls.push(URL.createObjectURL(f));
     }
+    if (skipped) showToast(`Максимум ${MAX_PHOTOS} фото — ${skipped} не додав`, 3500);
     fileInput.value = '';       // щоб те саме фото можна було додати знову
     renderThumbs();
   });
@@ -2159,7 +2192,13 @@ function openComposer(pageId, editPost = null) {
       eventFields.event_time     = back.querySelector('.fd-comp-etime').value || null;
       eventFields.event_location = back.querySelector('.fd-comp-eloc').value.trim() || null;
     }
-    if (!text && !existing.length && !files.length) return;
+    // 🔎 АУДИТ 26.07: тут стояв мовчазний `return`. Людина тисне «Опублікувати» на порожній
+    // формі — і НІЧОГО не відбувається: ні реакції, ні пояснення. З боку користувача це
+    // читається як «кнопка не працює». Кажемо прямо, чого бракує.
+    if (!text && !existing.length && !files.length) {
+      showToast(postType === 'event' ? 'Додай опис або фото до події' : 'Напиши текст або додай фото', 3000);
+      return;
+    }
     if (text && containsProfanity(text)) { showToast('🚫 Пост містить заборонені слова', 3500, 'error'); return; }
     // Офлайн видно ще ДО спроби — не мучимо людину очікуванням заради відомого результату.
     if (navigator.onLine === false) {
@@ -2210,8 +2249,53 @@ function openComposer(pageId, editPost = null) {
   });
 
   document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
-  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
-  autoGrowTextarea(back.querySelector('.fd-comp-text'));   // поле росте по тексту (скрол — сам лист)
+
+  const compSheet = back.querySelector('.fd-composer');
+  const headEl    = back.querySelector('.fd-comp-head');
+  const bodyEl    = back.querySelector('.fd-comp-body');
+  const textEl    = back.querySelector('.fd-comp-text');
+
+  // ── Закриття: анімуємо ТІЛЬКИ зсув (той самий висновок, що для листа коментарів) ──
+  // Заморожуємо висоту й знімаємо перехід, щоб `translateY(100%)` мав нерухому ціль,
+  // а `closing` глушить `blur`, який інакше почав би повертати лист посеред з'їзду.
+  let closing = false;
+  const beginClose = () => {
+    if (closing) return;
+    closing = true;
+    compSheet.classList.remove('fd-comp--anim');
+    compSheet.style.height = compSheet.offsetHeight + 'px';
+  };
+
+  // Плавність — одноразовим класом і ДО першої зміни висоти (урок PR #660: у `onOpen`
+  // модуля вона вмикається вже після запису висоти, тобто анімувати їй нічого).
+  let animTimer = 0;
+  const kbAnim = () => {
+    compSheet.classList.add('fd-comp--anim');
+    clearTimeout(animTimer);
+    animTimer = setTimeout(() => compSheet.classList.remove('fd-comp--anim'), 300);
+  };
+  // Свайп ТІЛЬКИ за шапку: у тілі листа тепер справжній скрол, і жест там заважав би.
+  attachSheetSwipe(back, compSheet, bodyEl, close, {
+    grip: headEl,
+    onDismissStart: () => beginClose(),
+    keepVisibleOnDismiss: true,   // лист має бути ВИДНО, поки він з'їжджає донизу
+  });
+
+  // ── Клавіатура: та сама механіка, що в листі коментарів (вимога Вови) ────────────
+  // Низ листа сідає на клавіатуру, верх іде до `--fd-kb-top-gap` від краю екрана.
+  // ⚠️ Першим аргументом — ПРОЗОРИЙ `.fd-sheet-vp`, а не затемнення (інакше задник
+  // поїде разом з клавіатурою — баг, уже спійманий 25.07).
+  textEl?.addEventListener('focus', kbAnim);
+  textEl?.addEventListener('blur', () => { if (!closing) kbAnim(); });
+  detachKb = attachKeyboardSheet(back.querySelector('.fd-sheet-vp'), compSheet, {
+    input: textEl, minHeight: 220,
+    kbClass: 'fd-comp--kb', overlayClass: 'fd-sheet-vp--kb',
+    expandTop: readTopGap(compSheet),
+  });
+
+  // Поле росте по тексту, але скрол тепер у ТІЛА листа (`.fd-comp-body`), а не в самого
+  // листа — саме тому шапка більше нікуди не їде.
+  autoGrowTextarea(textEl);
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
