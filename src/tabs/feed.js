@@ -1267,6 +1267,9 @@ function openComments(postId, focusCommentId = null) {
     // kbClass тягне за собою і підкладку під системну панель iOS — вона зроблена
     // тінню самого аркуша (`.fd-com-sheet--kb`), тож окремий клас на оверлей не потрібен.
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
+    // Закриває зону під низом аркуша, крізь яку просвічувала сторінка (Вова 26.07,
+    // скрін IMG_3645). Деталі — у `.fd-sheet-vp--kb::after` у style/feed.css.
+    overlayClass: 'fd-sheet-vp--kb',
     // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
     // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
     onOpen: revealReply,
