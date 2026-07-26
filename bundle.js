@@ -573,16 +573,13 @@
   }
   async function submitPost(payload) {
     if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.rpc("submit_board_post", { payload });
-    if (error) {
-      console.warn("[supabase] submitPost error:", error);
-      return { ok: false, error: error.message };
-    }
-    if (data && data.ok === false) {
-      return { ok: false, error: data.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438" };
-    }
-    return { ok: true, status: data && data.status || "pending" };
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.rpc("submit_board_post", { payload }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    if (r.data && r.data.ok === false)
+      return { ok: false, error: netErrorText(r.data.error) };
+    return { ok: true, status: r.data && r.data.status || "pending" };
   }
   async function submitDiscussion(payload) {
     if (!supa)
@@ -873,16 +870,13 @@
   }
   async function updateBoardPost(postId, payload) {
     if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.rpc("update_board_post", { p_id: postId, payload });
-    if (error) {
-      console.warn("[supabase] updateBoardPost error:", error);
-      return { ok: false, error: error.message };
-    }
-    if (data && data.ok === false) {
-      return { ok: false, error: data.error || "\u043D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044C \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438" };
-    }
-    return { ok: true, status: data && data.status || "pending" };
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.rpc("update_board_post", { p_id: postId, payload }));
+    if (!r.ok)
+      return { ok: false, error: r.error };
+    if (r.data && r.data.ok === false)
+      return { ok: false, error: netErrorText(r.data.error) };
+    return { ok: true, status: r.data && r.data.status || "pending" };
   }
   async function fetchMyGroups() {
     if (!supa)
@@ -1109,11 +1103,60 @@
     return data?.cleared_at || null;
   }
   var NET_TIMEOUT = 6e3;
+  var WRITE_TIMEOUT = 12e3;
   function withTimeout(thenable, ms = NET_TIMEOUT) {
     return Promise.race([
       Promise.resolve(thenable),
       new Promise((_, reject) => setTimeout(() => reject(new Error("\u041D\u0435\u043C\u0430\u0454 \u0437\u0432'\u044F\u0437\u043A\u0443")), ms))
     ]);
+  }
+  function isTransientError(err) {
+    const msg = String(err?.message || err || "");
+    const status = Number(err?.status || err?.statusCode || 0);
+    if (status === 429 || status >= 500 && status < 600)
+      return true;
+    return /load failed|failed to fetch|networkerror|network ?error|немає зв|timeout|timed out|aborted|ERR_NETWORK/i.test(msg);
+  }
+  function netErrorText(err) {
+    const msg = String(err?.message || err || "");
+    if (typeof navigator !== "undefined" && navigator.onLine === false)
+      return "\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u2014 \u043F\u0435\u0440\u0435\u0432\u0456\u0440 \u0437\u0432'\u044F\u0437\u043E\u043A \u0456 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
+    if (isTransientError(err))
+      return "\u0421\u043B\u0430\u0431\u043A\u0438\u0439 \u0437\u0432'\u044F\u0437\u043E\u043A \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
+    if (/permission|denied|policy|row-level|RLS/i.test(msg))
+      return "\u041D\u0435\u0434\u043E\u0441\u0442\u0430\u0442\u043D\u044C\u043E \u043F\u0440\u0430\u0432 \u0434\u043B\u044F \u0446\u0456\u0454\u0457 \u0434\u0456\u0457";
+    if (/duplicate|unique/i.test(msg))
+      return "\u0426\u0435 \u0432\u0436\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E";
+    if (/JWT|token|session/i.test(msg))
+      return "\u0421\u0435\u0430\u043D\u0441 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0432 \u2014 \u0443\u0432\u0456\u0439\u0434\u0438 \u0437\u043D\u043E\u0432\u0443";
+    if (/нецензурн|заборонен/i.test(msg))
+      return "\u{1F6AB} \u0422\u0435\u043A\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430";
+    if (/занадто швидко|rate/i.test(msg))
+      return "\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0448\u0432\u0438\u0434\u043A\u043E \u2014 \u0437\u0430\u0447\u0435\u043A\u0430\u0439 \u043A\u0456\u043B\u044C\u043A\u0430 \u0441\u0435\u043A\u0443\u043D\u0434";
+    return "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
+  }
+  async function netCall(fn, { retries = 2, timeout = WRITE_TIMEOUT } = {}) {
+    let last = null;
+    for (let attempt = 0; attempt <= retries; attempt++) {
+      try {
+        const { data, error } = await withTimeout(fn(), timeout);
+        if (!error)
+          return { ok: true, data, error: null };
+        last = error;
+        if (!isTransientError(error))
+          break;
+      } catch (e) {
+        last = e;
+        if (!isTransientError(e))
+          break;
+      }
+      if (attempt < retries)
+        await new Promise((r) => setTimeout(r, 500 * (attempt + 1)));
+    }
+    const raw = String(last?.message || last || "");
+    if (raw)
+      console.warn("[netCall]", raw);
+    return { ok: false, data: null, error: netErrorText(last), raw };
   }
   async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
     if (!supa)
@@ -1538,11 +1581,12 @@
     }
     return new Set((data || []).map((r) => r.page_id));
   }
+  var POST_COLS = "id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)";
   async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
     if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
     const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : imageUrls ? [imageUrls] : [];
-    const { data, error } = await supa.from("page_posts").insert({
+    const row = {
       page_id: pageId,
       author_uid: uid,
       text,
@@ -1552,26 +1596,27 @@
       event_date: event.event_date || null,
       event_time: event.event_time || null,
       event_location: event.event_location || null
-    }).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
-    return error ? { ok: false, error: error.message } : { ok: true, post: data };
+    };
+    const r = await netCall(() => supa.from("page_posts").insert(row).select(POST_COLS).single());
+    return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
   }
   async function updatePagePost(postId, patch) {
     if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("page_posts").update(patch).eq("id", postId).select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").single();
-    return error ? { ok: false, error: error.message } : { ok: true, post: data };
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.from("page_posts").update(patch).eq("id", postId).select(POST_COLS).single());
+    return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
   }
   async function deletePagePost(postId) {
     if (!supa)
-      return { ok: false };
-    const { error } = await supa.from("page_posts").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", postId);
-    return error ? { ok: false, error: error.message } : { ok: true };
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.from("page_posts").update({ deleted_at: (/* @__PURE__ */ new Date()).toISOString() }).eq("id", postId));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   async function updatePage(pageId, patch) {
     if (!supa)
-      return { ok: false, error: "Supabase \u043D\u0435 \u043F\u0456\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u0438\u0439" };
-    const { data, error } = await supa.from("pages").update(patch).eq("id", pageId).select("id, name, theme, avatar_url, banner_url, is_system").single();
-    return error ? { ok: false, error: error.message } : { ok: true, page: data };
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.from("pages").update(patch).eq("id", pageId).select("id, name, theme, avatar_url, banner_url, is_system").single());
+    return r.ok ? { ok: true, page: r.data } : { ok: false, error: r.error };
   }
   async function fetchMySubscriptions() {
     if (!supa)
@@ -1709,7 +1754,7 @@
     const redirectTo = window.location.origin + window.location.pathname;
     const { error } = await supa2.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
     if (error)
-      showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0443\u0432\u0456\u0439\u0442\u0438: " + error.message, 4e3, "error");
+      showToast(netErrorText(error), 4e3, "error");
   }
   async function signOut() {
     const supa2 = getSupabase();
@@ -8916,7 +8961,7 @@
       const bd = wrap.querySelector("#acc-bdate").value;
       const res = await saveProfile({ name, birth_date: withDate ? bd : null });
       if (!res.ok) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
+        showToast(netErrorText(res.error), 4e3, "error");
         return;
       }
       closeModal2();
@@ -9155,7 +9200,7 @@
       btn.disabled = false;
       btn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u0430\u043D\u043A\u0435\u0442\u0443";
       if (!res.ok) {
-        showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + res.error, 4e3, "error");
+        showToast(netErrorText(res.error), 4e3, "error");
         return;
       }
       cab.querySelector("#acc-hero-name").textContent = [fields.name, fields.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
@@ -10872,19 +10917,6 @@ ${ev.description || ""}`
       return { el, top, onScroll, prevOverflow };
     });
     const pageTop0 = window.scrollY || 0;
-    const bodyStyle = document.body.style;
-    const prevBody = {
-      position: bodyStyle.position,
-      top: bodyStyle.top,
-      left: bodyStyle.left,
-      right: bodyStyle.right,
-      width: bodyStyle.width
-    };
-    bodyStyle.position = "fixed";
-    bodyStyle.top = `${-pageTop0}px`;
-    bodyStyle.left = "0";
-    bodyStyle.right = "0";
-    bodyStyle.width = "100%";
     const onPageScroll = () => {
       if ((window.scrollY || 0) !== pageTop0)
         window.scrollTo(0, pageTop0);
@@ -10893,13 +10925,6 @@ ${ev.description || ""}`
     return {
       unfreeze: () => {
         window.removeEventListener("scroll", onPageScroll);
-        bodyStyle.position = prevBody.position;
-        bodyStyle.top = prevBody.top;
-        bodyStyle.left = prevBody.left;
-        bodyStyle.right = prevBody.right;
-        bodyStyle.width = prevBody.width;
-        if (pageTop0)
-          window.scrollTo(0, pageTop0);
         frozen.forEach((f) => {
           f.el.removeEventListener("scroll", f.onScroll);
           f.el.style.overflowY = f.prevOverflow;
@@ -11960,7 +11985,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (res.ok)
         applyCommentRemove({ id, post_id: postId });
       else
-        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
+        showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
     });
     const input = sheet.querySelector(".fd-com-input");
     const sendBtn = sheet.querySelector(".fd-com-send");
@@ -12544,45 +12569,51 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast("\u{1F6AB} \u041F\u043E\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430", 3500, "error");
         return;
       }
+      if (navigator.onLine === false) {
+        showToast("\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u2014 \u0442\u0435\u043A\u0441\u0442 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0443 \u0444\u043E\u0440\u043C\u0456, \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0456\u0437\u043D\u0456\u0448\u0435", 4e3, "error");
+        return;
+      }
       sendBtn.disabled = true;
       sendBtn.textContent = edit ? "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026" : "\u041F\u0443\u0431\u043B\u0456\u043A\u0443\u044E\u2026";
-      let newUrls = [];
-      if (files.length) {
-        const failed = [];
-        for (const f of files) {
-          const up = await uploadImageReliable(f, { folder: "pages/", maxDim: 1600, quality: 0.82 });
-          if (up.url)
-            newUrls.push(up.url);
-          else
-            failed.push(up.error || "upload");
+      try {
+        let newUrls = [];
+        if (files.length) {
+          const failed = [];
+          for (const f of files) {
+            const up = await uploadImageReliable(f, { folder: "pages/", maxDim: 1600, quality: 0.82 });
+            if (up.url)
+              newUrls.push(up.url);
+            else
+              failed.push(up.error || "upload");
+          }
+          if (failed.length) {
+            showToast(`\u041D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u043B\u043E\u0441\u044C \u0444\u043E\u0442\u043E (${failed.length}) \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437`, 4e3, "error");
+            return;
+          }
         }
-        if (failed.length) {
+        const finalUrls = [...existing, ...newUrls];
+        const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields, showAuthor);
+        if (res.ok) {
+          if (edit) {
+            const i = posts.findIndex((p) => p.id === editPost.id);
+            if (i >= 0)
+              posts[i] = res.post;
+          } else {
+            posts.unshift(res.post);
+            notifyNewPagePost(res.post.id);
+          }
+          close();
+          document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
+          renderFeed();
+          openPageScreen(pageId, true);
+        } else {
+          showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
+        }
+      } finally {
+        if (sendBtn.isConnected) {
           sendBtn.disabled = false;
           sendBtn.textContent = CTA;
-          alert(`\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0442\u0438 ${failed.length} \u0444\u043E\u0442\u043E: ${failed[0]}
-\u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437.`);
-          return;
         }
-      }
-      const finalUrls = [...existing, ...newUrls];
-      const res = edit ? await updatePagePost(editPost.id, { text: text || "", image_urls: finalUrls, image_url: finalUrls[0] || null, show_author: showAuthor, ...eventFields }) : await createPagePost(pageId, currentUserId(), text || "", finalUrls, eventFields, showAuthor);
-      if (res.ok) {
-        if (edit) {
-          const i = posts.findIndex((p) => p.id === editPost.id);
-          if (i >= 0)
-            posts[i] = res.post;
-        } else {
-          posts.unshift(res.post);
-          notifyNewPagePost(res.post.id);
-        }
-        close();
-        document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
-        renderFeed();
-        openPageScreen(pageId, true);
-      } else {
-        sendBtn.disabled = false;
-        sendBtn.textContent = CTA;
-        alert((edit ? "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " : "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u043E\u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438: ") + (res.error || ""));
       }
     });
     document.body.appendChild(back);
@@ -12656,56 +12687,61 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     const saveBtn = back.querySelector(".fd-edit-save");
     saveBtn.addEventListener("click", async () => {
-      saveBtn.disabled = true;
-      saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026";
-      const patch = {};
-      if (bannerBlob) {
-        const up = await uploadBlobWithRetry(bannerBlob, "pages/");
-        if (!up.url) {
-          saveBtn.disabled = false;
-          saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
-          alert("\u0411\u0430\u043D\u0435\u0440 \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0432\u0441\u044F: " + (up.error || ""));
-          return;
-        }
-        patch.banner_url = up.url;
-      }
-      if (avatarBlob) {
-        const up = await uploadBlobWithRetry(avatarBlob, "pages/");
-        if (!up.url) {
-          saveBtn.disabled = false;
-          saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
-          alert("\u0410\u0432\u0430\u0442\u0430\u0440 \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0432\u0441\u044F: " + (up.error || ""));
-          return;
-        }
-        patch.avatar_url = up.url;
-      }
-      const name = back.querySelector("[data-name]").value.trim();
-      if (name && name !== page.name)
-        patch.name = name;
-      const theme = back.querySelector("[data-theme]").value.trim();
-      if (theme !== (page.theme || ""))
-        patch.theme = theme;
-      if (!Object.keys(patch).length) {
-        close();
+      if (navigator.onLine === false) {
+        showToast("\u041D\u0435\u043C\u0430\u0454 \u0456\u043D\u0442\u0435\u0440\u043D\u0435\u0442\u0443 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u043F\u0456\u0437\u043D\u0456\u0448\u0435", 4e3, "error");
         return;
       }
-      const res = await updatePage(pageId, patch);
-      if (res.ok) {
-        Object.assign(page, res.page);
-        posts.forEach((p) => {
-          if (p.page_id === pageId && p.pages) {
-            p.pages.avatar_url = page.avatar_url;
-            p.pages.name = page.name;
+      saveBtn.disabled = true;
+      saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u2026";
+      try {
+        const patch = {};
+        if (bannerBlob) {
+          const up = await uploadBlobWithRetry(bannerBlob, "pages/");
+          if (!up.url) {
+            showToast("\u0411\u0430\u043D\u0435\u0440 \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0432\u0441\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
+            return;
           }
-        });
-        close();
-        document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
-        renderFeed();
-        openPageScreen(pageId, true);
-      } else {
-        saveBtn.disabled = false;
-        saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
-        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438: " + (res.error || ""));
+          patch.banner_url = up.url;
+        }
+        if (avatarBlob) {
+          const up = await uploadBlobWithRetry(avatarBlob, "pages/");
+          if (!up.url) {
+            showToast("\u0410\u0432\u0430\u0442\u0430\u0440 \u043D\u0435 \u0437\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0438\u0432\u0441\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
+            return;
+          }
+          patch.avatar_url = up.url;
+        }
+        const name = back.querySelector("[data-name]").value.trim();
+        if (name && name !== page.name)
+          patch.name = name;
+        const theme = back.querySelector("[data-theme]").value.trim();
+        if (theme !== (page.theme || ""))
+          patch.theme = theme;
+        if (!Object.keys(patch).length) {
+          close();
+          return;
+        }
+        const res = await updatePage(pageId, patch);
+        if (res.ok) {
+          Object.assign(page, res.page);
+          posts.forEach((p) => {
+            if (p.page_id === pageId && p.pages) {
+              p.pages.avatar_url = page.avatar_url;
+              p.pages.name = page.name;
+            }
+          });
+          close();
+          document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
+          renderFeed();
+          openPageScreen(pageId, true);
+        } else {
+          showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
+        }
+      } finally {
+        if (saveBtn.isConnected) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = "\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438";
+        }
       }
     });
     document.body.appendChild(back);
@@ -12742,7 +12778,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         return;
       const res = await deletePagePost(postId);
       if (!res.ok) {
-        alert("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""));
+        showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
         return;
       }
       const hadScreen = !!document.querySelector(".fd-screen");

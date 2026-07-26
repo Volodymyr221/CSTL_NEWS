@@ -90,16 +90,14 @@ export async function fetchPostById(id) {
 // форсуються сервером (scripts/supabase_reputation.sql).
 // Повертає { ok:true, status:'pending'|'published' } або { ok:false, error }.
 export async function submitPost(payload) {
-  if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.rpc('submit_board_post', { payload });
-  if (error) {
-    console.warn('[supabase] submitPost error:', error);
-    return { ok: false, error: error.message };
-  }
-  if (data && data.ok === false) {
-    return { ok: false, error: data.error || 'не вдалось надіслати' };
-  }
-  return { ok: true, status: (data && data.status) || 'pending' };
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  // netCall оголошено нижче у файлі — це нормально: оголошення функції піднімається
+  // (hoisting), а виклик стається вже під час роботи, коли весь модуль завантажений.
+  const r = await netCall(() => supa.rpc('submit_board_post', { payload }));
+  if (!r.ok) return { ok: false, error: r.error };
+  // Сервер може відповісти «ok:false» ЗМІСТОВНО (антиспам, ліміт) — це не мережа.
+  if (r.data && r.data.ok === false) return { ok: false, error: netErrorText(r.data.error) };
+  return { ok: true, status: (r.data && r.data.status) || 'pending' };
 }
 
 // ОБГОВОРЕННЯ (type='chat') — БЕЗ людської модерації: публікуємо одразу.
@@ -448,16 +446,11 @@ export async function restorePost(postId) {
 // published → pending (повторна модерація). Потребує scripts/supabase_board_edit.sql.
 // Повертає { ok:true, status } або { ok:false, error }.
 export async function updateBoardPost(postId, payload) {
-  if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.rpc('update_board_post', { p_id: postId, payload });
-  if (error) {
-    console.warn('[supabase] updateBoardPost error:', error);
-    return { ok: false, error: error.message };
-  }
-  if (data && data.ok === false) {
-    return { ok: false, error: data.error || 'не вдалось зберегти' };
-  }
-  return { ok: true, status: (data && data.status) || 'pending' };
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.rpc('update_board_post', { p_id: postId, payload }));
+  if (!r.ok) return { ok: false, error: r.error };
+  if (r.data && r.data.ok === false) return { ok: false, error: netErrorText(r.data.error) };
+  return { ok: true, status: (r.data && r.data.status) || 'pending' };
 }
 
 // ── Приватні групові чати (Етап 2) ───────────────────────────────────────
@@ -678,11 +671,73 @@ export async function fetchThreadClearedAt(uid, threadId) {
 // Таймаут для мережевих викликів — щоб помилка зв'язку приходила швидко,
 // а не висіла поки браузер довго чекає відповіді (важливо для відкату B).
 const NET_TIMEOUT = 6000;
+// Запис у базу терпить довше за читання: людина щойно натиснула «Зберегти», і краще
+// почекати зайву секунду, ніж показати помилку на живому, але повільному зв'язку.
+const WRITE_TIMEOUT = 12000;
 function withTimeout(thenable, ms = NET_TIMEOUT) {
   return Promise.race([
     Promise.resolve(thenable),
     new Promise((_, reject) => setTimeout(() => reject(new Error('Немає зв\'язку')), ms)),
   ]);
+}
+
+// ── ЯДРО НАДІЙНОГО ЗАПИСУ (Вова 26.07, скрін IMG_3635) ──────────────────────────
+// Привід: під час дзвінка мережа просіла, збереження поста впало, і людина побачила
+// «TypeError: Load failed» — а кнопка застрягла на «Зберігаю…».
+//
+// 🔑 ГОЛОВНА ДУМКА: обрив зв'язку — не помилка користувача і не привід здаватись
+// з першої спроби. Для ФОТО у проєкті це вже вирішено (`core/upload.js`: стиснення +
+// послідовно + повтор із бекофом), а на записи в базу механізм просто не поширили.
+// Тут — та сама ідея, одним місцем для всіх записів.
+//
+// Повторюємо ЛИШЕ тимчасове (обрив, таймаут, 5xx, 429). Змістовне — права, валідація,
+// антиспам — повторювати безглуздо: відповідь буде та сама, а людина чекатиме втричі довше.
+
+// `Load failed` — так про обірваний запит каже Safari, `Failed to fetch` — Chrome.
+// Обидва означають одне: запит НЕ ДОЇХАВ. Це не помилка даних.
+function isTransientError(err) {
+  const msg = String(err?.message || err || '');
+  const status = Number(err?.status || err?.statusCode || 0);
+  if (status === 429 || (status >= 500 && status < 600)) return true;
+  return /load failed|failed to fetch|networkerror|network ?error|немає зв|timeout|timed out|aborted|ERR_NETWORK/i.test(msg);
+}
+
+// Один словник людських формулювань. Технічний текст не показуємо НІКОЛИ —
+// він нічого не пояснює людині й лише лякає.
+export function netErrorText(err) {
+  const msg = String(err?.message || err || '');
+  if (typeof navigator !== 'undefined' && navigator.onLine === false)
+    return 'Немає інтернету — перевір зв\'язок і спробуй ще раз';
+  if (isTransientError(err))              return 'Слабкий зв\'язок — спробуй ще раз';
+  if (/permission|denied|policy|row-level|RLS/i.test(msg)) return 'Недостатньо прав для цієї дії';
+  if (/duplicate|unique/i.test(msg))      return 'Це вже збережено';
+  if (/JWT|token|session/i.test(msg))     return 'Сеанс застарів — увійди знову';
+  if (/нецензурн|заборонен/i.test(msg))   return '🚫 Текст містить заборонені слова';
+  if (/занадто швидко|rate/i.test(msg))   return 'Занадто швидко — зачекай кілька секунд';
+  return 'Не вдалося зберегти — спробуй ще раз';
+}
+
+// fn — функція, що ПОВЕРТАЄ новий запит. Саме функція, а не готовий запит:
+// конструктор запиту Supabase одноразовий, повторно його «запустити» не можна.
+// Повертає { ok, data, error } — error уже ЛЮДСЬКИЙ, raw — технічний (для консолі).
+export async function netCall(fn, { retries = 2, timeout = WRITE_TIMEOUT } = {}) {
+  let last = null;
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const { data, error } = await withTimeout(fn(), timeout);
+      if (!error) return { ok: true, data, error: null };
+      last = error;
+      if (!isTransientError(error)) break;          // змістовна — повтор не допоможе
+    } catch (e) {
+      last = e;
+      if (!isTransientError(e)) break;
+    }
+    // Бекоф 0.5с / 1.0с — як в upload.js: короткий обрив за цей час зазвичай минає.
+    if (attempt < retries) await new Promise(r => setTimeout(r, 500 * (attempt + 1)));
+  }
+  const raw = String(last?.message || last || '');
+  if (raw) console.warn('[netCall]', raw);          // технічне — у консоль, не людині
+  return { ok: false, data: null, error: netErrorText(last), raw };
 }
 
 export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
@@ -1234,47 +1289,45 @@ export async function fetchMyEditablePageIds() {
 // пост стає ПОДІЄЮ (таб «Події» на каналі + плашка на картці). Порожні → null.
 // showAuthor — від чийого імені пост: true = під текстом видно підпис автора-людини,
 // false = суто від імені спільноти (вибір у композері, крок 6).
+// ⬇️ Записи «Стрічки» ходять через netCall: обрив зв'язку → тихий повтор, а людині
+//    у будь-якому разі — людський текст. Поля `select` не міняв.
+const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)';
+
 export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
-  if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
   const arr = Array.isArray(imageUrls) ? imageUrls.filter(Boolean) : (imageUrls ? [imageUrls] : []);
-  const { data, error } = await supa.from('page_posts')
-    .insert({
-      page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null,
-      show_author: showAuthor !== false,
-      event_date:     event.event_date     || null,
-      event_time:     event.event_time     || null,
-      event_location: event.event_location || null,
-    })
-    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
-    .single();
-  return error ? { ok: false, error: error.message } : { ok: true, post: data };
+  const row = {
+    page_id: pageId, author_uid: uid, text, image_urls: arr, image_url: arr[0] || null,
+    show_author: showAuthor !== false,
+    event_date:     event.event_date     || null,
+    event_time:     event.event_time     || null,
+    event_location: event.event_location || null,
+  };
+  const r = await netCall(() => supa.from('page_posts').insert(row).select(POST_COLS).single());
+  return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
 }
 
 // Оновити пост (текст/фото) — власник/адмін сторінки (RLS pposts update = can_edit_page).
 export async function updatePagePost(postId, patch) {
-  if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.from('page_posts')
-    .update(patch).eq('id', postId)
-    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
-    .single();
-  return error ? { ok: false, error: error.message } : { ok: true, post: data };
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.from('page_posts').update(patch).eq('id', postId).select(POST_COLS).single());
+  return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
 }
 
 // М'яке видалення поста (власник/адмін сторінки).
 export async function deletePagePost(postId) {
-  if (!supa) return { ok: false };
-  const { error } = await supa.from('page_posts')
-    .update({ deleted_at: new Date().toISOString() }).eq('id', postId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.from('page_posts')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', postId));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Оновити сторінку (аватар/банер/тема) — власник/адмін (RLS pages update).
 export async function updatePage(pageId, patch) {
-  if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.from('pages')
-    .update(patch).eq('id', pageId)
-    .select('id, name, theme, avatar_url, banner_url, is_system').single();
-  return error ? { ok: false, error: error.message } : { ok: true, page: data };
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.from('pages').update(patch).eq('id', pageId)
+    .select('id, name, theme, avatar_url, banner_url, is_system').single());
+  return r.ok ? { ok: true, page: r.data } : { ok: false, error: r.error };
 }
 
 // Дзвіночок: мої підписки → Set page_id.

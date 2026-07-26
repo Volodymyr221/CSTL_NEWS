@@ -6,6 +6,7 @@
 // вхід пропонується контекстно (через подію cstl-need-login від requireAuth).
 
 import { openLayer, closeLayer } from './layers.js';   // шари ↔ історія браузера (жест «назад»)
+import { netErrorText } from './supabase.js';   // єдиний словник людських формулювань помилок
 import {
   isLoggedIn, currentUser, onAuthChange,
   signInWithGoogle, signOut, getProfile, saveProfile, currentAvatarUrl,
@@ -87,7 +88,7 @@ function openProfile() {
     const name = wrap.querySelector('#acc-name').value.trim();
     const bd   = wrap.querySelector('#acc-bdate').value;   // YYYY-MM-DD або ''
     const res  = await saveProfile({ name, birth_date: withDate ? bd : null });
-    if (!res.ok) { showToast('Не вдалося зберегти: ' + res.error, 4000, 'error'); return; }
+    if (!res.ok) { showToast(netErrorText(res.error), 4000, 'error'); return; }
     closeModal();
     if (withDate) showToast('Профіль збережено', 2500);
   };
@@ -305,7 +306,7 @@ async function openAccount() {
     };
     const res = await saveProfile(fields);
     btn.disabled = false; btn.textContent = 'Зберегти анкету';
-    if (!res.ok) { showToast('Не вдалося зберегти: ' + res.error, 4000, 'error'); return; }
+    if (!res.ok) { showToast(netErrorText(res.error), 4000, 'error'); return; }
     // Оновлюємо шапку кабінету наживо
     cab.querySelector('#acc-hero-name').textContent = [fields.name, fields.surname].filter(Boolean).join(' ') || 'Житель';
     cab.querySelector('#acc-hero-place').textContent = fields.settlement || 'Учасник спільноти';
