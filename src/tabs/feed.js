@@ -257,7 +257,35 @@ function openViewer(images, startIdx) {
 //
 // Для решти аркушів (пост, сторінка, композер) grip не передається — поведінка та сама,
 // що була: там немає довгого списку, і закриття з будь-якого місця зручне.
-function attachSheetSwipe(back, panel, scroller, doClose, { grip = null } = {}) {
+// ── СТАН ЛИСТА КОМЕНТАРІВ: початкова висота ↔ на весь екран ────────────────────────
+// Вова 26.07: «коли натискає додати коментар — модалка має розширюватися плавно до самого
+// верху; коли згортає клавіатуру — шапка має бути так само зверху; легеньким свайпом
+// шапки — стає на те місце перше; звідти свайп — закривається; довгий або швидкий свайп
+// із самого верху — закривається відразу». Це логіка Instagram.
+//
+// Стан тримаємо КЛАСОМ на аркуші, а не числом: висоту у пікселях під клавіатурою пише
+// модуль (інлайном), і два джерела одного розміру вже колись розійшлись. Клас лишається
+// після зникнення клавіатури — саме тому лист і не «падає» назад сам собою.
+let comSheetFull = false;
+
+function setComSheetFull(on, { animate = true } = {}) {
+  const el = document.querySelector('.fd-com-sheet');
+  if (!el) return;
+  comSheetFull = !!on;
+  if (animate) {
+    // Одноразова плавність: клас живе рівно час переходу. Постійний `transition` на
+    // висоту дав би відставання аркуша від клавіатури (див. коментар у style/feed.css).
+    el.classList.add('fd-com-sheet--anim');
+    setTimeout(() => el.classList.remove('fd-com-sheet--anim'), 320);
+  }
+  el.classList.toggle('fd-com-sheet--full', comSheetFull);
+  // Повернення в початкову висоту при відкритій клавіатурі не буває (клавіатура тримає
+  // свою геометрію інлайном) — але якщо людина згорнула клавіатуру, інлайну вже нема,
+  // і клас керує висотою одноосібно.
+  if (!comSheetFull) el.style.height = '';
+}
+
+function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false } = {}) {
   scroller = scroller || panel;
   const zone = grip || panel;          // де жест ПОЧИНАЄТЬСЯ і живуть слухачі
   let startY = 0, dragging = false, dy = 0, travel = 1;
@@ -295,6 +323,30 @@ function attachSheetSwipe(back, panel, scroller, doClose, { grip = null } = {}) 
   zone.addEventListener('touchend', () => {
     if (!dragging) return;
     dragging = false;
+    // ── ТРИ РІВНІ ЖЕСТУ (лише для листа коментарів, `twoStage`) ────────────────────
+    // Логіка Instagram, дослівно з прохання Вови:
+    //   • лист РОЗШИРЕНИЙ на весь екран + невеликий рух → стає у ПОЧАТКОВУ висоту;
+    //   • лист у початковій висоті + рух → закривається (нижче, звичайний finishSwipe);
+    //   • розширений + ДОВГИЙ рух або КИДОК → закривається відразу, без проміжної станції.
+    // Пороги беремо ті самі, що вирішують закриття в `sheet-motion` (90px / 0.45 px·мс⁻¹),
+    // щоб «довгий» і «швидкий» означали тут те саме, що й у решті модалок застосунку.
+    if (twoStage && comSheetFull) {
+      const throwDown = drag.velocity > 0.45 && dy > 8;   // кидок
+      const longPull  = dy > 90;                          // дотягнув повільно
+      if (!throwDown && !longPull) {
+        // Проміжна станція: повертаємо аркуш на місце (жест скасовано) і водночас
+        // згортаємо його до початкової висоти. Саме те, що Вова описав як «стає на те
+        // місце перше», а не закриття.
+        panel.style.transition = 'transform 200ms cubic-bezier(0.32,0.72,0,1)';
+        panel.style.transform = '';
+        fade?.settle(false, 200);
+        setTimeout(() => { panel.style.transition = ''; }, 200);
+        setComSheetFull(false);
+        dy = 0;
+        return;
+      }
+      // Довгий рух або кидок — падаємо в звичайне закриття нижче.
+    }
     // Доїзд рахує sheet-motion: кидок закриває навіть коротким рухом, а час
     // завершення пропорційний залишку шляху (не фіксовані 240мс).
     finishSwipe({
@@ -781,7 +833,11 @@ function commentThreads(list) {
 function collapseBtnHtml(hostId, hidden, expanded, total, sub) {
   const cls = `fd-com-branch${sub ? ' fd-com-branch--sub' : ''}`;
   if (hidden > 0) return `<div class="${cls}"><button class="fd-com-more" data-more-parent="${hostId}" type="button">Ще ${hidden} ${pluralReplies(hidden)}</button></div>`;
-  if (expanded && total > REPLIES_VISIBLE) return `<div class="${cls}"><button class="fd-com-more" data-less-parent="${hostId}" type="button">Сховати відповіді</button></div>`;
+  // Скільки видно у ЗГОРНУТОМУ стані: на 2-му рівні — одна відповідь, на 3-му — жодної
+  // (див. коментар у threadHtml). Без цієї різниці одна єдина під-відповідь, раз
+  // розгорнута, більше не згорталась би: кнопки «Сховати» для неї не з'являлось.
+  const visibleWhenClosed = sub ? 0 : REPLIES_VISIBLE;
+  if (expanded && total > visibleWhenClosed) return `<div class="${cls}"><button class="fd-com-more" data-less-parent="${hostId}" type="button">Сховати відповіді</button></div>`;
   return '';
 }
 
@@ -799,7 +855,14 @@ function threadHtml(t) {
     let hasSub = '';
     if (r.subs.length) {
       const subOpen = expandedThreads.has(r.c.id);
-      const subVis = subOpen ? r.subs : r.subs.slice(0, REPLIES_VISIBLE);
+      // 🔑 ТРЕТІЙ РІВЕНЬ ЗАКРИТИЙ ПОВНІСТЮ (Вова 26.07, скрін IMG_3657 — зайвий коментар
+      // замальовано хрестиком): «має бути видно тільки два коментарі: основний і перший,
+      // на який відповіли. Дальше всі потрібно буде відкривати».
+      // ⚠️ Раніше тут стояв той самий зріз `slice(0, REPLIES_VISIBLE)`, що й на 2-му рівні.
+      // Ліміт «одна видима відповідь» діяв ОКРЕМО на кожному рівні, тож у ланцюжку
+      // корінь → відповідь → відповідь на неї видимих виходило ДВІ. Тепер під-відповіді
+      // не показуються, доки гілку не розгорнули: `[]` замість зрізу.
+      const subVis = subOpen ? r.subs : [];
       const subHid = r.subs.length - subVis.length;
       // 🔑 Ціль відповіді для 3-го рівня — НЕ сам коментар, а його господар (2-й рівень).
       // Інакше зʼявився б 4-й рівень, а ми його свідомо не робимо: хто кому відповів
@@ -1075,6 +1138,7 @@ function openComments(postId, focusCommentId = null) {
   sheet.className = 'fd-sheet-back fd-sheet-back--kbsafe';
   sheet.innerHTML = `
     <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
       <div class="fd-sheet fd-com-sheet">
         <div class="fd-com-grip">
           <div class="fd-sheet-handle"></div>
@@ -1200,6 +1264,7 @@ function openComments(postId, focusCommentId = null) {
   const close = () => {
     detachKb();       // зняти слухачі клавіатури і повернути оверлею/аркушу CSS-розкладку
     unlockScroll();   // повернути скрол сторінки (body був зафіксований під клавіатуру)
+    comSheetFull = false;   // наступне відкриття — знову з початкової висоти
     sheet.remove();
     if (openCommentSheet && openCommentSheet.back === sheet) openCommentSheet = null;
   };
@@ -1419,7 +1484,9 @@ function openComments(postId, focusCommentId = null) {
   // Свайп-закриття ТІЛЬКИ за шапку (рисочка + «7 коментарів»). Усередині списку
   // жест не існує — там лише прокрутка (Вова 25.07).
   const gripEl = sheet.querySelector('.fd-com-grip');
-  attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl });
+  // twoStage — три рівні жесту (розширений → початкова висота → закриття). Лише тут:
+  // інші листи не розширюються, тож проміжної станції в них немає.
+  attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true });
   // Шапка лежить ПОВЕРХ списку (щоб коментарі їхали під неї), тож у списку треба
   // звільнити під неї місце зверху. Висоту саме ВИМІРЮЄМО, а не прописуємо числом:
   // вона залежить від шрифту й міжрядкового інтервалу пристрою, і будь-яка формула
@@ -1434,16 +1501,21 @@ function openComments(postId, focusCommentId = null) {
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(padTop).observe(gripEl);
   // ⚠️ Першим аргументом — ПРОЗОРИЙ .fd-sheet-vp, а НЕ затемнення. Модуль рухає те,
   // що йому дали; дай йому затемнення — і воно поїде разом з клавіатурою (баг Вови 25.07).
-  detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {   // клавіатура: тільки після DOM
-    // kbClass тягне за собою і підкладку під системну панель iOS — вона зроблена
-    // тінню самого аркуша (`.fd-com-sheet--kb`), тож окремий клас на оверлей не потрібен.
+  detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
-    // Закриває зону під низом аркуша, крізь яку просвічувала сторінка (Вова 26.07,
-    // скрін IMG_3645). Деталі — у `.fd-sheet-vp--kb::after` у style/feed.css.
+    // Клас на оверлей лишається — на ньому висить `--kb-h` для підкладки.
     overlayClass: 'fd-sheet-vp--kb',
-    // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
-    // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
-    onOpen: revealReply,
+    // 🔑 РОЗШИРЕННЯ ДО ВЕРХУ (Вова 26.07): якір верху = 0, тобто аркуш займає всю видиму
+    // смугу над клавіатурою. Формула висоти в модулі не змінена — лише те, від чого
+    // відлічується верх.
+    expandTop: 0,
+    onOpen: () => {
+      // Клавіатура доїхала: (1) позначаємо лист розширеним — щоб він ЛИШИВСЯ зверху,
+      // коли клавіатуру згорнуть; (2) вмикаємо плавність на час переходу; (3) аж тепер
+      // видно, чи адресат відповіді не лишився за кадром.
+      setComSheetFull(true);
+      revealReply();
+    },
   });
   requestAnimationFrame(() => sheet.classList.add('open'));
 
