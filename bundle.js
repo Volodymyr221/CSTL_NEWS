@@ -11339,7 +11339,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (!comSheetFull)
       el.style.height = "";
   }
-  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false } = {}) {
+  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false, onDismissStart = null } = {}) {
     scroller = scroller || panel;
     const zone = grip || panel;
     let startY = 0, dragging = false, dy = 0, travel = 1;
@@ -11406,7 +11406,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         velocity: drag.velocity,
         remaining: sheetRemaining(panel, dy),
         dismissTransform: "translateY(100%)",
+        // 🔑 onDismissStart — ПЕРШИМ, до всього іншого. `finishSwipe` уже поставив
+        // `translateY(100%)`, але жодного кадру ще не намальовано, тож заморозити тут
+        // геометрію — значить заморозити її ДО початку руху.
         onDismiss: (ms) => {
+          onDismissStart?.();
           back.classList.remove("open");
           setTimeout(doClose, ms);
         },
@@ -12280,7 +12284,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     document.body.appendChild(sheet);
     const gripEl = sheet.querySelector(".fd-com-grip");
-    attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true });
+    attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true, onDismissStart: () => beginClose() });
     const padTop = () => {
       const h = gripEl.offsetHeight;
       if (h)
@@ -12289,6 +12293,14 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     padTop();
     if (typeof ResizeObserver !== "undefined")
       new ResizeObserver(padTop).observe(gripEl);
+    let closing = false;
+    const beginClose = () => {
+      if (closing)
+        return;
+      closing = true;
+      comSheet.classList.remove("fd-com-sheet--anim");
+      comSheet.style.height = comSheet.offsetHeight + "px";
+    };
     let kbAnimTimer = 0;
     const kbAnim = () => {
       comSheet.classList.add("fd-com-sheet--anim");
@@ -12297,6 +12309,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     };
     kbInput?.addEventListener("focus", kbAnim);
     kbInput?.addEventListener("blur", () => {
+      if (closing)
+        return;
       kbAnim();
       setComSheetFull(false, { animate: false });
     });
