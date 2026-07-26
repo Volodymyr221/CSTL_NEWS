@@ -66,6 +66,33 @@ function freezeBackground(overlay) {
   // ⚠️ Це НЕ покадрова компенсація жесту (та завжди дає дьоргання — урок 25.07):
   // системний автоскрол — разова подія, ми лише повертаємо її назад.
   const pageTop0 = window.scrollY || 0;
+
+  // ── ДВА РІВНІ ЗАМКА: спершу ЗАПОБІГТИ, і лише потім виправляти ────────────────
+  // Вова 26.07: «коли клавіатура опускається — все плавно, а коли піднімається,
+  // верх додатку трошки дьоргається, ніби відстає».
+  // 🔑 ЧОМУ САМЕ ПРИ ПІДЙОМІ: слухач `scroll` — це РЕАКЦІЯ. Він спрацьовує вже ПІСЛЯ
+  // того, як браузер прокрутив сторінку і намалював кадр. Тобто людина встигає побачити
+  // один кадр «поїхало», і аж наступний — «повернулось». При зникненні клавіатури ніхто
+  // нікуди не скролить, тому там і не смикається.
+  // РІВЕНЬ 1 (запобігання): робимо документ НЕПРОКРУЧУВАНИМ узагалі — `position: fixed`
+  // на <body>. Тоді iOS нема куди його зсувати, і кадру «поїхало» просто не існує.
+  //   Чому не досить `overflow: hidden` (він і так є в base.css): у встановленому
+  //   додатку iOS прокручує webview повз це правило — це ми й побачили на числах.
+  //   Чому безпечно: <body> і так `height: 100%` і не скролиться (скролер — `.app-main`),
+  //   а шапка/таб-бар прибиті до ЕКРАНА (`fixed`), тож положення батька їх не стосується.
+  // РІВЕНЬ 2 (страховка): слухач лишається. Якщо на якомусь пристрої рівень 1 не
+  // спрацює, поведінка буде рівно така, як зараз, — не гірша.
+  const bodyStyle = document.body.style;
+  const prevBody = {
+    position: bodyStyle.position, top: bodyStyle.top, left: bodyStyle.left,
+    right: bodyStyle.right, width: bodyStyle.width,
+  };
+  bodyStyle.position = 'fixed';
+  bodyStyle.top = `${-pageTop0}px`;
+  bodyStyle.left = '0';
+  bodyStyle.right = '0';
+  bodyStyle.width = '100%';
+
   const onPageScroll = () => {
     if ((window.scrollY || 0) !== pageTop0) window.scrollTo(0, pageTop0);
   };
@@ -74,6 +101,11 @@ function freezeBackground(overlay) {
   return {
     unfreeze: () => {
       window.removeEventListener('scroll', onPageScroll);
+      bodyStyle.position = prevBody.position; bodyStyle.top = prevBody.top;
+      bodyStyle.left = prevBody.left; bodyStyle.right = prevBody.right;
+      bodyStyle.width = prevBody.width;
+      // Сторінка була прокручена до відкриття листа — повертаємо рівно туди.
+      if (pageTop0) window.scrollTo(0, pageTop0);
       frozen.forEach(f => {
         f.el.removeEventListener('scroll', f.onScroll);
         f.el.style.overflowY = f.prevOverflow;
