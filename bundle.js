@@ -11314,6 +11314,18 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     track.scrollLeft = (startIdx || 0) * track.clientWidth;
   }
   var comSheetFull = false;
+  function readTopGap(root) {
+    try {
+      const probe = document.createElement("div");
+      probe.style.cssText = "position:absolute;left:0;top:0;width:0;visibility:hidden;pointer-events:none;height:var(--fd-kb-top-gap, 12px)";
+      root.appendChild(probe);
+      const h = probe.offsetHeight;
+      probe.remove();
+      return Math.max(0, Math.round(h) || 12);
+    } catch {
+      return 12;
+    }
+  }
   function setComSheetFull(on, { animate = true } = {}) {
     const el = document.querySelector(".fd-com-sheet");
     if (!el)
@@ -12277,18 +12289,30 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     padTop();
     if (typeof ResizeObserver !== "undefined")
       new ResizeObserver(padTop).observe(gripEl);
+    let kbAnimTimer = 0;
+    const kbAnim = () => {
+      comSheet.classList.add("fd-com-sheet--anim");
+      clearTimeout(kbAnimTimer);
+      kbAnimTimer = setTimeout(() => comSheet.classList.remove("fd-com-sheet--anim"), 300);
+    };
+    kbInput?.addEventListener("focus", kbAnim);
+    kbInput?.addEventListener("blur", () => {
+      kbAnim();
+      setComSheetFull(false, { animate: false });
+    });
     detachKb = attachKeyboardSheet(sheet.querySelector(".fd-sheet-vp"), comSheet, {
       input: kbInput,
       minHeight: 180,
       kbClass: "fd-com-sheet--kb",
       // Клас на оверлей лишається — на ньому висить `--kb-h` для підкладки.
       overlayClass: "fd-sheet-vp--kb",
-      // 🔑 РОЗШИРЕННЯ ДО ВЕРХУ (Вова 26.07): якір верху = 0, тобто аркуш займає всю видиму
-      // смугу над клавіатурою. Формула висоти в модулі не змінена — лише те, від чого
-      // відлічується верх.
-      expandTop: 0,
+      // 🔑 ЯКІР ВЕРХУ. Було `0` — лист упирався в самий край екрана (скрін IMG_3662).
+      // Тепер лишаємо відступ: значення живе у CSS (`--fd-kb-top-gap`), бо там воно
+      // резолвиться разом з `env(safe-area-inset-top)`. Формула висоти в модулі не
+      // змінена — змінюється рівно те, від чого відлічується верх.
+      expandTop: readTopGap(comSheet),
       onOpen: () => {
-        setComSheetFull(true);
+        setComSheetFull(true, { animate: false });
         revealReply();
       }
     });

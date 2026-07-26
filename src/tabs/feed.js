@@ -268,6 +268,25 @@ function openViewer(images, startIdx) {
 // після зникнення клавіатури — саме тому лист і не «падає» назад сам собою.
 let comSheetFull = false;
 
+// Відступ згори для піднятого листа — читаємо з CSS, а не тримаємо числом у JS.
+// 🔑 ЧОМУ ПРОБНИМ ЕЛЕМЕНТОМ, А НЕ `getComputedStyle().getPropertyValue('--fd-kb-top-gap')`:
+// власні властивості віддаються браузером НЕРОЗКРИТИМИ — ми отримали б рядок
+// «calc(12px + env(safe-area-inset-top, 0px))» і `parseFloat` мовчки дав би 12, тобто
+// виріз/острівець просто загубився б. Присвоївши це значення справжній `height`,
+// змушуємо браузер порахувати все сам, і читаємо готові пікселі.
+// Запобіжник: якщо щось пішло не так (елемент поза документом) — 12px за замовчуванням.
+function readTopGap(root) {
+  try {
+    const probe = document.createElement('div');
+    probe.style.cssText = 'position:absolute;left:0;top:0;width:0;visibility:hidden;' +
+      'pointer-events:none;height:var(--fd-kb-top-gap, 12px)';
+    root.appendChild(probe);
+    const h = probe.offsetHeight;
+    probe.remove();
+    return Math.max(0, Math.round(h) || 12);
+  } catch { return 12; }
+}
+
 function setComSheetFull(on, { animate = true } = {}) {
   const el = document.querySelector('.fd-com-sheet');
   if (!el) return;
@@ -1501,19 +1520,42 @@ function openComments(postId, focusCommentId = null) {
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(padTop).observe(gripEl);
   // ⚠️ Першим аргументом — ПРОЗОРИЙ .fd-sheet-vp, а НЕ затемнення. Модуль рухає те,
   // що йому дали; дай йому затемнення — і воно поїде разом з клавіатурою (баг Вови 25.07).
+  // ── ПЛАВНІСТЬ ПІДЙОМУ/ОПУСКАННЯ ЛИСТА (Вова 26.07, скрін IMG_3662) ─────────────
+  // 🔑 КОРІНЬ РИВКА, який тут лікується. Плавність вмикалась у `onOpen` модуля — а він
+  // спрацьовує ПІСЛЯ того, як модуль уже записав нову висоту. Тобто найбільший стрибок
+  // верху (зі ~152px у якір, за один кадр) відбувався ДО вмикання переходу, і анімувати
+  // тому переходу було вже нічого. Звідси «модалка різко зміщується догори».
+  // Тепер клас плавності вішаємо на `focus` — тобто ДО першої зміни висоти. Наш слухач
+  // зареєстрований РАНІШЕ за слухач модуля, а слухачі однієї події спрацьовують у
+  // порядку реєстрації → перехід гарантовано на місці, коли модуль почне рахувати.
+  // ⚠️ Це НЕ рух розкладки на випередження (HOT_RULES №10): клас лише вмикає CSS-перехід,
+  // геометрію не чіпає — ціль тапу з-під пальця не їде, лист від тапу не закривається.
+  let kbAnimTimer = 0;
+  const kbAnim = () => {
+    comSheet.classList.add('fd-com-sheet--anim');
+    clearTimeout(kbAnimTimer);
+    kbAnimTimer = setTimeout(() => comSheet.classList.remove('fd-com-sheet--anim'), 300);
+  };
+  kbInput?.addEventListener('focus', kbAnim);
+  // Згортання клавіатури: та сама плавність + лист ПОВЕРТАЄТЬСЯ у початкову висоту.
+  // 🔄 Це зміна рішення від 26.07 (раніше лист навмисно лишався зверху). Підтверджено
+  // Вовою: «модалка повинна плавно повернутися у своє початкове положення».
+  kbInput?.addEventListener('blur', () => { kbAnim(); setComSheetFull(false, { animate: false }); });
+
   detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
     // Клас на оверлей лишається — на ньому висить `--kb-h` для підкладки.
     overlayClass: 'fd-sheet-vp--kb',
-    // 🔑 РОЗШИРЕННЯ ДО ВЕРХУ (Вова 26.07): якір верху = 0, тобто аркуш займає всю видиму
-    // смугу над клавіатурою. Формула висоти в модулі не змінена — лише те, від чого
-    // відлічується верх.
-    expandTop: 0,
+    // 🔑 ЯКІР ВЕРХУ. Було `0` — лист упирався в самий край екрана (скрін IMG_3662).
+    // Тепер лишаємо відступ: значення живе у CSS (`--fd-kb-top-gap`), бо там воно
+    // резолвиться разом з `env(safe-area-inset-top)`. Формула висоти в модулі не
+    // змінена — змінюється рівно те, від чого відлічується верх.
+    expandTop: readTopGap(comSheet),
     onOpen: () => {
-      // Клавіатура доїхала: (1) позначаємо лист розширеним — щоб він ЛИШИВСЯ зверху,
-      // коли клавіатуру згорнуть; (2) вмикаємо плавність на час переходу; (3) аж тепер
-      // видно, чи адресат відповіді не лишився за кадром.
-      setComSheetFull(true);
+      // Клавіатура доїхала: позначаємо лист піднятим (стан потрібен свайпу `twoStage`)
+      // і перевіряємо, чи адресат відповіді не лишився за кадром. Плавність тут уже
+      // НЕ вмикаємо — вона ввімкнена на `focus`, до першої зміни висоти (див. вище).
+      setComSheetFull(true, { animate: false });
       revealReply();
     },
   });
