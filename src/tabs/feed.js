@@ -775,7 +775,7 @@ function renderCommentSheet() {
   // У заголовку — УСЬОГО коментарів під постом, а не скільки завантажено:
   // при частковому завантаженні «3 коментарі» під постом, де їх 80, брехало б.
   const total = commentCounts.get(postId) ?? list.length;
-  if (titleEl) titleEl.textContent = total ? `${total} ${pluralComments(total)}` : 'Коментарі';
+  if (titleEl) titleEl.textContent = commentTitleText(total);
 
   // ⚠️ ТРИ РІЗНІ СТАНИ, які раніше зливались в один порожній список:
   //   є дані           → показуємо їх (навіть якщо остання спроба оновити впала);
@@ -808,9 +808,57 @@ function renderCommentSheet() {
     : `<div class="fd-com-empty">Ще немає коментарів. Будьте першим!</div>`;
 }
 
+// Текст заголовка листа — ОДНА функція на два місця (заголовок і його оновлення ззовні).
+// 🔑 Навіщо окремо: до 26.07 заголовок формувався тільки всередині renderCommentSheet,
+// а число під карткою — у patchCommentCount. Два різні шляхи до двох чисел, які мусять
+// бути однакові, — саме так вони й розходились (Вова: «зверху пише 6, а по факту 4»).
+function commentTitleText(total) {
+  return total ? `${total} ${pluralComments(total)}` : 'Коментарі';
+}
+
+// Показати число під карткою І в заголовку відкритого листа — завжди разом.
 function patchCommentCount(postId) {
   const n = commentCounts.get(postId) || 0;
   document.querySelectorAll(`[data-comments="${postId}"] .fd-cnt`).forEach(el => el.textContent = n || '');
+  // Заголовок листа тепер оновлюється тим самим викликом — розійтися вони більше
+  // не можуть за побудовою, хоч би звідки прийшла зміна числа.
+  if (openCommentSheet && openCommentSheet.postId === postId && openCommentSheet.titleEl) {
+    openCommentSheet.titleEl.textContent = commentTitleText(n);
+  }
+}
+
+// ── ЗВІРКА ЛІЧИЛЬНИКА З БАЗОЮ (Вова 26.07: «має оновлюватися в реальному режимі.
+//    В кожного користувача») ──────────────────────────────────────────────────────
+// Кроковий +1/−1 дає миттєвий відгук, але будь-який кроковий лічильник рано чи пізно
+// розходиться з дійсністю: подія може загубитись при обриві звʼязку або прийти двічі,
+// а видалення коментаря, якого ми не завантажували, взагалі нічого не відніме.
+// Тому після кожної події про коментарі питаємо базу, скільки їх насправді.
+// Затримка — щоб пачка подій (каскадне видалення гілки — це N подій поспіль) дала
+// ОДИН запит, а не N. Патерн «спершу оптимістично, потім звірка».
+const COUNT_SYNC_DELAY = 400;
+const countSyncTimers = new Map();   // postId → таймер відкладеної звірки
+
+function scheduleCountSync(postId) {
+  if (postId == null) return;
+  clearTimeout(countSyncTimers.get(postId));
+  countSyncTimers.set(postId, setTimeout(async () => {
+    countSyncTimers.delete(postId);
+    const n = await fetchPostCommentCount(postId);
+    if (n == null) return;                       // не змогли спитати — лишаємо як є
+    if (commentCounts.get(postId) !== n) {
+      commentCounts.set(postId, n);
+      patchCommentCount(postId);
+    }
+    // Число розійшлося з тим, що реально лежить у пам'яті → ми пропустили подію.
+    // Перевантажуємо список, але ЛИШЕ коли він завантажений повністю: при частковому
+    // (є «Показати попередні») довжина законно менша за загальну, і звірка тут
+    // ганяла б запити по колу.
+    const arr = commentMap.get(postId);
+    const partial = commentPaging.get(postId)?.hasMore;
+    if (openCommentSheet?.postId === postId && arr && !partial && arr.length !== n) {
+      loadComments(postId).then(ok => { if (ok !== false) renderCommentSheet(); });
+    }
+  }, COUNT_SYNC_DELAY));
 }
 
 // Лічильник під карткою ведемо кроком (+1/−1), а не довжиною завантаженого масиву:
@@ -2080,6 +2128,10 @@ export async function initFeed() {
       const t = payload.eventType;
       if (t === 'DELETE') applyCommentRemove(payload.old);
       else applyCommentUpsert(payload.new);   // INSERT + UPDATE (deleted_at → remove усередині)
+      // …і одразу ставимо в чергу звірку з базою: кроковий +1/−1 вище дає миттєвий
+      // відгук, а через мить приходить правда і мовчки її підтверджує або виправляє.
+      // Так число однакове в УСІХ, навіть якщо чиясь подія загубилась дорогою.
+      scheduleCountSync((payload.new || payload.old)?.post_id);
     });
 
     // Жива синхронізація лайків: лічильник ❤️ оновлюється у всіх наживо.
