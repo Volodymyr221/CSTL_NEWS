@@ -823,19 +823,25 @@ function openComments(postId, focusCommentId = null) {
   const myUid = currentUserId();
   const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || 'Я', 'fd-com-ava-img');
   const sheet = document.createElement('div');
-  sheet.className = 'fd-sheet-back';
+  // --kbsafe + внутрішній .fd-sheet-vp: затемнення і система координат — різні шари.
+  // Рухається лише прозорий vp; затемнення статичне і лежить під клавіатурою.
+  // Чому саме тут, а не в решті листів: тільки цей лист має поле вводу, тобто
+  // тільки він живе під клавіатурою. Деталі — коментар у style/feed.css.
+  sheet.className = 'fd-sheet-back fd-sheet-back--kbsafe';
   sheet.innerHTML = `
-    <div class="fd-sheet fd-com-sheet">
-      <div class="fd-com-grip">
-        <div class="fd-sheet-handle"></div>
-        <div class="fd-sheet-title fd-com-title">Коментарі</div>
-      </div>
-      <div class="fd-com-list"></div>
-      <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
-      <div class="fd-com-compose">
-        <span class="fd-com-ava fd-com-myava">${myAva}</span>
-        <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
-        <button class="fd-com-send" type="button">${IC_SEND}</button>
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet fd-com-sheet">
+        <div class="fd-com-grip">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title fd-com-title">Коментарі</div>
+        </div>
+        <div class="fd-com-list"></div>
+        <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="Скасувати відповідь">${IC_X}</button></div>
+        <div class="fd-com-compose">
+          <span class="fd-com-ava fd-com-myava">${myAva}</span>
+          <input class="fd-com-input" type="text" placeholder="Додати коментар…" maxlength="1000">
+          <button class="fd-com-send" type="button">${IC_SEND}</button>
+        </div>
       </div>
     </div>`;
   const listEl = sheet.querySelector('.fd-com-list');
@@ -1148,7 +1154,9 @@ function openComments(postId, focusCommentId = null) {
   // Заголовок міняється («Коментарі» → «7 коментарів») і в 1-2 слова може перенестись
   // на другий рядок — тоді висота шапки інша. Стежимо, а не міряємо один раз.
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(padTop).observe(gripEl);
-  detachKb = attachKeyboardSheet(sheet, comSheet, {                           // клавіатура: тільки після DOM
+  // ⚠️ Першим аргументом — ПРОЗОРИЙ .fd-sheet-vp, а НЕ затемнення. Модуль рухає те,
+  // що йому дали; дай йому затемнення — і воно поїде разом з клавіатурою (баг Вови 25.07).
+  detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {   // клавіатура: тільки після DOM
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
     // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
     // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
