@@ -99,9 +99,30 @@ function freezeBackground(overlay) {
   };
   window.addEventListener('scroll', onPageScroll, { passive: true });
 
+  // ── КОМПЕНСАЦІЯ ЗСУВУ ВИДИМОЇ ОБЛАСТІ ДЛЯ ФОНУ (Вова 26.07, скрін IMG_3644) ──────
+  // 🔑 ЩО ПОКАЗАЛИ ЖИВІ ЧИСЛА: `offTop=29` — iOS зсунув видиму область, щоб показати
+  // поле вводу, і НЕ повернув її назад. Аркуш коментарів це не зачепило (модуль давно
+  // компенсує йому цей самий зсув через `overlay.style.top`), а от шапка поїхала за
+  // верхній край: «шапка ховається за екран, а не на своєму місці».
+  // Тут — та сама компенсація, поширена на фон. Два шари, бо вони прив'язані по-різному:
+  //   `--kb-vshift` → `.app-header` (+ її ::before): `fixed` прибитий до РОЗМІТКИ,
+  //      позицію body він не бачить, тому компенсується власним `top`.
+  //   `body.top`   → `.app-main` і решта потоку: вони діти зафіксованого body, тож
+  //      зсуваються разом з ним.
+  // ⚠️ Свідомо НЕ через `transform`: transform на предку робить його системою координат
+  // для `fixed`-нащадків — це зламало б модалки всередині. `top` такого ефекту не має.
+  const root = document.documentElement;
+  const setShift = (v) => {
+    const px = Math.round(v) || 0;
+    root.style.setProperty('--kb-vshift', px + 'px');
+    bodyStyle.top = `${-pageTop0 + px}px`;
+  };
+
   return {
+    setShift,
     unfreeze: () => {
       window.removeEventListener('scroll', onPageScroll);
+      root.style.removeProperty('--kb-vshift');
       bodyStyle.position = prevBody.position; bodyStyle.top = prevBody.top;
       bodyStyle.left = prevBody.left; bodyStyle.right = prevBody.right;
       bodyStyle.width = prevBody.width;
@@ -231,8 +252,12 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
       overlay.style.height = height + 'px';
       // 2) аркуш — рівно від top0 до низу видимої смуги. Верх лишається на top0.
       sheet.style.height = Math.max(minHeight, height - top0) + 'px';
+      // 3) фон — тим самим числом, що й аркуш. Шапка прибита до розмітки і без цього
+      //    їде за верхній край рівно на `viewShift` (діагноз зі скріна IMG_3644).
+      bg.setShift(viewShift);
       applied = true;
     } else if (applied || !open) {
+      bg.setShift(0);
       overlay.style.top = ''; overlay.style.left = ''; overlay.style.right = '';
       overlay.style.bottom = ''; overlay.style.width = ''; overlay.style.height = '';
       sheet.style.height = '';
@@ -324,7 +349,12 @@ function createDebugPanel() {
       const r = sheet.getBoundingClientRect();
       if (open && !wasOpen) { peakTop = 0; peakView = 0; peakPage = 0; }   // новий підйом — міряємо з чистого
       if (open || wasOpen) {
-        peakTop  = Math.max(peakTop, Math.abs(r.top - (top0 ?? r.top)));
+        // ⚠️ РАХУЄМО В ЕКРАННИХ КООРДИНАТАХ, А НЕ В КООРДИНАТАХ РОЗМІТКИ.
+        // Перша версія цього рядка брала голий `r.top` — і показувала `верх=59` там, де
+        // аркуш насправді стояв нерухомо: `getBoundingClientRect` міряє від розмітки, а
+        // вона сама зсунута на `viewShift`. Число лякало, а дефекту не описувало.
+        // Око бачить `r.top - viewShift`; від нього й рахуємо відхилення від top0.
+        peakTop  = Math.max(peakTop, Math.abs((r.top - (viewShift || 0)) - (top0 ?? r.top)));
         peakView = Math.max(peakView, viewShift || 0);
         peakPage = Math.max(peakPage, pageShift || 0);
       }

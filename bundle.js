@@ -10935,9 +10935,17 @@ ${ev.description || ""}`
         window.scrollTo(0, pageTop0);
     };
     window.addEventListener("scroll", onPageScroll, { passive: true });
+    const root = document.documentElement;
+    const setShift = (v) => {
+      const px = Math.round(v) || 0;
+      root.style.setProperty("--kb-vshift", px + "px");
+      bodyStyle.top = `${-pageTop0 + px}px`;
+    };
     return {
+      setShift,
       unfreeze: () => {
         window.removeEventListener("scroll", onPageScroll);
+        root.style.removeProperty("--kb-vshift");
         bodyStyle.position = prevBody.position;
         bodyStyle.top = prevBody.top;
         bodyStyle.left = prevBody.left;
@@ -11009,8 +11017,10 @@ ${ev.description || ""}`
         overlay.style.width = vv.width + "px";
         overlay.style.height = height + "px";
         sheet.style.height = Math.max(minHeight, height - top0) + "px";
+        bg.setShift(viewShift);
         applied = true;
       } else if (applied || !open) {
+        bg.setShift(0);
         overlay.style.top = "";
         overlay.style.left = "";
         overlay.style.right = "";
@@ -11096,7 +11106,7 @@ ${ev.description || ""}`
           peakPage = 0;
         }
         if (open || wasOpen) {
-          peakTop = Math.max(peakTop, Math.abs(r.top - (top0 ?? r.top)));
+          peakTop = Math.max(peakTop, Math.abs(r.top - (viewShift || 0) - (top0 ?? r.top)));
           peakView = Math.max(peakView, viewShift || 0);
           peakPage = Math.max(peakPage, pageShift || 0);
         }
