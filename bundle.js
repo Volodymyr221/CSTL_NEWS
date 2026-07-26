@@ -249,7 +249,6 @@
     return deleet(String(text || "").toLowerCase()).replace(/1/g, "i").replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
   }
   var PROFANITY_STEMS = [
-    // нецензурні (укр + рос)
     "\u0445\u0443\u0439",
     "\u0445\u0443\u0454",
     "\u0445\u0443\u044F",
@@ -296,33 +295,16 @@
     "\u043F\u043E\u0445\u0443\u0439",
     "\u0434\u0440\u043E\u0447",
     "\u0441\u0446\u0443\u043A",
-    "\u0441\u0446\u0438\u043A\u043B",
     "\u043A\u0443\u0440\u0432",
-    "\u0441\u0432\u043E\u043B\u043E\u0447",
-    "\u0433\u0456\u0432\u043D",
-    "\u0433\u043E\u0432\u043D",
-    "\u0441\u0440\u0430\u043A",
-    "\u0441\u0440\u0430\u043D",
-    "\u0436\u043E\u043F",
-    "\u043C\u0440\u0430\u0437",
     "\u0448\u043B\u044E\u0445",
     "\u0448\u043B\u044C\u043E\u043D\u0434\u0440",
-    "\u043F\u0430\u0434\u043B",
-    "\u0434\u043E\u0432\u0431\u043E",
-    "\u0434\u043E\u043B\u0431\u043E",
-    "\u0441\u043A\u043E\u0442\u0438\u043D",
-    "\u0442\u0432\u0430\u0440\u044E\u043A",
-    "\u043A\u043E\u0437\u043B\u0438\u043D",
-    "\u043B\u043E\u0448\u0430\u0440",
-    // образи
-    "\u0456\u0434\u0456\u043E\u0442",
-    "\u043A\u0440\u0435\u0442\u0438\u043D",
-    "\u043F\u0440\u0438\u0434\u0443\u0440",
-    "\u0456\u043C\u0431\u0435\u0446\u0438\u043B",
-    "\u0434\u0435\u0431\u0456\u043B",
-    "\u0434\u0435\u0431\u0438\u043B",
-    "\u0434\u0438\u0431\u0456\u043B",
-    "\u0434\u0438\u0431\u0438\u043B"
+    // ⚠️ було 'довбо'/'долбо' — блокувало легальне «довбати» («довбати стіну»).
+    // Лишились повні форми, які без матюка не існують.
+    "\u0434\u043E\u0432\u0431\u043E\u0439\u043E\u0431",
+    "\u0434\u043E\u0432\u0431\u043E\u0454\u0431",
+    "\u0434\u043E\u0432\u0431\u0430\u0454\u0431",
+    "\u0434\u043E\u043B\u0431\u043E\u0435\u0431",
+    "\u0434\u043E\u043B\u0431\u043E\u0439\u043E\u0431"
   ];
   var PROFANITY_EXACT = /* @__PURE__ */ new Set([
     "\u0431\u043B\u044F",
@@ -332,36 +314,8 @@
     "\u0441\u0443\u0447\u043A\u0430",
     "\u0441\u0443\u0447\u043A\u0438",
     "\u0445\u0435\u0440",
-    "\u043B\u043E\u0445",
-    "\u043B\u043E\u0445\u0430",
-    "\u043B\u043E\u0445\u0438",
     "\u043C\u0430\u043D\u0434\u0430",
-    "\u043C\u0430\u043D\u0434\u0438",
-    "\u043F\u0435\u0434\u0438\u043A",
-    "\u043F\u0435\u0434\u0438\u043A\u0438",
-    "\u043F\u0435\u0434\u0456\u043A",
-    "\u043F\u0435\u0434\u0456\u043A\u0438",
-    "\u043F\u0454\u0434\u0456\u043A",
-    "\u043F\u0454\u0434\u0438\u043A",
-    "\u043F\u0454\u0434\u0438\u043A\u0438",
-    "\u0433\u043D\u0438\u0434\u0430",
-    "\u0433\u043D\u0438\u0434\u0438",
-    "\u0434\u0443\u0440\u0430\u043A",
-    "\u0434\u0443\u0440\u0435\u043D\u044C",
-    "\u0434\u0443\u0440\u043D\u0438\u0439",
-    "\u0434\u0443\u0440\u043D\u0430",
-    "\u0434\u0443\u0440\u043D\u0435",
-    "\u0434\u0443\u0440\u043D\u0456",
-    "\u0442\u0443\u043F\u0438\u0439",
-    "\u0442\u0443\u043F\u0430",
-    "\u0442\u0443\u043F\u0435",
-    "\u0442\u0443\u043F\u0438\u0446\u044F",
-    "\u0442\u0443\u043F\u0438\u0446\u0456",
-    "\u043A\u043E\u0437\u0435\u043B",
-    "\u043A\u043E\u0437\u043B\u0438",
-    "\u0434\u0430\u0443\u043D",
-    "\u0431\u043E\u0432\u0434\u0443\u0440",
-    "\u0441\u043A\u043E\u0442"
+    "\u043C\u0430\u043D\u0434\u0438"
   ]);
   var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0457\u0431\u0430\u043B", "\u0439\u043E\u0431", "\u0431\u043B\u044F\u0434", "\u0431\u043B\u044F\u0442", "\u043C\u0443\u0434\u0430\u043A", "\u043F\u0456\u0434\u043E\u0440", "\u043F\u0438\u0434\u043E\u0440"];
   var PROFANITY_LATIN = [
@@ -398,18 +352,13 @@
     "gondon",
     "dolboeb",
     "dolbaeb",
-    "mraz",
     "nahui",
     "nahuy",
     "nahyi",
-    "nahren",
     "pohui",
     "pohuy",
     "yoban",
     "yobn",
-    "govno",
-    "gavno",
-    "durak",
     // англ.
     "fuck",
     "fuk",
@@ -417,44 +366,58 @@
     "shit",
     "bullshit",
     "bitch",
-    "biatch",
     "asshole",
     "motherfuck",
     "faggot",
     "nigger",
-    "nigga",
-    "whore",
-    "wanker",
-    "bollock",
-    "dickhead",
-    "jackass",
-    "dumbass",
-    "retard",
-    "bastard",
-    "douche"
+    "nigga"
   ];
   var PROFANITY_LATIN_SQUASH = ["blyat", "pizda", "nahui", "pidoras", "zalupa", "dolboeb"];
+  function spacedRuns(s, letters) {
+    const runs = [];
+    let chain = [];
+    const flush = () => {
+      if (chain.length >= 3)
+        runs.push(chain.join(""));
+      chain = [];
+    };
+    for (const part of s.split(letters)) {
+      if (part.length === 1)
+        chain.push(part);
+      else
+        flush();
+    }
+    flush();
+    return runs;
+  }
+  var PROFANITY_ALLOW = ["\u043F\u0456\u0434\u043E\u0440\u043B\u0438\u043A", "\u0454\u0431\u0440\u0440"];
+  var FILTER_APOSTROPHE = /['’ʼ`´]/g;
   function containsProfanity(text) {
-    const norm = normalizeForFilter(text);
-    const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
+    const norm = normalizeForFilter(text).replace(FILTER_APOSTROPHE, "");
+    const words = norm.split(/[^а-яіїєґa-z]+/).filter(Boolean);
     for (const w of words) {
+      if (PROFANITY_ALLOW.some((a) => w.startsWith(a)))
+        continue;
       if (PROFANITY_EXACT.has(w))
         return true;
       if (PROFANITY_STEMS.some((s) => w.startsWith(s)))
         return true;
     }
-    const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
-    if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
-      return true;
-    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1"));
+    for (const run of spacedRuns(norm, /[^а-яіїєґa-z]+/)) {
+      if (PROFANITY_SQUASH.some((s) => run.includes(s)))
+        return true;
+    }
+    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1")).replace(FILTER_APOSTROPHE, "");
     for (const one of ["i", "l"]) {
       const v = latinBase.replace(/1/g, one);
       for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
         if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
           return true;
       }
-      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s)))
-        return true;
+      for (const run of spacedRuns(v, /[^a-z]+/)) {
+        if (PROFANITY_LATIN_SQUASH.some((s) => run.includes(s)))
+          return true;
+      }
     }
     return false;
   }
