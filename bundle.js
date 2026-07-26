@@ -10919,16 +10919,20 @@ ${ev.description || ""}`
     const apply = () => {
       if (!applied)
         measureTop0();
-      const kb = Math.max(0, h0 - vv.height);
+      const shrink = Math.max(0, h0 - vv.height);
+      const shift = Math.max(0, vv.offsetTop, window.scrollY || 0);
+      const kb = Math.max(shrink, shift);
       const open = focused && kb > 80 && top0 !== null;
       if (open) {
-        overlay.style.top = vv.offsetTop + "px";
+        const top = shift;
+        const height = Math.max(minHeight, h0 - kb);
+        overlay.style.top = top + "px";
         overlay.style.left = vv.offsetLeft + "px";
         overlay.style.right = "auto";
         overlay.style.bottom = "auto";
         overlay.style.width = vv.width + "px";
-        overlay.style.height = vv.height + "px";
-        sheet.style.height = Math.max(minHeight, vv.height - top0) + "px";
+        overlay.style.height = height + "px";
+        sheet.style.height = Math.max(minHeight, height - top0) + "px";
         applied = true;
       } else if (applied || !open) {
         overlay.style.top = "";
@@ -10949,7 +10953,7 @@ ${ev.description || ""}`
         }
       }
       wasOpen = open;
-      dbg?.update({ open, kb, top0, h0, vv, sheet, overlay, bg });
+      dbg?.update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg });
     };
     const schedule = () => {
       cancelAnimationFrame(raf);
@@ -10992,16 +10996,28 @@ ${ev.description || ""}`
     const el = document.createElement("div");
     el.style.cssText = "position:fixed;left:6px;top:6px;z-index:99999;background:rgba(0,0,0,.82);color:#0f0;font:11px/1.35 ui-monospace,Menlo,monospace;padding:6px 8px;border-radius:8px;white-space:pre;pointer-events:none;max-width:92vw";
     document.body.appendChild(el);
+    const place = () => {
+      const vv = window.visualViewport;
+      if (!vv)
+        return;
+      el.style.top = vv.offsetTop + 6 + "px";
+      el.style.left = vv.offsetLeft + 6 + "px";
+    };
+    place();
+    window.visualViewport?.addEventListener("resize", place);
+    window.visualViewport?.addEventListener("scroll", place);
+    window.addEventListener("scroll", place, { passive: true });
     const ver = document.querySelector(".deploy-stamp")?.textContent?.trim() || "(\u0432\u0435\u0440\u0441\u0456\u0457 \u043D\u0435\u043C\u0430)";
     const mode = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone ? "\u0414\u041E\u0414\u0410\u0422\u041E\u041A (standalone)" : "\u0431\u0440\u0430\u0443\u0437\u0435\u0440";
     return {
-      update({ open, kb, top0, h0, vv, sheet, overlay, bg }) {
+      update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg }) {
         const r = sheet.getBoundingClientRect();
         const drift = bg?.drift?.() ?? [];
         const names = bg?.names?.() ?? [];
         const bgLine = names.length ? names.map((n, i) => `${n}:${drift[i] >= 0 ? "+" : ""}${drift[i]}`).join(" ") : "\u0441\u043A\u0440\u043E\u043B\u0435\u0440\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E";
         el.textContent = `${ver}  \xB7  ${mode}
 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0430: ${open ? "\u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0410" : "\u0437\u0430\u043A\u0440\u0438\u0442\u0430"}  kb=${Math.round(kb)}
+\u0441\u043F\u043E\u0441\u0456\u0431: \u0441\u0442\u0438\u0441\u043A=${Math.round(shrink ?? 0)} \u0437\u0441\u0443\u0432=${Math.round(shift ?? 0)}
 \u0424\u041E\u041D \u0437\u0441\u0443\u0432: ${bgLine}
 vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}
 window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}
