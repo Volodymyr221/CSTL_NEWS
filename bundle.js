@@ -11339,7 +11339,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (!comSheetFull)
       el.style.height = "";
   }
-  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false, onDismissStart = null } = {}) {
+  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false, onDismissStart = null, keepVisibleOnDismiss = false } = {}) {
     scroller = scroller || panel;
     const zone = grip || panel;
     let startY = 0, dragging = false, dy = 0, travel = 1;
@@ -11411,7 +11411,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         // геометрію — значить заморозити її ДО початку руху.
         onDismiss: (ms) => {
           onDismissStart?.();
-          back.classList.remove("open");
+          if (!keepVisibleOnDismiss)
+            back.classList.remove("open");
           setTimeout(doClose, ms);
         },
         backdrop: fade
@@ -12284,7 +12285,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     document.body.appendChild(sheet);
     const gripEl = sheet.querySelector(".fd-com-grip");
-    attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true, onDismissStart: () => beginClose() });
+    attachSheetSwipe(sheet, comSheet, listEl, close, {
+      grip: gripEl,
+      twoStage: true,
+      onDismissStart: () => beginClose(),
+      keepVisibleOnDismiss: true
+      // аркуш має бути ВИДНО, поки він з'їжджає донизу
+    });
     const padTop = () => {
       const h = gripEl.offsetHeight;
       if (h)
