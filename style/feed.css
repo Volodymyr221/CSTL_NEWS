@@ -616,6 +616,54 @@
   content: ''; position: absolute; left: -28px; top: 33px; bottom: -16px;
   border-left: 2px solid var(--fd-divider); pointer-events: none;
 }
+
+/* ── ТРЕТІЙ РІВЕНЬ (Вова 26.07, скріни IMG_3607/IMG_3638) ────────────────────────
+   Правила, звірені з Facebook і підтверджені Вовою:
+     1. лінія належить тому, КОГО коментують (є відповіді → є стовбур);
+     2. стовбур починається під аватаром;
+     3. до кожної відповіді — гачок із заокругленим кутом;
+     4. на останній відповіді лінія обривається…
+     4-виняток. …АЛЕ якщо остання відповідь сама має підгілку — стовбур батька
+        ПРОДОВЖУЄТЬСЯ повз неї (Вова: «Продовжується»), огортаючи вкладену розмову;
+     5. кнопка згортання — теж елемент гілки, зі своїм гачком;
+     6. кожен рівень має власну лінію;
+     7. глибше третього рівня не зміщуємо (робить commentThreads у feed.js);
+     8. другий крок відступу МЕНШИЙ за перший — 38px проти 44px.
+
+   ГЕОМЕТРІЯ 3-го рівня (рахована, не на око):
+     аватар відповіді 2-го рівня стоїть на лівому краї своєї гілки → його центр 17px.
+     під-відповідь відсунута на 38px → у її координатах центр стовбура = 17−38 = −21px.
+     гачок: вертикаль −16px (проміжок) → 33px (16 + півaватара 17), там загин управо,
+     ширина 11px → кінець на −10px, тобто рівно 10px не доходить до аватара —
+     той самий зазор, що й на 2-му рівні. */
+.fd-com-replies--sub { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
+.fd-com-branch--sub { position: relative; margin-left: 38px; }
+
+/* Стовбур уздовж відповіді, яка сама має підгілку. Малюємо на РЯДКУ: у нього вільний
+   ::after (::before зайнятий підсвіткою адресата), а обидва псевдоелементи самої
+   гілки вже витрачені на гачок і продовження лінії батька. */
+.fd-com-branch--has-sub > .fd-com-row::after {
+  content: ''; position: absolute; left: 16px; top: 40px; bottom: -16px;
+  border-left: 2px solid var(--fd-divider); pointer-events: none;
+}
+/* Гачок до кожної під-відповіді — та сама форма, менший розмах. */
+.fd-com-branch--sub::before {
+  content: ''; position: absolute; left: -21px; top: -16px; width: 11px; height: 33px;
+  border-left: 2px solid var(--fd-divider);
+  border-bottom: 2px solid var(--fd-divider);
+  border-bottom-left-radius: 8px;
+  pointer-events: none;
+}
+/* Продовження стовбура 2-го рівня між під-відповідями (правило 4 всередині підгілки). */
+.fd-com-branch--sub:not(:last-child)::after {
+  content: ''; position: absolute; left: -21px; top: 33px; bottom: -16px;
+  border-left: 2px solid var(--fd-divider); pointer-events: none;
+}
+/* Виняток із правила 4: остання відповідь із підгілкою НЕ обриває лінію батька. */
+.fd-com-branch--has-sub:last-child::after {
+  content: ''; position: absolute; left: -28px; top: 33px; bottom: 0;
+  border-left: 2px solid var(--fd-divider); pointer-events: none;
+}
 /* Згадка адресата на початку відповіді: «Віктор,» — у кольорі бренду, клікабельна.
    Без підкреслення: у стрічці це не посилання «кудись», а імʼя людини (як у Facebook).
    font-weight як у тексту — виділяє КОЛІР, а не жирність, інакше згадка перетягувала б
