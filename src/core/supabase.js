@@ -736,7 +736,9 @@ export async function netCall(fn, { retries = 2, timeout = WRITE_TIMEOUT } = {})
   if (raw) console.warn('[netCall]', raw);          // технічне — у консоль, не людині
   // transient кажемо назовні: для ВСТАВКИ це різниця між «можна спробувати ще раз»
   // і «база нас відхилила» (див. netInsert нижче).
-  return { ok: false, data: null, error: netErrorText(last), raw, transient: isTransientError(last) };
+  // rawError — сам обʼєкт помилки. Потрібен тим викликам, які дивляться на КОД
+  // (напр. «немає такої колонки», 42703): по тексту це вгадування, по коду — факт.
+  return { ok: false, data: null, error: netErrorText(last), raw, rawError: last, transient: isTransientError(last) };
 }
 
 // ── ВСТАВКА — окремий випадок, повтор тут НЕ безпечний ───────────────────────
@@ -1134,13 +1136,13 @@ export async function fetchPageReactions(userKey) {
 export async function setPageReaction(postId, userKey, on) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   if (!on) {
-    const { error } = await supa.from('page_reactions').delete()
-      .eq('post_id', postId).eq('user_id', userKey);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from('page_reactions').delete()
+      .eq('post_id', postId).eq('user_id', userKey));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  const { error } = await supa.from('page_reactions')
-    .upsert({ post_id: postId, user_id: userKey, emoji: '❤️' }, { onConflict: 'post_id,user_id' });
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_reactions')
+    .upsert({ post_id: postId, user_id: userKey, emoji: '❤️' }, { onConflict: 'post_id,user_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Коментарі постів → Map post_id → comments[] (невидалені, за часом).
@@ -1261,12 +1263,16 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
   const send = (row) => supa.from('page_comments').insert(row).select().single();
-  let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
+  // ⚠️ У `page_comments` клієнтського ключа (`client_tag`) НЕМА — на відміну від чату,
+  // груп і коментарів Дошки. Тобто звіряти нічим, і повтор дав би другий однаковий
+  // коментар під постом. Тому рівно одна спроба + людський текст. Ключ у цій таблиці —
+  // окремий захід (потребує міграції бази, тобто рук Вови).
+  let r = await netInsert(() => send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base));
   // Те саме розгортання без простою, що у fetchPostComments: поки міграції немає,
   // відповідь має надсилатись — просто без згадки. Інакше кнопка «Відповісти» була б
   // зламана в усіх до моменту, поки Вова накатає SQL.
-  if (replyToUid && noSuchColumn(error)) ({ data, error } = await send(base));
-  return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  if (replyToUid && noSuchColumn(r.rawError)) r = await netInsert(() => send(base));
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // Правка свого коментаря. Шлемо ЛИШЕ текст: позначку «змінено» (edited_at) ставить
@@ -1275,17 +1281,17 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
 // антиспам: до 25.07 редагування було обхідним шляхом для матюків.
 export async function editPageComment(commentId, text) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.from('page_comments')
-    .update({ text }).eq('id', commentId).select(`${COMMENT_COLS}, reply_to_uid`).single();
-  return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  const r = await netCall(() => supa.from('page_comments')
+    .update({ text }).eq('id', commentId).select(`${COMMENT_COLS}, reply_to_uid`).single());
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // Мʼяке видалення свого коментаря (RLS pcom update — автор або адмін сторінки).
 export async function deletePageComment(commentId) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { error } = await supa.from('page_comments')
-    .update({ deleted_at: new Date().toISOString() }).eq('id', commentId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_comments')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', commentId));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Лайки коментарів → Map comment_id → { count, my }. userKey = uid (тільки авторизовані).
@@ -1307,13 +1313,13 @@ export async function fetchPageCommentReactions(userKey) {
 export async function setPageCommentReaction(commentId, uid, on) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   if (!on) {
-    const { error } = await supa.from('page_comment_reactions').delete()
-      .eq('comment_id', commentId).eq('user_id', uid);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from('page_comment_reactions').delete()
+      .eq('comment_id', commentId).eq('user_id', uid));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  const { error } = await supa.from('page_comment_reactions')
-    .upsert({ comment_id: commentId, user_id: uid }, { onConflict: 'comment_id,user_id' });
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_comment_reactions')
+    .upsert({ comment_id: commentId, user_id: uid }, { onConflict: 'comment_id,user_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Жива підписка на лайки коментарів (лічильник оновлюється у всіх наживо).
@@ -1356,7 +1362,10 @@ export async function createPagePost(pageId, uid, text, imageUrls = [], event = 
     event_time:     event.event_time     || null,
     event_location: event.event_location || null,
   };
-  const r = await netCall(() => supa.from('page_posts').insert(row).select(POST_COLS).single());
+  // ⚠️ Було `netCall` (з повтором) — а це ВСТАВКА без клієнтського ключа. Тобто при
+  // обриві на зворотному шляху міг з'явитись ДРУГИЙ пост на сторінці. `netInsert` без
+  // `verify` робить рівно одну спробу і дає людський текст.
+  const r = await netInsert(() => supa.from('page_posts').insert(row).select(POST_COLS).single());
   return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
 }
 
@@ -1393,13 +1402,13 @@ export async function fetchMySubscriptions() {
 export async function setPageSubscription(pageId, uid, on) {
   if (!supa) return { ok: false };
   if (!on) {
-    const { error } = await supa.from('page_subscriptions').delete()
-      .eq('page_id', pageId).eq('uid', uid);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from('page_subscriptions').delete()
+      .eq('page_id', pageId).eq('uid', uid));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  const { error } = await supa.from('page_subscriptions')
-    .upsert({ page_id: pageId, uid }, { onConflict: 'page_id,uid' });
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_subscriptions')
+    .upsert({ page_id: pageId, uid }, { onConflict: 'page_id,uid' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Push підписникам сторінки про новий пост (Edge Function send-page-push).
@@ -1444,15 +1453,14 @@ export async function fetchPageModerators(pageId) {
 //   'error'     — технічний збій (деталі в консолі).
 export async function addPageModerator(pageId, email) {
   if (!supa) return 'error';
-  const { data, error } = await supa.rpc('add_page_moderator', { p_page_id: pageId, p_email: email });
-  if (error) { console.warn('[supabase] add_page_moderator:', error.message); return 'error'; }
-  return data || 'error';
+  // Встановлення стану — повтор безпечний: той самий модератор двічі не додасться.
+  const r = await netCall(() => supa.rpc('add_page_moderator', { p_page_id: pageId, p_email: email }));
+  return r.ok ? (r.data || 'error') : 'error';
 }
 
 // Прибрати зі сторінки. 'ok' | 'owner_protected' (власника прибрати не можна) | 'error'.
 export async function removePageModerator(pageId, uid) {
   if (!supa) return 'error';
-  const { data, error } = await supa.rpc('remove_page_moderator', { p_page_id: pageId, p_uid: uid });
-  if (error) { console.warn('[supabase] remove_page_moderator:', error.message); return 'error'; }
-  return data || 'error';
+  const r = await netCall(() => supa.rpc('remove_page_moderator', { p_page_id: pageId, p_uid: uid }));
+  return r.ok ? (r.data || 'error') : 'error';
 }
