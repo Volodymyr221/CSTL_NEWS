@@ -18,7 +18,7 @@ import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS, ALL_ICON } from 
 import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, refreshUnreadBadge } from './board-chat.js';
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
-  fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady,
+  fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
   fetchAllComments,
   fetchAllReactions, getAnonId,
   fetchSavedPostIds, hydrateNames, nameUid, liveName,
@@ -117,6 +117,10 @@ const MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColo
 // ── Стан (зберігається в межах сесії) ────────────────────────────────────────
 
 let allPosts       = [];   // [{id, type, ...}]
+// Жива підписка помітила зміну оголошень, але перемальовувати НЕ час (людина гортає
+// список або взагалі на іншій вкладці). Перемалюємо, коли це безпечно — при вході на
+// Дошку або коли людина повернеться вгору списку.
+let _boardStale    = false;
 let allAnnouncements = []; // офіційні з announcements
 let activeType     = 'board';
 let activeCategory = 'all';
@@ -1252,6 +1256,32 @@ export function initBoard() {
   // Зміна статусу власних постів («Мої оголошення»: завершити/повернути/видалити)
   // → одразу перезавантажуємо дошку, щоб зміна була видима без перезапуску застосунку.
   window.addEventListener('cstl-posts-changed', () => renderBoard());
+
+  // ── ЖИВА СИНХРОНІЗАЦІЯ ОГОЛОШЕНЬ (Вова 26.07) ──────────────────────────────────
+  // Досі підписки на `posts` не було: нове оголошення сусіда зʼявлялось лише після
+  // перезаходу на вкладку. `cstl-posts-changed` вище — подія ОДНОГО пристрою (мої власні
+  // дії), вона нікуди не летить.
+  //
+  // ⚠️ Чому не перемальовуємо одразу на кожну подію: `renderBoard()` перезавантажує і
+  // перемальовує весь список. Якщо людина саме гортає оголошення — список стрибне під
+  // пальцем (та сама сім'я, що HOT_RULES №10). Тому:
+  //   • Дошка не активна → лише позначка «дані змінились», перемалюємо при вході;
+  //   • активна і людина ВГОРІ списку (нічого не читає всередині) → одразу;
+  //   • активна, але прогорнута → чекаємо, поки повернеться вгору або вийде з вкладки.
+  if (isSupabaseReady()) {
+    subscribePosts(() => {
+      const main = document.querySelector('.app-main');
+      const onBoard = main?.dataset.tab === 'board';
+      if (onBoard && (main?.scrollTop || 0) < 120) renderBoard();
+      else _boardStale = true;
+    });
+    // Повернення вгору — момент, коли перемалювати безпечно.
+    document.querySelector('.app-main')?.addEventListener('scroll', () => {
+      const main = document.querySelector('.app-main');
+      if (!_boardStale || main?.dataset.tab !== 'board') return;
+      if ((main.scrollTop || 0) < 120) { _boardStale = false; renderBoard(); }
+    }, { passive: true });
+  }
   // Обговорення — справжня сторінка: рендеримо її контент при ВХОДІ на вкладку
   // і відновлюємо Дошку при ВИХОДІ (board.js поки рендерить обидві; розділ — Потік 2).
   window.addEventListener('cstl-tab-changed', () => {
@@ -1263,6 +1293,9 @@ export function initBoard() {
       activeLocation = COMMUNITY_ALL;
       renderAll();
     }
+    // Поки нас не було, хтось подав/змінив оголошення (жива підписка це помітила) —
+    // вхід на вкладку і є безпечний момент показати свіже.
+    if (tab === 'board' && _boardStale) { _boardStale = false; renderBoard(); }
     // Відступ під шапку: при ВХОДІ на Дошку вкладка щойно стала видимою, тому
     // тепер .bd-controls має реальну висоту (на старті вона була схована → offsetHeight=0
     // → вимір не спрацьовував). Міряємо тут. rAF — дочекатись layout після показу.

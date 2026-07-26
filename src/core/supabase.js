@@ -1016,6 +1016,21 @@ export function subscribeReactions(onChange) {
   return () => supa.removeChannel(ch);
 }
 
+// ДОШКА: жива підписка на самі оголошення (`posts`). Досі її не було — нове оголошення
+// зʼявлялось у інших лише після перезаходу на вкладку.
+// ⚠️ Тут проходять УСІ зміни таблиці, включно з `pending` (оголошення на модерації) і
+// `type='chat'` (обговорення). Що показувати — вирішує Дошка, а не підписка: вона лише
+// каже «дані змінились». Інакше правила видимості жили б у двох місцях.
+export function subscribePosts(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('board-posts-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'posts' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 export function subscribeComments(onChange) {
   if (!supa) return () => {};
   const ch = supa.channel('comments-watch')

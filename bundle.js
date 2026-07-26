@@ -1286,6 +1286,17 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function subscribePosts(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("board-posts-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "posts" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   function subscribeComments(onChange) {
     if (!supa)
       return () => {
@@ -5528,6 +5539,7 @@
   var EDIT_ICON_SVG2 = ICONS.pencil;
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var allPosts = [];
+  var _boardStale = false;
   var allAnnouncements = [];
   var activeType = "board";
   var activeCategory = "all";
@@ -6537,6 +6549,25 @@
         openAdModalStandalone(p);
     });
     window.addEventListener("cstl-posts-changed", () => renderBoard());
+    if (isSupabaseReady()) {
+      subscribePosts(() => {
+        const main = document.querySelector(".app-main");
+        const onBoard = main?.dataset.tab === "board";
+        if (onBoard && (main?.scrollTop || 0) < 120)
+          renderBoard();
+        else
+          _boardStale = true;
+      });
+      document.querySelector(".app-main")?.addEventListener("scroll", () => {
+        const main = document.querySelector(".app-main");
+        if (!_boardStale || main?.dataset.tab !== "board")
+          return;
+        if ((main.scrollTop || 0) < 120) {
+          _boardStale = false;
+          renderBoard();
+        }
+      }, { passive: true });
+    }
     window.addEventListener("cstl-tab-changed", () => {
       const tab = document.querySelector(".app-main")?.dataset.tab;
       if (tab === "discussions" && !discOpen)
@@ -6546,6 +6577,10 @@
       if (tab === "board" && activeLocation !== COMMUNITY_ALL) {
         activeLocation = COMMUNITY_ALL;
         renderAll();
+      }
+      if (tab === "board" && _boardStale) {
+        _boardStale = false;
+        renderBoard();
       }
       if (tab === "board")
         requestAnimationFrame(() => {
@@ -11483,10 +11518,15 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       pill = document.createElement("button");
       pill.type = "button";
       pill.className = "fd-newposts";
-      pill.addEventListener("click", () => {
-        posts = [...pendingPosts, ...posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      pill.addEventListener("click", async () => {
+        const \u043F\u0430\u0447\u043A\u0430 = pendingPosts;
         pendingPosts = [];
         renderNewPostsPill();
+        if (\u043F\u0430\u0447\u043A\u0430.some((p) => !p.pages || !p.pages.name)) {
+          await loadData2();
+        } else {
+          posts = [...\u043F\u0430\u0447\u043A\u0430, ...posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
         renderFeed();
         document.getElementById("feed-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
       });

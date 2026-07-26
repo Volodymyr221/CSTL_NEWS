@@ -473,11 +473,19 @@ function renderNewPostsPill() {
     pill = document.createElement('button');
     pill.type = 'button';
     pill.className = 'fd-newposts';
-    pill.addEventListener('click', () => {
-      posts = [...pendingPosts, ...posts]
-        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
-      pendingPosts = [];
+    pill.addEventListener('click', async () => {
+      // Серед накопиченого є пост зі СТОРІНКИ, якої ми не знаємо (її створили щойно) →
+      // картка вийшла б без назви й аватара. У такому разі не зшиваємо локально, а
+      // перечитуємо все: сторінки приїдуть разом із постами.
+      const пачка = pendingPosts;            // спершу забираємо накопичене, ТОДІ чистимо —
+      pendingPosts = [];                     // інакше пости зникли б, не доїхавши в список
       renderNewPostsPill();
+      if (пачка.some(p => !p.pages || !p.pages.name)) {
+        await loadData();                    // сторінка невідома → перечитуємо все
+      } else {
+        posts = [...пачка, ...posts]
+          .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      }
       renderFeed();
       document.getElementById('feed-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
