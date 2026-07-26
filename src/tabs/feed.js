@@ -308,7 +308,18 @@ function setComSheetFull(on, { animate = true } = {}) {
 // в момент, коли аркуш рушив униз, ще до першого кадру анімації. Потрібен там, де на
 // елементі може паралельно йти ІНША анімація: див. лист коментарів (заморожує висоту).
 // Решта аркушів його не передають — для них нічого не змінюється.
-function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false, onDismissStart = null } = {}) {
+// keepVisibleOnDismiss — не гасити контейнер, поки аркуш їде вниз.
+// 🔑 НАВІЩО (Вова 26.07: «пропадає, не видно що вона згортається донизу»):
+// `.fd-sheet-back` має `opacity: 0` + `transition: opacity .2s`, а клас `.open` вмикає
+// `opacity: 1`. Тобто звичне `back.classList.remove('open')` на початку закриття гасить
+// УВЕСЬ контейнер — разом із самим аркушем усередині. Аркуш при цьому справді їде вниз,
+// але стає невидимим раніше, ніж доїде: очима це читається як «просто зникло».
+// Затемнення й без цього класу гасне правильно — цим займається `fade.settle()`
+// (режим 'bg': міняє АЛЬФУ КОЛЬОРУ фону, а не `opacity`, саме щоб не чіпати аркуш).
+// Тому тут ми лише прибираємо ДРУГИЙ, зайвий механізм згасання.
+// ⚠️ Опція, а не зміна поведінки за замовчуванням: решта 4 листів «Стрічки» її не
+// передають і працюють рівно як раніше (HOT_RULES №9).
+function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false, onDismissStart = null, keepVisibleOnDismiss = false } = {}) {
   scroller = scroller || panel;
   const zone = grip || panel;          // де жест ПОЧИНАЄТЬСЯ і живуть слухачі
   let startY = 0, dragging = false, dy = 0, travel = 1;
@@ -379,7 +390,12 @@ function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStag
       // 🔑 onDismissStart — ПЕРШИМ, до всього іншого. `finishSwipe` уже поставив
       // `translateY(100%)`, але жодного кадру ще не намальовано, тож заморозити тут
       // геометрію — значить заморозити її ДО початку руху.
-      onDismiss: (ms) => { onDismissStart?.(); back.classList.remove('open'); setTimeout(doClose, ms); },
+      onDismiss: (ms) => {
+        onDismissStart?.();
+        // Гасимо контейнер лише там, де це не ховає сам аркуш (див. keepVisibleOnDismiss).
+        if (!keepVisibleOnDismiss) back.classList.remove('open');
+        setTimeout(doClose, ms);
+      },
       backdrop: fade,
     });
     dy = 0;
@@ -1512,7 +1528,11 @@ function openComments(postId, focusCommentId = null) {
   const gripEl = sheet.querySelector('.fd-com-grip');
   // twoStage — три рівні жесту (розширений → початкова висота → закриття). Лише тут:
   // інші листи не розширюються, тож проміжної станції в них немає.
-  attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true, onDismissStart: () => beginClose() });
+  attachSheetSwipe(sheet, comSheet, listEl, close, {
+    grip: gripEl, twoStage: true,
+    onDismissStart: () => beginClose(),
+    keepVisibleOnDismiss: true,   // аркуш має бути ВИДНО, поки він з'їжджає донизу
+  });
   // Шапка лежить ПОВЕРХ списку (щоб коментарі їхали під неї), тож у списку треба
   // звільнити під неї місце зверху. Висоту саме ВИМІРЮЄМО, а не прописуємо числом:
   // вона залежить від шрифту й міжрядкового інтервалу пристрою, і будь-яка формула
