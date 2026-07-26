@@ -12191,6 +12191,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast(commentErrorText(res.error), 4e3, "error");
       }
     };
+    sendBtn.addEventListener("pointerdown", (e) => e.preventDefault());
     sendBtn.addEventListener("click", send);
     input.addEventListener("keydown", (e) => {
       if (e.key === "Enter")
