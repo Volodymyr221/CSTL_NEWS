@@ -11659,19 +11659,21 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const myUid = currentUserId();
     const myAva = avatarHtml(cachedAvatar(myUid), cachedName(myUid) || "\u042F", "fd-com-ava-img");
     const sheet = document.createElement("div");
-    sheet.className = "fd-sheet-back";
+    sheet.className = "fd-sheet-back fd-sheet-back--kbsafe";
     sheet.innerHTML = `
-    <div class="fd-sheet fd-com-sheet">
-      <div class="fd-com-grip">
-        <div class="fd-sheet-handle"></div>
-        <div class="fd-sheet-title fd-com-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
-      </div>
-      <div class="fd-com-list"></div>
-      <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C">${IC_X}</button></div>
-      <div class="fd-com-compose">
-        <span class="fd-com-ava fd-com-myava">${myAva}</span>
-        <input class="fd-com-input" type="text" placeholder="\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
-        <button class="fd-com-send" type="button">${IC_SEND}</button>
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet fd-com-sheet">
+        <div class="fd-com-grip">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title fd-com-title">\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456</div>
+        </div>
+        <div class="fd-com-list"></div>
+        <div class="fd-com-replybar" hidden><span class="fd-com-replyto"></span><button class="fd-com-replyx" type="button" aria-label="\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u044C">${IC_X}</button></div>
+        <div class="fd-com-compose">
+          <span class="fd-com-ava fd-com-myava">${myAva}</span>
+          <input class="fd-com-input" type="text" placeholder="\u0414\u043E\u0434\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u2026" maxlength="1000">
+          <button class="fd-com-send" type="button">${IC_SEND}</button>
+        </div>
       </div>
     </div>`;
     const listEl = sheet.querySelector(".fd-com-list");
@@ -11955,7 +11957,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     padTop();
     if (typeof ResizeObserver !== "undefined")
       new ResizeObserver(padTop).observe(gripEl);
-    detachKb = attachKeyboardSheet(sheet, comSheet, {
+    detachKb = attachKeyboardSheet(sheet.querySelector(".fd-sheet-vp"), comSheet, {
       // клавіатура: тільки після DOM
       input: kbInput,
       minHeight: 180,
