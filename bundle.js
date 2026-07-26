@@ -11031,7 +11031,21 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
   var loaded = false;
-  function relTime(iso) {
+  var MONTHS_GEN2 = [
+    "\u0421\u0406\u0427\u041D\u042F",
+    "\u041B\u042E\u0422\u041E\u0413\u041E",
+    "\u0411\u0415\u0420\u0415\u0417\u041D\u042F",
+    "\u041A\u0412\u0406\u0422\u041D\u042F",
+    "\u0422\u0420\u0410\u0412\u041D\u042F",
+    "\u0427\u0415\u0420\u0412\u041D\u042F",
+    "\u041B\u0418\u041F\u041D\u042F",
+    "\u0421\u0415\u0420\u041F\u041D\u042F",
+    "\u0412\u0415\u0420\u0415\u0421\u041D\u042F",
+    "\u0416\u041E\u0412\u0422\u041D\u042F",
+    "\u041B\u0418\u0421\u0422\u041E\u041F\u0410\u0414\u0410",
+    "\u0413\u0420\u0423\u0414\u041D\u042F"
+  ];
+  function relTime(iso, { longDate = false } = {}) {
     const t = new Date(iso).getTime();
     if (!Number.isFinite(t))
       return "";
@@ -11045,7 +11059,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (diff < 172800)
       return "\u0432\u0447\u043E\u0440\u0430";
     const d = new Date(t);
-    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!longDate)
+      return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const base = `${d.getDate()} ${MONTHS_GEN2[d.getMonth()]}`;
+    return d.getFullYear() === (/* @__PURE__ */ new Date()).getFullYear() ? base : `${base} ${d.getFullYear()}`;
   }
   function avatarHtml(url, name, cls) {
     const letter = escapeHtml((name || "?").trim().charAt(0).toUpperCase() || "?");
@@ -11263,7 +11280,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
-          <span class="fd-time">${relTime(post.created_at)}</span>
+          <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="\u041C\u0435\u043D\u044E \u043F\u043E\u0441\u0442\u0430">${IC_DOTS}</button>` : ""}
       </header>

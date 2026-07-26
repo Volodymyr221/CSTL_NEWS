@@ -63,8 +63,18 @@ let loaded = false;
 // Ключ реакції = uid залогіненого. Лайк лише авторизованим (рішення Вови 22.07:
 // анонімна реакція ламає ідентифікацію і статистику). Гість → null (жодна не «моя»).
 
-// Відносний час: «щойно», «5 хв», «2 год», «вчора», «12.07».
-function relTime(iso) {
+// Місяці в РОДОВОМУ відмінку — «23 ЛИПНЯ», а не «23 ЛИПЕНЬ».
+// ВЕЛИКИМИ літерами — рівно той формат, який назвав Вова 26.07.
+const MONTHS_GEN = ['СІЧНЯ', 'ЛЮТОГО', 'БЕРЕЗНЯ', 'КВІТНЯ', 'ТРАВНЯ', 'ЧЕРВНЯ',
+  'ЛИПНЯ', 'СЕРПНЯ', 'ВЕРЕСНЯ', 'ЖОВТНЯ', 'ЛИСТОПАДА', 'ГРУДНЯ'];
+
+// Відносний час: «щойно», «5 хв», «2 год», «вчора», далі — дата.
+// longDate керує ЛИШЕ останньою сходинкою:
+//   false (коментарі) → «12.07» — компактно, бо час стоїть в одному рядку з іменем;
+//   true  (дата публікації поста) → «23 ЛИПНЯ» (Вова 26.07).
+// Один двигун із прапорцем, а не дві схожі функції — інакше вони розійдуться,
+// як уже розходились клієнтський і серверний антиспам.
+function relTime(iso, { longDate = false } = {}) {
   const t = new Date(iso).getTime();
   if (!Number.isFinite(t)) return '';
   const diff = Math.floor((Date.now() - t) / 1000);
@@ -73,7 +83,11 @@ function relTime(iso) {
   if (diff < 86400) return `${Math.floor(diff / 3600)} год`;
   if (diff < 172800) return 'вчора';
   const d = new Date(t);
-  return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+  if (!longDate) return `${String(d.getDate()).padStart(2, '0')}.${String(d.getMonth() + 1).padStart(2, '0')}`;
+  // День без нуля спереду: «3 ЛИПНЯ» читається краще за «03 ЛИПНЯ».
+  const base = `${d.getDate()} ${MONTHS_GEN[d.getMonth()]}`;
+  // Торішнє — з роком: інакше через рік «23 ЛИПНЯ» вказувало б на зовсім інший пост.
+  return d.getFullYear() === new Date().getFullYear() ? base : `${base} ${d.getFullYear()}`;
 }
 
 // Аватар-кружечок: фото або кольорова заглушка з першою літерою.
@@ -318,7 +332,7 @@ function postCardHtml(post) {
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, 'fd-ava')}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
-          <span class="fd-time">${relTime(post.created_at)}</span>
+          <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
