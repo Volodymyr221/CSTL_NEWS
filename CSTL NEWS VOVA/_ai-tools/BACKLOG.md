@@ -332,7 +332,7 @@ Supabase pg_cron кожні 5 хв перевіряє рейси
 
 | Задача | Коли зроблено | Доказ |
 |--------|---------------|-------|
-| **Кабінет редактора для Алли** (6 тех-питань + схема + код) | до 26.07 | `editor_users` з правами `can_create`/`can_publish`/`can_events` (`supabase_editor_cabinet.sql`), `cms_articles`, інвайти, планування, конвеєр `sync_cms.py` + `cms-sync.yml` (кожні 5 хв). = **Н-4** |
+| **Кабінет редактора** (6 тех-питань + схема + код) | до 26.07 | `editor_users` з правами `can_create`/`can_publish`/`can_events` (`supabase_editor_cabinet.sql`), `cms_articles`, інвайти, планування, конвеєр `sync_cms.py` + `cms-sync.yml` (кожні 5 хв). = **Н-4** |
 | **Захід 2 — репутація + автопублікація** | 08.07, PR #267 | `profiles.approved_count`/`trusted`, тригери, RPC `submit_board_post`. = **Д-1** |
 | **Порядок блоків Громади** | до 26.07 | `community.js:222-276` — Табло новин → Дошка → Подія → Автобуси → Погода → Контакти |
 | **Реальні номери місцевих контактів** | до 26.07 | `data/community.json`: амбулаторія, сільрада, ЦНАП, Волиньобленерго + групи `hero`/`emergency`/`local`. = **Г-10** |
