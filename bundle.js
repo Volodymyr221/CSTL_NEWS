@@ -11577,7 +11577,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var replyTarget = null;
   var editTarget = null;
   var expandedThreads = /* @__PURE__ */ new Set();
-  var REPLIES_VISIBLE = 2;
+  var REPLIES_VISIBLE = 1;
   function pluralComments(n) {
     const d = n % 10, h = n % 100;
     if (d === 1 && h !== 11)
