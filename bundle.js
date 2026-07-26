@@ -1066,6 +1066,8 @@
       return "\u0426\u0435 \u0432\u0436\u0435 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E";
     if (/JWT|token|session/i.test(msg))
       return "\u0421\u0435\u0430\u043D\u0441 \u0437\u0430\u0441\u0442\u0430\u0440\u0456\u0432 \u2014 \u0443\u0432\u0456\u0439\u0434\u0438 \u0437\u043D\u043E\u0432\u0443";
+    if (/parent_deleted/i.test(msg))
+      return "\u0426\u0435\u0439 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0443\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E";
     if (/нецензурн|заборонен/i.test(msg))
       return "\u{1F6AB} \u0422\u0435\u043A\u0441\u0442 \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430";
     if (/повтори символів|беззмістовн/i.test(msg))
@@ -1454,7 +1456,10 @@
     let r = await netInsert(() => send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base));
     if (replyToUid && noSuchColumn(r.rawError))
       r = await netInsert(() => send(base));
-    return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
+    if (r.ok)
+      return { ok: true, comment: r.data };
+    const gone = /parent_deleted/i.test(String(r.rawError?.message || r.raw || ""));
+    return { ok: false, error: r.error, gone };
   }
   async function editPageComment(commentId, text) {
     if (!supa)
@@ -12097,6 +12102,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         clearReply();
         input.focus();
         requestAnimationFrame(() => revealRow(res.comment?.id));
+      } else if (res.gone) {
+        showToast("\u0426\u0435\u0439 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0443\u0436\u0435 \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E", 3500, "error");
+        clearReply();
+        const ok = await loadComments(postId);
+        if (ok !== false)
+          renderCommentSheet();
       } else {
         showToast(commentErrorText(res.error), 4e3, "error");
       }

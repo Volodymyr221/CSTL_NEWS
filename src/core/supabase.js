@@ -711,6 +711,11 @@ export function netErrorText(err) {
   if (/permission|denied|policy|row-level|RLS/i.test(msg)) return 'Недостатньо прав для цієї дії';
   if (/duplicate|unique/i.test(msg))      return 'Це вже збережено';
   if (/JWT|token|session/i.test(msg))     return 'Сеанс застарів — увійди знову';
+  // Відповідь під коментар, який тим часом видалили. База відхиляє це тригером
+  // `page_comments_antispam` (міграція `forbid_reply_under_deleted_parent`, 26.07) —
+  // саме так народжувався «сирота»: живий коментар, якого екран показати не може,
+  // через що картка писала «2 коментарі», а в листі був один.
+  if (/parent_deleted/i.test(msg))        return 'Цей коментар уже видалено';
   if (/нецензурн|заборонен/i.test(msg))   return '🚫 Текст містить заборонені слова';
   // Доменні відповіді серверного антиспаму (тригери `*_antispam` у базі). Були
   // окремим словником у `feed.js` — через це той самий збій мав два різні тексти,
@@ -1287,7 +1292,12 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
   // відповідь має надсилатись — просто без згадки. Інакше кнопка «Відповісти» була б
   // зламана в усіх до моменту, поки Вова накатає SQL.
   if (replyToUid && noSuchColumn(r.rawError)) r = await netInsert(() => send(base));
-  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
+  if (r.ok) return { ok: true, comment: r.data };
+  // `gone` — окремий випадок, а не просто помилка: батьківський коментар зник, поки
+  // людина писала відповідь. Викликачу цього замало знати текстом — йому треба
+  // перемалювати гілку, інакше людина далі дивиться на коментар, якого вже немає.
+  const gone = /parent_deleted/i.test(String(r.rawError?.message || r.raw || ''));
+  return { ok: false, error: r.error, gone };
 }
 
 // Правка свого коментаря. Шлемо ЛИШЕ текст: позначку «змінено» (edited_at) ставить
