@@ -10995,11 +10995,12 @@ ${ev.description || ""}`
       if (!applied)
         measureTop0();
       const shrink = Math.max(0, h0 - vv.height);
-      const shift = Math.max(0, vv.offsetTop, window.scrollY || 0);
-      const kb = Math.max(shrink, shift);
+      const viewShift = Math.max(0, vv.offsetTop);
+      const pageShift = Math.max(0, window.scrollY || 0);
+      const kb = Math.max(shrink, viewShift, pageShift);
       const open = focused && kb > 80 && top0 !== null;
       if (open) {
-        const top = shift;
+        const top = viewShift;
         const height = Math.max(minHeight, h0 - kb);
         overlay.style.top = top + "px";
         overlay.style.left = vv.offsetLeft + "px";
@@ -11028,11 +11029,12 @@ ${ev.description || ""}`
         }
       }
       wasOpen = open;
-      dbg?.update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg });
+      dbg?.update({ open, kb, shrink, viewShift, pageShift, top0, h0, vv, sheet, overlay, bg });
     };
     const schedule = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(apply);
+      raf = 0;
+      apply();
     };
     const onFocus = () => {
       focused = true;
@@ -11084,15 +11086,28 @@ ${ev.description || ""}`
     window.addEventListener("scroll", place, { passive: true });
     const ver = document.querySelector(".deploy-stamp")?.textContent?.trim() || "(\u0432\u0435\u0440\u0441\u0456\u0457 \u043D\u0435\u043C\u0430)";
     const mode = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone ? "\u0414\u041E\u0414\u0410\u0422\u041E\u041A (standalone)" : "\u0431\u0440\u0430\u0443\u0437\u0435\u0440";
+    let peakTop = 0, peakView = 0, peakPage = 0, wasOpen = false;
     return {
-      update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg }) {
+      update({ open, kb, shrink, viewShift, pageShift, top0, h0, vv, sheet, overlay, bg }) {
         const r = sheet.getBoundingClientRect();
+        if (open && !wasOpen) {
+          peakTop = 0;
+          peakView = 0;
+          peakPage = 0;
+        }
+        if (open || wasOpen) {
+          peakTop = Math.max(peakTop, Math.abs(r.top - (top0 ?? r.top)));
+          peakView = Math.max(peakView, viewShift || 0);
+          peakPage = Math.max(peakPage, pageShift || 0);
+        }
+        wasOpen = open;
         const drift = bg?.drift?.() ?? [];
         const names = bg?.names?.() ?? [];
         const bgLine = names.length ? names.map((n, i) => `${n}:${drift[i] >= 0 ? "+" : ""}${drift[i]}`).join(" ") : "\u0441\u043A\u0440\u043E\u043B\u0435\u0440\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E";
         el.textContent = `${ver}  \xB7  ${mode}
 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0430: ${open ? "\u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0410" : "\u0437\u0430\u043A\u0440\u0438\u0442\u0430"}  kb=${Math.round(kb)}
-\u0441\u043F\u043E\u0441\u0456\u0431: \u0441\u0442\u0438\u0441\u043A=${Math.round(shrink ?? 0)} \u0437\u0441\u0443\u0432=${Math.round(shift ?? 0)}
+\u0441\u043F\u043E\u0441\u0456\u0431: \u0441\u0442\u0438\u0441\u043A=${Math.round(shrink ?? 0)} \u0437\u0441\u0443\u0432=${Math.round(viewShift ?? 0)} \u0441\u0442\u043E\u0440=${Math.round(pageShift ?? 0)}
+\u041F\u0406\u041A \u0437\u0430 \u043F\u0456\u0434\u0439\u043E\u043C: \u0432\u0435\u0440\u0445=${Math.round(peakTop)} \u0437\u0441\u0443\u0432=${Math.round(peakView)} \u0441\u0442\u043E\u0440=${Math.round(peakPage)}
 \u0424\u041E\u041D \u0437\u0441\u0443\u0432: ${bgLine}
 vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}
 window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}

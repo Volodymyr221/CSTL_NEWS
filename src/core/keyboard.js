@@ -201,16 +201,26 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     // з аркушем, шапкою листа і навіть панеллю діагностики. Це пояснює геть усе, що Вова
     // бачив: «все ховається за екран», зниклий верх листа і зниклу панель.
     const shrink = Math.max(0, h0 - vv.height);              // спосіб А
-    const shift  = Math.max(0, vv.offsetTop, window.scrollY || 0);  // спосіб Б
-    const kb = Math.max(shrink, shift);      // скільки місця з'їла клавіатура, як не міряй
+    // 🔑 ДВІ РІЗНІ РОЛІ, ЯКІ РАНІШЕ ЖИЛИ В ОДНІЙ ЗМІННІЙ `shift` (26.07, третій захід).
+    // Вони НЕ взаємозамінні, і саме змішування давало фантомний стрибок аркуша:
+    //   viewShift — НАСКІЛЬКИ iOS зсунув ВИДИМУ область. Це реальність, яку видно очима,
+    //     і саме її треба компенсувати позицією оверлея.
+    //   pageShift — скрол ДОКУМЕНТА. Його ми самі активно скасовуємо (`onPageScroll`
+    //     повертає сторінку назад), тобто це стан, який живе один кадр і зникає.
+    // Ставити оверлей за `pageShift` означало компенсувати зсув, якого через кадр уже
+    // нема, — аркуш їхав униз і повертався. Тому: детект бере обидва (клавіатуру треба
+    // впізнати хай як iOS звільнив місце), а ПОЗИЦІЮВАННЯ — лише реальний зсув.
+    const viewShift = Math.max(0, vv.offsetTop);
+    const pageShift = Math.max(0, window.scrollY || 0);
+    const kb = Math.max(shrink, viewShift, pageShift);  // скільки місця з'їла клавіатура, як не міряй
     // «Відкрита» — фокус у полі І помітна реакція будь-яким зі способів.
     // Гейт фокуса лишається: vv.height буває «застряглим» після закриття клавіатури.
     const open = focused && kb > 80 && top0 !== null;
     if (open) {
-      // Видима смуга, у якій нам можна малювати: від `shift` згори, висотою `h0 - kb`.
-      // У способі А це те саме, що було (shift = vv.offsetTop, h0 - kb = vv.height) —
+      // Видима смуга, у якій нам можна малювати: від `viewShift` згори, висотою `h0 - kb`.
+      // У способі А це те саме, що було (viewShift = vv.offsetTop, h0 - kb = vv.height) —
       // тобто перевірена поведінка не змінюється жодним пікселем.
-      const top = shift;
+      const top = viewShift;
       const height = Math.max(minHeight, h0 - kb);
       // 1) оверлей — рівно на видиму смугу, хай як Safari зсунув чи стиснув сторінку
       overlay.style.top    = top + 'px';
@@ -232,10 +242,24 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     // Гачок — лише на ПЕРЕХІД у стан «клавіатура відкрита», не на кожен кадр.
     if (open && !wasOpen) { try { onOpen?.(); } catch (_) {} }
     wasOpen = open;
-    dbg?.update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg });
+    dbg?.update({ open, kb, shrink, viewShift, pageShift, top0, h0, vv, sheet, overlay, bg });
   };
 
-  const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); };
+  // ── ЧОМУ СИНХРОННО, А НЕ ЧЕРЕЗ requestAnimationFrame ────────────────────────────
+  // 🔑 ТРЕТІЙ ЗАХІД НА «ВЕРХ ДЬОРГАЄТЬСЯ» (26.07). Раніше тут стояло
+  // `requestAnimationFrame(apply)` — тобто на КОЖНУ подію видимої області ми свідомо
+  // відкладали перерахунок на наступний кадр. Для рідкої події це непомітно, але поява
+  // клавіатури — це анімація: `resize`/`scroll` сиплються десятки разів поспіль, і
+  // кожен раз аркуш опинявся на кадр ПОЗАДУ фону. Фон уже поїхав — аркуш ще ні.
+  // Саме ця розсинхронізація на 1 кадр × десятки кадрів і читається як «дьоргання».
+  // Тепер геометрія оновлюється в тому ж такті, в якому браузер віддав нові числа:
+  // фон і аркуш рухаються разом, і компенсація перестає запізнюватись.
+  // ⚠️ Це НЕ прогноз і НЕ рух розкладки на випередження (спроба, що зламала тап у поле,
+  // — HOT_RULES №10). Ми нічого не вгадуємо: реагуємо на ті самі числа, просто вчасно.
+  // Ціна — `apply` виконується в обробнику події. Він дешевий: пише стилі й читає
+  // `vv.*` (не розкладку); єдиний вимір розкладки (`measureTop0`) працює лише поки ми
+  // самі ще не чіпали розміри.
+  const schedule = () => { cancelAnimationFrame(raf); raf = 0; apply(); };
   const onFocus = () => { focused = true; schedule(); };
   const onBlur  = () => { focused = false; schedule(); };
 
@@ -287,9 +311,24 @@ function createDebugPanel() {
   // на iOS поводиться інакше, ніж у вкладці Safari — це важлива змінна діагнозу.
   const mode = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone
     ? 'ДОДАТОК (standalone)' : 'браузер';
+  // ── ПІКИ ЗА ЧАС ПЕРЕХОДУ ────────────────────────────────────────────────────────
+  // 🔑 Навіщо: миттєві числа на скріні показують КІНЦЕВИЙ стан — а він у нас і так
+  // ідеальний (`аркуш top=157 = top0`). Дефект живе кілька кадрів між тапом і появою
+  // клавіатури, тобто на статичному скріні його не видно взагалі. Тому запам'ятовуємо
+  // найгірше значення за поточний підйом клавіатури: один скрін від Вови = однозначна
+  // відповідь, ЩО саме і НА СКІЛЬКИ смикнулось, замість чергової здогадки.
+  // Скидаються, коли клавіатура закрилась, — щоб кожен наступний підйом мірявся чисто.
+  let peakTop = 0, peakView = 0, peakPage = 0, wasOpen = false;
   return {
-    update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg }) {
+    update({ open, kb, shrink, viewShift, pageShift, top0, h0, vv, sheet, overlay, bg }) {
       const r = sheet.getBoundingClientRect();
+      if (open && !wasOpen) { peakTop = 0; peakView = 0; peakPage = 0; }   // новий підйом — міряємо з чистого
+      if (open || wasOpen) {
+        peakTop  = Math.max(peakTop, Math.abs(r.top - (top0 ?? r.top)));
+        peakView = Math.max(peakView, viewShift || 0);
+        peakPage = Math.max(peakPage, pageShift || 0);
+      }
+      wasOpen = open;
       // 🔴 РЯДОК-ВІДПОВІДЬ на питання «чому фон з'їжджає»: якщо drift ≠ 0 — поїхав
       // САМ скролер (замок не тримає); якщо drift = 0, а offTop ≠ 0 — скролер стоїть,
       // а зсунулась уся видима область (iOS), і замок скролера тут безсилий.
@@ -302,7 +341,11 @@ function createDebugPanel() {
         `${ver}  ·  ${mode}\n` +
         `клавіатура: ${open ? 'ВІДКРИТА' : 'закрита'}  kb=${Math.round(kb)}\n` +
         // Який спосіб застосував iOS: стиснув видиму область (А) чи прокрутив webview (Б).
-        `спосіб: стиск=${Math.round(shrink ?? 0)} зсув=${Math.round(shift ?? 0)}\n` +
+        // `зсув` — видима область (позиціюємо по ньому), `стор` — скрол документа (лише детект).
+        `спосіб: стиск=${Math.round(shrink ?? 0)} зсув=${Math.round(viewShift ?? 0)} стор=${Math.round(pageShift ?? 0)}\n` +
+        // 🔴 ГОЛОВНИЙ РЯДОК ДЛЯ ДІАГНОЗУ: найгірше за час підйому клавіатури.
+        // верх=0 → аркуш не смикався жодного кадру (тоді рухався фон, а не ми).
+        `ПІК за підйом: верх=${Math.round(peakTop)} зсув=${Math.round(peakView)} стор=${Math.round(peakPage)}\n` +
         `ФОН зсув: ${bgLine}\n` +
         `vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}\n` +
         `window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}\n` +
