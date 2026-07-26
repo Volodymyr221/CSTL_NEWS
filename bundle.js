@@ -11239,8 +11239,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     let lh = parseFloat(cs.lineHeight);
     if (!lh || isNaN(lh))
       lh = parseFloat(cs.fontSize) * 1.5;
-    const pad2 = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-    return { lh, collapsed: Math.round(lh * CLAMP_LINES + pad2) };
+    const padT = parseFloat(cs.paddingTop) || 0;
+    const padB = parseFloat(cs.paddingBottom) || 0;
+    const collapsed = Math.floor(lh * CLAMP_LINES) + padT;
+    const contentFull = el.scrollHeight - padT - padB;
+    return { lh, collapsed, contentFull, contentCollapsed: lh * CLAMP_LINES };
   }
   function scrollParent(el) {
     for (let p = el.parentElement; p; p = p.parentElement) {
@@ -11261,8 +11264,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const stale = el.nextElementSibling;
       if (stale && stale.classList.contains("fd-more"))
         stale.remove();
-      const { lh, collapsed } = clampMetrics(el);
-      if (el.scrollHeight <= collapsed + lh * CLAMP_SLACK)
+      const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+      if (contentFull <= contentCollapsed + lh * CLAMP_SLACK)
         return;
       const open = expandedPosts.has(id);
       el.classList.add("fd-text--clip");

@@ -200,8 +200,10 @@
 
 /* Кнопка «… Показати більше» / «Згорнути». На всю ширину блоку — щоб у неї було
    легко попасти пальцем (сама смужка тексту вузька), але вирівняна ліворуч під текст. */
-.fd-more { display: block; width: 100%; text-align: left; padding: 0 14px 12px;
-  margin-top: -6px; background: none; border: 0; font: inherit; font-size: 14.5px;
+/* ⚠️ БЕЗ відʼємного margin-top. Перша версія мала `margin-top:-6px` «щоб тісніше» —
+   і кнопка налазила на обрізаний рядок тексту. Місце під нею дає власний padding. */
+.fd-more { display: block; width: 100%; text-align: left; padding: 2px 14px 12px;
+  background: none; border: 0; font: inherit; font-size: 14.5px;
   font-weight: 600; color: var(--fd-muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
 .fd-more:active { opacity: .55; }
 

@@ -222,8 +222,18 @@ function clampMetrics(el) {
   const cs = getComputedStyle(el);
   let lh = parseFloat(cs.lineHeight);
   if (!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.5;   // line-height:normal → запасний розрахунок
-  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
-  return { lh, collapsed: Math.round(lh * CLAMP_LINES + pad) };
+  const padT = parseFloat(cs.paddingTop) || 0;
+  const padB = parseFloat(cs.paddingBottom) || 0;
+  // ⚠️ У стелю входить ЛИШЕ верхній padding. Нижній додавати НЕ можна: текст
+  // малюється і в зоні padding, тож обрізка на `padT + рядки + padB` показувала б
+  // ще 12px наступного рядка — смужку літер, на яку налазила кнопка (спіймано
+  // скріншотом у Chromium, а не в теорії). Округлення вниз — щоб дробовий
+  // line-height не додав пів-пікселя наступного рядка.
+  const collapsed = Math.floor(lh * CLAMP_LINES) + padT;
+  // Чиста висота тексту, без обох padding — щоб поріг «чи варто згортати»
+  // порівнював однорідні числа.
+  const contentFull = el.scrollHeight - padT - padB;
+  return { lh, collapsed, contentFull, contentCollapsed: lh * CLAMP_LINES };
 }
 
 // Найближчий предок, який реально скролиться. Потрібен, бо стрічка живе в
@@ -251,9 +261,9 @@ function wireClamps(root) {
     const stale = el.nextElementSibling;
     if (stale && stale.classList.contains('fd-more')) stale.remove();
 
-    const { lh, collapsed } = clampMetrics(el);
-    // scrollHeight читаємо ПІСЛЯ зняття обмежень — інакше це була б висота обрізаного блоку.
-    if (el.scrollHeight <= collapsed + lh * CLAMP_SLACK) return;   // короткий пост — не чіпаємо
+    // Метрики читаємо ПІСЛЯ зняття обмежень — інакше це була б висота обрізаного блоку.
+    const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+    if (contentFull <= contentCollapsed + lh * CLAMP_SLACK) return;   // короткий пост — не чіпаємо
 
     const open = expandedPosts.has(id);
     el.classList.add('fd-text--clip');
