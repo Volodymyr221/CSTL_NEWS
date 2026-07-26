@@ -463,64 +463,69 @@ export async function fetchMyGroups() {
   return data || [];
 }
 
+// Створення групи — вставка без клієнтського ключа → без повтору (інакше дві однакові
+// групи, і людина не зрозуміє, у котру з них запрошувати).
 export async function createGroup({ name, description = null, type = 'locality', emoji = null, gradient = null }) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('create_group', {
+  const r = await netInsert(() => supa.rpc('create_group', {
     p_name: name, p_description: description, p_type: type, p_emoji: emoji, p_gradient: gradient,
-  });
-  if (error) { console.warn('[supabase] createGroup:', error.message); return { ok: false, error: error.message }; }
-  return { ok: true, id: data };
+  }));
+  return r.ok ? { ok: true, id: r.data } : { ok: false, error: r.error };
 }
 
 // requiresApproval: true → посилання зі схваленням адміна; false → миттєвий вступ
+// Теж вставка: повтор видав би ДРУГЕ посилання-запрошення. Перше при цьому лишилось би
+// живим — тобто по репозиторію гуляли б два токени на одну групу. Не повторюємо.
 export async function createGroupInvite(groupId, requiresApproval = false) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('create_group_invite', { p_gid: groupId, p_requires_approval: requiresApproval });
-  if (error) { console.warn('[supabase] createGroupInvite:', error.message); return { ok: false, error: error.message }; }
-  return { ok: true, token: data };
+  const r = await netInsert(() => supa.rpc('create_group_invite', { p_gid: groupId, p_requires_approval: requiresApproval }));
+  return r.ok ? { ok: true, token: r.data } : { ok: false, error: r.error };
 }
 
 export async function getGroupByInvite(token) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('get_group_by_invite', { p_token: token });
-  if (error) { console.warn('[supabase] getGroupByInvite:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('get_group_by_invite', { p_token: token }), { timeout: NET_TIMEOUT });
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
+// Далі — дії, що ВСТАНОВЛЮЮТЬ стан (вступив / вийшов / схвалено / відхилено / новий
+// власник). Повтор дає той самий результат, тому він безпечний: сервер на другий раз
+// або зробить те саме, або скаже «вже так» — дубля сутності не з'явиться.
 export async function joinGroupByToken(token) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('join_group_by_token', { p_token: token });
-  if (error) { console.warn('[supabase] joinGroupByToken:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('join_group_by_token', { p_token: token }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 export async function leaveGroup(groupId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('leave_group', { p_gid: groupId });
-  if (error) { console.warn('[supabase] leaveGroup:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('leave_group', { p_gid: groupId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 export async function approveMember(groupId, uid) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('approve_member', { p_gid: groupId, p_uid: uid });
-  if (error) { console.warn('[supabase] approveMember:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('approve_member', { p_gid: groupId, p_uid: uid }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 export async function rejectMember(groupId, uid) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('reject_member', { p_gid: groupId, p_uid: uid });
-  if (error) { console.warn('[supabase] rejectMember:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('reject_member', { p_gid: groupId, p_uid: uid }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Передати власника групи іншому учаснику (потім старий власник може вийти)
 export async function transferGroupOwner(groupId, uid) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('transfer_group_owner', { p_gid: groupId, p_uid: uid });
-  if (error) { console.warn('[supabase] transferGroupOwner:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('transfer_group_owner', { p_gid: groupId, p_uid: uid }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Учасники групи (RLS: бачить лише учасник). Імена резолвимо окремо через fetchProfileNames.
@@ -554,36 +559,32 @@ export async function sendGroupMessage({ groupId, senderUid, text, photoUrl = nu
   if (photoUrl) row.photo_url = photoUrl;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  try {
-    const { data, error } = await withTimeout(supa.from('chat_group_messages').insert(row).select().single());
-    if (error) return { ok: false, error: error.message };
-    // Push усім учасникам групи ≠ відправник (не блокуємо UI — помилка пуша не валить відправку)
-    supa.functions.invoke('send-group-push', { body: { message_id: data.id } })
-      .catch(e => console.warn('[supabase] send-group-push:', e?.message));
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+  const r = await netInsert(() => supa.from('chat_group_messages').insert(row).select().single(), {
+    verify: clientTag
+      ? () => supa.from('chat_group_messages').select('*').eq('group_id', groupId).eq('client_tag', clientTag).maybeSingle()
+      : null,
+  });
+  if (!r.ok) return { ok: false, error: r.error };
+  // Push усім учасникам групи ≠ відправник (не блокуємо UI — помилка пуша не валить відправку)
+  supa.functions.invoke('send-group-push', { body: { message_id: r.data.id } })
+    .catch(e => console.warn('[supabase] send-group-push:', e?.message));
+  return { ok: true, message: r.data };
 }
 
 export async function editGroupMessage(messageId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('chat_group_messages')
-      .update({ text, edited_at: new Date().toISOString() })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+  const r = await netCall(() => supa.from('chat_group_messages')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 export async function deleteGroupMessage(messageId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('chat_group_messages')
-      .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+  const r = await netCall(() => supa.from('chat_group_messages')
+    .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 export function subscribeGroupMessages(groupId, onChange) {
