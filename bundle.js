@@ -10872,6 +10872,19 @@ ${ev.description || ""}`
       return { el, top, onScroll, prevOverflow };
     });
     const pageTop0 = window.scrollY || 0;
+    const bodyStyle = document.body.style;
+    const prevBody = {
+      position: bodyStyle.position,
+      top: bodyStyle.top,
+      left: bodyStyle.left,
+      right: bodyStyle.right,
+      width: bodyStyle.width
+    };
+    bodyStyle.position = "fixed";
+    bodyStyle.top = `${-pageTop0}px`;
+    bodyStyle.left = "0";
+    bodyStyle.right = "0";
+    bodyStyle.width = "100%";
     const onPageScroll = () => {
       if ((window.scrollY || 0) !== pageTop0)
         window.scrollTo(0, pageTop0);
@@ -10880,6 +10893,13 @@ ${ev.description || ""}`
     return {
       unfreeze: () => {
         window.removeEventListener("scroll", onPageScroll);
+        bodyStyle.position = prevBody.position;
+        bodyStyle.top = prevBody.top;
+        bodyStyle.left = prevBody.left;
+        bodyStyle.right = prevBody.right;
+        bodyStyle.width = prevBody.width;
+        if (pageTop0)
+          window.scrollTo(0, pageTop0);
         frozen.forEach((f) => {
           f.el.removeEventListener("scroll", f.onScroll);
           f.el.style.overflowY = f.prevOverflow;
