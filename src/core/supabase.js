@@ -109,12 +109,10 @@ export async function submitDiscussion(payload) {
   const nowIso = new Date().toISOString();
   const row = { ...payload, type: 'chat', status: 'published',
                 published_at: nowIso, bumped_at: nowIso };
-  const { error } = await supa.from('posts').insert(row);
-  if (error) {
-    console.warn('[supabase] submitDiscussion error:', error);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+  // Вставка БЕЗ клієнтського ключа (у `posts` його немає) → повтор не робимо:
+  // дубль обговорення в стрічці гірший за «спробуй ще раз». Текст — людський.
+  const r = await netInsert(() => supa.from('posts').insert(row));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // ── ОФІЦІЙНІ ОГОЛОШЕННЯ ─────────────────────────────────────────────────
@@ -178,19 +176,20 @@ export async function fetchAllReactions(anonId) {
 // політика вимагає user_id = auth.uid()::text, тож реагувати може лише акаунт.
 export async function setReaction(postId, userId, emoji) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  // Реакція — ідемпотентна (зняти/поставити дає той самий результат), тож повтор
+  // при обриві безпечний. Текст помилки людський, але викликач її зазвичай не
+  // показує: смітити тостом через лайк — гірше за тихий відкат галочки.
   if (emoji == null) {
-    const { error } = await supa.from('reactions')
+    const r = await netCall(() => supa.from('reactions')
       .delete()
       .eq('post_id', postId)
-      .eq('user_id', userId);
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
+      .eq('user_id', userId));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   // upsert через onConflict (post_id, user_id) — або INSERT, або UPDATE emoji
-  const { error } = await supa.from('reactions')
-    .upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: 'post_id,user_id' });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  const r = await netCall(() => supa.from('reactions')
+    .upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: 'post_id,user_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // ── КОМЕНТАРІ ────────────────────────────────────────────────────────────
@@ -222,36 +221,33 @@ export async function addComment(postId, author, text, senderUid, { replyToId = 
   if (senderUid) row.sender_uid = senderUid;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  try {
-    const { data, error } = await withTimeout(supa.from('comments').insert(row).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  // Як і в чаті: повтор лише зі звіркою за client_tag, інакше під обговоренням
+  // з'явиться два однакові коментарі.
+  const r = await netInsert(() => supa.from('comments').insert(row).select().single(), {
+    verify: clientTag
+      ? () => supa.from('comments').select('*').eq('post_id', postId).eq('client_tag', clientTag).maybeSingle()
+      : null,
+  });
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // Редагування свого коментаря «Обговорень» (текст + позначка edited_at)
 export async function editComment(commentId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('comments')
-      .update({ text, edited_at: new Date().toISOString() })
-      .eq('id', commentId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('comments')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', commentId).select().single());
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // М'яке видалення коментаря (лишаємо рядок, ставимо deleted_at → плейсхолдер у UI).
 // text='' бо колонка може бути NOT NULL; UI орієнтується на deleted_at.
 export async function deleteComment(commentId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('comments')
-      .update({ deleted_at: new Date().toISOString(), text: '' })
-      .eq('id', commentId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('comments')
+    .update({ deleted_at: new Date().toISOString(), text: '' })
+    .eq('id', commentId).select().single());
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // ── STORAGE: завантаження фото у bucket community-photos ─────────────────
@@ -408,36 +404,39 @@ export async function fetchMyPosts(uid) {
 
 // Підняти власний опублікований пост угору стрічки (кулдаун 3 год — на сервері).
 // Повертає { ok:true, bumped_at } або { ok:false, error, seconds_left? }.
+// ⚠️ Єдиний з чотирьох, де повтор має нюанс: якщо перша спроба доїхала, а відповідь
+// загубилась, друга впаде у серверний кулдаун 3 год і людина побачить «зачекай». Пост
+// при цьому піднято, і список це покаже — тобто гірше, ніж ідеально, але не втрата дії.
 export async function bumpPost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('bump_post', { p_id: postId });
-  if (error) { console.warn('[supabase] bumpPost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('bump_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Завершити власний пост (status=closed → зникає з дошки, лишається в архіві).
 export async function closePost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('close_post', { p_id: postId });
-  if (error) { console.warn('[supabase] closePost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('close_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Видалити власний пост (CASCADE прибере треди/коментарі/реакції/закладки).
 export async function deleteMyPost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('delete_my_post', { p_id: postId });
-  if (error) { console.warn('[supabase] deleteMyPost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('delete_my_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Повернути завершене оголошення в активні (closed → published).
 // bumped_at не змінюється → той самий час підняття/кулдауну, що був до завершення.
 export async function restorePost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('restore_post', { p_id: postId });
-  if (error) { console.warn('[supabase] restorePost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('restore_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Д-3: редагувати власне оголошення через RPC update_board_post (SECURITY DEFINER,
