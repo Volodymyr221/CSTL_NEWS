@@ -2,7 +2,7 @@
   "version": 2,
   "source": "VOPAS — vopas.com.ua (авто-оновлення)",
   "updatedAt": "26.07.2026",
-  "updatedTime": "09:21",
+  "updatedTime": "11:57",
   "carriers": {
     "під_яцишин_м_м": {
       "name": "під.Яцишин М.М.",
@@ -10027,7 +10027,7 @@
           "bus": "БАЗ 079-23",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:06",
           "arrival_time": "12:05",
           "duration_min": 119,
@@ -10124,7 +10124,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "10:10",
           "arrival_time": "11:45",
           "duration_min": 95,
@@ -10166,7 +10166,7 @@
           "bus": "БАЗ А 079.25",
           "days": "щодня",
           "status": "scheduled",
-          "sale_active": true,
+          "sale_active": false,
           "departure_time": "11:30",
           "arrival_time": "13:10",
           "duration_min": 100,
@@ -10207,8 +10207,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.25",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "12:25",
           "arrival_time": "14:10",
           "duration_min": 105,
@@ -10470,8 +10470,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БАЗ А 079.24",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "14:00",
           "arrival_time": "15:35",
           "duration_min": 95,
@@ -10693,8 +10693,8 @@
           "carrier": "під_яцишин_м_м",
           "bus": "БОГДАН А0921",
           "days": "щодня",
-          "status": "scheduled",
-          "sale_active": true,
+          "status": "cancelled",
+          "sale_active": false,
           "departure_time": "15:40",
           "arrival_time": "17:20",
           "duration_min": 100,
@@ -11266,7 +11266,7 @@
         }
       ],
       "fetchedAt": "26.07.2026",
-      "fetchedTime": "09:21"
+      "fetchedTime": "11:57"
     },
     "2026-07-27": {
       "routes": [
@@ -12872,7 +12872,7 @@
         }
       ],
       "fetchedAt": "26.07.2026",
-      "fetchedTime": "09:21"
+      "fetchedTime": "11:57"
     },
     "2026-07-28": {
       "routes": [
