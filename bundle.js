@@ -10872,19 +10872,6 @@ ${ev.description || ""}`
       return { el, top, onScroll, prevOverflow };
     });
     const pageTop0 = window.scrollY || 0;
-    const bodyStyle = document.body.style;
-    const prevBody = {
-      position: bodyStyle.position,
-      top: bodyStyle.top,
-      left: bodyStyle.left,
-      right: bodyStyle.right,
-      width: bodyStyle.width
-    };
-    bodyStyle.position = "fixed";
-    bodyStyle.top = `${-pageTop0}px`;
-    bodyStyle.left = "0";
-    bodyStyle.right = "0";
-    bodyStyle.width = "100%";
     const onPageScroll = () => {
       if ((window.scrollY || 0) !== pageTop0)
         window.scrollTo(0, pageTop0);
@@ -10893,13 +10880,6 @@ ${ev.description || ""}`
     return {
       unfreeze: () => {
         window.removeEventListener("scroll", onPageScroll);
-        bodyStyle.position = prevBody.position;
-        bodyStyle.top = prevBody.top;
-        bodyStyle.left = prevBody.left;
-        bodyStyle.right = prevBody.right;
-        bodyStyle.width = prevBody.width;
-        if (pageTop0)
-          window.scrollTo(0, pageTop0);
         frozen.forEach((f) => {
           f.el.removeEventListener("scroll", f.onScroll);
           f.el.style.overflowY = f.prevOverflow;
@@ -11435,7 +11415,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     el.style.removeProperty("--sh-tight");
   }
   var NAME_RANGE = 60;
-  var TIGHT_RANGE = 60;
+  var TIGHT_RANGE = 180;
   function shrinkProgress(scrollTop, nameRange = NAME_RANGE, tightRange = TIGHT_RANGE) {
     const s = Math.max(0, scrollTop);
     const clamp012 = (v) => Math.min(1, Math.max(0, v));
@@ -11863,8 +11843,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (openCommentSheet && openCommentSheet.back === sheet)
         openCommentSheet = null;
     };
+    const vpEl = sheet.querySelector(".fd-sheet-vp");
     sheet.addEventListener("click", (e) => {
-      if (e.target === sheet)
+      if (e.target === sheet || e.target === vpEl)
         close();
     });
     const expandThread = (rootId) => {
