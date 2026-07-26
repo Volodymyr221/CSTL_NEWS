@@ -109,12 +109,10 @@ export async function submitDiscussion(payload) {
   const nowIso = new Date().toISOString();
   const row = { ...payload, type: 'chat', status: 'published',
                 published_at: nowIso, bumped_at: nowIso };
-  const { error } = await supa.from('posts').insert(row);
-  if (error) {
-    console.warn('[supabase] submitDiscussion error:', error);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+  // Вставка БЕЗ клієнтського ключа (у `posts` його немає) → повтор не робимо:
+  // дубль обговорення в стрічці гірший за «спробуй ще раз». Текст — людський.
+  const r = await netInsert(() => supa.from('posts').insert(row));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // ── ОФІЦІЙНІ ОГОЛОШЕННЯ ─────────────────────────────────────────────────
@@ -178,19 +176,20 @@ export async function fetchAllReactions(anonId) {
 // політика вимагає user_id = auth.uid()::text, тож реагувати може лише акаунт.
 export async function setReaction(postId, userId, emoji) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
+  // Реакція — ідемпотентна (зняти/поставити дає той самий результат), тож повтор
+  // при обриві безпечний. Текст помилки людський, але викликач її зазвичай не
+  // показує: смітити тостом через лайк — гірше за тихий відкат галочки.
   if (emoji == null) {
-    const { error } = await supa.from('reactions')
+    const r = await netCall(() => supa.from('reactions')
       .delete()
       .eq('post_id', postId)
-      .eq('user_id', userId);
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
+      .eq('user_id', userId));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
   // upsert через onConflict (post_id, user_id) — або INSERT, або UPDATE emoji
-  const { error } = await supa.from('reactions')
-    .upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: 'post_id,user_id' });
-  if (error) return { ok: false, error: error.message };
-  return { ok: true };
+  const r = await netCall(() => supa.from('reactions')
+    .upsert({ post_id: postId, user_id: userId, emoji }, { onConflict: 'post_id,user_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // ── КОМЕНТАРІ ────────────────────────────────────────────────────────────
@@ -222,36 +221,33 @@ export async function addComment(postId, author, text, senderUid, { replyToId = 
   if (senderUid) row.sender_uid = senderUid;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  try {
-    const { data, error } = await withTimeout(supa.from('comments').insert(row).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  // Як і в чаті: повтор лише зі звіркою за client_tag, інакше під обговоренням
+  // з'явиться два однакові коментарі.
+  const r = await netInsert(() => supa.from('comments').insert(row).select().single(), {
+    verify: clientTag
+      ? () => supa.from('comments').select('*').eq('post_id', postId).eq('client_tag', clientTag).maybeSingle()
+      : null,
+  });
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // Редагування свого коментаря «Обговорень» (текст + позначка edited_at)
 export async function editComment(commentId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('comments')
-      .update({ text, edited_at: new Date().toISOString() })
-      .eq('id', commentId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('comments')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', commentId).select().single());
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // М'яке видалення коментаря (лишаємо рядок, ставимо deleted_at → плейсхолдер у UI).
 // text='' бо колонка може бути NOT NULL; UI орієнтується на deleted_at.
 export async function deleteComment(commentId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('comments')
-      .update({ deleted_at: new Date().toISOString(), text: '' })
-      .eq('id', commentId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, comment: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('comments')
+    .update({ deleted_at: new Date().toISOString(), text: '' })
+    .eq('id', commentId).select().single());
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // ── STORAGE: завантаження фото у bucket community-photos ─────────────────
@@ -283,7 +279,9 @@ export async function uploadPhotoToStorage(blob, folder = '') {
 
   if (uploadError) {
     console.warn('[supabase] uploadPhotoToStorage error:', uploadError.message);
-    return { url: null, error: uploadError.message };
+    // Людський текст, а не технічний: цей рядок доходить до тоста в кабінеті й
+    // у композері. Повтор тут не наш клопіт — його вже робить core/upload.js.
+    return { url: null, error: netErrorText(uploadError) };
   }
 
   const { data } = supa.storage.from('community-photos').getPublicUrl(path);
@@ -408,36 +406,39 @@ export async function fetchMyPosts(uid) {
 
 // Підняти власний опублікований пост угору стрічки (кулдаун 3 год — на сервері).
 // Повертає { ok:true, bumped_at } або { ok:false, error, seconds_left? }.
+// ⚠️ Єдиний з чотирьох, де повтор має нюанс: якщо перша спроба доїхала, а відповідь
+// загубилась, друга впаде у серверний кулдаун 3 год і людина побачить «зачекай». Пост
+// при цьому піднято, і список це покаже — тобто гірше, ніж ідеально, але не втрата дії.
 export async function bumpPost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('bump_post', { p_id: postId });
-  if (error) { console.warn('[supabase] bumpPost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('bump_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Завершити власний пост (status=closed → зникає з дошки, лишається в архіві).
 export async function closePost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('close_post', { p_id: postId });
-  if (error) { console.warn('[supabase] closePost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('close_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Видалити власний пост (CASCADE прибере треди/коментарі/реакції/закладки).
 export async function deleteMyPost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('delete_my_post', { p_id: postId });
-  if (error) { console.warn('[supabase] deleteMyPost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('delete_my_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Повернути завершене оголошення в активні (closed → published).
 // bumped_at не змінюється → той самий час підняття/кулдауну, що був до завершення.
 export async function restorePost(postId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('restore_post', { p_id: postId });
-  if (error) { console.warn('[supabase] restorePost:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('restore_post', { p_id: postId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Д-3: редагувати власне оголошення через RPC update_board_post (SECURITY DEFINER,
@@ -464,64 +465,69 @@ export async function fetchMyGroups() {
   return data || [];
 }
 
+// Створення групи — вставка без клієнтського ключа → без повтору (інакше дві однакові
+// групи, і людина не зрозуміє, у котру з них запрошувати).
 export async function createGroup({ name, description = null, type = 'locality', emoji = null, gradient = null }) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('create_group', {
+  const r = await netInsert(() => supa.rpc('create_group', {
     p_name: name, p_description: description, p_type: type, p_emoji: emoji, p_gradient: gradient,
-  });
-  if (error) { console.warn('[supabase] createGroup:', error.message); return { ok: false, error: error.message }; }
-  return { ok: true, id: data };
+  }));
+  return r.ok ? { ok: true, id: r.data } : { ok: false, error: r.error };
 }
 
 // requiresApproval: true → посилання зі схваленням адміна; false → миттєвий вступ
+// Теж вставка: повтор видав би ДРУГЕ посилання-запрошення. Перше при цьому лишилось би
+// живим — тобто по репозиторію гуляли б два токени на одну групу. Не повторюємо.
 export async function createGroupInvite(groupId, requiresApproval = false) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('create_group_invite', { p_gid: groupId, p_requires_approval: requiresApproval });
-  if (error) { console.warn('[supabase] createGroupInvite:', error.message); return { ok: false, error: error.message }; }
-  return { ok: true, token: data };
+  const r = await netInsert(() => supa.rpc('create_group_invite', { p_gid: groupId, p_requires_approval: requiresApproval }));
+  return r.ok ? { ok: true, token: r.data } : { ok: false, error: r.error };
 }
 
 export async function getGroupByInvite(token) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('get_group_by_invite', { p_token: token });
-  if (error) { console.warn('[supabase] getGroupByInvite:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('get_group_by_invite', { p_token: token }), { timeout: NET_TIMEOUT });
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
+// Далі — дії, що ВСТАНОВЛЮЮТЬ стан (вступив / вийшов / схвалено / відхилено / новий
+// власник). Повтор дає той самий результат, тому він безпечний: сервер на другий раз
+// або зробить те саме, або скаже «вже так» — дубля сутності не з'явиться.
 export async function joinGroupByToken(token) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('join_group_by_token', { p_token: token });
-  if (error) { console.warn('[supabase] joinGroupByToken:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('join_group_by_token', { p_token: token }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 export async function leaveGroup(groupId) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('leave_group', { p_gid: groupId });
-  if (error) { console.warn('[supabase] leaveGroup:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('leave_group', { p_gid: groupId }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 export async function approveMember(groupId, uid) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('approve_member', { p_gid: groupId, p_uid: uid });
-  if (error) { console.warn('[supabase] approveMember:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('approve_member', { p_gid: groupId, p_uid: uid }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 export async function rejectMember(groupId, uid) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('reject_member', { p_gid: groupId, p_uid: uid });
-  if (error) { console.warn('[supabase] rejectMember:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('reject_member', { p_gid: groupId, p_uid: uid }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Передати власника групи іншому учаснику (потім старий власник може вийти)
 export async function transferGroupOwner(groupId, uid) {
   if (!supa) return { ok: false, error: 'no_supa' };
-  const { data, error } = await supa.rpc('transfer_group_owner', { p_gid: groupId, p_uid: uid });
-  if (error) { console.warn('[supabase] transferGroupOwner:', error.message); return { ok: false, error: error.message }; }
-  return data || { ok: false, error: 'no_data' };
+  const r = await netCall(() => supa.rpc('transfer_group_owner', { p_gid: groupId, p_uid: uid }));
+  if (!r.ok) return { ok: false, error: r.error };
+  return r.data || { ok: false, error: 'no_data' };
 }
 
 // Учасники групи (RLS: бачить лише учасник). Імена резолвимо окремо через fetchProfileNames.
@@ -555,36 +561,32 @@ export async function sendGroupMessage({ groupId, senderUid, text, photoUrl = nu
   if (photoUrl) row.photo_url = photoUrl;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  try {
-    const { data, error } = await withTimeout(supa.from('chat_group_messages').insert(row).select().single());
-    if (error) return { ok: false, error: error.message };
-    // Push усім учасникам групи ≠ відправник (не блокуємо UI — помилка пуша не валить відправку)
-    supa.functions.invoke('send-group-push', { body: { message_id: data.id } })
-      .catch(e => console.warn('[supabase] send-group-push:', e?.message));
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+  const r = await netInsert(() => supa.from('chat_group_messages').insert(row).select().single(), {
+    verify: clientTag
+      ? () => supa.from('chat_group_messages').select('*').eq('group_id', groupId).eq('client_tag', clientTag).maybeSingle()
+      : null,
+  });
+  if (!r.ok) return { ok: false, error: r.error };
+  // Push усім учасникам групи ≠ відправник (не блокуємо UI — помилка пуша не валить відправку)
+  supa.functions.invoke('send-group-push', { body: { message_id: r.data.id } })
+    .catch(e => console.warn('[supabase] send-group-push:', e?.message));
+  return { ok: true, message: r.data };
 }
 
 export async function editGroupMessage(messageId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('chat_group_messages')
-      .update({ text, edited_at: new Date().toISOString() })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+  const r = await netCall(() => supa.from('chat_group_messages')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 export async function deleteGroupMessage(messageId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('chat_group_messages')
-      .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: (e && e.message) || 'timeout' }; }
+  const r = await netCall(() => supa.from('chat_group_messages')
+    .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 export function subscribeGroupMessages(groupId, onChange) {
@@ -623,30 +625,27 @@ export async function fetchThreadStates(uid) {
 export async function setThreadState(uid, threadId, patch) {
   if (!supa || !uid) return { ok: false, error: 'no-supa' };
   const row = { uid, thread_id: threadId, updated_at: new Date().toISOString(), ...patch };
-  try {
-    const { error } = await withTimeout(
-      supa.from('thread_user_state').upsert(row, { onConflict: 'uid,thread_id' })
-    );
-    if (error) return { ok: false, error: error.message };
-    return { ok: true };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('thread_user_state').upsert(row, { onConflict: 'uid,thread_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Знайти або створити тред покупця на оголошенні. authorUid = власник посту.
 // authorName/buyerName зберігаємо денормалізовано (profiles приватний — див. SQL).
 export async function getOrCreateThread({ postId, authorUid, buyerUid, authorName, buyerName }) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { data: existing } = await supa.from('threads')
+  // Вставка тут безпечна для повтору БЕЗ client_tag: у пари (пост, покупець) тред
+  // рівно один, і звірка — це той самий пошук, що вже стоїть першим рядком.
+  const find = () => supa.from('threads')
     .select('*').eq('post_id', postId).eq('buyer_uid', buyerUid).maybeSingle();
-  if (existing) return { ok: true, thread: existing };
-  const { data, error } = await supa.from('threads')
+  const found = await netCall(find, { retries: 1, timeout: NET_TIMEOUT });
+  if (found.ok && found.data) return { ok: true, thread: found.data };
+  const r = await netInsert(() => supa.from('threads')
     .insert({
       post_id: postId, author_uid: authorUid, buyer_uid: buyerUid,
       author_name: authorName || null, buyer_name: buyerName || null,
     })
-    .select().single();
-  if (error) return { ok: false, error: error.message };
-  return { ok: true, thread: data };
+    .select().single(), { verify: find });
+  return r.ok ? { ok: true, thread: r.data } : { ok: false, error: r.error };
 }
 
 // Повідомлення треда (старі → нові).
@@ -713,6 +712,12 @@ export function netErrorText(err) {
   if (/duplicate|unique/i.test(msg))      return 'Це вже збережено';
   if (/JWT|token|session/i.test(msg))     return 'Сеанс застарів — увійди знову';
   if (/нецензурн|заборонен/i.test(msg))   return '🚫 Текст містить заборонені слова';
+  // Доменні відповіді серверного антиспаму (тригери `*_antispam` у базі). Були
+  // окремим словником у `feed.js` — через це той самий збій мав два різні тексти,
+  // і при переході коментарів на ядро точне формулювання підмінялось загальним.
+  if (/повтори символів|беззмістовн/i.test(msg)) return '🚫 Текст схожий на спам';
+  if (/щойно це написали/i.test(msg))     return 'Ви щойно це написали';
+  if (/порожній/i.test(msg))              return 'Текст порожній';
   if (/занадто швидко|rate/i.test(msg))   return 'Занадто швидко — зачекай кілька секунд';
   return 'Не вдалося зберегти — спробуй ще раз';
 }
@@ -737,7 +742,38 @@ export async function netCall(fn, { retries = 2, timeout = WRITE_TIMEOUT } = {})
   }
   const raw = String(last?.message || last || '');
   if (raw) console.warn('[netCall]', raw);          // технічне — у консоль, не людині
-  return { ok: false, data: null, error: netErrorText(last), raw };
+  // transient кажемо назовні: для ВСТАВКИ це різниця між «можна спробувати ще раз»
+  // і «база нас відхилила» (див. netInsert нижче).
+  // rawError — сам обʼєкт помилки. Потрібен тим викликам, які дивляться на КОД
+  // (напр. «немає такої колонки», 42703): по тексту це вгадування, по коду — факт.
+  return { ok: false, data: null, error: netErrorText(last), raw, rawError: last, transient: isTransientError(last) };
+}
+
+// ── ВСТАВКА — окремий випадок, повтор тут НЕ безпечний ───────────────────────
+// 🔑 ГОЛОВНА ДУМКА: обрив зв'язку буває двох видів, і на вигляд вони однакові.
+// (1) запит НЕ доїхав до бази — повтор безпечний і потрібний;
+// (2) запит доїхав, база записала, а ВІДПОВІДЬ загубилась по дорозі назад —
+//     повтор створить ДРУГИЙ коментар / ДРУГЕ повідомлення / ДРУГИЙ пост.
+// Клієнт відрізнити (1) від (2) не може. Тому питаємо базу: «цей рядок уже там?».
+//
+// verify — функція, що повертає запит-пошук за КЛІЄНТСЬКИМ ключем (`client_tag`,
+// uuid від клієнта). Немає ключа — немає чим звіряти → повтору не робимо взагалі:
+// краще «спробуй ще раз» людині, ніж тихий дубль у стрічці.
+//
+// Якщо звірка сама не доїхала — теж НЕ повторюємо. Не знаємо стану = не пишемо.
+export async function netInsert(fn, { verify = null, retries = 2, timeout = WRITE_TIMEOUT } = {}) {
+  let last = await netCall(fn, { retries: 0, timeout });
+  if (last.ok || !last.transient || !verify) return last;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    await new Promise(r => setTimeout(r, 500 * attempt));
+    const chk = await netCall(verify, { retries: 1, timeout: NET_TIMEOUT });
+    if (!chk.ok) return last;                       // не змогли перевірити — не дублюємо
+    if (chk.data) return { ok: true, data: chk.data, error: null, recovered: true };
+    last = await netCall(fn, { retries: 0, timeout });
+    if (last.ok || !last.transient) return last;
+  }
+  return last;
 }
 
 export async function sendMessage({ threadId, senderUid, text, photoUrl = null, replyToId = null, clientTag = null }) {
@@ -746,13 +782,19 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
   if (photoUrl) row.photo_url = photoUrl;
   if (replyToId) row.reply_to_id = replyToId;
   if (clientTag) row.client_tag = clientTag;
-  let data, error;
-  try {
-    ({ data, error } = await withTimeout(supa.from('messages').insert(row).select().single()));
-  } catch (e) { return { ok: false, error: e.message }; }
-  if (error) return { ok: false, error: error.message };
+  // Повтор при обриві — лише зі звіркою за client_tag, інакше людина отримає
+  // ДВА однакові повідомлення в розмові (див. netInsert).
+  const r = await netInsert(() => supa.from('messages').insert(row).select().single(), {
+    verify: clientTag
+      ? () => supa.from('messages').select('*').eq('thread_id', threadId).eq('client_tag', clientTag).maybeSingle()
+      : null,
+  });
+  if (!r.ok) return { ok: false, error: r.error };
+  const data = r.data;
   // Час+прев'ю треда тепер ставить тригер trg_touch_thread у БД (надійно).
   // Лишаємо клієнтський апдейт як підстраховку (ідемпотентно, не шкодить).
+  // Свідомо БЕЗ повтору: правду тут пише тригер, а зайві 1.5с бекофу на слабкому
+  // зв'язку відчувались би як «повідомлення довго надсилається» вже ПІСЛЯ успіху.
   const preview = text || (photoUrl ? '📷 Фото' : '');
   await supa.from('threads')
     .update({ last_message_at: new Date().toISOString(), last_message_text: preview })
@@ -766,32 +808,29 @@ export async function sendMessage({ threadId, senderUid, text, photoUrl = null, 
 // Редагування свого повідомлення (текст + позначка edited_at)
 export async function editMessage(messageId, text) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('messages')
-      .update({ text, edited_at: new Date().toISOString() })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('messages')
+    .update({ text, edited_at: new Date().toISOString() })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 // М'яке видалення (soft-delete): лишаємо рядок, прибираємо вміст → плейсхолдер у UI
 export async function deleteMessage(messageId) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  try {
-    const { data, error } = await withTimeout(supa.from('messages')
-      .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
-      .eq('id', messageId).select().single());
-    if (error) return { ok: false, error: error.message };
-    return { ok: true, message: data };
-  } catch (e) { return { ok: false, error: e.message }; }
+  const r = await netCall(() => supa.from('messages')
+    .update({ deleted_at: new Date().toISOString(), text: null, photo_url: null })
+    .eq('id', messageId).select().single());
+  return r.ok ? { ok: true, message: r.data } : { ok: false, error: r.error };
 }
 
 // Позначити вхідні повідомлення треда прочитаними (read_at).
+// Тихий запис: людині про нього не кажемо (вона не просила «позначити прочитаним»,
+// це побічна дія відкриття розмови). Але повтор потрібен — інакше при кліпанні
+// мережі бейдж непрочитаних лишається висіти на порожній розмові.
 export async function markThreadRead(threadId, uid) {
   if (!supa || !uid) return;
-  await supa.from('messages').update({ read_at: new Date().toISOString() })
-    .eq('thread_id', threadId).neq('sender_uid', uid).is('read_at', null);
+  await netCall(() => supa.from('messages').update({ read_at: new Date().toISOString() })
+    .eq('thread_id', threadId).neq('sender_uid', uid).is('read_at', null));
 }
 
 // Скільки непрочитаних повідомлень адресовано мені (для бейджа).
@@ -834,10 +873,9 @@ export async function fetchUnreadByThread(uid) {
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).
 export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
   if (!supa || !uid) return { ok: false };
-  const { error } = await supa.from('user_push_devices')
-    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' });
-  if (error) { console.warn('[supabase] saveUserPushDevice:', error.message); return { ok: false }; }
-  return { ok: true };
+  const r = await netCall(() => supa.from('user_push_devices')
+    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' }));
+  return r.ok ? { ok: true } : { ok: false };
 }
 
 // Realtime: будь-яка зміна повідомлень одного треда (нові / редагування / видалення / прочитано).
@@ -874,19 +912,19 @@ export async function fetchSavedPostIds(uid) {
   return set;
 }
 
+// Закладки — тихі й ідемпотентні: повтор дає той самий стан, а тост через закладку
+// людині не потрібен (викликач сам відкочує іконку, якщо не вийшло).
 export async function addSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
-  const { error } = await supa.from('saved_posts')
-    .upsert({ uid, post_id: postId }, { onConflict: 'uid,post_id' });
-  if (error) { console.warn('[supabase] addSavedPost:', error.message); return { ok: false }; }
-  return { ok: true };
+  const r = await netCall(() => supa.from('saved_posts')
+    .upsert({ uid, post_id: postId }, { onConflict: 'uid,post_id' }));
+  return r.ok ? { ok: true } : { ok: false };
 }
 
 export async function removeSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
-  const { error } = await supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId);
-  if (error) { console.warn('[supabase] removeSavedPost:', error.message); return { ok: false }; }
-  return { ok: true };
+  const r = await netCall(() => supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId));
+  return r.ok ? { ok: true } : { ok: false };
 }
 
 // ── ВІДСТЕЖУВАНІ РЕЙСИ — гідрація з push_subscriptions (синхрон між пристроями) ──
@@ -934,16 +972,18 @@ export async function fetchTrackedRoutesFromDB(uid, todayISO) {
 // Зберігає push-підписку у Supabase. При повторному виклику — upsert оновлює.
 // payload: { user_uuid, endpoint, p256dh, auth_key, route_id, route_name,
 //            boarding_stop, alighting_stop, track_date, dep_time }
+// Це ВСТАВКА, але повтор тут безпечний — і не через звірку, а через саму базу:
+// на рядок стоїть унікальність, тож друга спроба впаде у 23505, який ми й так
+// вважаємо успіхом. Тобто дубля підписки не буде за побудовою.
+// Чому це важливо: обрив саме тут = людина бачить увімкнений дзвіночок, а сервер
+// про рейс не знає, і сповіщення не прийде. Тихий збій, який помічають надто пізно.
 export async function savePushSubscription(payload) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { error } = await supa.from('push_subscriptions').insert(payload);
-  if (error) {
-    // 23505 = unique_violation (порушення унікальності) — підписка вже є, це нормально
-    if (error.code === '23505') return { ok: true };
-    console.warn('[supabase] savePushSubscription:', error.message);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+  const r = await netCall(() => supa.from('push_subscriptions').insert(payload));
+  if (r.ok) return { ok: true };
+  // 23505 = unique_violation (порушення унікальності) — підписка вже є, це нормально
+  if (r.rawError?.code === '23505') return { ok: true };
+  return { ok: false, error: r.error };
 }
 
 // Видаляє конкретний рядок підписки (при знятті відстеження рейсу).
@@ -951,16 +991,12 @@ export async function savePushSubscription(payload) {
 // зробити повтор і не лишити висячу серверну підписку при збої мережі.
 export async function deletePushSubscription(endpoint, routeId, trackDate) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { error } = await supa.from('push_subscriptions')
+  const r = await netCall(() => supa.from('push_subscriptions')
     .delete()
     .eq('endpoint', endpoint)
     .eq('route_id', routeId)
-    .eq('track_date', trackDate);
-  if (error) {
-    console.warn('[supabase] deletePushSubscription:', error.message);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+    .eq('track_date', trackDate));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // ── REALTIME ─────────────────────────────────────────────────────────────────
@@ -1019,6 +1055,10 @@ export function subscribePageReactions(onChange) {
 
 // Записати подію. Fire-and-forget — НЕ блокує UI і НЕ кидає помилку викликачу
 // (аналітика ніколи не має зламати реальну дію користувача).
+// 🛑 СВІДОМО без ядра netCall/netInsert (не «недогляд», не чіпати без прохання):
+// це аналітика. Людині вона нічого не показує, тож людський текст помилки ні до чого,
+// а повтор при обриві накрутив би подію двічі й перекосив статистику в адмінці.
+// Ціна втраченої події при обриві — нуль; ціна дубля — брехлива цифра.
 export function logEvent(visitorId, type, { tab = null, meta = null } = {}) {
   if (!supa || !visitorId) return;
   supa.from('analytics_events')
@@ -1107,13 +1147,13 @@ export async function fetchPageReactions(userKey) {
 export async function setPageReaction(postId, userKey, on) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   if (!on) {
-    const { error } = await supa.from('page_reactions').delete()
-      .eq('post_id', postId).eq('user_id', userKey);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from('page_reactions').delete()
+      .eq('post_id', postId).eq('user_id', userKey));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  const { error } = await supa.from('page_reactions')
-    .upsert({ post_id: postId, user_id: userKey, emoji: '❤️' }, { onConflict: 'post_id,user_id' });
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_reactions')
+    .upsert({ post_id: postId, user_id: userKey, emoji: '❤️' }, { onConflict: 'post_id,user_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Коментарі постів → Map post_id → comments[] (невидалені, за часом).
@@ -1177,9 +1217,13 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
     if (beforeTs) q = q.lt('created_at', beforeTs);
     return q;
   };
-  let { data: roots, error } = await rootsQ(cols);
-  if (noSuchColumn(error)) ({ data: roots, error } = await rootsQ(COMMENT_COLS));
-  if (error) { console.warn('[supabase] fetchPostComments (кореневі):', error.message); return { comments: [], hasMore: false, error: error.message }; }
+  // Читання теж через ядро: коментарі — не дрібниця, а вміст екрана. Одна невдала
+  // спроба на слабкому зв'язку раніше давала «не вдалося завантажити» замість
+  // 40 коментарів під постом сільради. Повтор читання безпечний за визначенням.
+  let rr = await netCall(() => rootsQ(cols), { timeout: NET_TIMEOUT });
+  if (noSuchColumn(rr.rawError)) rr = await netCall(() => rootsQ(COMMENT_COLS), { timeout: NET_TIMEOUT });
+  if (!rr.ok) return { comments: [], hasMore: false, error: rr.error };
+  let roots = rr.data;
 
   roots = roots || [];
   const hasMore = roots.length > limit;
@@ -1206,16 +1250,16 @@ export async function fetchPostComments(postId, { beforeTs = null, limit = COMME
   for (let depth = 0; depth < MAX_REPLY_DEPTH && frontier.length; depth++) {
     const repQ = (c) => supa.from('page_comments').select(c)
       .eq('post_id', postId).is('deleted_at', null).in('parent_id', frontier);
-    let { data: batch, error: repErr } = await repQ(repCols);
+    let rep = await netCall(() => repQ(repCols), { timeout: NET_TIMEOUT });
     // Розгортання без простою: поки міграції `reply_to_uid` немає — тягнемо без неї.
     // Запам'ятовуємо вибір, щоб не бити в ту саму стіну на кожному наступному рівні.
-    if (noSuchColumn(repErr)) { repCols = COMMENT_COLS; ({ data: batch, error: repErr } = await repQ(repCols)); }
+    if (noSuchColumn(rep.rawError)) { repCols = COMMENT_COLS; rep = await netCall(() => repQ(repCols), { timeout: NET_TIMEOUT }); }
     // Відповіді теж вважаємо помилкою, а не «їх просто нема»: показати коріння без
     // гілок — це та сама брехня, тільки тихіша (людина подумає, що їй не відповіли).
-    if (repErr) { console.warn('[supabase] fetchPostComments (відповіді):', repErr.message); return { comments: [], hasMore: false, error: repErr.message }; }
+    if (!rep.ok) return { comments: [], hasMore: false, error: rep.error };
     // Дедуп за id — і водночас захист від зациклення: те, що вже бачили, не стає
     // новим рубежем, тож цикл гарантовано завершується.
-    const fresh = (batch || []).filter(r => !seen.has(r.id));
+    const fresh = (rep.data || []).filter(r => !seen.has(r.id));
     fresh.forEach(r => seen.add(r.id));
     replies.push(...fresh);
     frontier = fresh.map(r => r.id);
@@ -1234,12 +1278,16 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   const base = { post_id: postId, author_uid: uid, text, parent_id: parentId };
   const send = (row) => supa.from('page_comments').insert(row).select().single();
-  let { data, error } = await send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base);
+  // ⚠️ У `page_comments` клієнтського ключа (`client_tag`) НЕМА — на відміну від чату,
+  // груп і коментарів Дошки. Тобто звіряти нічим, і повтор дав би другий однаковий
+  // коментар під постом. Тому рівно одна спроба + людський текст. Ключ у цій таблиці —
+  // окремий захід (потребує міграції бази, тобто рук Вови).
+  let r = await netInsert(() => send(replyToUid ? { ...base, reply_to_uid: replyToUid } : base));
   // Те саме розгортання без простою, що у fetchPostComments: поки міграції немає,
   // відповідь має надсилатись — просто без згадки. Інакше кнопка «Відповісти» була б
   // зламана в усіх до моменту, поки Вова накатає SQL.
-  if (replyToUid && noSuchColumn(error)) ({ data, error } = await send(base));
-  return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  if (replyToUid && noSuchColumn(r.rawError)) r = await netInsert(() => send(base));
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // Правка свого коментаря. Шлемо ЛИШЕ текст: позначку «змінено» (edited_at) ставить
@@ -1248,17 +1296,17 @@ export async function addPageComment(postId, uid, text, parentId = null, replyTo
 // антиспам: до 25.07 редагування було обхідним шляхом для матюків.
 export async function editPageComment(commentId, text) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { data, error } = await supa.from('page_comments')
-    .update({ text }).eq('id', commentId).select(`${COMMENT_COLS}, reply_to_uid`).single();
-  return error ? { ok: false, error: error.message } : { ok: true, comment: data };
+  const r = await netCall(() => supa.from('page_comments')
+    .update({ text }).eq('id', commentId).select(`${COMMENT_COLS}, reply_to_uid`).single());
+  return r.ok ? { ok: true, comment: r.data } : { ok: false, error: r.error };
 }
 
 // Мʼяке видалення свого коментаря (RLS pcom update — автор або адмін сторінки).
 export async function deletePageComment(commentId) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
-  const { error } = await supa.from('page_comments')
-    .update({ deleted_at: new Date().toISOString() }).eq('id', commentId);
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_comments')
+    .update({ deleted_at: new Date().toISOString() }).eq('id', commentId));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Лайки коментарів → Map comment_id → { count, my }. userKey = uid (тільки авторизовані).
@@ -1280,13 +1328,13 @@ export async function fetchPageCommentReactions(userKey) {
 export async function setPageCommentReaction(commentId, uid, on) {
   if (!supa) return { ok: false, error: 'Supabase не підключений' };
   if (!on) {
-    const { error } = await supa.from('page_comment_reactions').delete()
-      .eq('comment_id', commentId).eq('user_id', uid);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from('page_comment_reactions').delete()
+      .eq('comment_id', commentId).eq('user_id', uid));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  const { error } = await supa.from('page_comment_reactions')
-    .upsert({ comment_id: commentId, user_id: uid }, { onConflict: 'comment_id,user_id' });
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_comment_reactions')
+    .upsert({ comment_id: commentId, user_id: uid }, { onConflict: 'comment_id,user_id' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Жива підписка на лайки коментарів (лічильник оновлюється у всіх наживо).
@@ -1329,7 +1377,10 @@ export async function createPagePost(pageId, uid, text, imageUrls = [], event = 
     event_time:     event.event_time     || null,
     event_location: event.event_location || null,
   };
-  const r = await netCall(() => supa.from('page_posts').insert(row).select(POST_COLS).single());
+  // ⚠️ Було `netCall` (з повтором) — а це ВСТАВКА без клієнтського ключа. Тобто при
+  // обриві на зворотному шляху міг з'явитись ДРУГИЙ пост на сторінці. `netInsert` без
+  // `verify` робить рівно одну спробу і дає людський текст.
+  const r = await netInsert(() => supa.from('page_posts').insert(row).select(POST_COLS).single());
   return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
 }
 
@@ -1366,13 +1417,13 @@ export async function fetchMySubscriptions() {
 export async function setPageSubscription(pageId, uid, on) {
   if (!supa) return { ok: false };
   if (!on) {
-    const { error } = await supa.from('page_subscriptions').delete()
-      .eq('page_id', pageId).eq('uid', uid);
-    return error ? { ok: false, error: error.message } : { ok: true };
+    const r = await netCall(() => supa.from('page_subscriptions').delete()
+      .eq('page_id', pageId).eq('uid', uid));
+    return r.ok ? { ok: true } : { ok: false, error: r.error };
   }
-  const { error } = await supa.from('page_subscriptions')
-    .upsert({ page_id: pageId, uid }, { onConflict: 'page_id,uid' });
-  return error ? { ok: false, error: error.message } : { ok: true };
+  const r = await netCall(() => supa.from('page_subscriptions')
+    .upsert({ page_id: pageId, uid }, { onConflict: 'page_id,uid' }));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // Push підписникам сторінки про новий пост (Edge Function send-page-push).
@@ -1417,15 +1468,14 @@ export async function fetchPageModerators(pageId) {
 //   'error'     — технічний збій (деталі в консолі).
 export async function addPageModerator(pageId, email) {
   if (!supa) return 'error';
-  const { data, error } = await supa.rpc('add_page_moderator', { p_page_id: pageId, p_email: email });
-  if (error) { console.warn('[supabase] add_page_moderator:', error.message); return 'error'; }
-  return data || 'error';
+  // Встановлення стану — повтор безпечний: той самий модератор двічі не додасться.
+  const r = await netCall(() => supa.rpc('add_page_moderator', { p_page_id: pageId, p_email: email }));
+  return r.ok ? (r.data || 'error') : 'error';
 }
 
 // Прибрати зі сторінки. 'ok' | 'owner_protected' (власника прибрати не можна) | 'error'.
 export async function removePageModerator(pageId, uid) {
   if (!supa) return 'error';
-  const { data, error } = await supa.rpc('remove_page_moderator', { p_page_id: pageId, p_uid: uid });
-  if (error) { console.warn('[supabase] remove_page_moderator:', error.message); return 'error'; }
-  return data || 'error';
+  const r = await netCall(() => supa.rpc('remove_page_moderator', { p_page_id: pageId, p_uid: uid }));
+  return r.ok ? (r.data || 'error') : 'error';
 }

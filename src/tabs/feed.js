@@ -18,7 +18,7 @@ import {
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
-  fetchPageModerators, addPageModerator, removePageModerator,
+  fetchPageModerators, addPageModerator, removePageModerator, netErrorText,
 } from '../core/supabase.js';
 import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
@@ -555,16 +555,17 @@ function pluralComments(n) {
   return 'коментарів';
 }
 
-// Помилка бази → людська підказка. Тригер trg_page_comments_antispam повертає
-// технічний текст («antispam: нецензурна лексика»), який людині нічого не пояснює.
+// Помилка бази → людська підказка. ⚠️ ТУТ БУВ ДРУГИЙ СЛОВНИК тих самих формулювань,
+// і саме через нього той самий збій мав два різні тексти залежно від того, звідки
+// прийшов. Тепер формулювання одні — у `netErrorText` (core/supabase.js), а тут лишився
+// лише коментарний відтінок фрази «не надіслано»: людина натискала «Надіслати», і про
+// коментар їй сказати доречніше, ніж про абстрактний «текст».
+// Дописуєш нове формулювання — дописуй у netErrorText, не тут.
 function commentErrorText(err) {
-  const e = String(err || '');
-  if (/нецензурн/i.test(e))                return '🚫 Коментар містить заборонені слова';
-  if (/повтори символів|беззмістовн/i.test(e)) return '🚫 Коментар схожий на спам';
-  if (/щойно це написали/i.test(e))        return 'Ви щойно це написали';
-  if (/занадто швидко/i.test(e))           return 'Занадто швидко — зачекайте кілька секунд';
-  if (/порожній/i.test(e))                 return 'Коментар порожній';
-  return 'Коментар не надіслано — спробуй ще раз';
+  const human = netErrorText(err);
+  return human === 'Не вдалося зберегти — спробуй ще раз'
+    ? 'Коментар не надіслано — спробуй ще раз'
+    : human;
 }
 
 // Рядок коментаря — три поверхи, як у Facebook і Instagram (звірено зі скрінами Вови

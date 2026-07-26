@@ -885,13 +885,17 @@ export function attachDiscussionsDelegation() {
 
     // POST у Supabase
     if (isSupabaseReady()) {
-      const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId });
+      // clientTag — клієнтський ключ (uuid), який дає базі впізнати ЦЕЙ коментар.
+      // Без нього повтор при обриві зв'язку заборонений: не було б чим відрізнити
+      // «не доїхало» від «доїхало, а відповідь загубилась» → міг з'явитись дубль.
+      const tag = (crypto.randomUUID && crypto.randomUUID()) || String(Date.now()) + Math.random().toString(36).slice(2);
+      const result = await addComment(postId, myName, text, currentUserId(), { replyToId: replyId, clientTag: tag });
       if (!result.ok) {
         // Помилка — забираємо optimistic коментар
         const filtered = (commentsByPost.get(postId) || []).filter(c => c.id !== tempComment.id);
         commentsByPost.set(postId, filtered);
         rerenderCommentsBlock(postId);
-        showToast('❌ Не вдалося надіслати повідомлення. Спробуйте ще раз.', 4000, 'error');
+        showToast(result.error || 'Не вдалося надіслати — спробуй ще раз', 4000, 'error');
       } else if (result.comment) {
         // Заміняємо temp-коментар на справжній (з реальним id з БД)
         const updated = (commentsByPost.get(postId) || []).map(c =>
