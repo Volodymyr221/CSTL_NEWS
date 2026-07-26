@@ -11380,11 +11380,25 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (!el)
       return;
     el.style.setProperty("--sh", "0");
+    el.style.setProperty("--sh-tight", "0");
     el.classList.remove("is-fit");
     if (el.scrollWidth <= el.clientWidth + 1)
       el.classList.add("is-fit");
     planCollapsedPad(el);
     el.style.removeProperty("--sh");
+    el.style.removeProperty("--sh-tight");
+  }
+  var NAME_RANGE = 60;
+  var TIGHT_RANGE = 60;
+  function shrinkProgress(scrollTop, nameRange = NAME_RANGE, tightRange = TIGHT_RANGE) {
+    const s = Math.max(0, scrollTop);
+    const clamp012 = (v) => Math.min(1, Math.max(0, v));
+    return {
+      name: clamp012(s / nameRange),
+      // Друга фаза стартує рівно там, де закінчилась перша — без паузи між ними
+      // (пауза між рухом пальця і реакцією екрана вже читалась як ривок, 24.07).
+      tight: clamp012((s - nameRange) / tightRange)
+    };
   }
   var CIRCLE_RING = 62;
   var CIRCLE_PAD = 16;
@@ -12740,13 +12754,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {
-        const SHRINK_START = 0;
-        const SHRINK_RANGE = 60;
         let shRaf = 0;
         const applyShrink = () => {
           shRaf = 0;
-          const p = Math.min(1, Math.max(0, (main.scrollTop - SHRINK_START) / SHRINK_RANGE));
-          bar.style.setProperty("--sh", p.toFixed(3));
+          const p = shrinkProgress(main.scrollTop);
+          bar.style.setProperty("--sh", p.name.toFixed(3));
+          bar.style.setProperty("--sh-tight", p.tight.toFixed(3));
         };
         const onShrink = () => {
           if (!shRaf)

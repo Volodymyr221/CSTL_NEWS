@@ -419,13 +419,35 @@ function layoutCircles() {
   const el = document.querySelector('#feed-circles .fd-circles');
   if (!el) return;
   // ⚠️ Міряти ОБОВ'ЯЗКОВО у розгорнутому стані. Колонки реально звужуються при
-  // згортанні (--sh), тож якщо міряти під час скролу вниз, смуга «вміститься» і
-  // розкладка вибереться хибна. Тому на час заміру глушимо --sh на самій смузі.
+  // згортанні, тож якщо міряти під час скролу вниз, смуга «вміститься» і розкладка
+  // вибереться хибна. Глушимо ОБИДВІ фази: ширину дає --sh-tight, і забути її тут
+  // означало б міряти вже стиснутий ряд.
   el.style.setProperty('--sh', '0');
+  el.style.setProperty('--sh-tight', '0');
   el.classList.remove('is-fit');                        // міряємо натуральну ширину
   if (el.scrollWidth <= el.clientWidth + 1) el.classList.add('is-fit');
   planCollapsedPad(el);
-  el.style.removeProperty('--sh');                      // повертаємо успадкований від топбару
+  el.style.removeProperty('--sh');                      // повертаємо успадковані від топбару
+  el.style.removeProperty('--sh-tight');
+}
+
+// Дві фази згортання топбару зі скролу (Вова 26.07, скрін IMG_3629):
+//   спершу ВЕРТИКАЛЬНО згасають назви, і лише коли їх уже нема — кільця сходяться.
+// Раніше обидва рухи йшли з одного числа, тобто одночасно, і сусідні назви
+// налазили одна на одну (підпис 112px ширший за колонку 96px — він живе за рахунок
+// проміжку, який у той самий момент зникав).
+// Винесено окремою чистою функцією, щоб перевірятись тестом без браузера.
+export const NAME_RANGE  = 60;   // px скролу на згасання назв (як було до поділу)
+export const TIGHT_RANGE = 60;   // px скролу на сходження кілець, ПІСЛЯ назв
+export function shrinkProgress(scrollTop, nameRange = NAME_RANGE, tightRange = TIGHT_RANGE) {
+  const s = Math.max(0, scrollTop);
+  const clamp01 = (v) => Math.min(1, Math.max(0, v));
+  return {
+    name:  clamp01(s / nameRange),
+    // Друга фаза стартує рівно там, де закінчилась перша — без паузи між ними
+    // (пауза між рухом пальця і реакцією екрана вже читалась як ривок, 24.07).
+    tight: clamp01((s - nameRange) / tightRange),
+  };
 }
 
 // Наскільки розсунути бічні відступи смуги, коли назви згорнуті (Вова 25.07,
@@ -1929,8 +1951,8 @@ export async function initFeed() {
     // Переміряти розкладку кружечків при зміні ширини екрана (поворот тощо).
     window.addEventListener('resize', layoutCircles);
 
-    // Стискання топбару при скролі стрічки вниз: прогрес 0..1 на перших SHRINK_RANGE
-    // пікселів → CSS-змінна --sh (кільця/відступи меншають плавно, scroll-linked).
+    // Стискання топбару при скролі стрічки вниз: дві CSS-змінні (--sh, --sh-tight),
+    // рахує shrinkProgress(), зчеплено зі скролом (scroll-linked).
     // Той самий патерн що на Громаді: слухач на .app-main + rAF-троттлінг.
     const main = document.querySelector('.app-main');
     const bar = root.querySelector('.fd-topbar');
@@ -1940,13 +1962,14 @@ export async function initFeed() {
       // рух пальця і реакцію екрана — на телефоні це читалось як сильний ривок
       // («виходить нелогічний»). Тепер згортання зчеплене зі скролом з першого
       // пікселя, а діапазон розтягнуто 40→60px, щоб зміна була плавнішою.
-      const SHRINK_START = 0;    // реагує одразу, разом з пальцем
-      const SHRINK_RANGE = 60;   // повне згортання назв за 60px скролу (0→60px)
+      // ДВІ ФАЗИ (Вова 26.07): 0→60px згасають назви, 60→120px сходяться кільця.
+      // Математика — у чистій shrinkProgress() вище (перевіряється тестом без браузера).
       let shRaf = 0;
       const applyShrink = () => {
         shRaf = 0;
-        const p = Math.min(1, Math.max(0, (main.scrollTop - SHRINK_START) / SHRINK_RANGE));
-        bar.style.setProperty('--sh', p.toFixed(3));
+        const p = shrinkProgress(main.scrollTop);
+        bar.style.setProperty('--sh', p.name.toFixed(3));
+        bar.style.setProperty('--sh-tight', p.tight.toFixed(3));
       };
       const onShrink = () => { if (!shRaf) shRaf = requestAnimationFrame(applyShrink); };
       main.addEventListener('scroll', onShrink, { passive: true });
