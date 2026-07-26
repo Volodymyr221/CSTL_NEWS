@@ -576,8 +576,11 @@ function commentErrorText(err) {
 // Instagram)». Це застаріло: обидві мережі відтоді розвели імʼя і текст по різних
 // рядках. Вова: «чому коментар знаходиться навпроти імені? Ми ж говорили, що зверху
 // імʼя, під іменем коментар». Тримаємо як у зразку — не повертати «в один абзац».
-// reply=true → вкладена відповідь. Відповідь чіпляється до кореня (parent_id||id) — 2 рівні.
-function commentRowHtml(c, reply = false) {
+// reply=true → вкладена відповідь.
+// replyTo — до КОГО чіпляти нову відповідь на цей коментар. Рахує дерево (commentThreads),
+// а не сам рядок: тільки там видно рівень. Для 3-го рівня це господар гілки, не сам
+// коментар — так глибина зупиняється на трьох, як у Facebook.
+function commentRowHtml(c, reply = false, replyTo = null) {
   const nm = c.author_uid ? liveName('', c.author_uid, 'Житель') : 'Житель';  // вже екранований
   const mine = c.author_uid && c.author_uid === currentUserId();
   const lr = comReactMap.get(c.id) || { count: 0, my: false };
@@ -606,7 +609,7 @@ function commentRowHtml(c, reply = false) {
       <div class="fd-com-body">
         <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
         <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">Редагувати</button><button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${replyTo || c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ''}" type="button">Відповісти</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">Редагувати</button><button class="fd-com-del" data-del-com="${c.id}" type="button">Видалити</button>` : ''}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? ' fd-com-like--on' : ''}" data-com-like="${c.id}" type="button" aria-label="Вподобати коментар">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -634,40 +637,90 @@ function pluralReplies(n) {
 // видалення, scripts/supabase_comment_cascade.sql) — сюди такі відповіді просто не
 // доїжджають. Ця перевірка — другий рубіж на випадок гонки: realtime міг принести
 // видалення кореня раніше, ніж відповідей, і тоді на секунду вигулькнув би «сирота».
+// ТРИ РІВНІ, як у Facebook (Вова 26.07, скріни IMG_3607/IMG_3637/IMG_3638):
+//   1 корінь → 2 відповідь → 3 відповідь на відповідь → ГЛИБШЕ НЕ ЗМІЩУЄМО.
+// Усе, що глибше, «сідає» на третій рівень до свого предка, а звʼязок показує згадка
+// імені. Вова: «У фейсбук не безкінечно зміщується» — і це не примха, а арифметика:
+// екран 390px, кожен рівень з'їдає відступ, на четвертому тексту лишається ~200px.
 function commentThreads(list) {
-  const repliesByParent = new Map();
-  for (const c of list) if (c.parent_id) {
-    if (!repliesByParent.has(c.parent_id)) repliesByParent.set(c.parent_id, []);
-    repliesByParent.get(c.parent_id).push(c);
+  const byId = new Map(list.map(c => [c.id, c]));
+
+  // Ланцюг предків знизу вгору: [батько, дід, …, корінь]. `seen` — захист від
+  // зациклення на випадок битих даних: краще обірвати ланцюг, ніж повісити застосунок.
+  const ancestors = (c) => {
+    const out = []; const seen = new Set([c.id]);
+    let cur = byId.get(c.parent_id);
+    while (cur && !seen.has(cur.id)) { seen.add(cur.id); out.push(cur); cur = cur.parent_id ? byId.get(cur.parent_id) : null; }
+    return out;
+  };
+
+  const lvl2 = new Map();   // id кореня      → відповіді 2-го рівня
+  const lvl3 = new Map();   // id відповіді 2 → відповіді 3-го рівня (і всі глибші)
+  const roots = [];
+  for (const c of list) {
+    if (!c.parent_id) { roots.push(c); continue; }
+    const anc = ancestors(c);
+    if (!anc.length) continue;                       // батька нема (видалений) — сирота
+    if (anc.length === 1) {                          // батько кореневий → ми 2-й рівень
+      if (!lvl2.has(anc[0].id)) lvl2.set(anc[0].id, []);
+      lvl2.get(anc[0].id).push(c);
+    } else {                                         // глибше → чіпляємось до предка 2-го рівня
+      const host = anc[anc.length - 2];              // передостанній у ланцюгу = 2-й рівень
+      if (!lvl3.has(host.id)) lvl3.set(host.id, []);
+      lvl3.get(host.id).push(c);
+    }
   }
-  const threads = [];
-  for (const c of list) if (!c.parent_id) {
-    threads.push({ root: c, replies: repliesByParent.get(c.id) || [] });
-  }
-  return threads;
+  return roots.map(r => ({
+    root: r,
+    replies: (lvl2.get(r.id) || []).map(x => ({ c: x, subs: lvl3.get(x.id) || [] })),
+  }));
 }
 
 // Розмітка однієї гілки. Обгортка .fd-com-branch навколо КОЖНОЇ відповіді — не зайвий
 // рівень, а вимушений: лінія-гачок малюється псевдоелементом ::before, а на самому
 // рядку ::before уже зайнятий підсвіткою адресата (.fd-com-row--replying). Без обгортки
 // одне затерло б інше — саме тому гілка і підсвітка живуть на різних елементах.
+// Кнопка згортання/розгортання — однакова для будь-якого рівня (Вова обрав варіант «як
+// у Facebook»: кожна гілка згортається САМА, а не вся розмова одним махом).
+function collapseBtnHtml(hostId, hidden, expanded, total, sub) {
+  const cls = `fd-com-branch${sub ? ' fd-com-branch--sub' : ''}`;
+  if (hidden > 0) return `<div class="${cls}"><button class="fd-com-more" data-more-parent="${hostId}" type="button">Ще ${hidden} ${pluralReplies(hidden)}</button></div>`;
+  if (expanded && total > REPLIES_VISIBLE) return `<div class="${cls}"><button class="fd-com-more" data-less-parent="${hostId}" type="button">Сховати відповіді</button></div>`;
+  return '';
+}
+
 function threadHtml(t) {
-  const rows = [commentRowHtml(t.root, false)];
+  const rows = [commentRowHtml(t.root, false, t.root.id)];
   if (!t.replies.length) return `<div class="fd-com-thread">${rows.join('')}</div>`;
 
   const expanded = expandedThreads.has(t.root.id);
   const visible = expanded ? t.replies : t.replies.slice(0, REPLIES_VISIBLE);
   const hidden = t.replies.length - visible.length;
-  const branches = visible.map(r => `<div class="fd-com-branch">${commentRowHtml(r, true)}</div>`);
-  // Кнопка-перемикач в кінці гілки. Ховати є ЧОГО лише коли відповідей більше за поріг —
-  // інакше «Сховати» згортало б у той самий вигляд, і кнопка була б обманом.
-  // Без неї розгортання було глухим кутом: розгорнув — і назад не згорнеш (скарга Вови).
-  if (hidden > 0) branches.push(
-    `<div class="fd-com-branch"><button class="fd-com-more" data-more-parent="${t.root.id}" type="button">Ще ${hidden} ${pluralReplies(hidden)}</button></div>`
-  );
-  else if (expanded && t.replies.length > REPLIES_VISIBLE) branches.push(
-    `<div class="fd-com-branch"><button class="fd-com-more" data-less-parent="${t.root.id}" type="button">Сховати відповіді</button></div>`
-  );
+
+  const branches = visible.map(r => {
+    // Відповідь 2-го рівня: відповідати на неї → 3-й рівень, тож ціль = вона сама.
+    let inner = commentRowHtml(r.c, true, r.c.id);
+    let hasSub = '';
+    if (r.subs.length) {
+      const subOpen = expandedThreads.has(r.c.id);
+      const subVis = subOpen ? r.subs : r.subs.slice(0, REPLIES_VISIBLE);
+      const subHid = r.subs.length - subVis.length;
+      // 🔑 Ціль відповіді для 3-го рівня — НЕ сам коментар, а його господар (2-й рівень).
+      // Інакше зʼявився б 4-й рівень, а ми його свідомо не робимо: хто кому відповів
+      // покаже згадка імені, як у Facebook.
+      const subRows = subVis.map(s => `<div class="fd-com-branch fd-com-branch--sub">${commentRowHtml(s, true, r.c.id)}</div>`);
+      const btn = collapseBtnHtml(r.c.id, subHid, subOpen, r.subs.length, true);
+      if (btn) subRows.push(btn);
+      inner += `<div class="fd-com-replies fd-com-replies--sub">${subRows.join('')}</div>`;
+      // --has-sub: стовбур уздовж цієї відповіді + продовження лінії батька повз неї
+      // (Вова 26.07: «Продовжується»).
+      hasSub = ' fd-com-branch--has-sub';
+    }
+    return `<div class="fd-com-branch${hasSub}">${inner}</div>`;
+  });
+
+  const btn = collapseBtnHtml(t.root.id, hidden, expanded, t.replies.length, false);
+  if (btn) branches.push(btn);
   // --branched вмикає стовбур уздовж кореневого коментаря. Клас, а не CSS :has(),
   // навмисно: :has() з'явився лише в iOS 15.4, а лінія має бути в усіх однаково.
   return `<div class="fd-com-thread fd-com-thread--branched">${rows.join('')}<div class="fd-com-replies">${branches.join('')}</div></div>`;

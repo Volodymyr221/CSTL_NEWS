@@ -11551,7 +11551,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u0439";
     return "\u041A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u043E \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437";
   }
-  function commentRowHtml(c, reply = false) {
+  function commentRowHtml(c, reply = false, replyTo = null) {
     const nm = c.author_uid ? liveName("", c.author_uid, "\u0416\u0438\u0442\u0435\u043B\u044C") : "\u0416\u0438\u0442\u0435\u043B\u044C";
     const mine = c.author_uid && c.author_uid === currentUserId();
     const lr = comReactMap.get(c.id) || { count: 0, my: false };
@@ -11564,7 +11564,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       <div class="fd-com-body">
         <div class="fd-com-head"><span class="fd-com-name"${nameUid(c.author_uid)}${av}>${nm}</span><span class="fd-com-time">${relTime(c.created_at)}${edited}</span></div>
         <div class="fd-com-line"><span class="fd-com-txt">${mention}${escapeHtml(c.text)}</span></div>
-        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button><button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
+        <div class="fd-com-meta"><button class="fd-com-reply" data-reply-parent="${replyTo || c.parent_id || c.id}" data-reply-id="${c.id}" data-reply-uid="${c.author_uid || ""}" type="button">\u0412\u0456\u0434\u043F\u043E\u0432\u0456\u0441\u0442\u0438</button>${mine ? `<button class="fd-com-edit" data-edit-com="${c.id}" type="button">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button><button class="fd-com-del" data-del-com="${c.id}" type="button">\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>` : ""}</div>
       </div>
       <div class="fd-com-likewrap">
         <button class="fd-com-like${lr.my ? " fd-com-like--on" : ""}" data-com-like="${c.id}" type="button" aria-label="\u0412\u043F\u043E\u0434\u043E\u0431\u0430\u0442\u0438 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440">${lr.my ? IC_HEART_F : IC_HEART_O}</button>
@@ -11581,36 +11581,79 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return "\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0435\u0439";
   }
   function commentThreads(list) {
-    const repliesByParent = /* @__PURE__ */ new Map();
-    for (const c of list)
-      if (c.parent_id) {
-        if (!repliesByParent.has(c.parent_id))
-          repliesByParent.set(c.parent_id, []);
-        repliesByParent.get(c.parent_id).push(c);
+    const byId2 = new Map(list.map((c) => [c.id, c]));
+    const ancestors = (c) => {
+      const out = [];
+      const seen = /* @__PURE__ */ new Set([c.id]);
+      let cur = byId2.get(c.parent_id);
+      while (cur && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        out.push(cur);
+        cur = cur.parent_id ? byId2.get(cur.parent_id) : null;
       }
-    const threads = [];
-    for (const c of list)
+      return out;
+    };
+    const lvl2 = /* @__PURE__ */ new Map();
+    const lvl3 = /* @__PURE__ */ new Map();
+    const roots = [];
+    for (const c of list) {
       if (!c.parent_id) {
-        threads.push({ root: c, replies: repliesByParent.get(c.id) || [] });
+        roots.push(c);
+        continue;
       }
-    return threads;
+      const anc = ancestors(c);
+      if (!anc.length)
+        continue;
+      if (anc.length === 1) {
+        if (!lvl2.has(anc[0].id))
+          lvl2.set(anc[0].id, []);
+        lvl2.get(anc[0].id).push(c);
+      } else {
+        const host = anc[anc.length - 2];
+        if (!lvl3.has(host.id))
+          lvl3.set(host.id, []);
+        lvl3.get(host.id).push(c);
+      }
+    }
+    return roots.map((r) => ({
+      root: r,
+      replies: (lvl2.get(r.id) || []).map((x) => ({ c: x, subs: lvl3.get(x.id) || [] }))
+    }));
+  }
+  function collapseBtnHtml(hostId, hidden, expanded, total, sub) {
+    const cls = `fd-com-branch${sub ? " fd-com-branch--sub" : ""}`;
+    if (hidden > 0)
+      return `<div class="${cls}"><button class="fd-com-more" data-more-parent="${hostId}" type="button">\u0429\u0435 ${hidden} ${pluralReplies(hidden)}</button></div>`;
+    if (expanded && total > REPLIES_VISIBLE)
+      return `<div class="${cls}"><button class="fd-com-more" data-less-parent="${hostId}" type="button">\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456</button></div>`;
+    return "";
   }
   function threadHtml(t) {
-    const rows = [commentRowHtml(t.root, false)];
+    const rows = [commentRowHtml(t.root, false, t.root.id)];
     if (!t.replies.length)
       return `<div class="fd-com-thread">${rows.join("")}</div>`;
     const expanded = expandedThreads.has(t.root.id);
     const visible = expanded ? t.replies : t.replies.slice(0, REPLIES_VISIBLE);
     const hidden = t.replies.length - visible.length;
-    const branches = visible.map((r) => `<div class="fd-com-branch">${commentRowHtml(r, true)}</div>`);
-    if (hidden > 0)
-      branches.push(
-        `<div class="fd-com-branch"><button class="fd-com-more" data-more-parent="${t.root.id}" type="button">\u0429\u0435 ${hidden} ${pluralReplies(hidden)}</button></div>`
-      );
-    else if (expanded && t.replies.length > REPLIES_VISIBLE)
-      branches.push(
-        `<div class="fd-com-branch"><button class="fd-com-more" data-less-parent="${t.root.id}" type="button">\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456</button></div>`
-      );
+    const branches = visible.map((r) => {
+      let inner = commentRowHtml(r.c, true, r.c.id);
+      let hasSub = "";
+      if (r.subs.length) {
+        const subOpen = expandedThreads.has(r.c.id);
+        const subVis = subOpen ? r.subs : r.subs.slice(0, REPLIES_VISIBLE);
+        const subHid = r.subs.length - subVis.length;
+        const subRows = subVis.map((s) => `<div class="fd-com-branch fd-com-branch--sub">${commentRowHtml(s, true, r.c.id)}</div>`);
+        const btn2 = collapseBtnHtml(r.c.id, subHid, subOpen, r.subs.length, true);
+        if (btn2)
+          subRows.push(btn2);
+        inner += `<div class="fd-com-replies fd-com-replies--sub">${subRows.join("")}</div>`;
+        hasSub = " fd-com-branch--has-sub";
+      }
+      return `<div class="fd-com-branch${hasSub}">${inner}</div>`;
+    });
+    const btn = collapseBtnHtml(t.root.id, hidden, expanded, t.replies.length, false);
+    if (btn)
+      branches.push(btn);
     return `<div class="fd-com-thread fd-com-thread--branched">${rows.join("")}<div class="fd-com-replies">${branches.join("")}</div></div>`;
   }
   function patchCommentLike(id) {
