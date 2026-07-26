@@ -452,6 +452,20 @@
    вище за екран. position: fixed → міряється від видимої області, як і раніше
    міряли .fd-sheet-back (inset: 0), тож вимір top0 у модулі не змінюється. */
 .fd-sheet-vp { position: fixed; inset: 0; display: flex; align-items: flex-end; justify-content: center; }
+
+/* Продовження поверхні аркуша ПІД його низ ─────────────────────────────────────
+   Навіщо: `core/keyboard.js` стискає аркуш у момент ТАПУ в поле — на випередження,
+   поки клавіатура ще їде (інакше iOS сам прокручує сторінку, і стрибає весь верх).
+   Ті ~250мс, поки клавіатура піднімається, низ аркуша вже стоїть на її майбутній
+   межі, а під ним світилася б смуга голого затемнення. Домальовуємо туди ту саму
+   поверхню — і клавіатура виїжджає ніби з-під аркуша, без розриву.
+   Це чистий МАЛЮНОК: розкладки не займає, подій не ловить, після появи клавіатури
+   повністю ховається за нею. Ширина рівно як в аркуша (він max-width: 640px). */
+.fd-sheet-vp.kb-open::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  width: 100%; max-width: 640px; height: 60vh;
+  background: var(--fd-surface); pointer-events: none;
+}
 .fd-sheet { width: 100%; max-width: 640px; max-height: 82svh; overflow-y: auto; background: var(--fd-surface);
   border-radius: 20px 20px 0 0; padding: 8px 16px calc(16px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%); transition: transform 0.25s cubic-bezier(0.32,0.72,0,1); }
@@ -638,9 +652,12 @@
 
    ГЕОМЕТРІЯ 3-го рівня (рахована, не на око):
      аватар відповіді 2-го рівня стоїть на лівому краї своєї гілки → його центр 17px.
-     під-відповідь відсунута на 38px → у її координатах центр стовбура = 17−38 = −21px.
+     ⚠️ ВИПРАВЛЕНО 26.07 (Вова: «гілка і підгілка накладені одна на одну, підгілка має
+     виходити від гілки як одне ціле»): стовбур підгілки малюється на 16px (рядок Віктора),
+     а гачки стояли на 17px — зсув в 1px давав ДВІ лінії поряд замість однієї. Тепер
+     гачок теж на 16px: під-відповідь відсунута на 38px → 16−38 = −22px.
      гачок: вертикаль −16px (проміжок) → 33px (16 + півaватара 17), там загин управо,
-     ширина 11px → кінець на −10px, тобто рівно 10px не доходить до аватара —
+     ширина 12px → кінець на −10px, тобто рівно 10px не доходить до аватара —
      той самий зазор, що й на 2-му рівні. */
 .fd-com-replies--sub { display: flex; flex-direction: column; gap: 16px; margin-top: 16px; }
 .fd-com-branch--sub { position: relative; margin-left: 38px; }
@@ -654,7 +671,7 @@
 }
 /* Гачок до кожної під-відповіді — та сама форма, менший розмах. */
 .fd-com-branch--sub::before {
-  content: ''; position: absolute; left: -21px; top: -16px; width: 11px; height: 33px;
+  content: ''; position: absolute; left: -22px; top: -16px; width: 12px; height: 33px;
   border-left: 2px solid var(--fd-divider);
   border-bottom: 2px solid var(--fd-divider);
   border-bottom-left-radius: 8px;
@@ -663,7 +680,7 @@
 /* Продовження стовбура 2-го рівня між під-відповідями (правило 4 всередині підгілки).
    Та сама причина, що й рівнем вище: старт з -16px, інакше розрив навпроти аватара. */
 .fd-com-branch--sub:not(:last-child)::after {
-  content: ''; position: absolute; left: -21px; top: -16px; bottom: -16px;
+  content: ''; position: absolute; left: -22px; top: -16px; bottom: -16px;
   border-left: 2px solid var(--fd-divider); pointer-events: none;
 }
 /* Виняток із правила 4: остання відповідь із підгілкою НЕ обриває лінію батька.
