@@ -251,7 +251,8 @@ async function openAccount() {
       updateHeaderBtn();                        // шапка → назад на дефолтну іконку
       showToast('Фото видалено', 2200);
     } catch (err) {
-      showToast('Не вдалося видалити фото: ' + err.message, 4000, 'error');
+      // Текст уже людський (його дає netErrorText у saveProfile) — сирий сюди не доходить.
+      showToast(err.message || 'Не вдалося видалити фото — спробуй ще раз', 4000, 'error');
     } finally {
       avBtn.disabled = false; avBox.classList.remove('acc-av--loading');
     }
@@ -286,7 +287,7 @@ async function openAccount() {
       updateHeaderBtn();                        // мініатюра в шапці одразу
       showToast('✅ Фото оновлено', 2200);
     } catch (err) {
-      showToast('Не вдалося завантажити фото: ' + err.message, 4000, 'error');
+      showToast(err.message || 'Не вдалося завантажити фото — спробуй ще раз', 4000, 'error');
     } finally {
       avBtn.disabled = false; avBox.classList.remove('acc-av--loading');
     }

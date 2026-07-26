@@ -9,7 +9,7 @@
 // Етап 2: гейтинг увімкнено в діях (подача оголошення, реакції, коментарі,
 // трек автобуса). requireAuth() для гостя показує тост + подію cstl-need-login.
 
-import { getSupabase, netErrorText } from './supabase.js';
+import { getSupabase, netErrorText, netCall } from './supabase.js';
 import { showToast } from './utils.js';
 
 let _user = null;        // поточний користувач (або null якщо гість)
@@ -119,17 +119,21 @@ export async function saveProfile(fields = {}) {
   const row = { uid: _user.id, email: _user.email || null };
   for (const k of PROFILE_FIELDS) if (k in fields) row[k] = fields[k] === '' ? null : fields[k];
   let partial = false;
-  let { error } = await supa.from('profiles').upsert(row, { onConflict: 'uid' });
-  if (error && /column|schema/i.test(error.message)) {
+  // Через ядро: анкета — це upsert по uid, тобто повтор при обриві дає той самий рядок.
+  // Текст помилки людський (netErrorText), сирий — лише в консоль.
+  let r = await netCall(() => supa.from('profiles').upsert(row, { onConflict: 'uid' }));
+  let error = r.ok ? null : r.rawError;
+  if (error && /column|schema/i.test(error.message || '')) {
     // Розширені колонки ще не додані (міграція profiles_extended не застосована) —
     // зберігаємо базове, щоб ім'я не губилось, і ЧЕСНО повертаємо partial:
     // раніше тут мовчки губилися село/прізвище/телефон із тостом «збережено».
     partial = true;
     const core = { uid: _user.id, email: _user.email || null,
                    name: row.name ?? null, birth_date: row.birth_date ?? null };
-    ({ error } = await supa.from('profiles').upsert(core, { onConflict: 'uid' }));
+    r = await netCall(() => supa.from('profiles').upsert(core, { onConflict: 'uid' }));
+    error = r.ok ? null : r.rawError;
   }
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: r.error };   // r.error — уже людський текст
   if (row.name) _profileName = row.name;   // кеш для currentUserName()
   if (!partial && 'avatar_url' in row) _profileAvatar = row.avatar_url || null;   // кеш аватара
   return { ok: true, partial };

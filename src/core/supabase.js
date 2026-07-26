@@ -279,7 +279,9 @@ export async function uploadPhotoToStorage(blob, folder = '') {
 
   if (uploadError) {
     console.warn('[supabase] uploadPhotoToStorage error:', uploadError.message);
-    return { url: null, error: uploadError.message };
+    // Людський текст, а не технічний: цей рядок доходить до тоста в кабінеті й
+    // у композері. Повтор тут не наш клопіт — його вже робить core/upload.js.
+    return { url: null, error: netErrorText(uploadError) };
   }
 
   const { data } = supa.storage.from('community-photos').getPublicUrl(path);
@@ -863,10 +865,9 @@ export async function fetchUnreadByThread(uid) {
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).
 export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
   if (!supa || !uid) return { ok: false };
-  const { error } = await supa.from('user_push_devices')
-    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' });
-  if (error) { console.warn('[supabase] saveUserPushDevice:', error.message); return { ok: false }; }
-  return { ok: true };
+  const r = await netCall(() => supa.from('user_push_devices')
+    .upsert({ uid, endpoint, p256dh, auth_key }, { onConflict: 'uid,endpoint' }));
+  return r.ok ? { ok: true } : { ok: false };
 }
 
 // Realtime: будь-яка зміна повідомлень одного треда (нові / редагування / видалення / прочитано).
@@ -903,19 +904,19 @@ export async function fetchSavedPostIds(uid) {
   return set;
 }
 
+// Закладки — тихі й ідемпотентні: повтор дає той самий стан, а тост через закладку
+// людині не потрібен (викликач сам відкочує іконку, якщо не вийшло).
 export async function addSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
-  const { error } = await supa.from('saved_posts')
-    .upsert({ uid, post_id: postId }, { onConflict: 'uid,post_id' });
-  if (error) { console.warn('[supabase] addSavedPost:', error.message); return { ok: false }; }
-  return { ok: true };
+  const r = await netCall(() => supa.from('saved_posts')
+    .upsert({ uid, post_id: postId }, { onConflict: 'uid,post_id' }));
+  return r.ok ? { ok: true } : { ok: false };
 }
 
 export async function removeSavedPost(uid, postId) {
   if (!supa || !uid) return { ok: false };
-  const { error } = await supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId);
-  if (error) { console.warn('[supabase] removeSavedPost:', error.message); return { ok: false }; }
-  return { ok: true };
+  const r = await netCall(() => supa.from('saved_posts').delete().eq('uid', uid).eq('post_id', postId));
+  return r.ok ? { ok: true } : { ok: false };
 }
 
 // ── ВІДСТЕЖУВАНІ РЕЙСИ — гідрація з push_subscriptions (синхрон між пристроями) ──
@@ -963,16 +964,18 @@ export async function fetchTrackedRoutesFromDB(uid, todayISO) {
 // Зберігає push-підписку у Supabase. При повторному виклику — upsert оновлює.
 // payload: { user_uuid, endpoint, p256dh, auth_key, route_id, route_name,
 //            boarding_stop, alighting_stop, track_date, dep_time }
+// Це ВСТАВКА, але повтор тут безпечний — і не через звірку, а через саму базу:
+// на рядок стоїть унікальність, тож друга спроба впаде у 23505, який ми й так
+// вважаємо успіхом. Тобто дубля підписки не буде за побудовою.
+// Чому це важливо: обрив саме тут = людина бачить увімкнений дзвіночок, а сервер
+// про рейс не знає, і сповіщення не прийде. Тихий збій, який помічають надто пізно.
 export async function savePushSubscription(payload) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { error } = await supa.from('push_subscriptions').insert(payload);
-  if (error) {
-    // 23505 = unique_violation (порушення унікальності) — підписка вже є, це нормально
-    if (error.code === '23505') return { ok: true };
-    console.warn('[supabase] savePushSubscription:', error.message);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+  const r = await netCall(() => supa.from('push_subscriptions').insert(payload));
+  if (r.ok) return { ok: true };
+  // 23505 = unique_violation (порушення унікальності) — підписка вже є, це нормально
+  if (r.rawError?.code === '23505') return { ok: true };
+  return { ok: false, error: r.error };
 }
 
 // Видаляє конкретний рядок підписки (при знятті відстеження рейсу).
@@ -980,16 +983,12 @@ export async function savePushSubscription(payload) {
 // зробити повтор і не лишити висячу серверну підписку при збої мережі.
 export async function deletePushSubscription(endpoint, routeId, trackDate) {
   if (!supa) return { ok: false, error: 'no-supa' };
-  const { error } = await supa.from('push_subscriptions')
+  const r = await netCall(() => supa.from('push_subscriptions')
     .delete()
     .eq('endpoint', endpoint)
     .eq('route_id', routeId)
-    .eq('track_date', trackDate);
-  if (error) {
-    console.warn('[supabase] deletePushSubscription:', error.message);
-    return { ok: false, error: error.message };
-  }
-  return { ok: true };
+    .eq('track_date', trackDate));
+  return r.ok ? { ok: true } : { ok: false, error: r.error };
 }
 
 // ── REALTIME ─────────────────────────────────────────────────────────────────
