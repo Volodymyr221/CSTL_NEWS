@@ -124,6 +124,45 @@ function freezeBackground(overlay) {
   };
 }
 
+// ── Пам'ять про висоту клавіатури ЦЬОГО пристрою ────────────────────────────────
+// 🔑 НАВІЩО (Вова 26.07: «верхня частина при відкритті клавіатури досі пригає»):
+// причина дьоргання — не наша геометрія (діагностика з айфона показує, що КІНЦЕВИЙ
+// стан ідеальний: `стиск=413 зсув=0`, `ФОН зсув: +0`, верх аркуша = top0). Дьоргання
+// транзитне, і ось його механіка:
+//   1. Палець тапає в поле → подія focus.
+//   2. Клавіатура ще НЕ виїхала, аркуш ще на всю висоту → поле вводу лежить там, де
+//      за мить буде клавіатура.
+//   3. iOS бачить «фокусне поле буде закрите» і САМ прокручує webview угору, щоб його
+//      показати. Оце і є стрибок усього верху.
+//   4. Аж наприкінці анімації прилітає `visualViewport.resize`, ми перебудовуємо аркуш
+//      і повертаємо сторінку на місце — і все стає правильно. Але кадр уже показали.
+// Реагувати швидше ми не можемо: `scroll` приходить ПІСЛЯ малювання кадру.
+// Тому лікуємо причину, а не наслідок: стискаємо аркуш У МОМЕНТ ФОКУСА, за
+// ЗАПАМ'ЯТОВАНОЮ висотою клавіатури. Тоді на кроці 3 iOS бачить поле вже у видимій
+// зоні — і йому просто нема чого прокручувати.
+const KB_MEM_KEY = 'kb-height';
+let kbMem = null;                  // кеш у пам'яті: localStorage не смикаємо щокадру
+function recallKbHeight() {
+  if (kbMem === null) {
+    let v = 0;
+    try { v = parseInt(localStorage.getItem(KB_MEM_KEY) || '0', 10) || 0; } catch { v = 0; }
+    kbMem = (v >= 120 && v <= 900) ? v : 0;   // поза цими межами — не клавіатура
+  }
+  return kbMem;
+}
+function rememberKbHeight(px) {
+  const v = Math.round(px);
+  if (v < 120 || v > 900) return;
+  if (Math.abs(v - recallKbHeight()) < 5) return;   // те саме число — не пишемо
+  kbMem = v;
+  try { localStorage.setItem(KB_MEM_KEY, String(v)); } catch { /* приватний режим */ }
+}
+// Прогноз лише там, де клавіатура ЕКРАННА. На ноутбуці з мишею фокус у поле нічого не
+// займає, і завбачливе стискання аркуша було б чистою шкодою.
+function touchKeyboard() {
+  try { return window.matchMedia?.('(pointer: coarse)')?.matches === true; } catch { return false; }
+}
+
 // ── Дотягнути рядок у видиму зону скролера ──────────────────────────────────────
 // Використовує список коментарів: коли відповідаєш на коментар, який клавіатура
 // закрила, його треба показати. Правило: рухаємо ЛИШЕ якщо рядок реально не видно —
@@ -174,6 +213,8 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
   const h0 = vv.height;
 
   let raf = 0, focused = false, applied = false, wasOpen = false, top0 = null;
+  // predicted — завбачена висота клавіатури, поки система не сказала справжню.
+  let predicted = 0, predictTimer = 0;
 
   // top0 — де верх аркуша стоїть у СПОКОЇ, у координатах видимої області.
   // ⚠️ ПАСТКА, В ЯКУ Я ВЖЕ НАСТУПИВ (Вова: «верх під'їжджає до шапки»): якщо міряти
@@ -202,7 +243,14 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     // бачив: «все ховається за екран», зниклий верх листа і зниклу панель.
     const shrink = Math.max(0, h0 - vv.height);              // спосіб А
     const shift  = Math.max(0, vv.offsetTop, window.scrollY || 0);  // спосіб Б
-    const kb = Math.max(shrink, shift);      // скільки місця з'їла клавіатура, як не міряй
+    const real = Math.max(shrink, shift);    // що САМЕ каже система просто зараз
+    // Система відповіла — прогноз своє відпрацював, далі живемо на фактах.
+    // І заразом запам'ятовуємо справжню висоту клавіатури цього пристрою на майбутнє.
+    if (real > 80) {
+      if (predicted) { clearTimeout(predictTimer); predicted = 0; }
+      rememberKbHeight(real);
+    }
+    const kb = Math.max(real, predicted);    // скільки місця з'їла клавіатура, як не міряй
     // «Відкрита» — фокус у полі І помітна реакція будь-яким зі способів.
     // Гейт фокуса лишається: vv.height буває «застряглим» після закриття клавіатури.
     const open = focused && kb > 80 && top0 !== null;
@@ -229,15 +277,45 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
       applied = false;
     }
     if (kbClass) sheet.classList.toggle(kbClass, open);
+    // Поки прогноз випереджає клавіатуру, під аркушем на кілька кадрів лишається смуга
+    // порожнього затемнення. Клас домальовує туди поверхню аркуша — див. `style/feed.css`.
+    overlay.classList.toggle('kb-open', open);
     // Гачок — лише на ПЕРЕХІД у стан «клавіатура відкрита», не на кожен кадр.
     if (open && !wasOpen) { try { onOpen?.(); } catch (_) {} }
     wasOpen = open;
-    dbg?.update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg });
+    dbg?.update({ open, kb, shrink, shift, predicted, top0, h0, vv, sheet, overlay, bg });
   };
 
   const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); };
-  const onFocus = () => { focused = true; schedule(); };
-  const onBlur  = () => { focused = false; schedule(); };
+
+  const onFocus = () => {
+    focused = true;
+    // 🔑 ВИПЕРЕДЖАЄМО iOS (пояснення механіки — у блоці про пам'ять висоти вище).
+    // Прогноз беремо з пам'яті пристрою; якщо цей пристрій тут уперше — з оцінки
+    // 45% видимої висоти. Оцінка навмисно груба: помилка в неї впливає лише на НИЗ
+    // аркуша на кілька кадрів, бо верх у нас за побудовою завжди top0.
+    if (touchKeyboard() && !predicted) {
+      predicted = recallKbHeight() || Math.round(h0 * 0.45);
+      clearTimeout(predictTimer);
+      // Страховка: якщо клавіатура так і не з'явилась (зовнішня клавіатура, фокус із
+      // коду), прогноз мусить сам себе скасувати — інакше аркуш лишиться стиснутим.
+      predictTimer = setTimeout(() => {
+        if (!predicted) return;
+        predicted = 0; schedule();
+      }, 600);
+      // СИНХРОННО, у тому ж кадрі, що й focus: rAF тут уже пізно — iOS встигає
+      // вирішити, що поле треба «показати», і прокрутити сторінку.
+      cancelAnimationFrame(raf);
+      apply();
+      return;
+    }
+    schedule();
+  };
+  const onBlur = () => {
+    focused = false;
+    clearTimeout(predictTimer); predicted = 0;
+    schedule();
+  };
 
   input?.addEventListener('focus', onFocus);
   input?.addEventListener('blur', onBlur);
@@ -247,6 +325,7 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
 
   return () => {
     cancelAnimationFrame(raf);
+    clearTimeout(predictTimer); predicted = 0;
     unfreeze();
     input?.removeEventListener('focus', onFocus);
     input?.removeEventListener('blur', onBlur);
@@ -256,6 +335,7 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     overlay.style.bottom = ''; overlay.style.width = ''; overlay.style.height = '';
     sheet.style.height = '';
     if (kbClass) sheet.classList.remove(kbClass);
+    overlay.classList.remove('kb-open');
     dbg?.remove();
   };
 }
@@ -288,7 +368,7 @@ function createDebugPanel() {
   const mode = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone
     ? 'ДОДАТОК (standalone)' : 'браузер';
   return {
-    update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg }) {
+    update({ open, kb, shrink, shift, predicted, top0, h0, vv, sheet, overlay, bg }) {
       const r = sheet.getBoundingClientRect();
       // 🔴 РЯДОК-ВІДПОВІДЬ на питання «чому фон з'їжджає»: якщо drift ≠ 0 — поїхав
       // САМ скролер (замок не тримає); якщо drift = 0, а offTop ≠ 0 — скролер стоїть,
@@ -302,7 +382,7 @@ function createDebugPanel() {
         `${ver}  ·  ${mode}\n` +
         `клавіатура: ${open ? 'ВІДКРИТА' : 'закрита'}  kb=${Math.round(kb)}\n` +
         // Який спосіб застосував iOS: стиснув видиму область (А) чи прокрутив webview (Б).
-        `спосіб: стиск=${Math.round(shrink ?? 0)} зсув=${Math.round(shift ?? 0)}\n` +
+        `спосіб: стиск=${Math.round(shrink ?? 0)} зсув=${Math.round(shift ?? 0)} прогноз=${Math.round(predicted ?? 0)}\n` +
         `ФОН зсув: ${bgLine}\n` +
         `vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}\n` +
         `window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}\n` +
