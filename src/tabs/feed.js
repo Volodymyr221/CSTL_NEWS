@@ -304,7 +304,11 @@ function setComSheetFull(on, { animate = true } = {}) {
   if (!comSheetFull) el.style.height = '';
 }
 
-function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false } = {}) {
+// onDismissStart — необов'язковий гачок «жест вирішив закривати». Викликається СИНХРОННО
+// в момент, коли аркуш рушив униз, ще до першого кадру анімації. Потрібен там, де на
+// елементі може паралельно йти ІНША анімація: див. лист коментарів (заморожує висоту).
+// Решта аркушів його не передають — для них нічого не змінюється.
+function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false, onDismissStart = null } = {}) {
   scroller = scroller || panel;
   const zone = grip || panel;          // де жест ПОЧИНАЄТЬСЯ і живуть слухачі
   let startY = 0, dragging = false, dy = 0, travel = 1;
@@ -372,7 +376,10 @@ function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStag
       panel, dy, velocity: drag.velocity,
       remaining: sheetRemaining(panel, dy),
       dismissTransform: 'translateY(100%)',
-      onDismiss: (ms) => { back.classList.remove('open'); setTimeout(doClose, ms); },
+      // 🔑 onDismissStart — ПЕРШИМ, до всього іншого. `finishSwipe` уже поставив
+      // `translateY(100%)`, але жодного кадру ще не намальовано, тож заморозити тут
+      // геометрію — значить заморозити її ДО початку руху.
+      onDismiss: (ms) => { onDismissStart?.(); back.classList.remove('open'); setTimeout(doClose, ms); },
       backdrop: fade,
     });
     dy = 0;
@@ -1505,7 +1512,7 @@ function openComments(postId, focusCommentId = null) {
   const gripEl = sheet.querySelector('.fd-com-grip');
   // twoStage — три рівні жесту (розширений → початкова висота → закриття). Лише тут:
   // інші листи не розширюються, тож проміжної станції в них немає.
-  attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true });
+  attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true, onDismissStart: () => beginClose() });
   // Шапка лежить ПОВЕРХ списку (щоб коментарі їхали під неї), тож у списку треба
   // звільнити під неї місце зверху. Висоту саме ВИМІРЮЄМО, а не прописуємо числом:
   // вона залежить від шрифту й міжрядкового інтервалу пристрою, і будь-яка формула
@@ -1530,6 +1537,27 @@ function openComments(postId, focusCommentId = null) {
   // порядку реєстрації → перехід гарантовано на місці, коли модуль почне рахувати.
   // ⚠️ Це НЕ рух розкладки на випередження (HOT_RULES №10): клас лише вмикає CSS-перехід,
   // геометрію не чіпає — ціль тапу з-під пальця не їде, лист від тапу не закривається.
+  // ── ЗАКРИТТЯ: анімуємо ТІЛЬКИ зсув, більше нічого ──────────────────────────────
+  // 🔑 БАГ, ЯКИЙ ЦЕ ЛІКУЄ (Вова 26.07: «не звертається донизу, а дьоргається і пропадає»).
+  // Свайп закриває аркуш через `transform: translateY(100%)`, а «100%» — це 100% ВЛАСНОЇ
+  // ВИСОТИ елемента. Одночасно спрацьовував `blur` (фокус губиться при закритті) і
+  // повертав лист із висоти під клавіатуру (~496px) у початкові 82svh (~692px) — з
+  // переходом. Виходило, що висота РОСТЕ саме тоді, коли лист має рівно їхати вниз:
+  // ціль `100%` весь час тікала → рух нерівномірний, верх ще й розпухав.
+  // (Заразом `sheetRemaining()` міряв `offsetHeight` посеред цієї ж анімації, тож і
+  // тривалість доїзду рахувалась по висоті, якої вже не було.)
+  //
+  // ЛІКУЄМО ПРИЧИНУ, а не наслідок: у момент початку закриття фіксуємо висоту в пікселях
+  // і знімаємо клас переходу. Далі змінюється рівно одна властивість — `transform`,
+  // і в неї нерухома ціль. Прапорець `closing` глушить `blur`, хай коли б той прийшов.
+  let closing = false;
+  const beginClose = () => {
+    if (closing) return;
+    closing = true;
+    comSheet.classList.remove('fd-com-sheet--anim');       // геть перехід висоти
+    comSheet.style.height = comSheet.offsetHeight + 'px';  // і саму висоту — під замок
+  };
+
   let kbAnimTimer = 0;
   const kbAnim = () => {
     comSheet.classList.add('fd-com-sheet--anim');
@@ -1540,7 +1568,12 @@ function openComments(postId, focusCommentId = null) {
   // Згортання клавіатури: та сама плавність + лист ПОВЕРТАЄТЬСЯ у початкову висоту.
   // 🔄 Це зміна рішення від 26.07 (раніше лист навмисно лишався зверху). Підтверджено
   // Вовою: «модалка повинна плавно повернутися у своє початкове положення».
-  kbInput?.addEventListener('blur', () => { kbAnim(); setComSheetFull(false, { animate: false }); });
+  kbInput?.addEventListener('blur', () => {
+    // ⛔ Лист уже закривається — нічого не робимо. Інакше дві анімації б'ються за один
+    // елемент (див. `beginClose` нижче).
+    if (closing) return;
+    kbAnim(); setComSheetFull(false, { animate: false });
+  });
 
   detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
