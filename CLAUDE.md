@@ -20,7 +20,7 @@
 - Стек: ванільний JS, GitHub Pages, esbuild, PWA
 - Деплой: автоматичний через GitHub Actions при пуші/мерджі в `main` (підхід А+ через `actions/deploy-pages`)
 - URL: `https://volodymyr221.github.io/CSTL_NEWS/`
-- Лічильник версії внизу екрану: `v{N} · DD.MM HH:MM` — індикатор що останній деплой пройшов
+- Лічильник версії по центру шапки: `v{N} · DD.MM HH:MM` — індикатор що останній деплой пройшов
 
 ---
 
