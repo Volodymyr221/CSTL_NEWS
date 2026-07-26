@@ -1039,6 +1039,26 @@ export function subscribePageComments(onChange) {
   return () => supa.removeChannel(ch);
 }
 
+// «СТРІЧКА»: жива підписка на самі ПОСТИ (Вова 26.07: «realtime має бути… між всіма, в яких
+// зараз відкрита та чи інша модалка коментарів чи будь-яка інша сторінка взаємодії»).
+// Досі підписки на пости не було взагалі: новий пост зʼявлявся в інших лише після
+// перезаходу на вкладку. `cstl-posts-changed` — подія ОДНОГО пристрою, вона нікуди не летить.
+//
+// ⚠️ Realtime віддає рядок таблиці БЕЗ приєднаної сторінки (`pages(name, avatar_url)`) —
+// приєднання в підписках не буває. Тому назву й аватар сторінки викликач бере з уже
+// завантаженого списку сторінок (див. applyPostEvent у feed.js).
+// Видалення поста в застосунку мʼяке (`deleted_at`), тобто приходить як UPDATE з повним
+// рядком — окремої обробки DELETE не потребує.
+export function subscribePagePosts(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-posts-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_posts' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 // «СТРІЧКА»: жива підписка на лайки постів (лічильник оновлюється у всіх наживо).
 // DELETE-подія віддає post_id/user_id лише якщо таблиця має REPLICA IDENTITY FULL
 // (scripts/supabase_pages_reactions_auth.sql) — інакше зняття лайка не синхронізується.

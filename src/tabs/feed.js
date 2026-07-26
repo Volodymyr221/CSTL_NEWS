@@ -16,6 +16,7 @@ import {
   addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
   createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
+  subscribePagePosts,
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
   fetchPageModerators, addPageModerator, removePageModerator, netErrorText,
@@ -59,6 +60,13 @@ let comReactMap = new Map();  // comment_id → { count, my } (лайки ком
 let myPageIds = new Set();    // сторінки де я можу писати (власник/адмін)
 let mySubs = new Set();       // сторінки на які я підписаний (дзвіночок)
 let loaded = false;
+// Пости, які приїхали живою синхронізацією, поки людина читає стрічку. У список їх НЕ
+// вставляємо одразу: `renderFeed` перемальовує весь список (`innerHTML`), тобто вставка
+// зверху зсунула б усе під пальцем — та сама сім'я дефекту, що HOT_RULES №10.
+// Замість цього показуємо пігулку «↑ N нових публікацій» (як в Instagram і X), і людина
+// сама вирішує, коли оновити. Пігулка з'являється миттєво, тобто «живо» — але керує
+// моментом перемальовування людина, а не подія.
+let pendingPosts = [];
 
 // Ключ реакції = uid залогіненого. Лайк лише авторизованим (рішення Вови 22.07:
 // анонімна реакція ламає ідентифікацію і статистику). Гість → null (жодна не «моя»).
@@ -412,6 +420,83 @@ function renderFeed() {
   }
   listEl.innerHTML = posts.map(postCardHtml).join('');
   wireGalleries(listEl);
+}
+
+// ── ЖИВА СИНХРОНІЗАЦІЯ САМИХ ПОСТІВ ────────────────────────────────────────────────
+// Вова 26.07: «realtime має бути… між всіма, в яких зараз відкрита та чи інша модалка
+// коментарів чи будь-яка інша сторінка взаємодії». Коментарі й лайки жили наживо давно,
+// а самі пости — ні: новий пост зʼявлявся в інших лише після перезаходу на вкладку.
+//
+// Чому не вставляємо новий пост одразу в список — див. комент до `pendingPosts`.
+// Редагування і видалення НАЯВНОГО поста застосовуємо одразу: там нема нового вмісту
+// зверху, тобто нічого не зсувається над тим місцем, де людина читає.
+function applyPostEvent(payload) {
+  const row = payload.new || payload.old;
+  if (!row || !row.id) return;
+
+  // Мʼяке видалення (deleted_at) або справжній DELETE — прибираємо з екрана.
+  if (payload.eventType === 'DELETE' || row.deleted_at) {
+    const had = posts.some(p => p.id === row.id);
+    posts = posts.filter(p => p.id !== row.id);
+    pendingPosts = pendingPosts.filter(p => p.id !== row.id);
+    if (had) renderFeed();
+    renderNewPostsPill();
+    return;
+  }
+
+  // Realtime не приєднує сторінку (`pages(...)`) — доповнюємо з уже завантаженого списку.
+  // Сторінка невідома (щойно створена кимось іншим) → лишаємо без назви: пігулка все одно
+  // покаже пост, а повне оновлення при тапі дотягне сторінки разом із постами.
+  const page = pages.find(p => p.id === row.page_id);
+  const enriched = { ...row, pages: page ? { name: page.name, avatar_url: page.avatar_url } : row.pages };
+
+  const i = posts.findIndex(p => p.id === row.id);
+  if (i >= 0) {                       // редагування поста, який уже на екрані
+    posts[i] = enriched;
+    renderFeed();
+    return;
+  }
+  // Мій власний щойно надісланий пост уже додав композер — другий раз не показуємо.
+  if (pendingPosts.some(p => p.id === row.id)) return;
+  pendingPosts.push(enriched);
+  renderNewPostsPill();
+}
+
+// Пігулка «↑ N нових публікацій» під топбаром кружечків. Тап → вливаємо накопичене у
+// список, перемальовуємо і піднімаємо стрічку вгору.
+function renderNewPostsPill() {
+  const host = document.getElementById('page-shotam');
+  if (!host) return;
+  let pill = host.querySelector('.fd-newposts');
+  if (!pendingPosts.length) { pill?.remove(); return; }
+  if (!pill) {
+    pill = document.createElement('button');
+    pill.type = 'button';
+    pill.className = 'fd-newposts';
+    pill.addEventListener('click', () => {
+      posts = [...pendingPosts, ...posts]
+        .sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+      pendingPosts = [];
+      renderNewPostsPill();
+      renderFeed();
+      document.getElementById('feed-list')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+    host.appendChild(pill);
+  }
+  const n = pendingPosts.length;
+  const слово = n === 1 ? 'нова публікація' : (n < 5 ? 'нові публікації' : 'нових публікацій');
+  pill.textContent = `↑ ${n} ${слово}`;
+  positionNewPostsPill();
+}
+
+// Верх пігулки — від НИЖНЬОГО краю топбару кружечків. Окремою функцією, бо той самий
+// перерахунок потрібен на кожному кадрі скролу (топбар стискається).
+function positionNewPostsPill() {
+  const pill = document.querySelector('#page-shotam .fd-newposts');
+  if (!pill) return;
+  const bar = document.querySelector('#page-shotam .fd-topbar');
+  const bottom = bar ? bar.getBoundingClientRect().bottom : 72;
+  pill.style.top = `${Math.max(8, bottom + 8)}px`;
 }
 
 // Розкладка кружечків-каналів: влазять у рядок → рівномірно по ширині (space-evenly,
@@ -2141,6 +2226,9 @@ export async function initFeed() {
         const p = shrinkProgress(main.scrollTop);
         bar.style.setProperty('--sh', p.name.toFixed(3));
         bar.style.setProperty('--sh-tight', p.tight.toFixed(3));
+        // Пігулка «нові публікації» стоїть під топбаром, а топбар при скролі стає
+        // нижчим — тому її верх перераховуємо тут же, а не окремим слухачем скролу.
+        positionNewPostsPill();
       };
       const onShrink = () => { if (!shRaf) shRaf = requestAnimationFrame(applyShrink); };
       main.addEventListener('scroll', onShrink, { passive: true });
@@ -2160,6 +2248,8 @@ export async function initFeed() {
       scheduleCountSync((payload.new || payload.old)?.post_id);
     });
 
+    // Жива синхронізація САМИХ ПОСТІВ (новий/змінений/видалений) — у всіх, хто дивиться.
+    subscribePagePosts(applyPostEvent);
     // Жива синхронізація лайків: лічильник ❤️ оновлюється у всіх наживо.
     subscribePageReactions(applyReactionEvent);
     // Жива синхронізація лайків КОМЕНТАРІВ (фаза 3b).

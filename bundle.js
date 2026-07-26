@@ -1308,6 +1308,17 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function subscribePagePosts(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-posts-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_posts" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   function subscribePageReactions(onChange) {
     if (!supa)
       return () => {
@@ -11100,6 +11111,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
   var loaded = false;
+  var pendingPosts = [];
   var MONTHS_GEN2 = [
     "\u0441\u0456\u0447\u043D\u044F",
     "\u043B\u044E\u0442\u043E\u0433\u043E",
@@ -11431,6 +11443,67 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     }
     listEl.innerHTML = posts.map(postCardHtml).join("");
     wireGalleries(listEl);
+  }
+  function applyPostEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || !row.id)
+      return;
+    if (payload.eventType === "DELETE" || row.deleted_at) {
+      const had = posts.some((p) => p.id === row.id);
+      posts = posts.filter((p) => p.id !== row.id);
+      pendingPosts = pendingPosts.filter((p) => p.id !== row.id);
+      if (had)
+        renderFeed();
+      renderNewPostsPill();
+      return;
+    }
+    const page = pages.find((p) => p.id === row.page_id);
+    const enriched = { ...row, pages: page ? { name: page.name, avatar_url: page.avatar_url } : row.pages };
+    const i = posts.findIndex((p) => p.id === row.id);
+    if (i >= 0) {
+      posts[i] = enriched;
+      renderFeed();
+      return;
+    }
+    if (pendingPosts.some((p) => p.id === row.id))
+      return;
+    pendingPosts.push(enriched);
+    renderNewPostsPill();
+  }
+  function renderNewPostsPill() {
+    const host = document.getElementById("page-shotam");
+    if (!host)
+      return;
+    let pill = host.querySelector(".fd-newposts");
+    if (!pendingPosts.length) {
+      pill?.remove();
+      return;
+    }
+    if (!pill) {
+      pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "fd-newposts";
+      pill.addEventListener("click", () => {
+        posts = [...pendingPosts, ...posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        pendingPosts = [];
+        renderNewPostsPill();
+        renderFeed();
+        document.getElementById("feed-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      host.appendChild(pill);
+    }
+    const n = pendingPosts.length;
+    const \u0441\u043B\u043E\u0432\u043E = n === 1 ? "\u043D\u043E\u0432\u0430 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u044F" : n < 5 ? "\u043D\u043E\u0432\u0456 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457" : "\u043D\u043E\u0432\u0438\u0445 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0439";
+    pill.textContent = `\u2191 ${n} ${\u0441\u043B\u043E\u0432\u043E}`;
+    positionNewPostsPill();
+  }
+  function positionNewPostsPill() {
+    const pill = document.querySelector("#page-shotam .fd-newposts");
+    if (!pill)
+      return;
+    const bar = document.querySelector("#page-shotam .fd-topbar");
+    const bottom = bar ? bar.getBoundingClientRect().bottom : 72;
+    pill.style.top = `${Math.max(8, bottom + 8)}px`;
   }
   function layoutCircles() {
     const el = document.querySelector("#feed-circles .fd-circles");
@@ -12905,6 +12978,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           const p = shrinkProgress(main.scrollTop);
           bar.style.setProperty("--sh", p.name.toFixed(3));
           bar.style.setProperty("--sh-tight", p.tight.toFixed(3));
+          positionNewPostsPill();
         };
         const onShrink = () => {
           if (!shRaf)
@@ -12922,6 +12996,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           applyCommentUpsert(payload.new);
         scheduleCountSync((payload.new || payload.old)?.post_id);
       });
+      subscribePagePosts(applyPostEvent);
       subscribePageReactions(applyReactionEvent);
       subscribePageCommentReactions(applyCommentReactionEvent);
       root.dataset.fdWired = "1";
