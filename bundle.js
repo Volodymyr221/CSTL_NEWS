@@ -11435,7 +11435,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     el.style.removeProperty("--sh-tight");
   }
   var NAME_RANGE = 60;
-  var TIGHT_RANGE = 60;
+  var TIGHT_RANGE = 180;
   function shrinkProgress(scrollTop, nameRange = NAME_RANGE, tightRange = TIGHT_RANGE) {
     const s = Math.max(0, scrollTop);
     const clamp012 = (v) => Math.min(1, Math.max(0, v));
@@ -11863,8 +11863,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (openCommentSheet && openCommentSheet.back === sheet)
         openCommentSheet = null;
     };
+    const vpEl = sheet.querySelector(".fd-sheet-vp");
     sheet.addEventListener("click", (e) => {
-      if (e.target === sheet)
+      if (e.target === sheet || e.target === vpEl)
         close();
     });
     const expandThread = (rootId) => {
