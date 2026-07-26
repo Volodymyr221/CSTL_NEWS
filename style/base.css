@@ -118,9 +118,16 @@ html, body {
 /* ===== HEADER (шапка) ===== */
 /* Шапка фіксована під статусбаром iOS (top: env(safe-area-inset-top)).
    Без цього iOS додає 44px пустого простору під шапкою. */
+/* --kb-vshift — на скільки iOS зсунув ВИДИМУ область під клавіатуру (пише core/keyboard.js).
+   🔑 Навіщо (Вова 26.07, скрін IMG_3644: «шапка ховається за екран, а не на своєму місці»):
+   `fixed` прибитий до РОЗМІТКИ, а не до видимої області. Коли iOS прокручує webview, щоб
+   показати поле вводу, шапка їде разом з розміткою за верхній край — числа з айфона:
+   `offTop=29`, і 29px шапки просто немає на екрані. Аркуш коментарів цього не робить рівно
+   тому, що модуль уже компенсує йому цей самий зсув. Тут — та сама компенсація для шапки.
+   У спокої змінної нема → `0px`, тобто поведінка поза клавіатурою не змінюється жодним пікселем. */
 .app-header {
   position: fixed;
-  top: env(safe-area-inset-top, 0px);
+  top: calc(env(safe-area-inset-top, 0px) + var(--kb-vshift, 0px));
   left: 0; right: 0;
   height: var(--header-h);
   background: var(--white);
@@ -143,7 +150,8 @@ html, body {
 .app-header::before {
   content: '';
   position: fixed;
-  top: 0; left: 0; right: 0;
+  /* Їде разом із шапкою — інакше червона заглушка лишиться там, де шапки вже нема. */
+  top: var(--kb-vshift, 0px); left: 0; right: 0;
   height: env(safe-area-inset-top, 0px);
   background: var(--red);
   z-index: 101;
