@@ -11231,6 +11231,96 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         img.addEventListener("load", () => applyPhotoRatio(box, img), { once: true });
     });
   }
+  var CLAMP_LINES = 7;
+  var CLAMP_SLACK = 2;
+  var expandedPosts = /* @__PURE__ */ new Set();
+  function clampMetrics(el) {
+    const cs = getComputedStyle(el);
+    let lh = parseFloat(cs.lineHeight);
+    if (!lh || isNaN(lh))
+      lh = parseFloat(cs.fontSize) * 1.5;
+    const padT = parseFloat(cs.paddingTop) || 0;
+    const padB = parseFloat(cs.paddingBottom) || 0;
+    const collapsed = Math.floor(lh * CLAMP_LINES) + padT;
+    const contentFull = el.scrollHeight - padT - padB;
+    return { lh, collapsed, contentFull, contentCollapsed: lh * CLAMP_LINES };
+  }
+  function scrollParent(el) {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
+        return p;
+    }
+    return null;
+  }
+  function wireClamps(root) {
+    root.querySelectorAll(".fd-text").forEach((el) => {
+      const card = el.closest("[data-post]");
+      if (!card)
+        return;
+      const id = Number(card.dataset.post);
+      el.classList.remove("fd-text--clip", "fd-text--anim");
+      el.style.maxHeight = "";
+      const stale = el.nextElementSibling;
+      if (stale && stale.classList.contains("fd-more"))
+        stale.remove();
+      const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+      if (contentFull <= contentCollapsed + lh * CLAMP_SLACK)
+        return;
+      const open = expandedPosts.has(id);
+      el.classList.add("fd-text--clip");
+      el.style.maxHeight = open ? "none" : collapsed + "px";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "fd-more";
+      btn.dataset.toggleText = String(id);
+      btn.textContent = open ? "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438" : "\u2026 \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0431\u0456\u043B\u044C\u0448\u0435";
+      el.insertAdjacentElement("afterend", btn);
+    });
+  }
+  function togglePostText(id, btn) {
+    const card = btn.closest("[data-post]");
+    const el = card && card.querySelector(".fd-text");
+    if (!el)
+      return;
+    const { collapsed } = clampMetrics(el);
+    const opening = !expandedPosts.has(id);
+    el.classList.add("fd-text--anim");
+    if (opening) {
+      expandedPosts.add(id);
+      btn.textContent = "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438";
+      el.style.maxHeight = el.scrollHeight + "px";
+      el.addEventListener("transitionend", function done(e) {
+        if (e.propertyName !== "max-height")
+          return;
+        el.removeEventListener("transitionend", done);
+        el.classList.remove("fd-text--anim");
+        if (expandedPosts.has(id))
+          el.style.maxHeight = "none";
+      });
+      return;
+    }
+    expandedPosts.delete(id);
+    btn.textContent = "\u2026 \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0431\u0456\u043B\u044C\u0448\u0435";
+    const top = card.getBoundingClientRect().top;
+    if (top < 0) {
+      const sc = scrollParent(card);
+      if (sc)
+        sc.scrollTop += top - 8;
+      else
+        window.scrollBy(0, top - 8);
+    }
+    el.style.maxHeight = el.scrollHeight + "px";
+    requestAnimationFrame(() => {
+      el.style.maxHeight = collapsed + "px";
+    });
+    el.addEventListener("transitionend", function done(e) {
+      if (e.propertyName !== "max-height")
+        return;
+      el.removeEventListener("transitionend", done);
+      el.classList.remove("fd-text--anim");
+    });
+  }
   function wireGalleries(root) {
     wirePhotoRatios(root);
     root.querySelectorAll(".fd-gallery").forEach((g) => {
@@ -11490,6 +11580,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     }
     listEl.innerHTML = posts.map(postCardHtml).join("");
     wireGalleries(listEl);
+    wireClamps(listEl);
   }
   function applyPostEvent(payload) {
     const row = payload.new || payload.old;
@@ -12381,6 +12472,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
+    wireClamps(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
     screen.querySelectorAll(".fd-sctab").forEach((tab) => tab.addEventListener("click", () => {
       screen.querySelectorAll(".fd-sctab").forEach((t) => t.classList.toggle("is-on", t === tab));
@@ -12388,6 +12480,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
       wireCards(screen);
       wireGalleries(screen);
+      wireClamps(screen);
     }));
     if (page.banner_url)
       screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
@@ -13041,6 +13134,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           openViewer(postImages(post), Number(view.dataset.idx) || 0);
         return;
       }
+      const moreBtn = e.target.closest("[data-toggle-text]");
+      if (moreBtn) {
+        togglePostText(Number(moreBtn.dataset.toggleText), moreBtn);
+        return;
+      }
       const openPage = e.target.closest("[data-open-page]");
       if (openPage) {
         openPageScreen(Number(openPage.dataset.openPage));
@@ -13053,6 +13151,16 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (root && !root.dataset.fdWired) {
       wireCards(root);
       window.addEventListener("resize", layoutCircles);
+      let lastW = window.innerWidth;
+      window.addEventListener("resize", () => {
+        if (window.innerWidth === lastW)
+          return;
+        lastW = window.innerWidth;
+        const list = document.getElementById("feed-list");
+        if (list)
+          wireClamps(list);
+        document.querySelectorAll(".fd-screen").forEach(wireClamps);
+      });
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {
