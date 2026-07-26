@@ -200,6 +200,121 @@ function wirePhotoRatios(root) {
   });
 }
 
+// ── Згортання довгих текстів постів («… Показати більше») ────────────────────
+// Як у Facebook/Instagram: довгий пост показує перші рядки і кнопку, короткий —
+// цілком і без кнопки. Рішення приймається по ФАКТИЧНІЙ висоті після рендера,
+// а не по кількості символів: один і той самий текст на різних екранах і при
+// різному масштабі шрифту займає різну кількість рядків.
+const CLAMP_LINES = 7;   // скільки рядків видно у згорнутому стані
+const CLAMP_SLACK = 2;   // якщо ховається менше — кнопки НЕ показуємо (заради 1-2 рядків не варто)
+
+// Які пости людина розгорнула вручну. Тримаємо тут, а НЕ в розмітці, бо
+// renderFeed() робить `listEl.innerHTML = …` на кожен лайк / новий пост /
+// видалення — будь-який стан у DOM злетів би, і розгорнутий пост схлопувався б
+// сам собою просто тому, що хтось поставив лайк.
+const expandedPosts = new Set();
+
+// Висоти згорнутого і повного тексту, у пікселях, з ЖИВИХ стилів елемента.
+// Чому не рахуємо в CSS: `line-height` залежить від масштабу шрифту в
+// налаштуваннях телефона, а `padding` входить у `max-height` (box-sizing:
+// border-box глобально в base.css) — обидва числа відомі лише в момент показу.
+function clampMetrics(el) {
+  const cs = getComputedStyle(el);
+  let lh = parseFloat(cs.lineHeight);
+  if (!lh || isNaN(lh)) lh = parseFloat(cs.fontSize) * 1.5;   // line-height:normal → запасний розрахунок
+  const pad = (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0);
+  return { lh, collapsed: Math.round(lh * CLAMP_LINES + pad) };
+}
+
+// Найближчий предок, який реально скролиться. Потрібен, бо стрічка живе в
+// `.app-main`, а екран сторінки — окремий шар у body зі своїм скролом.
+function scrollParent(el) {
+  for (let p = el.parentElement; p; p = p.parentElement) {
+    const oy = getComputedStyle(p).overflowY;
+    if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;   // скролиться саме вікно
+}
+
+// Пройтись по щойно намальованих картках і згорнути ті тексти, які того варті.
+// Викликається в тих самих трьох точках, що й wireGalleries — після кожного
+// рендера списку. Ідемпотентна: спершу знімає сліди попереднього проходу, тому
+// повторний виклик (перемальовка, поворот екрана) не плодить других кнопок.
+function wireClamps(root) {
+  root.querySelectorAll('.fd-text').forEach(el => {
+    const card = el.closest('[data-post]');
+    if (!card) return;
+    const id = Number(card.dataset.post);
+
+    el.classList.remove('fd-text--clip', 'fd-text--anim');
+    el.style.maxHeight = '';
+    const stale = el.nextElementSibling;
+    if (stale && stale.classList.contains('fd-more')) stale.remove();
+
+    const { lh, collapsed } = clampMetrics(el);
+    // scrollHeight читаємо ПІСЛЯ зняття обмежень — інакше це була б висота обрізаного блоку.
+    if (el.scrollHeight <= collapsed + lh * CLAMP_SLACK) return;   // короткий пост — не чіпаємо
+
+    const open = expandedPosts.has(id);
+    el.classList.add('fd-text--clip');
+    el.style.maxHeight = open ? 'none' : collapsed + 'px';
+
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'fd-more';
+    btn.dataset.toggleText = String(id);
+    btn.textContent = open ? 'Згорнути' : '… Показати більше';
+    el.insertAdjacentElement('afterend', btn);
+  });
+}
+
+// Розгорнути / згорнути текст поста.
+// ⚠️ Анімуємо max-height у ПІКСЕЛЯХ: перехід з фіксованої висоти в `auto` браузер
+// не анімує взагалі — висота стрибнула б за один кадр.
+function togglePostText(id, btn) {
+  const card = btn.closest('[data-post]');
+  const el = card && card.querySelector('.fd-text');
+  if (!el) return;
+  const { collapsed } = clampMetrics(el);
+  const opening = !expandedPosts.has(id);
+  el.classList.add('fd-text--anim');
+
+  if (opening) {
+    expandedPosts.add(id);
+    btn.textContent = 'Згорнути';
+    el.style.maxHeight = el.scrollHeight + 'px';
+    // Доїхали — знімаємо стелю зовсім. Інакше текст, що виріс уже після
+    // розгортання (довантажився шрифт, поворот екрана), лишився б обрізаним
+    // по старому числу пікселів.
+    el.addEventListener('transitionend', function done(e) {
+      if (e.propertyName !== 'max-height') return;
+      el.removeEventListener('transitionend', done);
+      el.classList.remove('fd-text--anim');
+      if (expandedPosts.has(id)) el.style.maxHeight = 'none';
+    });
+    return;
+  }
+
+  expandedPosts.delete(id);
+  btn.textContent = '… Показати більше';
+  // Утримати місце під пальцем. Якщо верх картки вже вийшов за верхній край
+  // екрана, схлопування тексту «висмикнуло» б сторінку вгору — людина дивилась
+  // би вже на інший пост. Тому спершу підтягуємо картку до верху, і лише потім
+  // складаємо текст — рух відбувається на очах, а не за кадром.
+  const top = card.getBoundingClientRect().top;
+  if (top < 0) {
+    const sc = scrollParent(card);
+    if (sc) sc.scrollTop += top - 8; else window.scrollBy(0, top - 8);
+  }
+  el.style.maxHeight = el.scrollHeight + 'px';          // з чого анімувати
+  requestAnimationFrame(() => { el.style.maxHeight = collapsed + 'px'; });
+  el.addEventListener('transitionend', function done(e) {
+    if (e.propertyName !== 'max-height') return;
+    el.removeEventListener('transitionend', done);
+    el.classList.remove('fd-text--anim');
+  });
+}
+
 // Оновлення крапок/лічильника каруселі при свайпі (+ пропорції фото постів).
 function wireGalleries(root) {
   wirePhotoRatios(root);
@@ -514,6 +629,7 @@ function renderFeed() {
   }
   listEl.innerHTML = posts.map(postCardHtml).join('');
   wireGalleries(listEl);
+  wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
 }
 
 // ── ЖИВА СИНХРОНІЗАЦІЯ САМИХ ПОСТІВ ────────────────────────────────────────────────
@@ -1723,6 +1839,7 @@ async function openPageScreen(pageId, reopen = false) {
     b.addEventListener('click', () => openPageEditor(pageId)));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
   wireGalleries(screen);       // каруселі фото в постах сторінки
+  wireClamps(screen);          // згортання довгих текстів
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
 
   // Сегмент «Дописи | Події» — перемикає список у межах екрана каналу.
@@ -1731,7 +1848,7 @@ async function openPageScreen(pageId, reopen = false) {
       screen.querySelectorAll('.fd-sctab').forEach(t => t.classList.toggle('is-on', t === tab));
       const list = screen.querySelector('.fd-screen-list');
       list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
-      wireCards(screen); wireGalleries(screen);
+      wireCards(screen); wireGalleries(screen); wireClamps(screen);
     }));
 
   // Перегляд фото банера/аватара на весь екран (для всіх; реюз openViewer).
@@ -2369,6 +2486,11 @@ function wireCards(root) {
       if (post) openViewer(postImages(post), Number(view.dataset.idx) || 0);
       return;
     }
+    // «… Показати більше» / «Згорнути». Стоїть ПЕРЕД data-open-page: кнопка лежить
+    // усередині картки, а тап по картці веде на сторінку каналу — інакше замість
+    // розгортання людину викидало б на інший екран.
+    const moreBtn = e.target.closest('[data-toggle-text]');
+    if (moreBtn) { togglePostText(Number(moreBtn.dataset.toggleText), moreBtn); return; }
     const openPage = e.target.closest('[data-open-page]');
     if (openPage) { openPageScreen(Number(openPage.dataset.openPage)); return; }
   });
@@ -2381,6 +2503,20 @@ export async function initFeed() {
     wireCards(root);            // делегування один раз на контейнер вкладки
     // Переміряти розкладку кружечків при зміні ширини екрана (поворот тощо).
     window.addEventListener('resize', layoutCircles);
+
+    // Поворот екрана міняє кількість рядків у тексті — переміряти згортання,
+    // інакше кнопка «Показати більше» лишиться там, де ховати вже нічого.
+    // ⚠️ Реагуємо ЛИШЕ на зміну ШИРИНИ. На iOS `resize` сипле й від клавіатури та
+    // адресного рядка — там міняється тільки висота, і перемірювання всіх карток
+    // на кожну таку подію було б дорогим і дало б блимання під час набору тексту.
+    let lastW = window.innerWidth;
+    window.addEventListener('resize', () => {
+      if (window.innerWidth === lastW) return;
+      lastW = window.innerWidth;
+      const list = document.getElementById('feed-list');
+      if (list) wireClamps(list);
+      document.querySelectorAll('.fd-screen').forEach(wireClamps);
+    });
 
     // Стискання топбару при скролі стрічки вниз: дві CSS-змінні (--sh, --sh-tight),
     // рахує shrinkProgress(), зчеплено зі скролом (scroll-linked).
