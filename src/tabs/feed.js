@@ -1265,6 +1265,9 @@ function openComments(postId, focusCommentId = null) {
   // що йому дали; дай йому затемнення — і воно поїде разом з клавіатурою (баг Вови 25.07).
   detachKb = attachKeyboardSheet(sheet.querySelector('.fd-sheet-vp'), comSheet, {   // клавіатура: тільки після DOM
     input: kbInput, minHeight: 180, kbClass: 'fd-com-sheet--kb',
+    // Закриває зону під низом аркуша, крізь яку просвічувала сторінка (Вова 26.07,
+    // скрін IMG_3645). Деталі — у `.fd-sheet-vp--kb::after` у style/feed.css.
+    overlayClass: 'fd-sheet-vp--kb',
     // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
     // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
     onOpen: revealReply,
