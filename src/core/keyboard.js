@@ -134,20 +134,36 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
 
   const apply = () => {
     if (!applied) measureTop0();             // поки не втручались — вимір дійсний
-    const kb = Math.max(0, h0 - vv.height);  // скільки з'їла клавіатура
-    // «Відкрита» лише при фокусі в полі І помітному зменшенні (поріг 80px): без
-    // гейта фокуса vv.height буває «застряглим» після закриття клавіатури.
+
+    // 🔑 ДВА РІЗНІ СПОСОБИ, ЯКИМИ iOS ЗВІЛЬНЯЄ МІСЦЕ ПІД КЛАВІАТУРУ (Вова, скрін IMG_3631):
+    //   А) СТИСКАЄ видиму область → vv.height меншає. Так у вкладці Safari.
+    //   Б) ПРОКРУЧУЄ весь webview угору, а vv.height НЕ МІНЯЄ. Так у ВСТАНОВЛЕНОМУ
+    //      додатку (standalone) — саме там Вова і тестує.
+    // Стара умова знала лише спосіб А (`h0 - vv.height > 80`). У способі Б вона давала 0,
+    // модуль вважав, що клавіатури нема, і НЕ РОБИВ НІЧОГО — сторінка їхала вгору разом
+    // з аркушем, шапкою листа і навіть панеллю діагностики. Це пояснює геть усе, що Вова
+    // бачив: «все ховається за екран», зниклий верх листа і зниклу панель.
+    const shrink = Math.max(0, h0 - vv.height);              // спосіб А
+    const shift  = Math.max(0, vv.offsetTop, window.scrollY || 0);  // спосіб Б
+    const kb = Math.max(shrink, shift);      // скільки місця з'їла клавіатура, як не міряй
+    // «Відкрита» — фокус у полі І помітна реакція будь-яким зі способів.
+    // Гейт фокуса лишається: vv.height буває «застряглим» після закриття клавіатури.
     const open = focused && kb > 80 && top0 !== null;
     if (open) {
-      // 1) оверлей — рівно на видиму область, хай як Safari зсунув сторінку
-      overlay.style.top    = vv.offsetTop + 'px';
+      // Видима смуга, у якій нам можна малювати: від `shift` згори, висотою `h0 - kb`.
+      // У способі А це те саме, що було (shift = vv.offsetTop, h0 - kb = vv.height) —
+      // тобто перевірена поведінка не змінюється жодним пікселем.
+      const top = shift;
+      const height = Math.max(minHeight, h0 - kb);
+      // 1) оверлей — рівно на видиму смугу, хай як Safari зсунув чи стиснув сторінку
+      overlay.style.top    = top + 'px';
       overlay.style.left   = vv.offsetLeft + 'px';
       overlay.style.right  = 'auto';
       overlay.style.bottom = 'auto';
       overlay.style.width  = vv.width + 'px';
-      overlay.style.height = vv.height + 'px';
-      // 2) аркуш — рівно від top0 до низу видимої області. Верх лишається на top0.
-      sheet.style.height = Math.max(minHeight, vv.height - top0) + 'px';
+      overlay.style.height = height + 'px';
+      // 2) аркуш — рівно від top0 до низу видимої смуги. Верх лишається на top0.
+      sheet.style.height = Math.max(minHeight, height - top0) + 'px';
       applied = true;
     } else if (applied || !open) {
       overlay.style.top = ''; overlay.style.left = ''; overlay.style.right = '';
@@ -159,7 +175,7 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     // Гачок — лише на ПЕРЕХІД у стан «клавіатура відкрита», не на кожен кадр.
     if (open && !wasOpen) { try { onOpen?.(); } catch (_) {} }
     wasOpen = open;
-    dbg?.update({ open, kb, top0, h0, vv, sheet, overlay, bg });
+    dbg?.update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg });
   };
 
   const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); };
@@ -195,13 +211,27 @@ function createDebugPanel() {
     'color:#0f0;font:11px/1.35 ui-monospace,Menlo,monospace;padding:6px 8px;border-radius:8px;' +
     'white-space:pre;pointer-events:none;max-width:92vw';
   document.body.appendChild(el);
+  // ⚠️ ПАНЕЛЬ САМА ХОВАЛАСЬ ВІД ТОГО, ЩО МАЛА ДІАГНОСТУВАТИ (скрін IMG_3631 — панелі нема).
+  // `fixed` прив'язаний до РОЗМІТКИ; коли iOS прокручує весь webview угору під клавіатуру,
+  // панель їде разом з ним за верхній край екрана. Тепер тримаємо її на ВИДИМІЙ області.
+  // Інструмент, який зникає саме тоді, коли потрібен, — не інструмент.
+  const place = () => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    el.style.top  = (vv.offsetTop + 6) + 'px';
+    el.style.left = (vv.offsetLeft + 6) + 'px';
+  };
+  place();
+  window.visualViewport?.addEventListener('resize', place);
+  window.visualViewport?.addEventListener('scroll', place);
+  window.addEventListener('scroll', place, { passive: true });
   const ver = document.querySelector('.deploy-stamp')?.textContent?.trim() || '(версії нема)';
   // Режим показу: у встановленому з головного екрана додатку (standalone) клавіатура
   // на iOS поводиться інакше, ніж у вкладці Safari — це важлива змінна діагнозу.
   const mode = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone
     ? 'ДОДАТОК (standalone)' : 'браузер';
   return {
-    update({ open, kb, top0, h0, vv, sheet, overlay, bg }) {
+    update({ open, kb, shrink, shift, top0, h0, vv, sheet, overlay, bg }) {
       const r = sheet.getBoundingClientRect();
       // 🔴 РЯДОК-ВІДПОВІДЬ на питання «чому фон з'їжджає»: якщо drift ≠ 0 — поїхав
       // САМ скролер (замок не тримає); якщо drift = 0, а offTop ≠ 0 — скролер стоїть,
@@ -214,6 +244,8 @@ function createDebugPanel() {
       el.textContent =
         `${ver}  ·  ${mode}\n` +
         `клавіатура: ${open ? 'ВІДКРИТА' : 'закрита'}  kb=${Math.round(kb)}\n` +
+        // Який спосіб застосував iOS: стиснув видиму область (А) чи прокрутив webview (Б).
+        `спосіб: стиск=${Math.round(shrink ?? 0)} зсув=${Math.round(shift ?? 0)}\n` +
         `ФОН зсув: ${bgLine}\n` +
         `vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}\n` +
         `window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}\n` +
