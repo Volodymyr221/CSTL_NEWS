@@ -16,6 +16,7 @@ import { initMessages, openGroupsList, openInviteJoin } from './core/messages-ui
 import { initBoardChat, openThreadsList, openThreadById } from './tabs/board-chat.js';
 import { initSavedHub } from './core/saved-hub.js';   // хаб «Збережені» в шапці (08.07)
 import { initProfileCardTaps } from './core/profile-card.js';   // картка профілю по тапу на аватар
+import { showToast } from './core/utils.js';                    // тост для перемикача діагностики
 
 // Поточна активна вкладка
 let currentTab = 'community';
@@ -163,6 +164,28 @@ function initModalSwipe() {
 // Прихований доступ до адмінки: 5 тапів на лого «CSTL LIFE» у шапці
 // протягом 2 секунд → відкривається ./admin.html у тій самій PWA.
 // Адмін знає, звичайний юзер не зрозуміє.
+// Перемикач режиму діагностики клавіатури: 5 тапів по лічильнику версії внизу екрана.
+// НАВІЩО окремий жест: `#kbdebug` в адресі працює лише у вкладці Safari, а Вова тестує
+// у ВСТАНОВЛЕНОМУ додатку, де адресного рядка нема взагалі — і саме там клавіатура
+// поводиться інакше. Без цього діагностику на реальному місці не ввімкнути.
+// Лічильник (а не лого) — щоб не заважати 5 тапам по лого, які ведуть в адмінку.
+function initKbDebugShortcut() {
+  const stamp = document.querySelector('.deploy-stamp');
+  if (!stamp) return;
+  let taps = [];
+  stamp.style.cursor = 'pointer';
+  stamp.addEventListener('click', () => {
+    const now = Date.now();
+    taps = taps.filter(t => now - t < 2000);
+    taps.push(now);
+    if (taps.length < 5) return;
+    taps = [];
+    const on = localStorage.getItem('kbdebug') === '1';
+    if (on) localStorage.removeItem('kbdebug'); else localStorage.setItem('kbdebug', '1');
+    showToast(on ? 'Діагностика клавіатури ВИМКНЕНА' : 'Діагностика клавіатури УВІМКНЕНА — відкрий коментарі', 3500);
+  });
+}
+
 function initAdminShortcut() {
   const logo = document.querySelector('.header-logo');
   if (!logo) return;
@@ -257,7 +280,8 @@ function init() {
   initChatsHub();
   initProfileCardTaps();   // тап по аватару → картка профілю
   initAdminShortcut();
-  handleInviteHash();                              // вступ за посиланням при відкритті
+  initKbDebugShortcut();   // 5 тапів по лічильнику версії → діагностика клавіатури
+  handleInviteHash();                            // вступ за посиланням при відкритті
   window.addEventListener('hashchange', handleInviteHash);
   handleThreadHash();                              // P-9: холодний старт з нотифікації чату
   window.addEventListener('hashchange', handleThreadHash);

@@ -53,11 +53,18 @@ function freezeBackground(overlay) {
       el.scrollTop = top;              // overflow:hidden міг скинути позицію
       return { el, top, onScroll, prevOverflow };
     });
-  return () => frozen.forEach(f => {
-    f.el.removeEventListener('scroll', f.onScroll);
-    f.el.style.overflowY = f.prevOverflow;
-    f.el.scrollTop = f.top;            // повертаємо рівно туди, де людина читала
-  });
+  return {
+    unfreeze: () => frozen.forEach(f => {
+      f.el.removeEventListener('scroll', f.onScroll);
+      f.el.style.overflowY = f.prevOverflow;
+      f.el.scrollTop = f.top;          // повертаємо рівно туди, де людина читала
+    }),
+    // Для панелі діагностики: чи справді скролер стоїть. Якщо тут 0, а фон усе одно
+    // видимо з'їхав — значить рухається не скролер, а вся видима область (зсув iOS),
+    // і лікувати треба зовсім інше місце. Один скрін = однозначна відповідь.
+    drift: () => frozen.map(f => Math.round(f.el.scrollTop - f.top)),
+    names: () => frozen.map(f => f.el.className.split(' ')[0] || f.el.tagName.toLowerCase()),
+  };
 }
 
 // ── Дотягнути рядок у видиму зону скролера ──────────────────────────────────────
@@ -102,7 +109,8 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
   const dbg = kbDebugOn() ? createDebugPanel() : null;
   // Фон морозимо ЗАВЖДИ, поки аркуш живий — навіть якщо visualViewport недоступний:
   // саме автоскрол фону, а не висота аркуша, найпомітніше псує враження.
-  const unfreeze = freezeBackground(overlay);
+  const bg = freezeBackground(overlay);
+  const unfreeze = bg.unfreeze;
   if (!vv) return () => { unfreeze(); dbg?.remove(); };
 
   // h0 — висота видимої області без клавіатури (еталон, з яким порівнюємо далі).
@@ -151,7 +159,7 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     // Гачок — лише на ПЕРЕХІД у стан «клавіатура відкрита», не на кожен кадр.
     if (open && !wasOpen) { try { onOpen?.(); } catch (_) {} }
     wasOpen = open;
-    dbg?.update({ open, kb, top0, h0, vv, sheet, overlay });
+    dbg?.update({ open, kb, top0, h0, vv, sheet, overlay, bg });
   };
 
   const schedule = () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(apply); };
@@ -193,11 +201,20 @@ function createDebugPanel() {
   const mode = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator.standalone
     ? 'ДОДАТОК (standalone)' : 'браузер';
   return {
-    update({ open, kb, top0, h0, vv, sheet, overlay }) {
+    update({ open, kb, top0, h0, vv, sheet, overlay, bg }) {
       const r = sheet.getBoundingClientRect();
+      // 🔴 РЯДОК-ВІДПОВІДЬ на питання «чому фон з'їжджає»: якщо drift ≠ 0 — поїхав
+      // САМ скролер (замок не тримає); якщо drift = 0, а offTop ≠ 0 — скролер стоїть,
+      // а зсунулась уся видима область (iOS), і замок скролера тут безсилий.
+      const drift = bg?.drift?.() ?? [];
+      const names = bg?.names?.() ?? [];
+      const bgLine = names.length
+        ? names.map((n, i) => `${n}:${drift[i] >= 0 ? '+' : ''}${drift[i]}`).join(' ')
+        : 'скролерів не знайдено';
       el.textContent =
         `${ver}  ·  ${mode}\n` +
         `клавіатура: ${open ? 'ВІДКРИТА' : 'закрита'}  kb=${Math.round(kb)}\n` +
+        `ФОН зсув: ${bgLine}\n` +
         `vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}\n` +
         `window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}\n` +
         `scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(top0)}\n` +
