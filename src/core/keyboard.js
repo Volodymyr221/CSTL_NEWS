@@ -67,18 +67,33 @@ function freezeBackground(overlay) {
   // системний автоскрол — разова подія, ми лише повертаємо її назад.
   const pageTop0 = window.scrollY || 0;
 
-  // ⛔ ТУТ БУВ МІЙ «РІВЕНЬ 1» (26.07) — `position: fixed` на <body>, нібито щоб узагалі
-  // не дати сторінці поїхати. ПРИБРАНО як ДУБЛІКАТ і як хибну засновку. Знайдено аудитом,
-  // якого попросив Вова («перед фіксом перевір чи нічого не зламав»):
-  //   1) точно те саме вже робить `lockBodyScroll()` (`core/sheet-motion.js:175`), і воно
-  //      викликається у `feed.js:927` ПРИ ВІДКРИТТІ листа — тобто ще до цього модуля.
-  //      Два замки на один <body> — це саме той дубль, який HOT_RULE 8 забороняє.
-  //   2) головне: той замок БУВ АКТИВНИЙ у момент виміру зі скріна IMG_3632, а `scrollY`
-  //      там усе одно показав **413**. Тобто `body { position: fixed }` у встановленому
-  //      додатку iOS НЕ зупиняє прокрутку webview — доведено числом, не міркуванням.
-  //      Отже мій «рівень 1» не міг нічого виправити; лишати його означало б тримати
-  //      мертвий код із неправдивим поясненням.
-  // Працює саме те, що нижче: повернення прокрутки в слухачі. Воно й прибрало рух фону.
+  // ── 🛑 НЕ ПРИБИРАТИ ЦЕЙ БЛОК. ІСТОРІЯ, ЯКА КОШТУВАЛА РЕГРЕСУ ────────────────────
+  // 26.07 я додав його (PR #637) — Вова перевірив і сказав «ідеально, фіксуємо цей
+  // варіант». Далі під час аудиту я вирішив, що це ДУБЛЬ `lockBodyScroll()`
+  // (`core/sheet-motion.js`, викликається у `feed.js` при відкритті листа), і прибрав
+  // (PR #638). На папері дубль. На айфоні — зламалось усе, що ми лагодили два дні:
+  // «блимає, зміщується верхня частина, фон уже можна гортати».
+  //
+  // 🔑 ДЕ БУЛА ПОМИЛКА В МОЄМУ МІРКУВАННІ: я довів, що `body{position:fixed}` НЕ спиняє
+  // прокрутку webview у standalone (числа зі скріна: замок стояв, а `scrollY` = 413).
+  // З цього я зробив хибний висновок «отже він нічого не дає». Насправді він дає інше:
+  // поки документ не прокручується, iOS не перемальовує `fixed`-шари із запізненням —
+  // а саме це запізнення й видно як блимання та зсув затемнення.
+  // ⚠️ І головне за правилом Вови: він просив ЗАФІКСУВАТИ той варіант, а я змінив те,
+  // про що мене не просили. Чистота коду не варта зламаної фічі.
+  //
+  // Тримається сторожем `kb-guard.test.js` (реальні CSS+модуль+lockBodyScroll).
+  const bodyStyle = document.body.style;
+  const prevBody = {
+    position: bodyStyle.position, top: bodyStyle.top, left: bodyStyle.left,
+    right: bodyStyle.right, width: bodyStyle.width,
+  };
+  bodyStyle.position = 'fixed';
+  bodyStyle.top = `${-pageTop0}px`;
+  bodyStyle.left = '0';
+  bodyStyle.right = '0';
+  bodyStyle.width = '100%';
+
   const onPageScroll = () => {
     if ((window.scrollY || 0) !== pageTop0) window.scrollTo(0, pageTop0);
   };
@@ -87,6 +102,11 @@ function freezeBackground(overlay) {
   return {
     unfreeze: () => {
       window.removeEventListener('scroll', onPageScroll);
+      bodyStyle.position = prevBody.position; bodyStyle.top = prevBody.top;
+      bodyStyle.left = prevBody.left; bodyStyle.right = prevBody.right;
+      bodyStyle.width = prevBody.width;
+      // Сторінка була прокручена до відкриття листа — повертаємо рівно туди.
+      if (pageTop0) window.scrollTo(0, pageTop0);
       frozen.forEach(f => {
         f.el.removeEventListener('scroll', f.onScroll);
         f.el.style.overflowY = f.prevOverflow;
