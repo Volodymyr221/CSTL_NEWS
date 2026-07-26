@@ -1286,6 +1286,17 @@
     ).subscribe();
     return () => supa.removeChannel(ch);
   }
+  function subscribePosts(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("board-posts-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "posts" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
   function subscribeComments(onChange) {
     if (!supa)
       return () => {
@@ -1304,6 +1315,17 @@
     const ch = supa.channel("page-comments-watch").on(
       "postgres_changes",
       { event: "*", schema: "public", table: "page_comments" },
+      (payload) => onChange(payload)
+    ).subscribe();
+    return () => supa.removeChannel(ch);
+  }
+  function subscribePagePosts(onChange) {
+    if (!supa)
+      return () => {
+      };
+    const ch = supa.channel("page-posts-watch").on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "page_posts" },
       (payload) => onChange(payload)
     ).subscribe();
     return () => supa.removeChannel(ch);
@@ -5517,6 +5539,7 @@
   var EDIT_ICON_SVG2 = ICONS.pencil;
   var MYADS_ICON_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6M9 16h6"/></svg>';
   var allPosts = [];
+  var _boardStale = false;
   var allAnnouncements = [];
   var activeType = "board";
   var activeCategory = "all";
@@ -6526,6 +6549,25 @@
         openAdModalStandalone(p);
     });
     window.addEventListener("cstl-posts-changed", () => renderBoard());
+    if (isSupabaseReady()) {
+      subscribePosts(() => {
+        const main = document.querySelector(".app-main");
+        const onBoard = main?.dataset.tab === "board";
+        if (onBoard && (main?.scrollTop || 0) < 120)
+          renderBoard();
+        else
+          _boardStale = true;
+      });
+      document.querySelector(".app-main")?.addEventListener("scroll", () => {
+        const main = document.querySelector(".app-main");
+        if (!_boardStale || main?.dataset.tab !== "board")
+          return;
+        if ((main.scrollTop || 0) < 120) {
+          _boardStale = false;
+          renderBoard();
+        }
+      }, { passive: true });
+    }
     window.addEventListener("cstl-tab-changed", () => {
       const tab = document.querySelector(".app-main")?.dataset.tab;
       if (tab === "discussions" && !discOpen)
@@ -6535,6 +6577,10 @@
       if (tab === "board" && activeLocation !== COMMUNITY_ALL) {
         activeLocation = COMMUNITY_ALL;
         renderAll();
+      }
+      if (tab === "board" && _boardStale) {
+        _boardStale = false;
+        renderBoard();
       }
       if (tab === "board")
         requestAnimationFrame(() => {
@@ -11100,6 +11146,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
   var loaded = false;
+  var pendingPosts = [];
   var MONTHS_GEN2 = [
     "\u0441\u0456\u0447\u043D\u044F",
     "\u043B\u044E\u0442\u043E\u0433\u043E",
@@ -11431,6 +11478,72 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     }
     listEl.innerHTML = posts.map(postCardHtml).join("");
     wireGalleries(listEl);
+  }
+  function applyPostEvent(payload) {
+    const row = payload.new || payload.old;
+    if (!row || !row.id)
+      return;
+    if (payload.eventType === "DELETE" || row.deleted_at) {
+      const had = posts.some((p) => p.id === row.id);
+      posts = posts.filter((p) => p.id !== row.id);
+      pendingPosts = pendingPosts.filter((p) => p.id !== row.id);
+      if (had)
+        renderFeed();
+      renderNewPostsPill();
+      return;
+    }
+    const page = pages.find((p) => p.id === row.page_id);
+    const enriched = { ...row, pages: page ? { name: page.name, avatar_url: page.avatar_url } : row.pages };
+    const i = posts.findIndex((p) => p.id === row.id);
+    if (i >= 0) {
+      posts[i] = enriched;
+      renderFeed();
+      return;
+    }
+    if (pendingPosts.some((p) => p.id === row.id))
+      return;
+    pendingPosts.push(enriched);
+    renderNewPostsPill();
+  }
+  function renderNewPostsPill() {
+    const host = document.getElementById("page-shotam");
+    if (!host)
+      return;
+    let pill = host.querySelector(".fd-newposts");
+    if (!pendingPosts.length) {
+      pill?.remove();
+      return;
+    }
+    if (!pill) {
+      pill = document.createElement("button");
+      pill.type = "button";
+      pill.className = "fd-newposts";
+      pill.addEventListener("click", async () => {
+        const \u043F\u0430\u0447\u043A\u0430 = pendingPosts;
+        pendingPosts = [];
+        renderNewPostsPill();
+        if (\u043F\u0430\u0447\u043A\u0430.some((p) => !p.pages || !p.pages.name)) {
+          await loadData2();
+        } else {
+          posts = [...\u043F\u0430\u0447\u043A\u0430, ...posts].sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        }
+        renderFeed();
+        document.getElementById("feed-list")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+      host.appendChild(pill);
+    }
+    const n = pendingPosts.length;
+    const \u0441\u043B\u043E\u0432\u043E = n === 1 ? "\u043D\u043E\u0432\u0430 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u044F" : n < 5 ? "\u043D\u043E\u0432\u0456 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0457" : "\u043D\u043E\u0432\u0438\u0445 \u043F\u0443\u0431\u043B\u0456\u043A\u0430\u0446\u0456\u0439";
+    pill.textContent = `\u2191 ${n} ${\u0441\u043B\u043E\u0432\u043E}`;
+    positionNewPostsPill();
+  }
+  function positionNewPostsPill() {
+    const pill = document.querySelector("#page-shotam .fd-newposts");
+    if (!pill)
+      return;
+    const bar = document.querySelector("#page-shotam .fd-topbar");
+    const bottom = bar ? bar.getBoundingClientRect().bottom : 72;
+    pill.style.top = `${Math.max(8, bottom + 8)}px`;
   }
   function layoutCircles() {
     const el = document.querySelector("#feed-circles .fd-circles");
@@ -12905,6 +13018,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           const p = shrinkProgress(main.scrollTop);
           bar.style.setProperty("--sh", p.name.toFixed(3));
           bar.style.setProperty("--sh-tight", p.tight.toFixed(3));
+          positionNewPostsPill();
         };
         const onShrink = () => {
           if (!shRaf)
@@ -12922,6 +13036,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           applyCommentUpsert(payload.new);
         scheduleCountSync((payload.new || payload.old)?.post_id);
       });
+      subscribePagePosts(applyPostEvent);
       subscribePageReactions(applyReactionEvent);
       subscribePageCommentReactions(applyCommentReactionEvent);
       root.dataset.fdWired = "1";

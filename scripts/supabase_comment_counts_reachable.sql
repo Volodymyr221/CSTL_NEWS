@@ -103,3 +103,43 @@ select v.post_id,
             then 'збігається' else '🔴 РОЗХОДЖЕННЯ' end             as вердикт
   from public.page_comment_counts v
  order by v.post_id desc;
+
+-- ── 4. ТРЕТІЙ РУБІЖ: САМОЗАЛІКОВУВАННЯ ──────────────────────────────────────────────
+-- ✅ НАКАТАНО 26.07 (міграція `heal_orphan_comments_nightly`).
+-- Вова: «в майбутньому в постах такого не треба допускати».
+-- Заборона на вставці закриває ВІДОМИЙ шлях, подання не дає збрехати числом — а це на
+-- випадок, якщо розрив колись з'явиться інакше (новий код, ручний SQL, міграція).
+-- Тоді він зникне сам, а не житиме в базі до наступної скарги.
+create or replace function public.heal_orphan_page_comments()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  n integer;
+begin
+  with сироти as (
+    select c.id from public.page_comments c
+     where c.deleted_at is null
+       and c.parent_id is not null
+       and not exists (select 1 from public.page_comments p
+                        where p.id = c.parent_id and p.deleted_at is null)
+  )
+  update public.page_comments t
+     set deleted_at = now()
+    from сироти s
+   where t.id = s.id;
+  get diagnostics n = row_count;
+  if n > 0 then
+    raise warning 'heal_orphan_page_comments: вилікувано % недосяжних коментарів', n;
+  end if;
+  return n;
+end;
+$$;
+
+-- Щоночі 03:15 UTC (у застосунку практично нікого). Щохвилини не треба — це страховка,
+-- а не основний механізм. Разом із наявними `send-bus-push` і `flush-comment-push`.
+-- select cron.schedule('heal-orphan-comments', '15 3 * * *',
+--                      $$select public.heal_orphan_page_comments();$$);
+-- (закоментовано, щоб повторний прогін файлу не створив друге завдання; уже стоїть)

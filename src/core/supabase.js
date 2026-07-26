@@ -1016,6 +1016,21 @@ export function subscribeReactions(onChange) {
   return () => supa.removeChannel(ch);
 }
 
+// ДОШКА: жива підписка на самі оголошення (`posts`). Досі її не було — нове оголошення
+// зʼявлялось у інших лише після перезаходу на вкладку.
+// ⚠️ Тут проходять УСІ зміни таблиці, включно з `pending` (оголошення на модерації) і
+// `type='chat'` (обговорення). Що показувати — вирішує Дошка, а не підписка: вона лише
+// каже «дані змінились». Інакше правила видимості жили б у двох місцях.
+export function subscribePosts(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('board-posts-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'posts' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
 export function subscribeComments(onChange) {
   if (!supa) return () => {};
   const ch = supa.channel('comments-watch')
@@ -1034,6 +1049,26 @@ export function subscribePageComments(onChange) {
   const ch = supa.channel('page-comments-watch')
     .on('postgres_changes',
         { event: '*', schema: 'public', table: 'page_comments' },
+        payload => onChange(payload))
+    .subscribe();
+  return () => supa.removeChannel(ch);
+}
+
+// «СТРІЧКА»: жива підписка на самі ПОСТИ (Вова 26.07: «realtime має бути… між всіма, в яких
+// зараз відкрита та чи інша модалка коментарів чи будь-яка інша сторінка взаємодії»).
+// Досі підписки на пости не було взагалі: новий пост зʼявлявся в інших лише після
+// перезаходу на вкладку. `cstl-posts-changed` — подія ОДНОГО пристрою, вона нікуди не летить.
+//
+// ⚠️ Realtime віддає рядок таблиці БЕЗ приєднаної сторінки (`pages(name, avatar_url)`) —
+// приєднання в підписках не буває. Тому назву й аватар сторінки викликач бере з уже
+// завантаженого списку сторінок (див. applyPostEvent у feed.js).
+// Видалення поста в застосунку мʼяке (`deleted_at`), тобто приходить як UPDATE з повним
+// рядком — окремої обробки DELETE не потребує.
+export function subscribePagePosts(onChange) {
+  if (!supa) return () => {};
+  const ch = supa.channel('page-posts-watch')
+    .on('postgres_changes',
+        { event: '*', schema: 'public', table: 'page_posts' },
         payload => onChange(payload))
     .subscribe();
   return () => supa.removeChannel(ch);
