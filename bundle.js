@@ -10871,11 +10871,18 @@ ${ev.description || ""}`
       el.scrollTop = top;
       return { el, top, onScroll, prevOverflow };
     });
-    return () => frozen.forEach((f) => {
-      f.el.removeEventListener("scroll", f.onScroll);
-      f.el.style.overflowY = f.prevOverflow;
-      f.el.scrollTop = f.top;
-    });
+    return {
+      unfreeze: () => frozen.forEach((f) => {
+        f.el.removeEventListener("scroll", f.onScroll);
+        f.el.style.overflowY = f.prevOverflow;
+        f.el.scrollTop = f.top;
+      }),
+      // Для панелі діагностики: чи справді скролер стоїть. Якщо тут 0, а фон усе одно
+      // видимо з'їхав — значить рухається не скролер, а вся видима область (зсув iOS),
+      // і лікувати треба зовсім інше місце. Один скрін = однозначна відповідь.
+      drift: () => frozen.map((f) => Math.round(f.el.scrollTop - f.top)),
+      names: () => frozen.map((f) => f.el.className.split(" ")[0] || f.el.tagName.toLowerCase())
+    };
   }
   function revealInScroller(scroller, el, pad2 = 12) {
     if (!scroller || !el)
@@ -10894,7 +10901,8 @@ ${ev.description || ""}`
   function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "", onOpen } = {}) {
     const vv = window.visualViewport;
     const dbg = kbDebugOn() ? createDebugPanel() : null;
-    const unfreeze = freezeBackground(overlay);
+    const bg = freezeBackground(overlay);
+    const unfreeze = bg.unfreeze;
     if (!vv)
       return () => {
         unfreeze();
@@ -10941,7 +10949,7 @@ ${ev.description || ""}`
         }
       }
       wasOpen = open;
-      dbg?.update({ open, kb, top0, h0, vv, sheet, overlay });
+      dbg?.update({ open, kb, top0, h0, vv, sheet, overlay, bg });
     };
     const schedule = () => {
       cancelAnimationFrame(raf);
@@ -10987,10 +10995,14 @@ ${ev.description || ""}`
     const ver = document.querySelector(".deploy-stamp")?.textContent?.trim() || "(\u0432\u0435\u0440\u0441\u0456\u0457 \u043D\u0435\u043C\u0430)";
     const mode = window.matchMedia?.("(display-mode: standalone)")?.matches || window.navigator.standalone ? "\u0414\u041E\u0414\u0410\u0422\u041E\u041A (standalone)" : "\u0431\u0440\u0430\u0443\u0437\u0435\u0440";
     return {
-      update({ open, kb, top0, h0, vv, sheet, overlay }) {
+      update({ open, kb, top0, h0, vv, sheet, overlay, bg }) {
         const r = sheet.getBoundingClientRect();
+        const drift = bg?.drift?.() ?? [];
+        const names = bg?.names?.() ?? [];
+        const bgLine = names.length ? names.map((n, i) => `${n}:${drift[i] >= 0 ? "+" : ""}${drift[i]}`).join(" ") : "\u0441\u043A\u0440\u043E\u043B\u0435\u0440\u0456\u0432 \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E";
         el.textContent = `${ver}  \xB7  ${mode}
 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0430: ${open ? "\u0412\u0406\u0414\u041A\u0420\u0418\u0422\u0410" : "\u0437\u0430\u043A\u0440\u0438\u0442\u0430"}  kb=${Math.round(kb)}
+\u0424\u041E\u041D \u0437\u0441\u0443\u0432: ${bgLine}
 vv: h=${Math.round(vv.height)} offTop=${Math.round(vv.offsetTop)} pageTop=${Math.round(vv.pageTop)}
 window: inner=${window.innerHeight} client=${document.documentElement.clientHeight}
 scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(top0)}
@@ -11031,7 +11043,21 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var myPageIds = /* @__PURE__ */ new Set();
   var mySubs = /* @__PURE__ */ new Set();
   var loaded = false;
-  function relTime(iso) {
+  var MONTHS_GEN2 = [
+    "\u0421\u0406\u0427\u041D\u042F",
+    "\u041B\u042E\u0422\u041E\u0413\u041E",
+    "\u0411\u0415\u0420\u0415\u0417\u041D\u042F",
+    "\u041A\u0412\u0406\u0422\u041D\u042F",
+    "\u0422\u0420\u0410\u0412\u041D\u042F",
+    "\u0427\u0415\u0420\u0412\u041D\u042F",
+    "\u041B\u0418\u041F\u041D\u042F",
+    "\u0421\u0415\u0420\u041F\u041D\u042F",
+    "\u0412\u0415\u0420\u0415\u0421\u041D\u042F",
+    "\u0416\u041E\u0412\u0422\u041D\u042F",
+    "\u041B\u0418\u0421\u0422\u041E\u041F\u0410\u0414\u0410",
+    "\u0413\u0420\u0423\u0414\u041D\u042F"
+  ];
+  function relTime(iso, { longDate = false } = {}) {
     const t = new Date(iso).getTime();
     if (!Number.isFinite(t))
       return "";
@@ -11045,7 +11071,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (diff < 172800)
       return "\u0432\u0447\u043E\u0440\u0430";
     const d = new Date(t);
-    return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    if (!longDate)
+      return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const base = `${d.getDate()} ${MONTHS_GEN2[d.getMonth()]}`;
+    return d.getFullYear() === (/* @__PURE__ */ new Date()).getFullYear() ? base : `${base} ${d.getFullYear()}`;
   }
   function avatarHtml(url, name, cls) {
     const letter = escapeHtml((name || "?").trim().charAt(0).toUpperCase() || "?");
@@ -11263,7 +11292,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         <span class="fd-ava-wrap">${avatarHtml(page.avatar_url, page.name, "fd-ava")}</span>
         <span class="fd-head-txt">
           <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
-          <span class="fd-time">${relTime(post.created_at)}</span>
+          <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="\u041C\u0435\u043D\u044E \u043F\u043E\u0441\u0442\u0430">${IC_DOTS}</button>` : ""}
       </header>
@@ -11351,11 +11380,25 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (!el)
       return;
     el.style.setProperty("--sh", "0");
+    el.style.setProperty("--sh-tight", "0");
     el.classList.remove("is-fit");
     if (el.scrollWidth <= el.clientWidth + 1)
       el.classList.add("is-fit");
     planCollapsedPad(el);
     el.style.removeProperty("--sh");
+    el.style.removeProperty("--sh-tight");
+  }
+  var NAME_RANGE = 60;
+  var TIGHT_RANGE = 60;
+  function shrinkProgress(scrollTop, nameRange = NAME_RANGE, tightRange = TIGHT_RANGE) {
+    const s = Math.max(0, scrollTop);
+    const clamp012 = (v) => Math.min(1, Math.max(0, v));
+    return {
+      name: clamp012(s / nameRange),
+      // Друга фаза стартує рівно там, де закінчилась перша — без паузи між ними
+      // (пауза між рухом пальця і реакцією екрана вже читалась як ривок, 24.07).
+      tight: clamp012((s - nameRange) / tightRange)
+    };
   }
   var CIRCLE_RING = 62;
   var CIRCLE_PAD = 16;
@@ -12711,13 +12754,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {
-        const SHRINK_START = 0;
-        const SHRINK_RANGE = 60;
         let shRaf = 0;
         const applyShrink = () => {
           shRaf = 0;
-          const p = Math.min(1, Math.max(0, (main.scrollTop - SHRINK_START) / SHRINK_RANGE));
-          bar.style.setProperty("--sh", p.toFixed(3));
+          const p = shrinkProgress(main.scrollTop);
+          bar.style.setProperty("--sh", p.name.toFixed(3));
+          bar.style.setProperty("--sh-tight", p.tight.toFixed(3));
         };
         const onShrink = () => {
           if (!shRaf)
@@ -14173,6 +14215,27 @@ END:VEVENT`
       setTimeout(reset, 300);
     });
   }
+  function initKbDebugShortcut() {
+    const stamp = document.querySelector(".deploy-stamp");
+    if (!stamp)
+      return;
+    let taps = [];
+    stamp.style.cursor = "pointer";
+    stamp.addEventListener("click", () => {
+      const now = Date.now();
+      taps = taps.filter((t) => now - t < 2e3);
+      taps.push(now);
+      if (taps.length < 5)
+        return;
+      taps = [];
+      const on = localStorage.getItem("kbdebug") === "1";
+      if (on)
+        localStorage.removeItem("kbdebug");
+      else
+        localStorage.setItem("kbdebug", "1");
+      showToast(on ? "\u0414\u0456\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0438 \u0412\u0418\u041C\u041A\u041D\u0415\u041D\u0410" : "\u0414\u0456\u0430\u0433\u043D\u043E\u0441\u0442\u0438\u043A\u0430 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0438 \u0423\u0412\u0406\u041C\u041A\u041D\u0415\u041D\u0410 \u2014 \u0432\u0456\u0434\u043A\u0440\u0438\u0439 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456", 3500);
+    });
+  }
   function initAdminShortcut() {
     const logo = document.querySelector(".header-logo");
     if (!logo)
@@ -14256,6 +14319,7 @@ END:VEVENT`
     initChatsHub();
     initProfileCardTaps();
     initAdminShortcut();
+    initKbDebugShortcut();
     handleInviteHash();
     window.addEventListener("hashchange", handleInviteHash);
     handleThreadHash();
