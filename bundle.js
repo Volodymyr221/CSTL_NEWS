@@ -10981,7 +10981,7 @@ ${ev.description || ""}`
     scroller.scrollBy({ top: by, behavior: "smooth" });
     return by;
   }
-  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "", overlayClass = "", onOpen } = {}) {
+  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "", onOpen } = {}) {
     const vv = window.visualViewport;
     const dbg = kbDebugOn() ? createDebugPanel() : null;
     const bg = freezeBackground(overlay);
@@ -11032,8 +11032,6 @@ ${ev.description || ""}`
       }
       if (kbClass)
         sheet.classList.toggle(kbClass, open);
-      if (overlayClass)
-        overlay.classList.toggle(overlayClass, open);
       if (open && !wasOpen) {
         try {
           onOpen?.();
@@ -11078,8 +11076,6 @@ ${ev.description || ""}`
       sheet.style.height = "";
       if (kbClass)
         sheet.classList.remove(kbClass);
-      if (overlayClass)
-        overlay.classList.remove(overlayClass);
       dbg?.remove();
     };
   }
@@ -12166,12 +12162,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       new ResizeObserver(padTop).observe(gripEl);
     detachKb = attachKeyboardSheet(sheet.querySelector(".fd-sheet-vp"), comSheet, {
       // клавіатура: тільки після DOM
+      // kbClass тягне за собою і підкладку під системну панель iOS — вона зроблена
+      // тінню самого аркуша (`.fd-com-sheet--kb`), тож окремий клас на оверлей не потрібен.
       input: kbInput,
       minHeight: 180,
       kbClass: "fd-com-sheet--kb",
-      // Закриває зону під низом аркуша, крізь яку просвічувала сторінка (Вова 26.07,
-      // скрін IMG_3645). Деталі — у `.fd-sheet-vp--kb::after` у style/feed.css.
-      overlayClass: "fd-sheet-vp--kb",
       // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
       // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
       onOpen: revealReply

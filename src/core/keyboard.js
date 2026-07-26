@@ -178,14 +178,11 @@ export function revealInScroller(scroller, el, pad = 12) {
 //     клавіатура). У цьому крайньому випадку верх свідомо зсунеться — інакше аркуша
 //     не було б видно взагалі.
 //   kbClass — клас, що вішається на аркуш, поки клавіатура відкрита (відступи).
-//   overlayClass — те саме, але на ОВЕРЛЕЙ. Потрібен там, де треба домалювати щось
-//     ПОЗА аркушем: сам аркуш має `overflow: hidden`, тож його псевдоелемент обрізався б.
-//     У «Стрічці» цим закривається зона під низом аркуша (див. `.fd-sheet-vp--kb::after`).
 //   onOpen — викликається ПІСЛЯ того, як аркуш перебудувався під клавіатуру. Саме тут
 //     має жити «дотягнути потрібний рядок у видиму зону»: раніше цього моменту вміст
 //     ще не стиснувся, і будь-який вимір видимості брехав би.
 // Повертає функцію від'єднання — обов'язково викликати при закритті аркуша.
-export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = '', overlayClass = '', onOpen } = {}) {
+export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = '', onOpen } = {}) {
   const vv = window.visualViewport;
   const dbg = kbDebugOn() ? createDebugPanel() : null;
   // Фон морозимо ЗАВЖДИ, поки аркуш живий — навіть якщо visualViewport недоступний:
@@ -267,7 +264,6 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
       applied = false;
     }
     if (kbClass) sheet.classList.toggle(kbClass, open);
-    if (overlayClass) overlay.classList.toggle(overlayClass, open);
     // Гачок — лише на ПЕРЕХІД у стан «клавіатура відкрита», не на кожен кадр.
     if (open && !wasOpen) { try { onOpen?.(); } catch (_) {} }
     wasOpen = open;
@@ -309,7 +305,6 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
     overlay.style.bottom = ''; overlay.style.width = ''; overlay.style.height = '';
     sheet.style.height = '';
     if (kbClass) sheet.classList.remove(kbClass);
-    if (overlayClass) overlay.classList.remove(overlayClass);
     dbg?.remove();
   };
 }
