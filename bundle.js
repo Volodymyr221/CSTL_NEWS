@@ -10871,17 +10871,27 @@ ${ev.description || ""}`
       el.scrollTop = top;
       return { el, top, onScroll, prevOverflow };
     });
+    const pageTop0 = window.scrollY || 0;
+    const onPageScroll = () => {
+      if ((window.scrollY || 0) !== pageTop0)
+        window.scrollTo(0, pageTop0);
+    };
+    window.addEventListener("scroll", onPageScroll, { passive: true });
     return {
-      unfreeze: () => frozen.forEach((f) => {
-        f.el.removeEventListener("scroll", f.onScroll);
-        f.el.style.overflowY = f.prevOverflow;
-        f.el.scrollTop = f.top;
-      }),
+      unfreeze: () => {
+        window.removeEventListener("scroll", onPageScroll);
+        frozen.forEach((f) => {
+          f.el.removeEventListener("scroll", f.onScroll);
+          f.el.style.overflowY = f.prevOverflow;
+          f.el.scrollTop = f.top;
+        });
+      },
       // Для панелі діагностики: чи справді скролер стоїть. Якщо тут 0, а фон усе одно
       // видимо з'їхав — значить рухається не скролер, а вся видима область (зсув iOS),
       // і лікувати треба зовсім інше місце. Один скрін = однозначна відповідь.
-      drift: () => frozen.map((f) => Math.round(f.el.scrollTop - f.top)),
-      names: () => frozen.map((f) => f.el.className.split(" ")[0] || f.el.tagName.toLowerCase())
+      // Сторінка йде в той самий рядок окремим пунктом — саме вона і виявилась винною.
+      drift: () => frozen.map((f) => Math.round(f.el.scrollTop - f.top)).concat(Math.round((window.scrollY || 0) - pageTop0)),
+      names: () => frozen.map((f) => f.el.className.split(" ")[0] || f.el.tagName.toLowerCase()).concat("\u0421\u0422\u041E\u0420\u0406\u041D\u041A\u0410")
     };
   }
   function revealInScroller(scroller, el, pad2 = 12) {
