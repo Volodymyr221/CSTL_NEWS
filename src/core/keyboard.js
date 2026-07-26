@@ -185,7 +185,13 @@ export function revealInScroller(scroller, el, pad = 12) {
 //     має жити «дотягнути потрібний рядок у видиму зону»: раніше цього моменту вміст
 //     ще не стиснувся, і будь-який вимір видимості брехав би.
 // Повертає функцію від'єднання — обов'язково викликати при закритті аркуша.
-export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = '', overlayClass = '', onOpen } = {}) {
+// expandTop — ЯКІР ВЕРХУ аркуша, поки клавіатура відкрита (Вова 26.07: «модалка має
+//   розширюватися плавно до самого верху екрану»). `null` = попередня поведінка: верх
+//   лишається там, де аркуш стояв у спокої (`top0`). Число = скільки пікселів лишити
+//   згори видимої смуги, тобто `0` — на весь екран.
+//   ⚠️ Формулу висоти НЕ змінюємо (вона вистраждана трьома невдалими заходами) —
+//   змінюється рівно один доданок: від чого відлічуємо верх.
+export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = '', overlayClass = '', expandTop = null, onOpen } = {}) {
   const vv = window.visualViewport;
   const dbg = kbDebugOn() ? createDebugPanel() : null;
   // Фон морозимо ЗАВЖДИ, поки аркуш живий — навіть якщо visualViewport недоступний:
@@ -253,8 +259,16 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
       overlay.style.bottom = 'auto';
       overlay.style.width  = vv.width + 'px';
       overlay.style.height = height + 'px';
-      // 2) аркуш — рівно від top0 до низу видимої смуги. Верх лишається на top0.
-      sheet.style.height = Math.max(minHeight, height - top0) + 'px';
+      // 2) аркуш — рівно від якоря до низу видимої смуги.
+      //    Якір: `top0` (верх лишається де стояв) або `expandTop` (розширення до верху).
+      const anchor = expandTop == null ? top0 : Math.max(0, expandTop);
+      sheet.style.height = Math.max(minHeight, height - anchor) + 'px';
+      // 4) фактична висота клавіатури — назовні, як CSS-змінна. Потрібна підкладці під
+      //    низом аркуша (`.fd-sheet-kbpad`): вона мусить бути РІВНО такою, як зона
+      //    клавіатури. Числом у CSS це не задати — висота залежить від мови, емодзі-панелі
+      //    й моделі телефона, а `100vh` навмання вже одного разу дало підкладку за межами
+      //    екрана (вона тихо не малювалась).
+      overlay.style.setProperty('--kb-h', kb + 'px');
       // 3) фон — тим самим числом, що й аркуш. Шапка прибита до розмітки і без цього
       //    їде за верхній край рівно на `viewShift` (діагноз зі скріна IMG_3644).
       bg.setShift(viewShift);
@@ -263,6 +277,7 @@ export function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kb
       bg.setShift(0);
       overlay.style.top = ''; overlay.style.left = ''; overlay.style.right = '';
       overlay.style.bottom = ''; overlay.style.width = ''; overlay.style.height = '';
+      overlay.style.removeProperty('--kb-h');   // клавіатури нема → підкладці нічого закривати
       sheet.style.height = '';
       applied = false;
     }

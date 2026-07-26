@@ -10964,7 +10964,7 @@ ${ev.description || ""}`
     scroller.scrollBy({ top: by, behavior: "smooth" });
     return by;
   }
-  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "", overlayClass = "", onOpen } = {}) {
+  function attachKeyboardSheet(overlay, sheet, { input, minHeight = 180, kbClass = "", overlayClass = "", expandTop = null, onOpen } = {}) {
     const vv = window.visualViewport;
     const dbg = kbDebugOn() ? createDebugPanel() : null;
     const bg = freezeBackground(overlay);
@@ -10999,7 +10999,9 @@ ${ev.description || ""}`
         overlay.style.bottom = "auto";
         overlay.style.width = vv.width + "px";
         overlay.style.height = height + "px";
-        sheet.style.height = Math.max(minHeight, height - top0) + "px";
+        const anchor = expandTop == null ? top0 : Math.max(0, expandTop);
+        sheet.style.height = Math.max(minHeight, height - anchor) + "px";
+        overlay.style.setProperty("--kb-h", kb + "px");
         bg.setShift(viewShift);
         applied = true;
       } else if (applied || !open) {
@@ -11010,6 +11012,7 @@ ${ev.description || ""}`
         overlay.style.bottom = "";
         overlay.style.width = "";
         overlay.style.height = "";
+        overlay.style.removeProperty("--kb-h");
         sheet.style.height = "";
         applied = false;
       }
@@ -11310,7 +11313,21 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const track = ov.querySelector(".fd-viewer-track");
     track.scrollLeft = (startIdx || 0) * track.clientWidth;
   }
-  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null } = {}) {
+  var comSheetFull = false;
+  function setComSheetFull(on, { animate = true } = {}) {
+    const el = document.querySelector(".fd-com-sheet");
+    if (!el)
+      return;
+    comSheetFull = !!on;
+    if (animate) {
+      el.classList.add("fd-com-sheet--anim");
+      setTimeout(() => el.classList.remove("fd-com-sheet--anim"), 320);
+    }
+    el.classList.toggle("fd-com-sheet--full", comSheetFull);
+    if (!comSheetFull)
+      el.style.height = "";
+  }
+  function attachSheetSwipe(back, panel, scroller, doClose, { grip = null, twoStage = false } = {}) {
     scroller = scroller || panel;
     const zone = grip || panel;
     let startY = 0, dragging = false, dy = 0, travel = 1;
@@ -11356,6 +11373,21 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (!dragging)
         return;
       dragging = false;
+      if (twoStage && comSheetFull) {
+        const throwDown = drag.velocity > 0.45 && dy > 8;
+        const longPull = dy > 90;
+        if (!throwDown && !longPull) {
+          panel.style.transition = "transform 200ms cubic-bezier(0.32,0.72,0,1)";
+          panel.style.transform = "";
+          fade?.settle(false, 200);
+          setTimeout(() => {
+            panel.style.transition = "";
+          }, 200);
+          setComSheetFull(false);
+          dy = 0;
+          return;
+        }
+      }
       finishSwipe({
         panel,
         dy,
@@ -11713,7 +11745,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const cls = `fd-com-branch${sub ? " fd-com-branch--sub" : ""}`;
     if (hidden > 0)
       return `<div class="${cls}"><button class="fd-com-more" data-more-parent="${hostId}" type="button">\u0429\u0435 ${hidden} ${pluralReplies(hidden)}</button></div>`;
-    if (expanded && total > REPLIES_VISIBLE)
+    const visibleWhenClosed = sub ? 0 : REPLIES_VISIBLE;
+    if (expanded && total > visibleWhenClosed)
       return `<div class="${cls}"><button class="fd-com-more" data-less-parent="${hostId}" type="button">\u0421\u0445\u043E\u0432\u0430\u0442\u0438 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456</button></div>`;
     return "";
   }
@@ -11729,7 +11762,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       let hasSub = "";
       if (r.subs.length) {
         const subOpen = expandedThreads.has(r.c.id);
-        const subVis = subOpen ? r.subs : r.subs.slice(0, REPLIES_VISIBLE);
+        const subVis = subOpen ? r.subs : [];
         const subHid = r.subs.length - subVis.length;
         const subRows = subVis.map((s) => `<div class="fd-com-branch fd-com-branch--sub">${commentRowHtml(s, true, r.c.id)}</div>`);
         const btn2 = collapseBtnHtml(r.c.id, subHid, subOpen, r.subs.length, true);
@@ -11939,6 +11972,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     sheet.className = "fd-sheet-back fd-sheet-back--kbsafe";
     sheet.innerHTML = `
     <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
       <div class="fd-sheet fd-com-sheet">
         <div class="fd-com-grip">
           <div class="fd-sheet-handle"></div>
@@ -12047,6 +12081,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const close = () => {
       detachKb();
       unlockScroll();
+      comSheetFull = false;
       sheet.remove();
       if (openCommentSheet && openCommentSheet.back === sheet)
         openCommentSheet = null;
@@ -12233,7 +12268,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     document.body.appendChild(sheet);
     const gripEl = sheet.querySelector(".fd-com-grip");
-    attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl });
+    attachSheetSwipe(sheet, comSheet, listEl, close, { grip: gripEl, twoStage: true });
     const padTop = () => {
       const h = gripEl.offsetHeight;
       if (h)
@@ -12243,18 +12278,19 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (typeof ResizeObserver !== "undefined")
       new ResizeObserver(padTop).observe(gripEl);
     detachKb = attachKeyboardSheet(sheet.querySelector(".fd-sheet-vp"), comSheet, {
-      // клавіатура: тільки після DOM
-      // kbClass тягне за собою і підкладку під системну панель iOS — вона зроблена
-      // тінню самого аркуша (`.fd-com-sheet--kb`), тож окремий клас на оверлей не потрібен.
       input: kbInput,
       minHeight: 180,
       kbClass: "fd-com-sheet--kb",
-      // Закриває зону під низом аркуша, крізь яку просвічувала сторінка (Вова 26.07,
-      // скрін IMG_3645). Деталі — у `.fd-sheet-vp--kb::after` у style/feed.css.
+      // Клас на оверлей лишається — на ньому висить `--kb-h` для підкладки.
       overlayClass: "fd-sheet-vp--kb",
-      // Клавіатура доїхала і список стиснувся до реального розміру — аж тепер видно,
-      // чи адресат лишився за кадром. Раніше цього моменту міряти нема сенсу.
-      onOpen: revealReply
+      // 🔑 РОЗШИРЕННЯ ДО ВЕРХУ (Вова 26.07): якір верху = 0, тобто аркуш займає всю видиму
+      // смугу над клавіатурою. Формула висоти в модулі не змінена — лише те, від чого
+      // відлічується верх.
+      expandTop: 0,
+      onOpen: () => {
+        setComSheetFull(true);
+        revealReply();
+      }
     });
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
