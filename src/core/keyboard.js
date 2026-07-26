@@ -53,17 +53,41 @@ function freezeBackground(overlay) {
       el.scrollTop = top;              // overflow:hidden міг скинути позицію
       return { el, top, onScroll, prevOverflow };
     });
+
+  // 🔑 ТРЕТІЙ СКРОЛЕР, ЯКОГО ТУТ БРАКУВАЛО — САМ ДОКУМЕНТ (скрін IMG_3632, живі числа
+  // з айфона Вови: `ФОН зсув: app-main:+0`, тобто внутрішній скролер СТОЯВ, а
+  // `scrollY=413` і `offTop=413` — поїхала вся сторінка).
+  // Чому раніше не ловили: `body { overflow: hidden }` у base.css нібито робить документ
+  // непрокручуваним — і у вкладці Safari так і є. Але у ВСТАНОВЛЕНОМУ додатку iOS
+  // прокручує webview повз це правило, щоб показати поле вводу.
+  // Знімаємо саму причину: не даємо сторінці поїхати. Тоді «спосіб Б» просто не виникає,
+  // і фон стоїть без жодних контр-зсувів (їх довелось би вішати на .app-main, а це
+  // ризик зробити його системою координат для fixed-нащадків).
+  // ⚠️ Це НЕ покадрова компенсація жесту (та завжди дає дьоргання — урок 25.07):
+  // системний автоскрол — разова подія, ми лише повертаємо її назад.
+  const pageTop0 = window.scrollY || 0;
+  const onPageScroll = () => {
+    if ((window.scrollY || 0) !== pageTop0) window.scrollTo(0, pageTop0);
+  };
+  window.addEventListener('scroll', onPageScroll, { passive: true });
+
   return {
-    unfreeze: () => frozen.forEach(f => {
-      f.el.removeEventListener('scroll', f.onScroll);
-      f.el.style.overflowY = f.prevOverflow;
-      f.el.scrollTop = f.top;          // повертаємо рівно туди, де людина читала
-    }),
+    unfreeze: () => {
+      window.removeEventListener('scroll', onPageScroll);
+      frozen.forEach(f => {
+        f.el.removeEventListener('scroll', f.onScroll);
+        f.el.style.overflowY = f.prevOverflow;
+        f.el.scrollTop = f.top;        // повертаємо рівно туди, де людина читала
+      });
+    },
     // Для панелі діагностики: чи справді скролер стоїть. Якщо тут 0, а фон усе одно
     // видимо з'їхав — значить рухається не скролер, а вся видима область (зсув iOS),
     // і лікувати треба зовсім інше місце. Один скрін = однозначна відповідь.
-    drift: () => frozen.map(f => Math.round(f.el.scrollTop - f.top)),
-    names: () => frozen.map(f => f.el.className.split(' ')[0] || f.el.tagName.toLowerCase()),
+    // Сторінка йде в той самий рядок окремим пунктом — саме вона і виявилась винною.
+    drift: () => frozen.map(f => Math.round(f.el.scrollTop - f.top))
+      .concat(Math.round((window.scrollY || 0) - pageTop0)),
+    names: () => frozen.map(f => f.el.className.split(' ')[0] || f.el.tagName.toLowerCase())
+      .concat('СТОРІНКА'),
   };
 }
 
