@@ -1497,16 +1497,28 @@
       roots = roots.slice(0, limit);
     if (!roots.length)
       return { comments: [], hasMore: false };
-    const ids = roots.map((r) => r.id);
-    const repQ = (c) => supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).in("parent_id", ids);
-    let { data: replies, error: repErr } = await repQ(cols);
-    if (noSuchColumn(repErr))
-      ({ data: replies, error: repErr } = await repQ(COMMENT_COLS));
-    if (repErr) {
-      console.warn("[supabase] fetchPostComments (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456):", repErr.message);
-      return { comments: [], hasMore: false, error: repErr.message };
+    const MAX_REPLY_DEPTH = 8;
+    const replies = [];
+    const seen = new Set(roots.map((r) => r.id));
+    let frontier = roots.map((r) => r.id);
+    let repCols = cols;
+    for (let depth = 0; depth < MAX_REPLY_DEPTH && frontier.length; depth++) {
+      const repQ = (c) => supa.from("page_comments").select(c).eq("post_id", postId).is("deleted_at", null).in("parent_id", frontier);
+      let { data: batch, error: repErr } = await repQ(repCols);
+      if (noSuchColumn(repErr)) {
+        repCols = COMMENT_COLS;
+        ({ data: batch, error: repErr } = await repQ(repCols));
+      }
+      if (repErr) {
+        console.warn("[supabase] fetchPostComments (\u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u0456):", repErr.message);
+        return { comments: [], hasMore: false, error: repErr.message };
+      }
+      const fresh = (batch || []).filter((r) => !seen.has(r.id));
+      fresh.forEach((r) => seen.add(r.id));
+      replies.push(...fresh);
+      frontier = fresh.map((r) => r.id);
     }
-    const comments = [...roots, ...replies || []].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
+    const comments = [...roots, ...replies].sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
     return { comments, hasMore };
   }
   async function addPageComment(postId, uid, text, parentId = null, replyToUid = null) {
