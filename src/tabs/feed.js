@@ -760,6 +760,44 @@ function keepScroll(scroller, fn) {
   if (delta) scroller.scrollTop += delta;
 }
 
+// Зібрати DOM-вузол картки з ТІЄЇ САМОЇ розмітки, якою малюється вся стрічка
+// (`postCardHtml`), щоб оновлена картка не могла відрізнятись від сусідніх.
+// onPage — картка стоїть на екрані спільноти: лише там має сенс позначка «Закріплено».
+function cardNode(post, onPage) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = postCardHtml(post, onPage).trim();
+  return tpl.content.firstElementChild;
+}
+
+// Перемалювати ОДНУ картку скрізь, де вона зараз є: у головній стрічці і на відкритому
+// екрані спільноти. Делегування подій (`wireCards`) висить на КОНТЕЙНЕРІ, а не на самій
+// картці, тож заміна вузла нічого не відвʼязує — лайк, коментарі й меню «⋯» працюють далі.
+function patchPostCard(postId) {
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  document.querySelectorAll(`[data-post="${postId}"]`).forEach(old => {
+    const onPage = !!old.closest('.fd-screen');
+    // Яке фото зараз відкрите в каруселі — щоб після заміни лишилось те саме.
+    // Інакше людина, яка догорнула до 3-го знімка, після закріплення поста побачила б 1-й.
+    const shot = old.querySelector('.fd-gal-track')?.scrollLeft || 0;
+    const node = cardNode(post, onPage);
+    keepScroll(scrollerOf(old), () => {
+      old.replaceWith(node);
+      wireGalleries(node);   // карусель і пропорції кадру — інакше померли б саме на цій картці
+      wireClamps(node);      // «… Показати більше» (стан розгорнутих живе в expandedPosts, не в DOM)
+      if (shot) {
+        // Один кадр очікування — саме тому, що `wireGalleries` СВОЇМ rAF ставить трек на
+        // перший слайд (обхід iOS scroll-snap). Наш обробник зареєстрований пізніше, тож
+        // виконається після нього і поверне те фото, на якому людина зупинилась.
+        requestAnimationFrame(() => {
+          const t = node.querySelector('.fd-gal-track');
+          if (t) t.scrollLeft = shot;
+        });
+      }
+    });
+  });
+}
+
 // ── ЖИВА СИНХРОНІЗАЦІЯ САМИХ ПОСТІВ ────────────────────────────────────────────────
 // Вова 26.07: «realtime має бути… між всіма, в яких зараз відкрита та чи інша модалка
 // коментарів чи будь-яка інша сторінка взаємодії». Коментарі й лайки жили наживо давно,
