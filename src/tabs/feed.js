@@ -1836,6 +1836,16 @@ function orderPinned(list) {
   return [...pinned, ...rest];
 }
 
+// Пости ОДНІЄЇ спільноти в порядку її екрана: закріплені вгорі, решта за датою.
+// 🔑 Саме ФУНКЦІЯ, а не збережений масив. Раніше екран рахував список один раз при
+// відкритті і тримав його в замиканні — після точкової зміни (новий пост, закріплення,
+// видалення) та копія миттєво застарівала, і перемикач «Дописи | Події» повертав на
+// екран стан на момент відкриття. Поки після кожної дії екран будувався заново, це
+// було непомітно; коли перестали — стало б справжнім багом.
+function pagePostsOf(pageId) {
+  return orderPinned(posts.filter(p => p.page_id === pageId));
+}
+
 function screenListHtml(tab, pagePosts) {
   if (tab === 'events') {
     const today = todayKey();
@@ -1869,12 +1879,13 @@ async function openPageScreen(pageId, reopen = false) {
   // закріпляти тільки в себе на спільноті, а не в головній стрічці»).
   // Сортуємо саме в цьому місці — на екрані КОНКРЕТНОЇ спільноти. `renderFeed()`
   // (головна стрічка) працює з `posts` як був, за датою; його не чіпаємо взагалі.
-  // `slice()` обов'язковий: `sort` міняє масив на місці, а `posts` — спільний стан,
-  // і його порядок визначає вигляд головної стрічки.
-  const pagePosts = orderPinned(posts.filter(p => p.page_id === pageId));
-
+  // `orderPinned` не мутує вхідний масив: `posts` — спільний стан, і його порядок
+  // визначає вигляд головної стрічки.
   const screen = document.createElement('div');
   screen.className = 'fd-screen';
+  // Чия це спільнота — щоб точкові оновлення (нова картка, закріплення) знали,
+  // до якого саме відкритого екрана вони стосуються.
+  screen.dataset.page = String(pageId);
   screen.innerHTML = `
     <!-- 🔑 УСІ ТРИ КНОПКИ ШАПКИ — В ОДНОМУ ЛИПКОМУ БАРІ (Вова 25.07, вибір після IMG_3578).
          Раніше «⋯» жила в банері, а її меню — окремо, і після переводу банера в sticky вони
@@ -1919,7 +1930,7 @@ async function openPageScreen(pageId, reopen = false) {
         <button class="fd-sctab"       data-sctab="events" type="button">Події</button>
       </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
-      <div class="fd-screen-list">${screenListHtml('posts', pagePosts)}</div>
+      <div class="fd-screen-list">${screenListHtml('posts', pagePostsOf(pageId))}</div>
     </div>`;
 
   // Екран — повноекранний ШАР, підключений до історії браузера (core/layers.js).
@@ -1956,7 +1967,7 @@ async function openPageScreen(pageId, reopen = false) {
     tab.addEventListener('click', () => {
       screen.querySelectorAll('.fd-sctab').forEach(t => t.classList.toggle('is-on', t === tab));
       const list = screen.querySelector('.fd-screen-list');
-      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
+      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePostsOf(pageId));
       wireCards(screen); wireGalleries(screen); wireClamps(screen);
     }));
 
