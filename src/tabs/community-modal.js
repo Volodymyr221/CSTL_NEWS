@@ -124,14 +124,17 @@ export function openBoardModal(opts = {}) {
 
   // Д-17: лінія-роздільник під липкою шапкою з'являється лише коли контент почав скролитись
   // під неї (при повністю відкритій нескроленій модалці лінія візуально зайва — фідбек Вови).
-  // 🔄 27.07: скролиться ТІЛО (`.app-modal-body`), а не аркуш — після стандартизації
-  // примітиву. Слухач на аркуші більше не спрацьовував би ніколи, і лінія-роздільник
-  // під шапкою не з'являлась би взагалі. Клас лишаємо на аркуші (за ним чіпляється CSS).
-  const sheetEl  = wrap.querySelector('.app-modal-sheet');
-  const scrollEl = wrap.querySelector('.app-modal-body') || sheetEl;
-  if (sheetEl && scrollEl) {
-    const syncScrolled = () => sheetEl.classList.toggle('is-scrolled', scrollEl.scrollTop > 2);
-    scrollEl.addEventListener('scroll', syncScrolled, { passive: true });
+  // ⚠️ Ця модалка — ВИНЯТОК зі стандарту примітиву: скролиться сам аркуш (див. пояснення
+  // у `style/community.css`, блок `app-modal--board-compose .app-modal-sheet`).
+  // Слухаємо ОБИДВА вузли й беремо той, що реально прокрутився, — тоді лінія-роздільник
+  // працює незалежно від того, яку геометрію модалка отримає в майбутньому.
+  const sheetEl = wrap.querySelector('.app-modal-sheet');
+  const bodyEl  = wrap.querySelector('.app-modal-body');
+  if (sheetEl) {
+    const syncScrolled = () => sheetEl.classList.toggle(
+      'is-scrolled', (sheetEl.scrollTop > 2) || ((bodyEl?.scrollTop || 0) > 2));
+    sheetEl.addEventListener('scroll', syncScrolled, { passive: true });
+    bodyEl?.addEventListener('scroll', syncScrolled, { passive: true });
     syncScrolled();
   }
 

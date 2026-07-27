@@ -2095,7 +2095,13 @@
         close();
     };
     document.addEventListener("keydown", onKey);
-    const scroller = wrap.querySelector(".app-modal-body") || panel;
+    const bodyEl = wrap.querySelector(".app-modal-body");
+    const scrollerEl = () => {
+      if (!bodyEl)
+        return panel;
+      const oy = getComputedStyle(bodyEl).overflowY;
+      return oy === "visible" || oy === "clip" ? panel : bodyEl;
+    };
     let closing = false;
     function teardown() {
       if (_active?.el === wrap)
@@ -2129,12 +2135,13 @@
     backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
-      let startY = 0, dragging = false, dy = 0, travel = 1;
+      let startY = 0, dragging = false, dy = 0, travel = 1, scroller = panel;
       const drag = createDragTracker();
       const fade = createBackdropFade(backdrop);
       panel.addEventListener("touchstart", (e) => {
         const y = e.touches[0].clientY;
         const inHeader = y - panel.getBoundingClientRect().top < 64;
+        scroller = scrollerEl();
         if (!inHeader && scroller.scrollTop > 0)
           return;
         startY = y;
@@ -2436,10 +2443,14 @@
       })
     });
     const sheetEl = wrap.querySelector(".app-modal-sheet");
-    const scrollEl = wrap.querySelector(".app-modal-body") || sheetEl;
-    if (sheetEl && scrollEl) {
-      const syncScrolled = () => sheetEl.classList.toggle("is-scrolled", scrollEl.scrollTop > 2);
-      scrollEl.addEventListener("scroll", syncScrolled, { passive: true });
+    const bodyEl = wrap.querySelector(".app-modal-body");
+    if (sheetEl) {
+      const syncScrolled = () => sheetEl.classList.toggle(
+        "is-scrolled",
+        sheetEl.scrollTop > 2 || (bodyEl?.scrollTop || 0) > 2
+      );
+      sheetEl.addEventListener("scroll", syncScrolled, { passive: true });
+      bodyEl?.addEventListener("scroll", syncScrolled, { passive: true });
       syncScrolled();
     }
     const dynamicEl = wrap.querySelector("#bm-dynamic");
