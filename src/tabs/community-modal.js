@@ -124,10 +124,14 @@ export function openBoardModal(opts = {}) {
 
   // Д-17: лінія-роздільник під липкою шапкою з'являється лише коли контент почав скролитись
   // під неї (при повністю відкритій нескроленій модалці лінія візуально зайва — фідбек Вови).
-  const sheetEl = wrap.querySelector('.app-modal-sheet');
-  if (sheetEl) {
-    const syncScrolled = () => sheetEl.classList.toggle('is-scrolled', sheetEl.scrollTop > 2);
-    sheetEl.addEventListener('scroll', syncScrolled, { passive: true });
+  // 🔄 27.07: скролиться ТІЛО (`.app-modal-body`), а не аркуш — після стандартизації
+  // примітиву. Слухач на аркуші більше не спрацьовував би ніколи, і лінія-роздільник
+  // під шапкою не з'являлась би взагалі. Клас лишаємо на аркуші (за ним чіпляється CSS).
+  const sheetEl  = wrap.querySelector('.app-modal-sheet');
+  const scrollEl = wrap.querySelector('.app-modal-body') || sheetEl;
+  if (sheetEl && scrollEl) {
+    const syncScrolled = () => sheetEl.classList.toggle('is-scrolled', scrollEl.scrollTop > 2);
+    scrollEl.addEventListener('scroll', syncScrolled, { passive: true });
     syncScrolled();
   }
 
