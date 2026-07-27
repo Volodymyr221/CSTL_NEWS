@@ -1866,7 +1866,7 @@ async function requestPushForSavedRoute(rid, date, from, to) {
   if (!isLoggedIn()) { requireAuth('увімкнути сповіщення', () => {}); return; }
   if (!isPushCapable()) { showToast('Сповіщення недоступні на цьому пристрої'); return; }
   if (Notification.permission === 'denied') {
-    showToast('Сповіщення вимкнені в налаштуваннях телефону/браузера. Увімкніть їх, щоб отримувати нагадування.');
+    showToast('Сповіщення вимкнені в налаштуваннях телефону — увімкни їх, щоб отримувати нагадування');
     return;
   }
   const entry = findTrackedEntry(rid, from || null, to || null, date);

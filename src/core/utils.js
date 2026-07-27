@@ -237,19 +237,86 @@ export async function sharePost({ title, url }) {
 
 // Показати toast-повідомлення (маленьке сповіщення знизу екрану)
 // type: '' (звичайне) або 'error' (червоне — для заборон/помилок)
-export function showToast(msg, duration = 3000, type = '') {
-  let toast = document.getElementById('cstl-toast');
-  if (!toast) {
-    toast = document.createElement('div');
-    toast.id = 'cstl-toast';
-    toast.className = 'toast';   // без цього класу CSS .toast не діяв → тост опинявся у потоці сторінки (під модалками)
-    document.body.appendChild(toast);
+// ── СИСТЕМНІ ПОВІДОМЛЕННЯ (toast) — один компонент на весь застосунок ──────────
+// Кличеться 132 рази з усіх модулів. Сигнатура `(msg, duration, type)` НЕ змінена —
+// лише `duration` тепер має значення «0 = порахуй сам за довжиною тексту» (раніше
+// за замовчуванням стояло 3000). Жоден наявний виклик нуля не передає — звірено.
+//
+// 🔑 ЩО БУЛО НЕ ТАК (окрім CSS, див. style/base.css):
+// один вузол і один таймер. Друге повідомлення МИТТЄВО затирало перше — його ніхто
+// не встигав прочитати. При 132 викликах це трапляється регулярно (напр. невдале
+// збереження одразу після успішного завантаження фото).
+const TOAST_MIN = 2500;    // менше — не встигнеш прочитати навіть двох слів
+const TOAST_MAX = 6000;    // більше — заважає, а не допомагає
+const TOAST_READ = 1500;   // скільки повідомлення має провисіти, перш ніж його можна змінити
+const TOAST_FADE = 220;    // тривалість згасання з CSS — щоб наступне не наїхало на попереднє
+
+const toastQueue = [];
+let toastCurrent = null;   // текст, що зараз на екрані (null = вільно)
+let toastShownAt = 0;
+let toastTimer = 0;
+
+// Час показу за довжиною: три рядки за 3 секунди прочитати неможливо.
+// Явно заданий `duration` завжди має пріоритет — код, який знає краще, лишається головним.
+function toastDuration(text, explicit) {
+  if (explicit > 0) return explicit;
+  return Math.min(TOAST_MAX, Math.max(TOAST_MIN, 1200 + text.length * 55));
+}
+
+function toastNode() {
+  let t = document.getElementById('cstl-toast');
+  if (!t) {
+    t = document.createElement('div');
+    t.id = 'cstl-toast';
+    t.className = 'toast';   // без цього класу CSS .toast не діяв → тост опинявся у потоці сторінки (під модалками)
+    // Для читача екрана: повідомлення оголошується, не перебиваючи поточну фразу.
+    t.setAttribute('role', 'status');
+    t.setAttribute('aria-live', 'polite');
+    document.body.appendChild(t);
   }
-  toast.textContent = msg;
-  toast.classList.toggle('toast--error', type === 'error');
-  toast.classList.add('visible');
-  clearTimeout(toast._hideTimer);
-  toast._hideTimer = setTimeout(() => toast.classList.remove('visible'), duration);
+  return t;
+}
+
+function toastShow(item) {
+  const t = toastNode();
+  t.textContent = item.msg;
+  t.classList.toggle('toast--error', item.type === 'error');
+  toastCurrent = item.msg;
+  toastShownAt = Date.now();
+  // Наступним кадром — інакше на щойно створеному вузлі переходу не буде взагалі
+  // (браузер не встигає зафіксувати початковий стан).
+  requestAnimationFrame(() => t.classList.add('visible'));
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(toastHide, item.ms);
+}
+
+function toastHide() {
+  clearTimeout(toastTimer);
+  document.getElementById('cstl-toast')?.classList.remove('visible');
+  toastCurrent = null;
+  // Даємо згасанню доїхати, тоді показуємо наступне з черги.
+  setTimeout(() => { const next = toastQueue.shift(); if (next) toastShow(next); }, TOAST_FADE);
+}
+
+export function showToast(msg, duration = 0, type = '') {
+  const text = String(msg ?? '').trim();
+  if (!text) return;                       // порожній тост — це завжди помилка виклику
+  const item = { msg: text, ms: toastDuration(text, duration), type };
+
+  if (!toastCurrent) { toastShow(item); return; }
+  if (toastCurrent === text) return;       // те саме вже висить — не блимаємо
+
+  // Поточне ще не встигли прочитати → нове чекає. Встигли → міняємо одразу,
+  // щоб черга не розтягувалась на десятки секунд.
+  if (Date.now() - toastShownAt >= TOAST_READ) {
+    toastQueue.length = 0;
+    toastQueue.push(item);
+    toastHide();
+    return;
+  }
+  if (toastQueue.some(q => q.msg === text)) return;   // дубль у черзі не тримаємо
+  if (toastQueue.length >= 2) toastQueue.shift();     // стеля: найсвіжіші важливіші
+  toastQueue.push(item);
 }
 
 // Перегляд фото на весь екран (спільний lightbox — переюз `.pm-lightbox`).
