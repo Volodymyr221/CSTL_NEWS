@@ -166,6 +166,27 @@
 .fd-card-menu { margin-left: auto; flex: none; width: 32px; height: 32px; padding: 0; border: 0;
   background: none; cursor: pointer; color: var(--fd-muted); display: flex; align-items: center; justify-content: center; }
 .fd-card-menu svg { width: 20px; height: 20px; }
+/* Позначка «Закріплено» — лише на екрані спільноти (у головній стрічці закріплення
+   нічого не означає, там порядок завжди за датою). Кольори взяті з наявної плашки
+   події `.fd-evb` — нових значень не вводимо. */
+.fd-pin-badge {
+  margin-left: auto; flex: none;
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 700; letter-spacing: 0.2px;
+  color: var(--fd-accent);
+  background: color-mix(in srgb, var(--fd-accent) 8%, var(--fd-surface));
+  border: 1px solid color-mix(in srgb, var(--fd-accent) 22%, transparent);
+}
+.fd-pin-badge svg { width: 13px; height: 13px; }
+/* Коли позначка є, вона вже забрала вільне місце — інакше `margin-left:auto` у «⋯»
+   поділив би простір навпіл і кнопка відʼїхала б від краю. */
+.fd-pin-badge + .fd-card-menu { margin-left: 4px; }
+/* На фото шапка світла — позначка має лишатись читабельною. */
+.fd-card-head--onphoto .fd-pin-badge {
+  color: #fff; background: rgba(0, 0, 0, 0.38); border-color: rgba(255, 255, 255, 0.35);
+}
+
 /* Меню поста (нижній лист): Редагувати / Видалити. */
 .fd-postmenu-item { display: flex; align-items: center; gap: 12px; width: 100%; padding: 14px 8px;
   border: 0; background: none; cursor: pointer; font: inherit; font-size: 16px; color: var(--fd-ink); text-align: left; }

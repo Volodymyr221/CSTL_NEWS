@@ -1325,7 +1325,7 @@
   async function fetchPagePosts(pageId = null, limit = 60) {
     if (!supa)
       return [];
-    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
+    let q = supa.from("page_posts").select("id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)").is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
     if (pageId != null)
       q = q.eq("page_id", pageId);
     const { data, error } = await q;
@@ -1508,7 +1508,7 @@
     }
     return new Set((data || []).map((r) => r.page_id));
   }
-  var POST_COLS = "id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)";
+  var POST_COLS = "id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)";
   async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
     if (!supa)
       return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
@@ -1531,6 +1531,12 @@
     if (!supa)
       return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
     const r = await netCall(() => supa.from("page_posts").update(patch).eq("id", postId).select(POST_COLS).single());
+    return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
+  }
+  async function setPagePostPinned(postId, pinned) {
+    if (!supa)
+      return { ok: false, error: "\u041D\u0435\u043C\u0430\u0454 \u0437'\u0454\u0434\u043D\u0430\u043D\u043D\u044F \u0437 \u0431\u0430\u0437\u043E\u044E" };
+    const r = await netCall(() => supa.from("page_posts").update({ pinned_at: pinned ? (/* @__PURE__ */ new Date()).toISOString() : null }).eq("id", postId).select(POST_COLS).single());
     return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
   }
   async function deletePagePost(postId) {
@@ -11129,6 +11135,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   var IC_CLOSE = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var IC_X = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
   var IC_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
+  var IC_PIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/></svg>';
+  var IC_UNPIN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l-3.249 3.249l-3.751 1.251l-1.5 1.5l7 7l1.5 -1.5l1.25 -3.75l3.25 -3.25"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/><path d="M3 3l18 18"/></svg>';
   var IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
   var IC_USERS = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
   var IC_DOTS = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
@@ -11565,7 +11573,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     return `<div class="fd-evb${past ? " fd-evb--past" : ""}">
     <span class="fd-evb-when">\u{1F5D3} ${when}</span>${loc}</div>`;
   }
-  function postCardHtml(post) {
+  function postCardHtml(post, onPage = false) {
     const page = post.pages || {};
     const rx = reactionMap.get(post.id) || { count: 0, my: false };
     const cCount = commentCounts.get(post.id) || 0;
@@ -11583,6 +11591,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           <span class="fd-page-name">${escapeHtml(page.name || "\u0421\u0442\u043E\u0440\u0456\u043D\u043A\u0430")}</span>
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
+        ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + "\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E</span>" : ""}
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="\u041C\u0435\u043D\u044E \u043F\u043E\u0441\u0442\u0430">${IC_DOTS}</button>` : ""}
       </header>
       ${photo}
@@ -11661,7 +11670,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       listEl.innerHTML = `<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>`;
       return;
     }
-    listEl.innerHTML = posts.map(postCardHtml).join("");
+    listEl.innerHTML = posts.map((p) => postCardHtml(p)).join("");
     wireGalleries(listEl);
     wireClamps(listEl);
   }
@@ -12476,13 +12485,20 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     requestAnimationFrame(() => sheet.classList.add("open"));
   }
+  var MAX_PINNED = 3;
+  function orderPinned(list) {
+    const pinned = list.filter((p) => p.pinned_at);
+    const rest = list.filter((p) => !p.pinned_at);
+    pinned.sort((a, b) => String(b.pinned_at).localeCompare(String(a.pinned_at)));
+    return [...pinned, ...rest];
+  }
   function screenListHtml(tab, pagePosts) {
     if (tab === "events") {
       const today = todayKey();
       const evs = pagePosts.filter((p) => p.event_date && p.event_date >= today).sort((a, b) => a.event_date.localeCompare(b.event_date));
-      return evs.length ? evs.map(postCardHtml).join("") : '<div class="fd-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439.</div>';
+      return evs.length ? evs.map((p) => postCardHtml(p)).join("") : '<div class="fd-empty">\u0429\u0435 \u043D\u0435\u043C\u0430\u0454 \u0437\u0430\u043F\u043B\u0430\u043D\u043E\u0432\u0430\u043D\u0438\u0445 \u043F\u043E\u0434\u0456\u0439.</div>';
     }
-    return pagePosts.length ? pagePosts.map(postCardHtml).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
+    return pagePosts.length ? pagePosts.map((p) => postCardHtml(p, true)).join("") : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
   }
   async function openPageScreen(pageId, reopen = false) {
     const page = pages.find((p) => p.id === pageId);
@@ -12490,7 +12506,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return;
     const canEdit = myPageIds.has(pageId);
     const subscribed = mySubs.has(pageId);
-    const pagePosts = posts.filter((p) => p.page_id === pageId);
+    const pagePosts = orderPinned(posts.filter((p) => p.page_id === pageId));
     const screen = document.createElement("div");
     screen.className = "fd-screen";
     screen.innerHTML = `
@@ -12862,10 +12878,24 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     requestAnimationFrame(() => back.classList.add("open"));
   }
   var MAX_PHOTOS = 10;
-  var DRAFT_TTL = 7 * 24 * 3600 * 1e3;
+  var DRAFT_TTL = 12 * 3600 * 1e3;
   var draftKey = (pageId) => `cstl_fd_draft_${pageId}`;
+  function ssGet(key, fallback) {
+    try {
+      const v = sessionStorage.getItem(key);
+      return v ? JSON.parse(v) : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  function ssSet(key, value) {
+    try {
+      sessionStorage.setItem(key, JSON.stringify(value));
+    } catch {
+    }
+  }
   function readDraft(pageId) {
-    const d = lsGet(draftKey(pageId), null);
+    const d = ssGet(draftKey(pageId), null);
     if (!d || typeof d !== "object")
       return null;
     if (!d.ts || Date.now() - d.ts > DRAFT_TTL) {
@@ -12881,14 +12911,26 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       clearDraft(pageId);
       return;
     }
-    lsSet(draftKey(pageId), { ...d, ts: Date.now() });
+    ssSet(draftKey(pageId), { ...d, ts: Date.now() });
   }
   function clearDraft(pageId) {
     try {
-      localStorage.removeItem(draftKey(pageId));
+      sessionStorage.removeItem(draftKey(pageId));
     } catch {
     }
   }
+  (function purgeLegacyDrafts() {
+    try {
+      const keys = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("cstl_fd_draft_"))
+          keys.push(k);
+      }
+      keys.forEach((k) => localStorage.removeItem(k));
+    } catch {
+    }
+  })();
   function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
@@ -13313,9 +13355,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return;
     const back = document.createElement("div");
     back.className = "fd-sheet-back";
+    const isPinned = !!post.pinned_at;
     back.innerHTML = `
     <div class="fd-sheet fd-postmenu">
       <div class="fd-sheet-handle"></div>
+      <button class="fd-postmenu-item" data-act="pin" type="button">${isPinned ? IC_UNPIN + "\u0412\u0456\u0434\u043A\u0440\u0456\u043F\u0438\u0442\u0438" : IC_PIN + "\u0417\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u0438 \u0432\u0433\u043E\u0440\u0456 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438"}</button>
       <button class="fd-postmenu-item" data-act="edit" type="button">${IC_EDIT}\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438</button>
       <button class="fd-postmenu-item fd-postmenu-item--danger" data-act="del" type="button">${IC_TRASH}\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438</button>
     </div>`;
@@ -13331,6 +13375,29 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (item.dataset.act === "edit") {
         close();
         openComposer(post.page_id, post);
+        return;
+      }
+      if (item.dataset.act === "pin") {
+        const pinnedHere = posts.filter((p) => p.page_id === post.page_id && p.pinned_at).length;
+        if (!isPinned && pinnedHere >= MAX_PINNED) {
+          showToast(`\u041C\u043E\u0436\u043D\u0430 \u0437\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u0438 \u0449\u043E\u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 ${MAX_PINNED} \u043F\u043E\u0441\u0442\u0438. \u0421\u043F\u0435\u0440\u0448\u0443 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u0438 \u044F\u043A\u0438\u0439\u0441\u044C`, 4e3);
+          return;
+        }
+        const res2 = await setPagePostPinned(postId, !isPinned);
+        if (!res2.ok) {
+          showToast(res2.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
+          return;
+        }
+        const i = posts.findIndex((p) => p.id === postId);
+        if (i >= 0)
+          posts[i] = res2.post;
+        const hadScreen2 = !!document.querySelector(".fd-screen");
+        close();
+        showToast(isPinned ? "\u041F\u043E\u0441\u0442 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E" : "\u041F\u043E\u0441\u0442 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E \u0432\u0433\u043E\u0440\u0456 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438", 2500);
+        document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
+        renderFeed();
+        if (hadScreen2)
+          openPageScreen(post.page_id, true);
         return;
       }
       if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0441\u0442?"))

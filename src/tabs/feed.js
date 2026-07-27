@@ -7,7 +7,7 @@
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
 import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea,
-         looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg, lsGet, lsSet } from '../core/utils.js';
+         looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -15,7 +15,7 @@ import {
   fetchPageCommentCounts, fetchPostComments, fetchPostCommentCount, COMMENT_ROOTS_PAGE,
   addPageComment, editPageComment, deletePageComment, fetchMyEditablePageIds,
   fetchPageCommentReactions, setPageCommentReaction, subscribePageCommentReactions,
-  createPagePost, updatePagePost, deletePagePost, fetchMySubscriptions, setPageSubscription,
+  createPagePost, updatePagePost, deletePagePost, setPagePostPinned, fetchMySubscriptions, setPageSubscription,
   subscribePagePosts,
   updatePage, subscribePageComments, subscribePageReactions,
   saveUserPushDevice, notifyNewPagePost,
@@ -43,6 +43,10 @@ const IC_SHARE  = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentC
 const IC_CLOSE  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_X      = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6l-12 12"/><path d="M6 6l12 12"/></svg>';
 const IC_EDIT   = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4l10.5 -10.5a2.83 2.83 0 0 0 -4 -4l-10.5 10.5v4"/><path d="M13.5 6.5l4 4"/></svg>';
+// Канцелярська кнопка (Tabler pin). ⚠️ НЕ беремо `ICONS.pin` з core/icons.js — там
+// МАПНИЙ маркер (крапля з кружечком), він означає «місце», а не «закріплено».
+const IC_PIN    = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l-4 4l-4 1.5l-1.5 1.5l7 7l1.5 -1.5l1.5 -4l4 -4"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/></svg>';
+const IC_UNPIN  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M15 4.5l-3.249 3.249l-3.751 1.251l-1.5 1.5l7 7l1.5 -1.5l1.25 -3.75l3.25 -3.25"/><path d="M9 15l-4.5 4.5"/><path d="M14.5 4l5.5 5.5"/><path d="M3 3l18 18"/></svg>';
 const IC_CAMERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M5 7h2l1 -2h8l1 2h2a2 2 0 0 1 2 2v9a2 2 0 0 1 -2 2h-14a2 2 0 0 1 -2 -2v-9a2 2 0 0 1 2 -2"/><circle cx="12" cy="13" r="3"/></svg>';
 const IC_USERS  = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 0 1 4 -4h4a4 4 0 0 1 4 4v2"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/><path d="M21 21v-2a4 4 0 0 0 -3 -3.85"/></svg>';
 const IC_DOTS   = '<svg viewBox="0 0 24 24" fill="currentColor"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>';
@@ -600,7 +604,10 @@ function eventBadgeHtml(post) {
     <span class="fd-evb-when">🗓 ${when}</span>${loc}</div>`;
 }
 
-function postCardHtml(post) {
+// onPage — картка малюється на екрані КОНКРЕТНОЇ спільноти (а не в головній стрічці).
+// Лише там має сенс позначка «Закріплено»: у головній стрічці закріплення нічого не
+// означає, бо порядок там завжди за датою (пряма вимога Вови).
+function postCardHtml(post, onPage = false) {
   const page = post.pages || {};
   const rx = reactionMap.get(post.id) || { count: 0, my: false };
   // ⚠️ Саме commentCounts, а не довжина commentMap: у мапі лежать коментарі ЛИШЕ
@@ -626,6 +633,7 @@ function postCardHtml(post) {
           <span class="fd-page-name">${escapeHtml(page.name || 'Сторінка')}</span>
           <span class="fd-time">${relTime(post.created_at, { longDate: true })}</span>
         </span>
+        ${onPage && post.pinned_at ? '<span class="fd-pin-badge">' + IC_PIN + 'Закріплено</span>' : ''}
         ${canEditPost ? `<button class="fd-card-menu" data-post-menu="${post.id}" type="button" aria-label="Меню поста">${IC_DOTS}</button>` : ''}
       </header>
       ${photo}
@@ -699,7 +707,11 @@ function renderFeed() {
     listEl.innerHTML = `<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>`;
     return;
   }
-  listEl.innerHTML = posts.map(postCardHtml).join('');
+  // ⚠️ Стрілка, а не голий `postCardHtml`: `map` передає другим аргументом ІНДЕКС, і він
+  // мовчки став би прапорцем `onPage` — позначка «Закріплено» вилізла б у ГОЛОВНІЙ
+  // стрічці на всіх картках, крім першої (у неї індекс 0). А головна стрічка про
+  // закріплення знати не повинна взагалі — пряма вимога Вови.
+  listEl.innerHTML = posts.map(p => postCardHtml(p)).join('');
   wireGalleries(listEl);
   wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
 }
@@ -1810,18 +1822,37 @@ function openComments(postId, focusCommentId = null) {
 // Список постів каналу для сегмента «Дописи | Події».
 // posts  — усі пости каналу (за свіжістю, як стрічка).
 // events — лише пости-події, майбутні (event_date ≥ сьогодні), за датою зростання.
+// Скільки постів можна тримати закріпленими одночасно (рішення Вови: «до 3 нормально»).
+// Одне число — міняється тут.
+const MAX_PINNED = 3;
+
+// Закріплені вгору, решта — як прийшли (за датою). Стабільно: серед закріплених
+// свіжіше закріплення вище, серед звичайних порядок не змінюється взагалі.
+// ⚠️ Не мутує вхідний масив — `posts` спільний, і його порядок тримає головну стрічку.
+function orderPinned(list) {
+  const pinned = list.filter(p => p.pinned_at);
+  const rest   = list.filter(p => !p.pinned_at);
+  pinned.sort((a, b) => String(b.pinned_at).localeCompare(String(a.pinned_at)));
+  return [...pinned, ...rest];
+}
+
 function screenListHtml(tab, pagePosts) {
   if (tab === 'events') {
     const today = todayKey();
     const evs = pagePosts
       .filter(p => p.event_date && p.event_date >= today)
       .sort((a, b) => a.event_date.localeCompare(b.event_date));
+    // Події впорядковані за ДАТОЮ події — закріплення сюди не лізе (це розклад, а не
+    // стрічка). Позначку теж не малюємо: вона мала б сенс лише там, де є порядок.
     return evs.length
-      ? evs.map(postCardHtml).join('')
+      ? evs.map(p => postCardHtml(p)).join('')
       : '<div class="fd-empty">Ще немає запланованих подій.</div>';
   }
+  // ⚠️ Стрілка, а не голий `postCardHtml`: `map` передає другим аргументом ІНДЕКС,
+  // і прапорець «ми на екрані спільноти» мовчки став би номером картки (0 — хибний,
+  // решта — істинні). Тобто позначки не було б рівно на першому пості.
   return pagePosts.length
-    ? pagePosts.map(postCardHtml).join('')
+    ? pagePosts.map(p => postCardHtml(p, true)).join('')
     : '<div class="fd-empty">Тут ще немає постів.</div>';
 }
 
@@ -1834,7 +1865,13 @@ async function openPageScreen(pageId, reopen = false) {
   if (!page) return;
   const canEdit = myPageIds.has(pageId);
   const subscribed = mySubs.has(pageId);
-  const pagePosts = posts.filter(p => p.page_id === pageId);
+  // 🔑 ЗАКРІПЛЕНІ — ВГОРІ, І ЛИШЕ ТУТ (вимога Вови 27.07: «адмін спільноти може
+  // закріпляти тільки в себе на спільноті, а не в головній стрічці»).
+  // Сортуємо саме в цьому місці — на екрані КОНКРЕТНОЇ спільноти. `renderFeed()`
+  // (головна стрічка) працює з `posts` як був, за датою; його не чіпаємо взагалі.
+  // `slice()` обов'язковий: `sort` міняє масив на місці, а `posts` — спільний стан,
+  // і його порядок визначає вигляд головної стрічки.
+  const pagePosts = orderPinned(posts.filter(p => p.page_id === pageId));
 
   const screen = document.createElement('div');
   screen.className = 'fd-screen';
@@ -2271,14 +2308,36 @@ const MAX_PHOTOS = 10;
 // «Подати оголошення». Збереження ж не чіпає жест ЖОДНИМ рядком і працює однаково для
 // всіх шляхів: тап повз лист, свайп, ✕, а заразом і вбитий застосунок чи дзвінок.
 //
-// ⚠️ ФОТО НЕ ЗБЕРІГАЮТЬСЯ. Вибране фото — це `File` у пам'яті вкладки; у localStorage
+// ⚠️ ФОТО НЕ ЗБЕРІГАЮТЬСЯ. Вибране фото — це `File` у пам'яті вкладки; у сховище
 // його не покласти (потрібен IndexedDB — окрема робота, не цей захід). Тому в тості
 // прямо кажемо, що фото треба вибрати ще раз — краще чесно, ніж мовчки недорахувати.
-const DRAFT_TTL = 7 * 24 * 3600 * 1000;   // тиждень: старіша чернетка вже не актуальна
+//
+// 🔑 ЖИВЕ ЛИШЕ ПОКИ ВІДКРИТИЙ ЗАСТОСУНОК (виправлено 27.07 за зауваженням Вови:
+// «закрив додаток, відкрив написати пост — а мені знову пише великий пост, який писав
+// раніше»). Перша версія клала чернетку в `localStorage`, тобто НАЗАВЖДИ — і поводилась
+// як повноцінне сховище чернеток, яким вона не є.
+// РІШЕННЯ: `sessionStorage`. Він живе рівно стільки, скільки відкрита вкладка/застосунок,
+// і зникає сам, коли його закрили. Це точно збігається із задумом: чернетка тут —
+// СТРАХОВКА від випадкового тапу повз лист, а не архів написаного.
+// Якщо колись знадобиться справжній СПИСОК чернеток (окремий екран, видалення,
+// редагування) — це окрема фіча, і тоді сховище має бути постійним і видимим людині.
+// Мовчазне «вічне» збереження без списку — гірше за обидва варіанти: текст спливає
+// через дні, а знайти чи прибрати його ніде.
+const DRAFT_TTL = 12 * 3600 * 1000;   // додатковий запобіжник, якщо вкладка висить добу
 const draftKey = (pageId) => `cstl_fd_draft_${pageId}`;
 
+// Обгортки над sessionStorage: у приватному режимі й на старих движках доступ до нього
+// може кинути виняток — чернетка не та річ, заради якої можна впасти.
+function ssGet(key, fallback) {
+  try { const v = sessionStorage.getItem(key); return v ? JSON.parse(v) : fallback; }
+  catch { return fallback; }
+}
+function ssSet(key, value) {
+  try { sessionStorage.setItem(key, JSON.stringify(value)); } catch {}
+}
+
 function readDraft(pageId) {
-  const d = lsGet(draftKey(pageId), null);
+  const d = ssGet(draftKey(pageId), null);
   if (!d || typeof d !== 'object') return null;
   if (!d.ts || Date.now() - d.ts > DRAFT_TTL) { clearDraft(pageId); return null; }
   // Порожня чернетка — не чернетка (інакше показували б тост ні про що).
@@ -2288,11 +2347,25 @@ function readDraft(pageId) {
 function writeDraft(pageId, d) {
   const meaningful = (d.text || '').trim() || d.date || d.time || (d.loc || '').trim();
   if (!meaningful) { clearDraft(pageId); return; }   // стер усе — чернетки більше нема
-  lsSet(draftKey(pageId), { ...d, ts: Date.now() });
+  ssSet(draftKey(pageId), { ...d, ts: Date.now() });
 }
 function clearDraft(pageId) {
-  try { localStorage.removeItem(draftKey(pageId)); } catch {}
+  try { sessionStorage.removeItem(draftKey(pageId)); } catch {}
 }
+
+// Разове прибирання за ПЕРШОЮ версією. Вона писала в `localStorage`, тож у всіх, хто вже
+// встиг оновитись до неї, там лежить «вічна» чернетка. Читати ми її більше не читаємо,
+// але лишати сміття в сховищі людини негарно — виносимо один раз при завантаженні.
+(function purgeLegacyDrafts() {
+  try {
+    const keys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith('cstl_fd_draft_')) keys.push(k);
+    }
+    keys.forEach(k => localStorage.removeItem(k));
+  } catch {}
+})();
 
 function openComposer(pageId, editPost = null) {
   const page = pages.find(p => p.id === pageId);
@@ -2726,9 +2799,11 @@ function openPostMenu(postId) {
   if (!post) return;
   const back = document.createElement('div');
   back.className = 'fd-sheet-back';
+  const isPinned = !!post.pinned_at;
   back.innerHTML = `
     <div class="fd-sheet fd-postmenu">
       <div class="fd-sheet-handle"></div>
+      <button class="fd-postmenu-item" data-act="pin" type="button">${isPinned ? IC_UNPIN + 'Відкріпити' : IC_PIN + 'Закріпити вгорі спільноти'}</button>
       <button class="fd-postmenu-item" data-act="edit" type="button">${IC_EDIT}Редагувати</button>
       <button class="fd-postmenu-item fd-postmenu-item--danger" data-act="del" type="button">${IC_TRASH}Видалити</button>
     </div>`;
@@ -2738,6 +2813,32 @@ function openPostMenu(postId) {
     const item = e.target.closest('[data-act]');
     if (!item) return;
     if (item.dataset.act === 'edit') { close(); openComposer(post.page_id, post); return; }
+
+    // ── Закріпити / відкріпити ВСЕРЕДИНІ спільноти ──────────────────────────────
+    if (item.dataset.act === 'pin') {
+      // Ліміт рахуємо ЛИШЕ по цій сторінці: у кожної спільноти своя трійка.
+      const pinnedHere = posts.filter(p => p.page_id === post.page_id && p.pinned_at).length;
+      if (!isPinned && pinnedHere >= MAX_PINNED) {
+        showToast(`Можна закріпити щонайбільше ${MAX_PINNED} пости. Спершу відкріпи якийсь`, 4000);
+        return;
+      }
+      const res = await setPagePostPinned(postId, !isPinned);
+      if (!res.ok) { showToast(res.error || 'Не вдалося — спробуй ще раз', 4000, 'error'); return; }
+      // Оновлюємо стан у пам'яті тим, що ПОВЕРНУВ сервер, а не своїм припущенням:
+      // якщо база чогось не дала, ми не будемо малювати неіснуючий стан.
+      const i = posts.findIndex(p => p.id === postId);
+      if (i >= 0) posts[i] = res.post;
+      const hadScreen = !!document.querySelector('.fd-screen');
+      close();
+      showToast(isPinned ? 'Пост відкріплено' : 'Пост закріплено вгорі спільноти', 2500);
+      // Перемальовуємо ЕКРАН СПІЛЬНОТИ — саме там порядок і змінився. Головну стрічку
+      // теж оновлюємо, але лише щоб картка показала свіжі дані: її порядок не залежить
+      // від закріплення взагалі (вимога Вови).
+      document.querySelectorAll('.fd-screen').forEach(s => s.remove());
+      renderFeed();
+      if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
+      return;
+    }
     // Видалення
     if (!confirm('Видалити пост?')) return;
     const res = await deletePagePost(postId);
