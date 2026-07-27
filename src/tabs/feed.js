@@ -913,7 +913,7 @@ function applyPostEvent(payload) {
     const had = posts.some(p => p.id === row.id);
     posts = posts.filter(p => p.id !== row.id);
     pendingPosts = pendingPosts.filter(p => p.id !== row.id);
-    if (had) renderFeed();
+    if (had) removePostCard(row.id);      // точково: решта списку не перемальовується
     renderNewPostsPill();
     return;
   }
@@ -926,8 +926,12 @@ function applyPostEvent(payload) {
 
   const i = posts.findIndex(p => p.id === row.id);
   if (i >= 0) {                       // редагування поста, який уже на екрані
+    const wasPinned = !!posts[i].pinned_at;
     posts[i] = enriched;
-    renderFeed();
+    patchPostCard(row.id);
+    // Закріпив/відкріпив ІНШИЙ адмін — у нас теж має перескочити, але лише в межах
+    // екрана його спільноти і без стрибка прокрутки.
+    if (wasPinned !== !!enriched.pinned_at) reorderPagePosts(enriched.page_id, row.id);
     return;
   }
   // Мій власний щойно надісланий пост уже додав композер — другий раз не показуємо.
