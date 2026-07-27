@@ -855,6 +855,31 @@ function insertPostCard(post) {
   });
 }
 
+// Переставити ОДНУ картку на своє місце в списку спільноти (закріпили/відкріпили).
+// Рухаємо сам вузол через `insertBefore` — DOM переносить елемент, а не створює новий,
+// тож фото не перезавантажуються і нічого не блимає. Головної стрічки це не стосується
+// взагалі: там порядок завжди за датою (пряма вимога Вови).
+function reorderPagePosts(pageId, movedId) {
+  document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`).forEach(screen => {
+    // «Події» впорядковані за датою події — закріплення туди не лізе.
+    if ((screen.querySelector('.fd-sctab.is-on')?.dataset.sctab || 'posts') !== 'posts') return;
+    const list = screen.querySelector('.fd-screen-list');
+    const node = list?.querySelector(`[data-post="${movedId}"]`);
+    if (!list || !node) return;
+    const ordered = pagePostsOf(pageId);
+    const i = ordered.findIndex(p => p.id === Number(movedId));
+    let next = null;
+    for (let k = i + 1; k < ordered.length && !next; k++) {
+      next = list.querySelector(`[data-post="${ordered[k].id}"]`);
+    }
+    if (next === node.nextElementSibling) return;        // уже стоїть де треба — не смикаємо
+    // skipId: сам переставлений вузол не може бути якорем — він же і їде.
+    keepScroll(scrollerOf(list), () => {
+      if (next) list.insertBefore(node, next); else list.appendChild(node);
+    }, movedId);
+  });
+}
+
 // Прибрати картку з усіх списків. Порожній список показує ту саму заглушку, що й
 // звичайний рендер — інакше після видалення останнього поста лишалась би біла пляма.
 function removePostCard(postId) {
@@ -2997,15 +3022,15 @@ function openPostMenu(postId) {
       // якщо база чогось не дала, ми не будемо малювати неіснуючий стан.
       const i = posts.findIndex(p => p.id === postId);
       if (i >= 0) posts[i] = res.post;
-      const hadScreen = !!document.querySelector('.fd-screen');
       close();
       showToast(isPinned ? 'Пост відкріплено' : 'Пост закріплено вгорі спільноти', 2500);
-      // Перемальовуємо ЕКРАН СПІЛЬНОТИ — саме там порядок і змінився. Головну стрічку
-      // теж оновлюємо, але лише щоб картка показала свіжі дані: її порядок не залежить
-      // від закріплення взагалі (вимога Вови).
-      document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-      renderFeed();
-      if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
+      // Дві дрібні дії замість перебудови всього екрана:
+      //   1) картка перемальовується — зʼявляється (чи зникає) позначка «Закріплено»;
+      //   2) вузол переїжджає на своє місце в списку СПІЛЬНОТИ (у головній стрічці
+      //      порядок не залежить від закріплення взагалі — вимога Вови).
+      // Прокрутка при цьому лишається там, де була.
+      patchPostCard(postId);
+      reorderPagePosts(post.page_id, postId);
       return;
     }
     // Видалення
