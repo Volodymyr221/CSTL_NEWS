@@ -56,14 +56,53 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   const onKey = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
 
-  function close() {
-    if (_active?.el !== wrap) return;
-    _active = null;
+  // ── ЗАКРИТТЯ ЯК У «СТРІЧЦІ»: АРКУШ З'ЇЖДЖАЄ ДОНИЗУ, А НЕ ЗГАСАЄ (27.07) ──────────
+  // Вова: «логіка закриття / відкриття модалок має бути така як в стрічці, плавна і чітка».
+  //
+  // БУЛО: `wrap.classList.remove('open')` → `.app-modal { opacity: 0 }` гасив УВЕСЬ
+  // контейнер разом з аркушем. Аркуш нікуди не їхав — він просто зникав.
+  // СТАЛО (дослівно патерн `.fd-sheet` зі «Стрічки»): рухаємо `transform` аркуша,
+  // а затемнення гасимо ОКРЕМИМ елементом. Це різні вузли, тож аркуш лишається
+  // повністю видимим усю дорогу вниз — те, чого Вова домагався в листі коментарів
+  // (PR #664, «не видно що вона згортається до низу»).
+  //
+  // ⚠️ ГЕОМЕТРІЮ СКРОЛУ НЕ ЧІПАЄМО. Саме вона (хто скролиться — аркуш чи тіло) двічі
+  // зламала «Подати оголошення» і була відкочена (#677). Анімація закриття від неї
+  // не залежить: тут немає жодної зміни в CSS розкладки.
+  let closing = false;
+  // Спільна частина будь-якого закриття — знімаємо стан і слухачі рівно один раз.
+  function teardown() {
+    if (_active?.el === wrap) _active = null;
     onClose?.();
-    wrap.classList.remove('open');
     document.body.classList.remove('modal-open');
     document.removeEventListener('keydown', onKey);
-    setTimeout(() => wrap.remove(), 240);
+  }
+
+  // ⚠️ Висоту фіксуємо в пікселях ПЕРЕД рухом: `translateY(100%)` рахується від ВЛАСНОЇ
+  // висоти елемента, і якщо вона в цей момент зміниться — ціль «тікає» і рух стає
+  // нерівномірним. Це вже коштувало окремого фіксу в листі коментарів (PR #663).
+  function slideOut(ms = 240) {
+    panel.style.height = panel.offsetHeight + 'px';
+    panel.style.transition = `transform ${ms}ms cubic-bezier(0.32, 0.72, 0, 1)`;
+    panel.style.transform = 'translateY(100%)';
+    if (backdrop) {
+      backdrop.style.transition = `opacity ${ms}ms linear`;
+      backdrop.style.opacity = '0';
+    }
+    setTimeout(() => wrap.remove(), ms + 20);
+  }
+
+  function close() {
+    if (closing || _active?.el !== wrap) return;
+    closing = true;
+    teardown();
+    // Центрована картка донизу не їде — там своя анімація (scale), лишаємо як було.
+    if (variant !== 'sheet' || !panel) {
+      wrap.classList.remove('open');
+      setTimeout(() => wrap.remove(), 240);
+      return;
+    }
+    slideOut();
   }
 
   backdrop?.addEventListener('click', close);
@@ -122,7 +161,18 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
         panel, dy, velocity: drag.velocity,
         remaining: sheetRemaining(panel, dy),
         dismissTransform: 'translateY(100%)',
-        onDismiss: () => close(),
+        // Аркуш УЖЕ поїхав донизу (`finishSwipe` щойно поставив transform), а затемнення
+        // гасить `fade`. Тому тут НЕ кличемо close() — він запустив би другу, зустрічну
+        // анімацію. Робимо рівно два діла: фіксуємо висоту (нерухома ціль для
+        // translateY) і прибираємо вузол після доїзду. Клас `open` НЕ знімаємо —
+        // інакше контейнер загасив би аркуш раніше, ніж той доїде («просто зникло»).
+        onDismiss: (ms) => {
+          if (closing) return;
+          closing = true;
+          teardown();
+          panel.style.height = panel.offsetHeight + 'px';
+          setTimeout(() => wrap.remove(), ms + 20);
+        },
         backdrop: fade,
       });
       dy = 0;

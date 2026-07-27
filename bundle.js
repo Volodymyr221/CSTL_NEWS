@@ -2095,15 +2095,35 @@
         close();
     };
     document.addEventListener("keydown", onKey);
-    function close() {
-      if (_active?.el !== wrap)
-        return;
-      _active = null;
+    let closing = false;
+    function teardown() {
+      if (_active?.el === wrap)
+        _active = null;
       onClose?.();
-      wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKey);
-      setTimeout(() => wrap.remove(), 240);
+    }
+    function slideOut(ms = 240) {
+      panel.style.height = panel.offsetHeight + "px";
+      panel.style.transition = `transform ${ms}ms cubic-bezier(0.32, 0.72, 0, 1)`;
+      panel.style.transform = "translateY(100%)";
+      if (backdrop) {
+        backdrop.style.transition = `opacity ${ms}ms linear`;
+        backdrop.style.opacity = "0";
+      }
+      setTimeout(() => wrap.remove(), ms + 20);
+    }
+    function close() {
+      if (closing || _active?.el !== wrap)
+        return;
+      closing = true;
+      teardown();
+      if (variant !== "sheet" || !panel) {
+        wrap.classList.remove("open");
+        setTimeout(() => wrap.remove(), 240);
+        return;
+      }
+      slideOut();
     }
     backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
@@ -2155,7 +2175,19 @@
           velocity: drag.velocity,
           remaining: sheetRemaining(panel, dy),
           dismissTransform: "translateY(100%)",
-          onDismiss: () => close(),
+          // Аркуш УЖЕ поїхав донизу (`finishSwipe` щойно поставив transform), а затемнення
+          // гасить `fade`. Тому тут НЕ кличемо close() — він запустив би другу, зустрічну
+          // анімацію. Робимо рівно два діла: фіксуємо висоту (нерухома ціль для
+          // translateY) і прибираємо вузол після доїзду. Клас `open` НЕ знімаємо —
+          // інакше контейнер загасив би аркуш раніше, ніж той доїде («просто зникло»).
+          onDismiss: (ms) => {
+            if (closing)
+              return;
+            closing = true;
+            teardown();
+            panel.style.height = panel.offsetHeight + "px";
+            setTimeout(() => wrap.remove(), ms + 20);
+          },
           backdrop: fade
         });
         dy = 0;
