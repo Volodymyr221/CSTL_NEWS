@@ -1159,7 +1159,7 @@ export async function fetchPages() {
 export async function fetchPagePosts(pageId = null, limit = 60) {
   if (!supa) return [];
   let q = supa.from('page_posts')
-    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)')
+    .select('id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)')
     .is('deleted_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
@@ -1410,7 +1410,7 @@ export async function fetchMyEditablePageIds() {
 // false = суто від імені спільноти (вибір у композері, крок 6).
 // ⬇️ Записи «Стрічки» ходять через netCall: обрив зв'язку → тихий повтор, а людині
 //    у будь-якому разі — людський текст. Поля `select` не міняв.
-const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pages(name, avatar_url)';
+const POST_COLS = 'id, page_id, author_uid, text, image_url, image_urls, show_author, event_date, event_time, event_location, created_at, pinned_at, pages(name, avatar_url)';
 
 export async function createPagePost(pageId, uid, text, imageUrls = [], event = {}, showAuthor = true) {
   if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
@@ -1433,6 +1433,19 @@ export async function createPagePost(pageId, uid, text, imageUrls = [], event = 
 export async function updatePagePost(postId, patch) {
   if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
   const r = await netCall(() => supa.from('page_posts').update(patch).eq('id', postId).select(POST_COLS).single());
+  return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
+}
+
+// Закріпити / відкріпити пост УСЕРЕДИНІ його спільноти (рішення Вови 27.07).
+// Права окремо не перевіряємо — це робить RLS: політика `pposts update` пускає лише
+// туди, де `can_edit_page(page_id)`. Тобто закріпити щось у ЧУЖІЙ спільноті неможливо
+// навіть в обхід застосунку, і клієнтська перевірка була б лише другою копією правила.
+// Порядок серед закріплених дає сам час: свіжіше закріплення — вище.
+export async function setPagePostPinned(postId, pinned) {
+  if (!supa) return { ok: false, error: 'Немає з\'єднання з базою' };
+  const r = await netCall(() => supa.from('page_posts')
+    .update({ pinned_at: pinned ? new Date().toISOString() : null })
+    .eq('id', postId).select(POST_COLS).single());
   return r.ok ? { ok: true, post: r.data } : { ok: false, error: r.error };
 }
 
