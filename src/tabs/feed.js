@@ -716,6 +716,186 @@ function renderFeed() {
   wireClamps(listEl);          // згорнути довгі тексти (стан розгорнутих переживає перемальовку)
 }
 
+// ── ТОЧКОВЕ ОНОВЛЕННЯ ОДНІЄЇ КАРТКИ (без перемальовки всієї стрічки) ──────────
+// 🔑 НАВІЩО (Вова 27.07): «після редагування або закріплення стрічка перезавантажується
+// і кидає на самий верх — пост доводиться шукати заново». Корінь був не в тих діях, а
+// в тому, що кожна з них закінчувалась `renderFeed()` (`listEl.innerHTML = …`) і
+// знесенням+переоткриттям екрана спільноти. На мить список стає порожнім, висота падає
+// до нуля — і браузер обрізає позицію прокрутки до 0. Звідси і блимання, і стрибок.
+//
+// Взірець уже був у цьому файлі: `patchLike()` міняє лише кнопку лайка, тому лайк
+// ніколи не блимав. Нижче — те саме для картки цілком.
+
+// Найближчий предок, що реально скролиться. Для головної стрічки це `.app-main`,
+// для екрана спільноти — сам `.fd-screen`. Якщо вміст коротший за екран, скролу нема
+// і компенсувати нічого — тоді нуль-об'єкт (запис у нього нікому не шкодить).
+function scrollerOf(node) {
+  return scrollParent(node) || document.scrollingElement || document.documentElement;
+}
+
+// Якір прокрутки (той самий прийом, яким браузер утримує сторінку, коли довантажилась
+// картинка вгорі). Міряємо, на скільки пікселів нижче верху стоїть перша ВИДИМА картка,
+// робимо зміну — і повертаємо їй те саме число.
+//
+// ⚠️ Чому запам'ятовуємо картку, а не просто `scrollTop`: висота вмісту НАД нею могла
+// змінитись (відредагований текст став довшим, закріплений пост поїхав угору) — і тоді
+// старий `scrollTop` вказує вже на інше місце. Число без орієнтира нічого не гарантує.
+//
+// skipId — картка, яку саме зараз прибирають. Її не можна брати за якір: після зміни
+// шукати вже нема чого, компенсація не спрацює і список смикнеться вгору на її висоту.
+function keepScroll(scroller, fn, skipId = null) {
+  if (!scroller) { fn(); return; }
+  const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
+  // Якір — перша картка, чий НИЖНІЙ край ще нижче верху видимої області. Тобто та,
+  // яку людина зараз бачить (навіть якщо її верх уже поїхав за екран).
+  const anchor = [...scroller.querySelectorAll('[data-post]')]
+    .find(c => c.getBoundingClientRect().bottom > viewTop + 1
+            && String(c.dataset.post) !== String(skipId));
+  const anchorId = anchor?.dataset.post;
+  const before = anchor ? anchor.getBoundingClientRect().top : 0;
+
+  fn();
+
+  if (!anchorId) return;
+  // Вузол міг бути ЗАМІНЕНИЙ новим — шукаємо заново за id, а не за старим посиланням.
+  const after = scroller.querySelector(`[data-post="${anchorId}"]`);
+  if (!after) return;                          // якір зник (його ж і видалили) — не смикаємо
+  const delta = after.getBoundingClientRect().top - before;
+  if (delta) scroller.scrollTop += delta;
+}
+
+// Зібрати DOM-вузол картки з ТІЄЇ САМОЇ розмітки, якою малюється вся стрічка
+// (`postCardHtml`), щоб оновлена картка не могла відрізнятись від сусідніх.
+// onPage — картка стоїть на екрані спільноти: лише там має сенс позначка «Закріплено».
+function cardNode(post, onPage) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = postCardHtml(post, onPage).trim();
+  return tpl.content.firstElementChild;
+}
+
+// Перемалювати ОДНУ картку скрізь, де вона зараз є: у головній стрічці і на відкритому
+// екрані спільноти. Делегування подій (`wireCards`) висить на КОНТЕЙНЕРІ, а не на самій
+// картці, тож заміна вузла нічого не відвʼязує — лайк, коментарі й меню «⋯» працюють далі.
+function patchPostCard(postId) {
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  document.querySelectorAll(`[data-post="${postId}"]`).forEach(old => {
+    const onPage = !!old.closest('.fd-screen');
+    // Яке фото зараз відкрите в каруселі — щоб після заміни лишилось те саме.
+    // Інакше людина, яка догорнула до 3-го знімка, після закріплення поста побачила б 1-й.
+    const shot = old.querySelector('.fd-gal-track')?.scrollLeft || 0;
+    const node = cardNode(post, onPage);
+    keepScroll(scrollerOf(old), () => {
+      old.replaceWith(node);
+      wireGalleries(node);   // карусель і пропорції кадру — інакше померли б саме на цій картці
+      wireClamps(node);      // «… Показати більше» (стан розгорнутих живе в expandedPosts, не в DOM)
+      if (shot) {
+        // Один кадр очікування — саме тому, що `wireGalleries` СВОЇМ rAF ставить трек на
+        // перший слайд (обхід iOS scroll-snap). Наш обробник зареєстрований пізніше, тож
+        // виконається після нього і поверне те фото, на якому людина зупинилась.
+        requestAnimationFrame(() => {
+          const t = node.querySelector('.fd-gal-track');
+          if (t) t.scrollLeft = shot;
+        });
+      }
+    });
+  });
+}
+
+// Списки, у яких зараз живуть картки: головна стрічка + кожен відкритий екран спільноти.
+// Для екрана віддаємо ще й порядок його вкладки — щоб нова картка стала на своє місце
+// (під закріпленими), а не абикуди.
+function liveCardLists(pageId) {
+  const out = [];
+  const feed = document.getElementById('feed-list');
+  if (feed) out.push({ el: feed, onPage: false, ordered: posts });
+  document.querySelectorAll('.fd-screen').forEach(screen => {
+    if (pageId != null && Number(screen.dataset.page) !== Number(pageId)) return;
+    const list = screen.querySelector('.fd-screen-list');
+    if (!list) return;
+    // На вкладці «Події» порядок свій (за датою події) і закріплення туди не лізе.
+    const tab = screen.querySelector('.fd-sctab.is-on')?.dataset.sctab || 'posts';
+    out.push({ el: list, onPage: true, ordered: pagePostsOf(Number(screen.dataset.page)), tab });
+  });
+  return out;
+}
+
+// Вставити щойно створений пост у всі відкриті списки — без перемальовки решти.
+// `posts` до цього моменту вже містить новий пост (його додав композер).
+function insertPostCard(post) {
+  liveCardLists(post.page_id).forEach(({ el, onPage, ordered, tab }) => {
+    // Вкладка «Події» показує лише майбутні події за датою. Допис туди не належить,
+    // а подія має стати за датою — простіше й чесніше перемалювати саме цей список.
+    if (tab === 'events') {
+      keepScroll(scrollerOf(el), () => {
+        el.innerHTML = screenListHtml('events', ordered);
+        wireGalleries(el); wireClamps(el);
+      });
+      return;
+    }
+    const scroller = scrollerOf(el);
+    // 🔑 Виняток із правила «не рухати екран»: якщо людина СТОЇТЬ УГОРІ списку, якір
+    // тримав би її на старій першій картці — і щойно опублікований пост опинився б над
+    // видимою областю. Тобто «нічого не сталось». Угорі списку даємо новій картці
+    // просто зʼявитись, як у Instagram.
+    const atTop = (scroller?.scrollTop || 0) < 4;
+    const put = () => {
+      el.querySelector('.fd-empty')?.remove();          // список був порожній
+      const node = cardNode(post, onPage);
+      const i = ordered.findIndex(p => p.id === post.id);
+      // Сусід знизу — перший із наступних за порядком, хто вже є в цьому списку.
+      let next = null;
+      for (let k = i + 1; k < ordered.length && !next; k++) {
+        next = el.querySelector(`[data-post="${ordered[k].id}"]`);
+      }
+      if (next) el.insertBefore(node, next); else el.appendChild(node);
+      wireGalleries(node); wireClamps(node);
+    };
+    if (atTop) put(); else keepScroll(scroller, put);
+  });
+}
+
+// Переставити ОДНУ картку на своє місце в списку спільноти (закріпили/відкріпили).
+// Рухаємо сам вузол через `insertBefore` — DOM переносить елемент, а не створює новий,
+// тож фото не перезавантажуються і нічого не блимає. Головної стрічки це не стосується
+// взагалі: там порядок завжди за датою (пряма вимога Вови).
+function reorderPagePosts(pageId, movedId) {
+  document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`).forEach(screen => {
+    // «Події» впорядковані за датою події — закріплення туди не лізе.
+    if ((screen.querySelector('.fd-sctab.is-on')?.dataset.sctab || 'posts') !== 'posts') return;
+    const list = screen.querySelector('.fd-screen-list');
+    const node = list?.querySelector(`[data-post="${movedId}"]`);
+    if (!list || !node) return;
+    const ordered = pagePostsOf(pageId);
+    const i = ordered.findIndex(p => p.id === Number(movedId));
+    let next = null;
+    for (let k = i + 1; k < ordered.length && !next; k++) {
+      next = list.querySelector(`[data-post="${ordered[k].id}"]`);
+    }
+    if (next === node.nextElementSibling) return;        // уже стоїть де треба — не смикаємо
+    // skipId: сам переставлений вузол не може бути якорем — він же і їде.
+    keepScroll(scrollerOf(list), () => {
+      if (next) list.insertBefore(node, next); else list.appendChild(node);
+    }, movedId);
+  });
+}
+
+// Прибрати картку з усіх списків. Порожній список показує ту саму заглушку, що й
+// звичайний рендер — інакше після видалення останнього поста лишалась би біла пляма.
+function removePostCard(postId) {
+  document.querySelectorAll(`[data-post="${postId}"]`).forEach(node => {
+    const list = node.parentElement;
+    keepScroll(scrollerOf(node), () => {
+      node.remove();
+      if (list && !list.querySelector('[data-post]') && !list.querySelector('.fd-empty')) {
+        list.innerHTML = list.id === 'feed-list'
+          ? '<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>'
+          : '<div class="fd-empty">Тут ще немає постів.</div>';
+      }
+    }, postId);
+  });
+}
+
 // ── ЖИВА СИНХРОНІЗАЦІЯ САМИХ ПОСТІВ ────────────────────────────────────────────────
 // Вова 26.07: «realtime має бути… між всіма, в яких зараз відкрита та чи інша модалка
 // коментарів чи будь-яка інша сторінка взаємодії». Коментарі й лайки жили наживо давно,
@@ -733,7 +913,7 @@ function applyPostEvent(payload) {
     const had = posts.some(p => p.id === row.id);
     posts = posts.filter(p => p.id !== row.id);
     pendingPosts = pendingPosts.filter(p => p.id !== row.id);
-    if (had) renderFeed();
+    if (had) removePostCard(row.id);      // точково: решта списку не перемальовується
     renderNewPostsPill();
     return;
   }
@@ -746,8 +926,12 @@ function applyPostEvent(payload) {
 
   const i = posts.findIndex(p => p.id === row.id);
   if (i >= 0) {                       // редагування поста, який уже на екрані
+    const wasPinned = !!posts[i].pinned_at;
     posts[i] = enriched;
-    renderFeed();
+    patchPostCard(row.id);
+    // Закріпив/відкріпив ІНШИЙ адмін — у нас теж має перескочити, але лише в межах
+    // екрана його спільноти і без стрибка прокрутки.
+    if (wasPinned !== !!enriched.pinned_at) reorderPagePosts(enriched.page_id, row.id);
     return;
   }
   // Мій власний щойно надісланий пост уже додав композер — другий раз не показуємо.
@@ -1836,6 +2020,16 @@ function orderPinned(list) {
   return [...pinned, ...rest];
 }
 
+// Пости ОДНІЄЇ спільноти в порядку її екрана: закріплені вгорі, решта за датою.
+// 🔑 Саме ФУНКЦІЯ, а не збережений масив. Раніше екран рахував список один раз при
+// відкритті і тримав його в замиканні — після точкової зміни (новий пост, закріплення,
+// видалення) та копія миттєво застарівала, і перемикач «Дописи | Події» повертав на
+// екран стан на момент відкриття. Поки після кожної дії екран будувався заново, це
+// було непомітно; коли перестали — стало б справжнім багом.
+function pagePostsOf(pageId) {
+  return orderPinned(posts.filter(p => p.page_id === pageId));
+}
+
 function screenListHtml(tab, pagePosts) {
   if (tab === 'events') {
     const today = todayKey();
@@ -1869,12 +2063,13 @@ async function openPageScreen(pageId, reopen = false) {
   // закріпляти тільки в себе на спільноті, а не в головній стрічці»).
   // Сортуємо саме в цьому місці — на екрані КОНКРЕТНОЇ спільноти. `renderFeed()`
   // (головна стрічка) працює з `posts` як був, за датою; його не чіпаємо взагалі.
-  // `slice()` обов'язковий: `sort` міняє масив на місці, а `posts` — спільний стан,
-  // і його порядок визначає вигляд головної стрічки.
-  const pagePosts = orderPinned(posts.filter(p => p.page_id === pageId));
-
+  // `orderPinned` не мутує вхідний масив: `posts` — спільний стан, і його порядок
+  // визначає вигляд головної стрічки.
   const screen = document.createElement('div');
   screen.className = 'fd-screen';
+  // Чия це спільнота — щоб точкові оновлення (нова картка, закріплення) знали,
+  // до якого саме відкритого екрана вони стосуються.
+  screen.dataset.page = String(pageId);
   screen.innerHTML = `
     <!-- 🔑 УСІ ТРИ КНОПКИ ШАПКИ — В ОДНОМУ ЛИПКОМУ БАРІ (Вова 25.07, вибір після IMG_3578).
          Раніше «⋯» жила в банері, а її меню — окремо, і після переводу банера в sticky вони
@@ -1919,7 +2114,7 @@ async function openPageScreen(pageId, reopen = false) {
         <button class="fd-sctab"       data-sctab="events" type="button">Події</button>
       </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>Написати пост…</span></button>` : ''}
-      <div class="fd-screen-list">${screenListHtml('posts', pagePosts)}</div>
+      <div class="fd-screen-list">${screenListHtml('posts', pagePostsOf(pageId))}</div>
     </div>`;
 
   // Екран — повноекранний ШАР, підключений до історії браузера (core/layers.js).
@@ -1956,7 +2151,7 @@ async function openPageScreen(pageId, reopen = false) {
     tab.addEventListener('click', () => {
       screen.querySelectorAll('.fd-sctab').forEach(t => t.classList.toggle('is-on', t === tab));
       const list = screen.querySelector('.fd-screen-list');
-      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
+      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePostsOf(pageId));
       wireCards(screen); wireGalleries(screen); wireClamps(screen);
     }));
 
@@ -2560,9 +2755,12 @@ function openComposer(pageId, editPost = null) {
         // (тап повз лист, свайп) — там чернетка якраз і має вціліти.
         if (!edit) clearDraft(pageId);
         close();
-        document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-        renderFeed();
-        openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
+        // 🔑 ТОЧКОВО, а не перемальовкою всього (Вова 27.07: «після редагування кидає
+        // на самий верх — пост доводиться шукати заново»). Раніше тут стояло знесення
+        // екрана спільноти + `renderFeed()` + переоткриття екрана: список на мить ставав
+        // порожнім, прокрутка обрізалась до нуля. Тепер міняється рівно одна картка.
+        if (edit) patchPostCard(res.post.id);
+        else insertPostCard(res.post);
       } else {
         // Текст і фото лишаються у формі — людина просто тисне ще раз.
         showToast(res.error || 'Не вдалося зберегти — спробуй ще раз', 4000, 'error');
@@ -2828,27 +3026,26 @@ function openPostMenu(postId) {
       // якщо база чогось не дала, ми не будемо малювати неіснуючий стан.
       const i = posts.findIndex(p => p.id === postId);
       if (i >= 0) posts[i] = res.post;
-      const hadScreen = !!document.querySelector('.fd-screen');
       close();
       showToast(isPinned ? 'Пост відкріплено' : 'Пост закріплено вгорі спільноти', 2500);
-      // Перемальовуємо ЕКРАН СПІЛЬНОТИ — саме там порядок і змінився. Головну стрічку
-      // теж оновлюємо, але лише щоб картка показала свіжі дані: її порядок не залежить
-      // від закріплення взагалі (вимога Вови).
-      document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-      renderFeed();
-      if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
+      // Дві дрібні дії замість перебудови всього екрана:
+      //   1) картка перемальовується — зʼявляється (чи зникає) позначка «Закріплено»;
+      //   2) вузол переїжджає на своє місце в списку СПІЛЬНОТИ (у головній стрічці
+      //      порядок не залежить від закріплення взагалі — вимога Вови).
+      // Прокрутка при цьому лишається там, де була.
+      patchPostCard(postId);
+      reorderPagePosts(post.page_id, postId);
       return;
     }
     // Видалення
     if (!confirm('Видалити пост?')) return;
     const res = await deletePagePost(postId);
     if (!res.ok) { showToast(res.error || 'Не вдалося видалити — спробуй ще раз', 4000, 'error'); return; }
-    const hadScreen = !!document.querySelector('.fd-screen');
     posts = posts.filter(p => p.id !== postId);
     close();
-    document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-    renderFeed();
-    if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
+    // Знімаємо саме цю картку. Решта списку лишається тими самими вузлами — тобто
+    // не блимає і не перезавантажує фото, а екран не «стрибає» на позицію 0.
+    removePostCard(postId);
   });
   document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
   // Меню маленьке — скрол і клавіатура тут не потрібні. Але плавне ЗАКРИТТЯ стосується
