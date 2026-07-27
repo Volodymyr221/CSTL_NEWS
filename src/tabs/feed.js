@@ -3037,12 +3037,11 @@ function openPostMenu(postId) {
     if (!confirm('Видалити пост?')) return;
     const res = await deletePagePost(postId);
     if (!res.ok) { showToast(res.error || 'Не вдалося видалити — спробуй ще раз', 4000, 'error'); return; }
-    const hadScreen = !!document.querySelector('.fd-screen');
     posts = posts.filter(p => p.id !== postId);
     close();
-    document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-    renderFeed();
-    if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
+    // Знімаємо саме цю картку. Решта списку лишається тими самими вузлами — тобто
+    // не блимає і не перезавантажує фото, а екран не «стрибає» на позицію 0.
+    removePostCard(postId);
   });
   document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
   // Меню маленьке — скрол і клавіатура тут не потрібні. Але плавне ЗАКРИТТЯ стосується
