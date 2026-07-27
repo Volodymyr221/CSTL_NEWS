@@ -11750,6 +11750,36 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (delta)
       scroller.scrollTop += delta;
   }
+  function viewRect(scroller) {
+    if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
+      return { top: 0, bottom: window.innerHeight };
+    }
+    const r = scroller.getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom };
+  }
+  function cardVisible(node, scroller) {
+    const r = node.getBoundingClientRect();
+    const v = viewRect(scroller);
+    return r.bottom > v.top && r.top < v.bottom;
+  }
+  var CARD_LEAVE_MS = 340;
+  function collapseCard(node, after) {
+    const h = node.offsetHeight;
+    node.style.overflow = "hidden";
+    node.style.height = h + "px";
+    node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
+    requestAnimationFrame(() => {
+      node.style.height = "0px";
+      node.style.opacity = "0";
+    });
+    setTimeout(after, CARD_LEAVE_MS + 20);
+  }
+  function restoreCard(node) {
+    node.style.transition = "";
+    node.style.height = "";
+    node.style.overflow = "";
+    node.style.opacity = "";
+  }
   function cardNode(post, onPage) {
     const tpl = document.createElement("template");
     tpl.innerHTML = postCardHtml(post, onPage).trim();
@@ -11842,23 +11872,39 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       }
       if (next === node.nextElementSibling)
         return;
-      keepScroll(scrollerOf(list), () => {
+      const place = () => {
         if (next)
           list.insertBefore(node, next);
         else
           list.appendChild(node);
-      }, movedId);
+      };
+      const scroller = scrollerOf(list);
+      const kids = [...list.children];
+      const goesDown = (next ? kids.indexOf(next) : kids.length) > kids.indexOf(node);
+      if (goesDown && cardVisible(node, scroller)) {
+        collapseCard(node, () => {
+          place();
+          restoreCard(node);
+        });
+        return;
+      }
+      keepScroll(scroller, place, movedId);
     });
   }
   function removePostCard(postId) {
     document.querySelectorAll(`[data-post="${postId}"]`).forEach((node) => {
       const list = node.parentElement;
-      keepScroll(scrollerOf(node), () => {
+      const scroller = scrollerOf(node);
+      const finish2 = () => {
         node.remove();
         if (list && !list.querySelector("[data-post]") && !list.querySelector(".fd-empty")) {
           list.innerHTML = list.id === "feed-list" ? '<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>' : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
         }
-      }, postId);
+      };
+      if (cardVisible(node, scroller))
+        collapseCard(node, finish2);
+      else
+        keepScroll(scroller, finish2, postId);
     });
   }
   function applyPostEvent(payload) {
