@@ -12725,7 +12725,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
   function orderPinned(list) {
     const pinned = list.filter((p) => p.pinned_at);
     const rest = list.filter((p) => !p.pinned_at);
-    pinned.sort((a, b) => String(b.pinned_at).localeCompare(String(a.pinned_at)));
     return [...pinned, ...rest];
   }
   function pagePostsOf(pageId) {
