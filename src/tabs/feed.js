@@ -740,13 +740,17 @@ function scrollerOf(node) {
 // ⚠️ Чому запам'ятовуємо картку, а не просто `scrollTop`: висота вмісту НАД нею могла
 // змінитись (відредагований текст став довшим, закріплений пост поїхав угору) — і тоді
 // старий `scrollTop` вказує вже на інше місце. Число без орієнтира нічого не гарантує.
-function keepScroll(scroller, fn) {
+//
+// skipId — картка, яку саме зараз прибирають. Її не можна брати за якір: після зміни
+// шукати вже нема чого, компенсація не спрацює і список смикнеться вгору на її висоту.
+function keepScroll(scroller, fn, skipId = null) {
   if (!scroller) { fn(); return; }
   const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
   // Якір — перша картка, чий НИЖНІЙ край ще нижче верху видимої області. Тобто та,
   // яку людина зараз бачить (навіть якщо її верх уже поїхав за екран).
   const anchor = [...scroller.querySelectorAll('[data-post]')]
-    .find(c => c.getBoundingClientRect().bottom > viewTop + 1);
+    .find(c => c.getBoundingClientRect().bottom > viewTop + 1
+            && String(c.dataset.post) !== String(skipId));
   const anchorId = anchor?.dataset.post;
   const before = anchor ? anchor.getBoundingClientRect().top : 0;
 
@@ -795,6 +799,75 @@ function patchPostCard(postId) {
         });
       }
     });
+  });
+}
+
+// Списки, у яких зараз живуть картки: головна стрічка + кожен відкритий екран спільноти.
+// Для екрана віддаємо ще й порядок його вкладки — щоб нова картка стала на своє місце
+// (під закріпленими), а не абикуди.
+function liveCardLists(pageId) {
+  const out = [];
+  const feed = document.getElementById('feed-list');
+  if (feed) out.push({ el: feed, onPage: false, ordered: posts });
+  document.querySelectorAll('.fd-screen').forEach(screen => {
+    if (pageId != null && Number(screen.dataset.page) !== Number(pageId)) return;
+    const list = screen.querySelector('.fd-screen-list');
+    if (!list) return;
+    // На вкладці «Події» порядок свій (за датою події) і закріплення туди не лізе.
+    const tab = screen.querySelector('.fd-sctab.is-on')?.dataset.sctab || 'posts';
+    out.push({ el: list, onPage: true, ordered: pagePostsOf(Number(screen.dataset.page)), tab });
+  });
+  return out;
+}
+
+// Вставити щойно створений пост у всі відкриті списки — без перемальовки решти.
+// `posts` до цього моменту вже містить новий пост (його додав композер).
+function insertPostCard(post) {
+  liveCardLists(post.page_id).forEach(({ el, onPage, ordered, tab }) => {
+    // Вкладка «Події» показує лише майбутні події за датою. Допис туди не належить,
+    // а подія має стати за датою — простіше й чесніше перемалювати саме цей список.
+    if (tab === 'events') {
+      keepScroll(scrollerOf(el), () => {
+        el.innerHTML = screenListHtml('events', ordered);
+        wireGalleries(el); wireClamps(el);
+      });
+      return;
+    }
+    const scroller = scrollerOf(el);
+    // 🔑 Виняток із правила «не рухати екран»: якщо людина СТОЇТЬ УГОРІ списку, якір
+    // тримав би її на старій першій картці — і щойно опублікований пост опинився б над
+    // видимою областю. Тобто «нічого не сталось». Угорі списку даємо новій картці
+    // просто зʼявитись, як у Instagram.
+    const atTop = (scroller?.scrollTop || 0) < 4;
+    const put = () => {
+      el.querySelector('.fd-empty')?.remove();          // список був порожній
+      const node = cardNode(post, onPage);
+      const i = ordered.findIndex(p => p.id === post.id);
+      // Сусід знизу — перший із наступних за порядком, хто вже є в цьому списку.
+      let next = null;
+      for (let k = i + 1; k < ordered.length && !next; k++) {
+        next = el.querySelector(`[data-post="${ordered[k].id}"]`);
+      }
+      if (next) el.insertBefore(node, next); else el.appendChild(node);
+      wireGalleries(node); wireClamps(node);
+    };
+    if (atTop) put(); else keepScroll(scroller, put);
+  });
+}
+
+// Прибрати картку з усіх списків. Порожній список показує ту саму заглушку, що й
+// звичайний рендер — інакше після видалення останнього поста лишалась би біла пляма.
+function removePostCard(postId) {
+  document.querySelectorAll(`[data-post="${postId}"]`).forEach(node => {
+    const list = node.parentElement;
+    keepScroll(scrollerOf(node), () => {
+      node.remove();
+      if (list && !list.querySelector('[data-post]') && !list.querySelector('.fd-empty')) {
+        list.innerHTML = list.id === 'feed-list'
+          ? '<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>'
+          : '<div class="fd-empty">Тут ще немає постів.</div>';
+      }
+    }, postId);
   });
 }
 
