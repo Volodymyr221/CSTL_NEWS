@@ -2726,9 +2726,12 @@ function openComposer(pageId, editPost = null) {
         // (тап повз лист, свайп) — там чернетка якраз і має вціліти.
         if (!edit) clearDraft(pageId);
         close();
-        document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-        renderFeed();
-        openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
+        // 🔑 ТОЧКОВО, а не перемальовкою всього (Вова 27.07: «після редагування кидає
+        // на самий верх — пост доводиться шукати заново»). Раніше тут стояло знесення
+        // екрана спільноти + `renderFeed()` + переоткриття екрана: список на мить ставав
+        // порожнім, прокрутка обрізалась до нуля. Тепер міняється рівно одна картка.
+        if (edit) patchPostCard(res.post.id);
+        else insertPostCard(res.post);
       } else {
         // Текст і фото лишаються у формі — людина просто тисне ще раз.
         showToast(res.error || 'Не вдалося зберегти — спробуй ще раз', 4000, 'error');
