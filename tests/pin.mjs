@@ -10,8 +10,12 @@ const SRC = projectFile('src/tabs/feed.js');
 const from = SRC.indexOf('const MAX_PINNED');
 const to   = SRC.indexOf('function screenListHtml');
 if (from < 0 || to < 0) { console.log('❌ не знайшов блок закріплення'); process.exit(1); }
-const { orderPinned, MAX_PINNED } =
-  new Function(SRC.slice(from, to) + '\nreturn { orderPinned, MAX_PINNED };')();
+// `pagePostsOf` читає модульний список `posts` — тому віддаємо його параметром.
+// Так стенд може ганяти НЕ лише чисту сортувалку, а й ту функцію, якою екран
+// спільноти реально бере свої пости.
+const load = (allPosts = []) =>
+  new Function('posts', SRC.slice(from, to) + '\nreturn { orderPinned, MAX_PINNED, pagePostsOf };')(allPosts);
+const { orderPinned, MAX_PINNED } = load();
 
 const res = []; const ok = (n, c, i = '') => { res.push(c); console.log(`${c ? '✅' : '❌'} ${n}${i ? '  — ' + i : ''}`); };
 const P = (id, page, pinned = null) => ({ id, page_id: page, pinned_at: pinned });
@@ -47,8 +51,20 @@ ok('ліміт закріплених — 3', MAX_PINNED === 3, String(MAX_PINNE
 const feedRender = SRC.slice(SRC.indexOf('function renderFeed'), SRC.indexOf('function renderFeed') + 3000);
 ok('головна стрічка НЕ сортує за закріпленням', !feedRender.includes('orderPinned'),
    'renderFeed має лишатись за датою');
-ok('екран спільноти сортує за закріпленням',
-   /const pagePosts = orderPinned\(posts\.filter/.test(SRC));
+// 🔴 БУЛО: `/const pagePosts = orderPinned\(posts\.filter/` — перевірка ФОРМИ ЗАПИСУ.
+// Вона впала 27.07 лише тому, що змінну перейменували у функцію `pagePostsOf()`,
+// хоча поведінка не змінилась ані на крок. Той самий гріх, від якого застерігає
+// коментар нижче. Стало: ганяємо саму функцію екрана і дивимось на НАСЛІДОК —
+// пости чужої спільноти не потрапляють, а закріплені стоять угорі.
+{
+  const mixed = [P(9, 2), P(5, 1), P(4, 1), P(3, 1, '2026-07-27T10:00:00Z'), P(2, 1), P(1, 1, '2026-07-27T12:00:00Z')];
+  const { pagePostsOf } = load(mixed);
+  ok('екран спільноти сортує за закріпленням', ids(pagePostsOf(1)) === '1,3,5,4,2', ids(pagePostsOf(1)));
+  ok('екран спільноти бере лише свої пости', !pagePostsOf(1).some(p => p.page_id !== 1));
+}
+// Список має братись НАЖИВО з `posts` (а не з копії, зробленої при відкритті екрана):
+// інакше після точкового оновлення перемикач «Дописи | Події» показав би старий стан.
+ok('екран малює список через pagePostsOf', /screenListHtml\((?:'posts'|tab\.dataset\.sctab), pagePostsOf\(/.test(SRC));
 
 // Позначка «Закріплено» — тільки на екрані спільноти.
 ok('позначка малюється лише при onPage', /onPage && post\.pinned_at/.test(SRC));

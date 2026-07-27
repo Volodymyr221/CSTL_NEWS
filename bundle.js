@@ -11728,6 +11728,139 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     wireGalleries(listEl);
     wireClamps(listEl);
   }
+  function scrollerOf(node) {
+    return scrollParent(node) || document.scrollingElement || document.documentElement;
+  }
+  function keepScroll(scroller, fn, skipId = null) {
+    if (!scroller) {
+      fn();
+      return;
+    }
+    const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
+    const anchor = [...scroller.querySelectorAll("[data-post]")].find((c) => c.getBoundingClientRect().bottom > viewTop + 1 && String(c.dataset.post) !== String(skipId));
+    const anchorId = anchor?.dataset.post;
+    const before = anchor ? anchor.getBoundingClientRect().top : 0;
+    fn();
+    if (!anchorId)
+      return;
+    const after = scroller.querySelector(`[data-post="${anchorId}"]`);
+    if (!after)
+      return;
+    const delta = after.getBoundingClientRect().top - before;
+    if (delta)
+      scroller.scrollTop += delta;
+  }
+  function cardNode(post, onPage) {
+    const tpl = document.createElement("template");
+    tpl.innerHTML = postCardHtml(post, onPage).trim();
+    return tpl.content.firstElementChild;
+  }
+  function patchPostCard(postId) {
+    const post = posts.find((p) => p.id === postId);
+    if (!post)
+      return;
+    document.querySelectorAll(`[data-post="${postId}"]`).forEach((old) => {
+      const onPage = !!old.closest(".fd-screen");
+      const shot = old.querySelector(".fd-gal-track")?.scrollLeft || 0;
+      const node = cardNode(post, onPage);
+      keepScroll(scrollerOf(old), () => {
+        old.replaceWith(node);
+        wireGalleries(node);
+        wireClamps(node);
+        if (shot) {
+          requestAnimationFrame(() => {
+            const t = node.querySelector(".fd-gal-track");
+            if (t)
+              t.scrollLeft = shot;
+          });
+        }
+      });
+    });
+  }
+  function liveCardLists(pageId) {
+    const out = [];
+    const feed = document.getElementById("feed-list");
+    if (feed)
+      out.push({ el: feed, onPage: false, ordered: posts });
+    document.querySelectorAll(".fd-screen").forEach((screen) => {
+      if (pageId != null && Number(screen.dataset.page) !== Number(pageId))
+        return;
+      const list = screen.querySelector(".fd-screen-list");
+      if (!list)
+        return;
+      const tab = screen.querySelector(".fd-sctab.is-on")?.dataset.sctab || "posts";
+      out.push({ el: list, onPage: true, ordered: pagePostsOf(Number(screen.dataset.page)), tab });
+    });
+    return out;
+  }
+  function insertPostCard(post) {
+    liveCardLists(post.page_id).forEach(({ el, onPage, ordered, tab }) => {
+      if (tab === "events") {
+        keepScroll(scrollerOf(el), () => {
+          el.innerHTML = screenListHtml("events", ordered);
+          wireGalleries(el);
+          wireClamps(el);
+        });
+        return;
+      }
+      const scroller = scrollerOf(el);
+      const atTop = (scroller?.scrollTop || 0) < 4;
+      const put = () => {
+        el.querySelector(".fd-empty")?.remove();
+        const node = cardNode(post, onPage);
+        const i = ordered.findIndex((p) => p.id === post.id);
+        let next = null;
+        for (let k = i + 1; k < ordered.length && !next; k++) {
+          next = el.querySelector(`[data-post="${ordered[k].id}"]`);
+        }
+        if (next)
+          el.insertBefore(node, next);
+        else
+          el.appendChild(node);
+        wireGalleries(node);
+        wireClamps(node);
+      };
+      if (atTop)
+        put();
+      else
+        keepScroll(scroller, put);
+    });
+  }
+  function reorderPagePosts(pageId, movedId) {
+    document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`).forEach((screen) => {
+      if ((screen.querySelector(".fd-sctab.is-on")?.dataset.sctab || "posts") !== "posts")
+        return;
+      const list = screen.querySelector(".fd-screen-list");
+      const node = list?.querySelector(`[data-post="${movedId}"]`);
+      if (!list || !node)
+        return;
+      const ordered = pagePostsOf(pageId);
+      const i = ordered.findIndex((p) => p.id === Number(movedId));
+      let next = null;
+      for (let k = i + 1; k < ordered.length && !next; k++) {
+        next = list.querySelector(`[data-post="${ordered[k].id}"]`);
+      }
+      if (next === node.nextElementSibling)
+        return;
+      keepScroll(scrollerOf(list), () => {
+        if (next)
+          list.insertBefore(node, next);
+        else
+          list.appendChild(node);
+      }, movedId);
+    });
+  }
+  function removePostCard(postId) {
+    document.querySelectorAll(`[data-post="${postId}"]`).forEach((node) => {
+      const list = node.parentElement;
+      keepScroll(scrollerOf(node), () => {
+        node.remove();
+        if (list && !list.querySelector("[data-post]") && !list.querySelector(".fd-empty")) {
+          list.innerHTML = list.id === "feed-list" ? '<div class="fd-empty">\u041F\u043E\u043A\u0438 \u0449\u043E \u0442\u0443\u0442 \u043F\u043E\u0440\u043E\u0436\u043D\u044C\u043E.<br>\u041D\u0435\u0437\u0430\u0431\u0430\u0440\u043E\u043C \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438 \u0433\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u0447\u043D\u0443\u0442\u044C \u043F\u0443\u0431\u043B\u0456\u043A\u0443\u0432\u0430\u0442\u0438 \u043D\u043E\u0432\u0438\u043D\u0438.</div>' : '<div class="fd-empty">\u0422\u0443\u0442 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u043F\u043E\u0441\u0442\u0456\u0432.</div>';
+        }
+      }, postId);
+    });
+  }
   function applyPostEvent(payload) {
     const row = payload.new || payload.old;
     if (!row || !row.id)
@@ -11737,7 +11870,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       posts = posts.filter((p) => p.id !== row.id);
       pendingPosts = pendingPosts.filter((p) => p.id !== row.id);
       if (had)
-        renderFeed();
+        removePostCard(row.id);
       renderNewPostsPill();
       return;
     }
@@ -11745,8 +11878,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const enriched = { ...row, pages: page ? { name: page.name, avatar_url: page.avatar_url } : row.pages };
     const i = posts.findIndex((p) => p.id === row.id);
     if (i >= 0) {
+      const wasPinned = !!posts[i].pinned_at;
       posts[i] = enriched;
-      renderFeed();
+      patchPostCard(row.id);
+      if (wasPinned !== !!enriched.pinned_at)
+        reorderPagePosts(enriched.page_id, row.id);
       return;
     }
     if (pendingPosts.some((p) => p.id === row.id))
@@ -12546,6 +12682,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     pinned.sort((a, b) => String(b.pinned_at).localeCompare(String(a.pinned_at)));
     return [...pinned, ...rest];
   }
+  function pagePostsOf(pageId) {
+    return orderPinned(posts.filter((p) => p.page_id === pageId));
+  }
   function screenListHtml(tab, pagePosts) {
     if (tab === "events") {
       const today = todayKey();
@@ -12560,9 +12699,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return;
     const canEdit = myPageIds.has(pageId);
     const subscribed = mySubs.has(pageId);
-    const pagePosts = orderPinned(posts.filter((p) => p.page_id === pageId));
     const screen = document.createElement("div");
     screen.className = "fd-screen";
+    screen.dataset.page = String(pageId);
     screen.innerHTML = `
     <!-- \u{1F511} \u0423\u0421\u0406 \u0422\u0420\u0418 \u041A\u041D\u041E\u041F\u041A\u0418 \u0428\u0410\u041F\u041A\u0418 \u2014 \u0412 \u041E\u0414\u041D\u041E\u041C\u0423 \u041B\u0418\u041F\u041A\u041E\u041C\u0423 \u0411\u0410\u0420\u0406 (\u0412\u043E\u0432\u0430 25.07, \u0432\u0438\u0431\u0456\u0440 \u043F\u0456\u0441\u043B\u044F IMG_3578).
          \u0420\u0430\u043D\u0456\u0448\u0435 \xAB\u22EF\xBB \u0436\u0438\u043B\u0430 \u0432 \u0431\u0430\u043D\u0435\u0440\u0456, \u0430 \u0457\u0457 \u043C\u0435\u043D\u044E \u2014 \u043E\u043A\u0440\u0435\u043C\u043E, \u0456 \u043F\u0456\u0441\u043B\u044F \u043F\u0435\u0440\u0435\u0432\u043E\u0434\u0443 \u0431\u0430\u043D\u0435\u0440\u0430 \u0432 sticky \u0432\u043E\u043D\u0438
@@ -12607,7 +12746,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         <button class="fd-sctab"       data-sctab="events" type="button">\u041F\u043E\u0434\u0456\u0457</button>
       </div>
       ${canEdit ? `<button class="fd-compose-open" type="button">${IC_IMG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438 \u043F\u043E\u0441\u0442\u2026</span></button>` : ""}
-      <div class="fd-screen-list">${screenListHtml("posts", pagePosts)}</div>
+      <div class="fd-screen-list">${screenListHtml("posts", pagePostsOf(pageId))}</div>
     </div>`;
     const layer = openLayer(
       () => screen.remove(),
@@ -12630,7 +12769,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     screen.querySelectorAll(".fd-sctab").forEach((tab) => tab.addEventListener("click", () => {
       screen.querySelectorAll(".fd-sctab").forEach((t) => t.classList.toggle("is-on", t === tab));
       const list = screen.querySelector(".fd-screen-list");
-      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
+      list.innerHTML = screenListHtml(tab.dataset.sctab, pagePostsOf(pageId));
       wireCards(screen);
       wireGalleries(screen);
       wireClamps(screen);
@@ -13162,9 +13301,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           if (!edit)
             clearDraft(pageId);
           close();
-          document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
-          renderFeed();
-          openPageScreen(pageId, true);
+          if (edit)
+            patchPostCard(res.post.id);
+          else
+            insertPostCard(res.post);
         } else {
           showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
         }
@@ -13445,13 +13585,10 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         const i = posts.findIndex((p) => p.id === postId);
         if (i >= 0)
           posts[i] = res2.post;
-        const hadScreen2 = !!document.querySelector(".fd-screen");
         close();
         showToast(isPinned ? "\u041F\u043E\u0441\u0442 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E" : "\u041F\u043E\u0441\u0442 \u0437\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E \u0432\u0433\u043E\u0440\u0456 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438", 2500);
-        document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
-        renderFeed();
-        if (hadScreen2)
-          openPageScreen(post.page_id, true);
+        patchPostCard(postId);
+        reorderPagePosts(post.page_id, postId);
         return;
       }
       if (!confirm("\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u043F\u043E\u0441\u0442?"))
@@ -13461,13 +13598,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
         return;
       }
-      const hadScreen = !!document.querySelector(".fd-screen");
       posts = posts.filter((p) => p.id !== postId);
       close();
-      document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
-      renderFeed();
-      if (hadScreen)
-        openPageScreen(post.page_id, true);
+      removePostCard(postId);
     });
     document.body.appendChild(back);
     const pmSheet = back.querySelector(".fd-postmenu");
