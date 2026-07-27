@@ -2095,54 +2095,26 @@
         close();
     };
     document.addEventListener("keydown", onKey);
-    const bodyEl = wrap.querySelector(".app-modal-body");
-    const scrollerEl = () => {
-      if (!bodyEl)
-        return panel;
-      const oy = getComputedStyle(bodyEl).overflowY;
-      return oy === "visible" || oy === "clip" ? panel : bodyEl;
-    };
-    let closing = false;
-    function teardown() {
-      if (_active?.el === wrap)
-        _active = null;
+    function close() {
+      if (_active?.el !== wrap)
+        return;
+      _active = null;
       onClose?.();
+      wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKey);
-    }
-    function slideOut(ms = 240) {
-      panel.style.height = panel.offsetHeight + "px";
-      panel.style.transition = `transform ${ms}ms cubic-bezier(0.32, 0.72, 0, 1)`;
-      panel.style.transform = "translateY(100%)";
-      if (backdrop) {
-        backdrop.style.transition = `opacity ${ms}ms linear`;
-        backdrop.style.opacity = "0";
-      }
-      setTimeout(() => wrap.remove(), ms + 20);
-    }
-    function close() {
-      if (closing || _active?.el !== wrap)
-        return;
-      closing = true;
-      teardown();
-      if (variant !== "sheet" || !panel) {
-        wrap.classList.remove("open");
-        setTimeout(() => wrap.remove(), 240);
-        return;
-      }
-      slideOut();
+      setTimeout(() => wrap.remove(), 240);
     }
     backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
-      let startY = 0, dragging = false, dy = 0, travel = 1, scroller = panel;
+      let startY = 0, dragging = false, dy = 0, travel = 1;
       const drag = createDragTracker();
       const fade = createBackdropFade(backdrop);
       panel.addEventListener("touchstart", (e) => {
         const y = e.touches[0].clientY;
         const inHeader = y - panel.getBoundingClientRect().top < 64;
-        scroller = scrollerEl();
-        if (!inHeader && scroller.scrollTop > 0)
+        if (!inHeader && panel.scrollTop > 0)
           return;
         startY = y;
         dragging = true;
@@ -2159,7 +2131,7 @@
           fade?.track(0);
           return;
         }
-        if (scroller.scrollTop > 0) {
+        if (panel.scrollTop > 0) {
           panel.style.transform = "";
           fade?.track(0);
           startY = e.touches[0].clientY;
@@ -2183,17 +2155,7 @@
           velocity: drag.velocity,
           remaining: sheetRemaining(panel, dy),
           dismissTransform: "translateY(100%)",
-          // Аркуш уже поїхав донизу (`finishSwipe` поставив transform), а затемнення
-          // гасне через `fade`. Тому тут НЕ запускаємо slideOut ще раз — лише фіксуємо
-          // висоту (нерухома ціль для translateY) і прибираємо вузол після доїзду.
-          onDismiss: (ms) => {
-            if (closing)
-              return;
-            closing = true;
-            teardown();
-            panel.style.height = panel.offsetHeight + "px";
-            setTimeout(() => wrap.remove(), ms + 20);
-          },
+          onDismiss: () => close(),
           backdrop: fade
         });
         dy = 0;
@@ -2443,14 +2405,9 @@
       })
     });
     const sheetEl = wrap.querySelector(".app-modal-sheet");
-    const bodyEl = wrap.querySelector(".app-modal-body");
     if (sheetEl) {
-      const syncScrolled = () => sheetEl.classList.toggle(
-        "is-scrolled",
-        sheetEl.scrollTop > 2 || (bodyEl?.scrollTop || 0) > 2
-      );
+      const syncScrolled = () => sheetEl.classList.toggle("is-scrolled", sheetEl.scrollTop > 2);
       sheetEl.addEventListener("scroll", syncScrolled, { passive: true });
-      bodyEl?.addEventListener("scroll", syncScrolled, { passive: true });
       syncScrolled();
     }
     const dynamicEl = wrap.querySelector("#bm-dynamic");

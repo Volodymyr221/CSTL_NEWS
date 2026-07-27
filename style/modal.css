@@ -34,54 +34,32 @@
   color: var(--ink, #2b2b2b);
   margin: 0 0 8px;
 }
-/* 🔑 ВМІСТ МОДАЛКИ НЕ ЇЗДИТЬ УБІК (27.07, вимога Вови «в усіх модалках зміст не має
-   зсуватись в бік»). Довге нерозривне слово — посилання, адреса пошти, номер — розпирає
-   скролер, а скролер із `overflow-y: auto` за правилом CSS отримує і горизонтальну
-   прокрутку. Стенд по живому застосунку ловив 585px зсуву в «Підтримці» й «Політиці».
-   `overflow-wrap: break-word` (а НЕ `anywhere`): звичайні слова не ріже — переносить
-   лише те, що інакше взагалі не влізе, і не змінює min-content ширину (тобто нічого
-   не стискає в сусідніх флекс/грід-розкладках). Той самий підхід уже стоїть у
-   «Стрічці» (`style/feed.css`) — тут просто доведено до спільного примітиву. */
-.app-modal-body {
-  font-size: 14.5px; color: var(--ink, #2b2b2b); line-height: 1.6;
-  word-break: normal; overflow-wrap: break-word;
-}
+.app-modal-body { font-size: 14.5px; color: var(--ink, #2b2b2b); line-height: 1.6; }
 .app-modal-body a { color: var(--red, #722F37); font-weight: 600; }
 .app-modal-body h4 { font-size: 14.5px; font-weight: 800; margin: 14px 0 4px; color: var(--ink, #2b2b2b); }
 .app-modal-body p { font-size: 13.5px; line-height: 1.55; color: #3a3a3a; margin-bottom: 6px; }
 
 /* --sheet: виїжджає знизу (Погода/Сайдбар/Світло/Автобуси) */
 .app-modal--sheet { display: flex; align-items: flex-end; justify-content: center; padding: 0; }
-/* 🔑 ТРИ ЯРУСИ (стандартизація 27.07, той самий принцип, що вже перевірений у «Стрічці»).
-   БУЛО: `overflow-y: auto` на самому аркуші — тобто рисочка, заголовок і ✕ лежали
-   ВСЕРЕДИНІ скролера і при довгому вмісті їхали за верхній край екрана, а повернути
-   їх скролом було неможливо (той самий баг, що Вова спіймав у композері «Стрічки»).
-   СТАЛО: аркуш не скролиться взагалі, скролиться рівно один ярус — `.app-modal-body`.
-   `max-height: 90svh` лишається, тож коротка модалка й далі невисока. */
 .app-modal-sheet {
   position: relative;
   width: 100%;
   max-height: 90svh;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Вміст не їздить УБІК. Скролер із `overflow-y: auto` за правилом CSS дістає й
+     горизонтальну прокрутку, тож одне довге НЕРОЗРИВНЕ слово (посилання, пошта)
+     розпирало аркуш і його можна було зсунути пальцем. `break-word` переносить лише
+     те, що інакше взагалі не влізе: звичайних слів не ріже і НЕ змінює min-content
+     ширину (сусідні розкладки не стискає). Стоїть на САМОМУ скролері, тому
+     властивість успадковується всім вмістом. Той самий підхід — у style/feed.css. */
+  word-break: normal; overflow-wrap: break-word;
   background: var(--bg-card, #fff);
   border-radius: 22px 22px 0 0;
   padding: 4px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   transform: translateY(100%);
   transition: transform 0.25s cubic-bezier(0.32, 0.72, 0, 1);
   box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.25);
-}
-/* Шапка аркуша (рисочка + заголовок) — нерухома. */
-.app-modal--sheet .app-modal-handle,
-.app-modal--sheet .app-modal-title { flex: 0 0 auto; }
-/* Тіло — ЄДИНИЙ скролер. `min-height: 0` обовʼязково: без нього флекс-елемент не дає
-   себе стиснути і скрол усередині просто не вмикається (класична пастка flexbox). */
-.app-modal--sheet .app-modal-body {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
 }
 .app-modal--sheet.open .app-modal-sheet { transform: translateY(0); }
 /* Модифікатор для довгого документу (Політика конфіденційності тощо) — вищий лист */
