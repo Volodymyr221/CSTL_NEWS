@@ -2436,9 +2436,10 @@
       })
     });
     const sheetEl = wrap.querySelector(".app-modal-sheet");
-    if (sheetEl) {
-      const syncScrolled = () => sheetEl.classList.toggle("is-scrolled", sheetEl.scrollTop > 2);
-      sheetEl.addEventListener("scroll", syncScrolled, { passive: true });
+    const scrollEl = wrap.querySelector(".app-modal-body") || sheetEl;
+    if (sheetEl && scrollEl) {
+      const syncScrolled = () => sheetEl.classList.toggle("is-scrolled", scrollEl.scrollTop > 2);
+      scrollEl.addEventListener("scroll", syncScrolled, { passive: true });
       syncScrolled();
     }
     const dynamicEl = wrap.querySelector("#bm-dynamic");
