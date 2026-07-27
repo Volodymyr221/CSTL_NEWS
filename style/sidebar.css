@@ -58,6 +58,10 @@
   padding-top: env(safe-area-inset-top, 0px);
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* Панель не їздить убік (27.07): будь-який скролер із `overflow-y: auto` дістає
+     й горизонтальну прокрутку, тож довгий нерозривний рядок зсував би меню.
+     Тут це запобіжник (пункти меню короткі), але правило по всьому застосунку одне. */
+  word-break: normal; overflow-wrap: break-word;
 }
 .sidebar--open { transform: translateX(0); }
 

@@ -3892,6 +3892,10 @@
      від краю → стрічка на час жесту overflow:hidden → свайп іде сторінці. */
   scrollbar-width: none;
   border-radius: 14px;   /* заокруглений clip overflow → картки клипаються по дузі на верх/низ, не квадратом (п.11) */
+  /* Стрічка не їздить УБІК (27.07): заголовки й анонси приходять із RSS, і одне
+     довге посилання розпирало б скролер — а він через `overflow-y: auto` має ще й
+     горизонтальну прокрутку. `break-word` переносить лише те, що інакше не влізе. */
+  word-break: normal; overflow-wrap: break-word;
 }
 .cm-news-feed::-webkit-scrollbar { display: none; }
 /* Без flex-shrink:0 flex-колонка з max-height стискає картки по висоті — тримаємо повну. */

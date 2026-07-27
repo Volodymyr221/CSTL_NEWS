@@ -347,7 +347,10 @@
   background: #d9d2c7; margin: 2px auto 10px;
 }
 .shub-title { font-size: 17px; font-weight: 800; margin-bottom: 10px; }
-.shub-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+/* «Збережене» тримає ТЕКСТ ЛЮДЕЙ (пости, оголошення) — одне довге посилання
+   розпирало б скролер убік (у нього через `overflow-y: auto` є й горизонтальна
+   прокрутка). `break-word` переносить лише те, що інакше не влізе (27.07). */
+.shub-body { overflow-y: auto; -webkit-overflow-scrolling: touch; word-break: normal; overflow-wrap: break-word; }
 .shub-section { margin-bottom: 14px; }
 .shub-section-title {
   font-size: 12px; font-weight: 700; letter-spacing: 0.6px;
