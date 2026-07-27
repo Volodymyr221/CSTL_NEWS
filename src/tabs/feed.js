@@ -2275,7 +2275,7 @@ function openPageTeam(pageId) {
     const res = await addPageModerator(pageId, email);
     addBtn.disabled = false; addBtn.textContent = 'Додати';
     if (res === 'ok')            { emailEl.value = ''; showToast('Модератора додано'); reload(); }
-    else if (res === 'not_found') showToast('Акаунта з такою поштою ще немає — хай людина спершу зайде через Google');
+    else if (res === 'not_found') showToast('Такої пошти ще немає — хай людина спершу зайде через Google');
     else if (res === 'already')  { emailEl.value = ''; showToast('Ця людина вже в команді сторінки'); }
     else if (res === 'bad_email') showToast('Перевір пошту — здається, у ній помилка');
     else showToast('Не вдалося додати — спробуй ще раз');
@@ -2819,7 +2819,7 @@ function openPostMenu(postId) {
       // Ліміт рахуємо ЛИШЕ по цій сторінці: у кожної спільноти своя трійка.
       const pinnedHere = posts.filter(p => p.page_id === post.page_id && p.pinned_at).length;
       if (!isPinned && pinnedHere >= MAX_PINNED) {
-        showToast(`Можна закріпити щонайбільше ${MAX_PINNED} пости. Спершу відкріпи якийсь`, 4000);
+        showToast(`Закріплено вже ${MAX_PINNED} — спершу відкріпи якийсь`);
         return;
       }
       const res = await setPagePostPinned(postId, !isPinned);

@@ -216,19 +216,73 @@
       return false;
     }
   }
-  function showToast(msg, duration = 3e3, type = "") {
-    let toast = document.getElementById("cstl-toast");
-    if (!toast) {
-      toast = document.createElement("div");
-      toast.id = "cstl-toast";
-      toast.className = "toast";
-      document.body.appendChild(toast);
+  var TOAST_MIN = 2500;
+  var TOAST_MAX = 6e3;
+  var TOAST_READ = 1500;
+  var TOAST_FADE = 220;
+  var toastQueue = [];
+  var toastCurrent = null;
+  var toastShownAt = 0;
+  var toastTimer = 0;
+  function toastDuration(text, explicit) {
+    if (explicit > 0)
+      return explicit;
+    return Math.min(TOAST_MAX, Math.max(TOAST_MIN, 1200 + text.length * 55));
+  }
+  function toastNode() {
+    let t = document.getElementById("cstl-toast");
+    if (!t) {
+      t = document.createElement("div");
+      t.id = "cstl-toast";
+      t.className = "toast";
+      t.setAttribute("role", "status");
+      t.setAttribute("aria-live", "polite");
+      document.body.appendChild(t);
     }
-    toast.textContent = msg;
-    toast.classList.toggle("toast--error", type === "error");
-    toast.classList.add("visible");
-    clearTimeout(toast._hideTimer);
-    toast._hideTimer = setTimeout(() => toast.classList.remove("visible"), duration);
+    return t;
+  }
+  function toastShow(item) {
+    const t = toastNode();
+    t.textContent = item.msg;
+    t.classList.toggle("toast--error", item.type === "error");
+    toastCurrent = item.msg;
+    toastShownAt = Date.now();
+    requestAnimationFrame(() => t.classList.add("visible"));
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(toastHide, item.ms);
+  }
+  function toastHide() {
+    clearTimeout(toastTimer);
+    document.getElementById("cstl-toast")?.classList.remove("visible");
+    toastCurrent = null;
+    setTimeout(() => {
+      const next = toastQueue.shift();
+      if (next)
+        toastShow(next);
+    }, TOAST_FADE);
+  }
+  function showToast(msg, duration = 0, type = "") {
+    const text = String(msg ?? "").trim();
+    if (!text)
+      return;
+    const item = { msg: text, ms: toastDuration(text, duration), type };
+    if (!toastCurrent) {
+      toastShow(item);
+      return;
+    }
+    if (toastCurrent === text)
+      return;
+    if (Date.now() - toastShownAt >= TOAST_READ) {
+      toastQueue.length = 0;
+      toastQueue.push(item);
+      toastHide();
+      return;
+    }
+    if (toastQueue.some((q) => q.msg === text))
+      return;
+    if (toastQueue.length >= 2)
+      toastQueue.shift();
+    toastQueue.push(item);
   }
   function openPhotoLightbox(url) {
     if (!url)
@@ -8517,7 +8571,7 @@
       return;
     }
     if (Notification.permission === "denied") {
-      showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443/\u0431\u0440\u0430\u0443\u0437\u0435\u0440\u0430. \u0423\u0432\u0456\u043C\u043A\u043D\u0456\u0442\u044C \u0457\u0445, \u0449\u043E\u0431 \u043E\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F.");
+      showToast("\u0421\u043F\u043E\u0432\u0456\u0449\u0435\u043D\u043D\u044F \u0432\u0438\u043C\u043A\u043D\u0435\u043D\u0456 \u0432 \u043D\u0430\u043B\u0430\u0448\u0442\u0443\u0432\u0430\u043D\u043D\u044F\u0445 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443 \u2014 \u0443\u0432\u0456\u043C\u043A\u043D\u0438 \u0457\u0445, \u0449\u043E\u0431 \u043E\u0442\u0440\u0438\u043C\u0443\u0432\u0430\u0442\u0438 \u043D\u0430\u0433\u0430\u0434\u0443\u0432\u0430\u043D\u043D\u044F");
       return;
     }
     const entry = findTrackedEntry(rid, from || null, to || null, date);
@@ -9190,7 +9244,7 @@
       cab.querySelector("#acc-hero-name").textContent = [fields.name, fields.surname].filter(Boolean).join(" ") || "\u0416\u0438\u0442\u0435\u043B\u044C";
       cab.querySelector("#acc-hero-place").textContent = fields.settlement || "\u0423\u0447\u0430\u0441\u043D\u0438\u043A \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438";
       if (res.partial) {
-        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0456\u043C\u02BC\u044F \u0456 \u0434\u0430\u0442\u0443. \u0421\u0435\u043B\u043E/\u0442\u0435\u043B\u0435\u0444\u043E\u043D \u043F\u043E\u043A\u0438 \u043D\u0435 \u0437\u0431\u0435\u0440\u0456\u0433\u0430\u044E\u0442\u044C\u0441\u044F \u2014 \u0431\u0430\u0437\u0443 \u043E\u043D\u043E\u0432\u043B\u044F\u0442\u044C \u043D\u0430\u0439\u0431\u043B\u0438\u0436\u0447\u0438\u043C \u0447\u0430\u0441\u043E\u043C", 5e3, "error");
+        showToast("\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E \u0456\u043C\u02BC\u044F \u0456 \u0434\u0430\u0442\u0443. \u0421\u0435\u043B\u043E \u0439 \u0442\u0435\u043B\u0435\u0444\u043E\u043D \u2014 \u0437\u0433\u043E\u0434\u043E\u043C", 5e3, "error");
       } else {
         showToast("\u2705 \u0410\u043D\u043A\u0435\u0442\u0443 \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E", 2500);
       }
@@ -12858,7 +12912,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast("\u041C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0434\u043E\u0434\u0430\u043D\u043E");
         reload();
       } else if (res === "not_found")
-        showToast("\u0410\u043A\u0430\u0443\u043D\u0442\u0430 \u0437 \u0442\u0430\u043A\u043E\u044E \u043F\u043E\u0448\u0442\u043E\u044E \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u043B\u044E\u0434\u0438\u043D\u0430 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0447\u0435\u0440\u0435\u0437 Google");
+        showToast("\u0422\u0430\u043A\u043E\u0457 \u043F\u043E\u0448\u0442\u0438 \u0449\u0435 \u043D\u0435\u043C\u0430\u0454 \u2014 \u0445\u0430\u0439 \u043B\u044E\u0434\u0438\u043D\u0430 \u0441\u043F\u0435\u0440\u0448\u0443 \u0437\u0430\u0439\u0434\u0435 \u0447\u0435\u0440\u0435\u0437 Google");
       else if (res === "already") {
         emailEl.value = "";
         showToast("\u0426\u044F \u043B\u044E\u0434\u0438\u043D\u0430 \u0432\u0436\u0435 \u0432 \u043A\u043E\u043C\u0430\u043D\u0434\u0456 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438");
@@ -13380,7 +13434,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (item.dataset.act === "pin") {
         const pinnedHere = posts.filter((p) => p.page_id === post.page_id && p.pinned_at).length;
         if (!isPinned && pinnedHere >= MAX_PINNED) {
-          showToast(`\u041C\u043E\u0436\u043D\u0430 \u0437\u0430\u043A\u0440\u0456\u043F\u0438\u0442\u0438 \u0449\u043E\u043D\u0430\u0439\u0431\u0456\u043B\u044C\u0448\u0435 ${MAX_PINNED} \u043F\u043E\u0441\u0442\u0438. \u0421\u043F\u0435\u0440\u0448\u0443 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u0438 \u044F\u043A\u0438\u0439\u0441\u044C`, 4e3);
+          showToast(`\u0417\u0430\u043A\u0440\u0456\u043F\u043B\u0435\u043D\u043E \u0432\u0436\u0435 ${MAX_PINNED} \u2014 \u0441\u043F\u0435\u0440\u0448\u0443 \u0432\u0456\u0434\u043A\u0440\u0456\u043F\u0438 \u044F\u043A\u0438\u0439\u0441\u044C`);
           return;
         }
         const res2 = await setPagePostPinned(postId, !isPinned);
