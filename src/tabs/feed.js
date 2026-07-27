@@ -764,6 +764,59 @@ function keepScroll(scroller, fn, skipId = null) {
   if (delta) scroller.scrollTop += delta;
 }
 
+// Видима область скролера. Для `document.scrollingElement` це саме ВІКНО, а не документ:
+// його `getBoundingClientRect()` віддає висоту всієї сторінки, і будь-яка картка
+// вважалась би видимою.
+function viewRect(scroller) {
+  if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
+    return { top: 0, bottom: window.innerHeight };
+  }
+  const r = scroller.getBoundingClientRect();
+  return { top: r.top, bottom: r.bottom };
+}
+
+function cardVisible(node, scroller) {
+  const r = node.getBoundingClientRect();
+  const v = viewRect(scroller);
+  return r.bottom > v.top && r.top < v.bottom;
+}
+
+// 🔑 ЧОМУ КАРТКА СКЛАДАЄТЬСЯ, А НЕ ЗНИКАЄ (Вова 27.07: «при відкріпленні воно стрибає
+// доверху»). Заміряно `tests/tools/unpin-probe.mjs`: коли картка йде ЗГОРИ, компенсувати
+// зсув нема чим — контенту над людиною фізично меншає, і прокрутка впирається в нуль.
+// При прокрутці 200px і картці 520px екран стрибав на −320px. Якір тут безсилий за
+// БУДЬ-ЯКОЇ реалізації, і це не помилка якоря. Тому картка не зникає миттєво, а
+// складається за 260мс: список сідає НА ОЧАХ — це читається як рух, а не як ривок.
+// (Закріплення навпаки ДОдає контент згори — там прокрутці завжди є куди рости, тож
+// воно й працювало без нарікань. Його не чіпаємо.)
+// 340мс, а не 260: картка у стрічці буває 500+px заввишки, і за 260мс така висота
+// згортається зі швидкістю ~4.5 пікселя за мілісекунду — рух є, але на межі різкого.
+// 340мс дають ~3 px/мс. Довше робити не варто: видалення почало б здаватись млявим.
+const CARD_LEAVE_MS = 340;
+
+function collapseCard(node, after) {
+  const h = node.offsetHeight;
+  node.style.overflow = 'hidden';
+  node.style.height = h + 'px';
+  // ⚠️ НЕ `cubic-bezier(0.32,0.72,0,1)` — це крива свайпу (модалки), вона навмисно
+  // стартує РІЗКО, бо продовжує рух пальця. Тут руху пальця нема, і різкий старт
+  // читається як той самий ривок: заміряно 135px за один кадр. Мʼякий старт
+  // (0.4,0,0.2,1) розкладає ті самі пікселі рівномірніше — не більше ~50px на кадр.
+  node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
+  requestAnimationFrame(() => { node.style.height = '0px'; node.style.opacity = '0'; });
+  // ⚠️ Таймер, а не `transitionend`: якщо застосунок згорнути під час анімації, подія
+  // може не прийти взагалі — і картка лишилась би складеною назавжди.
+  // Проміжок між картками (`gap: 8px` у `.fd-list`/`.fd-screen-list`) лишається — на тлі
+  // 300-500px самої картки ці 8 пікселів непомітні, а прибирати їх довелось би від'ємним
+  // відступом, тобто ще однією латкою.
+  setTimeout(after, CARD_LEAVE_MS + 20);
+}
+
+function restoreCard(node) {
+  node.style.transition = ''; node.style.height = '';
+  node.style.overflow = '';   node.style.opacity = '';
+}
+
 // Зібрати DOM-вузол картки з ТІЄЇ САМОЇ розмітки, якою малюється вся стрічка
 // (`postCardHtml`), щоб оновлена картка не могла відрізнятись від сусідніх.
 // onPage — картка стоїть на екрані спільноти: лише там має сенс позначка «Закріплено».
@@ -873,10 +926,19 @@ function reorderPagePosts(pageId, movedId) {
       next = list.querySelector(`[data-post="${ordered[k].id}"]`);
     }
     if (next === node.nextElementSibling) return;        // уже стоїть де треба — не смикаємо
+    const place = () => { if (next) list.insertBefore(node, next); else list.appendChild(node); };
+    const scroller = scrollerOf(list);
+    const kids = [...list.children];
+    const goesDown = (next ? kids.indexOf(next) : kids.length) > kids.indexOf(node);
+    // ВНИЗ (відкріплення) і картку видно → складаємо її на очах, тоді ставимо на місце.
+    // Саме тут якір безсилий: контенту згори меншає (див. коментар до `collapseCard`).
+    if (goesDown && cardVisible(node, scroller)) {
+      collapseCard(node, () => { place(); restoreCard(node); });
+      return;
+    }
+    // ВГОРУ (закріплення) або картки не видно — миттєво з якорем, як і було.
     // skipId: сам переставлений вузол не може бути якорем — він же і їде.
-    keepScroll(scrollerOf(list), () => {
-      if (next) list.insertBefore(node, next); else list.appendChild(node);
-    }, movedId);
+    keepScroll(scroller, place, movedId);
   });
 }
 
@@ -885,14 +947,19 @@ function reorderPagePosts(pageId, movedId) {
 function removePostCard(postId) {
   document.querySelectorAll(`[data-post="${postId}"]`).forEach(node => {
     const list = node.parentElement;
-    keepScroll(scrollerOf(node), () => {
+    const scroller = scrollerOf(node);
+    const finish = () => {
       node.remove();
       if (list && !list.querySelector('[data-post]') && !list.querySelector('.fd-empty')) {
         list.innerHTML = list.id === 'feed-list'
           ? '<div class="fd-empty">Поки що тут порожньо.<br>Незабаром сторінки громади почнуть публікувати новини.</div>'
           : '<div class="fd-empty">Тут ще немає постів.</div>';
       }
-    }, postId);
+    };
+    // Картку видно → складаємо на очах (та сама причина, що при відкріпленні: контенту
+    // згори меншає і компенсувати нема чим). Не видно → миттєво з якорем.
+    if (cardVisible(node, scroller)) collapseCard(node, finish);
+    else keepScroll(scroller, finish, postId);
   });
 }
 
@@ -2010,13 +2077,20 @@ function openComments(postId, focusCommentId = null) {
 // Одне число — міняється тут.
 const MAX_PINNED = 3;
 
-// Закріплені вгору, решта — як прийшли (за датою). Стабільно: серед закріплених
-// свіжіше закріплення вище, серед звичайних порядок не змінюється взагалі.
+// Закріплені вгору, решта під ними — і ті, і ті **за датою поста**, свіжіші першими.
+//
+// 🔑 ЧАС НАТИСКАННЯ НА ПОРЯДОК НЕ ВПЛИВАЄ (Вова 27.07): «якщо є пост 15 числа, 14 і 13,
+// і я закріпив усі три — навіть якщо 13-й я закріпив останнім, першим має стояти 15-й,
+// бо він свіжіший». Було навпаки: `pinned.sort` за `pinned_at` піднімав того, кого
+// закріпили ОСТАННІМ, і порядок залежав від випадкової черговості натискань.
+//
+// ⚠️ Тому тут НЕМА жодного сортування: `list` уже приходить за датою (свіжіші першими —
+// так віддає база і так тримається `posts`), а `filter` зберігає порядок. Додати сюди
+// сорт за `created_at` означало б другу копію правила, яке вже діє вище за течією.
 // ⚠️ Не мутує вхідний масив — `posts` спільний, і його порядок тримає головну стрічку.
 function orderPinned(list) {
   const pinned = list.filter(p => p.pinned_at);
   const rest   = list.filter(p => !p.pinned_at);
-  pinned.sort((a, b) => String(b.pinned_at).localeCompare(String(a.pinned_at)));
   return [...pinned, ...rest];
 }
 

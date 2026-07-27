@@ -157,5 +157,85 @@ ok('точковий патч чіпає рівно одну картку',
 // 6. Якір не «губить» картку: після всіх дій та сама картка досі в списку.
 ok('картка під пальцем нікуди не зникла', !editOn.gone && !pinOn.gone && !delOn.gone);
 
+// ── ВІДКРІПЛЕННЯ: чому тут якоря МАЛО ────────────────────────────────────────────
+// Вова 27.07: «при відкріпленні воно стрибає доверху». Заміряно: коли картка йде ЗГОРИ,
+// компенсувати нема чим — контенту над людиною фізично меншає, і прокрутка впирається
+// в нуль. Тому картка тепер СКЛАДАЄТЬСЯ за 260мс: список сідає на очах, а не ривком.
+const LEAVE_FROM = SRC.indexOf('function viewRect');
+const LEAVE_TO   = SRC.indexOf('// Зібрати DOM-вузол картки');
+if (LEAVE_FROM < 0 || LEAVE_TO < 0) { console.log('❌ не знайшов collapseCard у feed.js'); process.exit(1); }
+const LEAVE = SRC.slice(LEAVE_FROM, LEAVE_TO);
+
+const unpin = await page.evaluate(async ({ leave }) => {
+  const { collapseCard, cardVisible, CARD_LEAVE_MS } =
+    new Function(leave + '\nreturn { collapseCard, cardVisible, CARD_LEAVE_MS };')();
+  const sc = document.getElementById('sc');
+  const H = [520, 300, 380, 260, 340, 300, 420, 280];
+  const build = () => { sc.innerHTML = H.map((h, i) =>
+    `<article data-post="${i + 1}" style="height:${h}px">пост ${i + 1}</article>`).join(''); };
+  const top = () => sc.getBoundingClientRect().top;
+  const posOf = id => sc.querySelector(`[data-post="${id}"]`).getBoundingClientRect().top - top();
+  const frame = () => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)));
+
+  // Умови Вови: закріплений пост зверху (520px), людина трохи прокрутила (200px).
+  // Відкріплюємо — картка має поїхати на своє місце за датою (пʼятою).
+  const setup = () => { build(); sc.scrollTop = 200; };
+  const moveDown = () => sc.insertBefore(sc.querySelector('[data-post="1"]'), sc.children[5]);
+
+  // а) СТАРА поведінка — миттєва перестановка.
+  setup();
+  const beforeA = posOf('2');
+  moveDown();
+  const instant = Math.round(posOf('2') - beforeA);
+
+  // б) НОВА — картка складається.
+  // ⚠️ МІРЯЄМО НАЙБІЛЬШИЙ КРОК ЗА ОДИН КАДР, а не «зсув після дії». Перша версія цієї
+  // перевірки дивилась на позицію через два `requestAnimationFrame` і показала −84px —
+  // але то не стрибок, то вже проїхала анімація. «Стрибок» = великий зсув за ОДИН кадр;
+  // саме його бачить око. Плавність — це багато дрібних кроків, а не один великий.
+  setup();
+  const visible = cardVisible(sc.querySelector('[data-post="1"]'), sc);
+  const beforeB = posOf('2');
+  let placed = false;
+  collapseCard(sc.querySelector('[data-post="1"]'), () => { moveDown(); placed = true; });
+
+  // ⚠️ Міряємо ШВИДКІСТЬ (пікселів за мілісекунду), а не «пікселів за кадр». Перша спроба
+  // рахувала на кадр — і показувала 78-135px навіть на плавній анімації, бо в headless
+  // браузері кадри йдуть нерівно: один пропущений кадр = подвійний крок, хоча оку нічого
+  // не смикнулось. Швидкість від пропуску кадру не залежить: миттєвий стрибок — це
+  // сотні пікселів за 0мс, плавний проїзд — одиниці пікселів за мілісекунду.
+  let prev = beforeB, prevT = performance.now(), maxSpeed = 0, frames = 0;
+  const deadline = prevT + CARD_LEAVE_MS + 150;
+  while (performance.now() < deadline) {
+    await new Promise(r => requestAnimationFrame(r));
+    const now = posOf('2'), t = performance.now();
+    const dt = Math.max(t - prevT, 1);
+    maxSpeed = Math.max(maxSpeed, Math.abs(now - prev) / dt);
+    prev = now; prevT = t; frames++;
+  }
+  const maxStep = maxSpeed;
+  const settled = Math.round(prev - beforeB);
+  const newIndex = [...sc.children].indexOf(sc.querySelector('[data-post="1"]'));
+
+  return { instant, maxStep: Math.round(maxStep * 10) / 10, frames, settled, placed, visible,
+           newIndex, ms: CARD_LEAVE_MS };
+}, { leave: LEAVE });
+
+ok('картку зверху видно (умова, за якої вмикається згортання)', unpin.visible);
+ok('стара поведінка: увесь зсув за ОДИН кадр (це і є «стрибок»)', unpin.instant !== 0,
+   `${unpin.instant}px одним кроком`);
+// 🔴 ЗВІДКИ ПОРІГ (щоб не був підігнаний під зелене світло):
+//   миттєва перестановка — 528px за час одного кадру (≤16мс) = **понад 33 px/мс**;
+//   анімація 340мс — 1.55 px/мс у середньому, з розгоном easing до ~3;
+//   вимірювання в headless шумить приблизно на ±1.5 px/мс (нерівні кадри).
+// Поріг 6 стоїть між цими світами з обох боків із запасом: підняти його до 33 означало б
+// пропустити справжній стрибок, опустити до 3 — ловити шум замість поведінки.
+ok('нова: екран рухається плавно, а не ривком (≤ 6 px/мс)',
+   unpin.maxStep <= 6, `найбільша швидкість ${unpin.maxStep} px/мс (стрибок був ${Math.abs(unpin.instant)}px за кадр)`);
+ok('рух розтягнутий на багато кадрів, а не на один', unpin.frames > 5,
+   `${unpin.frames} кадрів, разом ${unpin.settled}px за ${unpin.ms}мс`);
+ok('після згортання картка стоїть на новому місці', unpin.placed && unpin.newIndex > 0,
+   `індекс ${unpin.newIndex}`);
+
 await browser.close();
 done();
