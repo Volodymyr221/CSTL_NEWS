@@ -287,6 +287,68 @@ function readTopGap(root) {
   } catch { return 12; }
 }
 
+// Адаптер «кілька полів → один слухач» для core/keyboard.js.
+// 🔑 НАВІЩО: модуль стежить за ОДНИМ елементом (`input.addEventListener('focus')`), бо в
+// листі коментарів поле єдине. У редакторі сторінки й команді полів кілька, а події
+// `focus`/`blur` НЕ СПЛИВАЮТЬ — тобто модуль побачив би фокус лише в першому полі.
+// Мапимо їх на `focusin`/`focusout`, які спливають, і віддаємо модулю об'єкт із тим
+// самим інтерфейсом. Ядро не змінюється жодним рядком.
+// ⚠️ ГОЛОВНА ТОНКІСТЬ: перехід МІЖ полями того самого листа дає `focusout` + `focusin`.
+// Якби ми пропустили `focusout`, модуль на мить вирішив би, що клавіатура зникла, і
+// аркуш смикнувся б. Тому гасимо його, коли фокус лишається всередині листа.
+// Мапу обгорток тримаємо, щоб `removeEventListener` спрацював на ТУ САМУ функцію
+// (інакше слухачі лишились би висіти після закриття).
+function multiFieldFocus(root) {
+  const wrapped = new Map();
+  return {
+    addEventListener(type, fn) {
+      const isBlur = type === 'blur';
+      const w = (e) => {
+        if (isBlur && root.contains(e.relatedTarget)) return;   // просто перейшли в сусіднє поле
+        fn(e);
+      };
+      wrapped.set(fn, w);
+      root.addEventListener(isBlur ? 'focusout' : 'focusin', w);
+    },
+    removeEventListener(type, fn) {
+      const w = wrapped.get(fn);
+      if (!w) return;
+      root.removeEventListener(type === 'blur' ? 'focusout' : 'focusin', w);
+      wrapped.delete(fn);
+    },
+  };
+}
+
+// Спільне облаштування нижнього листа: клавіатура + плавність + коректне закриття.
+// Один виклик замість трьох копій тієї самої логіки (редактор сторінки, команда, композер).
+// Повертає { detach, beginClose }:
+//   detach     — зняти слухачі клавіатури, кликати у close();
+//   beginClose — заморозити геометрію на початку з'їзду (інакше висота б'ється зі зсувом).
+function setupSheetShell(back, { sheet, input = null, minHeight = 200 }) {
+  let closing = false, animTimer = 0;
+  const beginClose = () => {
+    if (closing) return;
+    closing = true;
+    sheet.classList.remove('fd-comp--anim');
+    sheet.style.height = sheet.offsetHeight + 'px';
+  };
+  const anim = () => {
+    sheet.classList.add('fd-comp--anim');
+    clearTimeout(animTimer);
+    animTimer = setTimeout(() => sheet.classList.remove('fd-comp--anim'), 300);
+  };
+  // Одне поле — слухаємо його напряму; кілька — через адаптер focusin/focusout.
+  const focusSrc = input || multiFieldFocus(sheet);
+  focusSrc.addEventListener('focus', anim);
+  focusSrc.addEventListener('blur', () => { if (!closing) anim(); });
+  const detach = attachKeyboardSheet(back.querySelector('.fd-sheet-vp'), sheet, {
+    input: focusSrc, minHeight,
+    kbClass: 'fd-comp--kb', overlayClass: 'fd-sheet-vp--kb',
+    expandTop: readTopGap(sheet),
+  });
+  return { detach, beginClose };
+}
+
 function setComSheetFull(on, { animate = true } = {}) {
   const el = document.querySelector('.fd-com-sheet');
   if (!el) return;
@@ -1974,24 +2036,39 @@ function openPageTeam(pageId) {
   if (!page) return;
 
   const back = document.createElement('div');
-  back.className = 'fd-sheet-back';
+  // Три яруси (те саме, що в композері й редакторі сторінки): список модераторів може
+  // вирости, а форма додавання має лишатись на місці — інакше при відкритій клавіатурі
+  // поле вводу поїхало б разом зі списком.
+  back.className = 'fd-sheet-back fd-sheet-back--kbsafe';
   back.innerHTML = `
-    <div class="fd-sheet">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">Команда сторінки</div>
-      <div class="fd-team-list">Завантажую…</div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">Додати модератора за поштою</div>
-        <div class="fd-team-add">
-          <input class="fd-edit-input" data-email type="email" inputmode="email"
-                 autocapitalize="off" autocorrect="off" placeholder="ім'я@gmail.com">
-          <button class="fd-team-add-btn" type="button">Додати</button>
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
+      <div class="fd-sheet fd-composer">
+        <div class="fd-comp-head">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title">Команда сторінки</div>
         </div>
-        <div class="fd-team-hint">Права отримує лише той, хто вже має акаунт: людина має хоча б раз зайти в додаток через Google.</div>
+        <div class="fd-comp-body">
+          <div class="fd-team-list">Завантажую…</div>
+        </div>
+        <div class="fd-comp-bar fd-comp-bar--stack">
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">Додати модератора за поштою</div>
+            <div class="fd-team-add">
+              <input class="fd-edit-input" data-email type="email" inputmode="email"
+                     autocapitalize="off" autocorrect="off" placeholder="ім'я@gmail.com">
+              <button class="fd-team-add-btn" type="button">Додати</button>
+            </div>
+            <div class="fd-team-hint">Права отримує лише той, хто вже має акаунт: людина має хоча б раз зайти в додаток через Google.</div>
+          </div>
+        </div>
       </div>
     </div>`;
-  const close = () => back.remove();
-  back.addEventListener('click', e => { if (e.target === back) close(); });
+  let detachKb = () => {};
+  const close = () => { detachKb(); back.remove(); };
+  // Обидва шари — інакше тап у затемнення потрапляє у `.fd-sheet-vp` (регрес PR #631).
+  const vpEl = back.querySelector('.fd-sheet-vp');
+  back.addEventListener('click', e => { if (e.target === back || e.target === vpEl) close(); });
 
   const listEl = back.querySelector('.fd-team-list');
   const render = (rows) => {
@@ -2041,7 +2118,14 @@ function openPageTeam(pageId) {
   });
 
   document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
-  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);
+  const shellTeam = setupSheetShell(back, { sheet: back.querySelector('.fd-composer'), minHeight: 220 });
+  detachKb = shellTeam.detach;
+  // Свайп лише за шапку — у тілі тепер справжній скрол списку модераторів.
+  attachSheetSwipe(back, back.querySelector('.fd-composer'), back.querySelector('.fd-comp-body'), close, {
+    grip: back.querySelector('.fd-comp-head'),
+    onDismissStart: () => shellTeam.beginClose(),
+    keepVisibleOnDismiss: true,
+  });
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
@@ -2306,31 +2390,45 @@ function openPageEditor(pageId) {
   let bannerBlob = null, avatarBlob = null;
 
   const back = document.createElement('div');
-  back.className = 'fd-sheet-back';
+  // Три яруси — той самий принцип, що в композері (див. коментар у style/feed.css):
+  // шапка нерухома, скролиться лише тіло, кнопка дії завжди на екрані.
+  back.className = 'fd-sheet-back fd-sheet-back--kbsafe';
   back.innerHTML = `
-    <div class="fd-sheet">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">Редагувати сторінку</div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">Назва</div>
-        <input class="fd-edit-input" data-name value="${escapeHtml(page.name || '')}" maxlength="120" placeholder="Назва спільноти">
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
+      <div class="fd-sheet fd-composer">
+        <div class="fd-comp-head">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title">Редагувати сторінку</div>
+        </div>
+        <div class="fd-comp-body">
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">Назва</div>
+            <input class="fd-edit-input" data-name value="${escapeHtml(page.name || '')}" maxlength="120" placeholder="Назва спільноти">
+          </div>
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">Банер (широка шапка)</div>
+            <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
+          </div>
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">Аватар</div>
+            <label class="fd-edit-avatar">${page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-a></label>
+          </div>
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">Тема / опис</div>
+            <input class="fd-edit-input" data-theme value="${escapeHtml(page.theme || '')}" maxlength="80" placeholder="напр. Культура, Туризм">
+          </div>
+        </div>
+        <div class="fd-comp-bar">
+          <button class="fd-edit-save" type="button">Зберегти</button>
+        </div>
       </div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">Банер (широка шапка)</div>
-        <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
-      </div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">Аватар</div>
-        <label class="fd-edit-avatar">${page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : ''}${IC_CAMERA}<input type="file" accept="image/*" hidden data-a></label>
-      </div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">Тема / опис</div>
-        <input class="fd-edit-input" data-theme value="${escapeHtml(page.theme || '')}" maxlength="80" placeholder="напр. Культура, Туризм">
-      </div>
-      <button class="fd-edit-save" type="button">Зберегти</button>
     </div>`;
-  const close = () => back.remove();
-  back.addEventListener('click', e => { if (e.target === back) close(); });
+  let detachKb = () => {};
+  const close = () => { detachKb(); back.remove(); };
+  // Обидва шари — інакше тап у затемнення потрапляє у `.fd-sheet-vp` і не закриває (PR #631).
+  const vpEl = back.querySelector('.fd-sheet-vp');
+  back.addEventListener('click', e => { if (e.target === back || e.target === vpEl) close(); });
 
   const setPreview = (label, file) => {
     label.querySelector('img')?.remove();
@@ -2398,7 +2496,14 @@ function openPageEditor(pageId) {
   });
 
   document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
-  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
+  const shellEd = setupSheetShell(back, { sheet: back.querySelector('.fd-composer'), minHeight: 220 });
+  detachKb = shellEd.detach;
+  // Свайп лише за шапку: у тілі тепер справжній скрол полів, і жест там заважав би.
+  attachSheetSwipe(back, back.querySelector('.fd-composer'), back.querySelector('.fd-comp-body'), close, {
+    grip: back.querySelector('.fd-comp-head'),
+    onDismissStart: () => shellEd.beginClose(),
+    keepVisibleOnDismiss: true,
+  });
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
@@ -2432,7 +2537,19 @@ function openPostMenu(postId) {
     if (hadScreen) openPageScreen(post.page_id, true);   // переоткриття — запис в історії вже є
   });
   document.body.appendChild(back);   // спершу в DOM — тоді жест (див. sheet-motion.js)
-  attachSheetSwipe(back, back.querySelector('.fd-sheet'), back.querySelector('.fd-sheet'), close);   // свайп-закриття
+  // Меню маленьке — скрол і клавіатура тут не потрібні. Але плавне ЗАКРИТТЯ стосується
+  // і його: без `keepVisibleOnDismiss` контейнер гасне за 0.2с і меню зникає, замість того
+  // щоб з'їхати донизу (та сама причина, що в PR #664).
+  const pmSheet = back.querySelector('.fd-postmenu');
+  let pmClosing = false;
+  attachSheetSwipe(back, pmSheet, pmSheet, close, {
+    onDismissStart: () => {
+      if (pmClosing) return;
+      pmClosing = true;
+      pmSheet.style.height = pmSheet.offsetHeight + 'px';   // нерухома ціль для translateY(100%)
+    },
+    keepVisibleOnDismiss: true,
+  });
   requestAnimationFrame(() => back.classList.add('open'));
 }
 

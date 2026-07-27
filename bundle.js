@@ -11326,6 +11326,57 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return 12;
     }
   }
+  function multiFieldFocus(root) {
+    const wrapped = /* @__PURE__ */ new Map();
+    return {
+      addEventListener(type, fn) {
+        const isBlur = type === "blur";
+        const w = (e) => {
+          if (isBlur && root.contains(e.relatedTarget))
+            return;
+          fn(e);
+        };
+        wrapped.set(fn, w);
+        root.addEventListener(isBlur ? "focusout" : "focusin", w);
+      },
+      removeEventListener(type, fn) {
+        const w = wrapped.get(fn);
+        if (!w)
+          return;
+        root.removeEventListener(type === "blur" ? "focusout" : "focusin", w);
+        wrapped.delete(fn);
+      }
+    };
+  }
+  function setupSheetShell(back, { sheet, input = null, minHeight = 200 }) {
+    let closing = false, animTimer = 0;
+    const beginClose = () => {
+      if (closing)
+        return;
+      closing = true;
+      sheet.classList.remove("fd-comp--anim");
+      sheet.style.height = sheet.offsetHeight + "px";
+    };
+    const anim = () => {
+      sheet.classList.add("fd-comp--anim");
+      clearTimeout(animTimer);
+      animTimer = setTimeout(() => sheet.classList.remove("fd-comp--anim"), 300);
+    };
+    const focusSrc = input || multiFieldFocus(sheet);
+    focusSrc.addEventListener("focus", anim);
+    focusSrc.addEventListener("blur", () => {
+      if (!closing)
+        anim();
+    });
+    const detach = attachKeyboardSheet(back.querySelector(".fd-sheet-vp"), sheet, {
+      input: focusSrc,
+      minHeight,
+      kbClass: "fd-comp--kb",
+      overlayClass: "fd-sheet-vp--kb",
+      expandTop: readTopGap(sheet)
+    });
+    return { detach, beginClose };
+  }
   function setComSheetFull(on, { animate = true } = {}) {
     const el = document.querySelector(".fd-com-sheet");
     if (!el)
@@ -12611,25 +12662,40 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (!page)
       return;
     const back = document.createElement("div");
-    back.className = "fd-sheet-back";
+    back.className = "fd-sheet-back fd-sheet-back--kbsafe";
     back.innerHTML = `
-    <div class="fd-sheet">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438</div>
-      <div class="fd-team-list">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u044E\u2026</div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">\u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0437\u0430 \u043F\u043E\u0448\u0442\u043E\u044E</div>
-        <div class="fd-team-add">
-          <input class="fd-edit-input" data-email type="email" inputmode="email"
-                 autocapitalize="off" autocorrect="off" placeholder="\u0456\u043C'\u044F@gmail.com">
-          <button class="fd-team-add-btn" type="button">\u0414\u043E\u0434\u0430\u0442\u0438</button>
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
+      <div class="fd-sheet fd-composer">
+        <div class="fd-comp-head">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title">\u041A\u043E\u043C\u0430\u043D\u0434\u0430 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0438</div>
         </div>
-        <div class="fd-team-hint">\u041F\u0440\u0430\u0432\u0430 \u043E\u0442\u0440\u0438\u043C\u0443\u0454 \u043B\u0438\u0448\u0435 \u0442\u043E\u0439, \u0445\u0442\u043E \u0432\u0436\u0435 \u043C\u0430\u0454 \u0430\u043A\u0430\u0443\u043D\u0442: \u043B\u044E\u0434\u0438\u043D\u0430 \u043C\u0430\u0454 \u0445\u043E\u0447\u0430 \u0431 \u0440\u0430\u0437 \u0437\u0430\u0439\u0442\u0438 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0447\u0435\u0440\u0435\u0437 Google.</div>
+        <div class="fd-comp-body">
+          <div class="fd-team-list">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0443\u044E\u2026</div>
+        </div>
+        <div class="fd-comp-bar fd-comp-bar--stack">
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">\u0414\u043E\u0434\u0430\u0442\u0438 \u043C\u043E\u0434\u0435\u0440\u0430\u0442\u043E\u0440\u0430 \u0437\u0430 \u043F\u043E\u0448\u0442\u043E\u044E</div>
+            <div class="fd-team-add">
+              <input class="fd-edit-input" data-email type="email" inputmode="email"
+                     autocapitalize="off" autocorrect="off" placeholder="\u0456\u043C'\u044F@gmail.com">
+              <button class="fd-team-add-btn" type="button">\u0414\u043E\u0434\u0430\u0442\u0438</button>
+            </div>
+            <div class="fd-team-hint">\u041F\u0440\u0430\u0432\u0430 \u043E\u0442\u0440\u0438\u043C\u0443\u0454 \u043B\u0438\u0448\u0435 \u0442\u043E\u0439, \u0445\u0442\u043E \u0432\u0436\u0435 \u043C\u0430\u0454 \u0430\u043A\u0430\u0443\u043D\u0442: \u043B\u044E\u0434\u0438\u043D\u0430 \u043C\u0430\u0454 \u0445\u043E\u0447\u0430 \u0431 \u0440\u0430\u0437 \u0437\u0430\u0439\u0442\u0438 \u0432 \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0447\u0435\u0440\u0435\u0437 Google.</div>
+          </div>
+        </div>
       </div>
     </div>`;
-    const close = () => back.remove();
+    let detachKb = () => {
+    };
+    const close = () => {
+      detachKb();
+      back.remove();
+    };
+    const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
-      if (e.target === back)
+      if (e.target === back || e.target === vpEl)
         close();
     });
     const listEl = back.querySelector(".fd-team-list");
@@ -12698,7 +12764,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0434\u043E\u0434\u0430\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437");
     });
     document.body.appendChild(back);
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
+    const shellTeam = setupSheetShell(back, { sheet: back.querySelector(".fd-composer"), minHeight: 220 });
+    detachKb = shellTeam.detach;
+    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close, {
+      grip: back.querySelector(".fd-comp-head"),
+      onDismissStart: () => shellTeam.beginClose(),
+      keepVisibleOnDismiss: true
+    });
     requestAnimationFrame(() => back.classList.add("open"));
   }
   var MAX_PHOTOS = 10;
@@ -12936,32 +13008,47 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       return;
     let bannerBlob = null, avatarBlob = null;
     const back = document.createElement("div");
-    back.className = "fd-sheet-back";
+    back.className = "fd-sheet-back fd-sheet-back--kbsafe";
     back.innerHTML = `
-    <div class="fd-sheet">
-      <div class="fd-sheet-handle"></div>
-      <div class="fd-sheet-title">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">\u041D\u0430\u0437\u0432\u0430</div>
-        <input class="fd-edit-input" data-name value="${escapeHtml(page.name || "")}" maxlength="120" placeholder="\u041D\u0430\u0437\u0432\u0430 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438">
+    <div class="fd-sheet-vp">
+      <div class="fd-sheet-kbpad"></div>
+      <div class="fd-sheet fd-composer">
+        <div class="fd-comp-head">
+          <div class="fd-sheet-handle"></div>
+          <div class="fd-sheet-title">\u0420\u0435\u0434\u0430\u0433\u0443\u0432\u0430\u0442\u0438 \u0441\u0442\u043E\u0440\u0456\u043D\u043A\u0443</div>
+        </div>
+        <div class="fd-comp-body">
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">\u041D\u0430\u0437\u0432\u0430</div>
+            <input class="fd-edit-input" data-name value="${escapeHtml(page.name || "")}" maxlength="120" placeholder="\u041D\u0430\u0437\u0432\u0430 \u0441\u043F\u0456\u043B\u044C\u043D\u043E\u0442\u0438">
+          </div>
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">\u0411\u0430\u043D\u0435\u0440 (\u0448\u0438\u0440\u043E\u043A\u0430 \u0448\u0430\u043F\u043A\u0430)</div>
+            <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
+          </div>
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">\u0410\u0432\u0430\u0442\u0430\u0440</div>
+            <label class="fd-edit-avatar">${page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-a></label>
+          </div>
+          <div class="fd-edit-field">
+            <div class="fd-edit-label">\u0422\u0435\u043C\u0430 / \u043E\u043F\u0438\u0441</div>
+            <input class="fd-edit-input" data-theme value="${escapeHtml(page.theme || "")}" maxlength="80" placeholder="\u043D\u0430\u043F\u0440. \u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430, \u0422\u0443\u0440\u0438\u0437\u043C">
+          </div>
+        </div>
+        <div class="fd-comp-bar">
+          <button class="fd-edit-save" type="button">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
+        </div>
       </div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">\u0411\u0430\u043D\u0435\u0440 (\u0448\u0438\u0440\u043E\u043A\u0430 \u0448\u0430\u043F\u043A\u0430)</div>
-        <label class="fd-edit-banner">${page.banner_url ? `<img src="${escapeHtml(page.banner_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-b></label>
-      </div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">\u0410\u0432\u0430\u0442\u0430\u0440</div>
-        <label class="fd-edit-avatar">${page.avatar_url ? `<img src="${escapeHtml(page.avatar_url)}" alt="">` : ""}${IC_CAMERA}<input type="file" accept="image/*" hidden data-a></label>
-      </div>
-      <div class="fd-edit-field">
-        <div class="fd-edit-label">\u0422\u0435\u043C\u0430 / \u043E\u043F\u0438\u0441</div>
-        <input class="fd-edit-input" data-theme value="${escapeHtml(page.theme || "")}" maxlength="80" placeholder="\u043D\u0430\u043F\u0440. \u041A\u0443\u043B\u044C\u0442\u0443\u0440\u0430, \u0422\u0443\u0440\u0438\u0437\u043C">
-      </div>
-      <button class="fd-edit-save" type="button">\u0417\u0431\u0435\u0440\u0435\u0433\u0442\u0438</button>
     </div>`;
-    const close = () => back.remove();
+    let detachKb = () => {
+    };
+    const close = () => {
+      detachKb();
+      back.remove();
+    };
+    const vpEl = back.querySelector(".fd-sheet-vp");
     back.addEventListener("click", (e) => {
-      if (e.target === back)
+      if (e.target === back || e.target === vpEl)
         close();
     });
     const setPreview = (label, file) => {
@@ -13054,7 +13141,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       }
     });
     document.body.appendChild(back);
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
+    const shellEd = setupSheetShell(back, { sheet: back.querySelector(".fd-composer"), minHeight: 220 });
+    detachKb = shellEd.detach;
+    attachSheetSwipe(back, back.querySelector(".fd-composer"), back.querySelector(".fd-comp-body"), close, {
+      grip: back.querySelector(".fd-comp-head"),
+      onDismissStart: () => shellEd.beginClose(),
+      keepVisibleOnDismiss: true
+    });
     requestAnimationFrame(() => back.classList.add("open"));
   }
   function openPostMenu(postId) {
@@ -13099,7 +13192,17 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         openPageScreen(post.page_id, true);
     });
     document.body.appendChild(back);
-    attachSheetSwipe(back, back.querySelector(".fd-sheet"), back.querySelector(".fd-sheet"), close);
+    const pmSheet = back.querySelector(".fd-postmenu");
+    let pmClosing = false;
+    attachSheetSwipe(back, pmSheet, pmSheet, close, {
+      onDismissStart: () => {
+        if (pmClosing)
+          return;
+        pmClosing = true;
+        pmSheet.style.height = pmSheet.offsetHeight + "px";
+      },
+      keepVisibleOnDismiss: true
+    });
     requestAnimationFrame(() => back.classList.add("open"));
   }
   function wireCards(root) {
