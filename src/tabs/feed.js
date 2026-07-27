@@ -7,7 +7,7 @@
 // page_subscriptions). Права доступу — RLS у scripts/supabase_pages.sql.
 
 import { escapeHtml, showToast, deepLink, formatEventDate, todayKey, containsProfanity, autoGrowTextarea,
-         looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg } from '../core/utils.js';
+         looksLikeSpam, isDuplicateMsg, isFlooding, recordSentMsg, lsGet, lsSet } from '../core/utils.js';
 import { currentUserId, isLoggedIn, requireAuth } from '../core/auth.js';
 import {
   fetchAvatars, cachedName, cachedAvatar, liveName, nameUid,
@@ -2259,6 +2259,41 @@ function openPageTeam(pageId) {
 // ── Композер: власник/адмін пише АБО редагує пост сторінки (кілька фото) ─────
 // editPost заданий → режим редагування: префіл тексту + наявні фото, «Зберегти».
 const MAX_PHOTOS = 10;
+// ── ЧЕРНЕТКА КОМПОЗЕРА ───────────────────────────────────────────────────────────
+// Аудит «Стрічки» 27.07: людина пише довгий допис, зачіпає пальцем повз лист — і все
+// зникає без жодного питання. `close()` просто зносив вузол. Це єдине місце в застосунку,
+// де ВТРАЧАЄТЬСЯ вже зроблена робота, тому й узялись за нього першим.
+//
+// ЧОМУ ЗБЕРЕЖЕННЯ, А НЕ ПИТАННЯ «ви впевнені?»:
+// свайп-закриття спершу ДОВОДИТЬ лист донизу і лише потім кличе `close()` — питати там
+// уже пізно, листа на екрані нема. Щоб питати вчасно, довелось би лізти в механіку жесту
+// (`attachSheetSwipe` / `sheet-motion`), а саме такі заходи в цю сесію двічі ламали
+// «Подати оголошення». Збереження ж не чіпає жест ЖОДНИМ рядком і працює однаково для
+// всіх шляхів: тап повз лист, свайп, ✕, а заразом і вбитий застосунок чи дзвінок.
+//
+// ⚠️ ФОТО НЕ ЗБЕРІГАЮТЬСЯ. Вибране фото — це `File` у пам'яті вкладки; у localStorage
+// його не покласти (потрібен IndexedDB — окрема робота, не цей захід). Тому в тості
+// прямо кажемо, що фото треба вибрати ще раз — краще чесно, ніж мовчки недорахувати.
+const DRAFT_TTL = 7 * 24 * 3600 * 1000;   // тиждень: старіша чернетка вже не актуальна
+const draftKey = (pageId) => `cstl_fd_draft_${pageId}`;
+
+function readDraft(pageId) {
+  const d = lsGet(draftKey(pageId), null);
+  if (!d || typeof d !== 'object') return null;
+  if (!d.ts || Date.now() - d.ts > DRAFT_TTL) { clearDraft(pageId); return null; }
+  // Порожня чернетка — не чернетка (інакше показували б тост ні про що).
+  const meaningful = (d.text || '').trim() || d.date || d.time || (d.loc || '').trim();
+  return meaningful ? d : null;
+}
+function writeDraft(pageId, d) {
+  const meaningful = (d.text || '').trim() || d.date || d.time || (d.loc || '').trim();
+  if (!meaningful) { clearDraft(pageId); return; }   // стер усе — чернетки більше нема
+  lsSet(draftKey(pageId), { ...d, ts: Date.now() });
+}
+function clearDraft(pageId) {
+  try { localStorage.removeItem(draftKey(pageId)); } catch {}
+}
+
 function openComposer(pageId, editPost = null) {
   const page = pages.find(p => p.id === pageId);
   if (!page) return;
@@ -2445,6 +2480,12 @@ function openComposer(pageId, editPost = null) {
       if (res.ok) {
         if (edit) { const i = posts.findIndex(p => p.id === editPost.id); if (i >= 0) posts[i] = res.post; }
         else { posts.unshift(res.post); notifyNewPagePost(res.post.id); }   // push підписникам (лише новий пост)
+        // 🔑 Чернетку прибираємо САМЕ ТУТ — після підтвердженого успіху. Пост уже
+        // опубліковано, тож зберігати його текст нема сенсу; інакше наступне відкриття
+        // композера підклало б щойно опублікований допис ще раз.
+        // ⚠️ Ставити це в `close()` НЕ можна: закриття буває й невдалим шляхом
+        // (тап повз лист, свайп) — там чернетка якраз і має вціліти.
+        if (!edit) clearDraft(pageId);
         close();
         document.querySelectorAll('.fd-screen').forEach(s => s.remove());
         renderFeed();
@@ -2465,6 +2506,51 @@ function openComposer(pageId, editPost = null) {
   const headEl    = back.querySelector('.fd-comp-head');
   const bodyEl    = back.querySelector('.fd-comp-body');
   const textEl    = back.querySelector('.fd-comp-text');
+
+  // ── Чернетка: відновити при відкритті, зберігати на ходу ────────────────────────
+  // Тільки для НОВОГО поста. У режимі редагування джерело правди — сам пост на сервері;
+  // підкласти туди стару чернетку означало б мовчки підмінити те, що людина бачить.
+  const dateEl = back.querySelector('.fd-comp-date');
+  const timeEl = back.querySelector('.fd-comp-etime');
+  const locEl  = back.querySelector('.fd-comp-eloc');
+
+  const setType = (t) => {
+    postType = t;
+    back.querySelectorAll('.fd-comp-type-btn').forEach(b => b.classList.toggle('is-on', b.dataset.type === t));
+    eventBox.hidden = t !== 'event';
+  };
+
+  if (!edit) {
+    const d = readDraft(pageId);
+    if (d) {
+      textEl.value = d.text || '';
+      dateEl.value = d.date || '';
+      timeEl.value = d.time || '';
+      locEl.value  = d.loc  || '';
+      if (d.type === 'event') setType('event');
+      if (d.showAuthor) {
+        showAuthor = true;
+        back.querySelectorAll('.fd-comp-as-btn').forEach(b => b.classList.toggle('is-on', b.dataset.as === 'me'));
+      }
+      // Кажемо і про відновлення, і про те, чого відновити не могли (фото).
+      showToast('Відновив твою чернетку. Фото треба вибрати ще раз', 4000);
+    }
+  }
+
+  // Зберігаємо з невеликою затримкою — щоб не писати в сховище на кожну літеру.
+  let draftTimer = 0;
+  const saveDraft = () => {
+    if (edit) return;
+    clearTimeout(draftTimer);
+    draftTimer = setTimeout(() => writeDraft(pageId, {
+      text: textEl.value, type: postType,
+      date: dateEl.value, time: timeEl.value, loc: locEl.value,
+      showAuthor,
+    }), 400);
+  };
+  // `input` покриває набір тексту й усі поля події; `click` — перемикачі типу і підпису.
+  bodyEl.addEventListener('input', saveDraft);
+  back.querySelectorAll('.fd-comp-type-btn, .fd-comp-as-btn').forEach(b => b.addEventListener('click', saveDraft));
 
   // ── Закриття: анімуємо ТІЛЬКИ зсув (той самий висновок, що для листа коментарів) ──
   // Заморожуємо висоту й знімаємо перехід, щоб `translateY(100%)` мав нерухому ціль,

@@ -12862,6 +12862,33 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     requestAnimationFrame(() => back.classList.add("open"));
   }
   var MAX_PHOTOS = 10;
+  var DRAFT_TTL = 7 * 24 * 3600 * 1e3;
+  var draftKey = (pageId) => `cstl_fd_draft_${pageId}`;
+  function readDraft(pageId) {
+    const d = lsGet(draftKey(pageId), null);
+    if (!d || typeof d !== "object")
+      return null;
+    if (!d.ts || Date.now() - d.ts > DRAFT_TTL) {
+      clearDraft(pageId);
+      return null;
+    }
+    const meaningful = (d.text || "").trim() || d.date || d.time || (d.loc || "").trim();
+    return meaningful ? d : null;
+  }
+  function writeDraft(pageId, d) {
+    const meaningful = (d.text || "").trim() || d.date || d.time || (d.loc || "").trim();
+    if (!meaningful) {
+      clearDraft(pageId);
+      return;
+    }
+    lsSet(draftKey(pageId), { ...d, ts: Date.now() });
+  }
+  function clearDraft(pageId) {
+    try {
+      localStorage.removeItem(draftKey(pageId));
+    } catch {
+    }
+  }
   function openComposer(pageId, editPost = null) {
     const page = pages.find((p) => p.id === pageId);
     if (!page)
@@ -13036,6 +13063,8 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
             posts.unshift(res.post);
             notifyNewPagePost(res.post.id);
           }
+          if (!edit)
+            clearDraft(pageId);
           close();
           document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
           renderFeed();
@@ -13055,6 +13084,46 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const headEl = back.querySelector(".fd-comp-head");
     const bodyEl = back.querySelector(".fd-comp-body");
     const textEl = back.querySelector(".fd-comp-text");
+    const dateEl = back.querySelector(".fd-comp-date");
+    const timeEl = back.querySelector(".fd-comp-etime");
+    const locEl = back.querySelector(".fd-comp-eloc");
+    const setType = (t) => {
+      postType = t;
+      back.querySelectorAll(".fd-comp-type-btn").forEach((b) => b.classList.toggle("is-on", b.dataset.type === t));
+      eventBox.hidden = t !== "event";
+    };
+    if (!edit) {
+      const d = readDraft(pageId);
+      if (d) {
+        textEl.value = d.text || "";
+        dateEl.value = d.date || "";
+        timeEl.value = d.time || "";
+        locEl.value = d.loc || "";
+        if (d.type === "event")
+          setType("event");
+        if (d.showAuthor) {
+          showAuthor = true;
+          back.querySelectorAll(".fd-comp-as-btn").forEach((b) => b.classList.toggle("is-on", b.dataset.as === "me"));
+        }
+        showToast("\u0412\u0456\u0434\u043D\u043E\u0432\u0438\u0432 \u0442\u0432\u043E\u044E \u0447\u0435\u0440\u043D\u0435\u0442\u043A\u0443. \u0424\u043E\u0442\u043E \u0442\u0440\u0435\u0431\u0430 \u0432\u0438\u0431\u0440\u0430\u0442\u0438 \u0449\u0435 \u0440\u0430\u0437", 4e3);
+      }
+    }
+    let draftTimer = 0;
+    const saveDraft = () => {
+      if (edit)
+        return;
+      clearTimeout(draftTimer);
+      draftTimer = setTimeout(() => writeDraft(pageId, {
+        text: textEl.value,
+        type: postType,
+        date: dateEl.value,
+        time: timeEl.value,
+        loc: locEl.value,
+        showAuthor
+      }), 400);
+    };
+    bodyEl.addEventListener("input", saveDraft);
+    back.querySelectorAll(".fd-comp-type-btn, .fd-comp-as-btn").forEach((b) => b.addEventListener("click", saveDraft));
     let closing = false;
     const beginClose = () => {
       if (closing)
