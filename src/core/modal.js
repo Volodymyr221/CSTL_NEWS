@@ -56,9 +56,19 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   const onKey = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
 
-  // Тіло-скролер. Аркуш більше не скролиться сам (див. style/modal.css) — це важливо
-  // і для жесту нижче: перевіряти треба прокрутку ТІЛА, а не панелі.
-  const scroller = wrap.querySelector('.app-modal-body') || panel;
+  // Хто саме скролиться — питання жесту нижче: свайп-закриття можна вмикати лише коли
+  // вміст догорнуто ДО ВЕРХУ, інакше замість скролу вийде закриття.
+  // За стандартом (style/modal.css) скролер — тіло. Але окрема модалка може лишитись на
+  // старій геометрії, де скролиться сам аркуш (див. `.app-modal--board-compose`
+  // у style/community.css: у неї власна повноширинна шапка з відʼємними полями, і тіло
+  // скролером бути не може). Тому не вгадуємо по класу, а ПИТАЄМО живі стилі —
+  // повертаємо той вузол, який справді прокручується.
+  const bodyEl = wrap.querySelector('.app-modal-body');
+  const scrollerEl = () => {
+    if (!bodyEl) return panel;
+    const oy = getComputedStyle(bodyEl).overflowY;
+    return (oy === 'visible' || oy === 'clip') ? panel : bodyEl;
+  };
 
   let closing = false;
   // Спільна частина будь-якого закриття: знімаємо стан і слухачі рівно один раз.
@@ -106,7 +116,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
 
   // Свайп-вниз закриває (лише sheet-варіант).
   if (variant === 'sheet' && swipeClose && panel) {
-    let startY = 0, dragging = false, dy = 0, travel = 1;
+    let startY = 0, dragging = false, dy = 0, travel = 1, scroller = panel;
     const drag = createDragTracker();   // швидкість пальця → нативне завершення жесту
     const fade = createBackdropFade(backdrop);   // затемнення світлішає разом з рухом
     panel.addEventListener('touchstart', e => {
@@ -115,7 +125,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       // ЗАВЖДИ, навіть коли контент прогорнуто. У тілі — лише коли скрол на самому верху,
       // інакше це звичайний скрол (не перехоплюємо).
       const inHeader = (y - panel.getBoundingClientRect().top) < 64;
-      // Скрол тепер у ТІЛА (аркуш не скролиться) — питаємо саме його.
+      scroller = scrollerEl();   // визначаємо на початку жесту — стилі вже застосовані
       if (!inHeader && scroller.scrollTop > 0) return;
       startY = y; dragging = true; dy = 0;
       travel = Math.max(panel.offsetHeight || 1, 1);   // повний шлях аркуша — міряємо раз за жест
