@@ -56,14 +56,49 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
   const onKey = e => { if (e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
 
-  function close() {
-    if (_active?.el !== wrap) return;
-    _active = null;
+  // Тіло-скролер. Аркуш більше не скролиться сам (див. style/modal.css) — це важливо
+  // і для жесту нижче: перевіряти треба прокрутку ТІЛА, а не панелі.
+  const scroller = wrap.querySelector('.app-modal-body') || panel;
+
+  let closing = false;
+  // Спільна частина будь-якого закриття: знімаємо стан і слухачі рівно один раз.
+  function teardown() {
+    if (_active?.el === wrap) _active = null;
     onClose?.();
-    wrap.classList.remove('open');
     document.body.classList.remove('modal-open');
     document.removeEventListener('keydown', onKey);
-    setTimeout(() => wrap.remove(), 240);
+  }
+
+  // 🔑 ЗАКРИТТЯ — З'ЇЗД ДОНИЗУ, А НЕ ЗГАСАННЯ (стандартизація 27.07).
+  // БУЛО: `wrap.classList.remove('open')` → `.app-modal { opacity: 0; transition: .2s }`
+  // гасив УВЕСЬ контейнер разом з аркушем. Аркуш нікуди не їхав — він просто зникав.
+  // Вова про це прямо: «щоб вони закривалися так само плавно донизу, а не просто пропадали».
+  // СТАЛО: анімуємо `transform` аркуша, а затемнення гасимо ОКРЕМО (це різні елементи,
+  // тож аркуш лишається повністю видимим усю дорогу вниз).
+  // ⚠️ Висоту фіксуємо в пікселях: `translateY(100%)` рахується від ВЛАСНОЇ висоти, і якщо
+  // вона в цей момент зміниться — ціль «тікає» і рух стає нерівномірним (урок PR #663).
+  function slideOut(ms = 240) {
+    panel.style.height = panel.offsetHeight + 'px';
+    panel.style.transition = `transform ${ms}ms cubic-bezier(0.32, 0.72, 0, 1)`;
+    panel.style.transform = 'translateY(100%)';
+    if (backdrop) {
+      backdrop.style.transition = `opacity ${ms}ms linear`;
+      backdrop.style.opacity = '0';
+    }
+    setTimeout(() => wrap.remove(), ms + 20);
+  }
+
+  function close() {
+    if (closing || _active?.el !== wrap) return;
+    closing = true;
+    teardown();
+    // Центрована картка з'їжджати не має — там своя анімація (scale), лишаємо як було.
+    if (variant !== 'sheet' || !panel) {
+      wrap.classList.remove('open');
+      setTimeout(() => wrap.remove(), 240);
+      return;
+    }
+    slideOut();
   }
 
   backdrop?.addEventListener('click', close);
@@ -80,7 +115,8 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       // ЗАВЖДИ, навіть коли контент прогорнуто. У тілі — лише коли скрол на самому верху,
       // інакше це звичайний скрол (не перехоплюємо).
       const inHeader = (y - panel.getBoundingClientRect().top) < 64;
-      if (!inHeader && panel.scrollTop > 0) return;
+      // Скрол тепер у ТІЛА (аркуш не скролиться) — питаємо саме його.
+      if (!inHeader && scroller.scrollTop > 0) return;
       startY = y; dragging = true; dy = 0;
       travel = Math.max(panel.offsetHeight || 1, 1);   // повний шлях аркуша — міряємо раз за жест
       drag.start(y);
@@ -96,7 +132,7 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
       // довести контент до верху; startY переставляємо, щоб зсув почав рахуватись від
       // точки досягнення верху (без стрибка). Це усуває відрив липкої шапки: transform
       // на прокрученому контейнері зі sticky-дітьми рве їх від тіла на iOS WebKit.
-      if (panel.scrollTop > 0) {
+      if (scroller.scrollTop > 0) {
         panel.style.transform = '';
         fade?.track(0);
         startY = e.touches[0].clientY;
@@ -122,7 +158,16 @@ export function openModal({ title = '', bodyHtml = '', variant = 'sheet', onMoun
         panel, dy, velocity: drag.velocity,
         remaining: sheetRemaining(panel, dy),
         dismissTransform: 'translateY(100%)',
-        onDismiss: () => close(),
+        // Аркуш уже поїхав донизу (`finishSwipe` поставив transform), а затемнення
+        // гасне через `fade`. Тому тут НЕ запускаємо slideOut ще раз — лише фіксуємо
+        // висоту (нерухома ціль для translateY) і прибираємо вузол після доїзду.
+        onDismiss: (ms) => {
+          if (closing) return;
+          closing = true;
+          teardown();
+          panel.style.height = panel.offsetHeight + 'px';
+          setTimeout(() => wrap.remove(), ms + 20);
+        },
         backdrop: fade,
       });
       dy = 0;

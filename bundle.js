@@ -2095,15 +2095,36 @@
         close();
     };
     document.addEventListener("keydown", onKey);
-    function close() {
-      if (_active?.el !== wrap)
-        return;
-      _active = null;
+    const scroller = wrap.querySelector(".app-modal-body") || panel;
+    let closing = false;
+    function teardown() {
+      if (_active?.el === wrap)
+        _active = null;
       onClose?.();
-      wrap.classList.remove("open");
       document.body.classList.remove("modal-open");
       document.removeEventListener("keydown", onKey);
-      setTimeout(() => wrap.remove(), 240);
+    }
+    function slideOut(ms = 240) {
+      panel.style.height = panel.offsetHeight + "px";
+      panel.style.transition = `transform ${ms}ms cubic-bezier(0.32, 0.72, 0, 1)`;
+      panel.style.transform = "translateY(100%)";
+      if (backdrop) {
+        backdrop.style.transition = `opacity ${ms}ms linear`;
+        backdrop.style.opacity = "0";
+      }
+      setTimeout(() => wrap.remove(), ms + 20);
+    }
+    function close() {
+      if (closing || _active?.el !== wrap)
+        return;
+      closing = true;
+      teardown();
+      if (variant !== "sheet" || !panel) {
+        wrap.classList.remove("open");
+        setTimeout(() => wrap.remove(), 240);
+        return;
+      }
+      slideOut();
     }
     backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
@@ -2114,7 +2135,7 @@
       panel.addEventListener("touchstart", (e) => {
         const y = e.touches[0].clientY;
         const inHeader = y - panel.getBoundingClientRect().top < 64;
-        if (!inHeader && panel.scrollTop > 0)
+        if (!inHeader && scroller.scrollTop > 0)
           return;
         startY = y;
         dragging = true;
@@ -2131,7 +2152,7 @@
           fade?.track(0);
           return;
         }
-        if (panel.scrollTop > 0) {
+        if (scroller.scrollTop > 0) {
           panel.style.transform = "";
           fade?.track(0);
           startY = e.touches[0].clientY;
@@ -2155,7 +2176,17 @@
           velocity: drag.velocity,
           remaining: sheetRemaining(panel, dy),
           dismissTransform: "translateY(100%)",
-          onDismiss: () => close(),
+          // Аркуш уже поїхав донизу (`finishSwipe` поставив transform), а затемнення
+          // гасне через `fade`. Тому тут НЕ запускаємо slideOut ще раз — лише фіксуємо
+          // висоту (нерухома ціль для translateY) і прибираємо вузол після доїзду.
+          onDismiss: (ms) => {
+            if (closing)
+              return;
+            closing = true;
+            teardown();
+            panel.style.height = panel.offsetHeight + "px";
+            setTimeout(() => wrap.remove(), ms + 20);
+          },
           backdrop: fade
         });
         dy = 0;
