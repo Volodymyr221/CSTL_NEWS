@@ -249,7 +249,6 @@
     return deleet(String(text || "").toLowerCase()).replace(/1/g, "i").replace(/[a-z]/g, (ch) => FILTER_HOMOGLYPHS[ch] || ch).replace(/(.)\1{2,}/g, "$1");
   }
   var PROFANITY_STEMS = [
-    // нецензурні (укр + рос)
     "\u0445\u0443\u0439",
     "\u0445\u0443\u0454",
     "\u0445\u0443\u044F",
@@ -296,33 +295,16 @@
     "\u043F\u043E\u0445\u0443\u0439",
     "\u0434\u0440\u043E\u0447",
     "\u0441\u0446\u0443\u043A",
-    "\u0441\u0446\u0438\u043A\u043B",
     "\u043A\u0443\u0440\u0432",
-    "\u0441\u0432\u043E\u043B\u043E\u0447",
-    "\u0433\u0456\u0432\u043D",
-    "\u0433\u043E\u0432\u043D",
-    "\u0441\u0440\u0430\u043A",
-    "\u0441\u0440\u0430\u043D",
-    "\u0436\u043E\u043F",
-    "\u043C\u0440\u0430\u0437",
     "\u0448\u043B\u044E\u0445",
     "\u0448\u043B\u044C\u043E\u043D\u0434\u0440",
-    "\u043F\u0430\u0434\u043B",
-    "\u0434\u043E\u0432\u0431\u043E",
-    "\u0434\u043E\u043B\u0431\u043E",
-    "\u0441\u043A\u043E\u0442\u0438\u043D",
-    "\u0442\u0432\u0430\u0440\u044E\u043A",
-    "\u043A\u043E\u0437\u043B\u0438\u043D",
-    "\u043B\u043E\u0448\u0430\u0440",
-    // образи
-    "\u0456\u0434\u0456\u043E\u0442",
-    "\u043A\u0440\u0435\u0442\u0438\u043D",
-    "\u043F\u0440\u0438\u0434\u0443\u0440",
-    "\u0456\u043C\u0431\u0435\u0446\u0438\u043B",
-    "\u0434\u0435\u0431\u0456\u043B",
-    "\u0434\u0435\u0431\u0438\u043B",
-    "\u0434\u0438\u0431\u0456\u043B",
-    "\u0434\u0438\u0431\u0438\u043B"
+    // ⚠️ було 'довбо'/'долбо' — блокувало легальне «довбати» («довбати стіну»).
+    // Лишились повні форми, які без матюка не існують.
+    "\u0434\u043E\u0432\u0431\u043E\u0439\u043E\u0431",
+    "\u0434\u043E\u0432\u0431\u043E\u0454\u0431",
+    "\u0434\u043E\u0432\u0431\u0430\u0454\u0431",
+    "\u0434\u043E\u043B\u0431\u043E\u0435\u0431",
+    "\u0434\u043E\u043B\u0431\u043E\u0439\u043E\u0431"
   ];
   var PROFANITY_EXACT = /* @__PURE__ */ new Set([
     "\u0431\u043B\u044F",
@@ -332,36 +314,8 @@
     "\u0441\u0443\u0447\u043A\u0430",
     "\u0441\u0443\u0447\u043A\u0438",
     "\u0445\u0435\u0440",
-    "\u043B\u043E\u0445",
-    "\u043B\u043E\u0445\u0430",
-    "\u043B\u043E\u0445\u0438",
     "\u043C\u0430\u043D\u0434\u0430",
-    "\u043C\u0430\u043D\u0434\u0438",
-    "\u043F\u0435\u0434\u0438\u043A",
-    "\u043F\u0435\u0434\u0438\u043A\u0438",
-    "\u043F\u0435\u0434\u0456\u043A",
-    "\u043F\u0435\u0434\u0456\u043A\u0438",
-    "\u043F\u0454\u0434\u0456\u043A",
-    "\u043F\u0454\u0434\u0438\u043A",
-    "\u043F\u0454\u0434\u0438\u043A\u0438",
-    "\u0433\u043D\u0438\u0434\u0430",
-    "\u0433\u043D\u0438\u0434\u0438",
-    "\u0434\u0443\u0440\u0430\u043A",
-    "\u0434\u0443\u0440\u0435\u043D\u044C",
-    "\u0434\u0443\u0440\u043D\u0438\u0439",
-    "\u0434\u0443\u0440\u043D\u0430",
-    "\u0434\u0443\u0440\u043D\u0435",
-    "\u0434\u0443\u0440\u043D\u0456",
-    "\u0442\u0443\u043F\u0438\u0439",
-    "\u0442\u0443\u043F\u0430",
-    "\u0442\u0443\u043F\u0435",
-    "\u0442\u0443\u043F\u0438\u0446\u044F",
-    "\u0442\u0443\u043F\u0438\u0446\u0456",
-    "\u043A\u043E\u0437\u0435\u043B",
-    "\u043A\u043E\u0437\u043B\u0438",
-    "\u0434\u0430\u0443\u043D",
-    "\u0431\u043E\u0432\u0434\u0443\u0440",
-    "\u0441\u043A\u043E\u0442"
+    "\u043C\u0430\u043D\u0434\u0438"
   ]);
   var PROFANITY_SQUASH = ["\u0445\u0443\u0439", "\u0445\u0443\u0439\u043B", "\u043F\u0438\u0437\u0434", "\u043F\u0456\u0437\u0434", "\u0454\u0431\u0430\u043B", "\u0457\u0431\u0430\u043B", "\u0439\u043E\u0431", "\u0431\u043B\u044F\u0434", "\u0431\u043B\u044F\u0442", "\u043C\u0443\u0434\u0430\u043A", "\u043F\u0456\u0434\u043E\u0440", "\u043F\u0438\u0434\u043E\u0440"];
   var PROFANITY_LATIN = [
@@ -398,18 +352,13 @@
     "gondon",
     "dolboeb",
     "dolbaeb",
-    "mraz",
     "nahui",
     "nahuy",
     "nahyi",
-    "nahren",
     "pohui",
     "pohuy",
     "yoban",
     "yobn",
-    "govno",
-    "gavno",
-    "durak",
     // англ.
     "fuck",
     "fuk",
@@ -417,44 +366,58 @@
     "shit",
     "bullshit",
     "bitch",
-    "biatch",
     "asshole",
     "motherfuck",
     "faggot",
     "nigger",
-    "nigga",
-    "whore",
-    "wanker",
-    "bollock",
-    "dickhead",
-    "jackass",
-    "dumbass",
-    "retard",
-    "bastard",
-    "douche"
+    "nigga"
   ];
   var PROFANITY_LATIN_SQUASH = ["blyat", "pizda", "nahui", "pidoras", "zalupa", "dolboeb"];
+  function spacedRuns(s, letters) {
+    const runs = [];
+    let chain = [];
+    const flush = () => {
+      if (chain.length >= 3)
+        runs.push(chain.join(""));
+      chain = [];
+    };
+    for (const part of s.split(letters)) {
+      if (part.length === 1)
+        chain.push(part);
+      else
+        flush();
+    }
+    flush();
+    return runs;
+  }
+  var PROFANITY_ALLOW = ["\u043F\u0456\u0434\u043E\u0440\u043B\u0438\u043A", "\u0454\u0431\u0440\u0440"];
+  var FILTER_APOSTROPHE = /['’ʼ`´]/g;
   function containsProfanity(text) {
-    const norm = normalizeForFilter(text);
-    const words = norm.split(/[^а-яіїєґ'a-z]+/).filter(Boolean);
+    const norm = normalizeForFilter(text).replace(FILTER_APOSTROPHE, "");
+    const words = norm.split(/[^а-яіїєґa-z]+/).filter(Boolean);
     for (const w of words) {
+      if (PROFANITY_ALLOW.some((a) => w.startsWith(a)))
+        continue;
       if (PROFANITY_EXACT.has(w))
         return true;
       if (PROFANITY_STEMS.some((s) => w.startsWith(s)))
         return true;
     }
-    const squashed = norm.replace(/[^а-яіїєґa-z]/g, "");
-    if (PROFANITY_SQUASH.some((s) => squashed.includes(s)))
-      return true;
-    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1"));
+    for (const run of spacedRuns(norm, /[^а-яіїєґa-z]+/)) {
+      if (PROFANITY_SQUASH.some((s) => run.includes(s)))
+        return true;
+    }
+    const latinBase = deleet(String(text || "").toLowerCase().replace(/(.)\1{2,}/g, "$1")).replace(FILTER_APOSTROPHE, "");
     for (const one of ["i", "l"]) {
       const v = latinBase.replace(/1/g, one);
       for (const w of v.split(/[^a-z]+/).filter(Boolean)) {
         if (PROFANITY_LATIN.some((s) => w.startsWith(s)))
           return true;
       }
-      if (PROFANITY_LATIN_SQUASH.some((s) => v.replace(/[^a-z]/g, "").includes(s)))
-        return true;
+      for (const run of spacedRuns(v, /[^a-z]+/)) {
+        if (PROFANITY_LATIN_SQUASH.some((s) => run.includes(s)))
+          return true;
+      }
     }
     return false;
   }
@@ -11268,6 +11231,96 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         img.addEventListener("load", () => applyPhotoRatio(box, img), { once: true });
     });
   }
+  var CLAMP_LINES = 7;
+  var CLAMP_SLACK = 2;
+  var expandedPosts = /* @__PURE__ */ new Set();
+  function clampMetrics(el) {
+    const cs = getComputedStyle(el);
+    let lh = parseFloat(cs.lineHeight);
+    if (!lh || isNaN(lh))
+      lh = parseFloat(cs.fontSize) * 1.5;
+    const padT = parseFloat(cs.paddingTop) || 0;
+    const padB = parseFloat(cs.paddingBottom) || 0;
+    const collapsed = Math.floor(lh * CLAMP_LINES) + padT;
+    const contentFull = el.scrollHeight - padT - padB;
+    return { lh, collapsed, contentFull, contentCollapsed: lh * CLAMP_LINES };
+  }
+  function scrollParent(el) {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
+        return p;
+    }
+    return null;
+  }
+  function wireClamps(root) {
+    root.querySelectorAll(".fd-text").forEach((el) => {
+      const card = el.closest("[data-post]");
+      if (!card)
+        return;
+      const id = Number(card.dataset.post);
+      el.classList.remove("fd-text--clip", "fd-text--anim");
+      el.style.maxHeight = "";
+      const stale = el.nextElementSibling;
+      if (stale && stale.classList.contains("fd-more"))
+        stale.remove();
+      const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+      if (contentFull <= contentCollapsed + lh * CLAMP_SLACK)
+        return;
+      const open = expandedPosts.has(id);
+      el.classList.add("fd-text--clip");
+      el.style.maxHeight = open ? "none" : collapsed + "px";
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "fd-more";
+      btn.dataset.toggleText = String(id);
+      btn.textContent = open ? "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438" : "\u2026 \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0431\u0456\u043B\u044C\u0448\u0435";
+      el.insertAdjacentElement("afterend", btn);
+    });
+  }
+  function togglePostText(id, btn) {
+    const card = btn.closest("[data-post]");
+    const el = card && card.querySelector(".fd-text");
+    if (!el)
+      return;
+    const { collapsed } = clampMetrics(el);
+    const opening = !expandedPosts.has(id);
+    el.classList.add("fd-text--anim");
+    if (opening) {
+      expandedPosts.add(id);
+      btn.textContent = "\u0417\u0433\u043E\u0440\u043D\u0443\u0442\u0438";
+      el.style.maxHeight = el.scrollHeight + "px";
+      el.addEventListener("transitionend", function done(e) {
+        if (e.propertyName !== "max-height")
+          return;
+        el.removeEventListener("transitionend", done);
+        el.classList.remove("fd-text--anim");
+        if (expandedPosts.has(id))
+          el.style.maxHeight = "none";
+      });
+      return;
+    }
+    expandedPosts.delete(id);
+    btn.textContent = "\u2026 \u041F\u043E\u043A\u0430\u0437\u0430\u0442\u0438 \u0431\u0456\u043B\u044C\u0448\u0435";
+    const top = card.getBoundingClientRect().top;
+    if (top < 0) {
+      const sc = scrollParent(card);
+      if (sc)
+        sc.scrollTop += top - 8;
+      else
+        window.scrollBy(0, top - 8);
+    }
+    el.style.maxHeight = el.scrollHeight + "px";
+    requestAnimationFrame(() => {
+      el.style.maxHeight = collapsed + "px";
+    });
+    el.addEventListener("transitionend", function done(e) {
+      if (e.propertyName !== "max-height")
+        return;
+      el.removeEventListener("transitionend", done);
+      el.classList.remove("fd-text--anim");
+    });
+  }
   function wireGalleries(root) {
     wirePhotoRatios(root);
     root.querySelectorAll(".fd-gallery").forEach((g) => {
@@ -11578,6 +11631,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     }
     listEl.innerHTML = posts.map(postCardHtml).join("");
     wireGalleries(listEl);
+    wireClamps(listEl);
   }
   function applyPostEvent(payload) {
     const row = payload.new || payload.old;
@@ -12469,6 +12523,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
+    wireClamps(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
     screen.querySelectorAll(".fd-sctab").forEach((tab) => tab.addEventListener("click", () => {
       screen.querySelectorAll(".fd-sctab").forEach((t) => t.classList.toggle("is-on", t === tab));
@@ -12476,6 +12531,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       list.innerHTML = screenListHtml(tab.dataset.sctab, pagePosts);
       wireCards(screen);
       wireGalleries(screen);
+      wireClamps(screen);
     }));
     if (page.banner_url)
       screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
@@ -13234,6 +13290,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
           openViewer(postImages(post), Number(view.dataset.idx) || 0);
         return;
       }
+      const moreBtn = e.target.closest("[data-toggle-text]");
+      if (moreBtn) {
+        togglePostText(Number(moreBtn.dataset.toggleText), moreBtn);
+        return;
+      }
       const openPage = e.target.closest("[data-open-page]");
       if (openPage) {
         openPageScreen(Number(openPage.dataset.openPage));
@@ -13246,6 +13307,16 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     if (root && !root.dataset.fdWired) {
       wireCards(root);
       window.addEventListener("resize", layoutCircles);
+      let lastW = window.innerWidth;
+      window.addEventListener("resize", () => {
+        if (window.innerWidth === lastW)
+          return;
+        lastW = window.innerWidth;
+        const list = document.getElementById("feed-list");
+        if (list)
+          wireClamps(list);
+        document.querySelectorAll(".fd-screen").forEach(wireClamps);
+      });
       const main = document.querySelector(".app-main");
       const bar = root.querySelector(".fd-topbar");
       if (main && bar) {

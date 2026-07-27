@@ -183,6 +183,30 @@
 
 .fd-text { padding: 8px 14px 12px; font-size: 15px; line-height: 1.5; color: var(--fd-ink); white-space: pre-wrap; word-break: break-word; }
 
+/* ── Згортання довгих текстів (як у Facebook/Instagram) ─────────────────────
+   Порогові числа тут НЕ задаються: висоту рахує wireClamps() у feed.js із
+   реального `line-height` через getComputedStyle, бо (а) людина може збільшити
+   шрифт у налаштуваннях iPhone, (б) padding входить у висоту (box-sizing:
+   border-box глобально в base.css) і його треба додати до порогу.
+   Тут — лише вигляд і плавність; max-height приходить inline у пікселях.
+
+   ⚠️ Чому не `-webkit-line-clamp`: він обрізає красиво, але НЕ анімується —
+   а вимога була плавне розгортання ~250-300мс. */
+.fd-text--clip { overflow: hidden; }
+/* Клас плавності вішається ОКРЕМО і тільки на час руху. Якби transition висів
+   постійно, перший рендер згорнутої картки анімувався б із повної висоти в
+   обрізану — тобто текст на очах «складався» б сам собою при кожній перемальовці. */
+.fd-text--anim { transition: max-height .28s cubic-bezier(.22, .61, .36, 1); }
+
+/* Кнопка «… Показати більше» / «Згорнути». На всю ширину блоку — щоб у неї було
+   легко попасти пальцем (сама смужка тексту вузька), але вирівняна ліворуч під текст. */
+/* ⚠️ БЕЗ відʼємного margin-top. Перша версія мала `margin-top:-6px` «щоб тісніше» —
+   і кнопка налазила на обрізаний рядок тексту. Місце під нею дає власний padding. */
+.fd-more { display: block; width: 100%; text-align: left; padding: 2px 14px 12px;
+  background: none; border: 0; font: inherit; font-size: 14.5px;
+  font-weight: 600; color: var(--fd-muted); cursor: pointer; -webkit-tap-highlight-color: transparent; }
+.fd-more:active { opacity: .55; }
+
 /* Фото — на всю ширину */
 .fd-photo { width: 100%; background: #e9ebee; cursor: pointer; }
 .fd-photo img { width: 100%; display: block; max-height: 520px; object-fit: cover; }
