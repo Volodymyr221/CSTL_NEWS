@@ -23,11 +23,13 @@
 import { chromium } from 'playwright';
 import { launch, projectFile, reporter } from './_lib.mjs';
 
+// Механізм живе у СПІЛЬНОМУ модулі (ним користуються і «Стрічка», і Дошка).
+// Знімаємо `export` — і весь модуль можна виконати як звичайний код усередині браузера.
 const SRC = projectFile('src/tabs/feed.js');
-const from = SRC.indexOf('function keepScroll');
-const to   = SRC.indexOf('// Зібрати DOM-вузол картки');
-if (from < 0 || to < 0 || to < from) { console.log('❌ не знайшов keepScroll у feed.js'); process.exit(1); }
-const KEEP_SCROLL = SRC.slice(from, to);
+const KEEP_SCROLL = projectFile('src/core/list-patch.js').replace(/^export /gm, '');
+if (!KEEP_SCROLL.includes('function keepScroll')) {
+  console.log('❌ не знайшов keepScroll у core/list-patch.js'); process.exit(1);
+}
 
 const { ok, done } = reporter();
 
@@ -161,14 +163,11 @@ ok('картка під пальцем нікуди не зникла', !editOn.
 // Вова 27.07: «при відкріпленні воно стрибає доверху». Заміряно: коли картка йде ЗГОРИ,
 // компенсувати нема чим — контенту над людиною фізично меншає, і прокрутка впирається
 // в нуль. Тому картка тепер СКЛАДАЄТЬСЯ за 260мс: список сідає на очах, а не ривком.
-const LEAVE_FROM = SRC.indexOf('function viewRect');
-const LEAVE_TO   = SRC.indexOf('// Зібрати DOM-вузол картки');
-if (LEAVE_FROM < 0 || LEAVE_TO < 0) { console.log('❌ не знайшов collapseCard у feed.js'); process.exit(1); }
-const LEAVE = SRC.slice(LEAVE_FROM, LEAVE_TO);
+const LEAVE = KEEP_SCROLL;   // той самий модуль: там і якір, і згортання картки
 
 const unpin = await page.evaluate(async ({ leave }) => {
   const { collapseCard, cardVisible, CARD_LEAVE_MS } =
-    new Function(leave + '\nreturn { collapseCard, cardVisible, CARD_LEAVE_MS };')();
+    new Function(leave + '\nreturn { collapseCard: collapseNode, cardVisible: isNodeVisible, CARD_LEAVE_MS };')();
   const sc = document.getElementById('sc');
   const H = [520, 300, 380, 260, 340, 300, 420, 280];
   const build = () => { sc.innerHTML = H.map((h, i) =>

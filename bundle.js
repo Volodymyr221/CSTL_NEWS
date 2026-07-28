@@ -4565,6 +4565,69 @@
     });
   }
 
+  // src/core/list-patch.js
+  function scrollParent(el) {
+    for (let p = el.parentElement; p; p = p.parentElement) {
+      const oy = getComputedStyle(p).overflowY;
+      if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
+        return p;
+    }
+    return null;
+  }
+  function scrollerOf(node) {
+    return scrollParent(node) || document.scrollingElement || document.documentElement;
+  }
+  function viewRect(scroller) {
+    if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
+      return { top: 0, bottom: window.innerHeight };
+    }
+    const r = scroller.getBoundingClientRect();
+    return { top: r.top, bottom: r.bottom };
+  }
+  function isNodeVisible(node, scroller) {
+    const r = node.getBoundingClientRect();
+    const v = viewRect(scroller);
+    return r.bottom > v.top && r.top < v.bottom;
+  }
+  function keepScroll(scroller, fn, skip = null, key = "data-post") {
+    if (!scroller) {
+      fn();
+      return;
+    }
+    const idOf = (el) => el.getAttribute(key);
+    const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
+    const anchor = [...scroller.querySelectorAll(`[${key}]`)].find((c) => c.getBoundingClientRect().bottom > viewTop + 1 && String(idOf(c)) !== String(skip));
+    const anchorId = anchor ? idOf(anchor) : null;
+    const before = anchor ? anchor.getBoundingClientRect().top : 0;
+    fn();
+    if (anchorId == null)
+      return;
+    const after = scroller.querySelector(`[${key}="${anchorId}"]`);
+    if (!after)
+      return;
+    const delta = after.getBoundingClientRect().top - before;
+    if (delta)
+      scroller.scrollTop += delta;
+  }
+  var CARD_LEAVE_MS = 340;
+  function collapseNode(node, after) {
+    const h = node.offsetHeight;
+    node.style.overflow = "hidden";
+    node.style.height = h + "px";
+    node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
+    requestAnimationFrame(() => {
+      node.style.height = "0px";
+      node.style.opacity = "0";
+    });
+    setTimeout(after, CARD_LEAVE_MS + 20);
+  }
+  function restoreNode(node) {
+    node.style.transition = "";
+    node.style.height = "";
+    node.style.overflow = "";
+    node.style.opacity = "";
+  }
+
   // src/core/board-shared.js
   var BOOKMARK_OUTLINE_SVG2 = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
   var BOOKMARK_FILLED_SVG2 = '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>';
@@ -5895,27 +5958,42 @@
     <div class="board-backdrop" id="board-backdrop"></div>
     <div class="bd-stream">${sorted.map(renderCard).join("")}</div>`;
   }
+  async function loadBoardData() {
+    if (!isSupabaseReady())
+      return false;
+    const uid = currentUserId();
+    const [posts2, anns, comments, saved, reactions] = await Promise.all([
+      fetchPublishedPosts(),
+      fetchPublishedAnnouncements(),
+      fetchAllComments(),
+      uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set()),
+      fetchAllReactions(uid || getAnonId())
+    ]);
+    if (posts2 === null)
+      return false;
+    allPosts = posts2;
+    allAnnouncements = anns || [];
+    setDiscussionsData(comments, reactions);
+    setSavedIds(saved);
+    return true;
+  }
+  async function refreshBoardKeepingPlace() {
+    const el = getBoardRoot();
+    const body = document.getElementById("bd-body");
+    const ok = await loadBoardData();
+    if (!ok || !el || !body) {
+      renderBoard();
+      return;
+    }
+    keepScroll(document.querySelector(".app-main"), () => renderBodyOnly(), null, "data-post-id");
+  }
   async function renderBoard() {
     const el = getBoardRoot();
     if (!el)
       return;
-    if (isSupabaseReady()) {
-      const uid = currentUserId();
-      const [posts2, anns, comments, saved, reactions] = await Promise.all([
-        fetchPublishedPosts(),
-        fetchPublishedAnnouncements(),
-        fetchAllComments(),
-        uid ? fetchSavedPostIds(uid) : Promise.resolve(/* @__PURE__ */ new Set()),
-        fetchAllReactions(uid || getAnonId())
-      ]);
-      if (posts2 !== null) {
-        allPosts = posts2;
-        allAnnouncements = anns || [];
-        setDiscussionsData(comments, reactions);
-        setSavedIds(saved);
-        renderAll(el);
-        return;
-      }
+    if (await loadBoardData()) {
+      renderAll(el);
+      return;
     }
     try {
       const [boardRes, communityRes] = await Promise.all([
@@ -6603,7 +6681,7 @@
       if (p)
         openAdModalStandalone(p);
     });
-    window.addEventListener("cstl-posts-changed", () => renderBoard());
+    window.addEventListener("cstl-posts-changed", () => refreshBoardKeepingPlace());
     if (isSupabaseReady()) {
       subscribePosts(() => {
         const main = document.querySelector(".app-main");
@@ -11339,14 +11417,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     const contentFull = el.scrollHeight - padT - padB;
     return { lh, collapsed, contentFull, contentCollapsed: lh * CLAMP_LINES };
   }
-  function scrollParent(el) {
-    for (let p = el.parentElement; p; p = p.parentElement) {
-      const oy = getComputedStyle(p).overflowY;
-      if ((oy === "auto" || oy === "scroll") && p.scrollHeight > p.clientHeight)
-        return p;
-    }
-    return null;
-  }
   function wireClamps(root) {
     root.querySelectorAll(".fd-text").forEach((el) => {
       const card = el.closest("[data-post]");
@@ -11732,58 +11802,9 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     wireGalleries(listEl);
     wireClamps(listEl);
   }
-  function scrollerOf(node) {
-    return scrollParent(node) || document.scrollingElement || document.documentElement;
-  }
-  function keepScroll(scroller, fn, skipId = null) {
-    if (!scroller) {
-      fn();
-      return;
-    }
-    const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
-    const anchor = [...scroller.querySelectorAll("[data-post]")].find((c) => c.getBoundingClientRect().bottom > viewTop + 1 && String(c.dataset.post) !== String(skipId));
-    const anchorId = anchor?.dataset.post;
-    const before = anchor ? anchor.getBoundingClientRect().top : 0;
-    fn();
-    if (!anchorId)
-      return;
-    const after = scroller.querySelector(`[data-post="${anchorId}"]`);
-    if (!after)
-      return;
-    const delta = after.getBoundingClientRect().top - before;
-    if (delta)
-      scroller.scrollTop += delta;
-  }
-  function viewRect(scroller) {
-    if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
-      return { top: 0, bottom: window.innerHeight };
-    }
-    const r = scroller.getBoundingClientRect();
-    return { top: r.top, bottom: r.bottom };
-  }
-  function cardVisible(node, scroller) {
-    const r = node.getBoundingClientRect();
-    const v = viewRect(scroller);
-    return r.bottom > v.top && r.top < v.bottom;
-  }
-  var CARD_LEAVE_MS = 340;
-  function collapseCard(node, after) {
-    const h = node.offsetHeight;
-    node.style.overflow = "hidden";
-    node.style.height = h + "px";
-    node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
-    requestAnimationFrame(() => {
-      node.style.height = "0px";
-      node.style.opacity = "0";
-    });
-    setTimeout(after, CARD_LEAVE_MS + 20);
-  }
-  function restoreCard(node) {
-    node.style.transition = "";
-    node.style.height = "";
-    node.style.overflow = "";
-    node.style.opacity = "";
-  }
+  var cardVisible = isNodeVisible;
+  var collapseCard = collapseNode;
+  var restoreCard = restoreNode;
   function cardNode(post, onPage) {
     const tpl = document.createElement("template");
     tpl.innerHTML = postCardHtml(post, onPage).trim();

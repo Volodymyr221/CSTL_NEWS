@@ -25,6 +25,9 @@ import { ensurePushSubscription, pushBlockedMsg } from '../core/push.js';
 import { uploadImageReliable, uploadBlobWithRetry } from '../core/upload.js';   // стиснення+повтор — єдиний надійний шлях
 import { openLayer, closeLayer } from '../core/layers.js'; // повноекранні шари ↔ історія браузера
 import { openCropper } from '../core/cropper.js';         // рамка кадрування перед завантаженням // повноекранні шари ↔ історія браузера
+// Спільна з Дошкою механіка «оновити список, не смикнувши екран» (див. core/list-patch.js).
+import { scrollParent, scrollerOf, keepScroll, isNodeVisible, collapseNode, restoreNode, CARD_LEAVE_MS }
+  from '../core/list-patch.js';
 import { createDragTracker, finishSwipe, sheetRemaining, createBackdropFade, lockBodyScroll } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття + замок скролу під клавіатуру
 import { attachKeyboardSheet, revealInScroller } from '../core/keyboard.js';   // аркуш під клавіатурою: верх стоїть, низ сідає на неї
 
@@ -242,15 +245,7 @@ function clampMetrics(el) {
   return { lh, collapsed, contentFull, contentCollapsed: lh * CLAMP_LINES };
 }
 
-// Найближчий предок, який реально скролиться. Потрібен, бо стрічка живе в
-// `.app-main`, а екран сторінки — окремий шар у body зі своїм скролом.
-function scrollParent(el) {
-  for (let p = el.parentElement; p; p = p.parentElement) {
-    const oy = getComputedStyle(p).overflowY;
-    if ((oy === 'auto' || oy === 'scroll') && p.scrollHeight > p.clientHeight) return p;
-  }
-  return null;   // скролиться саме вікно
-}
+// `scrollParent` тепер спільний — див. імпорт з core/list-patch.js угорі файлу.
 
 // Пройтись по щойно намальованих картках і згорнути ті тексти, які того варті.
 // Викликається в тих самих трьох точках, що й wireGalleries — після кожного
@@ -741,96 +736,12 @@ function renderFeed() {
 // Взірець уже був у цьому файлі: `patchLike()` міняє лише кнопку лайка, тому лайк
 // ніколи не блимав. Нижче — те саме для картки цілком.
 
-// Найближчий предок, що реально скролиться. Для головної стрічки це `.app-main`,
-// для екрана спільноти — сам `.fd-screen`. Якщо вміст коротший за екран, скролу нема
-// і компенсувати нічого — тоді нуль-об'єкт (запис у нього нікому не шкодить).
-function scrollerOf(node) {
-  return scrollParent(node) || document.scrollingElement || document.documentElement;
-}
-
-// Якір прокрутки (той самий прийом, яким браузер утримує сторінку, коли довантажилась
-// картинка вгорі). Міряємо, на скільки пікселів нижче верху стоїть перша ВИДИМА картка,
-// робимо зміну — і повертаємо їй те саме число.
-//
-// ⚠️ Чому запам'ятовуємо картку, а не просто `scrollTop`: висота вмісту НАД нею могла
-// змінитись (відредагований текст став довшим, закріплений пост поїхав угору) — і тоді
-// старий `scrollTop` вказує вже на інше місце. Число без орієнтира нічого не гарантує.
-//
-// skipId — картка, яку саме зараз прибирають. Її не можна брати за якір: після зміни
-// шукати вже нема чого, компенсація не спрацює і список смикнеться вгору на її висоту.
-function keepScroll(scroller, fn, skipId = null) {
-  if (!scroller) { fn(); return; }
-  const viewTop = scroller.getBoundingClientRect ? scroller.getBoundingClientRect().top : 0;
-  // Якір — перша картка, чий НИЖНІЙ край ще нижче верху видимої області. Тобто та,
-  // яку людина зараз бачить (навіть якщо її верх уже поїхав за екран).
-  const anchor = [...scroller.querySelectorAll('[data-post]')]
-    .find(c => c.getBoundingClientRect().bottom > viewTop + 1
-            && String(c.dataset.post) !== String(skipId));
-  const anchorId = anchor?.dataset.post;
-  const before = anchor ? anchor.getBoundingClientRect().top : 0;
-
-  fn();
-
-  if (!anchorId) return;
-  // Вузол міг бути ЗАМІНЕНИЙ новим — шукаємо заново за id, а не за старим посиланням.
-  const after = scroller.querySelector(`[data-post="${anchorId}"]`);
-  if (!after) return;                          // якір зник (його ж і видалили) — не смикаємо
-  const delta = after.getBoundingClientRect().top - before;
-  if (delta) scroller.scrollTop += delta;
-}
-
-// Видима область скролера. Для `document.scrollingElement` це саме ВІКНО, а не документ:
-// його `getBoundingClientRect()` віддає висоту всієї сторінки, і будь-яка картка
-// вважалась би видимою.
-function viewRect(scroller) {
-  if (!scroller || scroller === document.scrollingElement || scroller === document.documentElement) {
-    return { top: 0, bottom: window.innerHeight };
-  }
-  const r = scroller.getBoundingClientRect();
-  return { top: r.top, bottom: r.bottom };
-}
-
-function cardVisible(node, scroller) {
-  const r = node.getBoundingClientRect();
-  const v = viewRect(scroller);
-  return r.bottom > v.top && r.top < v.bottom;
-}
-
-// 🔑 ЧОМУ КАРТКА СКЛАДАЄТЬСЯ, А НЕ ЗНИКАЄ (Вова 27.07: «при відкріпленні воно стрибає
-// доверху»). Заміряно `tests/tools/unpin-probe.mjs`: коли картка йде ЗГОРИ, компенсувати
-// зсув нема чим — контенту над людиною фізично меншає, і прокрутка впирається в нуль.
-// При прокрутці 200px і картці 520px екран стрибав на −320px. Якір тут безсилий за
-// БУДЬ-ЯКОЇ реалізації, і це не помилка якоря. Тому картка не зникає миттєво, а
-// складається за 260мс: список сідає НА ОЧАХ — це читається як рух, а не як ривок.
-// (Закріплення навпаки ДОдає контент згори — там прокрутці завжди є куди рости, тож
-// воно й працювало без нарікань. Його не чіпаємо.)
-// 340мс, а не 260: картка у стрічці буває 500+px заввишки, і за 260мс така висота
-// згортається зі швидкістю ~4.5 пікселя за мілісекунду — рух є, але на межі різкого.
-// 340мс дають ~3 px/мс. Довше робити не варто: видалення почало б здаватись млявим.
-const CARD_LEAVE_MS = 340;
-
-function collapseCard(node, after) {
-  const h = node.offsetHeight;
-  node.style.overflow = 'hidden';
-  node.style.height = h + 'px';
-  // ⚠️ НЕ `cubic-bezier(0.32,0.72,0,1)` — це крива свайпу (модалки), вона навмисно
-  // стартує РІЗКО, бо продовжує рух пальця. Тут руху пальця нема, і різкий старт
-  // читається як той самий ривок: заміряно 135px за один кадр. Мʼякий старт
-  // (0.4,0,0.2,1) розкладає ті самі пікселі рівномірніше — не більше ~50px на кадр.
-  node.style.transition = `height ${CARD_LEAVE_MS}ms cubic-bezier(0.4,0,0.2,1), opacity ${CARD_LEAVE_MS - 100}ms linear`;
-  requestAnimationFrame(() => { node.style.height = '0px'; node.style.opacity = '0'; });
-  // ⚠️ Таймер, а не `transitionend`: якщо застосунок згорнути під час анімації, подія
-  // може не прийти взагалі — і картка лишилась би складеною назавжди.
-  // Проміжок між картками (`gap: 8px` у `.fd-list`/`.fd-screen-list`) лишається — на тлі
-  // 300-500px самої картки ці 8 пікселів непомітні, а прибирати їх довелось би від'ємним
-  // відступом, тобто ще однією латкою.
-  setTimeout(after, CARD_LEAVE_MS + 20);
-}
-
-function restoreCard(node) {
-  node.style.transition = ''; node.style.height = '';
-  node.style.overflow = '';   node.style.opacity = '';
-}
+// Механіка «оновити список, не смикнувши екран» винесена у `core/list-patch.js` —
+// нею користується і Дошка. Тут лишається лише те, що знає про пости.
+// Локальні назви збережені, щоб не переписувати виклики по всьому файлу.
+const cardVisible = isNodeVisible;
+const collapseCard = collapseNode;
+const restoreCard  = restoreNode;
 
 // Зібрати DOM-вузол картки з ТІЄЇ САМОЇ розмітки, якою малюється вся стрічка
 // (`postCardHtml`), щоб оновлена картка не могла відрізнятись від сусідніх.
