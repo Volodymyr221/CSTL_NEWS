@@ -29,10 +29,15 @@ import { launch, projectFile, reporter } from './_lib.mjs';
 const BASE_CSS = projectFile('style/base.css');
 const COMM_CSS = projectFile('style/community.css');
 
-// Сторож присутності: якщо згортання колись повернуть на висоту, ці два рядки зникнуть,
+// Сторож присутності: якщо згортання колись повернуть на висоту, цей рядок зникне,
 // і стенд скаже це прямо, а не буде мовчки міряти не те.
-if (!/#board-content\s+\.bd-controls--collapsed\s*\{[^}]*translateY\(-100%\)/.test(COMM_CSS)) {
-  console.log('❌ у community.css немає translateY(-100%) на #board-content .bd-controls--collapsed');
+// ⚠️ Регулярка навмисно НЕ вимагає точного `translateY(-100%)`. Перша версія вимагала —
+// і впала, коли зсув став `calc(-100% - 6px)` (запас під рамку плашки). Поведінка при
+// цьому не змінилась ані на крок. Це рівно та помилка, що вже коштувала часу 27.07:
+// перевірка чіплялась за ФОРМУ ЗАПИСУ замість наслідку. Тепер вимагаємо лише
+// «зсув по вертикалі на власну висоту», а сам наслідок міряють перевірки нижче.
+if (!/#board-content\s+\.bd-controls--collapsed\s*\{[^}]*translateY\([^)]*-100%/.test(COMM_CSS)) {
+  console.log('❌ у community.css немає зсуву translateY(…-100%…) на #board-content .bd-controls--collapsed');
   console.log('   Якщо згортання свідомо переписали — треба переписати і цей стенд, а не гасити його.');
   process.exit(1);
 }
