@@ -67,7 +67,10 @@ const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 function renderLoc(loc, extraClass = '') {
   if (!loc) return '';
   const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
-  return `<span class="cm-board-loc${extraClass ? ' ' + extraClass : ''}">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+  // ⚠️ Назва загорнута у ВЛАСНИЙ span, а не лежить голим текстом: інакше довгу назву
+  // не обрізати трикрапкою — у flex-контейнері голий текст стає анонімним елементом,
+  // до якого `text-overflow` не застосовується.
+  return `<span class="cm-board-loc${extraClass ? ' ' + extraClass : ''}">${PIN_ICON_SVG}<span class="cm-board-loc-t">${escapeHtml(label)}</span></span>`;
 }
 // Контакт оголошення: телефон розпізнаємо ОДНИМ правилом на весь модуль (картка,
 // модалка, майбутні місця) — щоб копії не розійшлись, як колись розійшлись два
