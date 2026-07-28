@@ -64,10 +64,10 @@ const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none
 // Д-19: показ локації на картці/зум-модалці. null/порожньо (старі пости — будуть
 // видалені) → нічого; COMMUNITY_ALL → «Олицька громада» (COMMUNITY_ALL_LABEL);
 // конкретний НП → його назву. Guard прибрано ЛИШЕ для показу — фільтр не чіпаємо.
-function renderLoc(loc) {
+function renderLoc(loc, extraClass = '') {
   if (!loc) return '';
   const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
-  return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+  return `<span class="cm-board-loc${extraClass ? ' ' + extraClass : ''}">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
 }
 // Контакт оголошення: телефон розпізнаємо ОДНИМ правилом на весь модуль (картка,
 // модалка, майбутні місця) — щоб копії не розійшлись, як колись розійшлись два
@@ -104,16 +104,26 @@ function renderPrice(p) {
 // нерівними (де є телефон — дві кнопки, де нема — одна). Контакт тепер живе в модалці
 // однією широкою кнопкою (renderContactBar). Прапорець `actions` лишає стару поведінку
 // доступною, якщо колись знадобиться.
-function renderCardFoot(p, { actions = false } = {}) {
+// 🆕 28.07 (потік /byyou) — ПЕРШИЙ РЯДОК ФУТЕРА РІЗНИЙ на картці й у модалці:
+//   • КАРТКА (`onCard`) — населений пункт. Рішення Вови: «назву населеного пункту
+//     перемістити на місце імені, а імʼя забрати з картки, залишити тільки в модалці».
+//     Причина продуктова: у стрічці оголошень людині важливо ДЕ, а не ХТО.
+//   • МОДАЛКА — імʼя автора, як було. Локацію там НЕ повторюємо: у модалці вона вже
+//     стоїть у липкій шапці (`renderAdModal` → `.cm-board-modal-subhead`), і другий
+//     такий самий рядок був би дублем.
+function renderCardFoot(p, { actions = false, onCard = false } = {}) {
   const tel = actions ? phoneOf(p) : '';
+  const lead = onCard
+    ? renderLoc(p.location, 'cm-board-loc--foot')
+    : `<span class="cm-board-author cm-board-author--card">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>`;
   return `
-      <div class="cm-board-foot">
+      <div class="cm-board-foot${onCard ? ' cm-board-foot--card' : ''}">
         ${actions ? `<div class="cm-board-foot-actions">
           ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>` : ''}
           <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
         </div>` : ''}
         <div class="cm-board-foot-who">
-          <span class="cm-board-author cm-board-author--card">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>
+          ${lead}
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       </div>`;
@@ -207,12 +217,11 @@ function renderBoardCard(p) {
       <span class="cm-board-pin"></span>
       ${photoHtml}
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-      ${renderLoc(p.location)}
       ${renderPrice(p)}
       ${p.title
         ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>`
         : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
-      ${renderCardFoot(p)}
+      ${renderCardFoot(p, { onCard: true })}
       ${boardActionsHtml(p)}
     </article>
   `;
