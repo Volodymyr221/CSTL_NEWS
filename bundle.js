@@ -11358,7 +11358,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const stale = el.nextElementSibling;
       if (stale && stale.classList.contains("fd-more"))
         stale.remove();
+      if (!el.isConnected)
+        return;
       const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+      if (!isFinite(lh) || !isFinite(collapsed) || !isFinite(contentFull))
+        return;
       if (contentFull <= contentCollapsed + lh * CLAMP_SLACK)
         return;
       const open = expandedPosts.has(id);
@@ -11906,6 +11910,71 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       else
         keepScroll(scroller, finish2, postId);
     });
+  }
+  var screenRemeasure = /* @__PURE__ */ new WeakMap();
+  function preloadImage(url, timeout = 2500) {
+    if (!url)
+      return Promise.resolve();
+    return new Promise((res) => {
+      const im = new Image();
+      const done = () => res();
+      im.onload = done;
+      im.onerror = done;
+      im.src = url;
+      setTimeout(done, timeout);
+    });
+  }
+  async function patchPageScreen(pageId) {
+    const screens = [...document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`)];
+    if (!screens.length)
+      return;
+    const page = pages.find((p) => p.id === pageId);
+    if (!page)
+      return;
+    await Promise.all([preloadImage(page.banner_url), preloadImage(page.avatar_url)]);
+    screens.forEach((screen) => {
+      const banner = screen.querySelector(".fd-banner");
+      if (banner) {
+        banner.classList.toggle("fd-banner--view", !!page.banner_url);
+        const img = banner.querySelector("img");
+        if (page.banner_url) {
+          if (img) {
+            if (img.getAttribute("src") !== page.banner_url)
+              img.src = page.banner_url;
+          } else
+            banner.innerHTML = `<img src="${escapeHtml(page.banner_url)}" alt="">`;
+        } else if (img)
+          banner.innerHTML = "";
+      }
+      const ava = screen.querySelector(".fd-screen-ava");
+      if (ava) {
+        ava.classList.toggle("fd-screen-ava--view", !!page.avatar_url);
+        ava.innerHTML = avatarHtml(page.avatar_url, page.name, "fd-screen-ava-img");
+      }
+      const nameEl = screen.querySelector(".fd-screen-name");
+      if (nameEl)
+        nameEl.textContent = page.name || "";
+      const titleIn = screen.querySelector(".fd-screen-title-in");
+      let themeEl = screen.querySelector(".fd-screen-theme");
+      if (page.theme) {
+        if (!themeEl && titleIn) {
+          themeEl = document.createElement("div");
+          themeEl.className = "fd-screen-theme";
+          titleIn.appendChild(themeEl);
+        }
+        if (themeEl)
+          themeEl.textContent = page.theme;
+      } else if (themeEl)
+        themeEl.remove();
+      screenRemeasure.get(screen)?.();
+    });
+  }
+  function refreshFeedCircles() {
+    const circlesEl = document.getElementById("feed-circles");
+    if (!circlesEl)
+      return;
+    circlesEl.innerHTML = circlesHtml();
+    layoutCircles();
   }
   function applyPostEvent(payload) {
     const row = payload.new || payload.old;
@@ -12809,7 +12878,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
-    wireClamps(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
     screen.querySelectorAll(".fd-sctab").forEach((tab) => tab.addEventListener("click", () => {
       screen.querySelectorAll(".fd-sctab").forEach((t) => t.classList.toggle("is-on", t === tab));
@@ -12819,10 +12887,15 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       wireGalleries(screen);
       wireClamps(screen);
     }));
-    if (page.banner_url)
-      screen.querySelector(".fd-banner--view")?.addEventListener("click", () => openViewer([page.banner_url], 0));
-    if (page.avatar_url)
-      screen.querySelector(".fd-screen-ava--view")?.addEventListener("click", () => openViewer([page.avatar_url], 0));
+    screen.addEventListener("click", (e) => {
+      const cur = pages.find((p) => p.id === pageId) || {};
+      if (e.target.closest(".fd-banner--view") && cur.banner_url) {
+        openViewer([cur.banner_url], 0);
+        return;
+      }
+      if (e.target.closest(".fd-screen-ava--view") && cur.avatar_url)
+        openViewer([cur.avatar_url], 0);
+    });
     const menuBtn = screen.querySelector(".fd-screen-menu");
     const menuPop = screen.querySelector(".fd-screen-menu-pop");
     if (menuBtn && menuPop) {
@@ -12918,8 +12991,13 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
         measure();
         applyTitle();
       });
+      screenRemeasure.set(screen, () => {
+        measure();
+        onTitle();
+      });
     }
     document.body.appendChild(screen);
+    wireClamps(screen);
     requestAnimationFrame(() => screen.classList.add("open"));
   }
   function bellClass(pageId) {
@@ -13565,9 +13643,12 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
             }
           });
           close();
-          document.querySelectorAll(".fd-screen").forEach((s) => s.remove());
-          renderFeed();
-          openPageScreen(pageId, true);
+          patchPageScreen(pageId);
+          refreshFeedCircles();
+          posts.forEach((p) => {
+            if (p.page_id === pageId)
+              patchPostCard(p.id);
+          });
         } else {
           showToast(res.error || "\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0437\u0431\u0435\u0440\u0435\u0433\u0442\u0438 \u2014 \u0441\u043F\u0440\u043E\u0431\u0443\u0439 \u0449\u0435 \u0440\u0430\u0437", 4e3, "error");
         }
@@ -13661,7 +13742,20 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     requestAnimationFrame(() => back.classList.add("open"));
   }
+  var TAP_SLOP = 10;
+  var tapDown = null;
+  function isCleanTap(down, e) {
+    if (!down)
+      return false;
+    if (Math.abs(e.clientX - down.x) > TAP_SLOP || Math.abs(e.clientY - down.y) > TAP_SLOP)
+      return false;
+    const sel = typeof window.getSelection === "function" ? window.getSelection() : null;
+    return !(sel && !sel.isCollapsed);
+  }
   function wireCards(root) {
+    root.addEventListener("pointerdown", (e) => {
+      tapDown = { x: e.clientX, y: e.clientY };
+    }, { passive: true });
     root.addEventListener("click", (e) => {
       const menuBtn = e.target.closest("[data-post-menu]");
       if (menuBtn) {
@@ -13694,6 +13788,17 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (moreBtn) {
         togglePostText(Number(moreBtn.dataset.toggleText), moreBtn);
         return;
+      }
+      const textEl = e.target.closest(".fd-text");
+      if (textEl && textEl.classList.contains("fd-text--clip")) {
+        const id = Number(textEl.closest("[data-post]")?.dataset.post);
+        const btn = textEl.nextElementSibling;
+        if (id && !expandedPosts.has(id) && btn?.classList.contains("fd-more") && isCleanTap(tapDown, e)) {
+          togglePostText(id, btn);
+          return;
+        }
+        if (expandedPosts.has(id))
+          return;
       }
       const openPage = e.target.closest("[data-open-page]");
       if (openPage) {

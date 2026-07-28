@@ -213,9 +213,11 @@ const CLAMP_LINES = 7;   // скільки рядків видно у згорн
 const CLAMP_SLACK = 2;   // якщо ховається менше — кнопки НЕ показуємо (заради 1-2 рядків не варто)
 
 // Які пости людина розгорнула вручну. Тримаємо тут, а НЕ в розмітці, бо
-// renderFeed() робить `listEl.innerHTML = …` на кожен лайк / новий пост /
-// видалення — будь-який стан у DOM злетів би, і розгорнутий пост схлопувався б
-// сам собою просто тому, що хтось поставив лайк.
+// `renderFeed()` перемальовує список цілком (`listEl.innerHTML = …`) — будь-який стан,
+// записаний у DOM, злітав би. ⚠️ 27-28.07 таких перемальовок стало НАБАГАТО менше
+// (дії над постом тепер точкові — див. `patchPostCard`), але renderFeed лишився на
+// першому показі, поверненні на вкладку і пігулці «нові публікації». Тобто причина
+// тримати стан поза розміткою нікуди не поділась.
 const expandedPosts = new Set();
 
 // Висоти згорнутого і повного тексту, у пікселях, з ЖИВИХ стилів елемента.
@@ -265,8 +267,21 @@ function wireClamps(root) {
     const stale = el.nextElementSibling;
     if (stale && stale.classList.contains('fd-more')) stale.remove();
 
+    // 🔴 БАГ 27.07 (Вова: «на сторінці спільноти текст уже відкритий, а кнопка пише
+    // "Показати більше"; тисну — нічого не збільшується, лише міняється напис»).
+    // Корінь: `openPageScreen` кликав `wireClamps` ДО того, як екран потрапляв у
+    // документ. У відʼєднаного елемента `getComputedStyle` віддає порожні значення,
+    // тож `line-height` ставав NaN — і далі все рахувалось у NaN. Умова «текст
+    // короткий» (`NaN <= NaN`) хибна, тому функція не виходила, а `max-height: NaNpx`
+    // браузер мовчки ігнорував. Наслідок: текст лишався ПОВНИЙ, але кнопку домальовано.
+    // Тепер міряти можна лише те, що справді в документі — інакше числа вигадані.
+    if (!el.isConnected) return;
+
     // Метрики читаємо ПІСЛЯ зняття обмежень — інакше це була б висота обрізаного блоку.
     const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+    // Другий рубіж на той самий випадок: якщо мірка чомусь не дала чисел, НІЧОГО не
+    // робимо. Краще довгий текст без кнопки, ніж кнопка, яка бреше.
+    if (!isFinite(lh) || !isFinite(collapsed) || !isFinite(contentFull)) return;
     if (contentFull <= contentCollapsed + lh * CLAMP_SLACK) return;   // короткий пост — не чіпаємо
 
     const open = expandedPosts.has(id);
@@ -961,6 +976,83 @@ function removePostCard(postId) {
     if (cardVisible(node, scroller)) collapseCard(node, finish);
     else keepScroll(scroller, finish, postId);
   });
+}
+
+// ── ШАПКА ЕКРАНА СПІЛЬНОТИ: оновлення на місці ───────────────────────────────
+// Останнє місце, де після дії екран будувався заново (тобто прокрутка починалась з нуля).
+// Відкладалось свідомо: масштаб липкого заголовка міряється ОДИН раз під конкретну назву,
+// тож саму лише розмітку підмінити мало — треба ще й перевиміряти. Тому екран віддає
+// свій перемір назовні (`screenRemeasure`), і збереження сторінки більше нічого не зносить.
+const screenRemeasure = new WeakMap();
+
+// Дочекатись, поки картинка справді завантажиться. Без цього на місці банера/аватара
+// на частку секунди лишався б порожній прямокутник — саме те «блимання», якого позбувались.
+// Стеля 2.5с: повільна мережа не має тримати шапку в старому стані нескінченно.
+function preloadImage(url, timeout = 2500) {
+  if (!url) return Promise.resolve();
+  return new Promise(res => {
+    const im = new Image();
+    const done = () => res();
+    im.onload = done; im.onerror = done;
+    im.src = url;
+    setTimeout(done, timeout);
+  });
+}
+
+// Оновити шапку відкритого екрана спільноти під свіжі дані сторінки.
+// Працює і тоді, коли чогось НЕ БУЛО і воно зʼявилось (банер, опис) — і навпаки.
+async function patchPageScreen(pageId) {
+  const screens = [...document.querySelectorAll(`.fd-screen[data-page="${pageId}"]`)];
+  if (!screens.length) return;
+  const page = pages.find(p => p.id === pageId);
+  if (!page) return;
+  await Promise.all([preloadImage(page.banner_url), preloadImage(page.avatar_url)]);
+
+  screens.forEach(screen => {
+    // Банер. Класом `--view` позначаємо саме той, що можна відкрити на весь екран.
+    const banner = screen.querySelector('.fd-banner');
+    if (banner) {
+      banner.classList.toggle('fd-banner--view', !!page.banner_url);
+      const img = banner.querySelector('img');
+      if (page.banner_url) {
+        if (img) { if (img.getAttribute('src') !== page.banner_url) img.src = page.banner_url; }
+        else banner.innerHTML = `<img src="${escapeHtml(page.banner_url)}" alt="">`;
+      } else if (img) banner.innerHTML = '';
+    }
+    // Аватар. `avatarHtml` сам вирішує: фото чи кольорова заглушка з першою літерою —
+    // тому і при знятому аватарі, і при зміненій назві заглушка лишається правильною.
+    const ava = screen.querySelector('.fd-screen-ava');
+    if (ava) {
+      ava.classList.toggle('fd-screen-ava--view', !!page.avatar_url);
+      ava.innerHTML = avatarHtml(page.avatar_url, page.name, 'fd-screen-ava-img');
+    }
+    // Назва і опис.
+    const nameEl = screen.querySelector('.fd-screen-name');
+    if (nameEl) nameEl.textContent = page.name || '';
+    const titleIn = screen.querySelector('.fd-screen-title-in');
+    let themeEl = screen.querySelector('.fd-screen-theme');
+    if (page.theme) {
+      if (!themeEl && titleIn) {           // опису не було — створюємо на тому ж місці
+        themeEl = document.createElement('div');
+        themeEl.className = 'fd-screen-theme';
+        titleIn.appendChild(themeEl);
+      }
+      if (themeEl) themeEl.textContent = page.theme;
+    } else if (themeEl) themeEl.remove();  // опис прибрали — знімаємо і рядок
+
+    // 🔑 Перемір ОБОВʼЯЗКОВИЙ і саме після зміни тексту: від ширини назви залежить,
+    // наскільки її зменшувати в піні, а від висоти заголовка — висота скла під ним.
+    screenRemeasure.get(screen)?.();
+  });
+}
+
+// Кружечки спільнот угорі «Стрічки» — там теж назва й аватар сторінки.
+// Окремо, бо це самостійний контейнер: перемальовується цілком, прокрутки списку не чіпає.
+function refreshFeedCircles() {
+  const circlesEl = document.getElementById('feed-circles');
+  if (!circlesEl) return;
+  circlesEl.innerHTML = circlesHtml();
+  layoutCircles();
 }
 
 // ── ЖИВА СИНХРОНІЗАЦІЯ САМИХ ПОСТІВ ────────────────────────────────────────────────
@@ -2217,7 +2309,8 @@ async function openPageScreen(pageId, reopen = false) {
     b.addEventListener('click', () => openPageEditor(pageId)));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
   wireGalleries(screen);       // каруселі фото в постах сторінки
-  wireClamps(screen);          // згортання довгих текстів
+  // ⚠️ `wireClamps` тут НЕ кличемо — екран ще не в документі, а згортання тексту
+  // рахується з ЖИВИХ стилів. Виклик стоїть нижче, одразу після `appendChild`.
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
 
   // Сегмент «Дописи | Події» — перемикає список у межах екрана каналу.
@@ -2230,10 +2323,16 @@ async function openPageScreen(pageId, reopen = false) {
     }));
 
   // Перегляд фото банера/аватара на весь екран (для всіх; реюз openViewer).
-  if (page.banner_url) screen.querySelector('.fd-banner--view')
-    ?.addEventListener('click', () => openViewer([page.banner_url], 0));
-  if (page.avatar_url) screen.querySelector('.fd-screen-ava--view')
-    ?.addEventListener('click', () => openViewer([page.avatar_url], 0));
+  // ⚠️ ЧЕРЕЗ ДЕЛЕГУВАННЯ, а не двома прямими слухачами. Адреса читається з `pages`
+  // У МОМЕНТ ТАПУ, а не при відкритті екрана. Раніше це було безпечно лише тому, що
+  // після збереження сторінки екран будувався заново; тепер він оновлюється на місці —
+  // і замикання зі старим посиланням показувало б стару картинку. Заразом працює
+  // випадок «банера не було, зʼявився»: тоді слухача не існувало б узагалі.
+  screen.addEventListener('click', e => {
+    const cur = pages.find(p => p.id === pageId) || {};
+    if (e.target.closest('.fd-banner--view') && cur.banner_url) { openViewer([cur.banner_url], 0); return; }
+    if (e.target.closest('.fd-screen-ava--view') && cur.avatar_url) openViewer([cur.avatar_url], 0);
+  });
 
   // Меню «⋯» (лише адмін): відкрити/закрити; клік поза меню або по пункту — закриває.
   const menuBtn = screen.querySelector('.fd-screen-menu');
@@ -2357,9 +2456,15 @@ async function openPageScreen(pageId, reopen = false) {
     screen.addEventListener('scroll', onTitle, { passive: true });
     window.addEventListener('resize', () => { measure(); onTitle(); });
     requestAnimationFrame(() => { measure(); applyTitle(); });
+    // 🔑 Віддаємо перемір назовні. Саме через нього збереження сторінки раніше вимагало
+    // перебудови всього екрана: масштаб липкого заголовка рахується ОДИН раз під конкретну
+    // назву, і після перейменування лишився б розрахований під стару. Тепер шапку можна
+    // оновити на місці й одразу перевиміряти (`patchPageScreen`).
+    screenRemeasure.set(screen, () => { measure(); onTitle(); });
   }
 
   document.body.appendChild(screen);
+  wireClamps(screen);          // згортання довгих текстів — ЛИШЕ коли екран у документі
   requestAnimationFrame(() => screen.classList.add('open'));
 }
 
@@ -3042,9 +3147,14 @@ function openPageEditor(pageId) {
         Object.assign(page, res.page);                         // оновити кеш сторінки
         posts.forEach(p => { if (p.page_id === pageId && p.pages) { p.pages.avatar_url = page.avatar_url; p.pages.name = page.name; } });
         close();
-        document.querySelectorAll('.fd-screen').forEach(s => s.remove());
-        renderFeed();
-        openPageScreen(pageId, true);   // переоткриття — запис в історії вже є
+        // ТОЧКОВО, без перебудови екрана (останнє таке місце — закрито 28.07):
+        //   1) шапка відкритого екрана спільноти — на місці, з переміром заголовка;
+        //   2) кружечки вгорі «Стрічки» — там та сама назва й аватар;
+        //   3) картки цієї спільноти — у їхніх шапках теж назва й аватар сторінки.
+        // Прокрутка при цьому не рухається: жоден список не перемальовується цілком.
+        patchPageScreen(pageId);
+        refreshFeedCircles();
+        posts.forEach(p => { if (p.page_id === pageId) patchPostCard(p.id); });
       } else {
         showToast(res.error || 'Не вдалося зберегти — спробуй ще раз', 4000, 'error');
       }
@@ -3138,8 +3248,31 @@ function openPostMenu(postId) {
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
+// ── Тап ПО САМОМУ ТЕКСТУ розгортає пост (як в Instagram/Facebook) ────────────
+// Вимога Вови 27.07: «щоб на текст можна було також відкрити повністю, але чітко —
+// не просто десь тицьнув і воно відкрилось. А згорнути вже по кнопці».
+//
+// Три умови, і всі три обовʼязкові:
+//   1. тап саме по тексту згорнутого поста (розгорнутий тап ІГНОРУЄ — інакше випадкове
+//      торкання складало б назад те, що людина щойно відкрила читати);
+//   2. палець майже не зрушив (≤10px) — інакше це був скрол або початок виділення;
+//   3. нічого не виділено — якщо людина виділяє текст, вона його читає, а не відкриває.
+const TAP_SLOP = 10;   // скільки пікселів руху ще вважається тапом, а не жестом
+let tapDown = null;    // де палець торкнувся востаннє (спільне на всі картки)
+
+// Окремою функцією — щоб правило можна було перевірити числами у стенді,
+// а не «на око» в браузері.
+function isCleanTap(down, e) {
+  if (!down) return false;
+  if (Math.abs(e.clientX - down.x) > TAP_SLOP || Math.abs(e.clientY - down.y) > TAP_SLOP) return false;
+  const sel = typeof window.getSelection === 'function' ? window.getSelection() : null;
+  return !(sel && !sel.isCollapsed);
+}
+
 // ── Делегування подій на картках (лайк/коментарі/відкрити сторінку) ─────────
 function wireCards(root) {
+  // Точка дотику пальця — потрібна, щоб відрізнити тап від скролу (див. isCleanTap).
+  root.addEventListener('pointerdown', e => { tapDown = { x: e.clientX, y: e.clientY }; }, { passive: true });
   root.addEventListener('click', e => {
     const menuBtn = e.target.closest('[data-post-menu]');   // «⋯» поста — перед open-page
     if (menuBtn) { openPostMenu(Number(menuBtn.dataset.postMenu)); return; }
@@ -3160,6 +3293,20 @@ function wireCards(root) {
     // розгортання людину викидало б на інший екран.
     const moreBtn = e.target.closest('[data-toggle-text]');
     if (moreBtn) { togglePostText(Number(moreBtn.dataset.toggleText), moreBtn); return; }
+    // Тап по тексту згорнутого поста = «Показати більше». Тільки РОЗГОРТАЄ:
+    // згортання лишається за кнопкою (див. коментар до isCleanTap вище).
+    const textEl = e.target.closest('.fd-text');
+    if (textEl && textEl.classList.contains('fd-text--clip')) {
+      const id = Number(textEl.closest('[data-post]')?.dataset.post);
+      const btn = textEl.nextElementSibling;
+      if (id && !expandedPosts.has(id) && btn?.classList.contains('fd-more') && isCleanTap(tapDown, e)) {
+        togglePostText(id, btn);
+        return;
+      }
+      // Тап по тексту, який уже розгорнуто, не робить нічого — і НЕ провалюється
+      // далі на «відкрити сторінку»: текст це вміст поста, а не кнопка переходу.
+      if (expandedPosts.has(id)) return;
+    }
     const openPage = e.target.closest('[data-open-page]');
     if (openPage) { openPageScreen(Number(openPage.dataset.openPage)); return; }
   });
