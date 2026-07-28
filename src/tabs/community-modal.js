@@ -91,7 +91,9 @@ export function openBoardModal(opts = {}) {
     // 🆕 28.07 (потік 2): ціна — НЕОБОВʼЯЗКОВА (пряма вимога Вови: оголошення має
     // виглядати чітко і з нею, і без неї). Тримаємо РЯДКОМ, а не числом: поле може
     // бути порожнім, а порожній рядок і 0 — це різні речі («не вказано» vs «безкоштовно»).
-    price: isEdit && editPost.price != null ? String(editPost.price) : '',
+    // ⚠️ База віддає numeric рядком «1500.00» — прибираємо копійки, якщо їх нема,
+    // інакше у полі редагування стояло б «1500.00» замість «1500».
+    price: isEdit && editPost.price != null ? String(editPost.price).replace(/\.00$/, '') : '',
     // «Договірна» — окреме поле в базі (`posts.price_negotiable`). Взаємовиключне з числом.
     negotiable: isEdit ? !!editPost.price_negotiable : false,
   };
@@ -162,14 +164,20 @@ export function openBoardModal(opts = {}) {
       <div class="bm-section" id="bm-price-section"${categoryHasPrice(state.category) ? '' : ' hidden'}>
         <label class="bm-label" for="bm-price">Ціна <span class="bm-label-hint">(необов'язково)</span></label>
         <div class="bm-price-field">
-          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="напр. 2500" value="${escapeHtml(state.price)}"${state.negotiable ? ' disabled' : ''}>
+          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="напр. 2500" value="${escapeHtml(isFreePrice() ? '' : state.price)}"${state.negotiable || isFreePrice() ? ' disabled' : ''}>
           <span class="bm-price-cur">₴</span>
+        </div>
+        <div class="bm-price-opts">
           <label class="bm-negot">
             <input type="checkbox" id="bm-negotiable"${state.negotiable ? ' checked' : ''}>
             <span>Договірна</span>
           </label>
+          <label class="bm-negot">
+            <input type="checkbox" id="bm-free"${isFreePrice() ? ' checked' : ''}>
+            <span>Безкоштовно</span>
+          </label>
         </div>
-        <p class="bm-label-hint bm-price-note">Порожньо — ціни на картці не буде. «0» покаже «Безкоштовно».</p>
+        <p class="bm-label-hint bm-price-note">Порожньо — ціни на картці не буде.</p>
       </div>
 
       <div class="bm-section">
@@ -226,28 +234,23 @@ export function openBoardModal(opts = {}) {
       if (parts.length > 1) v = `${parts[0]}.${parts.slice(1).join('').slice(0, 2)}`;
       e.target.value = v;
       state.price = v;
-      // Вписав число — «Договірна» скидається. Це НЕ примха інтерфейсу: сервер робить
-      // рівно те саме (`if v_price is not null then v_negot := false`), і якби клієнт
-      // лишив галочку, вона б стояла в формі, а в базу не потрапила.
-      if (v && state.negotiable) {
+      // Вписав число — обидві галочки знімаються. Це НЕ примха інтерфейсу: сервер
+      // робить те саме (`if v_price is not null then v_negot := false`), і якби клієнт
+      // лишив галочку стояти, вона б висіла у формі, а в базу не потрапила.
+      if (v) {
         state.negotiable = false;
-        const cb = dynamicEl.querySelector('#bm-negotiable');
-        if (cb) cb.checked = false;
+        const cbN = dynamicEl.querySelector('#bm-negotiable');
+        const cbF = dynamicEl.querySelector('#bm-free');
+        if (cbN) cbN.checked = false;
+        if (cbF) cbF.checked = false;
       }
       renderPreview();
     });
-    // «Договірна» — вимикає поле числа (і навпаки). Взаємовиключність тут ВИДИМА:
-    // поле стає неактивним, тобто людина не вводить те, що все одно буде відкинуто.
     dynamicEl.querySelector('#bm-negotiable')?.addEventListener('change', e => {
-      state.negotiable = e.target.checked;
-      const inp = dynamicEl.querySelector('#bm-price');
-      if (state.negotiable) {
-        state.price = '';
-        if (inp) { inp.value = ''; inp.disabled = true; }
-      } else if (inp) {
-        inp.disabled = false;
-      }
-      renderPreview();
+      setPriceMode(e.target.checked ? 'negot' : 'num');
+    });
+    dynamicEl.querySelector('#bm-free')?.addEventListener('change', e => {
+      setPriceMode(e.target.checked ? 'free' : 'num');
     });
     // Локація
     dynamicEl.querySelector('#bm-location')?.addEventListener('change', e => {
@@ -267,6 +270,34 @@ export function openBoardModal(opts = {}) {
     });
     syncPriceVisibility();
     bindPhotoSlots();
+  }
+
+  // «Безкоштовно» — це НЕ окреме поле в базі, а ціна 0. Тому окремого стану не заводимо:
+  // ознака виводиться з самої ціни. Один стан = нема чому розсинхронитись.
+  // ⚠️ Порівнюємо ЧИСЛОМ, а не рядком: база віддає numeric як «0.00», і `=== '0'`
+  // мовчки не спрацював би при редагуванні вже збереженого безкоштовного оголошення.
+  function isFreePrice() {
+    return state.price !== '' && Number(state.price) === 0;
+  }
+
+  // Три взаємовиключні стани ціни: число · «Договірна» · «Безкоштовно».
+  // ОДИН вхід на всі переходи — інакше три обробники по-різному уявляли б, що саме
+  // зараз стоїть, і рано чи пізно розійшлись би (класична хвороба двох джерел правди).
+  function setPriceMode(mode) {   // 'num' | 'negot' | 'free'
+    const inp = dynamicEl.querySelector('#bm-price');
+    const cbN = dynamicEl.querySelector('#bm-negotiable');
+    const cbF = dynamicEl.querySelector('#bm-free');
+    state.negotiable = mode === 'negot';
+    // 'free' → 0 (саме так «безкоштовно» лежить у базі); 'negot' і 'num' → порожньо
+    // (у режимі 'num' людина щойно зняла галочку і вписуватиме число сама).
+    state.price = mode === 'free' ? '0' : '';
+    if (inp) {
+      if (mode !== 'num') inp.value = '';
+      inp.disabled = mode !== 'num';
+    }
+    if (cbN) cbN.checked = mode === 'negot';
+    if (cbF) cbF.checked = mode === 'free';
+    renderPreview();
   }
 
   // 🆕 28.07 — поле «Ціна» видно ЛИШЕ для категорій, де ціна має сенс

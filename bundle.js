@@ -2483,7 +2483,9 @@
       // 🆕 28.07 (потік 2): ціна — НЕОБОВʼЯЗКОВА (пряма вимога Вови: оголошення має
       // виглядати чітко і з нею, і без неї). Тримаємо РЯДКОМ, а не числом: поле може
       // бути порожнім, а порожній рядок і 0 — це різні речі («не вказано» vs «безкоштовно»).
-      price: isEdit && editPost.price != null ? String(editPost.price) : "",
+      // ⚠️ База віддає numeric рядком «1500.00» — прибираємо копійки, якщо їх нема,
+      // інакше у полі редагування стояло б «1500.00» замість «1500».
+      price: isEdit && editPost.price != null ? String(editPost.price).replace(/\.00$/, "") : "",
       // «Договірна» — окреме поле в базі (`posts.price_negotiable`). Взаємовиключне з числом.
       negotiable: isEdit ? !!editPost.price_negotiable : false
     };
@@ -2545,14 +2547,20 @@
       <div class="bm-section" id="bm-price-section"${categoryHasPrice(state.category) ? "" : " hidden"}>
         <label class="bm-label" for="bm-price">\u0426\u0456\u043D\u0430 <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
         <div class="bm-price-field">
-          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="\u043D\u0430\u043F\u0440. 2500" value="${escapeHtml(state.price)}"${state.negotiable ? " disabled" : ""}>
+          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="\u043D\u0430\u043F\u0440. 2500" value="${escapeHtml(isFreePrice() ? "" : state.price)}"${state.negotiable || isFreePrice() ? " disabled" : ""}>
           <span class="bm-price-cur">\u20B4</span>
+        </div>
+        <div class="bm-price-opts">
           <label class="bm-negot">
             <input type="checkbox" id="bm-negotiable"${state.negotiable ? " checked" : ""}>
             <span>\u0414\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430</span>
           </label>
+          <label class="bm-negot">
+            <input type="checkbox" id="bm-free"${isFreePrice() ? " checked" : ""}>
+            <span>\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</span>
+          </label>
         </div>
-        <p class="bm-label-hint bm-price-note">\u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u0446\u0456\u043D\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043D\u0435 \u0431\u0443\u0434\u0435. \xAB0\xBB \u043F\u043E\u043A\u0430\u0436\u0435 \xAB\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E\xBB.</p>
+        <p class="bm-label-hint bm-price-note">\u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u0446\u0456\u043D\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043D\u0435 \u0431\u0443\u0434\u0435.</p>
       </div>
 
       <div class="bm-section">
@@ -2603,27 +2611,22 @@
           v = `${parts[0]}.${parts.slice(1).join("").slice(0, 2)}`;
         e.target.value = v;
         state.price = v;
-        if (v && state.negotiable) {
+        if (v) {
           state.negotiable = false;
-          const cb = dynamicEl.querySelector("#bm-negotiable");
-          if (cb)
-            cb.checked = false;
+          const cbN = dynamicEl.querySelector("#bm-negotiable");
+          const cbF = dynamicEl.querySelector("#bm-free");
+          if (cbN)
+            cbN.checked = false;
+          if (cbF)
+            cbF.checked = false;
         }
         renderPreview();
       });
       dynamicEl.querySelector("#bm-negotiable")?.addEventListener("change", (e) => {
-        state.negotiable = e.target.checked;
-        const inp = dynamicEl.querySelector("#bm-price");
-        if (state.negotiable) {
-          state.price = "";
-          if (inp) {
-            inp.value = "";
-            inp.disabled = true;
-          }
-        } else if (inp) {
-          inp.disabled = false;
-        }
-        renderPreview();
+        setPriceMode(e.target.checked ? "negot" : "num");
+      });
+      dynamicEl.querySelector("#bm-free")?.addEventListener("change", (e) => {
+        setPriceMode(e.target.checked ? "free" : "num");
       });
       dynamicEl.querySelector("#bm-location")?.addEventListener("change", (e) => {
         state.location = e.target.value;
@@ -2640,6 +2643,26 @@
       });
       syncPriceVisibility();
       bindPhotoSlots();
+    }
+    function isFreePrice() {
+      return state.price !== "" && Number(state.price) === 0;
+    }
+    function setPriceMode(mode) {
+      const inp = dynamicEl.querySelector("#bm-price");
+      const cbN = dynamicEl.querySelector("#bm-negotiable");
+      const cbF = dynamicEl.querySelector("#bm-free");
+      state.negotiable = mode === "negot";
+      state.price = mode === "free" ? "0" : "";
+      if (inp) {
+        if (mode !== "num")
+          inp.value = "";
+        inp.disabled = mode !== "num";
+      }
+      if (cbN)
+        cbN.checked = mode === "negot";
+      if (cbF)
+        cbF.checked = mode === "free";
+      renderPreview();
     }
     function syncPriceVisibility() {
       const sec = dynamicEl.querySelector("#bm-price-section");
