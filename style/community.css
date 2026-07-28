@@ -2329,6 +2329,18 @@
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 /* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
 .cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; font-size: 13px; }
+/* 🆕 29.07 — ІМ'Я АВТОРА стало на місце населеного пункту у шапці модалки
+   (Вова: «поміщай місцями»). Ті самі правила, що були в НП: праворуч від пігулки
+   категорії, той самий рядок, той самий кегль — тобто перестановка НЕ ламає ритм шапки. */
+.cm-board-modal-subhead .cm-board-author--head {
+  float: right;
+  margin-bottom: 0;
+  font-size: 13px;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 .cm-board-modal-subhead .cm-board-title { clear: both; margin: 0; }
 /* У модалці ціна більша — там місця вдосталь і це головна цифра екрана */
 .cm-board-modal-subhead .cm-board-price { clear: both; font-size: 22px; margin-bottom: 4px; }
@@ -2436,7 +2448,14 @@
   padding-top: 0;
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-foot::before { display: none; }
-.cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: center; }
+/* 🆕 29.07 — футер модалки тепер показує НП+дату і мусить вирівнюватись ТАК САМО, як
+   на картці (Вова: «використати таку саму логіку як на карточці коли модалка закрита»).
+   Було `text-align: center` — воно лишилось від часів, коли тут стояло ім'я по центру
+   між кнопками. З лівим вирівнюванням центрування зламало б увесь прийом із колонками
+   (пін/стрілка ліворуч, текст під першою буквою). */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: left; }
+/* НП у футері модалки — трохи більший, ніж на картці: там тісно у дві колонки, тут ні. */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-loc--foot { font-size: 13px; }
 /* 🆕 28.07 (потік 2): контакт переїхав із КАРТКИ у модалку однією широкою кнопкою.
    Футер модалки став ДВОРЯДКОВИМ: верхній рядок — автор/дата + зберегти/шер (рівно як
    був, не переписаний), нижній — контакт на всю ширину.

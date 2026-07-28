@@ -114,22 +114,29 @@ function renderPrice(p) {
 //   • МОДАЛКА — імʼя автора, як було. Локацію там НЕ повторюємо: у модалці вона вже
 //     стоїть у липкій шапці (`renderAdModal` → `.cm-board-modal-subhead`), і другий
 //     такий самий рядок був би дублем.
-function renderCardFoot(p, { actions = false, onCard = false } = {}) {
+function renderCardFoot(p, { actions = false } = {}) {
   const tel = actions ? phoneOf(p) : '';
-  const lead = onCard
-    ? renderLoc(p.location, 'cm-board-loc--foot')
-    : `<span class="cm-board-author cm-board-author--card">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>`;
   return `
-      <div class="cm-board-foot${onCard ? ' cm-board-foot--card' : ''}">
+      <div class="cm-board-foot cm-board-foot--card">
         ${actions ? `<div class="cm-board-foot-actions">
           ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>` : ''}
           <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
         </div>` : ''}
         <div class="cm-board-foot-who">
-          ${lead}
+          ${renderLoc(p.location, 'cm-board-loc--foot')}
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       </div>`;
+}
+
+// Ім'я автора у ШАПЦІ зум-модалки — там, де раніше стояв населений пункт.
+// Вова 29.07: «при відкритій модалці назву населеного пункту та ім'я людини поміняй
+// місцями». Тобто НП з шапки переїхав у футер (і там працює за тією самою логікою, що
+// на картці: пін над стрілкою, дата під першою буквою), а ім'я піднялось у шапку.
+// ⚠️ `nameUid` + `liveName` обов'язкові — на них тримається підстановка живого імені
+// з бази (`hydrateNames`); без них у шапці лишався б знімок імені на момент відкриття.
+function renderAuthorHead(p) {
+  return `<span class="cm-board-author cm-board-author--head">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>`;
 }
 
 // Контакт у зум-модалці: одна широка кнопка «Написати» (внутрішній чат) + дзвінок
@@ -224,7 +231,7 @@ function renderBoardCard(p) {
       ${p.title
         ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>`
         : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
-      ${renderCardFoot(p, { onCard: true })}
+      ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -256,7 +263,7 @@ function renderAdModal(p) {
       ${photoHtml}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${renderLoc(p.location)}
+        ${renderAuthorHead(p)}
         ${renderPrice(p)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       </div>

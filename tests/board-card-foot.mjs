@@ -116,6 +116,54 @@ for (const [loc, time] of [['ЖОРНИЩЕ', '13 липня'], ['ОЛИЦЬКА
      `розʼїзд стрілки=${b.bumpDrift}px`);
 }
 
+// 🆕 29.07 — ТА САМА ЛОГІКА В МОДАЛЦІ. Вова: «при відкритій модалці… використати таку
+// саму логіку як на карточці». Футер модалки має власні правила (він мерджиться в один
+// рядок із «зберегти/шер»), тож зелене світло на картці НЕ доводить нічого про модалку —
+// саме там колись стояло `text-align: center`, яке зламало б колонки.
+async function measureModal(loc, time, bumped) {
+  await page.setContent(`<!doctype html><html><head><meta charset="utf-8"><style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--red:#722F37;--ink-soft:#5F5448;--ink:#2A2520}
+${CSS}
+html,body{margin:0;height:100%}
+</style></head><body>
+<article class="cm-board-note cm-board-modal-note visible">
+  <div class="cm-board-modal-foot">
+    <div class="cm-board-foot cm-board-foot--card">
+      <div class="cm-board-foot-who">
+        <span class="cm-board-loc cm-board-loc--foot"><svg width="12" height="12" viewBox="0 0 24 24"></svg><span class="cm-board-loc-t">${loc}</span></span>
+        <span class="cm-board-time">${bumped
+          ? `<span class="cm-board-bumped"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>${time}</span>`
+          : time}</span>
+      </div>
+    </div>
+    <div class="bd-actions bd-actions--board-compact"><div class="bd-actions-extra"></div></div>
+  </div>
+</article></body></html>`);
+  return page.evaluate(() => {
+    const tl = (el) => { const r = document.createRange(); r.selectNodeContents(el); return r.getBoundingClientRect().left; };
+    const locTxt = document.querySelector('.cm-board-loc-t');
+    const pin = document.querySelector('.cm-board-loc--foot svg');
+    const bump = document.querySelector('.cm-board-bumped');
+    const timeEl = document.querySelector('.cm-board-time');
+    const host = bump || timeEl;
+    const node = [...host.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+    const r = document.createRange();
+    if (node) r.selectNode(node); else r.selectNodeContents(host);
+    const bi = bump && bump.querySelector('svg');
+    return {
+      drift: Math.round(Math.abs(tl(locTxt) - r.getBoundingClientRect().left)),
+      bumpDrift: bi ? Math.round(Math.abs(pin.getBoundingClientRect().left - bi.getBoundingClientRect().left)) : null,
+    };
+  });
+}
+
+for (const bumped of [false, true]) {
+  const mm = await measureModal('ЖОРНИЩЕ', '13 липня', bumped);
+  ok(`МОДАЛКА${bumped ? ' ↑піднято' : ''} · дата під першою буквою НП`, mm.drift === 0, `розʼїзд=${mm.drift}px`);
+  if (bumped) ok('МОДАЛКА ↑піднято · стрілка під піном', mm.bumpDrift === 0, `розʼїзд=${mm.bumpDrift}px`);
+}
+
 // Контроль: старе правило мусить давати розʼїзд бодай в одній сцені.
 ok('КОНТРОЛЬ: старе правило (text-align:right) дає розʼїзд', controlWorked,
    'старий CSS теж дав 0 — тоді стенд не міряє нічого, його треба переписати');
