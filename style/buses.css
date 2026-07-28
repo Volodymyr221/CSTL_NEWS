@@ -2,12 +2,12 @@
 
 /* Фон тільки для вкладки Автобуси — нейтральний матовий сірий */
 #page-buses {
-  background: #ECEEF2;
+  background: var(--app-bg);
 }
 #page-buses .bus-search,
 #page-buses .bus-list,
 #page-buses .bus-card {
-  background: #ECEEF2;
+  background: var(--app-bg);
 }
 .buses-updated {
   font-size: 11px;
@@ -32,7 +32,7 @@
   left: 0;
   right: 0;
   z-index: 92;
-  background: #ECEEF2;
+  background: var(--app-bg);
   padding: 6px 0 4px;
   overflow: hidden;
   user-select: none;
@@ -505,7 +505,7 @@
     #D8DBE0 0%,
     #DDE0E5 40%,
     #E6E9EC 70%,
-    #ECEEF2 100%
+    var(--app-bg) 100%
   );
   border-radius: 16px;
   text-align: center;
@@ -699,11 +699,11 @@
 .bus-card {
   padding: 14px 16px 8px;
   border-bottom: 1px solid var(--hairline);
-  background: #ECEEF2;
+  background: var(--app-bg);
 }
 .bus-card.past { opacity: 0.32; }
 .bus-card.next {
-  background: #ECEEF2;
+  background: var(--app-bg);
 }
 /* Б7.1: коротка підсвітка картки при переході з хабу «Збережені» (не зсуває layout — box-shadow) */
 .bus-card--flash { animation: bus-card-flash 1.5s ease-out; }
@@ -817,7 +817,7 @@
 .bus-search {
   margin: 0;
   padding: 6px 14px 10px;
-  background: #ECEEF2;
+  background: var(--app-bg);
   position: fixed;
   top: calc(var(--header-h) + env(safe-area-inset-top, 0px) + 64px);
   left: 0;
