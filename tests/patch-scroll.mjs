@@ -189,51 +189,53 @@ const unpin = await page.evaluate(async ({ leave }) => {
   const instant = Math.round(posOf('2') - beforeA);
 
   // б) НОВА — картка складається.
-  // ⚠️ МІРЯЄМО НАЙБІЛЬШИЙ КРОК ЗА ОДИН КАДР, а не «зсув після дії». Перша версія цієї
-  // перевірки дивилась на позицію через два `requestAnimationFrame` і показала −84px —
-  // але то не стрибок, то вже проїхала анімація. «Стрибок» = великий зсув за ОДИН кадр;
-  // саме його бачить око. Плавність — це багато дрібних кроків, а не один великий.
+  //
+  // 🔴 ТРЕТЯ РЕДАКЦІЯ ЦІЄЇ ПЕРЕВІРКИ. Дві попередні міряли рух ВИБІРКОЮ ПО КАДРАХ
+  // («пікселів за кадр», потім «пікселів за мілісекунду») — і обидві виявились
+  // крихкими: у headless-браузері під навантаженням (17 стендів поспіль) кадри
+  // просто не приходять, уся анімація лягає між двома вимірами, і плавний рух
+  // виглядає як стрибок 36.9 px/мс. Тест падав, хоча код був незмінний.
+  //
+  // Тому міряємо не «як швидко», а ДЕТЕРМІНОВАНІ факти, які не залежать від кадрів:
+  //   • одразу після дії картка ЩЕ на місці (нічого не перескочило);
+  //   • на висоті стоїть перехід потрібної тривалості (звідки й береться плавність);
+  //   • перестановка стається ЛИШЕ після цього часу, а не в тому ж кадрі.
+  // Разом це і є «рух розтягнутий у часі», тобто протилежність ривка.
   setup();
   const visible = cardVisible(sc.querySelector('[data-post="1"]'), sc);
   const beforeB = posOf('2');
-  let placed = false;
-  collapseCard(sc.querySelector('[data-post="1"]'), () => { moveDown(); placed = true; });
+  const card = sc.querySelector('[data-post="1"]');
+  let placed = false, placedAt = 0;
+  const startedAt = performance.now();
+  collapseCard(card, () => { moveDown(); placed = true; placedAt = performance.now(); });
 
-  // ⚠️ Міряємо ШВИДКІСТЬ (пікселів за мілісекунду), а не «пікселів за кадр». Перша спроба
-  // рахувала на кадр — і показувала 78-135px навіть на плавній анімації, бо в headless
-  // браузері кадри йдуть нерівно: один пропущений кадр = подвійний крок, хоча оку нічого
-  // не смикнулось. Швидкість від пропуску кадру не залежить: миттєвий стрибок — це
-  // сотні пікселів за 0мс, плавний проїзд — одиниці пікселів за мілісекунду.
-  let prev = beforeB, prevT = performance.now(), maxSpeed = 0, frames = 0;
-  const deadline = prevT + CARD_LEAVE_MS + 150;
-  while (performance.now() < deadline) {
-    await new Promise(r => requestAnimationFrame(r));
-    const now = posOf('2'), t = performance.now();
-    const dt = Math.max(t - prevT, 1);
-    maxSpeed = Math.max(maxSpeed, Math.abs(now - prev) / dt);
-    prev = now; prevT = t; frames++;
-  }
-  const maxStep = maxSpeed;
-  const settled = Math.round(prev - beforeB);
+  await frame();                                   // дати перехіду стартувати
+  const stillThere = [...sc.children].indexOf(card) === 0;   // картка ще зверху
+  const cs = getComputedStyle(card);
+  const transMs = Math.round((parseFloat(cs.transitionDuration) || 0) * 1000);
+  const midShift = Math.round(posOf('2') - beforeB);
+
+  await new Promise(r => setTimeout(r, CARD_LEAVE_MS + 250));
+  const settled = Math.round(posOf('2') - beforeB);
   const newIndex = [...sc.children].indexOf(sc.querySelector('[data-post="1"]'));
+  const took = Math.round(placedAt - startedAt);
 
-  return { instant, maxStep: Math.round(maxStep * 10) / 10, frames, settled, placed, visible,
+  return { instant, stillThere, transMs, midShift, settled, placed, took, visible,
            newIndex, ms: CARD_LEAVE_MS };
 }, { leave: LEAVE });
 
 ok('картку зверху видно (умова, за якої вмикається згортання)', unpin.visible);
 ok('стара поведінка: увесь зсув за ОДИН кадр (це і є «стрибок»)', unpin.instant !== 0,
    `${unpin.instant}px одним кроком`);
-// 🔴 ЗВІДКИ ПОРІГ (щоб не був підігнаний під зелене світло):
-//   миттєва перестановка — 528px за час одного кадру (≤16мс) = **понад 33 px/мс**;
-//   анімація 340мс — 1.55 px/мс у середньому, з розгоном easing до ~3;
-//   вимірювання в headless шумить приблизно на ±1.5 px/мс (нерівні кадри).
-// Поріг 6 стоїть між цими світами з обох боків із запасом: підняти його до 33 означало б
-// пропустити справжній стрибок, опустити до 3 — ловити шум замість поведінки.
-ok('нова: екран рухається плавно, а не ривком (≤ 6 px/мс)',
-   unpin.maxStep <= 6, `найбільша швидкість ${unpin.maxStep} px/мс (стрибок був ${Math.abs(unpin.instant)}px за кадр)`);
-ok('рух розтягнутий на багато кадрів, а не на один', unpin.frames > 5,
-   `${unpin.frames} кадрів, разом ${unpin.settled}px за ${unpin.ms}мс`);
+// Нова поведінка — три детерміновані факти замість крихкої вибірки по кадрах.
+ok('нова: одразу після дії картка ЩЕ на місці (нічого не перескочило)', unpin.stillThere,
+   `зсув на старті ${unpin.midShift}px`);
+ok('нова: на висоту картки поставлено перехід потрібної тривалості',
+   unpin.transMs === unpin.ms, `${unpin.transMs}мс (очікуємо ${unpin.ms})`);
+ok('нова: перестановка стається ЛИШЕ після анімації, а не в тому ж кадрі',
+   unpin.placed && unpin.took >= unpin.ms, `через ${unpin.took}мс`);
+ok('наприкінці список усе одно сідає (рух відбувся)', unpin.settled !== 0,
+   `${unpin.settled}px разом`);
 ok('після згортання картка стоїть на новому місці', unpin.placed && unpin.newIndex > 0,
    `індекс ${unpin.newIndex}`);
 
