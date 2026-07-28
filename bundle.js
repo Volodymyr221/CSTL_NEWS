@@ -6019,8 +6019,6 @@
     el.innerHTML = `
     ${hasCork ? `
       <div class="board-bg" aria-hidden="true"></div>
-      <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
-      <div class="board-vignette board-vignette--bottom" aria-hidden="true"></div>
     ` : `
       <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
     `}
