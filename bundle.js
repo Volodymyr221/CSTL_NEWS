@@ -5749,20 +5749,22 @@
     const isWord = !/\d/.test(t);
     return `<div class="cm-board-price${isWord ? " cm-board-price--word" : ""}">${escapeHtml(t)}</div>`;
   }
-  function renderCardFoot(p, { actions = false, onCard = false } = {}) {
+  function renderCardFoot(p, { actions = false } = {}) {
     const tel = actions ? phoneOf(p) : "";
-    const lead = onCard ? renderLoc(p.location, "cm-board-loc--foot") : `<span class="cm-board-author cm-board-author--card">\u2014 <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>`;
     return `
-      <div class="cm-board-foot${onCard ? " cm-board-foot--card" : ""}">
+      <div class="cm-board-foot cm-board-foot--card">
         ${actions ? `<div class="cm-board-foot-actions">
           ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
           <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
         </div>` : ""}
         <div class="cm-board-foot-who">
-          ${lead}
+          ${renderLoc(p.location, "cm-board-loc--foot")}
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
       </div>`;
+  }
+  function renderAuthorHead(p) {
+    return `<span class="cm-board-author cm-board-author--head">\u2014 <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>`;
   }
   function renderContactBar(p) {
     const tel = phoneOf(p);
@@ -5819,7 +5821,7 @@
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderPrice(p)}
       ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
-      ${renderCardFoot(p, { onCard: true })}
+      ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </article>
   `;
@@ -5843,7 +5845,7 @@
       ${photoHtml}
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
-        ${renderLoc(p.location)}
+        ${renderAuthorHead(p)}
         ${renderPrice(p)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
