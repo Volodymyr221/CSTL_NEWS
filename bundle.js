@@ -6731,7 +6731,7 @@
   function fitBoardAuthors() {
     const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
     const range = document.createRange();
-    document.querySelectorAll(".cm-board-foot").forEach((foot) => {
+    document.querySelectorAll(".cm-board-foot--card").forEach((foot) => {
       if (!foot.clientWidth)
         return;
       const nameEl = foot.querySelector(".cm-board-foot-who .cm-board-author--card");

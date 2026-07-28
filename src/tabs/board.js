@@ -1306,7 +1306,15 @@ function syncBoardBodyOffset() {
 function fitBoardAuthors() {
   const MAX = 12.5, MIN = 6.5, STEP = 0.5, PAD = 4;
   const range = document.createRange();
-  document.querySelectorAll('.cm-board-foot').forEach(foot => {
+  // 🔴 28.07 (/byyou, крок 4) — ЛИШЕ ФУТЕРИ КАРТОК, і це важливо.
+  // Раніше добір ішов по ВСІХ `.cm-board-foot`, тобто зачіпав і зум-модалку. А модалці
+  // це шкодить: там імені задано 13px у CSS, і функція мовчки перебивала його інлайновим
+  // стилем ≤12.5px — досить було живому оновленню списку (`renderBodyOnly`) статись, поки
+  // модалка відкрита. Дефект був невидимий, бо збіг лише за 0.5px і лише інколи.
+  // ⚠️ Після переїзду НП у футер (крок 1) на картках імені НЕМА зовсім, тож зараз цикл
+  // не робить нічого. Функцію НЕ видаляю без слова Вови (HOT_RULES №9) — вона знадобиться,
+  // якщо ім'я колись повернуть на картку. Але шкодити модалці вона більше не може.
+  document.querySelectorAll('.cm-board-foot--card').forEach(foot => {
     if (!foot.clientWidth) return;            // схований — пропускаємо (перерахуємо при вході на вкладку)
     const nameEl = foot.querySelector('.cm-board-foot-who .cm-board-author--card');
     const actions = foot.querySelector('.cm-board-foot-actions');
