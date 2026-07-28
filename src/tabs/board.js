@@ -250,6 +250,31 @@ function renderAdModal(p) {
   `;
 }
 
+// 🆕 28.07 — ТІНЬ ПІД ЛИПКИМ БЛОКОМ (категорія · ціна · заголовок) З'ЯВЛЯЄТЬСЯ ПЛАВНО.
+// Скарга Вови: «зараз вона виглядає негарно» — тінь малювалась ЗАВЖДИ, навіть коли під
+// блоком нічого не проїжджає і відділяти нема чого. Має наростати рівно тоді, коли блок
+// уперся у верх і текст поїхав під нього.
+// Той самий висновок, що й Д-17 для шапки форми подачі («лінія зайва, поки не скролили»),
+// тільки з плавним згасанням: сам перехід робить CSS (`transition` на `.is-stuck`),
+// JS лише каже «блок прилип» / «відлип».
+//
+// ⚠️ ДВІ умови, а не одна. Перевірка «блок уперся у верх скролера» сама по собі бреше,
+// коли у оголошення НЕМА фото: тоді блок стоїть угорі від самого початку, тобто «прилип»
+// уже при нульовій прокрутці — і тінь показалась би одразу, тобто рівно той баг, який
+// лагодимо. Тому додаємо scrollTop > 2: тінь є лише коли реально прокрутили.
+function attachSubheadShadow(modal) {
+  const scroller = modal.querySelector('.cm-board-modal-scrollarea');
+  const head = modal.querySelector('.cm-board-modal-subhead');
+  if (!scroller || !head) return;
+  const sync = () => {
+    // top:-1px у sticky → у прилиплому стані різниця ≈ −1, тому поріг 1, а не 0.
+    const reachedTop = head.getBoundingClientRect().top - scroller.getBoundingClientRect().top <= 1;
+    head.classList.toggle('is-stuck', scroller.scrollTop > 2 && reachedTop);
+  };
+  sync();
+  scroller.addEventListener('scroll', () => requestAnimationFrame(sync), { passive: true });
+}
+
 // Повноекранний перегляд фото зі свайпом між кадрами. Відкривається тапом по фото
 // в галереї модалки. Закриття: ✕, тап по фону, свайп вниз.
 function openPhotoLightbox(photos, startIdx) {
@@ -841,6 +866,7 @@ export function openAdModalStandalone(post) {
   document.body.appendChild(modal);
   document.body.classList.add('cm-zoom-open');
   hydrateNames(modal);   // живе імʼя автора оголошення за uid
+  attachSubheadShadow(modal);   // тінь під липким блоком — лише коли текст пішов під нього
 
   let closed = false;
   const close = () => {
@@ -937,6 +963,7 @@ function initBoardNoteExpand(root) {
     document.body.appendChild(modal);
     document.body.classList.add('cm-zoom-open');   // блокуємо скрол фону (.app-main)
     hydrateNames(modal);   // живе імʼя автора оголошення за uid
+    attachSubheadShadow(modal);   // тінь під липким блоком — лише коли текст пішов під нього
 
     modal.querySelectorAll('.cm-board-call').forEach(btn => {
       btn.addEventListener('click', e => { e.stopPropagation(); }, { capture: true });

@@ -5780,6 +5780,18 @@
     </div>
   `;
   }
+  function attachSubheadShadow(modal) {
+    const scroller = modal.querySelector(".cm-board-modal-scrollarea");
+    const head = modal.querySelector(".cm-board-modal-subhead");
+    if (!scroller || !head)
+      return;
+    const sync = () => {
+      const reachedTop = head.getBoundingClientRect().top - scroller.getBoundingClientRect().top <= 1;
+      head.classList.toggle("is-stuck", scroller.scrollTop > 2 && reachedTop);
+    };
+    sync();
+    scroller.addEventListener("scroll", () => requestAnimationFrame(sync), { passive: true });
+  }
   function openPhotoLightbox2(photos, startIdx) {
     if (!photos || !photos.length)
       return;
@@ -6254,6 +6266,7 @@
     document.body.appendChild(modal);
     document.body.classList.add("cm-zoom-open");
     hydrateNames(modal);
+    attachSubheadShadow(modal);
     let closed = false;
     const close = () => {
       if (closed)
@@ -6364,6 +6377,7 @@
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
       hydrateNames(modal);
+      attachSubheadShadow(modal);
       modal.querySelectorAll(".cm-board-call").forEach((btn) => {
         btn.addEventListener("click", (e) => {
           e.stopPropagation();
