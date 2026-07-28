@@ -1,0 +1,21 @@
+# ── ДОДАТИ ДО СВОГО .gitignore ────────────────────────────────
+# Рантайм-маркери хуків Claude (не комітити)
+.claude/.flow-release
+.claude/hooks/.flow-handoff-warned
+.claude/hooks/.flow-warn-35
+.claude/hooks/.flow-warn-55
+.claude/.token-halt
+
+# Сміття ОС і редакторів
+.DS_Store
+**/.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Архіви, логи, секрети
+*.zip
+*.log
+*.tmp
+.env
+.env.local

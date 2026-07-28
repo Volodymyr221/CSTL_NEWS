@@ -1,0 +1,47 @@
+{
+  "_комент": "Дозволи + хуки. Шляхи через $CLAUDE_PROJECT_DIR — працює в будь-якому репозиторії.",
+  "permissions": {
+    "allow": [
+      "Bash(node*)",
+      "Bash(git status*)", "Bash(git diff*)", "Bash(git log*)", "Bash(git add*)",
+      "Bash(git commit*)", "Bash(git push*)", "Bash(git fetch*)", "Bash(git pull*)",
+      "Bash(git branch*)", "Bash(git checkout*)",
+      "Bash(date*)", "Bash(wc*)", "Bash(ls*)", "Bash(mkdir*)", "Bash(cat*)", "Bash(echo*)"
+    ],
+    "deny": [
+      "Bash(git push --force*)",
+      "Bash(git push -f*)",
+      "Bash(git reset --hard*)",
+      "Bash(rm -rf*)"
+    ]
+  },
+  "hooks": {
+    "SessionStart": [
+      { "matcher": "startup|resume",
+        "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/session-git-sync.sh\"" }] }
+    ],
+    "UserPromptSubmit": [
+      { "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/context-warning.sh\"" }] }
+    ],
+    "PreToolUse": [
+      { "matcher": "Edit",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/pre-edit-read-check.js\"" }] },
+      { "matcher": "Bash",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/flow-push-lock.js\"" }] },
+      { "matcher": "*",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/token-guard.js\" pre" }] }
+    ],
+    "PostToolUse": [
+      { "matcher": "Agent|Task",
+        "hooks": [{ "type": "command", "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/token-guard.js\" post" }] },
+      { "matcher": "Edit|Write",
+        "hooks": [
+          { "type": "command", "command": "file=\"$CLAUDE_TOOL_INPUT_FILE_PATH\"; if [[ \"$file\" == *.js ]]; then node --check \"$file\" && echo \"✓ синтаксис OK: $file\" || echo \"✗ ПОМИЛКА синтаксису: $file\"; fi" },
+          { "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/cache-name-reminder.sh\"" }
+        ] }
+    ],
+    "Stop": [
+      { "hooks": [{ "type": "command", "command": "bash \"$CLAUDE_PROJECT_DIR/.claude/hooks/flow-context-guard.sh\"" }] }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+# Згенеровані / великі файли — не вантажити в контекст Claude
+bundle.js
+bundle.js.map
+dist/
+build/
+node_modules/
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Бінарні медіа
+*.png
+*.jpg
+*.jpeg
+*.webp
+*.gif
+*.mp4
+*.pdf
+
+# Бекапи і мініфіковані
+backup/
+*.min.js
+*.min.css
+*.zip
