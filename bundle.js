@@ -11358,7 +11358,11 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       const stale = el.nextElementSibling;
       if (stale && stale.classList.contains("fd-more"))
         stale.remove();
+      if (!el.isConnected)
+        return;
       const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+      if (!isFinite(lh) || !isFinite(collapsed) || !isFinite(contentFull))
+        return;
       if (contentFull <= contentCollapsed + lh * CLAMP_SLACK)
         return;
       const open = expandedPosts.has(id);
@@ -12809,7 +12813,6 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     screen.querySelectorAll("[data-edit-page]").forEach((b) => b.addEventListener("click", () => openPageEditor(pageId)));
     wireCards(screen);
     wireGalleries(screen);
-    wireClamps(screen);
     screen.querySelector(".fd-bell")?.addEventListener("click", () => toggleBell(pageId, screen));
     screen.querySelectorAll(".fd-sctab").forEach((tab) => tab.addEventListener("click", () => {
       screen.querySelectorAll(".fd-sctab").forEach((t) => t.classList.toggle("is-on", t === tab));
@@ -12920,6 +12923,7 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       });
     }
     document.body.appendChild(screen);
+    wireClamps(screen);
     requestAnimationFrame(() => screen.classList.add("open"));
   }
   function bellClass(pageId) {
@@ -13661,7 +13665,20 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
     });
     requestAnimationFrame(() => back.classList.add("open"));
   }
+  var TAP_SLOP = 10;
+  var tapDown = null;
+  function isCleanTap(down, e) {
+    if (!down)
+      return false;
+    if (Math.abs(e.clientX - down.x) > TAP_SLOP || Math.abs(e.clientY - down.y) > TAP_SLOP)
+      return false;
+    const sel = typeof window.getSelection === "function" ? window.getSelection() : null;
+    return !(sel && !sel.isCollapsed);
+  }
   function wireCards(root) {
+    root.addEventListener("pointerdown", (e) => {
+      tapDown = { x: e.clientX, y: e.clientY };
+    }, { passive: true });
     root.addEventListener("click", (e) => {
       const menuBtn = e.target.closest("[data-post-menu]");
       if (menuBtn) {
@@ -13694,6 +13711,17 @@ scrollY=${Math.round(window.scrollY)}  h0=${Math.round(h0)}  top0=${Math.round(t
       if (moreBtn) {
         togglePostText(Number(moreBtn.dataset.toggleText), moreBtn);
         return;
+      }
+      const textEl = e.target.closest(".fd-text");
+      if (textEl && textEl.classList.contains("fd-text--clip")) {
+        const id = Number(textEl.closest("[data-post]")?.dataset.post);
+        const btn = textEl.nextElementSibling;
+        if (id && !expandedPosts.has(id) && btn?.classList.contains("fd-more") && isCleanTap(tapDown, e)) {
+          togglePostText(id, btn);
+          return;
+        }
+        if (expandedPosts.has(id))
+          return;
       }
       const openPage = e.target.closest("[data-open-page]");
       if (openPage) {

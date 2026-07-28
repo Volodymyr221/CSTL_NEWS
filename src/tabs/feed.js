@@ -265,8 +265,21 @@ function wireClamps(root) {
     const stale = el.nextElementSibling;
     if (stale && stale.classList.contains('fd-more')) stale.remove();
 
+    // 🔴 БАГ 27.07 (Вова: «на сторінці спільноти текст уже відкритий, а кнопка пише
+    // "Показати більше"; тисну — нічого не збільшується, лише міняється напис»).
+    // Корінь: `openPageScreen` кликав `wireClamps` ДО того, як екран потрапляв у
+    // документ. У відʼєднаного елемента `getComputedStyle` віддає порожні значення,
+    // тож `line-height` ставав NaN — і далі все рахувалось у NaN. Умова «текст
+    // короткий» (`NaN <= NaN`) хибна, тому функція не виходила, а `max-height: NaNpx`
+    // браузер мовчки ігнорував. Наслідок: текст лишався ПОВНИЙ, але кнопку домальовано.
+    // Тепер міряти можна лише те, що справді в документі — інакше числа вигадані.
+    if (!el.isConnected) return;
+
     // Метрики читаємо ПІСЛЯ зняття обмежень — інакше це була б висота обрізаного блоку.
     const { lh, collapsed, contentFull, contentCollapsed } = clampMetrics(el);
+    // Другий рубіж на той самий випадок: якщо мірка чомусь не дала чисел, НІЧОГО не
+    // робимо. Краще довгий текст без кнопки, ніж кнопка, яка бреше.
+    if (!isFinite(lh) || !isFinite(collapsed) || !isFinite(contentFull)) return;
     if (contentFull <= contentCollapsed + lh * CLAMP_SLACK) return;   // короткий пост — не чіпаємо
 
     const open = expandedPosts.has(id);
@@ -2217,7 +2230,8 @@ async function openPageScreen(pageId, reopen = false) {
     b.addEventListener('click', () => openPageEditor(pageId)));
   wireCards(screen);           // лайк/коментарі всередині екрана сторінки
   wireGalleries(screen);       // каруселі фото в постах сторінки
-  wireClamps(screen);          // згортання довгих текстів
+  // ⚠️ `wireClamps` тут НЕ кличемо — екран ще не в документі, а згортання тексту
+  // рахується з ЖИВИХ стилів. Виклик стоїть нижче, одразу після `appendChild`.
   screen.querySelector('.fd-bell')?.addEventListener('click', () => toggleBell(pageId, screen));
 
   // Сегмент «Дописи | Події» — перемикає список у межах екрана каналу.
@@ -2360,6 +2374,7 @@ async function openPageScreen(pageId, reopen = false) {
   }
 
   document.body.appendChild(screen);
+  wireClamps(screen);          // згортання довгих текстів — ЛИШЕ коли екран у документі
   requestAnimationFrame(() => screen.classList.add('open'));
 }
 
@@ -3138,8 +3153,31 @@ function openPostMenu(postId) {
   requestAnimationFrame(() => back.classList.add('open'));
 }
 
+// ── Тап ПО САМОМУ ТЕКСТУ розгортає пост (як в Instagram/Facebook) ────────────
+// Вимога Вови 27.07: «щоб на текст можна було також відкрити повністю, але чітко —
+// не просто десь тицьнув і воно відкрилось. А згорнути вже по кнопці».
+//
+// Три умови, і всі три обовʼязкові:
+//   1. тап саме по тексту згорнутого поста (розгорнутий тап ІГНОРУЄ — інакше випадкове
+//      торкання складало б назад те, що людина щойно відкрила читати);
+//   2. палець майже не зрушив (≤10px) — інакше це був скрол або початок виділення;
+//   3. нічого не виділено — якщо людина виділяє текст, вона його читає, а не відкриває.
+const TAP_SLOP = 10;   // скільки пікселів руху ще вважається тапом, а не жестом
+let tapDown = null;    // де палець торкнувся востаннє (спільне на всі картки)
+
+// Окремою функцією — щоб правило можна було перевірити числами у стенді,
+// а не «на око» в браузері.
+function isCleanTap(down, e) {
+  if (!down) return false;
+  if (Math.abs(e.clientX - down.x) > TAP_SLOP || Math.abs(e.clientY - down.y) > TAP_SLOP) return false;
+  const sel = typeof window.getSelection === 'function' ? window.getSelection() : null;
+  return !(sel && !sel.isCollapsed);
+}
+
 // ── Делегування подій на картках (лайк/коментарі/відкрити сторінку) ─────────
 function wireCards(root) {
+  // Точка дотику пальця — потрібна, щоб відрізнити тап від скролу (див. isCleanTap).
+  root.addEventListener('pointerdown', e => { tapDown = { x: e.clientX, y: e.clientY }; }, { passive: true });
   root.addEventListener('click', e => {
     const menuBtn = e.target.closest('[data-post-menu]');   // «⋯» поста — перед open-page
     if (menuBtn) { openPostMenu(Number(menuBtn.dataset.postMenu)); return; }
@@ -3160,6 +3198,20 @@ function wireCards(root) {
     // розгортання людину викидало б на інший екран.
     const moreBtn = e.target.closest('[data-toggle-text]');
     if (moreBtn) { togglePostText(Number(moreBtn.dataset.toggleText), moreBtn); return; }
+    // Тап по тексту згорнутого поста = «Показати більше». Тільки РОЗГОРТАЄ:
+    // згортання лишається за кнопкою (див. коментар до isCleanTap вище).
+    const textEl = e.target.closest('.fd-text');
+    if (textEl && textEl.classList.contains('fd-text--clip')) {
+      const id = Number(textEl.closest('[data-post]')?.dataset.post);
+      const btn = textEl.nextElementSibling;
+      if (id && !expandedPosts.has(id) && btn?.classList.contains('fd-more') && isCleanTap(tapDown, e)) {
+        togglePostText(id, btn);
+        return;
+      }
+      // Тап по тексту, який уже розгорнуто, не робить нічого — і НЕ провалюється
+      // далі на «відкрити сторінку»: текст це вміст поста, а не кнопка переходу.
+      if (expandedPosts.has(id)) return;
+    }
     const openPage = e.target.closest('[data-open-page]');
     if (openPage) { openPageScreen(Number(openPage.dataset.openPage)); return; }
   });
