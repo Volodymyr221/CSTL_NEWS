@@ -2172,7 +2172,11 @@
   /* центр проміжку між низом шапки і верхом таб-бару.
      -18px знизу резервуємо під виступ центральної кнопки-замка (стирчить ~27px над таб-баром) */
   top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 18px) / 2);
-  width: min(88vw, 360px);
+  /* 28.07 (Вова: «модалку можна трішки розширити»): було min(88vw, 360px).
+     ⚠️ Тісно робила саме СТЕЛЯ 360px, а не 88vw: на великому iPhone (430px) 88vw = 378px,
+     тобто стеля вигравала і лишала по 35px порожнечі з боків. Тому піднято обидва числа —
+     самого 92vw не вистачило б, стеля так само з'їла б виграш. */
+  width: min(92vw, 400px);
   max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 58px);
   display: flex;
   flex-direction: column;
