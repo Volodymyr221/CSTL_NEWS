@@ -2,6 +2,7 @@
 // Supabase з пісочниці недосяжний — картки підсуваємо руками в DOM тим самим
 // шаблоном, що й renderBoardCard, щоб бачити РЕАЛЬНИЙ вигляд фону/шапки/карток.
 import { chromium } from 'playwright';
+import { mkdirSync } from 'fs';
 import { launch, serve, blockExternal } from '../_lib.mjs';
 
 const { url, stop } = await serve();
@@ -65,7 +66,13 @@ await page.evaluate(() => {
 }).then(r => console.log('DOM:', r));
 
 await page.waitForTimeout(500);
-const SHOTS = '/tmp/claude-0/-home-user-CSTL-NEWS/c54d5b52-37d3-5109-938e-c8206edc65ab/scratchpad';
+// 🔴 Було зашито АБСОЛЮТНИЙ шлях у теку однієї конкретної сесії
+// (`/tmp/claude-0/…/c54d5b52-…/scratchpad`). Наступна сесія має інший ідентифікатор,
+// тож інструмент мовчки писав знімки в неіснуючу теку — «відпрацював», нічого не давши.
+// Це та сама хвороба, через яку 27.07 загубились сторожі клавіатури.
+// Тепер тека береться з аргументу, а за замовчуванням — поруч із самим інструментом.
+const SHOTS = process.argv[2] || new URL('./_out', import.meta.url).pathname;
+mkdirSync(SHOTS, { recursive: true });
 await page.screenshot({ path: `${SHOTS}/board-1-top.png` });
 
 // Прокрутити вниз — шапка мусить поїхати вгору

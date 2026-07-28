@@ -11,20 +11,35 @@
 // «брудно» навіть при тій самій різниці яскравості. Тому у варіантах картка стає
 // чистим білим #FFFFFF (та сама поверхня, що в «Стрічці» — заразом DRY).
 //
+// 🔴 ПОЛАГОДЖЕНО 28.07 (/byyou) — ІНСТРУМЕНТ БУВ ЗЛАМАНИЙ І МОВЧКИ ПОКАЗУВАВ ОДНЕ Й ТЕ САМЕ.
+// Він перебивав `--app-bg`, але потік 1 того ж дня переселив Дошку на ОКРЕМИЙ токен
+// `--board-bg` (`base.css:274` + `.board-bg`). Тобто після тієї зміни варіанти A/B/C
+// давали БАЙТ-У-БАЙТ однакові знімки (звірено md5) — інструмент «працював», нічого не
+// змінюючи. Класика «мірка бреше»: зелено виглядало, доводило нуль.
+//
+// 🔄 ЗАРАЗОМ ЗМІНЕНО САМУ ГІПОТЕЗУ. Стара серія (A/B/C) шукала ТЕМНІШИЙ фон. Це виявився
+// хибний шлях: Вова 28.07 сказав «карточки зливаються з фоном і це сильно давить на очі» —
+// тобто затемнення фону дало +0.10 контрасту і водночас тиск на очі. На такій різниці
+// яскравості око ловить КРАЙ, а не заливку (так роблять iOS/Material). Тому нова серія
+// тримає фон СВІТЛИМ і додає картці чіткий 1px край + зібрану тінь.
+//
 // Запуск: node tests/tools/board-bg-variants.mjs [тека для знімків]
 import { chromium } from 'playwright';
 import { launch, serve, blockExternal } from '../_lib.mjs';
 
 const OUT = process.argv[2] || '/tmp';
 
-// Варіанти: [ярлик, фон вкладки, скло шапки, поверхня картки]
-// Скло — той самий колір, що фон, з тією ж прозорістю 0.62 (щоб шапка лишалась
-// «склом», а не плитою, але вже в тон новому фону).
+// Варіанти: [ярлик, фон Дошки, край картки, тінь картки]
+// Край — головний важіль нової серії: 1px лінія читається оком навіть там, де різниця
+// заливок мала. Тінь при цьому ЗБИРАЄМО (менший радіус, менша непрозорість): широка
+// розмита тінь на світлому тлі читається як бруд, а не як край.
+const EDGE   = '1px solid rgba(16,18,22,0.10)';
+const SHADOW = '0 1px 2px rgba(16,18,22,0.06), 0 4px 10px rgba(16,18,22,0.10)';
 const VARIANTS = [
-  ['0-зараз',    '#ECEEF1', 'rgba(236,238,241,0.62)', '#FBFBF9'],
-  ['A-мягко',    '#E7EAEF', 'rgba(231,234,239,0.66)', '#FFFFFF'],
-  ['B-помітно',  '#E1E5EB', 'rgba(225,229,235,0.68)', '#FFFFFF'],
-  ['C-виразно',  '#DCE1E8', 'rgba(220,225,232,0.70)', '#FFFFFF'],
+  ['0-зараз',      '#E1E5EB', 'none', null],   // null = не чіпаємо чинну тінь
+  ['A-край',       '#E1E5EB', EDGE,   SHADOW], // той самий фон, доданий край
+  ['B-світліший',  '#ECEEF1', EDGE,   SHADOW], // фон як у Стрічки — легше очам
+  ['C-тепліший',   '#EFEFEC', EDGE,   SHADOW], // менш холодний сірий
 ];
 
 const { url, stop } = await serve();
@@ -42,18 +57,25 @@ await page.evaluate(() => {
 await page.evaluate(() => window.switchTab?.('board'));
 await page.waitForTimeout(1200);
 
-for (const [label, bg, glass, card] of VARIANTS) {
-  await page.evaluate(({ bg, glass, card }) => {
+for (const [label, bg, edge, shadow] of VARIANTS) {
+  await page.evaluate(({ bg, edge, shadow }) => {
     let s = document.getElementById('__bgvar');
     if (!s) { s = document.createElement('style'); s.id = '__bgvar'; document.head.appendChild(s); }
+    // ⚠️ Перебиваємо САМЕ `--board-bg` (і сам шар `.board-bg`) — Дошка живе на ньому,
+    //    а не на `--app-bg`. Через це стара версія інструмента нічого не змінювала.
     s.textContent = `
-      :root { --app-bg: ${bg}; --app-glass: ${glass}; }
-      .cm-board-note { background: ${card} !important; }
+      :root { --board-bg: ${bg}; }
+      .board-bg { background: ${bg} !important; }
+      .app-main[data-tab="board"] { background: ${bg} !important; }
+      #board-content .cm-board-note:not(.cm-board-note--official) {
+        border: ${edge} !important;
+        ${shadow ? `box-shadow: ${shadow} !important;` : ''}
+      }
     `;
-  }, { bg, glass, card });
+  }, { bg, edge, shadow });
   await page.waitForTimeout(300);
   await page.screenshot({ path: `${OUT}/bg-${label}.png` });
-  console.log(`${label}: фон ${bg} · картка ${card}`);
+  console.log(`${label.padEnd(14)} фон ${bg} · край ${edge === 'none' ? '—' : 'є'}`);
 }
 
 await browser.close();

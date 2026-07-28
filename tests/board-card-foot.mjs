@@ -30,7 +30,8 @@ const CASES = [
 ];
 
 // oldRule=true відтворює стан ДО фіксу (контроль).
-const PAGE = (loc, time, oldRule) => `<!doctype html><html><head><meta charset="utf-8"><style>
+// bumped=true → дата зі стрілкою «піднято» (інший випадок вирівнювання).
+const PAGE = (loc, time, oldRule, bumped = false) => `<!doctype html><html><head><meta charset="utf-8"><style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{--red:#722F37;--ink-soft:#5F5448;--ink:#2A2520}
 ${CSS}
@@ -44,7 +45,9 @@ ${oldRule ? '.cm-board-foot--card{justify-content:space-between}.cm-board-foot--
   <div class="cm-board-foot cm-board-foot--card">
     <div class="cm-board-foot-who">
       <span class="cm-board-loc cm-board-loc--foot"><svg width="12" height="12" viewBox="0 0 24 24"></svg><span class="cm-board-loc-t">${loc}</span></span>
-      <span class="cm-board-time">${time}</span>
+      <span class="cm-board-time">${bumped
+        ? `<span class="cm-board-bumped"><svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>${time}</span>`
+        : time}</span>
     </div>
   </div>
 </article></body></html>`;
@@ -52,8 +55,8 @@ ${oldRule ? '.cm-board-foot--card{justify-content:space-between}.cm-board-foot--
 const browser = await launch(chromium);
 const page = await browser.newPage({ viewport: { width: 200, height: 500 } });
 
-async function measure(loc, time, oldRule) {
-  await page.setContent(PAGE(loc, time, oldRule));
+async function measure(loc, time, oldRule, bumped = false) {
+  await page.setContent(PAGE(loc, time, oldRule, bumped));
   return page.evaluate(() => {
     // 🔴 МІРЯЄМО ГЛІФИ, А НЕ КОРОБКИ. Перша версія цього стенда брала
     // `element.getBoundingClientRect()` — і давала 0 навіть на СТАРОМУ, зламаному CSS:
@@ -68,10 +71,25 @@ async function measure(loc, time, oldRule) {
     const locEl = document.querySelector('.cm-board-loc--foot');
     const locTxt = document.querySelector('.cm-board-loc-t');
     const timeEl = document.querySelector('.cm-board-time');
+    const pin = locEl.querySelector('svg');
+    const bump = document.querySelector('.cm-board-bumped');
+    const bumpIcon = bump && bump.querySelector('svg');
     const card = document.querySelector('.cm-board-note');
+    // Текст дати = останній текстовий вузол (у «піднятих» перед ним стоїть стрілка).
+    const timeTextEl = bump || timeEl;
+    const timeTextLeft = (() => {
+      const r = document.createRange();
+      const node = [...timeTextEl.childNodes].find(n => n.nodeType === 3 && n.textContent.trim());
+      if (!node) return textLeft(timeTextEl);
+      r.selectNode(node);
+      return r.getBoundingClientRect().left;
+    })();
     return {
-      // Порівнюємо початок ІКОНКИ-піна (лівий край НП) з початком тексту дати.
-      drift: Math.round(Math.abs(textLeft(locEl) - textLeft(timeEl))),
+      // 🔑 КРИТЕРІЙ ЗМІНИВСЯ (Вова, друга ітерація): дата має починатись НЕ під піном,
+      // а під ПЕРШОЮ БУКВОЮ населеного пункту.
+      drift: Math.round(Math.abs(textLeft(locTxt) - timeTextLeft)),
+      // Стрілка «піднято» — навпаки, має стояти рівно під піном.
+      bumpDrift: bumpIcon ? Math.round(Math.abs(pin.getBoundingClientRect().left - bumpIcon.getBoundingClientRect().left)) : null,
       locFromCard: Math.round(locEl.getBoundingClientRect().left - card.getBoundingClientRect().left),
       oneLine: Math.round(locEl.getBoundingClientRect().height) < 30,
       locSize: parseFloat(getComputedStyle(locTxt).fontSize),
@@ -83,10 +101,19 @@ let controlWorked = false;
 for (const [loc, time] of CASES) {
   const now = await measure(loc, time, false);
   const old = await measure(loc, time, true);
-  ok(`«${loc}» + «${time}» · дата починається там само, де НП`, now.drift === 0,
+  ok(`«${loc}» + «${time}» · дата під ПЕРШОЮ БУКВОЮ НП`, now.drift === 0,
      `розʼїзд=${now.drift}px`);
   ok(`«${loc}» · НП в ОДИН рядок`, now.oneLine, `висота ${now.oneLine ? 'ок' : 'перенеслось'}`);
   if (old.drift > 0) controlWorked = true;
+}
+
+// Випадок «піднято»: стрілка стає під пін, а текст дати лишається під першою буквою.
+for (const [loc, time] of [['ЖОРНИЩЕ', '13 липня'], ['ОЛИЦЬКА ГРОМАДА', '20 хв тому']]) {
+  const b = await measure(loc, time, false, true);
+  ok(`«${loc}» ↑піднято · текст дати все одно під першою буквою`, b.drift === 0,
+     `розʼїзд=${b.drift}px`);
+  ok(`«${loc}» ↑піднято · стрілка рівно під піном`, b.bumpDrift === 0,
+     `розʼїзд стрілки=${b.bumpDrift}px`);
 }
 
 // Контроль: старе правило мусить давати розʼїзд бодай в одній сцені.
@@ -95,7 +122,7 @@ ok('КОНТРОЛЬ: старе правило (text-align:right) дає роз
 
 // НП у футері має бути помітно більший за дату (Вова: «трішки збільшити»).
 const m = await measure('ЖОРНИЩЕ', '13 липня', false);
-ok('НП більший за 11px (колишній розмір імені)', m.locSize > 11, `${m.locSize}px`);
+ok("НП більший за 11px, але менший за 12.5px (Вова: «зменшити, але не як раніше»)", m.locSize > 11 && m.locSize < 12.5, `${m.locSize}px`);
 
 await browser.close();
 done();
