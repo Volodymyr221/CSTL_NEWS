@@ -24,10 +24,11 @@ const PENCIL_ICON_SVG = ICONS.pencil;
 // Д-6: векторний пін локації в прев'ю — мірор board.js PIN_ICON_SVG/renderLoc (не імпортуємо
 // з board.js через циклічний імпорт). Щоб прев'ю показувало локацію так само, як реальна картка.
 const PIN_ICON_SVG = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>';
-function renderPreviewLoc(loc) {
+function renderPreviewLoc(loc, extraClass = '') {
   if (!loc) return '';
   const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
-  return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
+  // Внутрішній span — дзеркало `renderLoc` у board.js (потрібен для обрізки трикрапкою).
+  return `<span class="cm-board-loc${extraClass ? ' ' + extraClass : ''}">${PIN_ICON_SVG}<span class="cm-board-loc-t">${escapeHtml(label)}</span></span>`;
 }
 
 // Д-24: маска українського номера — завжди префікс +380, далі рівно 9 цифр,
@@ -446,12 +447,13 @@ export function openBoardModal(opts = {}) {
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         ${catHtml}
-        ${renderPreviewLoc(state.location)}
         ${priceHtml}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
-        <div class="cm-board-footer">
-          <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
-          <span class="cm-board-time">щойно</span>
+        <div class="cm-board-foot cm-board-foot--card">
+          <div class="cm-board-foot-who">
+            ${renderPreviewLoc(state.location, 'cm-board-loc--foot')}
+            <span class="cm-board-time">щойно</span>
+          </div>
         </div>
         ${contactHtml}
       </article>
