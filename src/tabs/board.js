@@ -607,11 +607,14 @@ function renderAll() {
   const el = getBoardRoot();
   if (!el) return;
   const hasCork = activeType === 'board';
+  // 28.07: у Дошки прибрано ЗАТЕМНЕНІ КРАЇ (`.board-vignette` — градієнти
+  // rgba(0,0,0,0.58) по 140px згори і знизу). Вони були частиною «темного корка» і
+  // на новому світло-сірому фоні читались би як дві брудні смуги через екран.
+  // ⚠️ Клас у CSS ЛИШАЄТЬСЯ — його вживають Обговорення (гілка else нижче), а їхній
+  // теплий беж я свідомо не чіпаю (правило «не чіпати те, про що не просили»).
   el.innerHTML = `
     ${hasCork ? `
       <div class="board-bg" aria-hidden="true"></div>
-      <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
-      <div class="board-vignette board-vignette--bottom" aria-hidden="true"></div>
     ` : `
       <div class="board-vignette board-vignette--top" aria-hidden="true"></div>
     `}
