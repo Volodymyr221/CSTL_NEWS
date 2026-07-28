@@ -1601,6 +1601,19 @@
    Телефон — ширина за атрибутом size="18" (трохи більше за макс. "+380 XX XXX XX XX"). */
 .app-modal--board-compose #bm-location { width: auto; max-width: 100%; }
 .app-modal--board-compose #bm-contact  { width: auto; }
+/* 🆕 28.07 (потік 2): поле ціни — вузьке (ціна коротка, повна ширина виглядала б
+   як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
+   рахувати padding під різну ширину «₴»/«$» і вибирати між обрізаною цифрою
+   і зайвою дірою. */
+.bm-price-field { display: flex; align-items: center; gap: 8px; }
+.app-modal--board-compose #bm-price { width: auto; margin-bottom: 0; }
+.bm-price-cur {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink-soft, #6b6b6b);
+  flex-shrink: 0;
+}
+.bm-price-note { margin: 6px 0 0; display: block; }
 
 .cm-board-form-title {
   font-size: 14px;

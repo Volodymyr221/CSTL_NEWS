@@ -10,7 +10,7 @@
 //           setDiscussionsData / подію 'cstl-posts-changed').
 // Спільне обох типів (закладки, кнопки зберегти/шер) — core/board-shared.js.
 
-import { escapeHtml, formatTime, sharePost, postTime, showToast } from '../core/utils.js';
+import { escapeHtml, formatTime, sharePost, postTime, showToast, formatPrice } from '../core/utils.js';
 import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
@@ -78,25 +78,12 @@ function phoneOf(p) {
   return isPhone ? contact.replace(/[^\d+]/g, '') : '';
 }
 
-// Ціна оголошення (потік 2 Дошки, 28.07). Показуємо ЛИШЕ коли вона є: для «віддам» /
-// «загубилось» / «шукаю» ціна безглузда, і порожній слот у сітці лишати не можна
-// (пряме рішення Вови) — тому при порожньому значенні рядок просто не малюється,
-// а НЕ пишеться «ціну не вказано».
-// ⚠️ price === 0 — це свідоме «Безкоштовно», а не «не вказано»: тому перевірка саме
-// на null/'' , а не на «хибність» значення (0 хибний, і `if (!p.price)` з'їв би його).
-const PRICE_SYMBOLS = { UAH: '₴', USD: '$', EUR: '€' };
-function priceText(p) {
-  if (!p || p.price == null || p.price === '') return '';
-  const n = Number(p.price);
-  if (!isFinite(n) || n < 0) return '';
-  if (n === 0) return 'Безкоштовно';
-  // toLocaleString('uk-UA') дає нерозривний пробіл між тисячами — саме те, що треба:
-  // число не переноситься посеред себе на вузькій картці («2 500», не «2\n500»).
-  const sym = PRICE_SYMBOLS[p.currency || 'UAH'] || String(p.currency || '');
-  return `${n.toLocaleString('uk-UA')} ${sym}`.trim();
-}
+// Ціна оголошення (потік 2 Дошки, 28.07). Сам формат — у `core/utils.js`
+// (`formatPrice`), спільний із прев'ю форми подачі. Тут лише розмітка Дошки.
+// Порожньо → рядка НЕМА зовсім: для «віддам»/«шукаю»/«загубилось» ціна безглузда,
+// а порожній слот у сітці лишати не можна (рішення Вови).
 function renderPrice(p) {
-  const t = priceText(p);
+  const t = p ? formatPrice(p.price, p.currency) : '';
   return t ? `<div class="cm-board-price">${escapeHtml(t)}</div>` : '';
 }
 

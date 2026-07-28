@@ -127,6 +127,29 @@ export function formatEventDate(dateStr) {
   return d.toLocaleDateString('uk-UA', { day: 'numeric', month: 'long', weekday: 'long' });
 }
 
+// 🆕 28.07 (потік 2 Дошки) — ЦІНА одним форматувальником на весь застосунок.
+// Живе тут, а не в board.js, бо потрібна ДВОМ модулям: картці/модалці Дошки
+// (`tabs/board.js`) і прев'ю форми подачі (`tabs/community-modal.js`). Пряме
+// board.js ← community-modal.js неможливе — board.js уже імпортує форму, вийшло б
+// коло імпортів; а копію робити не можна (у проєкті два списки антиспаму вже
+// розійшлися саме так).
+//
+// Порожньо / не число / від'ємне → '' (рядок ціни просто не малюється: для
+// «віддам»/«шукаю»/«загубилось» порожній слот у сітці не лишаємо — рішення Вови).
+// ⚠️ 0 — це свідоме «Безкоштовно», а не «не вказано». Тому перевірка на null/'',
+// а не на хибність значення: `if (!price)` з'їв би нуль.
+const PRICE_SYMBOLS = { UAH: '₴', USD: '$', EUR: '€' };
+export function formatPrice(price, currency) {
+  if (price == null || price === '') return '';
+  const n = Number(price);
+  if (!isFinite(n) || n < 0) return '';
+  if (n === 0) return 'Безкоштовно';
+  // toLocaleString('uk-UA') ставить між тисячами НЕРОЗРИВНИЙ пробіл — саме те, що
+  // треба на вузькій картці: число не переноситься саме посеред себе.
+  const sym = PRICE_SYMBOLS[currency || 'UAH'] || String(currency || '');
+  return `${n.toLocaleString('uk-UA')} ${sym}`.trim();
+}
+
 // Доповнити число до 2 знаків ('5' → '05'). Використовується для часу, дат, ID.
 export function pad(n) { return String(n).padStart(2, '0'); }
 
