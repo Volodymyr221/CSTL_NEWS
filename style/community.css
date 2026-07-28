@@ -1625,6 +1625,25 @@
   flex-shrink: 0;
 }
 .bm-price-note { margin: 6px 0 0; display: block; }
+/* «Договірна» — поруч із полем числа, бо це ТА САМА відповідь на питання «скільки»,
+   лише інакша. Окремою секцією нижче вона читалась би як не пов'язана з ціною. */
+.bm-negot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bm-negot input { width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; }
+/* Поле числа вимкнене, коли стоїть «Договірна» — видно, що вводити нема сенсу. */
+.app-modal--board-compose #bm-price:disabled { opacity: 0.45; }
+/* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
+.cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
+.cm-board-modal-subhead .cm-board-price--word { font-size: 17px; }
 
 .cm-board-form-title {
   font-size: 14px;

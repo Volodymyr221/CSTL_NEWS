@@ -83,8 +83,11 @@ function phoneOf(p) {
 // Порожньо → рядка НЕМА зовсім: для «віддам»/«шукаю»/«загубилось» ціна безглузда,
 // а порожній слот у сітці лишати не можна (рішення Вови).
 function renderPrice(p) {
-  const t = p ? formatPrice(p.price, p.currency) : '';
-  return t ? `<div class="cm-board-price">${escapeHtml(t)}</div>` : '';
+  const t = p ? formatPrice(p.price, p.currency, p.price_negotiable) : '';
+  if (!t) return '';
+  // «Договірна»/«Безкоштовно» — це слова, а не сума: трохи менші, щоб не важили як цифра.
+  const isWord = !/\d/.test(t);
+  return `<div class="cm-board-price${isWord ? ' cm-board-price--word' : ''}">${escapeHtml(t)}</div>`;
 }
 
 // Футер картки/зум-модалки (рішення Вови): БЕЗ номера телефону (персональні дані +
