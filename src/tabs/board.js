@@ -26,6 +26,8 @@ import {
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { createDragTracker, finishSwipe, centeredRemaining, createBackdropFade } from '../core/sheet-motion.js'; // нативне завершення свайп-закриття
 import { ICONS } from '../core/icons.js';
+// Той самий якір прокрутки, що й у «Стрічці» — щоб оновлення списку не смикало екран.
+import { keepScroll } from '../core/list-patch.js';
 import {
   BOOKMARK_OUTLINE_SVG, BOOKMARK_FILLED_SVG,
   getSavedIds, setSavedIds, isSaved, toggleSaved, saveBtnHtml, shareBtnHtml,
@@ -530,30 +532,55 @@ function renderBody() {
     <div class="bd-stream">${sorted.map(renderCard).join('')}</div>`;
 }
 
+// Перечитати дані Дошки з бази (без жодного рендера). Винесено з `renderBoard`, щоб
+// «мʼяке» оновлення могло взяти свіжі дані й перемалювати ЛИШЕ список, не чіпаючи шапку
+// й не будуючи вкладку заново.
+// Повертає true, якщо дані прийшли з бази.
+async function loadBoardData() {
+  if (!isSupabaseReady()) return false;
+  const uid = currentUserId();
+  const [posts, anns, comments, saved, reactions] = await Promise.all([
+    fetchPublishedPosts(),
+    fetchPublishedAnnouncements(),
+    fetchAllComments(),
+    uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
+    fetchAllReactions(uid || getAnonId()),
+  ]);
+  if (posts === null) return false;
+  allPosts         = posts;
+  allAnnouncements = anns || [];
+  setDiscussionsData(comments, reactions);   // стан обговорень живе у board-discussions.js
+  setSavedIds(saved);                        // закладки — у board-shared.js
+  return true;
+}
+
+// 🔑 МʼЯКЕ ОНОВЛЕННЯ ПІСЛЯ ВЛАСНОЇ ДІЇ (завершив / повернув / видалив / опублікував).
+// Було: `renderBoard()` — перечитати все і зібрати ВКЛАДКУ заново. Через це екран
+// стрибав на початок, як це було у «Стрічці» до 27.07.
+// Стало: дані перечитуємо (стан на сервері справді змінився), але перемальовуємо лише
+// список і всередині `keepScroll` — id карток ті самі, тож якір знаходить свою картку
+// після перемальовки і повертає екран рівно туди, де він був.
+//
+// ⚠️ Чому не точковий патч однієї картки, як у «Стрічці»: Дошка — це корок у ДВІ
+// колонки, і картки розкладені по них за парністю (`i % 2`). Тобто поява чи зникнення
+// однієї картки законно перекладає всі наступні — патчити одну там нема сенсу.
+// Позицію це не псує: якір рахує по тій картці, яку людина бачить, а не по індексу.
+async function refreshBoardKeepingPlace() {
+  const el = getBoardRoot();
+  const body = document.getElementById('bd-body');
+  const ok = await loadBoardData();
+  if (!ok || !el || !body) { renderBoard(); return; }   // не змогли мʼяко — звичайним шляхом
+  keepScroll(document.querySelector('.app-main'), () => renderBodyOnly(), null, 'data-post-id');
+}
+
 export async function renderBoard() {
   const el = getBoardRoot();
   if (!el) return;
 
-  // 1. Supabase: пости + анонси + коментарі + закладки + реакції(лайки) паралельно
-  if (isSupabaseReady()) {
-    // «Моя» закладка — лише для залогіненого акаунта (uid). Гість → нічого персонального.
-    const uid = currentUserId();
-    const [posts, anns, comments, saved, reactions] = await Promise.all([
-      fetchPublishedPosts(),
-      fetchPublishedAnnouncements(),
-      fetchAllComments(),
-      uid ? fetchSavedPostIds(uid) : Promise.resolve(new Set()),
-      fetchAllReactions(uid || getAnonId()),
-    ]);
-    if (posts !== null) {
-      allPosts         = posts;
-      allAnnouncements = anns || [];
-      setDiscussionsData(comments, reactions);   // стан обговорень живе у board-discussions.js
-      setSavedIds(saved);                        // закладки — у board-shared.js
-      renderAll(el);
-      return;
-    }
-  }
+  // 1. Supabase: пости + анонси + коментарі + закладки + реакції(лайки) паралельно.
+  // Саме читання — у `loadBoardData()` (спільне з мʼяким оновленням, щоб не тримати
+  // два однакові запити в різних місцях).
+  if (await loadBoardData()) { renderAll(el); return; }
 
   // 2. Fallback: JSON (поки БД порожня або немає мережі — показуємо демо-дані)
   try {
@@ -1254,8 +1281,10 @@ export function initBoard() {
     if (p) openAdModalStandalone(p);
   });
   // Зміна статусу власних постів («Мої оголошення»: завершити/повернути/видалити)
-  // → одразу перезавантажуємо дошку, щоб зміна була видима без перезапуску застосунку.
-  window.addEventListener('cstl-posts-changed', () => renderBoard());
+  // і публікація нового — зміна має бути видима одразу, без перезапуску застосунку.
+  // ⚠️ Саме `refreshBoardKeepingPlace`, а не `renderBoard`: друге збирає вкладку заново
+  // і кидає на початок списку (та сама скарга, що була у «Стрічці» 27.07).
+  window.addEventListener('cstl-posts-changed', () => refreshBoardKeepingPlace());
 
   // ── ЖИВА СИНХРОНІЗАЦІЯ ОГОЛОШЕНЬ (Вова 26.07) ──────────────────────────────────
   // Досі підписки на `posts` не було: нове оголошення сусіда зʼявлялось лише після
