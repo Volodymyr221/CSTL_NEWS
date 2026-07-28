@@ -5883,7 +5883,7 @@
     const count = showCategories ? getBoardDisplayCount() : 0;
     const titlebarHtml = showCategories ? `
     <div class="bd-titlebar">
-      <h2 class="bd-title">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
+      <h2 class="sr-only">\u0414\u043E\u0448\u043A\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u044C</h2>
       <div class="bd-subrow">
         <span class="bd-count" id="bd-count">${count} ${pluralAds(count)}</span>
         <div class="bd-loc-filter">
@@ -6621,8 +6621,8 @@
       return;
     _headerCollapseWired = true;
     const TOP_ZONE = 90;
-    const HIDE_AFTER = 80;
-    const SHOW_AFTER = 320;
+    const HIDE_AFTER = 110;
+    const SHOW_AFTER = 70;
     let lastY = main.scrollTop;
     let accDown = 0, accUp = 0;
     let collapsed = false;
