@@ -69,23 +69,69 @@ function renderLoc(loc) {
   const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
   return `<span class="cm-board-loc">${PIN_ICON_SVG}${escapeHtml(label)}</span>`;
 }
-// Футер картки/зум-модалки (рішення Вови): БЕЗ номера телефону (персональні дані +
-// дублює кнопку дзвінка). Кнопки зліва — дзвінок лише якщо контакт=телефон,
-// повідомлення завжди (внутрішній чат). Ім'я+час справа, навпроти кнопок.
-function renderCardFoot(p) {
-  const contact = p.contact ? String(p.contact).trim() : '';
+// Контакт оголошення: телефон розпізнаємо ОДНИМ правилом на весь модуль (картка,
+// модалка, майбутні місця) — щоб копії не розійшлись, як колись розійшлись два
+// списки антиспаму.
+function phoneOf(p) {
+  const contact = p && p.contact ? String(p.contact).trim() : '';
   const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-  const tel = isPhone ? contact.replace(/[^\d+]/g, '') : '';
+  return isPhone ? contact.replace(/[^\d+]/g, '') : '';
+}
+
+// Ціна оголошення (потік 2 Дошки, 28.07). Показуємо ЛИШЕ коли вона є: для «віддам» /
+// «загубилось» / «шукаю» ціна безглузда, і порожній слот у сітці лишати не можна
+// (пряме рішення Вови) — тому при порожньому значенні рядок просто не малюється,
+// а НЕ пишеться «ціну не вказано».
+// ⚠️ price === 0 — це свідоме «Безкоштовно», а не «не вказано»: тому перевірка саме
+// на null/'' , а не на «хибність» значення (0 хибний, і `if (!p.price)` з'їв би його).
+const PRICE_SYMBOLS = { UAH: '₴', USD: '$', EUR: '€' };
+function priceText(p) {
+  if (!p || p.price == null || p.price === '') return '';
+  const n = Number(p.price);
+  if (!isFinite(n) || n < 0) return '';
+  if (n === 0) return 'Безкоштовно';
+  // toLocaleString('uk-UA') дає нерозривний пробіл між тисячами — саме те, що треба:
+  // число не переноситься посеред себе на вузькій картці («2 500», не «2\n500»).
+  const sym = PRICE_SYMBOLS[p.currency || 'UAH'] || String(p.currency || '');
+  return `${n.toLocaleString('uk-UA')} ${sym}`.trim();
+}
+function renderPrice(p) {
+  const t = priceText(p);
+  return t ? `<div class="cm-board-price">${escapeHtml(t)}</div>` : '';
+}
+
+// Футер картки/зум-модалки (рішення Вови): БЕЗ номера телефону (персональні дані +
+// дублює кнопку дзвінка). Ім'я+час справа.
+// 🆕 28.07 (потік 2): кнопки 📞/💬 з КАРТКИ прибрано — вони були 34px (менше за
+// мінімум Apple HIG 44px), конкурували з тапом «відкрити оголошення» і робили картки
+// нерівними (де є телефон — дві кнопки, де нема — одна). Контакт тепер живе в модалці
+// однією широкою кнопкою (renderContactBar). Прапорець `actions` лишає стару поведінку
+// доступною, якщо колись знадобиться.
+function renderCardFoot(p, { actions = false } = {}) {
+  const tel = actions ? phoneOf(p) : '';
   return `
       <div class="cm-board-foot">
-        <div class="cm-board-foot-actions">
-          ${isPhone ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>` : ''}
+        ${actions ? `<div class="cm-board-foot-actions">
+          ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>` : ''}
           <button class="cm-board-msg-btn" data-open-chat aria-label="Повідомлення">${MSG_ICON_SVG}</button>
-        </div>
+        </div>` : ''}
         <div class="cm-board-foot-who">
           <span class="cm-board-author cm-board-author--card">— <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, 'анонімно')}</span></span>
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
+      </div>`;
+}
+
+// Контакт у зум-модалці: одна широка кнопка «Написати» (внутрішній чат) + дзвінок
+// окремою квадратною кнопкою, якщо контакт розпізнано як телефон. Обидві 44px —
+// мінімальна тап-ціль за Apple HIG. Клас/атрибут `data-open-chat` той самий, що був
+// на картці, тож делегований обробник (document-level) працює без змін.
+function renderContactBar(p) {
+  const tel = phoneOf(p);
+  return `
+      <div class="cm-board-contact-bar">
+        ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="Подзвонити">${PHONE_ICON_SVG}</a>` : ''}
+        <button class="cm-board-write-btn" type="button" data-open-chat>${MSG_ICON_SVG}<span>Написати</span></button>
       </div>`;
 }
 // Стрілка вгору (векторна) — мітка «піднято» біля дати.
@@ -148,6 +194,11 @@ function boardActionsHtml(post) {
 // ── Картки за типом ──────────────────────────────────────────────────────────
 
 // BOARD: стікер на корку (з збереженням і поділитися)
+// 🆕 28.07 (потік 2): картка більше НЕ показує опис — 4 рядки прев'ю з'їдали пів картки
+// і не допомагали вибирати (рішення Вови). Лишились: фото · категорія+локація · ціна ·
+// заголовок · автор+час. Повний опис читається в модалці (тап по картці).
+// ⚠️ Виняток — старі пости БЕЗ заголовка (Д-16 зробив його обов'язковим лише 08.07):
+// у них замість заголовка показуємо текст, інакше картка була б порожньою.
 function renderBoardCard(p) {
   const tilt = 0; // картки рівні (без нахилу) — рішення Вови 20.06
   const photo = (Array.isArray(p.photos) && p.photos[0]) || p.photo;
@@ -160,8 +211,10 @@ function renderBoardCard(p) {
       ${photoHtml}
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderLoc(p.location)}
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
-      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      ${renderPrice(p)}
+      ${p.title
+        ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>`
+        : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
       ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </article>
@@ -195,6 +248,7 @@ function renderAdModal(p) {
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
         ${renderLoc(p.location)}
+        ${renderPrice(p)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ''}
       </div>
       <div class="cm-board-modal-content">
@@ -204,6 +258,7 @@ function renderAdModal(p) {
     <div class="cm-board-modal-foot">
       ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
+      ${renderContactBar(p)}
     </div>
   `;
 }

@@ -324,6 +324,9 @@ export function openBoardModal(opts = {}) {
       <div class="cm-board-contact cm-board-contact--phone">
         ${escapeHtml(contactShow)}
       </div>` : '';
+    // Д-6: прев'ю мусить дзеркалити РЕАЛЬНУ картку. 🆕 28.07 (потік 2) з картки прибрано
+    // опис — прибираємо його і тут, інакше прев'ю обіцяло б те, чого на дошці не буде.
+    // Опис нікуди не дівається: він відкривається в модалці оголошення.
     previewCanvas.innerHTML = `
       <article class="cm-board-note bd-card bd-card--board${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
@@ -331,7 +334,6 @@ export function openBoardModal(opts = {}) {
         ${catHtml}
         ${renderPreviewLoc(state.location)}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
-        <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
           <span class="cm-board-time">щойно</span>
