@@ -2172,7 +2172,11 @@
   /* центр проміжку між низом шапки і верхом таб-бару.
      -18px знизу резервуємо під виступ центральної кнопки-замка (стирчить ~27px над таб-баром) */
   top: calc((var(--header-h) + env(safe-area-inset-top, 0px) + 100dvh - var(--tabbar-h) - env(safe-area-inset-bottom, 0px) - 18px) / 2);
-  width: min(88vw, 360px);
+  /* 28.07 (Вова: «модалку можна трішки розширити»): було min(88vw, 360px).
+     ⚠️ Тісно робила саме СТЕЛЯ 360px, а не 88vw: на великому iPhone (430px) 88vw = 378px,
+     тобто стеля вигравала і лишала по 35px порожнечі з боків. Тому піднято обидва числа —
+     самого 92vw не вистачило б, стеля так само з'їла б виграш. */
+  width: min(92vw, 400px);
   max-height: calc(100dvh - var(--header-h) - var(--tabbar-h) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px) - 58px);
   display: flex;
   flex-direction: column;
@@ -2254,8 +2258,20 @@
   position: sticky;
   top: -1px;
   z-index: 2;
-  box-shadow: 0 3px 5px -3px rgba(0,0,0,0.12);   /* трохи менша тінь (Вова 11.07) */
   display: flow-root;   /* контейнер для float:right (пін НП) нижче — інакше висота збігається */
+  /* 🆕 28.07 — тінь і лінія З'ЯВЛЯЮТЬСЯ ПЛАВНО, а не висять завжди (скарга Вови:
+     «зараз вона виглядає негарно»). Сенс тіні — показати, що під блоком щось проїжджає;
+     поки нічого не проїжджає, вона просто бруднить чистий блок.
+     Стан «щось проїжджає» ставить JS класом `.is-stuck` (`attachSubheadShadow` у board.js),
+     плавність — цей `transition`. Розмір тіні НЕ змінено (0 3px 5px -3px / 12%,
+     підібрано Вовою 11.07) — змінюється лише її наявність. */
+  border-bottom-color: transparent;
+  box-shadow: 0 3px 5px -3px rgba(0,0,0,0);
+  transition: box-shadow 0.22s ease, border-bottom-color 0.22s ease;
+}
+.cm-board-modal-subhead.is-stuck {
+  border-bottom-color: rgba(0,0,0,0.06);
+  box-shadow: 0 3px 5px -3px rgba(0,0,0,0.12);
 }
 .cm-board-modal-subhead .cm-board-cat { margin-bottom: 6px; }
 /* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
@@ -2334,10 +2350,18 @@
 .cm-board-modal-note .cm-board-modal-foot .cm-board-msg-btn svg { width: 24px; height: 24px; }
 /* Дата публікації в модалці — трохи більша за базові 9px (Вова 11.07). */
 .cm-board-modal-note .cm-board-modal-foot .cm-board-time { font-size: 11px; }
+/* 🆕 28.07 — футер став КОМПАКТНІШИЙ (Вова: «занадто високий»).
+   Зсув 5+6=11px був потрібен, поки над кнопками 🔖/↗ малювалась лінія-роздільник —
+   вона відділяла їх від рядка «ім'я / телефон». Лінію прибрано (нижче у файлі),
+   тож зсув лишився б просто дірою. */
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
-  margin-top: 5px;
-  padding-top: 6px;
+  margin-top: 0;
+  padding-top: 0;
 }
+/* Ім'я автора у модалці — більше за картку (Вова: «ім'я замале»). На картці ним керує
+   JS `fitBoardAuthors` (8.5–12.5px під ширину, бо там поряд тіснились кнопки); у модалці
+   кнопок поряд уже немає, місця вдосталь — тому фіксовані 13px. */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-author--card { font-size: 13px; }
 
 /* Мердж двох блоків футера модалки в один рядок (Вова 11.07): call+msg+ім'я зліва
    (пояснює кому дзвониш/пишеш), save+share справа (де раніше було ім'я). Прибрано
@@ -2347,7 +2371,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding: 14px 20px 16px;   /* трохи вища панель, вміст по центру вертикалі (Вова 11.07) */
+  /* 28.07: 14/16 → 10/12 (Вова: «занадто високий»). Панель нижча на 8px, і на стільки ж
+     її верхній край (лінія з тінню) їде ВНИЗ — саме те, чого просив Вова («блок трошки
+     опустити»): текст опису більше не обрізається на півслові. */
+  padding: 10px 20px 12px;
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-foot {
   justify-content: flex-start;
@@ -2369,7 +2396,7 @@
   display: flex;
   align-items: stretch;
   gap: 8px;
-  margin-top: 10px;
+  margin-top: 7px;   /* 28.07: 10 → 7, частина компактування футера */
 }
 /* Дзвінок — квадратна кнопка 44px (мінімальна тап-ціль за Apple HIG; на картці вона
    була 34px — це й була одна з причин прибрати її звідти).
@@ -3367,22 +3394,13 @@
   justify-content: space-between;
   gap: 8px;
   position: relative;
-  border-top: none;   /* штрихпунктир → суцільна затухаюча лінія (::before нижче) */
+  border-top: none;
 }
-/* Роздільна лінія над реакціями у модалці — суцільна, затухає по краях (як на картці),
-   лишається лише під блоком «ім'я / номер телефону» */
-.cm-board-modal-note .bd-actions--board-compact::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(to right,
-    transparent 0%,
-    rgba(0,0,0,0.12) 50%,
-    transparent 100%);
-}
+/* 🗑 28.07 — лінію-роздільник над 🔖/↗ ПРИБРАНО за прямою вказівкою Вови («Прибери»).
+   Історія: вона малювалась через `::before` і відділяла кнопки від рядка «ім'я / телефон»,
+   поки футер був ОДНИМ рядком (мердж 11.07). Після переїзду контакту у власну смугу
+   (потік 2, 28.07) футер став дворядковим — і лінія опинилась усередині одного рядка,
+   не розділяючи вже нічого. Разом з нею знято зсув 5+6px, який тримав під неї місце. */
 .cm-board-modal-note .bd-actions-extra {
   display: flex;
   gap: 6px;
