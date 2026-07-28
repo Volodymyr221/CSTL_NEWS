@@ -1613,6 +1613,9 @@
    як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
    рахувати padding під різну ширину «₴»/«$» і вибирати між обрізаною цифрою
    і зайвою дірою. */
+/* Секція ціни ховається для категорій без ціни. Явне правило потрібне, бо `.bm-section`
+   може мати `display`, а він перебиває стандартну поведінку атрибута `hidden`. */
+.bm-section[hidden] { display: none; }
 .bm-price-field { display: flex; align-items: center; gap: 8px; }
 .app-modal--board-compose #bm-price { width: auto; margin-bottom: 0; }
 .bm-price-cur {

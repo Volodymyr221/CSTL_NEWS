@@ -8,12 +8,12 @@
 -- ЗАСТОСОВАНО (08.07.2026, через MCP apply_migration, project uabyfecseqnemvcqhdem).
 -- Скрипт ІДЕМПОТЕНТНИЙ (additive) — можна запускати повторно, дані не втрачаються.
 --
--- ⚠️ 28.07.2026 — функцію submit_board_post ДОПОВНЕНО ціною (потік 2 Дошки):
---    колонки posts.price / posts.currency існували в схемі з самого початку
---    (supabase_schema.sql), але RPC їх не заповнювала. Тепер заповнює + валідує.
+-- ✅ 28.07.2026 — підтримка ЦІНИ вже НА ПРОДІ (міграція `board_price_support_submit`,
+--    20260728122041, накатана 12:20 UTC). Накочувати цей файл повторно НЕ треба —
+--    він лише дзеркалить те, що в базі. Доведено живими даними: пост id 53
+--    «Продаю машину» має price=1500.00, currency='UAH'.
 --    Файл лишається ЄДИНИМ джерелом тіла цієї функції — окремої копії в новому
 --    файлі свідомо не робимо (дві копії вже коштували проєкту розʼїзду антиспаму).
---    🔴 ПОТРІБЕН ПОВТОРНИЙ НАКАТ цього файлу, інакше поле «Ціна» у формі не збережеться.
 -- ============================================================================
 
 
@@ -88,6 +88,18 @@ create trigger trg_revoke_trust_on_reject
 --    («insert only pending») — але ЛИШЕ для довірених, перевірка серверна,
 --    клієнт не може підробити. Статус і owner_uid форсуються сервером,
 --    payload.status/payload.owner_uid ігноруються.
+-- ============================================================================
+-- ⚠️ БЛОК НИЖЧЕ — ДЗЕРКАЛО ПРОДА (знято з бази 28.07.2026 через pg_get_functiondef).
+-- Міграція `board_price_support_submit` (20260728122041) пішла в базу, але в цей файл
+-- НЕ потрапила — репозиторій і база розійшлись на кілька годин.
+-- 🔴 ЧИМ ЦЕ МАЛО НЕ КОШТУВАЛО: у сесії 28.07 я, прочитавши ЦЕЙ файл (а не базу),
+--    вирішив що ціна не підтримується, написав ВЛАСНУ, БІДНІШУ версію і зібрався її
+--    накотити. Вона знищила б: гейт за категорією (`v_price_cats`), прапорець
+--    «Договірна» (`price_negotiable`) і серверне жорстке `currency = 'UAH'`.
+--    Врятувала лише звірка з живою базою ПЕРЕД накатом.
+-- ➡️ ПРАВИЛО: перед накатом будь-якої RPC — спершу `pg_get_functiondef` з прода
+--    і порівняти з файлом. Файл може відставати.
+-- ============================================================================
 create or replace function public.submit_board_post(payload jsonb)
 returns jsonb
 language plpgsql
@@ -95,81 +107,93 @@ security definer
 set search_path = public
 as $$
 declare
-  v_uid     uuid    := auth.uid();
-  v_trusted boolean := false;
-  v_recent  integer := 0;
-  v_status  text;
-  v_text    text    := nullif(btrim(coalesce(payload->>'text','')), '');
-  v_title   text    := nullif(btrim(coalesce(payload->>'title','')), '');
-  -- 🆕 28.07 (потік 2 Дошки): ціна. Опційна — «віддам»/«шукаю»/«загубилось» ідуть без неї.
-  v_price_raw text  := nullif(btrim(coalesce(payload->>'price','')), '');
-  v_price   numeric;
-  v_curr    text    := upper(nullif(btrim(coalesce(payload->>'currency','')), ''));
+  v_uid       uuid    := auth.uid();
+  v_trusted   boolean := false;
+  v_recent    integer := 0;
+  v_status    text;
+  v_text      text    := nullif(btrim(coalesce(payload->>'text','')), '');
+  v_title     text    := nullif(btrim(coalesce(payload->>'title','')), '');
+  v_cat       text    := payload->>'category';
+  -- Категорії, де ціна має сенс. «віддам» тут НЕМА свідомо: воно безкоштовне за
+  -- визначенням, і показ «Безкоштовно» — справа клієнта, а не збережене число.
+  v_price_cats text[] := array['продам','послуга','куплю'];
+  v_price_ok  boolean := v_cat = any(v_price_cats);
+  v_price     numeric;
+  v_negot     boolean := coalesce((payload->>'price_negotiable')::boolean, false);
+  -- Стеля: без неї хтось вписав би 10^20 і зламав верстку картки. 100 млн грн —
+  -- завідомо вище будь-якого реального оголошення в громаді.
+  v_price_max numeric := 100000000;
 begin
   if v_text is null then
     return jsonb_build_object('ok', false, 'error', 'Порожній текст');
   end if;
-  -- Д-16: заголовок обов'язковий (клієнт валідує теж; тут — авторитетно на сервері).
   if v_title is null then
     return jsonb_build_object('ok', false, 'error', 'Потрібен заголовок');
   end if;
 
-  -- Ціна: валідуємо ТУТ, а не лише на клієнті — форму можна обійти прямим викликом API.
-  -- Формат: цілі або 2 знаки після крапки, без мінуса. Порожньо → null (ціни немає).
-  if v_price_raw is not null then
-    if v_price_raw !~ '^[0-9]+(\.[0-9]{1,2})?$' then
-      return jsonb_build_object('ok', false, 'error', 'Некоректна ціна');
+  -- Ціна: приймаємо лише коректне число. `payload->>'price'` може бути будь-чим,
+  -- тому парсимо через безпечне приведення, а не довіряємо типу.
+  begin
+    v_price := nullif(btrim(coalesce(payload->>'price','')), '')::numeric;
+  exception when others then
+    return jsonb_build_object('ok', false, 'error', 'Ціна має бути числом');
+  end;
+
+  if v_price is not null then
+    if v_price < 0 then
+      return jsonb_build_object('ok', false, 'error', 'Ціна не може бути відʼємною');
     end if;
-    v_price := v_price_raw::numeric;
-    if v_price > 100000000 then
+    if v_price > v_price_max then
       return jsonb_build_object('ok', false, 'error', 'Завелика ціна');
     end if;
-  end if;
-  if v_curr is not null and v_curr not in ('UAH', 'USD', 'EUR') then
-    return jsonb_build_object('ok', false, 'error', 'Невідома валюта');
+    v_price := round(v_price, 2);
   end if;
 
-  -- Рейт-ліміт: не більше 3 постів за останню хвилину на автора.
+  -- Категорія без ціни (шукаю / знайдено / загубилось / віддам) → витираємо обидва поля,
+  -- навіть якщо клієнт їх надіслав.
+  if not v_price_ok then
+    v_price := null;
+    v_negot := false;
+  end if;
+  -- «Договірна» і число — взаємовиключні. Число має пріоритет: якщо людина його вписала,
+  -- вона таки назвала ціну.
+  if v_price is not null then
+    v_negot := false;
+  end if;
+
   if v_uid is not null then
-    select count(*) into v_recent
-      from public.posts
-      where owner_uid = v_uid
-        and created_at > now() - interval '1 minute';
+    select count(*) into v_recent from public.posts
+      where owner_uid = v_uid and created_at > now() - interval '1 minute';
     if v_recent >= 3 then
-      return jsonb_build_object('ok', false,
-        'error', 'Занадто часто — зачекайте хвилину');
+      return jsonb_build_object('ok', false, 'error', 'Занадто часто — зачекайте хвилину');
     end if;
-
-    select coalesce(trusted, false) into v_trusted
-      from public.profiles where uid = v_uid;
+    select coalesce(trusted, false) into v_trusted from public.profiles where uid = v_uid;
   end if;
-
   v_status := case when v_trusted then 'published' else 'pending' end;
 
   insert into public.posts
     (type, text, author, photos, category, color, contact, title, location, tags,
-     price, currency,
+     price, currency, price_negotiable,
      status, owner_uid, published_at, bumped_at, ts)
   values (
     coalesce(payload->>'type', 'board'),
     v_text,
     payload->>'author',
     coalesce((select array_agg(value) from jsonb_array_elements_text(payload->'photos')), '{}'),
-    payload->>'category',
+    v_cat,
     coalesce(payload->>'color', 'yellow'),
     payload->>'contact',
-    left(v_title, 80),   -- Д-16: обрізаємо до 80 (узгоджено з клієнтським maxlength)
-    payload->>'location',   -- Д-10: населений пункт (або «Вся Олицька громада»)
+    left(v_title, 80),
+    payload->>'location',
     coalesce((select array_agg(value) from jsonb_array_elements_text(payload->'tags')), '{}'),
-    v_price,                                    -- null = ціни немає (рядок на картці не малюється)
-    case when v_price is null then null else coalesce(v_curr, 'UAH') end,
-    v_status,
-    v_uid,
+    v_price,
+    'UAH',            -- валюту НЕ беремо від клієнта: у громаді розрахунки в гривні
+    v_negot,
+    v_status, v_uid,
     case when v_status = 'published' then now() else null end,
     case when v_status = 'published' then now() else null end,
     (extract(epoch from now()) * 1000)::bigint
   );
-
   return jsonb_build_object('ok', true, 'status', v_status);
 end;
 $$;

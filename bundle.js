@@ -2302,6 +2302,8 @@
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", color: "amber", icon: SVG.check },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", color: "amber", icon: SVG.help }
   ];
+  var PRICE_CATEGORIES = ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", "\u043A\u0443\u043F\u043B\u044E"];
+  var categoryHasPrice = (id) => PRICE_CATEGORIES.includes(id);
   var ALL_ICON = SVG.sliders;
   var byId = (id) => BOARD_CATEGORIES.find((c) => c.id === id);
   function catColor(id) {
@@ -2538,7 +2540,7 @@
         <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="\u041D\u0430\u043F\u0440. \u041F\u0440\u043E\u0434\u0430\u043C \u043C\u043E\u0442\u043E\u0446\u0438\u043A\u043B" value="${escapeHtml(state.title)}">
       </div>
 
-      <div class="bm-section">
+      <div class="bm-section" id="bm-price-section"${categoryHasPrice(state.category) ? "" : " hidden"}>
         <label class="bm-label" for="bm-price">\u0426\u0456\u043D\u0430 <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
         <div class="bm-price-field">
           <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="\u043D\u0430\u043F\u0440. 2500" value="${escapeHtml(state.price)}">
@@ -2580,6 +2582,7 @@
           dynamicEl.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           state.category = btn.dataset.cat;
+          syncPriceVisibility();
           renderPreview();
         });
       });
@@ -2609,7 +2612,21 @@
         state.contact = e.target.value;
         renderPreview();
       });
+      syncPriceVisibility();
       bindPhotoSlots();
+    }
+    function syncPriceVisibility() {
+      const sec = dynamicEl.querySelector("#bm-price-section");
+      if (!sec)
+        return;
+      const ok = categoryHasPrice(state.category);
+      sec.hidden = !ok;
+      if (!ok && state.price) {
+        state.price = "";
+        const inp = dynamicEl.querySelector("#bm-price");
+        if (inp)
+          inp.value = "";
+      }
     }
     function photoSlotsHtml(count = 5) {
       return `
@@ -2862,11 +2879,14 @@
       location: state.location || COMMUNITY_ALL,
       // Д-10
       tags: [],
-      // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — так RPC
-      // update_board_post розуміє «ціну стерли» і відрізняє це від «поле не чіпали»
-      // (див. v_has_price у scripts/supabase_board_edit.sql).
-      price: state.price.trim(),
-      currency: state.price.trim() ? "UAH" : null
+      // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — RPC не розрізняє
+      // «не передали» і «стерли» (обидва дають null), тож при редагуванні мовчання
+      // означало б стирання ціни.
+      // ⚠️ `currency` НЕ шлемо свідомо: сервер жорстко ставить 'UAH' і значення від
+      //    клієнта ігнорує («у громаді розрахунки в гривні» — коментар у самій RPC).
+      //    Так само не шлемо `price_negotiable` — прапорця «Договірна» у формі ще немає,
+      //    хоча база його вже підтримує (знахідка 28.07 при звірці з продом).
+      price: state.price.trim()
     };
   }
 

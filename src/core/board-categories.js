@@ -40,6 +40,18 @@ export const BOARD_CATEGORIES = [
   { id: 'загубилось', label: 'Загубилось',         color: 'amber',  icon: SVG.help   },
 ];
 
+// 🆕 28.07 — КАТЕГОРІЇ, ДЕ ЦІНА МАЄ СЕНС.
+// ⚠️ ЦЕ ДЗЕРКАЛО СЕРВЕРА: точно той самий список лежить у `v_price_cats` всередині
+// RPC `submit_board_post` і `update_board_post` (див. `scripts/supabase_reputation.sql`
+// та `scripts/supabase_board_edit.sql`). База — авторитет: для категорії поза цим
+// списком вона витирає `price` і `price_negotiable`, навіть якщо клієнт їх надіслав.
+// Тому форма мусить ховати поле ціни рівно для тих самих категорій — інакше людина
+// вписала б ціну під «Віддам», побачила б її у прев'ю, а в збереженому оголошенні її
+// не було б. Міняєш тут — міняй і в обох RPC (та сама хвороба, що два списки антиспаму).
+// «віддам» тут НЕМА свідомо: воно безкоштовне за визначенням.
+export const PRICE_CATEGORIES = ['продам', 'послуга', 'куплю'];
+export const categoryHasPrice = (id) => PRICE_CATEGORIES.includes(id);
+
 // Іконка «Всі» / дефолт кнопки-фільтра (повзунки).
 export const ALL_ICON = SVG.sliders;
 

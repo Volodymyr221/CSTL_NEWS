@@ -16,11 +16,18 @@
 -- ЗАСТОСУВАТИ через Supabase MCP apply_migration (project uabyfecseqnemvcqhdem).
 -- Скрипт ІДЕМПОТЕНТНИЙ (create or replace) — можна запускати повторно.
 --
--- ⚠️ 28.07.2026 — функцію ДОПОВНЕНО ціною (потік 2 Дошки), парно з
---    supabase_reputation.sql (submit_board_post). Накочувати ОБИДВА файли разом:
---    інакше подати ціну можна буде, а відредагувати — ні (або навпаки).
+-- ✅ 28.07.2026 — підтримка ЦІНИ вже НА ПРОДІ (міграція `board_price_support_update`,
+--    20260728122127, накатана 12:21 UTC). Повторний накат НЕ потрібен — файл лише
+--    дзеркалить базу.
 -- ============================================================================
 
+-- ============================================================================
+-- ⚠️ БЛОК НИЖЧЕ — ДЗЕРКАЛО ПРОДА (знято з бази 28.07.2026 через pg_get_functiondef).
+-- Міграція `board_price_support_update` (20260728122127) пішла в базу, але в цей файл
+-- НЕ потрапила. Парна до `board_price_support_submit` у supabase_reputation.sql —
+-- там же розписано, чим цей розсинхрон мало не коштував.
+-- ➡️ Перед накатом — спершу зняти живий код із прода і порівняти.
+-- ============================================================================
 create or replace function public.update_board_post(p_id bigint, payload jsonb)
 returns jsonb
 language plpgsql
@@ -36,21 +43,17 @@ declare
   v_new_status text;
   v_text       text    := nullif(btrim(coalesce(payload->>'text','')), '');
   v_title      text    := nullif(btrim(coalesce(payload->>'title','')), '');
-  -- 🆕 28.07 (потік 2 Дошки): ціна. Розрізняємо ТРИ випадки, а не два:
-  --   ключа 'price' у payload НЕМА          → ціну не чіпаємо (стара лишається);
-  --   ключ є, значення порожнє              → ціну ЗНЯТО (людина стерла поле);
-  --   ключ є, значення число                → нова ціна.
-  -- Без цієї різниці будь-яке редагування старого поста мовчки стирало б ціну.
-  v_has_price  boolean := payload ? 'price';
-  v_price_raw  text    := nullif(btrim(coalesce(payload->>'price','')), '');
+  v_cat        text    := payload->>'category';
+  v_price_cats text[]  := array['продам','послуга','куплю'];
+  v_price_ok   boolean := v_cat = any(v_price_cats);
   v_price      numeric;
-  v_curr       text    := upper(nullif(btrim(coalesce(payload->>'currency','')), ''));
+  v_negot      boolean := coalesce((payload->>'price_negotiable')::boolean, false);
+  v_price_max  numeric := 100000000;
 begin
   if v_uid is null then
     return jsonb_build_object('ok', false, 'error', 'Треба увійти');
   end if;
 
-  -- Пост має існувати; беремо власника/тип/статус для перевірок.
   select owner_uid, type, status
     into v_owner, v_type, v_status
     from public.posts where id = p_id;
@@ -68,7 +71,6 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Це оголошення не можна редагувати');
   end if;
 
-  -- Валідація вмісту (як у submit_board_post — авторитетно на сервері).
   if v_text is null then
     return jsonb_build_object('ok', false, 'error', 'Порожній текст');
   end if;
@@ -76,21 +78,32 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Потрібен заголовок');
   end if;
 
-  -- Ціна: та сама валідація, що в submit_board_post (форму можна обійти прямим API).
-  if v_price_raw is not null then
-    if v_price_raw !~ '^[0-9]+(\.[0-9]{1,2})?$' then
-      return jsonb_build_object('ok', false, 'error', 'Некоректна ціна');
+  begin
+    v_price := nullif(btrim(coalesce(payload->>'price','')), '')::numeric;
+  exception when others then
+    return jsonb_build_object('ok', false, 'error', 'Ціна має бути числом');
+  end;
+
+  if v_price is not null then
+    if v_price < 0 then
+      return jsonb_build_object('ok', false, 'error', 'Ціна не може бути відʼємною');
     end if;
-    v_price := v_price_raw::numeric;
-    if v_price > 100000000 then
+    if v_price > v_price_max then
       return jsonb_build_object('ok', false, 'error', 'Завелика ціна');
     end if;
-  end if;
-  if v_curr is not null and v_curr not in ('UAH', 'USD', 'EUR') then
-    return jsonb_build_object('ok', false, 'error', 'Невідома валюта');
+    v_price := round(v_price, 2);
   end if;
 
-  -- Довіра автора: trusted-published лишається published; звичайний published → pending.
+  -- Категорія без ціни → витираємо обидва поля. Це ще й ремонт заднім числом: якщо
+  -- людина ПЕРЕКЛЮЧИЛА категорію з «Продам» на «Загубилось», стара ціна мусить піти.
+  if not v_price_ok then
+    v_price := null;
+    v_negot := false;
+  end if;
+  if v_price is not null then
+    v_negot := false;
+  end if;
+
   select coalesce(trusted, false) into v_trusted
     from public.profiles where uid = v_uid;
 
@@ -100,32 +113,27 @@ begin
   end;
 
   update public.posts set
-    text         = v_text,
-    title        = left(v_title, 80),
-    category     = payload->>'category',
-    color        = coalesce(payload->>'color', color),
-    contact      = payload->>'contact',
-    location     = payload->>'location',
-    photos       = coalesce(
-                     (select array_agg(value) from jsonb_array_elements_text(payload->'photos')),
-                     '{}'),
-    price        = case when v_has_price then v_price else price end,
-    currency     = case
-                     when not v_has_price then currency
-                     when v_price is null  then null            -- ціну зняли
-                     else coalesce(v_curr, 'UAH')
-                   end,
-    status       = v_new_status,
-    published_at = case when v_new_status = 'pending' then null else published_at end,
-    updated_at   = now()
+    text             = v_text,
+    title            = left(v_title, 80),
+    category         = v_cat,
+    color            = coalesce(payload->>'color', color),
+    contact          = payload->>'contact',
+    location         = payload->>'location',
+    photos           = coalesce(
+                         (select array_agg(value) from jsonb_array_elements_text(payload->'photos')),
+                         '{}'),
+    price            = v_price,
+    currency         = 'UAH',
+    price_negotiable = v_negot,
+    status           = v_new_status,
+    published_at     = case when v_new_status = 'pending' then null else published_at end,
+    updated_at       = now()
   where id = p_id;
 
   return jsonb_build_object('ok', true, 'status', v_new_status);
 end;
 $$;
 
--- Лише залогінені: прибираємо дефолтний PUBLIC/anon-грант (аноніми й так блокуються
--- перевіркою auth.uid(), але тримаємо доступ мінімальним).
 revoke execute on function public.update_board_post(bigint, jsonb) from public, anon;
 grant  execute on function public.update_board_post(bigint, jsonb) to authenticated;
 
@@ -137,9 +145,15 @@ grant  execute on function public.update_board_post(bigint, jsonb) to authentica
 --   3. trusted-автор редагує свій published → ok, status лишається 'published'.
 --   4. Чужий пост (owner_uid <> auth.uid()) → error 'Це не ваше оголошення'.
 --   5. closed/rejected пост → error 'не можна редагувати'.
---   🆕 Ціна (28.07):
---   6. payload БЕЗ ключа 'price' → стара ціна лишилась незмінною.
---   7. payload з 'price': '' → price і currency стали null (ціну знято).
---   8. payload з 'price': '2500' → price=2500, currency='UAH'.
---   9. payload з 'price': '-5' або 'abc' → error 'Некоректна ціна', рядок не змінено.
+--   🆕 Ціна (28.07) — поведінка ПРОДА, звірена з живим кодом:
+--   6. price: '2500' + категорія «продам» → price=2500, currency='UAH', negotiable=false.
+--   7. price: '' → ціну знято (null). ⚠️ Ключ 'price' відсутній дає ТЕ САМЕ — функція
+--      не розрізняє «не передали» і «стерли». Тобто клієнт МУСИТЬ слати ціну щоразу,
+--      інакше редагування її зітре.
+--   8. price: 'abc' → error 'Ціна має бути числом'; '-5' → 'Ціна не може бути відʼємною';
+--      >100 млн → 'Завелика ціна'.
+--   9. Категорія НЕ з ['продам','послуга','куплю'] → price і price_negotiable
+--      витираються, навіть якщо клієнт їх надіслав. Це й ремонт заднім числом:
+--      перемкнув «Продам» → «Загубилось», стара ціна пішла.
+--  10. price_negotiable=true разом із числом → число перемагає, negotiable стає false.
 -- ============================================================================
