@@ -7,6 +7,13 @@
 --
 -- ЗАСТОСОВАНО (08.07.2026, через MCP apply_migration, project uabyfecseqnemvcqhdem).
 -- Скрипт ІДЕМПОТЕНТНИЙ (additive) — можна запускати повторно, дані не втрачаються.
+--
+-- ⚠️ 28.07.2026 — функцію submit_board_post ДОПОВНЕНО ціною (потік 2 Дошки):
+--    колонки posts.price / posts.currency існували в схемі з самого початку
+--    (supabase_schema.sql), але RPC їх не заповнювала. Тепер заповнює + валідує.
+--    Файл лишається ЄДИНИМ джерелом тіла цієї функції — окремої копії в новому
+--    файлі свідомо не робимо (дві копії вже коштували проєкту розʼїзду антиспаму).
+--    🔴 ПОТРІБЕН ПОВТОРНИЙ НАКАТ цього файлу, інакше поле «Ціна» у формі не збережеться.
 -- ============================================================================
 
 
@@ -94,6 +101,10 @@ declare
   v_status  text;
   v_text    text    := nullif(btrim(coalesce(payload->>'text','')), '');
   v_title   text    := nullif(btrim(coalesce(payload->>'title','')), '');
+  -- 🆕 28.07 (потік 2 Дошки): ціна. Опційна — «віддам»/«шукаю»/«загубилось» ідуть без неї.
+  v_price_raw text  := nullif(btrim(coalesce(payload->>'price','')), '');
+  v_price   numeric;
+  v_curr    text    := upper(nullif(btrim(coalesce(payload->>'currency','')), ''));
 begin
   if v_text is null then
     return jsonb_build_object('ok', false, 'error', 'Порожній текст');
@@ -101,6 +112,21 @@ begin
   -- Д-16: заголовок обов'язковий (клієнт валідує теж; тут — авторитетно на сервері).
   if v_title is null then
     return jsonb_build_object('ok', false, 'error', 'Потрібен заголовок');
+  end if;
+
+  -- Ціна: валідуємо ТУТ, а не лише на клієнті — форму можна обійти прямим викликом API.
+  -- Формат: цілі або 2 знаки після крапки, без мінуса. Порожньо → null (ціни немає).
+  if v_price_raw is not null then
+    if v_price_raw !~ '^[0-9]+(\.[0-9]{1,2})?$' then
+      return jsonb_build_object('ok', false, 'error', 'Некоректна ціна');
+    end if;
+    v_price := v_price_raw::numeric;
+    if v_price > 100000000 then
+      return jsonb_build_object('ok', false, 'error', 'Завелика ціна');
+    end if;
+  end if;
+  if v_curr is not null and v_curr not in ('UAH', 'USD', 'EUR') then
+    return jsonb_build_object('ok', false, 'error', 'Невідома валюта');
   end if;
 
   -- Рейт-ліміт: не більше 3 постів за останню хвилину на автора.
@@ -122,6 +148,7 @@ begin
 
   insert into public.posts
     (type, text, author, photos, category, color, contact, title, location, tags,
+     price, currency,
      status, owner_uid, published_at, bumped_at, ts)
   values (
     coalesce(payload->>'type', 'board'),
@@ -134,6 +161,8 @@ begin
     left(v_title, 80),   -- Д-16: обрізаємо до 80 (узгоджено з клієнтським maxlength)
     payload->>'location',   -- Д-10: населений пункт (або «Вся Олицька громада»)
     coalesce((select array_agg(value) from jsonb_array_elements_text(payload->'tags')), '{}'),
+    v_price,                                    -- null = ціни немає (рядок на картці не малюється)
+    case when v_price is null then null else coalesce(v_curr, 'UAH') end,
     v_status,
     v_uid,
     case when v_status = 'published' then now() else null end,

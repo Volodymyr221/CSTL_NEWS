@@ -1417,6 +1417,22 @@
   flex-shrink: 0;
 }
 
+/* 🆕 28.07 (потік 2): ЦІНА — перше, що людина шукає очима в оголошенні, тому стоїть
+   НАД заголовком і важча за нього (17px/800 проти 15px/700), як у OLX.
+   Малюється лише коли ціна є (`renderPrice` у board.js): для «віддам»/«шукаю»/
+   «загубилось» рядка просто немає — порожній слот у сітці не лишаємо.
+   `font-variant-numeric: tabular-nums` — цифри однакової ширини, щоб ціни у двох
+   колонках корка не «танцювали» одна відносно одної. */
+.cm-board-price {
+  font-size: 17px;
+  font-weight: 800;
+  line-height: 1.2;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
+  color: #1C1C1E;
+  margin-bottom: 3px;
+  align-self: flex-start;
+}
 .cm-board-title {
   font-size: 15px;
   font-weight: 700;
@@ -1585,6 +1601,19 @@
    Телефон — ширина за атрибутом size="18" (трохи більше за макс. "+380 XX XXX XX XX"). */
 .app-modal--board-compose #bm-location { width: auto; max-width: 100%; }
 .app-modal--board-compose #bm-contact  { width: auto; }
+/* 🆕 28.07 (потік 2): поле ціни — вузьке (ціна коротка, повна ширина виглядала б
+   як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
+   рахувати padding під різну ширину «₴»/«$» і вибирати між обрізаною цифрою
+   і зайвою дірою. */
+.bm-price-field { display: flex; align-items: center; gap: 8px; }
+.app-modal--board-compose #bm-price { width: auto; margin-bottom: 0; }
+.bm-price-cur {
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--ink-soft, #6b6b6b);
+  flex-shrink: 0;
+}
+.bm-price-note { margin: 6px 0 0; display: block; }
 
 .cm-board-form-title {
   font-size: 14px;
@@ -2232,6 +2261,8 @@
 /* НП — праворуч від тега категорії, той самий рядок (Вова 11.07); трохи більший шрифт. */
 .cm-board-modal-subhead .cm-board-loc { float: right; margin-bottom: 0; font-size: 13px; }
 .cm-board-modal-subhead .cm-board-title { clear: both; margin: 0; }
+/* У модалці ціна більша — там місця вдосталь і це головна цифра екрана */
+.cm-board-modal-subhead .cm-board-price { clear: both; font-size: 22px; margin-bottom: 4px; }
 /* Галерея — горизонтальний свайп (scroll-snap) на всю висоту рамки */
 .cm-board-modal-gallery {
   display: flex;
@@ -2326,6 +2357,63 @@
 }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-foot::before { display: none; }
 .cm-board-modal-note .cm-board-modal-foot .cm-board-foot-who { text-align: center; }
+/* 🆕 28.07 (потік 2): контакт переїхав із КАРТКИ у модалку однією широкою кнопкою.
+   Футер модалки став ДВОРЯДКОВИМ: верхній рядок — автор/дата + зберегти/шер (рівно як
+   був, не переписаний), нижній — контакт на всю ширину.
+   Прийом: flex-wrap на футері + flex-basis:100% на смузі контакту. Так робочий верхній
+   рядок лишається недоторканим — на відміну від переходу на grid, який переклав би
+   обидва блоки. */
+.cm-board-modal-note .cm-board-modal-foot { flex-wrap: wrap; }
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact-bar {
+  flex: 0 0 100%;
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  margin-top: 10px;
+}
+/* Дзвінок — квадратна кнопка 44px (мінімальна тап-ціль за Apple HIG; на картці вона
+   була 34px — це й була одна з причин прибрати її звідти).
+   ⚠️ Селектор навмисно на 4 рівні: вище у файлі стоїть
+   `.cm-board-modal-note .cm-board-modal-foot .cm-board-call { width: 42px }` (0,3,0) —
+   без четвертого рівня воно б виграло і кнопка лишилась би 42px. */
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact-bar .cm-board-call {
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+}
+.cm-board-modal-note .cm-board-modal-foot .cm-board-contact-bar .cm-board-call svg {
+  width: 22px;
+  height: 22px;
+}
+/* Головна дія модалки — написати автору. Залита (не контурна): це основна дія екрана,
+   дзвінок поруч лишається другорядним контурним. */
+.cm-board-write-btn {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: none;
+  border-radius: 12px;
+  background: var(--red);
+  color: #FFF;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(114, 47, 55, 0.28);
+  transition: transform 0.1s, box-shadow 0.15s, filter 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.cm-board-write-btn svg { width: 19px; height: 19px; flex-shrink: 0; }
+.cm-board-write-btn:active {
+  transform: scale(0.98);
+  filter: brightness(0.94);
+  box-shadow: 0 1px 4px rgba(114, 47, 55, 0.28);
+}
 .cm-board-modal-note .cm-board-modal-foot .bd-actions--board-compact {
   margin-top: 0;
   padding-top: 0;

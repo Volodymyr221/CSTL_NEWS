@@ -6,7 +6,7 @@
 // Тип 💬 Розмова (chat) прибрано 01.07.2026 — обговорення створюються
 // з вкладки «Чати» → «Обговорення» (overlay). Так Дошка = чистий маркетплейс.
 
-import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea } from '../core/utils.js';
+import { showToast, escapeHtml, containsProfanity, compressImage, autoGrowTextarea, formatPrice } from '../core/utils.js';
 import { submitPost, updateBoardPost, isSupabaseReady } from '../core/supabase.js';
 import { uploadBlobWithRetry } from '../core/upload.js';   // повтор upload при збої (blob уже стиснуто для прев'ю)
 import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
@@ -88,6 +88,10 @@ export function openBoardModal(opts = {}) {
     contact: isEdit && editPost.contact ? maskUaPhone(editPost.contact) : '+380',   // Д-24
     title: isEdit ? (editPost.title || '') : '',
     location: isEdit ? (editPost.location || COMMUNITY_ALL) : COMMUNITY_ALL,   // Д-10
+    // 🆕 28.07 (потік 2): ціна — НЕОБОВʼЯЗКОВА (пряма вимога Вови: оголошення має
+    // виглядати чітко і з нею, і без неї). Тримаємо РЯДКОМ, а не числом: поле може
+    // бути порожнім, а порожній рядок і 0 — це різні речі («не вказано» vs «безкоштовно»).
+    price: isEdit && editPost.price != null ? String(editPost.price) : '',
   };
 
   const bodyHtml = `
@@ -154,6 +158,15 @@ export function openBoardModal(opts = {}) {
       </div>
 
       <div class="bm-section">
+        <label class="bm-label" for="bm-price">Ціна <span class="bm-label-hint">(необов'язково)</span></label>
+        <div class="bm-price-field">
+          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="напр. 2500" value="${escapeHtml(state.price)}">
+          <span class="bm-price-cur">₴</span>
+        </div>
+        <p class="bm-label-hint bm-price-note">Порожньо — ціни на картці не буде. «0» покаже «Безкоштовно».</p>
+      </div>
+
+      <div class="bm-section">
         <label class="bm-label" for="bm-location">Локація</label>
         <select class="cm-board-input cm-board-input--small" id="bm-location">
           <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? ' selected' : ''}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
@@ -194,6 +207,18 @@ export function openBoardModal(opts = {}) {
     // Заголовок
     dynamicEl.querySelector('#bm-title')?.addEventListener('input', e => {
       state.title = e.target.value;
+      renderPreview();
+    });
+    // Ціна — пускаємо лише цифри і ОДНУ крапку, максимум 2 знаки після неї.
+    // Кома → крапка: на iOS цифрова клавіатура дає українську кому, а база чекає крапку.
+    // Чистимо просто в полі (а не тільки перед відправкою), щоб людина одразу бачила,
+    // що саме буде збережено — і прев'ю не показувало те, чого сервер не прийме.
+    dynamicEl.querySelector('#bm-price')?.addEventListener('input', e => {
+      let v = e.target.value.replace(/,/g, '.').replace(/[^\d.]/g, '');
+      const parts = v.split('.');
+      if (parts.length > 1) v = `${parts[0]}.${parts.slice(1).join('').slice(0, 2)}`;
+      e.target.value = v;
+      state.price = v;
       renderPreview();
     });
     // Локація
@@ -324,14 +349,21 @@ export function openBoardModal(opts = {}) {
       <div class="cm-board-contact cm-board-contact--phone">
         ${escapeHtml(contactShow)}
       </div>` : '';
+    // Ціна у прев'ю — тим самим форматувальником, що й на справжній картці
+    // (`core/utils.js`), інакше прев'ю показувало б «2500», а дошка «2 500 ₴».
+    const priceLabel = formatPrice(state.price, 'UAH');
+    const priceHtml = priceLabel ? `<div class="cm-board-price">${escapeHtml(priceLabel)}</div>` : '';
+    // Д-6: прев'ю мусить дзеркалити РЕАЛЬНУ картку. 🆕 28.07 (потік 2) з картки прибрано
+    // опис — прибираємо його і тут, інакше прев'ю обіцяло б те, чого на дошці не буде.
+    // Опис нікуди не дівається: він відкривається в модалці оголошення.
     previewCanvas.innerHTML = `
       <article class="cm-board-note bd-card bd-card--board${firstPhoto ? ' cm-board-note--has-photo' : ''}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ''}
         ${catHtml}
         ${renderPreviewLoc(state.location)}
+        ${priceHtml}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : 'Заголовок оголошення'}</h3>
-        <p class="cm-board-text">${escapeHtml(state.text.trim() || 'Текст оголошення зʼявиться тут…')}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">— ${escapeHtml(state.author.trim() || 'Житель')}</span>
           <span class="cm-board-time">щойно</span>
@@ -485,5 +517,10 @@ function buildPayload(state) {
     title:     state.title.trim(),   // обов'язковий (Д-16); сервер теж перевіряє
     location:  state.location || COMMUNITY_ALL,   // Д-10
     tags:      [],
+    // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — так RPC
+    // update_board_post розуміє «ціну стерли» і відрізняє це від «поле не чіпали»
+    // (див. v_has_price у scripts/supabase_board_edit.sql).
+    price:     state.price.trim(),
+    currency:  state.price.trim() ? 'UAH' : null,
   };
 }

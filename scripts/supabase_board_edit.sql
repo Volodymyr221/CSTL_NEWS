@@ -15,6 +15,10 @@
 --
 -- ЗАСТОСУВАТИ через Supabase MCP apply_migration (project uabyfecseqnemvcqhdem).
 -- Скрипт ІДЕМПОТЕНТНИЙ (create or replace) — можна запускати повторно.
+--
+-- ⚠️ 28.07.2026 — функцію ДОПОВНЕНО ціною (потік 2 Дошки), парно з
+--    supabase_reputation.sql (submit_board_post). Накочувати ОБИДВА файли разом:
+--    інакше подати ціну можна буде, а відредагувати — ні (або навпаки).
 -- ============================================================================
 
 create or replace function public.update_board_post(p_id bigint, payload jsonb)
@@ -32,6 +36,15 @@ declare
   v_new_status text;
   v_text       text    := nullif(btrim(coalesce(payload->>'text','')), '');
   v_title      text    := nullif(btrim(coalesce(payload->>'title','')), '');
+  -- 🆕 28.07 (потік 2 Дошки): ціна. Розрізняємо ТРИ випадки, а не два:
+  --   ключа 'price' у payload НЕМА          → ціну не чіпаємо (стара лишається);
+  --   ключ є, значення порожнє              → ціну ЗНЯТО (людина стерла поле);
+  --   ключ є, значення число                → нова ціна.
+  -- Без цієї різниці будь-яке редагування старого поста мовчки стирало б ціну.
+  v_has_price  boolean := payload ? 'price';
+  v_price_raw  text    := nullif(btrim(coalesce(payload->>'price','')), '');
+  v_price      numeric;
+  v_curr       text    := upper(nullif(btrim(coalesce(payload->>'currency','')), ''));
 begin
   if v_uid is null then
     return jsonb_build_object('ok', false, 'error', 'Треба увійти');
@@ -63,6 +76,20 @@ begin
     return jsonb_build_object('ok', false, 'error', 'Потрібен заголовок');
   end if;
 
+  -- Ціна: та сама валідація, що в submit_board_post (форму можна обійти прямим API).
+  if v_price_raw is not null then
+    if v_price_raw !~ '^[0-9]+(\.[0-9]{1,2})?$' then
+      return jsonb_build_object('ok', false, 'error', 'Некоректна ціна');
+    end if;
+    v_price := v_price_raw::numeric;
+    if v_price > 100000000 then
+      return jsonb_build_object('ok', false, 'error', 'Завелика ціна');
+    end if;
+  end if;
+  if v_curr is not null and v_curr not in ('UAH', 'USD', 'EUR') then
+    return jsonb_build_object('ok', false, 'error', 'Невідома валюта');
+  end if;
+
   -- Довіра автора: trusted-published лишається published; звичайний published → pending.
   select coalesce(trusted, false) into v_trusted
     from public.profiles where uid = v_uid;
@@ -82,6 +109,12 @@ begin
     photos       = coalesce(
                      (select array_agg(value) from jsonb_array_elements_text(payload->'photos')),
                      '{}'),
+    price        = case when v_has_price then v_price else price end,
+    currency     = case
+                     when not v_has_price then currency
+                     when v_price is null  then null            -- ціну зняли
+                     else coalesce(v_curr, 'UAH')
+                   end,
     status       = v_new_status,
     published_at = case when v_new_status = 'pending' then null else published_at end,
     updated_at   = now()
@@ -104,4 +137,9 @@ grant  execute on function public.update_board_post(bigint, jsonb) to authentica
 --   3. trusted-автор редагує свій published → ok, status лишається 'published'.
 --   4. Чужий пост (owner_uid <> auth.uid()) → error 'Це не ваше оголошення'.
 --   5. closed/rejected пост → error 'не можна редагувати'.
+--   🆕 Ціна (28.07):
+--   6. payload БЕЗ ключа 'price' → стара ціна лишилась незмінною.
+--   7. payload з 'price': '' → price і currency стали null (ціну знято).
+--   8. payload з 'price': '2500' → price=2500, currency='UAH'.
+--   9. payload з 'price': '-5' або 'abc' → error 'Некоректна ціна', рядок не змінено.
 -- ============================================================================

@@ -153,6 +153,18 @@
     const d = new Date(dateStr);
     return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", weekday: "long" });
   }
+  var PRICE_SYMBOLS = { UAH: "\u20B4", USD: "$", EUR: "\u20AC" };
+  function formatPrice(price, currency) {
+    if (price == null || price === "")
+      return "";
+    const n = Number(price);
+    if (!isFinite(n) || n < 0)
+      return "";
+    if (n === 0)
+      return "\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E";
+    const sym = PRICE_SYMBOLS[currency || "UAH"] || String(currency || "");
+    return `${n.toLocaleString("uk-UA")} ${sym}`.trim();
+  }
   function pad(n) {
     return String(n).padStart(2, "0");
   }
@@ -2464,8 +2476,12 @@
       contact: isEdit && editPost.contact ? maskUaPhone(editPost.contact) : "+380",
       // Д-24
       title: isEdit ? editPost.title || "" : "",
-      location: isEdit ? editPost.location || COMMUNITY_ALL : COMMUNITY_ALL
+      location: isEdit ? editPost.location || COMMUNITY_ALL : COMMUNITY_ALL,
       // Д-10
+      // 🆕 28.07 (потік 2): ціна — НЕОБОВʼЯЗКОВА (пряма вимога Вови: оголошення має
+      // виглядати чітко і з нею, і без неї). Тримаємо РЯДКОМ, а не числом: поле може
+      // бути порожнім, а порожній рядок і 0 — це різні речі («не вказано» vs «безкоштовно»).
+      price: isEdit && editPost.price != null ? String(editPost.price) : ""
     };
     const bodyHtml = `
     <div class="cm-board-modal-head">
@@ -2523,6 +2539,15 @@
       </div>
 
       <div class="bm-section">
+        <label class="bm-label" for="bm-price">\u0426\u0456\u043D\u0430 <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
+        <div class="bm-price-field">
+          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="\u043D\u0430\u043F\u0440. 2500" value="${escapeHtml(state.price)}">
+          <span class="bm-price-cur">\u20B4</span>
+        </div>
+        <p class="bm-label-hint bm-price-note">\u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u0446\u0456\u043D\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043D\u0435 \u0431\u0443\u0434\u0435. \xAB0\xBB \u043F\u043E\u043A\u0430\u0436\u0435 \xAB\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E\xBB.</p>
+      </div>
+
+      <div class="bm-section">
         <label class="bm-label" for="bm-location">\u041B\u043E\u043A\u0430\u0446\u0456\u044F</label>
         <select class="cm-board-input cm-board-input--small" id="bm-location">
           <option value="${escapeHtml(COMMUNITY_ALL)}"${state.location === COMMUNITY_ALL ? " selected" : ""}>${escapeHtml(COMMUNITY_ALL_LABEL)}</option>
@@ -2560,6 +2585,15 @@
       });
       dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
         state.title = e.target.value;
+        renderPreview();
+      });
+      dynamicEl.querySelector("#bm-price")?.addEventListener("input", (e) => {
+        let v = e.target.value.replace(/,/g, ".").replace(/[^\d.]/g, "");
+        const parts = v.split(".");
+        if (parts.length > 1)
+          v = `${parts[0]}.${parts.slice(1).join("").slice(0, 2)}`;
+        e.target.value = v;
+        state.price = v;
         renderPreview();
       });
       dynamicEl.querySelector("#bm-location")?.addEventListener("change", (e) => {
@@ -2675,14 +2709,16 @@
       <div class="cm-board-contact cm-board-contact--phone">
         ${escapeHtml(contactShow)}
       </div>` : "";
+      const priceLabel = formatPrice(state.price, "UAH");
+      const priceHtml = priceLabel ? `<div class="cm-board-price">${escapeHtml(priceLabel)}</div>` : "";
       previewCanvas.innerHTML = `
       <article class="cm-board-note bd-card bd-card--board${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
         ${firstPhoto ? `<div class="cm-board-photo-wrap"><img class="cm-board-photo" src="${firstPhoto}" alt=""></div>` : ""}
         ${catHtml}
         ${renderPreviewLoc(state.location)}
+        ${priceHtml}
         <h3 class="cm-board-title">${state.title.trim() ? escapeHtml(state.title.trim()) : "\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F"}</h3>
-        <p class="cm-board-text">${escapeHtml(state.text.trim() || "\u0422\u0435\u043A\u0441\u0442 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0437\u02BC\u044F\u0432\u0438\u0442\u044C\u0441\u044F \u0442\u0443\u0442\u2026")}</p>
         <div class="cm-board-footer">
           <span class="cm-board-author">\u2014 ${escapeHtml(state.author.trim() || "\u0416\u0438\u0442\u0435\u043B\u044C")}</span>
           <span class="cm-board-time">\u0449\u043E\u0439\u043D\u043E</span>
@@ -2825,7 +2861,12 @@
       // обов'язковий (Д-16); сервер теж перевіряє
       location: state.location || COMMUNITY_ALL,
       // Д-10
-      tags: []
+      tags: [],
+      // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — так RPC
+      // update_board_post розуміє «ціну стерли» і відрізняє це від «поле не чіпали»
+      // (див. v_has_price у scripts/supabase_board_edit.sql).
+      price: state.price.trim(),
+      currency: state.price.trim() ? "UAH" : null
     };
   }
 
@@ -5621,20 +5662,35 @@
     const label = loc === COMMUNITY_ALL ? COMMUNITY_ALL_LABEL : loc;
     return `<span class="cm-board-loc">${PIN_ICON_SVG2}${escapeHtml(label)}</span>`;
   }
-  function renderCardFoot(p) {
-    const contact = p.contact ? String(p.contact).trim() : "";
+  function phoneOf(p) {
+    const contact = p && p.contact ? String(p.contact).trim() : "";
     const isPhone = contact && /^[\+\d][\d\s\-\(\)]{5,}$/.test(contact);
-    const tel = isPhone ? contact.replace(/[^\d+]/g, "") : "";
+    return isPhone ? contact.replace(/[^\d+]/g, "") : "";
+  }
+  function renderPrice(p) {
+    const t = p ? formatPrice(p.price, p.currency) : "";
+    return t ? `<div class="cm-board-price">${escapeHtml(t)}</div>` : "";
+  }
+  function renderCardFoot(p, { actions = false } = {}) {
+    const tel = actions ? phoneOf(p) : "";
     return `
       <div class="cm-board-foot">
-        <div class="cm-board-foot-actions">
-          ${isPhone ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
+        ${actions ? `<div class="cm-board-foot-actions">
+          ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
           <button class="cm-board-msg-btn" data-open-chat aria-label="\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F">${MSG_ICON_SVG}</button>
-        </div>
+        </div>` : ""}
         <div class="cm-board-foot-who">
           <span class="cm-board-author cm-board-author--card">\u2014 <span${nameUid(p.owner_uid)}>${liveName(p.author, p.owner_uid, "\u0430\u043D\u043E\u043D\u0456\u043C\u043D\u043E")}</span></span>
           <span class="cm-board-time">${renderPostTime(p)}</span>
         </div>
+      </div>`;
+  }
+  function renderContactBar(p) {
+    const tel = phoneOf(p);
+    return `
+      <div class="cm-board-contact-bar">
+        ${tel ? `<a class="cm-board-call" href="tel:${escapeHtml(tel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438">${PHONE_ICON_SVG}</a>` : ""}
+        <button class="cm-board-write-btn" type="button" data-open-chat>${MSG_ICON_SVG}<span>\u041D\u0430\u043F\u0438\u0441\u0430\u0442\u0438</span></button>
       </div>`;
   }
   var BUMP_ICON_SVG = '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 12l6-6 6 6"/></svg>';
@@ -5683,8 +5739,8 @@
       ${photoHtml}
       <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
       ${renderLoc(p.location)}
-      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
-      <p class="cm-board-text">${escapeHtml(p.text)}</p>
+      ${renderPrice(p)}
+      ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : `<p class="cm-board-text">${escapeHtml(p.text)}</p>`}
       ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
     </article>
@@ -5710,6 +5766,7 @@
       <div class="cm-board-modal-subhead">
         <span class="cm-board-cat cm-board-cat--${escapeHtml(catColor(p.category))}">${catIcon(p.category)} ${escapeHtml(catShort(p.category))}</span>
         ${renderLoc(p.location)}
+        ${renderPrice(p)}
         ${p.title ? `<h3 class="cm-board-title">${escapeHtml(p.title)}</h3>` : ""}
       </div>
       <div class="cm-board-modal-content">
@@ -5719,6 +5776,7 @@
     <div class="cm-board-modal-foot">
       ${renderCardFoot(p)}
       ${boardActionsHtml(p)}
+      ${renderContactBar(p)}
     </div>
   `;
   }
