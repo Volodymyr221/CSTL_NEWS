@@ -1613,6 +1613,9 @@
    як помилка) + символ валюти поруч, а не всередині поля: інакше довелось би
    рахувати padding під різну ширину «₴»/«$» і вибирати між обрізаною цифрою
    і зайвою дірою. */
+/* Секція ціни ховається для категорій без ціни. Явне правило потрібне, бо `.bm-section`
+   може мати `display`, а він перебиває стандартну поведінку атрибута `hidden`. */
+.bm-section[hidden] { display: none; }
 .bm-price-field { display: flex; align-items: center; gap: 8px; }
 .app-modal--board-compose #bm-price { width: auto; margin-bottom: 0; }
 .bm-price-cur {
@@ -1622,6 +1625,34 @@
   flex-shrink: 0;
 }
 .bm-price-note { margin: 6px 0 0; display: block; }
+/* «Договірна» — поруч із полем числа, бо це ТА САМА відповідь на питання «скільки»,
+   лише інакша. Окремою секцією нижче вона читалась би як не пов'язана з ціною. */
+/* Два варіанти замість числа — власним рядком під полем, а не поруч із ним:
+   на вузькому екрані «₴ ☐ Договірна ☐ Безкоштовно» в один рядок не влазить
+   і переноситься навпіл. */
+.bm-price-opts { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 4px; }
+.bm-negot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* 🔴 44px — мінімальна тап-ціль за Apple HIG. Сам квадратик галочки 18px, і без цього
+     рядка вся клікабельна зона була б 18px заввишки: заміряно стендом. Той самий аргумент,
+     через який 28.07 кнопки модалки лишили 44px і не зменшували. Тягнеться за рахунок
+     padding, а не розміру квадратика — квадратик 18px виглядає правильно. */
+  min-height: 44px;
+  padding: 2px 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-soft);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.bm-negot input { width: 18px; height: 18px; accent-color: var(--red); flex-shrink: 0; }
+/* Поле числа вимкнене, коли стоїть «Договірна» — видно, що вводити нема сенсу. */
+.app-modal--board-compose #bm-price:disabled { opacity: 0.45; }
+/* «Договірна»/«Безкоштовно» — слова, не сума: трохи менші, щоб не важили як цифра. */
+.cm-board-price--word { font-size: 14.5px; letter-spacing: 0; }
+.cm-board-modal-subhead .cm-board-price--word { font-size: 17px; }
 
 .cm-board-form-title {
   font-size: 14px;

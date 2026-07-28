@@ -154,12 +154,12 @@
     return d.toLocaleDateString("uk-UA", { day: "numeric", month: "long", weekday: "long" });
   }
   var PRICE_SYMBOLS = { UAH: "\u20B4", USD: "$", EUR: "\u20AC" };
-  function formatPrice(price, currency) {
+  function formatPrice(price, currency, negotiable) {
     if (price == null || price === "")
-      return "";
+      return negotiable ? "\u0414\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430" : "";
     const n = Number(price);
     if (!isFinite(n) || n < 0)
-      return "";
+      return negotiable ? "\u0414\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430" : "";
     if (n === 0)
       return "\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E";
     const sym = PRICE_SYMBOLS[currency || "UAH"] || String(currency || "");
@@ -2302,6 +2302,8 @@
     { id: "\u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E", label: "\u0417\u043D\u0430\u0439\u0434\u0435\u043D\u043E", color: "amber", icon: SVG.check },
     { id: "\u0437\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", label: "\u0417\u0430\u0433\u0443\u0431\u0438\u043B\u043E\u0441\u044C", color: "amber", icon: SVG.help }
   ];
+  var PRICE_CATEGORIES = ["\u043F\u0440\u043E\u0434\u0430\u043C", "\u043F\u043E\u0441\u043B\u0443\u0433\u0430", "\u043A\u0443\u043F\u043B\u044E"];
+  var categoryHasPrice = (id) => PRICE_CATEGORIES.includes(id);
   var ALL_ICON = SVG.sliders;
   var byId = (id) => BOARD_CATEGORIES.find((c) => c.id === id);
   function catColor(id) {
@@ -2481,7 +2483,11 @@
       // 🆕 28.07 (потік 2): ціна — НЕОБОВʼЯЗКОВА (пряма вимога Вови: оголошення має
       // виглядати чітко і з нею, і без неї). Тримаємо РЯДКОМ, а не числом: поле може
       // бути порожнім, а порожній рядок і 0 — це різні речі («не вказано» vs «безкоштовно»).
-      price: isEdit && editPost.price != null ? String(editPost.price) : ""
+      // ⚠️ База віддає numeric рядком «1500.00» — прибираємо копійки, якщо їх нема,
+      // інакше у полі редагування стояло б «1500.00» замість «1500».
+      price: isEdit && editPost.price != null ? String(editPost.price).replace(/\.00$/, "") : "",
+      // «Договірна» — окреме поле в базі (`posts.price_negotiable`). Взаємовиключне з числом.
+      negotiable: isEdit ? !!editPost.price_negotiable : false
     };
     const bodyHtml = `
     <div class="cm-board-modal-head">
@@ -2538,13 +2544,23 @@
         <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="\u041D\u0430\u043F\u0440. \u041F\u0440\u043E\u0434\u0430\u043C \u043C\u043E\u0442\u043E\u0446\u0438\u043A\u043B" value="${escapeHtml(state.title)}">
       </div>
 
-      <div class="bm-section">
+      <div class="bm-section" id="bm-price-section"${categoryHasPrice(state.category) ? "" : " hidden"}>
         <label class="bm-label" for="bm-price">\u0426\u0456\u043D\u0430 <span class="bm-label-hint">(\u043D\u0435\u043E\u0431\u043E\u0432'\u044F\u0437\u043A\u043E\u0432\u043E)</span></label>
         <div class="bm-price-field">
-          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="\u043D\u0430\u043F\u0440. 2500" value="${escapeHtml(state.price)}">
+          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="\u043D\u0430\u043F\u0440. 2500" value="${escapeHtml(isFreePrice() ? "" : state.price)}"${state.negotiable || isFreePrice() ? " disabled" : ""}>
           <span class="bm-price-cur">\u20B4</span>
         </div>
-        <p class="bm-label-hint bm-price-note">\u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u0446\u0456\u043D\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043D\u0435 \u0431\u0443\u0434\u0435. \xAB0\xBB \u043F\u043E\u043A\u0430\u0436\u0435 \xAB\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E\xBB.</p>
+        <div class="bm-price-opts">
+          <label class="bm-negot">
+            <input type="checkbox" id="bm-negotiable"${state.negotiable ? " checked" : ""}>
+            <span>\u0414\u043E\u0433\u043E\u0432\u0456\u0440\u043D\u0430</span>
+          </label>
+          <label class="bm-negot">
+            <input type="checkbox" id="bm-free"${isFreePrice() ? " checked" : ""}>
+            <span>\u0411\u0435\u0437\u043A\u043E\u0448\u0442\u043E\u0432\u043D\u043E</span>
+          </label>
+        </div>
+        <p class="bm-label-hint bm-price-note">\u041F\u043E\u0440\u043E\u0436\u043D\u044C\u043E \u2014 \u0446\u0456\u043D\u0438 \u043D\u0430 \u043A\u0430\u0440\u0442\u0446\u0456 \u043D\u0435 \u0431\u0443\u0434\u0435.</p>
       </div>
 
       <div class="bm-section">
@@ -2580,6 +2596,7 @@
           dynamicEl.querySelectorAll(".bm-chip").forEach((b) => b.classList.remove("active"));
           btn.classList.add("active");
           state.category = btn.dataset.cat;
+          syncPriceVisibility();
           renderPreview();
         });
       });
@@ -2594,7 +2611,22 @@
           v = `${parts[0]}.${parts.slice(1).join("").slice(0, 2)}`;
         e.target.value = v;
         state.price = v;
+        if (v) {
+          state.negotiable = false;
+          const cbN = dynamicEl.querySelector("#bm-negotiable");
+          const cbF = dynamicEl.querySelector("#bm-free");
+          if (cbN)
+            cbN.checked = false;
+          if (cbF)
+            cbF.checked = false;
+        }
         renderPreview();
+      });
+      dynamicEl.querySelector("#bm-negotiable")?.addEventListener("change", (e) => {
+        setPriceMode(e.target.checked ? "negot" : "num");
+      });
+      dynamicEl.querySelector("#bm-free")?.addEventListener("change", (e) => {
+        setPriceMode(e.target.checked ? "free" : "num");
       });
       dynamicEl.querySelector("#bm-location")?.addEventListener("change", (e) => {
         state.location = e.target.value;
@@ -2609,7 +2641,47 @@
         state.contact = e.target.value;
         renderPreview();
       });
+      syncPriceVisibility();
       bindPhotoSlots();
+    }
+    function isFreePrice() {
+      return state.price !== "" && Number(state.price) === 0;
+    }
+    function setPriceMode(mode) {
+      const inp = dynamicEl.querySelector("#bm-price");
+      const cbN = dynamicEl.querySelector("#bm-negotiable");
+      const cbF = dynamicEl.querySelector("#bm-free");
+      state.negotiable = mode === "negot";
+      state.price = mode === "free" ? "0" : "";
+      if (inp) {
+        if (mode !== "num")
+          inp.value = "";
+        inp.disabled = mode !== "num";
+      }
+      if (cbN)
+        cbN.checked = mode === "negot";
+      if (cbF)
+        cbF.checked = mode === "free";
+      renderPreview();
+    }
+    function syncPriceVisibility() {
+      const sec = dynamicEl.querySelector("#bm-price-section");
+      if (!sec)
+        return;
+      const ok = categoryHasPrice(state.category);
+      sec.hidden = !ok;
+      if (!ok && (state.price || state.negotiable)) {
+        state.price = "";
+        state.negotiable = false;
+        const inp = dynamicEl.querySelector("#bm-price");
+        if (inp) {
+          inp.value = "";
+          inp.disabled = false;
+        }
+        const cb = dynamicEl.querySelector("#bm-negotiable");
+        if (cb)
+          cb.checked = false;
+      }
     }
     function photoSlotsHtml(count = 5) {
       return `
@@ -2709,8 +2781,8 @@
       <div class="cm-board-contact cm-board-contact--phone">
         ${escapeHtml(contactShow)}
       </div>` : "";
-      const priceLabel = formatPrice(state.price, "UAH");
-      const priceHtml = priceLabel ? `<div class="cm-board-price">${escapeHtml(priceLabel)}</div>` : "";
+      const priceLabel = formatPrice(state.price, "UAH", state.negotiable);
+      const priceHtml = priceLabel ? `<div class="cm-board-price${/\d/.test(priceLabel) ? "" : " cm-board-price--word"}">${escapeHtml(priceLabel)}</div>` : "";
       previewCanvas.innerHTML = `
       <article class="cm-board-note bd-card bd-card--board${firstPhoto ? " cm-board-note--has-photo" : ""}" style="--tilt:0deg">
         <span class="cm-board-pin"></span>
@@ -2862,11 +2934,13 @@
       location: state.location || COMMUNITY_ALL,
       // Д-10
       tags: [],
-      // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — так RPC
-      // update_board_post розуміє «ціну стерли» і відрізняє це від «поле не чіпали»
-      // (див. v_has_price у scripts/supabase_board_edit.sql).
+      // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — RPC не розрізняє
+      // «не передали» і «стерли» (обидва дають null), тож при редагуванні мовчання
+      // означало б стирання ціни.
+      // ⚠️ `currency` НЕ шлемо свідомо: сервер жорстко ставить 'UAH' і значення від
+      //    клієнта ігнорує («у громаді розрахунки в гривні» — коментар у самій RPC).
       price: state.price.trim(),
-      currency: state.price.trim() ? "UAH" : null
+      price_negotiable: !!state.negotiable
     };
   }
 
@@ -5668,8 +5742,11 @@
     return isPhone ? contact.replace(/[^\d+]/g, "") : "";
   }
   function renderPrice(p) {
-    const t = p ? formatPrice(p.price, p.currency) : "";
-    return t ? `<div class="cm-board-price">${escapeHtml(t)}</div>` : "";
+    const t = p ? formatPrice(p.price, p.currency, p.price_negotiable) : "";
+    if (!t)
+      return "";
+    const isWord = !/\d/.test(t);
+    return `<div class="cm-board-price${isWord ? " cm-board-price--word" : ""}">${escapeHtml(t)}</div>`;
   }
   function renderCardFoot(p, { actions = false } = {}) {
     const tel = actions ? phoneOf(p) : "";

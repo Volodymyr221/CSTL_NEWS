@@ -138,11 +138,15 @@ export function formatEventDate(dateStr) {
 // «віддам»/«шукаю»/«загубилось» порожній слот у сітці не лишаємо — рішення Вови).
 // ⚠️ 0 — це свідоме «Безкоштовно», а не «не вказано». Тому перевірка на null/'',
 // а не на хибність значення: `if (!price)` з'їв би нуль.
+// 🆕 28.07 — третій аргумент `negotiable` («Договірна»). Порядок саме такий, бо
+// ЧИСЛО має пріоритет: так вирішує сервер (`if v_price is not null then v_negot := false`
+// у `submit_board_post`), і клієнт мусить казати те саме — інакше картка написала б
+// «Договірна» там, де в базі лежить конкретна сума.
 const PRICE_SYMBOLS = { UAH: '₴', USD: '$', EUR: '€' };
-export function formatPrice(price, currency) {
-  if (price == null || price === '') return '';
+export function formatPrice(price, currency, negotiable) {
+  if (price == null || price === '') return negotiable ? 'Договірна' : '';
   const n = Number(price);
-  if (!isFinite(n) || n < 0) return '';
+  if (!isFinite(n) || n < 0) return negotiable ? 'Договірна' : '';
   if (n === 0) return 'Безкоштовно';
   // toLocaleString('uk-UA') ставить між тисячами НЕРОЗРИВНИЙ пробіл — саме те, що
   // треба на вузькій картці: число не переноситься саме посеред себе.

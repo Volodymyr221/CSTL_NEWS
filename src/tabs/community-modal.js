@@ -13,7 +13,7 @@ import { isLoggedIn, currentUserName, getProfile } from '../core/auth.js';
 import { SETTLEMENTS, COMMUNITY_ALL, COMMUNITY_ALL_LABEL } from '../core/settlements.js';
 import { openModal } from '../core/modal.js';
 // Таксономія категорій (id/label/колір/векторна іконка) — спільний модуль, єдине джерело.
-import { BOARD_CATEGORIES, catShort } from '../core/board-categories.js';
+import { BOARD_CATEGORIES, catShort, categoryHasPrice } from '../core/board-categories.js';
 import { ICONS } from '../core/icons.js';
 
 // Вектор-олівець у заголовку модалки — спільна іконка з core/icons.js (дедуп,
@@ -91,7 +91,11 @@ export function openBoardModal(opts = {}) {
     // 🆕 28.07 (потік 2): ціна — НЕОБОВʼЯЗКОВА (пряма вимога Вови: оголошення має
     // виглядати чітко і з нею, і без неї). Тримаємо РЯДКОМ, а не числом: поле може
     // бути порожнім, а порожній рядок і 0 — це різні речі («не вказано» vs «безкоштовно»).
-    price: isEdit && editPost.price != null ? String(editPost.price) : '',
+    // ⚠️ База віддає numeric рядком «1500.00» — прибираємо копійки, якщо їх нема,
+    // інакше у полі редагування стояло б «1500.00» замість «1500».
+    price: isEdit && editPost.price != null ? String(editPost.price).replace(/\.00$/, '') : '',
+    // «Договірна» — окреме поле в базі (`posts.price_negotiable`). Взаємовиключне з числом.
+    negotiable: isEdit ? !!editPost.price_negotiable : false,
   };
 
   const bodyHtml = `
@@ -157,13 +161,23 @@ export function openBoardModal(opts = {}) {
         <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="Напр. Продам мотоцикл" value="${escapeHtml(state.title)}">
       </div>
 
-      <div class="bm-section">
+      <div class="bm-section" id="bm-price-section"${categoryHasPrice(state.category) ? '' : ' hidden'}>
         <label class="bm-label" for="bm-price">Ціна <span class="bm-label-hint">(необов'язково)</span></label>
         <div class="bm-price-field">
-          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="напр. 2500" value="${escapeHtml(state.price)}">
+          <input class="cm-board-input cm-board-input--small" id="bm-price" type="text" inputmode="decimal" size="12" placeholder="напр. 2500" value="${escapeHtml(isFreePrice() ? '' : state.price)}"${state.negotiable || isFreePrice() ? ' disabled' : ''}>
           <span class="bm-price-cur">₴</span>
         </div>
-        <p class="bm-label-hint bm-price-note">Порожньо — ціни на картці не буде. «0» покаже «Безкоштовно».</p>
+        <div class="bm-price-opts">
+          <label class="bm-negot">
+            <input type="checkbox" id="bm-negotiable"${state.negotiable ? ' checked' : ''}>
+            <span>Договірна</span>
+          </label>
+          <label class="bm-negot">
+            <input type="checkbox" id="bm-free"${isFreePrice() ? ' checked' : ''}>
+            <span>Безкоштовно</span>
+          </label>
+        </div>
+        <p class="bm-label-hint bm-price-note">Порожньо — ціни на картці не буде.</p>
       </div>
 
       <div class="bm-section">
@@ -201,6 +215,7 @@ export function openBoardModal(opts = {}) {
         dynamicEl.querySelectorAll('.bm-chip').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         state.category = btn.dataset.cat;
+        syncPriceVisibility();
         renderPreview();
       });
     });
@@ -219,7 +234,23 @@ export function openBoardModal(opts = {}) {
       if (parts.length > 1) v = `${parts[0]}.${parts.slice(1).join('').slice(0, 2)}`;
       e.target.value = v;
       state.price = v;
+      // Вписав число — обидві галочки знімаються. Це НЕ примха інтерфейсу: сервер
+      // робить те саме (`if v_price is not null then v_negot := false`), і якби клієнт
+      // лишив галочку стояти, вона б висіла у формі, а в базу не потрапила.
+      if (v) {
+        state.negotiable = false;
+        const cbN = dynamicEl.querySelector('#bm-negotiable');
+        const cbF = dynamicEl.querySelector('#bm-free');
+        if (cbN) cbN.checked = false;
+        if (cbF) cbF.checked = false;
+      }
       renderPreview();
+    });
+    dynamicEl.querySelector('#bm-negotiable')?.addEventListener('change', e => {
+      setPriceMode(e.target.checked ? 'negot' : 'num');
+    });
+    dynamicEl.querySelector('#bm-free')?.addEventListener('change', e => {
+      setPriceMode(e.target.checked ? 'free' : 'num');
     });
     // Локація
     dynamicEl.querySelector('#bm-location')?.addEventListener('change', e => {
@@ -237,7 +268,57 @@ export function openBoardModal(opts = {}) {
       state.contact = e.target.value;
       renderPreview();
     });
+    syncPriceVisibility();
     bindPhotoSlots();
+  }
+
+  // «Безкоштовно» — це НЕ окреме поле в базі, а ціна 0. Тому окремого стану не заводимо:
+  // ознака виводиться з самої ціни. Один стан = нема чому розсинхронитись.
+  // ⚠️ Порівнюємо ЧИСЛОМ, а не рядком: база віддає numeric як «0.00», і `=== '0'`
+  // мовчки не спрацював би при редагуванні вже збереженого безкоштовного оголошення.
+  function isFreePrice() {
+    return state.price !== '' && Number(state.price) === 0;
+  }
+
+  // Три взаємовиключні стани ціни: число · «Договірна» · «Безкоштовно».
+  // ОДИН вхід на всі переходи — інакше три обробники по-різному уявляли б, що саме
+  // зараз стоїть, і рано чи пізно розійшлись би (класична хвороба двох джерел правди).
+  function setPriceMode(mode) {   // 'num' | 'negot' | 'free'
+    const inp = dynamicEl.querySelector('#bm-price');
+    const cbN = dynamicEl.querySelector('#bm-negotiable');
+    const cbF = dynamicEl.querySelector('#bm-free');
+    state.negotiable = mode === 'negot';
+    // 'free' → 0 (саме так «безкоштовно» лежить у базі); 'negot' і 'num' → порожньо
+    // (у режимі 'num' людина щойно зняла галочку і вписуватиме число сама).
+    state.price = mode === 'free' ? '0' : '';
+    if (inp) {
+      if (mode !== 'num') inp.value = '';
+      inp.disabled = mode !== 'num';
+    }
+    if (cbN) cbN.checked = mode === 'negot';
+    if (cbF) cbF.checked = mode === 'free';
+    renderPreview();
+  }
+
+  // 🆕 28.07 — поле «Ціна» видно ЛИШЕ для категорій, де ціна має сенс
+  // (`PRICE_CATEGORIES` = дзеркало серверного `v_price_cats`).
+  // ⚠️ Ховаючи поле, СТИРАЄМО і значення. Інакше вийшов би найгірший з можливих
+  // сценаріїв: людина вписала ціну під «Продам», перемкнула на «Віддам», прев'ю
+  // показало б ціну — а база при збереженні мовчки її витерла б (там саме такий гейт).
+  // Тобто застосунок пообіцяв би те, чого не збереже.
+  function syncPriceVisibility() {
+    const sec = dynamicEl.querySelector('#bm-price-section');
+    if (!sec) return;
+    const ok = categoryHasPrice(state.category);
+    sec.hidden = !ok;
+    if (!ok && (state.price || state.negotiable)) {
+      state.price = '';
+      state.negotiable = false;
+      const inp = dynamicEl.querySelector('#bm-price');
+      if (inp) { inp.value = ''; inp.disabled = false; }
+      const cb = dynamicEl.querySelector('#bm-negotiable');
+      if (cb) cb.checked = false;
+    }
   }
 
   function photoSlotsHtml(count = 5) {
@@ -351,8 +432,12 @@ export function openBoardModal(opts = {}) {
       </div>` : '';
     // Ціна у прев'ю — тим самим форматувальником, що й на справжній картці
     // (`core/utils.js`), інакше прев'ю показувало б «2500», а дошка «2 500 ₴».
-    const priceLabel = formatPrice(state.price, 'UAH');
-    const priceHtml = priceLabel ? `<div class="cm-board-price">${escapeHtml(priceLabel)}</div>` : '';
+    const priceLabel = formatPrice(state.price, 'UAH', state.negotiable);
+    // Д-6: клас `--word` теж дзеркалимо — інакше «Договірна» у прев'ю була б більшою,
+    // ніж на справжній картці.
+    const priceHtml = priceLabel
+      ? `<div class="cm-board-price${/\d/.test(priceLabel) ? '' : ' cm-board-price--word'}">${escapeHtml(priceLabel)}</div>`
+      : '';
     // Д-6: прев'ю мусить дзеркалити РЕАЛЬНУ картку. 🆕 28.07 (потік 2) з картки прибрано
     // опис — прибираємо його і тут, інакше прев'ю обіцяло б те, чого на дошці не буде.
     // Опис нікуди не дівається: він відкривається в модалці оголошення.
@@ -517,10 +602,12 @@ function buildPayload(state) {
     title:     state.title.trim(),   // обов'язковий (Д-16); сервер теж перевіряє
     location:  state.location || COMMUNITY_ALL,   // Д-10
     tags:      [],
-    // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — так RPC
-    // update_board_post розуміє «ціну стерли» і відрізняє це від «поле не чіпали»
-    // (див. v_has_price у scripts/supabase_board_edit.sql).
+    // 🆕 28.07 (потік 2): ціна. Ключ шлемо ЗАВЖДИ, навіть порожнім — RPC не розрізняє
+    // «не передали» і «стерли» (обидва дають null), тож при редагуванні мовчання
+    // означало б стирання ціни.
+    // ⚠️ `currency` НЕ шлемо свідомо: сервер жорстко ставить 'UAH' і значення від
+    //    клієнта ігнорує («у громаді розрахунки в гривні» — коментар у самій RPC).
     price:     state.price.trim(),
-    currency:  state.price.trim() ? 'UAH' : null,
+    price_negotiable: !!state.negotiable,
   };
 }
