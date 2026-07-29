@@ -603,7 +603,9 @@ export function subscribeGroupMessages(groupId, onChange) {
 export async function fetchMyThreads(uid) {
   if (!supa || !uid) return [];
   const { data, error } = await supa.from('threads')
-    .select('*, post:posts(id, title, text, category, photos, author, contact, location, published_at, created_at)')
+    // `status` потрібен, щоб картка оголошення в чаті могла показати «Завершено»
+    // (29.07, контексти розмови). Порожній join = оголошення видалили → «недоступне».
+    .select('*, post:posts(id, title, text, category, photos, author, contact, location, status, published_at, created_at)')
     .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`)
     .order('last_message_at', { ascending: false });
   if (error) { console.warn('[supabase] fetchMyThreads:', error.message); return []; }
@@ -873,6 +875,20 @@ export async function fetchUnreadByThread(uid) {
     map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
   }
   return map;
+}
+
+// Пари учасників по тредах → [{id, author_uid, buyer_uid}] БЕЗ join оголошень.
+// 🔴 29.07: бейдж непрочитаних має рахувати РОЗМОВИ (людей), а не треди — інакше одна
+// людина з двома оголошеннями давала б «2» на бейджі й ОДИН рядок у списку, тобто
+// число нікуди не вело. Окрема легка вибірка, бо `fetchMyThreads` тягне ще й пости,
+// а бейдж оновлюється часто (після кожного прочитання і кожного push).
+export async function fetchThreadPairs(uid) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('threads')
+    .select('id, author_uid, buyer_uid')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+  if (error) { console.warn('[supabase] fetchThreadPairs:', error.message); return []; }
+  return data || [];
 }
 
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).

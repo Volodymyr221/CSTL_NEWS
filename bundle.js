@@ -1006,7 +1006,7 @@
   async function fetchMyThreads(uid) {
     if (!supa || !uid)
       return [];
-    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos, author, contact, location, published_at, created_at)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
+    const { data, error } = await supa.from("threads").select("*, post:posts(id, title, text, category, photos, author, contact, location, status, published_at, created_at)").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`).order("last_message_at", { ascending: false });
     if (error) {
       console.warn("[supabase] fetchMyThreads:", error.message);
       return [];
@@ -1205,6 +1205,16 @@
       map.set(m.thread_id, (map.get(m.thread_id) || 0) + 1);
     }
     return map;
+  }
+  async function fetchThreadPairs(uid) {
+    if (!supa || !uid)
+      return [];
+    const { data, error } = await supa.from("threads").select("id, author_uid, buyer_uid").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+    if (error) {
+      console.warn("[supabase] fetchThreadPairs:", error.message);
+      return [];
+    }
+    return data || [];
   }
   async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
     if (!supa || !uid)
@@ -3225,6 +3235,31 @@
       }
     });
   }
+  function groupConversations(threads, me, unread = /* @__PURE__ */ new Map()) {
+    const tsOf = (t) => t && t.last_message_at ? new Date(t.last_message_at).getTime() : 0;
+    const byUid = /* @__PURE__ */ new Map();
+    for (const t of threads || []) {
+      const iAmAuthor = !!me && me === t.author_uid;
+      const uid = (iAmAuthor ? t.buyer_uid : t.author_uid) || "";
+      const name = (iAmAuthor ? t.buyer_name : t.author_name) || (iAmAuthor ? "\u041F\u043E\u043A\u0443\u043F\u0435\u0446\u044C" : "\u041F\u0440\u043E\u0434\u0430\u0432\u0435\u0446\u044C");
+      const key = uid || `t:${t.id}`;
+      let c = byUid.get(key);
+      if (!c) {
+        c = { key, otherUid: uid, otherName: name, threads: [], unread: 0, lastAt: 0, last: null };
+        byUid.set(key, c);
+      }
+      c.threads.push(t);
+      c.unread += unread.get(t.id) || 0;
+      if (tsOf(t) >= c.lastAt) {
+        c.lastAt = tsOf(t);
+        c.last = t;
+        c.otherName = name;
+      }
+    }
+    for (const c of byUid.values())
+      c.threads.sort((a, b) => tsOf(b) - tsOf(a));
+    return [...byUid.values()].sort((a, b) => b.lastAt - a.lastAt);
+  }
 
   // src/core/push.js
   var VAPID_PUBLIC_KEY = "BBsRg9Hv7JJLgBU-TEnQOnXtAEMpYPY3WrJyJQE4kHDAxFE1nxjj90rJ90dXzrLaYb1pPoGIJpqx8Zry87gB_4o";
@@ -3309,11 +3344,11 @@
     return me && me === thread.author_uid ? thread.buyer_uid || "" : thread.author_uid || "";
   }
   function threadPostTitle(thread) {
-    const p = thread.post || {};
+    const p = thread && thread.post || {};
     return p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
   }
   var _chatUnsub = null;
-  async function openChat(thread, post) {
+  async function openChat(convOrThread, post, activeId = null) {
     if (!isLoggedIn()) {
       requireAuth("\u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442", () => {
       });
@@ -3321,32 +3356,48 @@
     }
     ensureChatPush();
     const me = currentUserId();
-    const p = post || thread.post || {};
-    const title = p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
-    const partner = otherName(thread);
-    const thumb = p.photos && p.photos[0] || "";
-    const adAuthor = p.author ? String(p.author).trim() : "";
-    const adContact = p.contact ? String(p.contact).trim() : "";
-    const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
-    const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, "") : "";
+    const conv = convOrThread && Array.isArray(convOrThread.threads) ? convOrThread : { key: String(convOrThread?.id || ""), otherUid: otherUid(convOrThread), otherName: otherName(convOrThread), threads: [convOrThread], last: convOrThread };
+    let thread = conv.threads.find((t) => String(t.id) === String(activeId)) || conv.last || conv.threads[0];
+    const partner = conv.otherName;
+    const ctxHtml = (t, overridePost) => {
+      const p = overridePost || t.post || {};
+      const gone = !t.post && !overridePost;
+      const closed = p.status === "closed";
+      const title = gone ? "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435" : p.title || (p.text ? p.text.slice(0, 60) : "\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F");
+      const thumb = p.photos && p.photos[0] || "";
+      const adAuthor = p.author ? String(p.author).trim() : "";
+      const adContact = p.contact ? String(p.contact).trim() : "";
+      const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
+      const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, "") : "";
+      return `
+      <div class="pm-ctx${gone ? " pm-ctx--gone" : ""}" data-pm-ctx role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
+        ${thumb ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>` : `<span class="pm-ctx-thumb pm-ctx-thumb--none">\u{1F3F7}\uFE0F</span>`}
+        <span class="pm-ctx-body">
+          <span class="pm-ctx-title">${escapeHtml(title)}${closed ? '<span class="pm-ctx-state">\u0417\u0430\u0432\u0435\u0440\u0448\u0435\u043D\u043E</span>' : ""}</span>
+          ${p.location && p.location !== COMMUNITY_ALL ? `<span class="pm-ctx-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
+          ${adAuthor || adContact ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ""}${adAuthor ? `${adContact ? " \u2014 " : ""}${escapeHtml(adAuthor)}` : ""}</span>` : ""}
+          ${gone ? '<span class="pm-ctx-loc">\u041B\u0438\u0441\u0442\u0443\u0432\u0430\u043D\u043D\u044F \u0437\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u043E</span>' : '<span class="pm-ctx-link">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2192</span>'}
+        </span>
+        ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ""}
+      </div>`;
+    };
+    const tabsHtml = () => conv.threads.length < 2 ? "" : `
+    <div class="pm-ctx-tabs" id="pm-ctx-tabs" role="tablist" aria-label="\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0432 \u0446\u0456\u0439 \u0440\u043E\u0437\u043C\u043E\u0432\u0456">
+      ${conv.threads.map((t) => `
+        <button class="pm-ctx-tab${String(t.id) === String(thread.id) ? " pm-ctx-tab--active" : ""}" type="button"
+                role="tab" aria-selected="${String(t.id) === String(thread.id)}" data-ctx="${t.id}">
+          ${escapeHtml(threadPostTitle(t))}
+        </button>`).join("")}
+    </div>`;
     const api = buildScreen(`
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="\u041D\u0430\u0437\u0430\u0434">\u2190</button>
-      ${avatar(partner, otherUid(thread))}
-      <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
-        <div class="pm-head-name"${nameUid(otherUid(thread))}>${escapeHtml(partner)}</div>
+      ${avatar(partner, conv.otherUid)}
+      <div class="pm-head-titles" data-av-uid="${escapeHtml(conv.otherUid)}" role="button">
+        <div class="pm-head-name"${nameUid(conv.otherUid)}>${escapeHtml(partner)}</div>
       </div>
     </header>
-    <div class="pm-ctx" data-pm-ctx role="button" aria-label="\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F">
-      ${thumb ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>` : `<span class="pm-ctx-thumb pm-ctx-thumb--none">\u{1F3F7}\uFE0F</span>`}
-      <span class="pm-ctx-body">
-        <span class="pm-ctx-title">${escapeHtml(title)}</span>
-        ${p.location && p.location !== COMMUNITY_ALL ? `<span class="pm-ctx-loc">\u{1F4CD} ${escapeHtml(p.location)}</span>` : ""}
-        ${adAuthor || adContact ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ""}${adAuthor ? `${adContact ? " \u2014 " : ""}${escapeHtml(adAuthor)}` : ""}</span>` : ""}
-        <span class="pm-ctx-link">\u041F\u0435\u0440\u0435\u0433\u043B\u044F\u043D\u0443\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u2192</span>
-      </span>
-      ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="\u041F\u043E\u0434\u0437\u0432\u043E\u043D\u0438\u0442\u0438"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ""}
-    </div>
+    <div class="pm-ctxwrap" id="pm-ctxwrap">${tabsHtml()}${ctxHtml(thread, post)}</div>
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
     </div>
@@ -3369,6 +3420,7 @@
       <button class="pm-send" type="submit" aria-label="\u041D\u0430\u0434\u0456\u0441\u043B\u0430\u0442\u0438">\u2191</button>
     </form>
   `, "pm-screen--chat");
+    const ctxWrap = api.screen.querySelector("#pm-ctxwrap");
     const streamEl = api.screen.querySelector("#pm-stream");
     const form = api.screen.querySelector("#pm-form");
     const input = api.screen.querySelector("#pm-input");
@@ -3729,53 +3781,85 @@
       });
       api.screen.appendChild(sheet);
     };
-    const clearedAt = await fetchThreadClearedAt(me, thread.id);
-    if (api._closed)
-      return api;
-    messages = await fetchMessages(thread.id, clearedAt);
-    if (api._closed)
-      return api;
-    messages.forEach((m) => seen.add(msgKey(m)));
-    renderStream();
-    setTimeout(() => scrollBottom(false), 50);
-    _readThreads.add(thread.id);
-    markThreadRead(thread.id, me).finally(refreshUnreadBadge);
-    if (_chatUnsub) {
-      try {
-        _chatUnsub();
-      } catch (_) {
+    let ctxUnsub = null;
+    const loadContext = async () => {
+      const t = thread;
+      if (ctxUnsub) {
+        try {
+          ctxUnsub();
+        } catch (_) {
+        }
+        ctxUnsub = null;
       }
-    }
-    const chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
-      if (!row)
+      const clearedAt = await fetchThreadClearedAt(me, t.id);
+      if (api._closed || thread !== t)
         return;
-      if (type === "INSERT") {
-        const st = upsertMessage(row);
-        if (st === "add")
-          appendOne(row);
-        else if (st === "update")
-          replaceOne(row);
-        if (row.sender_uid !== me) {
-          _readThreads.add(thread.id);
-          markThreadRead(thread.id, me).finally(refreshUnreadBadge);
-        }
-      } else if (type === "UPDATE") {
-        const idx = messages.findIndex((m) => m.id === row.id);
-        if (idx >= 0) {
-          messages[idx] = row;
-          replaceOne(row);
+      const msgs = await fetchMessages(t.id, clearedAt);
+      if (api._closed || thread !== t)
+        return;
+      messages = msgs;
+      msgById = new Map(messages.map((m) => [m.id, m]));
+      seen.clear();
+      messages.forEach((m) => seen.add(msgKey(m)));
+      streamLastDay = null;
+      renderStream();
+      setTimeout(() => scrollBottom(false), 50);
+      _readThreads.add(t.id);
+      markThreadRead(t.id, me).finally(refreshUnreadBadge);
+      if (_chatUnsub) {
+        try {
+          _chatUnsub();
+        } catch (_) {
         }
       }
-    });
-    _chatUnsub = chatUnsub;
-    api._cleanup.push(() => {
-      try {
-        chatUnsub();
-      } catch (_) {
-      }
-      if (_chatUnsub === chatUnsub)
-        _chatUnsub = null;
-    });
+      const chatUnsub = subscribeThreadMessages(t.id, ({ type, row }) => {
+        if (!row || thread !== t)
+          return;
+        if (type === "INSERT") {
+          const st = upsertMessage(row);
+          if (st === "add")
+            appendOne(row);
+          else if (st === "update")
+            replaceOne(row);
+          if (row.sender_uid !== me) {
+            _readThreads.add(t.id);
+            markThreadRead(t.id, me).finally(refreshUnreadBadge);
+          }
+        } else if (type === "UPDATE") {
+          const idx = messages.findIndex((m) => m.id === row.id);
+          if (idx >= 0) {
+            messages[idx] = row;
+            replaceOne(row);
+          }
+        }
+      });
+      ctxUnsub = chatUnsub;
+      _chatUnsub = chatUnsub;
+      api._cleanup.push(() => {
+        try {
+          chatUnsub();
+        } catch (_) {
+        }
+        if (_chatUnsub === chatUnsub)
+          _chatUnsub = null;
+      });
+    };
+    const switchContext = (id) => {
+      const next = conv.threads.find((t) => String(t.id) === String(id));
+      if (!next || next === thread)
+        return;
+      thread = next;
+      clearCompose();
+      input.value = "";
+      ctxWrap.innerHTML = `${tabsHtml()}${ctxHtml(thread)}`;
+      messages = [];
+      msgById = /* @__PURE__ */ new Map();
+      streamEl.innerHTML = '<div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>';
+      loadContext();
+    };
+    await loadContext();
+    if (api._closed)
+      return api;
     api._cleanup.push(refreshUnreadBadge);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -3822,9 +3906,21 @@
       else if (kind === "menu")
         openMsgActions(m);
     });
-    api.screen.querySelector("[data-pm-ctx]")?.addEventListener("click", (e) => {
+    ctxWrap.addEventListener("click", (e) => {
+      const tab = e.target.closest("[data-ctx]");
+      if (tab) {
+        switchContext(tab.dataset.ctx);
+        return;
+      }
+      if (!e.target.closest("[data-pm-ctx]"))
+        return;
       if (e.target.closest(".pm-ctx-call"))
         return;
+      const p = thread.post;
+      if (!p) {
+        showToast("\u041E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F \u0431\u0456\u043B\u044C\u0448\u0435 \u043D\u0435\u0434\u043E\u0441\u0442\u0443\u043F\u043D\u0435", 2500);
+        return;
+      }
       window.dispatchEvent(new CustomEvent("cstl-open-ad", { detail: { post: p } }));
     });
     api.screen.querySelector(".pm-send")?.addEventListener("pointerdown", (e) => e.preventDefault());
@@ -3876,22 +3972,25 @@
       let filter = "all";
       let query = "";
       const stOf = (id) => states.get(id) || {};
+      const threadVisible = (t) => {
+        const s = stOf(t.id);
+        return !(s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at)));
+      };
+      const convArchived = (c) => c.threads.length > 0 && c.threads.every((t) => stOf(t.id).archived);
+      const conversationsAll = () => groupConversations(threads.filter(threadVisible), me, unread);
       const renderThreads = () => {
         const q = query.trim().toLowerCase();
-        const list = threads.filter((t) => {
-          const s = stOf(t.id);
-          if (s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at)))
-            return false;
+        const list = conversationsAll().filter((c) => {
           if (filter === "archive") {
-            if (!s.archived)
+            if (!convArchived(c))
               return false;
-          } else if (s.archived)
+          } else if (convArchived(c))
             return false;
-          if (filter === "unread" && !(unread.get(t.id) > 0))
+          if (filter === "unread" && !(c.unread > 0))
             return false;
           if (!q)
             return true;
-          const hay = `${otherName(t)} ${threadPostTitle(t)} ${t.last_message_text || ""}`.toLowerCase();
+          const hay = `${c.otherName} ${c.threads.map(threadPostTitle).join(" ")} ${c.last?.last_message_text || ""}`.toLowerCase();
           return hay.includes(q);
         });
         if (!list.length) {
@@ -3902,25 +4001,26 @@
                </div>` : `<div class="pm-empty pm-empty--mini">\u041D\u0456\u0447\u043E\u0433\u043E \u043D\u0435 \u0437\u043D\u0430\u0439\u0434\u0435\u043D\u043E</div>`;
           return;
         }
-        threadsEl.innerHTML = list.map((t) => {
-          const n = unread.get(t.id) || 0;
-          const name = otherName(t);
-          const preview = t.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
-          const archived = !!stOf(t.id).archived;
+        threadsEl.innerHTML = list.map((c) => {
+          const n = c.unread;
+          const top = c.last;
+          const more = c.threads.length - 1;
+          const preview = top?.last_message_text || "\u0420\u043E\u0437\u043C\u043E\u0432\u0443 \u0440\u043E\u0437\u043F\u043E\u0447\u0430\u0442\u043E";
+          const archived = convArchived(c);
           return `
-          <div class="pm-thread-row" data-row="${t.id}">
+          <div class="pm-thread-row" data-row="${escapeHtml(c.key)}">
             <div class="pm-thread-actions">
-              <button class="pm-thread-act pm-thread-act--archive" type="button" data-archive="${t.id}" aria-label="${archived ? "\u0420\u043E\u0437\u0430\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438" : "\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438"}">${archived ? ICON_UNARCHIVE : ICON_ARCHIVE}</button>
-              <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${t.id}" aria-label="\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438">${ICON_TRASH}</button>
+              <button class="pm-thread-act pm-thread-act--archive" type="button" data-archive="${escapeHtml(c.key)}" aria-label="${archived ? "\u0420\u043E\u0437\u0430\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438" : "\u0410\u0440\u0445\u0456\u0432\u0443\u0432\u0430\u0442\u0438"}">${archived ? ICON_UNARCHIVE : ICON_ARCHIVE}</button>
+              <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${escapeHtml(c.key)}" aria-label="\u0412\u0438\u0434\u0430\u043B\u0438\u0442\u0438">${ICON_TRASH}</button>
             </div>
-            <button class="pm-thread ${n > 0 ? "pm-thread--unread" : ""}" type="button" data-thread="${t.id}">
-              ${avatar(name, otherUid(t))}
+            <button class="pm-thread ${n > 0 ? "pm-thread--unread" : ""}" type="button" data-thread="${escapeHtml(c.key)}">
+              ${avatar(c.otherName, c.otherUid)}
               <div class="pm-thread-body">
                 <div class="pm-thread-top">
-                  <span class="pm-thread-name"${nameUid(otherUid(t))}>${escapeHtml(name)}</span>
-                  <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
+                  <span class="pm-thread-name"${nameUid(c.otherUid)}>${escapeHtml(c.otherName)}</span>
+                  <span class="pm-thread-time">${threadListTime(top?.last_message_at)}</span>
                 </div>
-                <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
+                <div class="pm-thread-post">${escapeHtml(threadPostTitle(top))}${more > 0 ? `<span class="pm-thread-more">+${more}</span>` : ""}</div>
                 <div class="pm-thread-last">${escapeHtml(preview)}</div>
               </div>
               ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ""}
@@ -4020,33 +4120,43 @@
             openRow = null;
         }
       }, { passive: false });
-      const applyThreadState = async (id, patch) => {
-        const prev = { ...states.get(id) || {} };
-        const merged = { ...prev, ...patch };
-        states.set(id, merged);
+      const applyConvState = async (key, patch) => {
+        const conv = conversationsAll().find((c) => c.key === key);
+        if (!conv)
+          return;
+        const ids = conv.threads.map((t) => t.id);
+        const prev = new Map(ids.map((id) => [id, { ...states.get(id) || {} }]));
+        for (const id of ids)
+          states.set(id, { ...prev.get(id) || {}, ...patch });
         closeOpenRow();
         renderThreads();
-        const res = await setThreadState(me, id, {
-          archived: !!merged.archived,
-          hidden: !!merged.hidden,
-          cleared_at: merged.cleared_at || null
-        });
-        if (!res.ok) {
-          states.set(id, prev);
+        const results = await Promise.all(ids.map((id) => {
+          const m = states.get(id) || {};
+          return setThreadState(me, id, {
+            archived: !!m.archived,
+            hidden: !!m.hidden,
+            cleared_at: m.cleared_at || null
+          });
+        }));
+        if (results.some((r) => !r.ok)) {
+          for (const id of ids)
+            states.set(id, prev.get(id) || {});
           renderThreads();
-          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F: " + (res.error || ""), 4e3, "error");
+          showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F: " + (results.find((r) => !r.ok)?.error || ""), 4e3, "error");
         }
       };
       threadsEl.addEventListener("click", (e) => {
         const arch = e.target.closest("[data-archive]");
         if (arch) {
-          const id = Number(arch.dataset.archive);
-          applyThreadState(id, { archived: !stOf(id).archived });
+          const key = arch.dataset.archive;
+          const conv2 = conversationsAll().find((c) => c.key === key);
+          if (conv2)
+            applyConvState(key, { archived: !convArchived(conv2) });
           return;
         }
         const del = e.target.closest("[data-delete]");
         if (del) {
-          applyThreadState(Number(del.dataset.delete), { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+          applyConvState(del.dataset.delete, { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
           return;
         }
         const btn = e.target.closest("[data-thread]");
@@ -4058,9 +4168,9 @@
           closeOpenRow();
           return;
         }
-        const t = threads.find((x) => String(x.id) === btn.dataset.thread);
-        if (t)
-          openChat(t, t.post);
+        const conv = conversationsAll().find((c) => c.key === btn.dataset.thread);
+        if (conv)
+          openChat(conv);
       });
       let refreshTimer = null;
       const refresh = async () => {
@@ -4361,7 +4471,15 @@
         }
         const badgeBtn = e.target.closest("[data-badge]");
         if (badgeBtn) {
-          openThreadsList();
+          const card = badgeBtn.closest("[data-ad]") || badgeBtn.closest(".pm-ad");
+          const postId = Number(card?.dataset.ad ?? card?.dataset.id ?? NaN);
+          const ts = byPost.get(postId) || [];
+          if (ts.length === 1) {
+            const t = ts[0];
+            const conv = groupConversations(threads, me).find((c) => c.threads.some((x) => x.id === t.id));
+            openChat(conv || t, t.post, t.id);
+          } else
+            openThreadsList();
           return;
         }
         const act = e.target.closest("[data-act]");
@@ -4508,8 +4626,17 @@
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442: " + (res.error || ""), 4e3, "error");
         return;
       }
-      openChat(res.thread, post);
+      openChat(await conversationOf(me, res.thread), post, res.thread.id);
     });
+  }
+  async function conversationOf(me, thread) {
+    try {
+      const all = await fetchMyThreads(me);
+      const conv = groupConversations(all, me).find((c) => c.threads.some((t) => t.id === thread.id));
+      return conv || thread;
+    } catch (_) {
+      return thread;
+    }
   }
   var _readThreads = /* @__PURE__ */ new Set();
   async function refreshUnreadBadge() {
@@ -4531,10 +4658,15 @@
       hideAll();
       return;
     }
-    const map = await fetchUnreadByThread(currentUserId());
+    const uid = currentUserId();
+    const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
     for (const id of _readThreads)
       map.delete(id);
-    const chats = map.size;
+    const keyOf = new Map(pairs.map((p) => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+    const people = /* @__PURE__ */ new Set();
+    for (const id of map.keys())
+      people.add(keyOf.get(id) || `t:${id}`);
+    const chats = people.size;
     if (chats <= 0) {
       hideAll();
       return;
@@ -4602,10 +4734,13 @@
   async function openThreadById(threadId) {
     if (!isLoggedIn() || threadId == null)
       return;
-    const threads = await fetchMyThreads(currentUserId());
+    const me = currentUserId();
+    const threads = await fetchMyThreads(me);
     const thread = threads.find((t) => String(t.id) === String(threadId));
-    if (thread)
-      openChat(thread, thread.post);
+    if (!thread)
+      return;
+    const conv = groupConversations(threads, me).find((c) => c.threads.some((t) => t.id === thread.id));
+    openChat(conv || thread, thread.post, thread.id);
   }
   var _chatBannerTimer = null;
   function showChatPushBanner({ title, body, threadId, url }) {

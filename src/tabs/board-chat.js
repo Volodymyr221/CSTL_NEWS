@@ -23,7 +23,7 @@ import {
 } from '../core/auth.js';
 import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
-  fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
+  fetchMyThreads, fetchMyPosts, fetchUnreadByThread, fetchThreadPairs,
   fetchThreadStates, setThreadState, fetchThreadClearedAt,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage,
@@ -36,7 +36,7 @@ import { openBoardModal } from './community-modal.js';
 import { escapeHtml, showToast, postTime, containsProfanity, openPhotoLightbox } from '../core/utils.js';
 import {
   ACT_ICONS, buildScreen, avatar, clockTime, dayLabel, threadListTime,
-  setupKeyboardResize, setupBubbleGestures,
+  setupKeyboardResize, setupBubbleGestures, groupConversations,
 } from '../core/chat-core.js';
 import { ensurePushSubscription } from '../core/push.js';
 import { ICONS } from '../core/icons.js';   // спільні векторні іконки (заміна емодзі в меню картки)
@@ -66,46 +66,79 @@ function otherUid(thread) {
 
 // Короткий заголовок оголошення треда
 function threadPostTitle(thread) {
-  const p = thread.post || {};
+  const p = (thread && thread.post) || {};
   return p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
 }
 
 // ── 1. Екран розмови 1-на-1 ──────────────────────────────────────────────
 let _chatUnsub = null;
 
-export async function openChat(thread, post) {
+// 🔴 29.07 — ЕКРАН РОЗМОВИ ТЕПЕР ПРО ЛЮДИНУ, А НЕ ПРО ОГОЛОШЕННЯ.
+// Приймає РОЗМОВУ `{key, otherUid, otherName, threads[], last}` з `groupConversations`.
+// Сумісність: якщо передали одинокий тред (старі виклики / deep-link з пуша), він
+// загортається в розмову з одного контексту — далі код єдиний, без розгалужень.
+// `activeId` — який контекст відкрити першим (напр. оголошення, з якого натиснули
+// «Написати», або тред із пуш-сповіщення).
+export async function openChat(convOrThread, post, activeId = null) {
   if (!isLoggedIn()) { requireAuth('відкрити чат', () => {}); return; }
   ensureChatPush();   // P-5: тап відкрити чат — реальний жест користувача, просимо дозвіл push
   const me = currentUserId();
-  const p = post || thread.post || {};
-  const title = p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
-  const partner = otherName(thread);
-  const thumb = (p.photos && p.photos[0]) || '';
-  const adAuthor = p.author ? String(p.author).trim() : '';
-  const adContact = p.contact ? String(p.contact).trim() : '';
-  const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
-  const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, '') : '';
+
+  const conv = (convOrThread && Array.isArray(convOrThread.threads))
+    ? convOrThread
+    : { key: String(convOrThread?.id || ''), otherUid: otherUid(convOrThread), otherName: otherName(convOrThread), threads: [convOrThread], last: convOrThread };
+  // ⚠️ `thread` НАВМИСНО `let`: це «активний контекст», і решта екрана (надсилання,
+  // realtime, позначення прочитаним) читає його через замикання. Перемикання чіпа
+  // міняє саме цю змінну — інакше довелось би переписувати пів файлу.
+  let thread = conv.threads.find(t => String(t.id) === String(activeId)) || conv.last || conv.threads[0];
+  const partner = conv.otherName;
+
+  // Картка активного оголошення — перемальовується при перемиканні контексту.
+  const ctxHtml = (t, overridePost) => {
+    const p = overridePost || t.post || {};
+    const gone = !t.post && !overridePost;               // пост видалено — join віддав null
+    const closed = p.status === 'closed';                // оголошення завершене
+    const title = gone ? 'Оголошення більше недоступне'
+                       : (p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення'));
+    const thumb = (p.photos && p.photos[0]) || '';
+    const adAuthor = p.author ? String(p.author).trim() : '';
+    const adContact = p.contact ? String(p.contact).trim() : '';
+    const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
+    const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, '') : '';
+    return `
+      <div class="pm-ctx${gone ? ' pm-ctx--gone' : ''}" data-pm-ctx role="button" aria-label="Переглянути оголошення">
+        ${thumb
+          ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>`
+          : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
+        <span class="pm-ctx-body">
+          <span class="pm-ctx-title">${escapeHtml(title)}${closed ? '<span class="pm-ctx-state">Завершено</span>' : ''}</span>
+          ${(p.location && p.location !== COMMUNITY_ALL) ? `<span class="pm-ctx-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+          ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
+          ${gone ? '<span class="pm-ctx-loc">Листування збережено</span>' : '<span class="pm-ctx-link">Переглянути оголошення →</span>'}
+        </span>
+        ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="Подзвонити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+      </div>`;
+  };
+  // Смужка контекстів. ⚠️ З'являється ЛИШЕ коли оголошень ≥2 — у звичайній розмові
+  // (переважна більшість) екран мусить лишитись точно таким, як був.
+  const tabsHtml = () => conv.threads.length < 2 ? '' : `
+    <div class="pm-ctx-tabs" id="pm-ctx-tabs" role="tablist" aria-label="Оголошення в цій розмові">
+      ${conv.threads.map(t => `
+        <button class="pm-ctx-tab${String(t.id) === String(thread.id) ? ' pm-ctx-tab--active' : ''}" type="button"
+                role="tab" aria-selected="${String(t.id) === String(thread.id)}" data-ctx="${t.id}">
+          ${escapeHtml(threadPostTitle(t))}
+        </button>`).join('')}
+    </div>`;
 
   const api = buildScreen(`
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-      ${avatar(partner, otherUid(thread))}
-      <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
-        <div class="pm-head-name"${nameUid(otherUid(thread))}>${escapeHtml(partner)}</div>
+      ${avatar(partner, conv.otherUid)}
+      <div class="pm-head-titles" data-av-uid="${escapeHtml(conv.otherUid)}" role="button">
+        <div class="pm-head-name"${nameUid(conv.otherUid)}>${escapeHtml(partner)}</div>
       </div>
     </header>
-    <div class="pm-ctx" data-pm-ctx role="button" aria-label="Переглянути оголошення">
-      ${thumb
-        ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>`
-        : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
-      <span class="pm-ctx-body">
-        <span class="pm-ctx-title">${escapeHtml(title)}</span>
-        ${(p.location && p.location !== COMMUNITY_ALL) ? `<span class="pm-ctx-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
-        ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
-        <span class="pm-ctx-link">Переглянути оголошення →</span>
-      </span>
-      ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="Подзвонити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
-    </div>
+    <div class="pm-ctxwrap" id="pm-ctxwrap">${tabsHtml()}${ctxHtml(thread, post)}</div>
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">Завантаження…</div>
     </div>
@@ -129,6 +162,7 @@ export async function openChat(thread, post) {
     </form>
   `, 'pm-screen--chat');
 
+  const ctxWrap  = api.screen.querySelector('#pm-ctxwrap');
   const streamEl = api.screen.querySelector('#pm-stream');
   const form     = api.screen.querySelector('#pm-form');
   const input    = api.screen.querySelector('#pm-input');
@@ -464,40 +498,95 @@ export async function openChat(thread, post) {
     api.screen.appendChild(sheet);
   };
 
-  // Початкове завантаження. Якщо чат раніше «видаляли» (cleared_at) — показуємо
-  // ЛИШЕ повідомлення після того моменту (чистий старт після повторного контакту).
-  const clearedAt = await fetchThreadClearedAt(me, thread.id);
-  if (api._closed) return api;
-  messages = await fetchMessages(thread.id, clearedAt);
-  if (api._closed) return api;
-  messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при відкритті
-  renderStream();
-  setTimeout(() => scrollBottom(false), 50);
-  // Позначити вхідні прочитаними + оновити бейдж. _readThreads = оптимістично
-  // (бейдж прибираємо одразу, не чекаючи БД — надійно навіть при затримці/збої).
-  _readThreads.add(thread.id);
-  markThreadRead(thread.id, me).finally(refreshUnreadBadge);
+  // ── Завантаження й realtime ОДНОГО контексту ────────────────────────────
+  // Винесено у функцію, бо тепер це робиться не лише при відкритті екрана, а й
+  // щоразу при перемиканні чіпа. Кожен контекст має ВЛАСНУ історію повідомлень —
+  // навмисно, зливати їх в одну стрічку не можна: «велосипед → айфон → велосипед»
+  // через місяць нечитабельне.
+  let ctxUnsub = null;
+  const loadContext = async () => {
+    const t = thread;                       // фіксуємо: поки чекаємо БД, чіп могли перемкнути
+    if (ctxUnsub) { try { ctxUnsub(); } catch (_) {} ctxUnsub = null; }
+    // Якщо чат раніше «видаляли» (cleared_at) — показуємо ЛИШЕ повідомлення після
+    // того моменту (чистий старт після повторного контакту).
+    const clearedAt = await fetchThreadClearedAt(me, t.id);
+    if (api._closed || thread !== t) return;
+    const msgs = await fetchMessages(t.id, clearedAt);
+    if (api._closed || thread !== t) return;
+    messages = msgs;
+    msgById = new Map(messages.map(m => [m.id, m]));
+    seen.clear();                                 // інший контекст — інша історія
+    messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при показі
+    streamLastDay = null;
+    renderStream();
+    setTimeout(() => scrollBottom(false), 50);
+    // Позначити вхідні прочитаними + оновити бейдж. _readThreads = оптимістично
+    // (бейдж прибираємо одразу, не чекаючи БД — надійно навіть при затримці/збої).
+    _readThreads.add(t.id);
+    markThreadRead(t.id, me).finally(refreshUnreadBadge);
 
-  // Realtime — нові / редаговані / видалені / прочитані повідомлення треда
-  if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
-  const chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
-    if (!row) return;
-    if (type === 'INSERT') {
-      const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
-      if (st === 'add') appendOne(row);          // нове чуже → вставляємо одну бульбашку
-      else if (st === 'update') replaceOne(row); // realtime випередив await → заміна на місці
-      // 'same' = відлуння власного повідомлення → нічого не чіпаємо (без блимання)
-      if (row.sender_uid !== me) { _readThreads.add(thread.id); markThreadRead(thread.id, me).finally(refreshUnreadBadge); }
-    } else if (type === 'UPDATE') {
-      const idx = messages.findIndex(m => m.id === row.id);
-      if (idx >= 0) { messages[idx] = row; replaceOne(row); }
-    }
-  });
-  _chatUnsub = chatUnsub;
-  // Очищаємо САМЕ цю підписку (не module-level змінну) → надійно навіть якщо колись
-  // відкриють інший чат поверх. Module-ref обнуляємо лише якщо він ще наш.
-  api._cleanup.push(() => { try { chatUnsub(); } catch (_) {} if (_chatUnsub === chatUnsub) _chatUnsub = null; });
+    // Realtime — нові / редаговані / видалені / прочитані повідомлення контексту
+    if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
+    const chatUnsub = subscribeThreadMessages(t.id, ({ type, row }) => {
+      if (!row || thread !== t) return;    // прилетіло у вже неактивний контекст
+      if (type === 'INSERT') {
+        const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
+        if (st === 'add') appendOne(row);          // нове чуже → вставляємо одну бульбашку
+        else if (st === 'update') replaceOne(row); // realtime випередив await → заміна на місці
+        // 'same' = відлуння власного повідомлення → нічого не чіпаємо (без блимання)
+        if (row.sender_uid !== me) { _readThreads.add(t.id); markThreadRead(t.id, me).finally(refreshUnreadBadge); }
+      } else if (type === 'UPDATE') {
+        const idx = messages.findIndex(m => m.id === row.id);
+        if (idx >= 0) { messages[idx] = row; replaceOne(row); }
+      }
+    });
+    ctxUnsub = chatUnsub;
+    _chatUnsub = chatUnsub;
+    // Очищаємо САМЕ цю підписку (не module-level змінну) → надійно навіть якщо колись
+    // відкриють інший чат поверх. Module-ref обнуляємо лише якщо він ще наш.
+    api._cleanup.push(() => { try { chatUnsub(); } catch (_) {} if (_chatUnsub === chatUnsub) _chatUnsub = null; });
+  };
+
+  // Перемикання чіпа: міняємо активний контекст → перемальовуємо шапку і вантажимо
+  // його історію. Поле вводу і бар «відповідь» скидаємо — цитата з іншого оголошення
+  // тут не має сенсу.
+  const switchContext = (id) => {
+    const next = conv.threads.find(t => String(t.id) === String(id));
+    if (!next || next === thread) return;
+    thread = next;
+    clearCompose();
+    input.value = '';
+    ctxWrap.innerHTML = `${tabsHtml()}${ctxHtml(thread)}`;
+    messages = []; msgById = new Map();
+    streamEl.innerHTML = '<div class="pm-loading">Завантаження…</div>';
+    loadContext();
+  };
+
+  await loadContext();
+  if (api._closed) return api;
   api._cleanup.push(refreshUnreadBadge);
+
+  // Довантаження решти контекстів — ПІСЛЯ показу екрана, не блокуючи його.
+  // Потрібне тільки коли зайшли з одинокого треда («Написати» з оголошення,
+  // тап по пушу): зі списку розмова приходить уже повною.
+  // ⚠️ Тихий fail-soft: не вийшло — лишається один контекст, тобто поведінка до 29.07.
+  if (conv.threads.length === 1 && conv.otherUid) {
+    (async () => {
+      try {
+        const all = await fetchMyThreads(me);
+        if (api._closed) return;
+        const full = groupConversations(all, me).find(c => c.threads.some(t => t.id === thread.id));
+        if (!full || full.threads.length < 2) return;
+        conv.threads = full.threads;
+        conv.otherName = full.otherName;
+        // Перемальовуємо ЛИШЕ смужку чіпів. Картку активного контексту й стрічку
+        // не чіпаємо: людина вже читає повідомлення, смикати їх під пальцем не можна.
+        const tabs = ctxWrap.querySelector('.pm-ctx-tabs');
+        if (tabs) tabs.outerHTML = tabsHtml();
+        else ctxWrap.insertAdjacentHTML('afterbegin', tabsHtml());
+      } catch (_) { /* лишаємо один контекст */ }
+    })();
+  }
 
   // Поле / редагування + кнопки-питання + фото + перегляд фото
   form.addEventListener('submit', (e) => { e.preventDefault(); submitText(); });
@@ -526,10 +615,16 @@ export async function openChat(thread, post) {
     if (kind === 'reply') startReply(m);
     else if (kind === 'menu') openMsgActions(m);
   });
-  // «Переглянути оголошення» — закрити чат і відкрити модалку Дошки
-  // «Переглянути оголошення» — модалка оголошення Дошки ПОВЕРХ чату (не закриваємо чат)
-  api.screen.querySelector('[data-pm-ctx]')?.addEventListener('click', (e) => {
+  // «Переглянути оголошення» — модалка оголошення Дошки ПОВЕРХ чату (не закриваємо чат).
+  // ⚠️ Слухач ДЕЛЕГОВАНИЙ на обгортку: картка перемальовується при перемиканні
+  // контексту, тож слухач, повішений прямо на неї, помер би після першого перемикання.
+  ctxWrap.addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-ctx]');
+    if (tab) { switchContext(tab.dataset.ctx); return; }
+    if (!e.target.closest('[data-pm-ctx]')) return;
     if (e.target.closest('.pm-ctx-call')) return;   // дзвінок — не відкривати модалку
+    const p = thread.post;
+    if (!p) { showToast('Оголошення більше недоступне', 2500); return; }
     window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
   });
   // Кнопка надсилання не забирає фокус (iOS клавіатура)
@@ -590,18 +685,36 @@ export function openThreadsList() {
     let query  = '';
 
     const stOf = (id) => states.get(id) || {};
+
+    // 🔴 29.07 — РЯДОК СПИСКУ = ЛЮДИНА, а не оголошення (див. `groupConversations`).
+    // Порядок дій принциповий:
+    //   1) відсіяти треди, приховані через `cleared_at` — це стан ОДНОГО треда;
+    //   2) згрупувати те, що лишилось, у розмови;
+    //   3) стан розмови рахувати вже по ВИДИМИХ контекстах.
+    // Якщо міняти порядок (спершу групувати), видалений контекст лишався б чіпом
+    // у розмові, хоч людина його прибрала.
+    const threadVisible = (t) => {
+      const s = stOf(t.id);
+      // «Видалено» (cleared_at): ховаємо, ПОКИ нема нового повідомлення після видалення.
+      // Прийшло нове (last_message_at пізніше) → чат знову зʼявляється (чистий).
+      return !(s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at)));
+    };
+    // Розмова архівна, лише коли архівні ВСІ її контексти. Рішення Вови: архів діє на
+    // всю розмову, тож ми їх завжди ставимо разом — розбіжність можлива тільки у
+    // старих даних, і тоді чесніше показати розмову, ніж сховати живий контекст.
+    const convArchived = (c) => c.threads.length > 0 && c.threads.every(t => stOf(t.id).archived);
+    const conversationsAll = () => groupConversations(threads.filter(threadVisible), me, unread);
+
     const renderThreads = () => {
       const q = query.trim().toLowerCase();
-      const list = threads.filter(t => {
-        const s = stOf(t.id);
-        // «Видалено» (cleared_at): ховаємо, ПОКИ нема нового повідомлення після видалення.
-        // Прийшло нове (last_message_at пізніше) → чат знову зʼявляється (чистий).
-        if (s.cleared_at && !(new Date(t.last_message_at) > new Date(s.cleared_at))) return false;
-        if (filter === 'archive') { if (!s.archived) return false; }
-        else if (s.archived) return false;                      // архівні не в «Усі»/«Непрочитані»
-        if (filter === 'unread' && !(unread.get(t.id) > 0)) return false;
+      const list = conversationsAll().filter(c => {
+        if (filter === 'archive') { if (!convArchived(c)) return false; }
+        else if (convArchived(c)) return false;                 // архівні не в «Усі»/«Непрочитані»
+        if (filter === 'unread' && !(c.unread > 0)) return false;
         if (!q) return true;
-        const hay = `${otherName(t)} ${threadPostTitle(t)} ${t.last_message_text || ''}`.toLowerCase();
+        // Пошук по імені + по ВСІХ оголошеннях розмови: людина шукає «велосипед»,
+        // а він може бути другим контекстом, не останнім.
+        const hay = `${c.otherName} ${c.threads.map(threadPostTitle).join(' ')} ${c.last?.last_message_text || ''}`.toLowerCase();
         return hay.includes(q);
       });
       if (!list.length) {
@@ -616,25 +729,28 @@ export function openThreadsList() {
             : `<div class="pm-empty pm-empty--mini">Нічого не знайдено</div>`;
         return;
       }
-      threadsEl.innerHTML = list.map(t => {
-        const n = unread.get(t.id) || 0;
-        const name = otherName(t);
-        const preview = t.last_message_text || 'Розмову розпочато';
-        const archived = !!stOf(t.id).archived;
+      threadsEl.innerHTML = list.map(c => {
+        const n = c.unread;
+        const top = c.last;                      // найсвіжіший контекст — його й показуємо
+        const more = c.threads.length - 1;       // скільки ще оголошень у цій розмові
+        const preview = top?.last_message_text || 'Розмову розпочато';
+        const archived = convArchived(c);
+        // `data-row`/`data-thread` тепер несуть КЛЮЧ РОЗМОВИ, а не id треда: усі дії
+        // (свайп, архів, видалення, відкриття) стали діями над розмовою цілком.
         return `
-          <div class="pm-thread-row" data-row="${t.id}">
+          <div class="pm-thread-row" data-row="${escapeHtml(c.key)}">
             <div class="pm-thread-actions">
-              <button class="pm-thread-act pm-thread-act--archive" type="button" data-archive="${t.id}" aria-label="${archived ? 'Розархівувати' : 'Архівувати'}">${archived ? ICON_UNARCHIVE : ICON_ARCHIVE}</button>
-              <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${t.id}" aria-label="Видалити">${ICON_TRASH}</button>
+              <button class="pm-thread-act pm-thread-act--archive" type="button" data-archive="${escapeHtml(c.key)}" aria-label="${archived ? 'Розархівувати' : 'Архівувати'}">${archived ? ICON_UNARCHIVE : ICON_ARCHIVE}</button>
+              <button class="pm-thread-act pm-thread-act--delete" type="button" data-delete="${escapeHtml(c.key)}" aria-label="Видалити">${ICON_TRASH}</button>
             </div>
-            <button class="pm-thread ${n > 0 ? 'pm-thread--unread' : ''}" type="button" data-thread="${t.id}">
-              ${avatar(name, otherUid(t))}
+            <button class="pm-thread ${n > 0 ? 'pm-thread--unread' : ''}" type="button" data-thread="${escapeHtml(c.key)}">
+              ${avatar(c.otherName, c.otherUid)}
               <div class="pm-thread-body">
                 <div class="pm-thread-top">
-                  <span class="pm-thread-name"${nameUid(otherUid(t))}>${escapeHtml(name)}</span>
-                  <span class="pm-thread-time">${threadListTime(t.last_message_at)}</span>
+                  <span class="pm-thread-name"${nameUid(c.otherUid)}>${escapeHtml(c.otherName)}</span>
+                  <span class="pm-thread-time">${threadListTime(top?.last_message_at)}</span>
                 </div>
-                <div class="pm-thread-post">${escapeHtml(threadPostTitle(t))}</div>
+                <div class="pm-thread-post">${escapeHtml(threadPostTitle(top))}${more > 0 ? `<span class="pm-thread-more">+${more}</span>` : ''}</div>
                 <div class="pm-thread-last">${escapeHtml(preview)}</div>
               </div>
               ${n > 0 ? `<span class="pm-thread-meta"><span class="pm-thread-dot"></span><span class="pm-row-badge">${n}</span></span>` : ''}
@@ -715,30 +831,47 @@ export function openThreadsList() {
       }
     }, { passive: false });
 
-    // Зміна стану розмови (архів/приховано) — оптимістично + БД (повний стан → upsert).
-    const applyThreadState = async (id, patch) => {
-      const prev = { ...(states.get(id) || {}) };
-      const merged = { ...prev, ...patch };   // зберігаємо cleared_at при архівуванні тощо
-      states.set(id, merged);
+    // 🔴 Зміна стану РОЗМОВИ (архів/видалення) — рішення Вови 29.07: дія над рядком
+    // діє на людину, а не на одне оголошення. Тому патч лягає на КОЖЕН тред пари.
+    // Оптимістично в памʼяті → потім у БД; будь-яка невдача відкочує ВСІ треди разом,
+    // інакше половина розмови лишилась би в архіві, а половина ні.
+    const applyConvState = async (key, patch) => {
+      const conv = conversationsAll().find(c => c.key === key);
+      if (!conv) return;
+      const ids  = conv.threads.map(t => t.id);
+      const prev = new Map(ids.map(id => [id, { ...(states.get(id) || {}) }]));
+      for (const id of ids) states.set(id, { ...(prev.get(id) || {}), ...patch });
       closeOpenRow();
       renderThreads();
-      const res = await setThreadState(me, id, {
-        archived: !!merged.archived, hidden: !!merged.hidden, cleared_at: merged.cleared_at || null,
-      });
-      if (!res.ok) { states.set(id, prev); renderThreads(); showToast('❌ Не вдалося: ' + (res.error || ''), 4000, 'error'); }
+      const results = await Promise.all(ids.map(id => {
+        const m = states.get(id) || {};
+        return setThreadState(me, id, {
+          archived: !!m.archived, hidden: !!m.hidden, cleared_at: m.cleared_at || null,
+        });
+      }));
+      if (results.some(r => !r.ok)) {
+        for (const id of ids) states.set(id, prev.get(id) || {});
+        renderThreads();
+        showToast('❌ Не вдалося: ' + (results.find(r => !r.ok)?.error || ''), 4000, 'error');
+      }
     };
 
     threadsEl.addEventListener('click', (e) => {
       const arch = e.target.closest('[data-archive]');
-      if (arch) { const id = Number(arch.dataset.archive); applyThreadState(id, { archived: !(stOf(id).archived) }); return; }
+      if (arch) {
+        const key = arch.dataset.archive;
+        const conv = conversationsAll().find(c => c.key === key);
+        if (conv) applyConvState(key, { archived: !convArchived(conv) });
+        return;
+      }
       const del = e.target.closest('[data-delete]');
-      if (del) { applyThreadState(Number(del.dataset.delete), { hidden: true, cleared_at: new Date().toISOString() }); return; }
+      if (del) { applyConvState(del.dataset.delete, { hidden: true, cleared_at: new Date().toISOString() }); return; }
       const btn = e.target.closest('[data-thread]');
       if (!btn) return;
       if (suppressClick) return;                 // щойно свайпнули — не відкривати чат
       if (openRow) { closeOpenRow(); return; }   // є відкрита картка → спершу закрити
-      const t = threads.find(x => String(x.id) === btn.dataset.thread);
-      if (t) openChat(t, t.post);
+      const conv = conversationsAll().find(c => c.key === btn.dataset.thread);
+      if (conv) openChat(conv);
     });
 
     // Живий список: нове повідомлення → перезавантажуємо треди (порядок за
@@ -1041,7 +1174,20 @@ export function openMyAds() {
         return;
       }
       const badgeBtn = e.target.closest('[data-badge]');
-      if (badgeBtn) { openThreadsList(); return; }
+      if (badgeBtn) {
+        // 29.07: якщо по цьому оголошенню звернувся РІВНО один покупець — відкриваємо
+        // одразу розмову з ним, і активним ставимо саме це оголошення. Кілька покупців
+        // в одну розмову не зведеш, тож там і далі відкривається список.
+        const card = badgeBtn.closest('[data-ad]') || badgeBtn.closest('.pm-ad');
+        const postId = Number(card?.dataset.ad ?? card?.dataset.id ?? NaN);
+        const ts = byPost.get(postId) || [];
+        if (ts.length === 1) {
+          const t = ts[0];
+          const conv = groupConversations(threads, me).find(c => c.threads.some(x => x.id === t.id));
+          openChat(conv || t, t.post, t.id);
+        } else openThreadsList();
+        return;
+      }
 
       const act = e.target.closest('[data-act]');
       if (act) {
@@ -1188,6 +1334,12 @@ export function startChatFromPost(post) {
       authorName: post.author || 'Продавець', buyerName: myName,
     });
     if (!res.ok) { showToast('Не вдалося відкрити чат: ' + (res.error || ''), 4000, 'error'); return; }
+    // 🔴 29.07 — якщо з цією людиною вже є розмова, чат НЕ роздвоюється: решту
+    // контекстів `openChat` довантажує САМ, уже після показу екрана.
+    // ⚠️ Тут навмисно НЕМА `await fetchMyThreads`: це найгарячіший шлях застосунку
+    // («Написати» з оголошення), і зайвий запит перед показом екрана віддавав би
+    // затримкою на слабкому зв'язку. `getOrCreateThread` не чіпаємо — він і далі
+    // тримає рівно один тред на пару (оголошення, покупець); змінюється лише показ.
     openChat(res.thread, post);
   });
 }
@@ -1209,10 +1361,16 @@ export async function refreshUnreadBadge() {
   };
   if (!isLoggedIn()) { hideAll(); return; }
 
-  // Кількість розмов з непрочитаними = розмір Map<thread_id, count>
-  const map = await fetchUnreadByThread(currentUserId());
+  // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
+  // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
+  // оголошеннями давала два треди. Тепер бейдж і список кажуть одне й те саме.
+  const uid = currentUserId();
+  const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
   for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
-  const chats = map.size;
+  const keyOf = new Map(pairs.map(p => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+  const people = new Set();
+  for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
+  const chats = people.size;
   if (chats <= 0) { hideAll(); return; }
   const label = chats > 99 ? '99+' : String(chats);
 
@@ -1267,9 +1425,15 @@ async function ensureChatPush() {
 // ── P-9: відкрити конкретну розмову за id треда (з нотифікації/hash-роутингу) ──
 export async function openThreadById(threadId) {
   if (!isLoggedIn() || threadId == null) return;
-  const threads = await fetchMyThreads(currentUserId());
+  const me = currentUserId();
+  const threads = await fetchMyThreads(me);
   const thread = threads.find(t => String(t.id) === String(threadId));
-  if (thread) openChat(thread, thread.post);
+  if (!thread) return;
+  // 29.07: пуш веде на КОНКРЕТНЕ оголошення, тому відкриваємо розмову з людиною,
+  // але активним ставимо саме той контекст, про який прийшло сповіщення. Інакше
+  // людина натиснула «нове повідомлення про велосипед», а потрапила б у айфон.
+  const conv = groupConversations(threads, me).find(c => c.threads.some(t => t.id === thread.id));
+  openChat(conv || thread, thread.post, thread.id);
 }
 
 // ── P-8: банер вхідного push (chat) коли застосунок у фокусі — раніше нічого
