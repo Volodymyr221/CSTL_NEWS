@@ -4461,7 +4461,15 @@
         }
         const badgeBtn = e.target.closest("[data-badge]");
         if (badgeBtn) {
-          openThreadsList();
+          const card = badgeBtn.closest("[data-ad]") || badgeBtn.closest(".pm-ad");
+          const postId = Number(card?.dataset.ad ?? card?.dataset.id ?? NaN);
+          const ts = byPost.get(postId) || [];
+          if (ts.length === 1) {
+            const t = ts[0];
+            const conv = groupConversations(threads, me).find((c) => c.threads.some((x) => x.id === t.id));
+            openChat(conv || t, t.post, t.id);
+          } else
+            openThreadsList();
           return;
         }
         const act = e.target.closest("[data-act]");
@@ -4608,8 +4616,17 @@
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442: " + (res.error || ""), 4e3, "error");
         return;
       }
-      openChat(res.thread, post);
+      openChat(await conversationOf(me, res.thread), post, res.thread.id);
     });
+  }
+  async function conversationOf(me, thread) {
+    try {
+      const all = await fetchMyThreads(me);
+      const conv = groupConversations(all, me).find((c) => c.threads.some((t) => t.id === thread.id));
+      return conv || thread;
+    } catch (_) {
+      return thread;
+    }
   }
   var _readThreads = /* @__PURE__ */ new Set();
   async function refreshUnreadBadge() {
@@ -4702,10 +4719,13 @@
   async function openThreadById(threadId) {
     if (!isLoggedIn() || threadId == null)
       return;
-    const threads = await fetchMyThreads(currentUserId());
+    const me = currentUserId();
+    const threads = await fetchMyThreads(me);
     const thread = threads.find((t) => String(t.id) === String(threadId));
-    if (thread)
-      openChat(thread, thread.post);
+    if (!thread)
+      return;
+    const conv = groupConversations(threads, me).find((c) => c.threads.some((t) => t.id === thread.id));
+    openChat(conv || thread, thread.post, thread.id);
   }
   var _chatBannerTimer = null;
   function showChatPushBanner({ title, body, threadId, url }) {

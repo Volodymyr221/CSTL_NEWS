@@ -1152,7 +1152,20 @@ export function openMyAds() {
         return;
       }
       const badgeBtn = e.target.closest('[data-badge]');
-      if (badgeBtn) { openThreadsList(); return; }
+      if (badgeBtn) {
+        // 29.07: якщо по цьому оголошенню звернувся РІВНО один покупець — відкриваємо
+        // одразу розмову з ним, і активним ставимо саме це оголошення. Кілька покупців
+        // в одну розмову не зведеш, тож там і далі відкривається список.
+        const card = badgeBtn.closest('[data-ad]') || badgeBtn.closest('.pm-ad');
+        const postId = Number(card?.dataset.ad ?? card?.dataset.id ?? NaN);
+        const ts = byPost.get(postId) || [];
+        if (ts.length === 1) {
+          const t = ts[0];
+          const conv = groupConversations(threads, me).find(c => c.threads.some(x => x.id === t.id));
+          openChat(conv || t, t.post, t.id);
+        } else openThreadsList();
+        return;
+      }
 
       const act = e.target.closest('[data-act]');
       if (act) {
@@ -1299,8 +1312,24 @@ export function startChatFromPost(post) {
       authorName: post.author || 'Продавець', buyerName: myName,
     });
     if (!res.ok) { showToast('Не вдалося відкрити чат: ' + (res.error || ''), 4000, 'error'); return; }
-    openChat(res.thread, post);
+    // 🔴 29.07 — якщо з цією людиною вже є розмова, НЕ відкриваємо окремий чат:
+    // підтягуємо всі її контексти й робимо активним саме те оголошення, з якого
+    // натиснули «Написати». `getOrCreateThread` не чіпаємо — він і далі тримає
+    // рівно один тред на пару (оголошення, покупець); змінюється лише те, ЯК ми
+    // це показуємо. Якщо треди не дочитались (мережа) — відкриваємо один, як раніше.
+    openChat(await conversationOf(me, res.thread), post, res.thread.id);
   });
+}
+
+// Зібрати розмову (усі контексти пари) навколо відомого треда.
+// ⚠️ Тихий fail-soft: будь-яка проблема з мережею → повертаємо одинокий тред, і чат
+// відкриється як до 29.07. Краще один контекст, ніж екран, що не відкрився.
+async function conversationOf(me, thread) {
+  try {
+    const all = await fetchMyThreads(me);
+    const conv = groupConversations(all, me).find(c => c.threads.some(t => t.id === thread.id));
+    return conv || thread;
+  } catch (_) { return thread; }
 }
 
 // ── Бейдж непрочитаних: іконка акаунта (шапка) + FAB Дошки + пункт «Повідомлення» ──
@@ -1378,9 +1407,15 @@ async function ensureChatPush() {
 // ── P-9: відкрити конкретну розмову за id треда (з нотифікації/hash-роутингу) ──
 export async function openThreadById(threadId) {
   if (!isLoggedIn() || threadId == null) return;
-  const threads = await fetchMyThreads(currentUserId());
+  const me = currentUserId();
+  const threads = await fetchMyThreads(me);
   const thread = threads.find(t => String(t.id) === String(threadId));
-  if (thread) openChat(thread, thread.post);
+  if (!thread) return;
+  // 29.07: пуш веде на КОНКРЕТНЕ оголошення, тому відкриваємо розмову з людиною,
+  // але активним ставимо саме той контекст, про який прийшло сповіщення. Інакше
+  // людина натиснула «нове повідомлення про велосипед», а потрапила б у айфон.
+  const conv = groupConversations(threads, me).find(c => c.threads.some(t => t.id === thread.id));
+  openChat(conv || thread, thread.post, thread.id);
 }
 
 // ── P-8: банер вхідного push (chat) коли застосунок у фокусі — раніше нічого
