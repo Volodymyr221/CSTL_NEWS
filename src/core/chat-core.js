@@ -270,3 +270,43 @@ export function setupBubbleGestures(container, onAction) {
     if (b && !b.classList.contains('pm-bubble--deleted')) { e.preventDefault(); onAction(b.dataset.msg, 'menu'); }
   });
 }
+
+// ── ГРУПУВАННЯ РОЗМОВ ─────────────────────────────────────── [GROUP-START]
+// 🔴 29.07 — РОЗМОВА = ПАРА ЛЮДЕЙ, а не оголошення.
+// Скарга Вови: «якщо автор має два оголошення і той самий покупець написав по обох —
+// це два окремих чати, дві переписки». Тобто список засмічувався однією людиною.
+//
+// 🔑 ЧОМУ БЕЗ НОВОЇ ТАБЛИЦІ. Наш `threads(post_id, author_uid, buyer_uid)` — це вже
+// «контекст оголошення всередині розмови», а `messages.thread_id` уже несе і пару
+// людей, і оголошення. Бракувало лише поняття «розмова» — і воно ВИВІДНЕ:
+// розмова = пара `(author_uid, buyer_uid)`. Окремий `conversation_id` не додав би
+// жодного факту, якого немає, зате потягнув би 5 політик RLS, `thread_user_state`,
+// два підрахунки непрочитаних, дві realtime-підписки й Edge Function пушів.
+// Тому групування живе ТУТ, у клієнті, і схема бази не змінюється взагалі.
+//
+// ⚠️ Функція НАВМИСНО чиста (без DOM, без `currentUserId()`): `me` приходить
+// аргументом, тому її ганяє стенд `tests/chat-grouping.mjs` прямо в node.
+// ⚠️ Треди, приховані через `cleared_at`, треба відсіяти ДО виклику — тут про
+// стан користувача нічого не відомо і не має бути відомо.
+export function groupConversations(threads, me, unread = new Map()) {
+  const tsOf = t => (t && t.last_message_at) ? new Date(t.last_message_at).getTime() : 0;
+  const byUid = new Map();
+  for (const t of (threads || [])) {
+    const iAmAuthor = !!me && me === t.author_uid;
+    const uid  = (iAmAuthor ? t.buyer_uid  : t.author_uid) || '';
+    const name = (iAmAuthor ? t.buyer_name : t.author_name) || (iAmAuthor ? 'Покупець' : 'Продавець');
+    // ⚠️ Порожній uid НЕ згортаємо в одну купу: без нього це різні невідомі люди,
+    // і зліпити їх разом означало б показати чужі переписки як одну розмову.
+    const key = uid || `t:${t.id}`;
+    let c = byUid.get(key);
+    if (!c) { c = { key, otherUid: uid, otherName: name, threads: [], unread: 0, lastAt: 0, last: null }; byUid.set(key, c); }
+    c.threads.push(t);
+    c.unread += (unread.get(t.id) || 0);
+    // Ім'я і прев'ю беремо з НАЙСВІЖІШОГО треда: імена денормалізовані й могли
+    // змінитись, тому старий тред пари може нести застаріле написання.
+    if (tsOf(t) >= c.lastAt) { c.lastAt = tsOf(t); c.last = t; c.otherName = name; }
+  }
+  for (const c of byUid.values()) c.threads.sort((a, b) => tsOf(b) - tsOf(a));
+  return [...byUid.values()].sort((a, b) => b.lastAt - a.lastAt);
+}
+// ─────────────────────────────────────────────────────────────── [GROUP-END]
