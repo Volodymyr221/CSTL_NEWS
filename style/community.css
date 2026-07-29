@@ -1826,7 +1826,9 @@
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);   /* тінь — щоб слот фото не зливався з фоном */
   transition: border-color 0.12s, background-color 0.12s;
 }
-.bm-photo-slot:active { background-color: var(--paper); }
+/* 29.07: було `--paper` #F4F1E6 — слот фото у листі подачі, а лист уже стоїть на
+   поверхні Дошки, тож кремовий натиск був останнім теплим спалахом у цьому вікні. */
+.bm-photo-slot:active { background-color: var(--board-press); }
 .bm-photo-slot.filled {
   border: 1.5px solid var(--border);
   background-color: transparent;
@@ -2631,7 +2633,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .cm-board-msg-btn:active {
-  background: var(--paper-deep);
+  background: var(--board-press);   /* 29.07: було `--paper-deep` — тепле на білій картці */
   transform: scale(0.92);
 }
 
@@ -2936,7 +2938,7 @@
   -webkit-tap-highlight-color: transparent;
 }
 .cm-board-call:active {
-  background: var(--paper-deep);
+  background: var(--board-press);   /* 29.07: було `--paper-deep` */
   transform: scale(0.92);
   box-shadow: inset 0 2px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.10);
 }
@@ -3279,6 +3281,11 @@
   border-color: rgba(16, 18, 22, 0.12);
   box-shadow: 0 1px 3px rgba(16, 18, 22, 0.06);
 }
+/* Кружечок «×» усередині поля пошуку. Базове правило дає йому `--paper-deep`
+   (#EAE4D2) — на кремовому полі це читалось, а на БІЛОМУ (правило вище) кремовий
+   кружечок став жовтуватою плямою. Scoped під `#board-content`, бо той самий клас
+   носять Обговорення, а там свідомо теплий беж. */
+#board-content .bd-search-clear { background: var(--board-press); }
 
 /* ── ЗГОРТАННЯ ШАПКИ ДОШКИ ПРИ СКРОЛІ (переписано 28.07) ──────────────────────
    Вова: «треба зробити, щоб ховалася оце поле воду з категоріями та і так далі…
@@ -3445,7 +3452,10 @@
   left: 0;
   z-index: 60;
   min-width: 210px;
-  background: var(--card-cream);
+  /* 🔴 29.07 — БІЛЕ (було `--card-cream` #FAF8EF). Обидва меню малює лише board.js,
+     тобто вони належать самій Дошці, і висять над білими картками на сірому фоні.
+     Кремове меню поверх білої картки давало жовтуватий острівець. */
+  background: var(--board-card);
   border: 1px solid rgba(0,0,0,0.15);
   border-radius: 14px;
   box-shadow: 0 10px 28px rgba(0,0,0,0.22);

@@ -105,12 +105,15 @@
 .pm-form {
   display: flex; gap: 8px; align-items: center;
   padding: 8px 10px calc(env(safe-area-inset-bottom, 0px) + 8px);
-  background: var(--card-cream, #FAF8EF);
+  /* 🔴 29.07 — БІЛИЙ бар (було `--card-cream` #FAF8EF). Стрічка повідомлень лежить
+     на `--board-bg`, тож бар вводу мусить від неї відділятись поверхнею, а не
+     тональністю. Кремовий на сірому давав жовтувату смугу через увесь низ екрана. */
+  background: var(--board-card);
   border-top: 1px solid var(--hairline, rgba(60,50,30,0.10));
   flex-shrink: 0;
 }
-/* Коли клавіатура відкрита — прибрати нижній safe-area відступ (інакше кремова
-   смуга між полем і клавіатурою). Та сама логіка для чату Дошки (.bd-chat-modal--kb). */
+/* Коли клавіатура відкрита — прибрати нижній safe-area відступ (інакше смуга
+   між полем і клавіатурою). Та сама логіка для чату Дошки (.bd-chat-modal--kb). */
 .pm-screen.pm-kb-open .pm-form { padding-bottom: 8px; }
 
 .pm-input {
@@ -232,8 +235,10 @@
 .pm-chips::-webkit-scrollbar { display: none; }
 .pm-chip {
   flex-shrink: 0; cursor: pointer;
-  border: 1px solid var(--hairline, rgba(60,50,30,0.10));
-  background: var(--card-cream, #FAF8EF); color: var(--ink-soft, #5F5448);
+  /* 29.07: біле тіло + межа з родини Дошки (було кремове тіло + теплий волосок).
+     Модель OLX: на сірому фоні відділяє ЛІНІЯ, а не різниця заливок. */
+  border: 1px solid var(--board-line);
+  background: var(--board-card); color: var(--ink-soft, #5F5448);
   font-size: 13.5px; font-weight: 600;
   padding: 8px 16px; border-radius: 14px;
   box-shadow: 0 1px 3px rgba(60, 40, 20, 0.10);
@@ -519,7 +524,14 @@
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
-  background: var(--card-cream, #FAF8EF);
+  /* 🔴 29.07 — смужка і картка під нею стали ОДНИМ БІЛИМ БЛОКОМ (обидві були
+     `--card-cream`). Задум «читаються одним блоком» лишився той самий — змінилась
+     лише поверхня, бо кремовий блок під бордовою шапкою на сірому екрані був
+     єдиною теплою плямою.
+     ⚠️ Наслідок, який довелось закрити тут же: чіпи були БІЛІ на кремовій смужці —
+     на білій смужці вони б зникли. Тому неактивний чіп тепер заглиблений
+     (`--board-bg`), а не виступає. Активний лишається бордовим. */
+  background: var(--board-card);
   border-bottom: 1px solid var(--hairline, rgba(60,50,30,0.10));
 }
 .pm-ctx-tabs::-webkit-scrollbar { display: none; }
@@ -528,8 +540,8 @@
   max-width: 62vw;
   padding: 6px 12px;
   border-radius: 14px;
-  border: 1px solid rgba(16, 18, 22, 0.14);
-  background: #FFFFFF;
+  border: 1px solid var(--board-line);
+  background: var(--board-bg);
   color: var(--ink-soft, #5F5448);
   font: 700 12px/1.2 inherit;
   text-transform: uppercase; letter-spacing: 0.02em;
@@ -556,18 +568,19 @@
 .pm-ctx {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
   padding: 10px 14px; border: 0; cursor: pointer; flex-shrink: 0;
-  background: var(--card-cream, #FAF8EF);
+  background: var(--board-card);   /* 29.07: разом зі смужкою чіпів — один білий блок */
   border-bottom: 1px solid var(--hairline, rgba(60,50,30,0.10));
   /* Нижні кути злегка заокруглені (гострувато — малий радіус, фідбек Вови) */
   border-bottom-left-radius: 10px; border-bottom-right-radius: 10px;
   box-shadow: 0 4px 8px -4px rgba(0,0,0,0.14);
   position: relative; z-index: 1;
 }
-.pm-ctx:active { background: var(--paper-deep, #EAE4D2); }
+.pm-ctx:active { background: var(--board-press); }
 .pm-ctx-thumb {
   width: 46px; height: 46px; flex-shrink: 0; border-radius: 12px;
   background-size: cover; background-position: center;
-  background-color: var(--paper-deep, #EAE4D2);
+  /* підкладка під фото оголошення (видно поки фото вантажиться або якщо його нема) */
+  background-color: var(--board-press);
   display: flex; align-items: center; justify-content: center; font-size: 22px;
 }
 .pm-ctx-body { flex: 1; min-width: 0; display: flex; flex-direction: column; }
@@ -581,7 +594,7 @@
   -webkit-tap-highlight-color: transparent; text-decoration: none;
 }
 .pm-ctx-call:active {
-  background: var(--paper-deep, #EAE4D2);
+  background: var(--board-press);
   transform: scale(0.92);
   box-shadow: inset 0 2px 14px rgba(0,0,0,0.35), 0 1px 4px rgba(0,0,0,0.10);
 }
@@ -655,7 +668,7 @@
   position: absolute; right: 12px;
   width: 34px; height: 34px; border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  background: var(--card-cream, #FAF8EF); color: var(--red, #722F37);
+  background: var(--board-card); color: var(--red, #722F37);
   box-shadow: 0 2px 10px rgba(0,0,0,0.20);
   opacity: 0; transform: translateY(-50%) scale(0.55);
   pointer-events: none; z-index: 40;
@@ -687,7 +700,9 @@
 /* Бар «Відповідь / Редагування» над полем */
 .pm-composebar {
   display: flex; align-items: center; gap: 10px;
-  padding: 8px 12px; background: var(--card-cream, #FAF8EF);
+  /* бар «Відповідь/Редагування» сидить впритул над `.pm-form` — мусить бути тієї
+     самої поверхні, інакше низ екрана двоколірний (29.07: обидва були кремові) */
+  padding: 8px 12px; background: var(--board-card);
   border-top: 1px solid var(--hairline, rgba(60,50,30,0.10));
   flex-shrink: 0;
 }
@@ -729,14 +744,19 @@
   margin-bottom: calc(env(safe-area-inset-bottom, 0px) + 8px);
   display: flex; flex-direction: column; gap: 1px;
   border-radius: 16px; overflow: hidden;
-  background: var(--card-cream, #FAF8EF);
+  /* 🔴 29.07 — ПОВЕРХНЯ ДОШКИ (було `--card-cream`). Тут фон контейнера видно у двох
+     місцях: у щілинах `gap: 1px` між кнопками (тобто це фактично роздільники) і в
+     8px просвіті над «Скасувати». Тому НЕ `--board-line`: суцільний #C4C4C1 дав би
+     тонкі лінії правильно, а просвіт над «Скасувати» — сірою плитою на 8px.
+     `--board-bg` рівно те, що вже взяли пункти FAB-меню (PR #710). */
+  background: var(--board-bg);
 }
 .pm-actions button {
   display: flex; align-items: center; gap: 13px;
-  border: 0; background: #fff; color: var(--ink, #2A2520);
+  border: 0; background: var(--board-card); color: var(--ink, #2A2520);
   font-size: 16px; padding: 15px 18px; text-align: left; cursor: pointer;
 }
-.pm-actions button:active { background: var(--paper-deep, #EAE4D2); }
+.pm-actions button:active { background: var(--board-press); }
 .pm-act-ic { display: inline-flex; flex-shrink: 0; color: var(--ink-soft, #5F5448); }
 .pm-act-ic svg { width: 21px; height: 21px; display: block; }
 .pm-actions-danger { color: #B3261E !important; }

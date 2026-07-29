@@ -4646,17 +4646,8 @@
         showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043A\u0440\u0438\u0442\u0438 \u0447\u0430\u0442: " + (res.error || ""), 4e3, "error");
         return;
       }
-      openChat(await conversationOf(me, res.thread), post, res.thread.id);
+      openChat(res.thread, post);
     });
-  }
-  async function conversationOf(me, thread) {
-    try {
-      const all = await fetchMyThreads(me);
-      const conv = groupConversations(all, me).find((c) => c.threads.some((t) => t.id === thread.id));
-      return conv || thread;
-    } catch (_) {
-      return thread;
-    }
   }
   var _readThreads = /* @__PURE__ */ new Set();
   async function refreshUnreadBadge() {
