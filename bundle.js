@@ -3861,6 +3861,26 @@
     if (api._closed)
       return api;
     api._cleanup.push(refreshUnreadBadge);
+    if (conv.threads.length === 1 && conv.otherUid) {
+      (async () => {
+        try {
+          const all = await fetchMyThreads(me);
+          if (api._closed)
+            return;
+          const full = groupConversations(all, me).find((c) => c.threads.some((t) => t.id === thread.id));
+          if (!full || full.threads.length < 2)
+            return;
+          conv.threads = full.threads;
+          conv.otherName = full.otherName;
+          const tabs = ctxWrap.querySelector(".pm-ctx-tabs");
+          if (tabs)
+            tabs.outerHTML = tabsHtml();
+          else
+            ctxWrap.insertAdjacentHTML("afterbegin", tabsHtml());
+        } catch (_) {
+        }
+      })();
+    }
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       submitText();
