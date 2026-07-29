@@ -206,7 +206,7 @@ export function openBoardModal(opts = {}) {
 
       <div class="bm-section">
         <label class="bm-label">Ім'я</label>
-        <div class="bm-author-fixed" id="bm-author-fixed">👤 ${escapeHtml(state.author)}</div>
+        <div class="bm-author-fixed" id="bm-author-fixed"><span class="bm-author-ic">${ICONS.user}</span><span class="bm-author-name">${escapeHtml(state.author)}</span></div>
       </div>
     `;
 
@@ -425,12 +425,10 @@ export function openBoardModal(opts = {}) {
       ? `<span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>`
       : `<span class="cm-board-cat cm-board-cat--placeholder">Категорія</span>`;
     const firstPhoto = state.photos.find(p => p);
-    // Д-24: показуємо телефон у прев'ю лише коли номер повний (9 цифр), не префікс-заглушку.
-    const contactShow = phoneDigits(state.contact) === 9 ? maskUaPhone(state.contact) : '';
-    const contactHtml = contactShow ? `
-      <div class="cm-board-contact cm-board-contact--phone">
-        ${escapeHtml(contactShow)}
-      </div>` : '';
+    // 🔴 29.07 — ТЕЛЕФОН З ПРЕВ'Ю ЗНЯТО (був Д-24). На справжній картці Дошки його
+    // немає з потоку 2: кнопки 📞/💬 переїхали в модалку оголошення. Тобто прев'ю
+    // обіцяло те, чого на дошці не буде. Сам номер нікуди не дівся — його видно,
+    // коли оголошення відкривають. Поле «Телефон» у формі лишається як було.
     // Ціна у прев'ю — тим самим форматувальником, що й на справжній картці
     // (`core/utils.js`), інакше прев'ю показувало б «2500», а дошка «2 500 ₴».
     const priceLabel = formatPrice(state.price, 'UAH', state.negotiable);
@@ -455,7 +453,6 @@ export function openBoardModal(opts = {}) {
             <span class="cm-board-time">щойно</span>
           </div>
         </div>
-        ${contactHtml}
       </article>
     `;
   }
@@ -480,8 +477,10 @@ export function openBoardModal(opts = {}) {
       const nm = firstNameOnly((p && p.name) || currentUserName()) || 'Житель';
       if (nm !== state.author) {
         state.author = nm;
-        const el = dynamicEl.querySelector('#bm-author-fixed');
-        if (el) el.textContent = `👤 ${nm}`;
+        // ⚠️ Тільки текстовий вузол імені. Раніше тут стояв `el.textContent = …`, і
+        // після підвантаження профілю він зніс би векторну іконку разом із розміткою.
+        const el = dynamicEl.querySelector('#bm-author-fixed .bm-author-name');
+        if (el) el.textContent = nm;
       }
       renderPreview();
     }).catch(() => {});

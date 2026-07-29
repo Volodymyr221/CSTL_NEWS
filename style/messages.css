@@ -280,9 +280,11 @@
   /* Картка на поверхні Дошки — біла з тонким обідком, ЯК НА САМІЙ ДОШЦІ.
      ⚠️ Кремову лишати не можна: тепла картка на нейтральному фоні читається
      «брудно» — це вже проходили на самій Дошці 28.07. */
-  border: 1px solid rgba(16, 18, 22, 0.18); border-radius: 18px;   /* щільність — у парі з --board-bg, див. community.css */
+  border: 1px solid #C4C4C1; border-radius: 18px;   /* обідок — у парі з --board-bg, див. community.css */
   background: #FFFFFF;
-  box-shadow: 0 1px 2px rgba(16,18,22,0.06), 0 4px 10px rgba(16,18,22,0.10);
+  /* Тіні НЕМАЄ — модель OLX: розділяє чітка лінія, а розмита тінь поруч із нею
+     читається як бруд і конкурує за ту саму роль межі (розбір — у community.css). */
+  box-shadow: none;
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .pm-thread-body { flex: 1; min-width: 0; }
@@ -350,9 +352,9 @@
 
 .pm-ad {
   background: #FFFFFF;
-  border: 1px solid rgba(16, 18, 22, 0.18);   /* щільність — у парі з --board-bg, див. community.css */
+  border: 1px solid #C4C4C1;   /* обідок — у парі з --board-bg, див. community.css */
   border-radius: 16px;
-  box-shadow: 0 1px 2px rgba(16,18,22,0.06), 0 4px 10px rgba(16,18,22,0.10);
+  box-shadow: none;   /* модель OLX — лінія замість тіні, див. community.css */
   position: relative; z-index: 1;
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
