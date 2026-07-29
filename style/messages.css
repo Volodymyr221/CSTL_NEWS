@@ -15,7 +15,12 @@
   bottom: 0; top: 0;
   width: 100%; max-width: 560px;
   transform: translateX(-50%) translateY(100%);
-  background: var(--paper, #F4F1E6);
+  /* 🔴 29.07 — ПОВЕРХНЯ ЗІ СПІЛЬНОЇ СИСТЕМИ, а не стара кремова.
+     Вова: «вкладки FAB — чому не зробив стандартизацію фонів?». Ці екрани
+     («Мої оголошення», «Повідомлення», «Збережені») відкриваються з FAB Дошки,
+     тобто читаються як її продовження — і мусять стояти на тій самій поверхні.
+     Було `--paper #F4F1E6` (тепла кремова палітра v3), стало `--board-bg`. */
+  background: var(--board-bg);
   display: flex; flex-direction: column;
   z-index: 2401;
   transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1);
@@ -272,9 +277,12 @@
   display: flex; align-items: center; gap: 12px;
   text-align: left; cursor: pointer;
   padding: 12px 14px;
-  border: 0; border-radius: 18px;
-  background: var(--card-cream, #FAF8EF);
-  box-shadow: var(--card-shadow, 0 1px 2px rgba(70,45,20,0.05), 0 8px 24px rgba(70,45,20,0.08));
+  /* Картка на поверхні Дошки — біла з тонким обідком, ЯК НА САМІЙ ДОШЦІ.
+     ⚠️ Кремову лишати не можна: тепла картка на нейтральному фоні читається
+     «брудно» — це вже проходили на самій Дошці 28.07. */
+  border: 1px solid rgba(16, 18, 22, 0.22); border-radius: 18px;
+  background: #FFFFFF;
+  box-shadow: 0 1px 2px rgba(16,18,22,0.06), 0 4px 10px rgba(16,18,22,0.10);
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 .pm-thread-body { flex: 1; min-width: 0; }
@@ -341,9 +349,10 @@
 .pm-ad-swipe-btn:active { filter: brightness(0.92); }
 
 .pm-ad {
-  background: var(--card-cream, #FAF8EF);
+  background: #FFFFFF;
+  border: 1px solid rgba(16, 18, 22, 0.22);
   border-radius: 16px;
-  box-shadow: 0 3px 10px rgba(60, 40, 20, 0.10), 0 1px 2px rgba(60, 40, 20, 0.06);
+  box-shadow: 0 1px 2px rgba(16,18,22,0.06), 0 4px 10px rgba(16,18,22,0.10);
   position: relative; z-index: 1;
   transition: transform 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
