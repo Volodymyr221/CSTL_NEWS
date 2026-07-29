@@ -1206,6 +1206,16 @@
     }
     return map;
   }
+  async function fetchThreadPairs(uid) {
+    if (!supa || !uid)
+      return [];
+    const { data, error } = await supa.from("threads").select("id, author_uid, buyer_uid").or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+    if (error) {
+      console.warn("[supabase] fetchThreadPairs:", error.message);
+      return [];
+    }
+    return data || [];
+  }
   async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
     if (!supa || !uid)
       return { ok: false };
@@ -4648,10 +4658,15 @@
       hideAll();
       return;
     }
-    const map = await fetchUnreadByThread(currentUserId());
+    const uid = currentUserId();
+    const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
     for (const id of _readThreads)
       map.delete(id);
-    const chats = map.size;
+    const keyOf = new Map(pairs.map((p) => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+    const people = /* @__PURE__ */ new Set();
+    for (const id of map.keys())
+      people.add(keyOf.get(id) || `t:${id}`);
+    const chats = people.size;
     if (chats <= 0) {
       hideAll();
       return;

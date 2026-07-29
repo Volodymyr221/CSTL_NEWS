@@ -877,6 +877,20 @@ export async function fetchUnreadByThread(uid) {
   return map;
 }
 
+// Пари учасників по тредах → [{id, author_uid, buyer_uid}] БЕЗ join оголошень.
+// 🔴 29.07: бейдж непрочитаних має рахувати РОЗМОВИ (людей), а не треди — інакше одна
+// людина з двома оголошеннями давала б «2» на бейджі й ОДИН рядок у списку, тобто
+// число нікуди не вело. Окрема легка вибірка, бо `fetchMyThreads` тягне ще й пости,
+// а бейдж оновлюється часто (після кожного прочитання і кожного push).
+export async function fetchThreadPairs(uid) {
+  if (!supa || !uid) return [];
+  const { data, error } = await supa.from('threads')
+    .select('id, author_uid, buyer_uid')
+    .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`);
+  if (error) { console.warn('[supabase] fetchThreadPairs:', error.message); return []; }
+  return data || [];
+}
+
 // Зберегти push-пристрій під акаунт (для чат-сповіщень).
 export async function saveUserPushDevice({ uid, endpoint, p256dh, auth_key }) {
   if (!supa || !uid) return { ok: false };

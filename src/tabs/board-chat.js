@@ -23,7 +23,7 @@ import {
 } from '../core/auth.js';
 import {
   getOrCreateThread, fetchMessages, sendMessage, markThreadRead,
-  fetchMyThreads, fetchMyPosts, fetchUnreadByThread,
+  fetchMyThreads, fetchMyPosts, fetchUnreadByThread, fetchThreadPairs,
   fetchThreadStates, setThreadState, fetchThreadClearedAt,
   subscribeThreadMessages, subscribeMyThreads, saveUserPushDevice,
   editMessage, deleteMessage,
@@ -1349,10 +1349,16 @@ export async function refreshUnreadBadge() {
   };
   if (!isLoggedIn()) { hideAll(); return; }
 
-  // Кількість розмов з непрочитаними = розмір Map<thread_id, count>
-  const map = await fetchUnreadByThread(currentUserId());
+  // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
+  // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
+  // оголошеннями давала два треди. Тепер бейдж і список кажуть одне й те саме.
+  const uid = currentUserId();
+  const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
   for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
-  const chats = map.size;
+  const keyOf = new Map(pairs.map(p => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+  const people = new Set();
+  for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
+  const chats = people.size;
   if (chats <= 0) { hideAll(); return; }
   const label = chats > 99 ? '99+' : String(chats);
 
