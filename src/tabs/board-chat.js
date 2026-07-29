@@ -73,39 +73,72 @@ function threadPostTitle(thread) {
 // ── 1. Екран розмови 1-на-1 ──────────────────────────────────────────────
 let _chatUnsub = null;
 
-export async function openChat(thread, post) {
+// 🔴 29.07 — ЕКРАН РОЗМОВИ ТЕПЕР ПРО ЛЮДИНУ, А НЕ ПРО ОГОЛОШЕННЯ.
+// Приймає РОЗМОВУ `{key, otherUid, otherName, threads[], last}` з `groupConversations`.
+// Сумісність: якщо передали одинокий тред (старі виклики / deep-link з пуша), він
+// загортається в розмову з одного контексту — далі код єдиний, без розгалужень.
+// `activeId` — який контекст відкрити першим (напр. оголошення, з якого натиснули
+// «Написати», або тред із пуш-сповіщення).
+export async function openChat(convOrThread, post, activeId = null) {
   if (!isLoggedIn()) { requireAuth('відкрити чат', () => {}); return; }
   ensureChatPush();   // P-5: тап відкрити чат — реальний жест користувача, просимо дозвіл push
   const me = currentUserId();
-  const p = post || thread.post || {};
-  const title = p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення');
-  const partner = otherName(thread);
-  const thumb = (p.photos && p.photos[0]) || '';
-  const adAuthor = p.author ? String(p.author).trim() : '';
-  const adContact = p.contact ? String(p.contact).trim() : '';
-  const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
-  const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, '') : '';
+
+  const conv = (convOrThread && Array.isArray(convOrThread.threads))
+    ? convOrThread
+    : { key: String(convOrThread?.id || ''), otherUid: otherUid(convOrThread), otherName: otherName(convOrThread), threads: [convOrThread], last: convOrThread };
+  // ⚠️ `thread` НАВМИСНО `let`: це «активний контекст», і решта екрана (надсилання,
+  // realtime, позначення прочитаним) читає його через замикання. Перемикання чіпа
+  // міняє саме цю змінну — інакше довелось би переписувати пів файлу.
+  let thread = conv.threads.find(t => String(t.id) === String(activeId)) || conv.last || conv.threads[0];
+  const partner = conv.otherName;
+
+  // Картка активного оголошення — перемальовується при перемиканні контексту.
+  const ctxHtml = (t, overridePost) => {
+    const p = overridePost || t.post || {};
+    const gone = !t.post && !overridePost;               // пост видалено — join віддав null
+    const closed = p.status === 'closed';                // оголошення завершене
+    const title = gone ? 'Оголошення більше недоступне'
+                       : (p.title || (p.text ? p.text.slice(0, 60) : 'Оголошення'));
+    const thumb = (p.photos && p.photos[0]) || '';
+    const adAuthor = p.author ? String(p.author).trim() : '';
+    const adContact = p.contact ? String(p.contact).trim() : '';
+    const adIsPhone = adContact && /^[\+\d][\d\s\-()]{5,}$/.test(adContact);
+    const adTel = adIsPhone ? adContact.replace(/[^\d+]/g, '') : '';
+    return `
+      <div class="pm-ctx${gone ? ' pm-ctx--gone' : ''}" data-pm-ctx role="button" aria-label="Переглянути оголошення">
+        ${thumb
+          ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>`
+          : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
+        <span class="pm-ctx-body">
+          <span class="pm-ctx-title">${escapeHtml(title)}${closed ? '<span class="pm-ctx-state">Завершено</span>' : ''}</span>
+          ${(p.location && p.location !== COMMUNITY_ALL) ? `<span class="pm-ctx-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
+          ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
+          ${gone ? '<span class="pm-ctx-loc">Листування збережено</span>' : '<span class="pm-ctx-link">Переглянути оголошення →</span>'}
+        </span>
+        ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="Подзвонити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
+      </div>`;
+  };
+  // Смужка контекстів. ⚠️ З'являється ЛИШЕ коли оголошень ≥2 — у звичайній розмові
+  // (переважна більшість) екран мусить лишитись точно таким, як був.
+  const tabsHtml = () => conv.threads.length < 2 ? '' : `
+    <div class="pm-ctx-tabs" id="pm-ctx-tabs" role="tablist" aria-label="Оголошення в цій розмові">
+      ${conv.threads.map(t => `
+        <button class="pm-ctx-tab${String(t.id) === String(thread.id) ? ' pm-ctx-tab--active' : ''}" type="button"
+                role="tab" aria-selected="${String(t.id) === String(thread.id)}" data-ctx="${t.id}">
+          ${escapeHtml(threadPostTitle(t))}
+        </button>`).join('')}
+    </div>`;
 
   const api = buildScreen(`
     <header class="pm-head pm-head--chat">
       <button class="pm-back" type="button" data-pm-back aria-label="Назад">←</button>
-      ${avatar(partner, otherUid(thread))}
-      <div class="pm-head-titles" data-av-uid="${escapeHtml(otherUid(thread))}" role="button">
-        <div class="pm-head-name"${nameUid(otherUid(thread))}>${escapeHtml(partner)}</div>
+      ${avatar(partner, conv.otherUid)}
+      <div class="pm-head-titles" data-av-uid="${escapeHtml(conv.otherUid)}" role="button">
+        <div class="pm-head-name"${nameUid(conv.otherUid)}>${escapeHtml(partner)}</div>
       </div>
     </header>
-    <div class="pm-ctx" data-pm-ctx role="button" aria-label="Переглянути оголошення">
-      ${thumb
-        ? `<span class="pm-ctx-thumb" style="background-image:url('${escapeHtml(thumb)}')"></span>`
-        : `<span class="pm-ctx-thumb pm-ctx-thumb--none">🏷️</span>`}
-      <span class="pm-ctx-body">
-        <span class="pm-ctx-title">${escapeHtml(title)}</span>
-        ${(p.location && p.location !== COMMUNITY_ALL) ? `<span class="pm-ctx-loc">📍 ${escapeHtml(p.location)}</span>` : ''}
-        ${(adAuthor || adContact) ? `<span class="pm-ctx-contact">${adContact ? `<span class="pm-ctx-phone">${escapeHtml(adContact)}</span>` : ''}${adAuthor ? `${adContact ? ' — ' : ''}${escapeHtml(adAuthor)}` : ''}</span>` : ''}
-        <span class="pm-ctx-link">Переглянути оголошення →</span>
-      </span>
-      ${adTel ? `<a class="pm-ctx-call" href="tel:${escapeHtml(adTel)}" aria-label="Подзвонити"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.8 19.8 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.8 19.8 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.69 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.33 1.85.56 2.81.69A2 2 0 0 1 22 16.92z"/></svg></a>` : ''}
-    </div>
+    <div class="pm-ctxwrap" id="pm-ctxwrap">${tabsHtml()}${ctxHtml(thread, post)}</div>
     <div class="pm-stream" id="pm-stream">
       <div class="pm-loading">Завантаження…</div>
     </div>
@@ -129,6 +162,7 @@ export async function openChat(thread, post) {
     </form>
   `, 'pm-screen--chat');
 
+  const ctxWrap  = api.screen.querySelector('#pm-ctxwrap');
   const streamEl = api.screen.querySelector('#pm-stream');
   const form     = api.screen.querySelector('#pm-form');
   const input    = api.screen.querySelector('#pm-input');
@@ -464,39 +498,72 @@ export async function openChat(thread, post) {
     api.screen.appendChild(sheet);
   };
 
-  // Початкове завантаження. Якщо чат раніше «видаляли» (cleared_at) — показуємо
-  // ЛИШЕ повідомлення після того моменту (чистий старт після повторного контакту).
-  const clearedAt = await fetchThreadClearedAt(me, thread.id);
-  if (api._closed) return api;
-  messages = await fetchMessages(thread.id, clearedAt);
-  if (api._closed) return api;
-  messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при відкритті
-  renderStream();
-  setTimeout(() => scrollBottom(false), 50);
-  // Позначити вхідні прочитаними + оновити бейдж. _readThreads = оптимістично
-  // (бейдж прибираємо одразу, не чекаючи БД — надійно навіть при затримці/збої).
-  _readThreads.add(thread.id);
-  markThreadRead(thread.id, me).finally(refreshUnreadBadge);
+  // ── Завантаження й realtime ОДНОГО контексту ────────────────────────────
+  // Винесено у функцію, бо тепер це робиться не лише при відкритті екрана, а й
+  // щоразу при перемиканні чіпа. Кожен контекст має ВЛАСНУ історію повідомлень —
+  // навмисно, зливати їх в одну стрічку не можна: «велосипед → айфон → велосипед»
+  // через місяць нечитабельне.
+  let ctxUnsub = null;
+  const loadContext = async () => {
+    const t = thread;                       // фіксуємо: поки чекаємо БД, чіп могли перемкнути
+    if (ctxUnsub) { try { ctxUnsub(); } catch (_) {} ctxUnsub = null; }
+    // Якщо чат раніше «видаляли» (cleared_at) — показуємо ЛИШЕ повідомлення після
+    // того моменту (чистий старт після повторного контакту).
+    const clearedAt = await fetchThreadClearedAt(me, t.id);
+    if (api._closed || thread !== t) return;
+    const msgs = await fetchMessages(t.id, clearedAt);
+    if (api._closed || thread !== t) return;
+    messages = msgs;
+    msgById = new Map(messages.map(m => [m.id, m]));
+    seen.clear();                                 // інший контекст — інша історія
+    messages.forEach(m => seen.add(msgKey(m)));   // історія НЕ анімується при показі
+    streamLastDay = null;
+    renderStream();
+    setTimeout(() => scrollBottom(false), 50);
+    // Позначити вхідні прочитаними + оновити бейдж. _readThreads = оптимістично
+    // (бейдж прибираємо одразу, не чекаючи БД — надійно навіть при затримці/збої).
+    _readThreads.add(t.id);
+    markThreadRead(t.id, me).finally(refreshUnreadBadge);
 
-  // Realtime — нові / редаговані / видалені / прочитані повідомлення треда
-  if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
-  const chatUnsub = subscribeThreadMessages(thread.id, ({ type, row }) => {
-    if (!row) return;
-    if (type === 'INSERT') {
-      const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
-      if (st === 'add') appendOne(row);          // нове чуже → вставляємо одну бульбашку
-      else if (st === 'update') replaceOne(row); // realtime випередив await → заміна на місці
-      // 'same' = відлуння власного повідомлення → нічого не чіпаємо (без блимання)
-      if (row.sender_uid !== me) { _readThreads.add(thread.id); markThreadRead(thread.id, me).finally(refreshUnreadBadge); }
-    } else if (type === 'UPDATE') {
-      const idx = messages.findIndex(m => m.id === row.id);
-      if (idx >= 0) { messages[idx] = row; replaceOne(row); }
-    }
-  });
-  _chatUnsub = chatUnsub;
-  // Очищаємо САМЕ цю підписку (не module-level змінну) → надійно навіть якщо колись
-  // відкриють інший чат поверх. Module-ref обнуляємо лише якщо він ще наш.
-  api._cleanup.push(() => { try { chatUnsub(); } catch (_) {} if (_chatUnsub === chatUnsub) _chatUnsub = null; });
+    // Realtime — нові / редаговані / видалені / прочитані повідомлення контексту
+    if (_chatUnsub) { try { _chatUnsub(); } catch (_) {} }
+    const chatUnsub = subscribeThreadMessages(t.id, ({ type, row }) => {
+      if (!row || thread !== t) return;    // прилетіло у вже неактивний контекст
+      if (type === 'INSERT') {
+        const st = upsertMessage(row);      // дедуплікація за id/client_tag (моє optimistic)
+        if (st === 'add') appendOne(row);          // нове чуже → вставляємо одну бульбашку
+        else if (st === 'update') replaceOne(row); // realtime випередив await → заміна на місці
+        // 'same' = відлуння власного повідомлення → нічого не чіпаємо (без блимання)
+        if (row.sender_uid !== me) { _readThreads.add(t.id); markThreadRead(t.id, me).finally(refreshUnreadBadge); }
+      } else if (type === 'UPDATE') {
+        const idx = messages.findIndex(m => m.id === row.id);
+        if (idx >= 0) { messages[idx] = row; replaceOne(row); }
+      }
+    });
+    ctxUnsub = chatUnsub;
+    _chatUnsub = chatUnsub;
+    // Очищаємо САМЕ цю підписку (не module-level змінну) → надійно навіть якщо колись
+    // відкриють інший чат поверх. Module-ref обнуляємо лише якщо він ще наш.
+    api._cleanup.push(() => { try { chatUnsub(); } catch (_) {} if (_chatUnsub === chatUnsub) _chatUnsub = null; });
+  };
+
+  // Перемикання чіпа: міняємо активний контекст → перемальовуємо шапку і вантажимо
+  // його історію. Поле вводу і бар «відповідь» скидаємо — цитата з іншого оголошення
+  // тут не має сенсу.
+  const switchContext = (id) => {
+    const next = conv.threads.find(t => String(t.id) === String(id));
+    if (!next || next === thread) return;
+    thread = next;
+    clearCompose();
+    input.value = '';
+    ctxWrap.innerHTML = `${tabsHtml()}${ctxHtml(thread)}`;
+    messages = []; msgById = new Map();
+    streamEl.innerHTML = '<div class="pm-loading">Завантаження…</div>';
+    loadContext();
+  };
+
+  await loadContext();
+  if (api._closed) return api;
   api._cleanup.push(refreshUnreadBadge);
 
   // Поле / редагування + кнопки-питання + фото + перегляд фото
@@ -526,10 +593,16 @@ export async function openChat(thread, post) {
     if (kind === 'reply') startReply(m);
     else if (kind === 'menu') openMsgActions(m);
   });
-  // «Переглянути оголошення» — закрити чат і відкрити модалку Дошки
-  // «Переглянути оголошення» — модалка оголошення Дошки ПОВЕРХ чату (не закриваємо чат)
-  api.screen.querySelector('[data-pm-ctx]')?.addEventListener('click', (e) => {
+  // «Переглянути оголошення» — модалка оголошення Дошки ПОВЕРХ чату (не закриваємо чат).
+  // ⚠️ Слухач ДЕЛЕГОВАНИЙ на обгортку: картка перемальовується при перемиканні
+  // контексту, тож слухач, повішений прямо на неї, помер би після першого перемикання.
+  ctxWrap.addEventListener('click', (e) => {
+    const tab = e.target.closest('[data-ctx]');
+    if (tab) { switchContext(tab.dataset.ctx); return; }
+    if (!e.target.closest('[data-pm-ctx]')) return;
     if (e.target.closest('.pm-ctx-call')) return;   // дзвінок — не відкривати модалку
+    const p = thread.post;
+    if (!p) { showToast('Оголошення більше недоступне', 2500); return; }
     window.dispatchEvent(new CustomEvent('cstl-open-ad', { detail: { post: p } }));
   });
   // Кнопка надсилання не забирає фокус (iOS клавіатура)

@@ -603,7 +603,9 @@ export function subscribeGroupMessages(groupId, onChange) {
 export async function fetchMyThreads(uid) {
   if (!supa || !uid) return [];
   const { data, error } = await supa.from('threads')
-    .select('*, post:posts(id, title, text, category, photos, author, contact, location, published_at, created_at)')
+    // `status` потрібен, щоб картка оголошення в чаті могла показати «Завершено»
+    // (29.07, контексти розмови). Порожній join = оголошення видалили → «недоступне».
+    .select('*, post:posts(id, title, text, category, photos, author, contact, location, status, published_at, created_at)')
     .or(`author_uid.eq.${uid},buyer_uid.eq.${uid}`)
     .order('last_message_at', { ascending: false });
   if (error) { console.warn('[supabase] fetchMyThreads:', error.message); return []; }

@@ -505,6 +505,53 @@
 /* Легка тінь на нижньому краї бордової шапки чату (фідбек Вови) */
 .pm-head--chat { position: relative; z-index: 3; box-shadow: 0 3px 8px rgba(60, 25, 30, 0.20); }
 
+/* ── КОНТЕКСТИ РОЗМОВИ (29.07) ────────────────────────────────────────────
+   Розмова тепер про ЛЮДИНУ, а всередині може бути кілька оголошень. Смужка чіпів
+   перемикає, історія в кожного своя.
+   ⚠️ Смужка з'являється ЛИШЕ коли оголошень ≥2 (розмітку не будує JS при одному) —
+   у звичайній розмові екран мусить лишитись точно таким, як був.
+   ⚠️ Горизонтальна ПРОКРУТКА, а не свайп по картках: свайп на 20-30 оголошеннях
+   означав би 30 послідовних жестів, щоб дійти до потрібного. */
+.pm-ctxwrap { flex-shrink: 0; position: relative; z-index: 2; }
+.pm-ctx-tabs {
+  display: flex; gap: 6px;
+  padding: 8px 14px 8px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  background: var(--card-cream, #FAF8EF);
+  border-bottom: 1px solid var(--hairline, rgba(60,50,30,0.10));
+}
+.pm-ctx-tabs::-webkit-scrollbar { display: none; }
+.pm-ctx-tab {
+  flex-shrink: 0;
+  max-width: 62vw;
+  padding: 6px 12px;
+  border-radius: 14px;
+  border: 1px solid rgba(16, 18, 22, 0.14);
+  background: #FFFFFF;
+  color: var(--ink-soft, #5F5448);
+  font: 700 12px/1.2 inherit;
+  text-transform: uppercase; letter-spacing: 0.02em;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  cursor: pointer; -webkit-tap-highlight-color: transparent;
+}
+.pm-ctx-tab--active {
+  background: var(--red, #722F37);
+  border-color: var(--red, #722F37);
+  color: #fff;
+}
+/* Позначка стану оголошення на картці контексту («Завершено») */
+.pm-ctx-state {
+  display: inline-block; margin-left: 6px; padding: 1px 6px;
+  border-radius: 6px; background: rgba(16, 18, 22, 0.08);
+  color: var(--ink-mute, #9C9080);
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; vertical-align: 1px;
+}
+/* Оголошення видалили — картка лишається, історія нікуди не дівається */
+.pm-ctx--gone { cursor: default; }
+.pm-ctx--gone .pm-ctx-title { color: var(--ink-mute, #9C9080); }
+
 /* Картка-контекст оголошення під хедером */
 .pm-ctx {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
