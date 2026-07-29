@@ -2588,7 +2588,7 @@
 
       <div class="bm-section">
         <label class="bm-label">\u0406\u043C'\u044F</label>
-        <div class="bm-author-fixed" id="bm-author-fixed">\u{1F464} ${escapeHtml(state.author)}</div>
+        <div class="bm-author-fixed" id="bm-author-fixed"><span class="bm-author-ic">${ICONS.user}</span><span class="bm-author-name">${escapeHtml(state.author)}</span></div>
       </div>
     `;
       dynamicEl.querySelectorAll(".bm-chip").forEach((btn) => {
@@ -2776,11 +2776,6 @@
       const cat = state.category ? BOARD_CATEGORIES.find((c) => c.id === state.category) : null;
       const catHtml = cat ? `<span class="cm-board-cat cm-board-cat--${cat.color}">${cat.icon} ${escapeHtml(catShort(state.category))}</span>` : `<span class="cm-board-cat cm-board-cat--placeholder">\u041A\u0430\u0442\u0435\u0433\u043E\u0440\u0456\u044F</span>`;
       const firstPhoto = state.photos.find((p) => p);
-      const contactShow = phoneDigits(state.contact) === 9 ? maskUaPhone(state.contact) : "";
-      const contactHtml = contactShow ? `
-      <div class="cm-board-contact cm-board-contact--phone">
-        ${escapeHtml(contactShow)}
-      </div>` : "";
       const priceLabel = formatPrice(state.price, "UAH", state.negotiable);
       const priceHtml = priceLabel ? `<div class="cm-board-price${/\d/.test(priceLabel) ? "" : " cm-board-price--word"}">${escapeHtml(priceLabel)}</div>` : "";
       previewCanvas.innerHTML = `
@@ -2796,7 +2791,6 @@
             <span class="cm-board-time">\u0449\u043E\u0439\u043D\u043E</span>
           </div>
         </div>
-        ${contactHtml}
       </article>
     `;
     }
@@ -2815,9 +2809,9 @@
         const nm = firstNameOnly(p && p.name || currentUserName()) || "\u0416\u0438\u0442\u0435\u043B\u044C";
         if (nm !== state.author) {
           state.author = nm;
-          const el = dynamicEl.querySelector("#bm-author-fixed");
+          const el = dynamicEl.querySelector("#bm-author-fixed .bm-author-name");
           if (el)
-            el.textContent = `\u{1F464} ${nm}`;
+            el.textContent = nm;
         }
         renderPreview();
       }).catch(() => {
