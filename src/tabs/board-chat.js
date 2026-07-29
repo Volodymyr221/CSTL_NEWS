@@ -566,6 +566,28 @@ export async function openChat(convOrThread, post, activeId = null) {
   if (api._closed) return api;
   api._cleanup.push(refreshUnreadBadge);
 
+  // Довантаження решти контекстів — ПІСЛЯ показу екрана, не блокуючи його.
+  // Потрібне тільки коли зайшли з одинокого треда («Написати» з оголошення,
+  // тап по пушу): зі списку розмова приходить уже повною.
+  // ⚠️ Тихий fail-soft: не вийшло — лишається один контекст, тобто поведінка до 29.07.
+  if (conv.threads.length === 1 && conv.otherUid) {
+    (async () => {
+      try {
+        const all = await fetchMyThreads(me);
+        if (api._closed) return;
+        const full = groupConversations(all, me).find(c => c.threads.some(t => t.id === thread.id));
+        if (!full || full.threads.length < 2) return;
+        conv.threads = full.threads;
+        conv.otherName = full.otherName;
+        // Перемальовуємо ЛИШЕ смужку чіпів. Картку активного контексту й стрічку
+        // не чіпаємо: людина вже читає повідомлення, смикати їх під пальцем не можна.
+        const tabs = ctxWrap.querySelector('.pm-ctx-tabs');
+        if (tabs) tabs.outerHTML = tabsHtml();
+        else ctxWrap.insertAdjacentHTML('afterbegin', tabsHtml());
+      } catch (_) { /* лишаємо один контекст */ }
+    })();
+  }
+
   // Поле / редагування + кнопки-питання + фото + перегляд фото
   form.addEventListener('submit', (e) => { e.preventDefault(); submitText(); });
   api.screen.querySelector('#pm-composebar-x')?.addEventListener('click', () => {
@@ -1312,24 +1334,14 @@ export function startChatFromPost(post) {
       authorName: post.author || 'Продавець', buyerName: myName,
     });
     if (!res.ok) { showToast('Не вдалося відкрити чат: ' + (res.error || ''), 4000, 'error'); return; }
-    // 🔴 29.07 — якщо з цією людиною вже є розмова, НЕ відкриваємо окремий чат:
-    // підтягуємо всі її контексти й робимо активним саме те оголошення, з якого
-    // натиснули «Написати». `getOrCreateThread` не чіпаємо — він і далі тримає
-    // рівно один тред на пару (оголошення, покупець); змінюється лише те, ЯК ми
-    // це показуємо. Якщо треди не дочитались (мережа) — відкриваємо один, як раніше.
-    openChat(await conversationOf(me, res.thread), post, res.thread.id);
+    // 🔴 29.07 — якщо з цією людиною вже є розмова, чат НЕ роздвоюється: решту
+    // контекстів `openChat` довантажує САМ, уже після показу екрана.
+    // ⚠️ Тут навмисно НЕМА `await fetchMyThreads`: це найгарячіший шлях застосунку
+    // («Написати» з оголошення), і зайвий запит перед показом екрана віддавав би
+    // затримкою на слабкому зв'язку. `getOrCreateThread` не чіпаємо — він і далі
+    // тримає рівно один тред на пару (оголошення, покупець); змінюється лише показ.
+    openChat(res.thread, post);
   });
-}
-
-// Зібрати розмову (усі контексти пари) навколо відомого треда.
-// ⚠️ Тихий fail-soft: будь-яка проблема з мережею → повертаємо одинокий тред, і чат
-// відкриється як до 29.07. Краще один контекст, ніж екран, що не відкрився.
-async function conversationOf(me, thread) {
-  try {
-    const all = await fetchMyThreads(me);
-    const conv = groupConversations(all, me).find(c => c.threads.some(t => t.id === thread.id));
-    return conv || thread;
-  } catch (_) { return thread; }
 }
 
 // ── Бейдж непрочитаних: іконка акаунта (шапка) + FAB Дошки + пункт «Повідомлення» ──
