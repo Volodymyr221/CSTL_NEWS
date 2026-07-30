@@ -441,8 +441,14 @@ function renderFab() {
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
-          <span class="board-fab-label">Повідомлення<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
-          <span class="board-fab-ic">${MSG_ICON_SVG}</span>
+          <!-- 30.07 (Вова): число НЕ в плашці, а НАКЛАДКОЮ на куток кружечка.
+               Було всередині .board-fab-label з margin-left 6px, а в плашки
+               white-space: nowrap — тому вона ШИРШАЛА щоразу, як приходило
+               повідомлення, і пункт меню стрибав у розмірі. Взірець накладки вже
+               був у проєкті: .board-trigger-badge на головній кнопці.
+               ⚠️ Зворотних лапок тут НЕ ставити — коментар усередині шаблонного рядка. -->
+          <span class="board-fab-label">Повідомлення</span>
+          <span class="board-fab-ic">${MSG_ICON_SVG}<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
         </button>
         <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">Збережені</span>
