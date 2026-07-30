@@ -27,6 +27,7 @@
 // окремою перевіркою самої функції хешування. Живий вхід двома акаунтами — за Вовою
 // на iPhone.
 import { chromium } from 'playwright';
+import { createHash } from 'crypto';
 import { chromiumPath, serve, projectFile, reporter } from './_lib.mjs';
 
 const { ok, done } = reporter();
@@ -121,9 +122,32 @@ const quoted = listBlock.match(/'[^']*'/g) || [];
 const hashes = listBlock.match(/'[0-9a-f]{64}'/g) || [];
 ok('усі записи списку — хеші по 64 hex-символи', hashes.length === quoted.length,
    `записів ${quoted.length}, з них правильних хешів ${hashes.length}`);
-// Порожній список = не пускає НІКОГО, включно з Вовою. Це не помилка стенда, а
-// сигнал «ще не налаштовано» — тому попередження, а не падіння.
-if (!hashes.length) console.log('⚠️  СПИСОК ДОПУЩЕНИХ ПОРОЖНІЙ — перед деплоєм вписати хеші пошт Вови, інакше замкне і його');
+ok('список допущених НЕ порожній', hashes.length > 0,
+   hashes.length ? `${hashes.length} допущені пошти` : 'порожній список замкне і Вову теж — деплоїти не можна');
+
+// ── 5. 🔴 БРАУЗЕР І ТЕРМІНАЛ МУСЯТЬ ДАВАТИ ОДИН І ТОЙ САМИЙ ХЕШ ──────────────
+// Це остання неперевірена ланка замка. Хеші у списку я порахував у терміналі
+// (`sha256sum`), а перевіряє їх БРАУЗЕР (`crypto.subtle.digest`). Якби ці два
+// шляхи розійшлись хоч на кодуванні тексту чи регістрі hex — список ніколи б не
+// збігся, і замок не пустив би самого Вову. Симптом виглядав би як «увійшов, а
+// пише що пошти немає в списку», тобто найгірший з можливих.
+//
+// ⚠️ Навмисно на НЕЙТРАЛЬНОМУ прикладі, а не на справжніх поштах: збіг алгоритму
+// не залежить від тексту, а справжні адреси в публічному репозиторії — саме те,
+// чого ми уникали хешуванням.
+const SAMPLE = 'test@example.com';
+const NODE_HASH = createHash('sha256').update(SAMPLE, 'utf8').digest('hex');
+const ctx5 = await browser.newContext();
+const pg5 = await ctx5.newPage();
+await pg5.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded' });
+const browserHash = await pg5.evaluate(async s => {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
+  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+}, SAMPLE);
+await ctx5.close();
+ok('хеш у браузері = хеш у терміналі (той самий алгоритм і кодування)',
+   browserHash === NODE_HASH, `${browserHash.slice(0, 16)}… vs ${NODE_HASH.slice(0, 16)}…`);
+ok('хеш має вигляд 64 hex-символи в нижньому регістрі', /^[0-9a-f]{64}$/.test(browserHash));
 
 await browser.close();
 await stop();
