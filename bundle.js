@@ -255,7 +255,28 @@
   }
   function toastShow(item) {
     const t = toastNode();
-    t.textContent = item.msg;
+    const act = item.action;
+    if (act && act.label && typeof act.onClick === "function") {
+      t.textContent = "";
+      const span = document.createElement("span");
+      span.className = "toast-text";
+      span.textContent = item.msg;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "toast-action";
+      btn.textContent = act.label;
+      btn.addEventListener("click", () => {
+        try {
+          act.onClick();
+        } catch (_) {
+        }
+        toastHide();
+      });
+      t.append(span, btn);
+    } else {
+      t.textContent = item.msg;
+    }
+    t.classList.toggle("toast--action", !!(act && act.label));
     t.classList.toggle("toast--error", item.type === "error");
     toastCurrent = item.msg;
     toastShownAt = Date.now();
@@ -273,11 +294,11 @@
         toastShow(next);
     }, TOAST_FADE);
   }
-  function showToast(msg, duration = 0, type = "") {
+  function showToast(msg, duration = 0, type = "", action = null) {
     const text = String(msg ?? "").trim();
     if (!text)
       return;
-    const item = { msg: text, ms: toastDuration(text, duration), type };
+    const item = { msg: text, ms: toastDuration(text, duration), type, action };
     if (!toastCurrent) {
       toastShow(item);
       return;
@@ -2464,6 +2485,23 @@
       d = d.slice(1);
     return Math.min(d.length, 9);
   }
+  function markInvalid(el) {
+    if (!el)
+      return;
+    el.classList.add("bm-invalid");
+    el.setAttribute("aria-invalid", "true");
+    try {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    } catch (_) {
+    }
+    el.focus();
+  }
+  function clearInvalid(el) {
+    if (!el)
+      return;
+    el.classList.remove("bm-invalid");
+    el.removeAttribute("aria-invalid");
+  }
   function firstNameOnly(full) {
     const w = String(full || "").trim().split(/\s+/)[0] || "";
     return w === "\u0416\u0438\u0442\u0435\u043B\u044C" ? "" : w;
@@ -2550,7 +2588,12 @@
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-title">\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A <span class="bm-label-req">*</span></label>
+        <label class="bm-label" for="bm-title">\u0417\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A <span class="bm-label-req">*</span>
+          <!-- 30.07 (\u0430\u0443\u0434\u0438\u0442 \u0414-\u04124): \u043B\u0456\u0447\u0438\u043B\u044C\u043D\u0438\u043A. \u041C\u0435\u0436\u0430 80 \u0441\u0438\u043C\u0432\u043E\u043B\u0456\u0432 \u0431\u0443\u043B\u0430, \u0430 \u043F\u043E\u043A\u0430\u0437\u043D\u0438\u043A\u0430 \u043D\u0435 \u0431\u0443\u043B\u043E \u2014
+               \u043F\u0440\u0438 \u0434\u043E\u0441\u044F\u0433\u043D\u0435\u043D\u043D\u0456 \u043C\u0435\u0436\u0456 \u043F\u043E\u043B\u0435 \u043F\u0440\u043E\u0441\u0442\u043E \xAB\u043F\u0435\u0440\u0435\u0441\u0442\u0430\u0454 \u043F\u0438\u0441\u0430\u0442\u0438\xBB, \u0456 \u0446\u0435 \u0447\u0438\u0442\u0430\u0454\u0442\u044C\u0441\u044F \u044F\u043A
+               \u043F\u043E\u043B\u0430\u043C\u0430\u043D\u0430 \u043A\u043B\u0430\u0432\u0456\u0430\u0442\u0443\u0440\u0430, \u0430 \u043D\u0435 \u044F\u043A \u043E\u0431\u043C\u0435\u0436\u0435\u043D\u043D\u044F. -->
+          <span class="bm-label-count" id="bm-title-count">${state.title.length}/80</span>
+        </label>
         <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="\u041D\u0430\u043F\u0440. \u041F\u0440\u043E\u0434\u0430\u043C \u043C\u043E\u0442\u043E\u0446\u0438\u043A\u043B" value="${escapeHtml(state.title)}">
       </div>
 
@@ -2612,6 +2655,12 @@
       });
       dynamicEl.querySelector("#bm-title")?.addEventListener("input", (e) => {
         state.title = e.target.value;
+        const cnt = dynamicEl.querySelector("#bm-title-count");
+        if (cnt) {
+          cnt.textContent = `${state.title.length}/80`;
+          cnt.classList.toggle("bm-label-count--full", state.title.length >= 80);
+        }
+        clearInvalid(e.target);
         renderPreview();
       });
       dynamicEl.querySelector("#bm-price")?.addEventListener("input", (e) => {
@@ -2644,11 +2693,13 @@
       });
       dynamicEl.querySelector("#bm-text")?.addEventListener("input", (e) => {
         state.text = e.target.value;
+        clearInvalid(e.target);
         renderPreview();
       });
       dynamicEl.querySelector("#bm-contact")?.addEventListener("input", (e) => {
         e.target.value = maskUaPhone(e.target.value);
         state.contact = e.target.value;
+        clearInvalid(e.target);
         renderPreview();
       });
       syncPriceVisibility();
@@ -2836,23 +2887,23 @@
       }
       if (!state.title.trim()) {
         showToast("\u0414\u043E\u0434\u0430\u0439\u0442\u0435 \u0437\u0430\u0433\u043E\u043B\u043E\u0432\u043E\u043A \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F", 2500);
-        wrap.querySelector("#bm-title")?.focus();
+        markInvalid(wrap.querySelector("#bm-title"));
         return;
       }
       if (!state.text.trim()) {
         showToast("\u0411\u0443\u0434\u044C \u043B\u0430\u0441\u043A\u0430, \u0437\u0430\u043F\u043E\u0432\u043D\u0456\u0442\u044C \u0442\u0435\u043A\u0441\u0442", 2500);
-        wrap.querySelector("#bm-text")?.focus();
+        markInvalid(wrap.querySelector("#bm-text"));
         return;
       }
       const pd = phoneDigits(state.contact);
       if (pd > 0 && pd < 9) {
         showToast("\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043F\u043E\u0432\u043D\u0438\u0439 \u043D\u043E\u043C\u0435\u0440 \u0442\u0435\u043B\u0435\u0444\u043E\u043D\u0443 \u0430\u0431\u043E \u0437\u0430\u043B\u0438\u0448\u0442\u0435 \u043F\u043E\u0440\u043E\u0436\u043D\u0456\u043C", 3e3);
-        wrap.querySelector("#bm-contact")?.focus();
+        markInvalid(wrap.querySelector("#bm-contact"));
         return;
       }
       if (containsProfanity(state.text) || containsProfanity(state.contact)) {
         showToast("\u{1F6AB} \u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F \u043C\u0456\u0441\u0442\u0438\u0442\u044C \u0437\u0430\u0431\u043E\u0440\u043E\u043D\u0435\u043D\u0456 \u0441\u043B\u043E\u0432\u0430 \u0456 \u043D\u0435 \u043D\u0430\u0434\u0456\u0441\u043B\u0430\u043D\u0435", 4500, "error");
-        wrap.querySelector("#bm-text")?.focus();
+        markInvalid(wrap.querySelector("#bm-text"));
         return;
       }
       if (state.uploadingCount > 0 || state.photos.some((p) => p && p.startsWith("blob:"))) {
@@ -3962,10 +4013,17 @@
           <input class="pm-search-input" id="pm-search" type="search"
                  placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" aria-label="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" autocomplete="off">
         </div>
-        <div class="pm-chips" id="pm-chips" role="tablist">
-          <button class="pm-chip pm-chip--active" type="button" data-filter="all">\u0423\u0441\u0456</button>
-          <button class="pm-chip" type="button" data-filter="unread">\u041D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0456</button>
-          <button class="pm-chip" type="button" data-filter="archive">\u0410\u0440\u0445\u0456\u0432</button>
+        <!-- 30.07 (\u0430\u0443\u0434\u0438\u0442 \u0414-\u04123): \u0431\u0443\u043B\u043E role=tablist \u0437 \u041D\u0415-\u0442\u0430\u0431\u0430\u043C\u0438. \u0420\u043E\u043B\u044C \u0431\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0445
+             \u0434\u0456\u0442\u0435\u0439 \u0433\u0456\u0440\u0448\u0430 \u0437\u0430 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C \u0440\u043E\u043B\u0456 \u2014 \u0447\u0438\u0442\u0430\u0447 \u0435\u043A\u0440\u0430\u043D\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0443\u0432\u0430\u0432 \xAB\u0441\u043F\u0438\u0441\u043E\u043A \u0432\u043A\u043B\u0430\u0434\u043E\u043A\xBB
+             \u0456 \u043D\u0435 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0432 \u0436\u043E\u0434\u043D\u043E\u0457 (\u0434\u0456\u0442\u0438 \u0431\u0443\u043B\u0438 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0456 \u043A\u043D\u043E\u043F\u043A\u0438 \u0431\u0435\u0437 role=tab \u0456
+             aria-selected). \u0426\u0435 \u043D\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0438, \u0430 \u0424\u0406\u041B\u042C\u0422\u0420\u0418 \u043E\u0434\u043D\u043E\u0433\u043E \u0441\u043F\u0438\u0441\u043A\u0443, \u0442\u043E\u0436 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u0430
+             \u043C\u043E\u0434\u0435\u043B\u044C \u2014 \u0433\u0440\u0443\u043F\u0430 \u043A\u043D\u043E\u043F\u043E\u043A-\u043F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447\u0456\u0432 \u0437 aria-pressed.
+             \u26A0\uFE0F \u0417\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0443 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0442\u0438: \u0432\u0456\u043D \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E
+             \u0440\u044F\u0434\u043A\u0430 \u0456 \u0432\u043E\u043D\u0438 \u0439\u043E\u0433\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C (\u0441\u043F\u0456\u0439\u043C\u0430\u0432\u0441\u044F \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 30.07). -->
+        <div class="pm-chips" id="pm-chips" role="group" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0440\u043E\u0437\u043C\u043E\u0432">
+          <button class="pm-chip pm-chip--active" type="button" data-filter="all" aria-pressed="true">\u0423\u0441\u0456</button>
+          <button class="pm-chip" type="button" data-filter="unread" aria-pressed="false">\u041D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0456</button>
+          <button class="pm-chip" type="button" data-filter="archive" aria-pressed="false">\u0410\u0440\u0445\u0456\u0432</button>
         </div>
         <div class="pm-threads" id="pm-threads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
       </div>
@@ -4052,11 +4110,23 @@
       };
       const autoUnarchiveUnread = async () => {
         const toFix = threads.filter((t) => unread.get(t.id) > 0 && stOf(t.id).archived);
-        for (const t of toFix) {
-          const prev = states.get(t.id) || {};
-          states.set(t.id, { ...prev, archived: false });
-          setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
-        }
+        if (!toFix.length)
+          return;
+        const prevOf = new Map(toFix.map((t) => [t.id, { ...states.get(t.id) || {} }]));
+        for (const t of toFix)
+          states.set(t.id, { ...prevOf.get(t.id), archived: false });
+        const results = await Promise.all(toFix.map((t) => {
+          const prev = prevOf.get(t.id);
+          return setThreadState(me, t.id, {
+            archived: false,
+            hidden: !!prev.hidden,
+            cleared_at: prev.cleared_at || null
+          });
+        }));
+        results.forEach((r, i) => {
+          if (!r.ok)
+            states.set(toFix[i].id, prevOf.get(toFix[i].id));
+        });
       };
       await autoUnarchiveUnread();
       renderThreads();
@@ -4069,7 +4139,11 @@
         if (!btn)
           return;
         filter = btn.dataset.filter;
-        chipsEl.querySelectorAll(".pm-chip").forEach((c) => c.classList.toggle("pm-chip--active", c === btn));
+        chipsEl.querySelectorAll(".pm-chip").forEach((c) => {
+          const on = c === btn;
+          c.classList.toggle("pm-chip--active", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
         renderThreads();
       });
       let openRow = null, suppressClick = false;
@@ -4176,7 +4250,34 @@
         }
         const del = e.target.closest("[data-delete]");
         if (del) {
-          applyConvState(del.dataset.delete, { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+          const key = del.dataset.delete;
+          const conv2 = conversationsAll().find((c) => c.key === key);
+          const ids = conv2 ? conv2.threads.map((t) => t.id) : [];
+          const snap = new Map(ids.map((id) => [id, { ...states.get(id) || {} }]));
+          const name = conv2?.otherName || "";
+          applyConvState(key, { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+          showToast(`\u0420\u043E\u0437\u043C\u043E\u0432\u0443${name ? " \u0437 " + name : ""} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E`, 6e3, "", {
+            label: "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438",
+            onClick: async () => {
+              for (const id of ids)
+                states.set(id, snap.get(id) || {});
+              renderThreads();
+              const res = await Promise.all(ids.map((id) => {
+                const m = snap.get(id) || {};
+                return setThreadState(me, id, {
+                  archived: !!m.archived,
+                  hidden: !!m.hidden,
+                  cleared_at: m.cleared_at || null
+                });
+              }));
+              if (res.some((r) => !r.ok)) {
+                for (const id of ids)
+                  states.set(id, { ...snap.get(id) || {}, hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+                renderThreads();
+                showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443", 4e3, "error");
+              }
+            }
+          });
           return;
         }
         const btn = e.target.closest("[data-thread]");
@@ -4650,11 +4751,13 @@
     });
   }
   var _readThreads = /* @__PURE__ */ new Set();
-  async function refreshUnreadBadge() {
+  var _unreadChats = 0;
+  function paintUnreadBadge() {
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
     const msgBadge = document.getElementById("board-fab-msgs-badge");
-    const hideAll = () => {
+    const chats = isLoggedIn() ? _unreadChats : 0;
+    if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {
         fabBadge.textContent = "";
@@ -4664,22 +4767,6 @@
         msgBadge.textContent = "";
         msgBadge.style.display = "none";
       }
-    };
-    if (!isLoggedIn()) {
-      hideAll();
-      return;
-    }
-    const uid = currentUserId();
-    const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
-    for (const id of _readThreads)
-      map.delete(id);
-    const keyOf = new Map(pairs.map((p) => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
-    const people = /* @__PURE__ */ new Set();
-    for (const id of map.keys())
-      people.add(keyOf.get(id) || `t:${id}`);
-    const chats = people.size;
-    if (chats <= 0) {
-      hideAll();
       return;
     }
     const label = chats > 99 ? "99+" : String(chats);
@@ -4700,6 +4787,23 @@
       msgBadge.textContent = label;
       msgBadge.style.display = "inline-block";
     }
+  }
+  async function refreshUnreadBadge() {
+    if (!isLoggedIn()) {
+      _unreadChats = 0;
+      paintUnreadBadge();
+      return;
+    }
+    const uid = currentUserId();
+    const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
+    for (const id of _readThreads)
+      map.delete(id);
+    const keyOf = new Map(pairs.map((p) => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+    const people = /* @__PURE__ */ new Set();
+    for (const id of map.keys())
+      people.add(keyOf.get(id) || `t:${id}`);
+    _unreadChats = people.size;
+    paintUnreadBadge();
   }
   async function registerChatPushDevice() {
     try {
@@ -6055,21 +6159,33 @@
       return renderChatCard(post);
     return renderBoardCard(post);
   }
+  function myActiveAdsCount() {
+    const me = currentUserId();
+    if (!me)
+      return 0;
+    return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== "chat" ? 1 : 0), 0);
+  }
+  function syncFabIcon() {
+    const box = document.getElementById("board-trigger-icon");
+    if (!box || discOpen)
+      return;
+    box.innerHTML = myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG2;
+  }
   function renderFab() {
     if (discOpen) {
       return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="disc-create" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
           <span class="board-fab-label">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
@@ -6083,26 +6199,31 @@
     return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="post" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
+        <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="messages" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
           <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">${MSG_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
       </div>
+      <!-- aria-label \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0421\u0422\u0410\u0411\u0406\u041B\u042C\u041D\u0418\u041C (\xAB\u0414\u0456\u0457\xBB), \u0445\u043E\u0447 \u0456\u043A\u043E\u043D\u043A\u0430 \u0439 \u043C\u043E\u0440\u0444\u0438\u0442\u044C\u0441\u044F: \u043A\u043D\u043E\u043F\u043A\u0430
+           \u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454 \u043C\u0435\u043D\u044E \u0434\u0456\u0439, \u0456 \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0435\u0437\u043C\u0456\u043D\u043D\u0430 \u043D\u0430\u0437\u0432\u0430, \u0430 \u043D\u0435
+           \u0442\u0430, \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u0441\u0430\u043C\u0430. \u0421\u0442\u0430\u043D \u0432\u0456\u043D \u0456 \u0442\u0430\u043A \u043F\u043E\u0447\u0443\u0454 \u0437 \u0431\u0435\u0439\u0434\u0436\u0430 \u043D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0438\u0445 \u2014
+           \u0442\u043E\u0439 \u043B\u0435\u0436\u0438\u0442\u044C \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u043A\u043D\u043E\u043F\u043A\u0438.
+           \u26A0\uFE0F \u0417\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0442\u0443\u0442 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u2014 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E \u0440\u044F\u0434\u043A\u0430. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-icon" id="board-trigger-icon">${myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG2}</span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>
@@ -6276,6 +6397,7 @@
       return;
     }
     keepScroll(document.querySelector(".app-main"), () => renderBodyOnly(), null, "data-post-id");
+    syncFabIcon();
   }
   async function renderBoard() {
     const el = getBoardRoot();
@@ -6337,7 +6459,7 @@
     };
     fabBtn?.addEventListener("click", toggleFab);
     fabBack?.addEventListener("click", closeFab);
-    refreshUnreadBadge();
+    paintUnreadBadge();
     fab?.querySelectorAll(".board-fab-item").forEach((item) => {
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
@@ -6397,7 +6519,12 @@
     }
     document.getElementById("bd-search-clear")?.addEventListener("click", () => {
       searchQuery = "";
-      renderAll(el);
+      const input = document.getElementById("bd-search-input");
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+      renderBodyOnly(el);
     });
     const wireMenuButton = (btnId, menuId, onPick) => {
       const btn = document.getElementById(btnId);
@@ -6439,6 +6566,22 @@
           closeBoardMenus();
       });
       document.querySelector(".app-main")?.addEventListener("scroll", closeBoardMenus, { passive: true });
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape")
+          return;
+        const f = document.getElementById("board-fab");
+        if (!f?.classList.contains("open"))
+          return;
+        f.classList.remove("open");
+        document.getElementById("board-trigger")?.setAttribute("aria-expanded", "false");
+      });
+      document.querySelector(".app-main")?.addEventListener("scroll", () => {
+        const f = document.getElementById("board-fab");
+        if (!f?.classList.contains("open"))
+          return;
+        f.classList.remove("open");
+        document.getElementById("board-trigger")?.setAttribute("aria-expanded", "false");
+      }, { passive: true });
     }
     el.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {

@@ -306,7 +306,31 @@ function toastNode() {
 
 function toastShow(item) {
   const t = toastNode();
-  t.textContent = item.msg;
+  // 🆕 30.07 — НЕОБОВʼЯЗКОВА КНОПКА ДІЇ (для «Видалено · Скасувати»).
+  // Чому тут, а не окремим компонентом: `showToast` — ЄДИНИЙ компонент системних
+  // повідомлень на весь застосунок (132 виклики), і саме через дві копії в цьому
+  // проєкті вже розходились списки антиспаму. Другий «снекбар» повторив би цю історію.
+  // ⚠️ Шлях БЕЗ дії лишається байт-у-байт той самий (`textContent`), тож усі наявні
+  // виклики не зачеплені — структура з двох вузлів будується лише коли дію передали.
+  const act = item.action;
+  if (act && act.label && typeof act.onClick === 'function') {
+    t.textContent = '';
+    const span = document.createElement('span');
+    span.className = 'toast-text';
+    span.textContent = item.msg;
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'toast-action';
+    btn.textContent = act.label;
+    btn.addEventListener('click', () => {
+      try { act.onClick(); } catch (_) { /* fail-soft: тост не має валити застосунок */ }
+      toastHide();
+    });
+    t.append(span, btn);
+  } else {
+    t.textContent = item.msg;
+  }
+  t.classList.toggle('toast--action', !!(act && act.label));
   t.classList.toggle('toast--error', item.type === 'error');
   toastCurrent = item.msg;
   toastShownAt = Date.now();
@@ -325,10 +349,13 @@ function toastHide() {
   setTimeout(() => { const next = toastQueue.shift(); if (next) toastShow(next); }, TOAST_FADE);
 }
 
-export function showToast(msg, duration = 0, type = '') {
+// `action` (30.07) — необовʼязкова кнопка в тості: `{ label, onClick }`.
+// Використання: незворотну дію показуємо як зроблену, а відкат даємо тут же
+// (патерн «Видалено · Скасувати»). Без `action` поведінка не змінилась ніяк.
+export function showToast(msg, duration = 0, type = '', action = null) {
   const text = String(msg ?? '').trim();
   if (!text) return;                       // порожній тост — це завжди помилка виклику
-  const item = { msg: text, ms: toastDuration(text, duration), type };
+  const item = { msg: text, ms: toastDuration(text, duration), type, action };
 
   if (!toastCurrent) { toastShow(item); return; }
   if (toastCurrent === text) return;       // те саме вже висить — не блимаємо

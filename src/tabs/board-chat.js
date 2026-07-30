@@ -650,10 +650,17 @@ export function openThreadsList() {
           <input class="pm-search-input" id="pm-search" type="search"
                  placeholder="Пошук повідомлень" aria-label="Пошук повідомлень" autocomplete="off">
         </div>
-        <div class="pm-chips" id="pm-chips" role="tablist">
-          <button class="pm-chip pm-chip--active" type="button" data-filter="all">Усі</button>
-          <button class="pm-chip" type="button" data-filter="unread">Непрочитані</button>
-          <button class="pm-chip" type="button" data-filter="archive">Архів</button>
+        <!-- 30.07 (аудит Д-В3): було role=tablist з НЕ-табами. Роль без відповідних
+             дітей гірша за відсутність ролі — читач екрана оголошував «список вкладок»
+             і не знаходив жодної (діти були звичайні кнопки без role=tab і
+             aria-selected). Це не вкладки, а ФІЛЬТРИ одного списку, тож правильна
+             модель — група кнопок-перемикачів з aria-pressed.
+             ⚠️ Зворотних лапок у цьому коментарі НЕ ставити: він усередині шаблонного
+             рядка і вони його закривають (спіймався на цьому 30.07). -->
+        <div class="pm-chips" id="pm-chips" role="group" aria-label="Фільтр розмов">
+          <button class="pm-chip pm-chip--active" type="button" data-filter="all" aria-pressed="true">Усі</button>
+          <button class="pm-chip" type="button" data-filter="unread" aria-pressed="false">Непрочитані</button>
+          <button class="pm-chip" type="button" data-filter="archive" aria-pressed="false">Архів</button>
         </div>
         <div class="pm-threads" id="pm-threads"><div class="pm-loading">Завантаження…</div></div>
       </div>
@@ -765,13 +772,27 @@ export function openThreadsList() {
     // глобальний бейдж рахує це непрочитане (незалежно від архіву), а список
     // ховає архівні з «Усі»/«Непрочитані» → «є непрочитане, але його ніде нема».
     // Нове вхідне повертає розмову в загальний список (як у месенджерах).
+    // 🔴 30.07 (аудит Д-Б4) — З AWAIT І З ВІДКОТОМ.
+    // Було: память міняли одразу, а `setThreadState` кликали БЕЗ await і без перевірки
+    // результату. Провал запису → память каже «розархівовано», база каже «в архіві»;
+    // наступне відкриття списку знову ховає розмову, і людина не розуміє чому.
+    // Поруч, у `applyConvState`, відкат і тост уже зроблені правильно — тут просто
+    // забули. Тихий розсинхрон гірший за видиму помилку.
     const autoUnarchiveUnread = async () => {
       const toFix = threads.filter(t => (unread.get(t.id) > 0) && stOf(t.id).archived);
-      for (const t of toFix) {
-        const prev = states.get(t.id) || {};
-        states.set(t.id, { ...prev, archived: false });
-        setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
-      }
+      if (!toFix.length) return;
+      const prevOf = new Map(toFix.map(t => [t.id, { ...(states.get(t.id) || {}) }]));
+      for (const t of toFix) states.set(t.id, { ...prevOf.get(t.id), archived: false });
+      const results = await Promise.all(toFix.map(t => {
+        const prev = prevOf.get(t.id);
+        return setThreadState(me, t.id, {
+          archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null,
+        });
+      }));
+      // Відкочуємо ЛИШЕ ті, що не записались — решта розмов лишається правильною.
+      results.forEach((r, i) => {
+        if (!r.ok) states.set(toFix[i].id, prevOf.get(toFix[i].id));
+      });
     };
 
     await autoUnarchiveUnread();
@@ -782,7 +803,11 @@ export function openThreadsList() {
       const btn = e.target.closest('[data-filter]');
       if (!btn) return;
       filter = btn.dataset.filter;
-      chipsEl.querySelectorAll('.pm-chip').forEach(c => c.classList.toggle('pm-chip--active', c === btn));
+      chipsEl.querySelectorAll('.pm-chip').forEach(c => {
+        const on = c === btn;
+        c.classList.toggle('pm-chip--active', on);
+        c.setAttribute('aria-pressed', on ? 'true' : 'false');   // 30.07: стан і для читача екрана
+      });
       renderThreads();
     });
     // Свайп-вліво по картці розмови → виїжджають дві дії (архів + видалити) ззаду.
@@ -864,8 +889,53 @@ export function openThreadsList() {
         if (conv) applyConvState(key, { archived: !convArchived(conv) });
         return;
       }
+      // 🔴 30.07 (аудит Д-Б2) — ВИДАЛЕННЯ З ВІДКОТОМ.
+      // Було: свайп відкриває дві кнопки однакової ваги (архів + кошик), тап по кошику
+      // ОДРАЗУ ставив `cleared_at` — і рядок зникав без питання, без тосту, без сліду.
+      // Технічно це мʼяке видалення (нове повідомлення повертає розмову), але людині
+      // це «зникла вся переписка», і зворотного шляху в інтерфейсі не існувало:
+      // архів має свій чіп «Архів», а видалене — ніде.
+      // Рішення Вови 30.07: «Крок 7 роби» — тост «Видалено · Скасувати».
+      //
+      // Чому НЕ діалог «ви впевнені?»: свайп уже є навмисним жестом, а питання на
+      // кожне видалення перетворює прибирання списку на десять підтверджень. Тост
+      // дешевший: дія відбувається одразу, а відкат лежить під рукою 6 секунд.
       const del = e.target.closest('[data-delete]');
-      if (del) { applyConvState(del.dataset.delete, { hidden: true, cleared_at: new Date().toISOString() }); return; }
+      if (del) {
+        const key = del.dataset.delete;
+        const conv = conversationsAll().find(c => c.key === key);
+        // ⚠️ Знімок робимо ДО видалення і тримаємо ids ОКРЕМО: після видалення
+        // `threadVisible` відсіює ці треди, тобто розмови в `conversationsAll()` уже
+        // НЕ БУДЕ — і `applyConvState(key, …)` для відкоту просто нічого не знайшов би.
+        const ids  = conv ? conv.threads.map(t => t.id) : [];
+        const snap = new Map(ids.map(id => [id, { ...(states.get(id) || {}) }]));
+        const name = conv?.otherName || '';
+        applyConvState(key, { hidden: true, cleared_at: new Date().toISOString() });
+        // Імʼя в тексті потрібне не лише для ясності: `showToast` глушить ДУБЛІ за
+        // текстом, тож два видалення підряд з однаковим написом лишили б друге без
+        // кнопки «Скасувати».
+        showToast(`Розмову${name ? ' з ' + name : ''} видалено`, 6000, '', {
+          label: 'Скасувати',
+          onClick: async () => {
+            for (const id of ids) states.set(id, snap.get(id) || {});
+            renderThreads();                     // рядок повертається одразу, не чекаючи базу
+            const res = await Promise.all(ids.map(id => {
+              const m = snap.get(id) || {};
+              return setThreadState(me, id, {
+                archived: !!m.archived, hidden: !!m.hidden, cleared_at: m.cleared_at || null,
+              });
+            }));
+            if (res.some(r => !r.ok)) {
+              // Базі не вдалось — не брешемо, що повернули. Наступне відкриття
+              // списку прочитає стан із бази, тож лишати оптимістичний вигляд шкідливо.
+              for (const id of ids) states.set(id, { ...(snap.get(id) || {}), hidden: true, cleared_at: new Date().toISOString() });
+              renderThreads();
+              showToast('Не вдалося відновити розмову', 4000, 'error');
+            }
+          },
+        });
+        return;
+      }
       const btn = e.target.closest('[data-thread]');
       if (!btn) return;
       if (suppressClick) return;                 // щойно свайпнули — не відкривати чат
@@ -1349,31 +1419,32 @@ export function startChatFromPost(post) {
 // _readThreads — треди, які ми ЩОЙНО прочитали (відкрили чат). Виключаємо їх з
 // лічильника одразу, не чекаючи поки БД оновить read_at → бейдж зникає надійно.
 const _readThreads = new Set();
-export async function refreshUnreadBadge() {
+// 🔴 30.07 (аудит Д-Б1) — БЕЙДЖ РОЗДІЛЕНО НА «ПОМАЛЮВАТИ» І «ПЕРЕПИТАТИ БАЗУ».
+// Було: `renderAll()` Дошки кликав `refreshUnreadBadge()`, а той робить ДВА запити в
+// Supabase (`fetchUnreadByThread` + `fetchThreadPairs`). А `renderAll()` кличеться на
+// вибір категорії · вибір НП · очистку пошуку · вихід з Обговорень · `setBoardActiveType`.
+// Тобто кожен тап по фільтру = дві мережеві подорожі, хоч кількість непрочитаних від
+// зміни категорії не змінюється. На селищному 3G це затримка, батарея і квота ні за що.
+//
+// Тепер: остання порахована цифра живе в `_unreadChats`, рендер лише МАЛЮЄ її
+// (`paintUnreadBadge`), а в базу ходимо на ПОДІЯХ, які реально можуть її змінити —
+// вхід/вихід, push, realtime, прочитання чату (ці виклики вже були на місці).
+let _unreadChats = 0;
+
+// Намалювати бейдж із уже відомого числа. Без мережі. Безпечно кликати на кожен рендер.
+export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
   const fabBadge = document.getElementById('board-trigger-badge');
   const msgBadge = document.getElementById('board-fab-msgs-badge');
 
-  const hideAll = () => {
+  const chats = isLoggedIn() ? _unreadChats : 0;
+  if (chats <= 0) {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
     if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
-  };
-  if (!isLoggedIn()) { hideAll(); return; }
-
-  // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
-  // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
-  // оголошеннями давала два треди. Тепер бейдж і список кажуть одне й те саме.
-  const uid = currentUserId();
-  const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
-  for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
-  const keyOf = new Map(pairs.map(p => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
-  const people = new Set();
-  for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
-  const chats = people.size;
-  if (chats <= 0) { hideAll(); return; }
+    return;
+  }
   const label = chats > 99 ? '99+' : String(chats);
-
   if (accBtn) {
     let badge = accBtn.querySelector('.account-unread');
     if (!badge) {
@@ -1385,6 +1456,23 @@ export async function refreshUnreadBadge() {
   }
   if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
+}
+
+// Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
+export async function refreshUnreadBadge() {
+  if (!isLoggedIn()) { _unreadChats = 0; paintUnreadBadge(); return; }
+
+  // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
+  // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
+  // оголошеннями давала два треди. Тепер бейдж і список кажуть одне й те саме.
+  const uid = currentUserId();
+  const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
+  for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
+  const keyOf = new Map(pairs.map(p => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+  const people = new Set();
+  for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
+  _unreadChats = people.size;
+  paintUnreadBadge();
 }
 
 // ── Реєстрація push-пристрою під акаунт (пасивний ресинк, без запиту дозволу) ──

@@ -15,7 +15,7 @@ import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
 import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS, ALL_ICON } from '../core/board-categories.js';
-import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, refreshUnreadBadge } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge } from './board-chat.js';
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
@@ -366,22 +366,57 @@ function renderCard(post) {
 // FAB — ДВІ незалежні кнопки: Дошка (оголошення) і Обговорення (свій набір дій).
 // Спільна лише speed-dial-механіка (id board-fab/board-trigger + клас .open),
 // щоб toggleFab/closeFab працювали. Розмітка/меню/іконка — різні за вкладкою.
+// ── ІКОНКА FAB ЗА СТАНОМ (рішення Вови 30.07) ────────────────────────────────
+// Вова: «поставити замість іконки повідомлення іконку з подати оголошення, а коли
+// користувач має активне 1+ оголошення то міняється на повідомлення».
+//
+// Задум: кнопка показує ту дію, яка людині зараз найімовірніше потрібна. Нема
+// оголошень → ти тут щоб подати. Є оголошення → ти тут щоб глянути відповіді.
+//
+// ⚠️ Я був ПРОТИ і лишаю заперечення в записі, бо воно чинне: іконка, що змінює
+// форму, гірше запамʼятовується рукою, а людина з активним оголошенням — саме та,
+// хто найімовірніше подасть друге, і для неї «створити» стає менш очевидним.
+// Рішення власника переважило (30.07, «Мій давай»).
+// 🔴 Заразом чесно: мій пункт аудиту Д-В1 був ХИБНИЙ. Я писав, що кнопка «бреше
+// текстом», але `.board-trigger--fixed .cm-board-trigger-text { display: none }` —
+// тексту на ній не видно взагалі, тож ні обіцянки, ні провалу WCAG не було. Реальна
+// нестача була саме та, яку назвав Вова: іконка не відповідала головній дії.
+//
+// ⚠️ БЕЗ МЕРЕЖІ: `allPosts` — це вже завантажені ОПУБЛІКОВАНІ пости
+// (`fetchPublishedPosts`), тобто «активне оголошення» = моє серед них. Жодного
+// додаткового запиту; саме тому іконку можна рахувати прямо в рендері.
+function myActiveAdsCount() {
+  const me = currentUserId();
+  if (!me) return 0;
+  return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== 'chat' ? 1 : 0), 0);
+}
+
+// Оновити ІКОНКУ на місці, без перебудови FAB. Потрібно тому, що після публікації
+// оголошення список освіжається через `refreshBoardKeepingPlace()` — а він свідомо
+// перемальовує ЛИШЕ картки (щоб не смикнути прокрутку), тож кнопка лишилась би зі
+// старою іконкою до наступного повного рендеру.
+function syncFabIcon() {
+  const box = document.getElementById('board-trigger-icon');
+  if (!box || discOpen) return;
+  box.innerHTML = myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG;
+}
+
 function renderFab() {
   if (discOpen) {
     // Обговорення: червоний круг з білим плюсом + своє меню.
     return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="disc-create" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
           <span class="board-fab-label">Створити обговорення</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
           <span class="board-fab-label">Мої обговорення</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
@@ -396,26 +431,31 @@ function renderFab() {
   return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="post" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
+        <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">Подати оголошення</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">Мої оголошення</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="messages" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
           <span class="board-fab-label">Повідомлення<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">${MSG_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
+      <!-- aria-label лишається СТАБІЛЬНИМ («Дії»), хоч іконка й морфиться: кнопка
+           справді відкриває меню дій, і читачу екрана потрібна незмінна назва, а не
+           та, що змінюється сама. Стан він і так почує з бейджа непрочитаних —
+           той лежить текстом усередині кнопки.
+           ⚠️ Зворотних лапок тут НЕ ставити — коментар усередині шаблонного рядка. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-icon" id="board-trigger-icon">${myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG}</span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>
@@ -683,6 +723,7 @@ async function refreshBoardKeepingPlace() {
   const ok = await loadBoardData();
   if (!ok || !el || !body) { renderBoard(); return; }   // не змогли мʼяко — звичайним шляхом
   keepScroll(document.querySelector('.app-main'), () => renderBodyOnly(), null, 'data-post-id');
+  syncFabIcon();   // 30.07: опублікував/завершив своє → іконка FAB могла змінитись
 }
 
 export async function renderBoard() {
@@ -757,7 +798,12 @@ function renderAll() {
   };
   fabBtn?.addEventListener('click', toggleFab);
   fabBack?.addEventListener('click', closeFab);
-  refreshUnreadBadge();   // заповнити бейдж непрочитаних на свіжому FAB (після рендеру Дошки)
+  // 🔴 30.07 (аудит Д-Б1) — МАЛЮЄМО з уже відомого числа, а не питаємо базу.
+  // Було `refreshUnreadBadge()` = два запити в Supabase на КОЖЕН renderAll, тобто на
+  // кожен тап по фільтру категорії/НП. Кількість непрочитаних від зміни категорії не
+  // змінюється, тож мережа тут була дарма. Свіжість тримають подієві виклики
+  // `refreshUnreadBadge` (вхід, push, realtime, прочитання чату) у board-chat.js.
+  paintUnreadBadge();     // новий FAB щойно створено рендером — заповнити бейдж
   fab?.querySelectorAll('.board-fab-item').forEach(item => {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
@@ -804,9 +850,18 @@ function renderAll() {
       debounce = setTimeout(() => renderBodyOnly(el), 180);
     });
   }
+  // 🔴 30.07 (аудит Д-Б3) — ОЧИСТКА ПОШУКУ НЕ ПЕРЕБУДОВУЄ ШАПКУ.
+  // Було `renderAll(el)`, а він робить `el.innerHTML = …` — тобто саме поле пошуку
+  // ПЕРЕСТВОРЮВАЛОСЬ. Фокус зникав, і на iPhone разом із ним згорталась клавіатура:
+  // людина тапнула «×», щоб шукати інакше, і мусила ще раз тапати в поле.
+  // Правильний механізм у файлі вже був — ввід у поле кличе `renderBodyOnly` (шапку не
+  // чіпає); кнопка ним просто не користувалась. Значення чистимо руками, бо без
+  // перебудови шапки поле саме не спорожніє.
   document.getElementById('bd-search-clear')?.addEventListener('click', () => {
     searchQuery = '';
-    renderAll(el);
+    const input = document.getElementById('bd-search-input');
+    if (input) { input.value = ''; input.focus(); }
+    renderBodyOnly(el);
   });
 
 
@@ -844,6 +899,25 @@ function renderAll() {
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBoardMenus(); });
     document.querySelector('.app-main')?.addEventListener('scroll', closeBoardMenus, { passive: true });
+    // 🔴 30.07 (аудит Д-В3) — FAB-меню теж закривається по Escape.
+    // Меню фільтрів закривались по кліку повз / Escape / скролу, а FAB-меню — лише
+    // повторним тапом або тапом у затемнення. Нерівність без причини: механіка та сама.
+    // Шукаємо вузол ЩОРАЗУ (`getElementById`), бо `renderAll` перестворює FAB —
+    // збережене посилання вказувало б на викинутий елемент.
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const f = document.getElementById('board-fab');
+      if (!f?.classList.contains('open')) return;
+      f.classList.remove('open');
+      document.getElementById('board-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+    // Скрол списку закриває FAB-меню — як і меню фільтрів (гортаєш = меню тобі мішає).
+    document.querySelector('.app-main')?.addEventListener('scroll', () => {
+      const f = document.getElementById('board-fab');
+      if (!f?.classList.contains('open')) return;
+      f.classList.remove('open');
+      document.getElementById('board-trigger')?.setAttribute('aria-expanded', 'false');
+    }, { passive: true });
   }
 
   // Кнопки виклика — окремий handler (capture щоб клік не лизнув на стікер)

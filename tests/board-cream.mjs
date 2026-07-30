@@ -102,6 +102,30 @@ const SCENE = `
 <div class="pm-actions-back"><div class="pm-actions" data-t="лист дій над повідомленням">
   <button data-t="кнопка в листі дій"></button>
 </div></div>
+
+<!-- 🔴 ЛИСТ ПОДАЧІ ОГОЛОШЕННЯ — доданий 30.07 після аудиту.
+     Саме його відсутність тут і була справжньою причиною, чому стенд пропустив
+     три невидимі межі (контраст 1.007): він їх не «міряв не так» — він їх НЕ БАЧИВ,
+     бо в сцені не було жодного елемента bm-*. Урок ширший за цей стенд: сцена мусить
+     містити КОЖЕН екран зони, інакше зелене світло говорить лише про те, що в ній є.
+     ⚠️ Зворотних лапок у цьому коментарі НЕ ставити — він усередині шаблонного рядка,
+     і вони його закривають. Стенд уже впав на цьому двічі (див. шапку файлу). -->
+<div class="app-modal app-modal--board-compose">
+  <div class="app-modal-sheet" data-t="лист подачі — поверхня">
+    <div class="bm-type-tabs" data-t="дорожка перемикача типу">
+      <button class="bm-type-tab active" data-t="активний таб типу"></button>
+      <button class="bm-type-tab"></button>
+    </div>
+    <span class="bm-author-fixed" data-t="поле «Імʼя»" data-el="рамка поля «Імʼя»">Вова</span>
+    <div class="bm-chips"><button class="bm-chip" data-t="чіп категорії" data-el="межа чіпа категорії"></button></div>
+    <div class="bm-photos">
+      <div class="bm-photo-slot" data-t="слот фото (порожній)" data-el="пунктир слота фото"></div>
+      <!-- слот із фото має заливку transparent (під ним картинка), тож у прохід
+           заливок його НЕ беремо (data-t немає) — лише в прохід МЕЖ. -->
+      <div class="bm-photo-slot filled" data-el="межа слота з фото"></div>
+    </div>
+  </div>
+</div>
 `;
 
 // Кремові оголошення СТАНОМ ДО ФІКСУ — рівно ті рядки, які замінено.
@@ -136,6 +160,13 @@ ${extraCss}
 
 const WARM_LIMIT = 6;   // розрив між нейтралью (≤3) і найслабшим кремовим (11)
 
+// 🔴 ПОРІГ ВИДИМОСТІ МЕЖІ (доданий 30.07). Модель OLX цілиться в контраст лінії ≈**1.40**
+// (`--board-bg #E6E6E3` ↔ `--board-line #C4C4C1` = 1.398). Поріг ставлю 1.30, а не 1.40:
+// сторож має ловити МЕРТВІ межі, а не сперечатись за десяті з дизайнерським рішенням.
+// Мертва зона для орієнтиру: `--border #E5E5E5` на тій самій поверхні давав **1.007**,
+// тобто рівно 1.00 — межі не існує. Розрив між 1.007 і 1.398 величезний, поріг у ньому.
+const EDGE_MIN = 1.30;
+
 async function measure(pg, html) {
   await pg.setContent(html);
   return pg.$$eval('[data-t]', nodes => nodes.map(n => {
@@ -145,6 +176,51 @@ async function measure(pg, html) {
     const hex = '#' + [r, g, b].map(v => v.toString(16).padStart(2, '0').toUpperCase()).join('');
     return { role: n.dataset.t, hex, warmth: r - b, transparent: !m || /,\s*0\)$/.test(bg) };
   }));
+}
+
+// Прохід по МЕЖАХ: контраст кольору рамки до ФАКТИЧНОГО фону під нею.
+// ⚠️ Фон беремо не в батька напряму, а піднімаючись до першого НЕПРОЗОРОГО предка —
+// інакше `transparent` контейнер дав би хибний «чорний» і всі числа були б завищені.
+async function measureEdges(pg, html) {
+  await pg.setContent(html);
+  return pg.$$eval('[data-el]', nodes => {
+    const rgb = (s) => {
+      const m = String(s).match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?/);
+      if (!m) return null;
+      const a = m[4] === undefined ? 1 : parseFloat(m[4]);
+      return a === 0 ? null : [+m[1], +m[2], +m[3]];
+    };
+    const lum = ([r, g, b]) => {
+      const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4; };
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+    };
+    const cr = (x, y) => {
+      const a = lum(x), b = lum(y), hi = Math.max(a, b), lo = Math.min(a, b);
+      return (hi + 0.05) / (lo + 0.05);
+    };
+    const hex = (c) => '#' + c.map(v => v.toString(16).padStart(2, '0').toUpperCase()).join('');
+    // Перший непрозорий фон, піднімаючись від батька вгору.
+    const behind = (n) => {
+      for (let p = n.parentElement; p; p = p.parentElement) {
+        const c = rgb(getComputedStyle(p).backgroundColor);
+        if (c) return c;
+      }
+      return [255, 255, 255];   // нічого не знайшли → біле полотно
+    };
+    return nodes.map(n => {
+      const cs = getComputedStyle(n);
+      const bc = rgb(cs.borderTopColor);
+      const bw = parseFloat(cs.borderTopWidth) || 0;
+      const base = behind(n);
+      return {
+        role: n.dataset.el,
+        hasBorder: bw > 0 && !!bc,
+        border: bc ? hex(bc) : null,
+        base: hex(base),
+        contrast: bc ? +cr(bc, base).toFixed(3) : 0,
+      };
+    });
+  });
 }
 
 const browser = await launch(chromium);
@@ -189,6 +265,34 @@ const chip  = a.find(x => x.role.startsWith('чіп контексту'));
 const strip = a.find(x => x.role.startsWith('смужка чіпів'));
 ok('чіп контексту відрізняється від смужки під ним',
    chip.hex !== strip.hex, `чіп ${chip.hex} · смужка ${strip.hex}`);
+
+// ── 4) МЕЖІ ВИДИМІ (додано 30.07 — це та слíпа пляма, крізь яку пройшов дефект) ──
+// 🔴 Чому цього тут не було і чому це головна правка стенда. Аудит 30.07 знайшов ТРИ
+// межі на листі подачі з контрастом **1.007** (тобто їх не існувало), і стенд був
+// ЗЕЛЕНИЙ: він міряв лише ТЕПЛОТУ заливок. Причини було дві, і обидві закриті:
+//   1) у сцені взагалі не було жодного `.bm-*` — стенд ці елементи не бачив;
+//   2) він не міряв КОНТРАСТ межі до того, що під нею.
+// Мораль ширша за цей файл: «нейтрально» і «видно» — РІЗНІ властивості, і зелене
+// світло на першій нічого не каже про другу.
+const edgesA = await measureEdges(pg, page(''));
+ok('прохід по межах не порожній', edgesA.length >= 4, `${edgesA.length} меж`);
+for (const e of edgesA) {
+  ok(`межа видима: ${e.role}`,
+     e.hasBorder && e.contrast >= EDGE_MIN,
+     e.hasBorder ? `${e.border} на ${e.base} · контраст ${e.contrast} (мін ${EDGE_MIN})`
+                 : 'межі НЕМА взагалі');
+}
+
+// КОНТРОЛЬ меж: повертаємо `--border` — стенд мусить назвати мертві межі.
+const EDGE_REVERT = `
+.bm-author-fixed, .bm-photo-slot, .bm-photo-slot.filled { border-color: var(--border); }
+.bm-chip { border-color: transparent; }
+`;
+const edgesB = await measureEdges(pg, page(EDGE_REVERT));
+const deadEdges = edgesB.filter(e => !e.hasBorder || e.contrast < EDGE_MIN);
+ok('контроль: на СТАРОМУ --border стенд бачить мертві межі',
+   deadEdges.length >= 4,
+   `зловлено ${deadEdges.length}: ` + deadEdges.map(e => `${e.role} ${e.contrast || 'нема'}`).join(' · '));
 
 await browser.close();
 done();
