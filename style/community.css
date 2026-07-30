@@ -1747,8 +1747,14 @@
   gap: 7px;
   padding: 9px 14px;
   border-radius: 12px;
-  background: #FFFFFF;
-  border: 1px solid var(--border, #e5e5e5);
+  background: var(--board-card);
+  /* 🔴 30.07 (аудит Д-А1) — МЕЖА З РОДИНИ ДОШКИ. Було `--border #E5E5E5`, і на поверхні
+     листа `--board-bg #E6E6E3` це давало контраст **1.007** — тобто рамки не було видно
+     зовсім. Саме поле лишалось помітним власною білою заливкою (1.251), тому дефект і
+     не кидався в очі: елемент читався, а його межа — ні.
+     ⚠️ Це хвіст кремового проходу 29.07: заливки я перевів, межі — ні. Модель OLX
+     тримається саме на ЛІНІЇ (контраст ≈1.40), не на різниці заливок. */
+  border: 1px solid var(--board-line);
   font-size: 15px;
   font-weight: 600;
   color: var(--ink, #2A2520);
@@ -1774,8 +1780,13 @@
   align-items: center;
   gap: 5px;
   padding: 7px 12px;
-  background: var(--gray-light);
-  border: 1.5px solid transparent;
+  /* 🔴 30.07 (аудит Д-А1/Д-В) — біле тіло + ЛІНІЯ, як уже зроблено для `.pm-chip`
+     у `messages.css`. Було `--gray-light #F5F5F5` без межі (`transparent`): на поверхні
+     листа це давало **1.147** і чіп тримався лише на тіні — тобто рівно те, від чого
+     пішли на картці Дошки. Тепер той самий прийом, що всюди в зоні: заливка виступає,
+     межа визначає край. */
+  background: var(--board-card);
+  border: 1.5px solid var(--board-line);
   border-radius: 999px;
   font-family: inherit;
   font-size: 13px;
@@ -1783,7 +1794,9 @@
   color: var(--ink);
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);   /* щоб чіп не зливався з кремовим фоном */
+  /* Тінь знято (30.07): вона була костилем «щоб чіп не зливався з кремовим фоном»,
+     а тепер край дає межа. Тримати обидва — це «подвійний розділювач», від якого
+     пішли 29.07 на картці Дошки (два розділювача в одному місці = каша). */
   transition: background 0.12s, border-color 0.12s, transform 0.08s;
 }
 .bm-chip:active { transform: scale(0.96); }
@@ -1812,10 +1825,14 @@
   flex: 0 0 calc((100% - 16px) / 3);   /* 3 видимі (2 gap×8px), решта — скрол */
   scroll-snap-align: start;
   aspect-ratio: 1;
-  background: var(--gray-light);
+  /* 🔴 30.07 (аудит Д-А1) — слот фото був НАЙГІРШИМ місцем: тіло `#F5F5F5` давало 1.147
+     до поверхні листа, а пунктирна межа `--border #E5E5E5` — **1.007**, тобто «додати
+     фото» позначала лише тінь. Пунктир ЛИШАЄТЬСЯ (він каже «тут порожньо, натисни»),
+     але тепер у кольорі родини — межа справді видима. */
+  background: var(--board-card);
   background-size: cover;
   background-position: center;
-  border: 1.5px dashed var(--border);
+  border: 1.5px dashed var(--board-line);
   border-radius: 10px;
   display: flex;
   align-items: center;
@@ -1823,14 +1840,19 @@
   cursor: pointer;
   overflow: hidden;
   -webkit-tap-highlight-color: transparent;
-  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12);   /* тінь — щоб слот фото не зливався з фоном */
+  /* Тінь знято (30.07). Її комент прямо казав «щоб слот фото не зливався з фоном» —
+     тобто вона робила роботу межі. За моделлю OLX це неправильний розділювач: розмитий
+     градієнт око читає як пляму, а не як край. Тепер край дає пунктир `--board-line`. */
   transition: border-color 0.12s, background-color 0.12s;
 }
 /* 29.07: було `--paper` #F4F1E6 — слот фото у листі подачі, а лист уже стоїть на
    поверхні Дошки, тож кремовий натиск був останнім теплим спалахом у цьому вікні. */
 .bm-photo-slot:active { background-color: var(--board-press); }
 .bm-photo-slot.filled {
-  border: 1.5px solid var(--border);
+  /* Слот із фото: межа теж із родини (була `--border` = 1.007 до поверхні листа).
+     Тут вона потрібна навіть більше, ніж у порожнього: світле фото без обідка
+     розтікається по світлій поверхні листа. */
+  border: 1.5px solid var(--board-line);
   background-color: transparent;
 }
 .bm-photo-plus {
@@ -4137,7 +4159,9 @@
   display: flex;
   gap: 6px;
   margin-bottom: 18px;
-  background: var(--gray-light);
+  /* 30.07: дорожка ЗАГЛИБЛЕНА (`--board-sunken`), була `--gray-light` = світліша за
+     поверхню листа. Пояснення інверсії — у `base.css`, блок `--board-sunken`. */
+  background: var(--board-sunken);
   border-radius: 14px;
   padding: 4px;
 }
