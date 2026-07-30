@@ -21,13 +21,15 @@
 // який вішає вигадане імʼя `cstl.local` на 127.0.0.1: сервер той самий, а
 // `location.hostname` уже НЕ localhost — рівно як на GitHub Pages.
 //
-// ⚠️ ЧОГО ЦЕЙ СТЕНД НЕ ПЕРЕВІРЯЄ І ЧОМУ ЧЕСНО ЦЕ СКАЗАТИ: справжній вхід через Google
-// (OAuth) з пісочниці недосяжний — там чужий домен і жива сесія. Тобто «пошта зі
-// списку відкриває додаток» доводиться лише шляхом device-прапорця (перевірка 3) плюс
-// окремою перевіркою самої функції хешування. Живий вхід двома акаунтами — за Вовою
-// на iPhone.
+// ⚠️ ЧОГО ЦЕЙ СТЕНД НЕ ПЕРЕВІРЯЄ І ЧОМУ ЧЕСНО ЦЕ СКАЗАТИ: наскрізний вхід СПРАВЖНІМ
+// кодом. Стенд не знає коду Вови і не має знати — інакше код лежав би в репозиторії
+// поруч зі своїм замком. Тому цей шлях перевіряється окремо і руками:
+//   DEV_CODE='код' node tests/dev-lock.mjs        (+3 перевірки, секція 3.6)
+//
+// 🆕 30.07: двері «пошта власника через Google» ПРИБРАНІ на прохання Вови, тож
+// перевірок навколо OAuth тут більше немає — натомість стенд стежить, щоб вони
+// не повернулись непоміченими (секція 4).
 import { chromium } from 'playwright';
-import { createHash } from 'crypto';
 import { chromiumPath, serve, projectFile, reporter } from './_lib.mjs';
 
 const { ok, done } = reporter();
@@ -83,10 +85,21 @@ async function visit(host, { deviceFlag = false } = {}) {
     gate:      !!document.querySelector('.dev-lock'),
     bodyClass: document.body.classList.contains('dev-locked'),
     gateText:  (document.querySelector('.dev-lock-title') || {}).textContent || '',
+    gateBody:  (document.querySelector('.dev-lock-text') || {}).textContent || '',
     hasBtn:    !!document.querySelector('.dev-lock-btn'),
     hasInput:  !!document.querySelector('.dev-lock-input'),
     hasLabel:  /код/i.test((document.querySelector('.dev-lock-label') || {}).textContent || ''),
-    hasOwnerLink: !!document.querySelector('.dev-lock-link'),
+    // 🔴 Поле коду міряємо ВИДИМІСТЮ, а не наявністю в DOM. Форма лежить у розмітці
+    // завжди (їй потрібні свої id і слухачі), і `!!querySelector` сказав би «є» навіть
+    // тоді, коли чужа людина не бачить нічого. Саме та підміна форми на наслідок,
+    // від якої застерігає урок 27.07.
+    inputShown: (() => {
+      const i = document.querySelector('.dev-lock-input');
+      return !!i && !!i.offsetParent;      // offsetParent === null у прихованого вузла
+    })(),
+    revealText: (document.querySelector('[data-dl-reveal]') || {}).textContent || '',
+    // Двері «пошта власника» прибрані — кнопки Google на екрані бути не може.
+    hasGoogle: /google/i.test(document.querySelector('.dev-lock-in') ? document.querySelector('.dev-lock-in').textContent : ''),
     blurred:   (() => {
       const bg = document.querySelector('.dev-lock-bg');
       if (!bg) return 0;
@@ -109,10 +122,20 @@ async function visit(host, { deviceFlag = false } = {}) {
 const outsider = await visit('cstl.local');
 if (LOCK_ON) {
   ok('чужий хост: заслінка показана', outsider.gate);
-  ok('чужий хост: заголовок «йдуть технічні розробки»', /розроб/i.test(outsider.gateText), `текст: "${outsider.gateText}"`);
+  // Заголовок Вова переписав 30.07 у саркастичний бік, і слова «розробки» в ньому
+  // більше нема — воно переїхало в підпис. Тому міряємо ДВА вузли: що заголовок
+  // непорожній і що людині пояснено, чому її не пускають. Прибити тут точний рядок
+  // означало б ламати стенд на кожну правку тексту.
+  ok('чужий хост: заголовок є і він непорожній', outsider.gateText.trim().length > 0, `"${outsider.gateText.trim()}"`);
+  ok('чужий хост: людині пояснено, що додаток ще закритий',
+     /розроб/i.test(outsider.gateText + ' ' + outsider.gateBody), `підпис: "${outsider.gateBody.trim()}"`);
   ok('чужий хост: є кнопка «Увійти»', outsider.hasBtn);
-  ok('чужий хост: є поле коду розробника', outsider.hasInput && outsider.hasLabel);
-  ok('чужий хост: є запасний вхід для власника', outsider.hasOwnerLink);
+  ok('чужий хост: поле коду існує в розмітці', outsider.hasInput && outsider.hasLabel);
+  // 🔴 Замовлення Вови: «код розробника треба якось по-іншому зробити, щоб це знали
+  // тільки розробники». Отже поле НЕ мусить бути видно доти, доки не тапнули.
+  ok('чужий хост: поле коду СХОВАНЕ до тапу', !outsider.inputShown);
+  ok('чужий хост: є тихий вхід для розробників', /розробник/i.test(outsider.revealText), `"${outsider.revealText.trim()}"`);
+  ok('чужий хост: входу через Google на екрані НЕМА', !outsider.hasGoogle);
   // Фон розмитий — саме те, що просив Вова («сторінка буде заблюрена»).
   // Міряємо ОБЧИСЛЕНИЙ `filter`, а не наявність класу: клас без blur нічого не дає.
   ok('чужий хост: фон справді розмитий (blur ≥ 8px)', outsider.blurred >= 8, `blur(${outsider.blurred}px)`);
@@ -149,7 +172,15 @@ for (const door of ['code', 'email', '1']) {
   const page = await ctx.newPage();
   await page.route('**://*.supabase.co/**', r => r.abort());
   await page.goto(`http://cstl.local:${port}/`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.dev-lock-input', { timeout: 10000 });
+  await page.waitForSelector('[data-dl-reveal]', { timeout: 10000 });
+  // Поле сховане — спершу тап по «Вхід для розробників». Заразом це і є перевірка,
+  // що тап справді ВІДКРИВАЄ форму: якби не відкривав, `waitForSelector` зі станом
+  // `visible` упав би тут, а не десь далі з незрозумілим симптомом.
+  await page.click('[data-dl-reveal]');
+  await page.waitForSelector('.dev-lock-input', { state: 'visible', timeout: 10000 });
+  ok('тап по «Вхід для розробників» відкриває поле коду', true);
+  ok('після відкриття форми саме посилання зникає',
+     !(await page.locator('[data-dl-reveal]').isVisible()));
 
   const tryCode = async value => {
     await page.fill('.dev-lock-input', value);
@@ -193,7 +224,9 @@ if (process.env.DEV_CODE) {
   const page = await ctx.newPage();
   await page.route('**://*.supabase.co/**', r => r.abort());
   await page.goto(`http://cstl.local:${port}/`, { waitUntil: 'domcontentloaded' });
-  await page.waitForSelector('.dev-lock-input', { timeout: 10000 });
+  await page.waitForSelector('[data-dl-reveal]', { timeout: 10000 });
+  await page.click('[data-dl-reveal]');                        // поле сховане до тапу
+  await page.waitForSelector('.dev-lock-input', { state: 'visible', timeout: 10000 });
   await page.fill('.dev-lock-input', process.env.DEV_CODE);
   await page.click('[data-dl-submit]');
   await page.waitForSelector('.dev-lock', { state: 'detached', timeout: 20000 }).catch(() => {});
@@ -211,35 +244,31 @@ if (process.env.DEV_CODE) {
   console.log('ℹ️  Успішний вхід кодом не перевірявся: запусти `DEV_CODE=\'код\' node tests/dev-lock.mjs`');
 }
 
-// ── 4. Список допущених: хеші, а НЕ відкриті пошти ───────────────────────────
-// Репозиторій публічний. Якщо колись хтось впише адресу текстом — стенд упаде.
-const rawBlock = (SRC.match(/ALLOWED_EMAIL_SHA256\s*=\s*\[([\s\S]*?)\]/) || [])[1] || '';
+// ── 4. Список кодів: хеші, а НЕ відкритий код ────────────────────────────────
+// ⚠️ Тут раніше перевірявся ще й `ALLOWED_EMAIL_SHA256`. Двері «пошта власника»
+// прибрані 30.07 на прохання Вови, тому й перевірка пішла. Натомість доданий
+// сторож нижче: якщо список пошт колись повернуть, стенд мусить сказати це вголос,
+// а не мовчки лишити мертву перевірку.
+ok('двері «пошта власника» справді прибрані з коду', !/ALLOWED_EMAIL_SHA256\s*=/.test(SRC),
+   'якщо їх повертають — поверни і перевірки на відкриті адреси в публічному репо');
+ok('заслінка більше не тягне Google-вхід', !/signInWithGoogle/.test(SRC));
+
+// У публічному репозиторії мусять лежати лише хеші PBKDF2, і в жодному разі не
+// сам код відкритим текстом.
+const rawCodes = (SRC.match(/ALLOWED_CODE_PBKDF2\s*=\s*\[([\s\S]*?)\]/) || [])[1] || '';
 // ⚠️ Коментарі з блоку прибираємо ДО підрахунку. Перша версія цієї перевірки цього
 // не робила — і впала на порожньому списку, бо порахувала лапки у рядках-підказках
-// («// 'a1b2…' ← головна пошта»). Тобто міряла не список, а власні коментарі: рівно
-// та помилка, від якої застерігає правило «мірку перевіряй так само, як код».
-const listBlock = rawBlock.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
-ok('у списку допущених немає відкритих пошт (лише хеші)', !/@/.test(listBlock),
-   listBlock.includes('@') ? 'знайдено «@» — це відкрита адреса в публічному репозиторії' : 'чисто');
-const quoted = listBlock.match(/'[^']*'/g) || [];
-const hashes = listBlock.match(/'[0-9a-f]{64}'/g) || [];
-ok('усі записи списку — хеші по 64 hex-символи', hashes.length === quoted.length,
-   `записів ${quoted.length}, з них правильних хешів ${hashes.length}`);
-ok('список допущених НЕ порожній', hashes.length > 0,
-   hashes.length ? `${hashes.length} допущені пошти` : 'порожній список замкне і Вову теж — деплоїти не можна');
-
-// Той самий контроль для СПИСКУ КОДІВ: у публічному репозиторії мусять лежати
-// лише хеші PBKDF2, і в жодному разі не сам код відкритим текстом.
-const rawCodes = (SRC.match(/ALLOWED_CODE_PBKDF2\s*=\s*\[([\s\S]*?)\]/) || [])[1] || '';
+// («// 'a1b2…' ← код»). Тобто міряла не список, а власні коментарі: рівно та
+// помилка, від якої застерігає правило «мірку перевіряй так само, як код».
 const codeBlock = rawCodes.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
 const codeQuoted = codeBlock.match(/'[^']*'/g) || [];
 const codeHashes = codeBlock.match(/'[0-9a-f]{64}'/g) || [];
 ok('усі записи списку кодів — хеші по 64 hex-символи', codeHashes.length === codeQuoted.length,
    `записів ${codeQuoted.length}, з них правильних хешів ${codeHashes.length}`);
-if (!codeHashes.length) {
-  console.log('⚠️  СПИСОК КОДІВ ПОРОЖНІЙ — двері «код» зачинені, працює лише пошта власника.');
-  console.log('   Порадити хеш: node tests/tools/dev-code-hash.mjs \'код\'');
-}
+// 🔴 Тепер це критично, а не інформаційно: код — ЄДИНІ двері. Порожній список
+// означає, що всередину не зайде ніхто, включно з Вовою на новому пристрої.
+ok('список кодів НЕ порожній', codeHashes.length > 0,
+   codeHashes.length ? `${codeHashes.length} код(и)` : 'порожній список замкне і Вову — деплоїти не можна');
 
 // ── 4.5 🔴 САМ КОД НЕ НАПИСАНИЙ ПОРУЧ ІЗ ВЛАСНИМ ХЕШЕМ ──────────────────────
 // Ця перевірка існує через справжню помилку: разом із хешем я вписав у КОМЕНТАРІЙ і
@@ -268,29 +297,40 @@ if (codeHashes.length) {
      leaked.length ? `ВІДКРИТИЙ КОД У РЕПОЗИТОРІЇ: ${leaked.join(', ')}` : `перевірено слів: ${words.length}`);
 }
 
-// ── 5. 🔴 БРАУЗЕР І ТЕРМІНАЛ МУСЯТЬ ДАВАТИ ОДИН І ТОЙ САМИЙ ХЕШ ──────────────
-// Це остання неперевірена ланка замка. Хеші у списку я порахував у терміналі
-// (`sha256sum`), а перевіряє їх БРАУЗЕР (`crypto.subtle.digest`). Якби ці два
-// шляхи розійшлись хоч на кодуванні тексту чи регістрі hex — список ніколи б не
-// збігся, і замок не пустив би самого Вову. Симптом виглядав би як «увійшов, а
-// пише що пошти немає в списку», тобто найгірший з можливих.
+// ── 5. 🔴 ПАРАМЕТРИ ХЕША НЕ МОЖНА МІНЯТИ НЕПОМІТНО ───────────────────────────
+// Тут раніше звірявся хеш у браузері з хешем у терміналі. Та перевірка стерегла
+// СПИСОК ПОШТ, який рахувався `shasum`-ом; пошти прибрані 30.07, і разом з ними
+// зникла причина. Лишати її означало б тримати перевірку з мертвим обґрунтуванням.
 //
-// ⚠️ Навмисно на НЕЙТРАЛЬНОМУ прикладі, а не на справжніх поштах: збіг алгоритму
-// не залежить від тексту, а справжні адреси в публічному репозиторії — саме те,
-// чого ми уникали хешуванням.
-const SAMPLE = 'test@example.com';
-const NODE_HASH = createHash('sha256').update(SAMPLE, 'utf8').digest('hex');
+// Натомість стережемо справжню вцілілу небезпеку. Хеш коду в `ALLOWED_CODE_PBKDF2`
+// пораховано з КОНКРЕТНОЮ сіллю і КОНКРЕТНОЮ кількістю повторів. Змінить хтось
+// `CODE_SALT` або `CODE_ITERATIONS` — усі збережені хеші стають недійсними МОВЧКИ:
+// помилки не буде, застосунок просто перестане пускати кого завгодно, а симптом
+// виглядатиме як «код правильний, а не заходить». Тепер це падіння стенда.
+// ⚠️ Значення прибиті навмисно: у цьому й сенс сторожа. Міняєш параметр — мусиш
+// перерахувати хеші (`node tests/tools/dev-code-hash.mjs`) і оновити рядок тут.
+const EXPECTED_SALT = 'cstl-dev-lock-2026-07';
+const EXPECTED_ITER = 200000;
 const ctx5 = await browser.newContext();
 const pg5 = await ctx5.newPage();
 await pg5.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded' });
-const browserHash = await pg5.evaluate(async s => {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s));
-  return [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-}, SAMPLE);
+const params = await pg5.evaluate(async base => {
+  const m = await import(base + '/src/core/dev-code.js');
+  return {
+    salt: m.CODE_SALT,
+    iter: m.CODE_ITERATIONS,
+    // Контроль самої мірки: нормалізація мусить зводити регістр і зайві пробіли.
+    // Якщо вона зламається, «правильний код» перестане збігатись — і без цього
+    // рядка стенд шукав би причину в чому завгодно, крім неї.
+    norm: m.normalizeDevCode('  ДВА   Слова  '),
+    hashLooksRight: /^[0-9a-f]{64}$/.test(await m.devCodeHash('контрольний-рядок') || ''),
+  };
+}, url);
 await ctx5.close();
-ok('хеш у браузері = хеш у терміналі (той самий алгоритм і кодування)',
-   browserHash === NODE_HASH, `${browserHash.slice(0, 16)}… vs ${NODE_HASH.slice(0, 16)}…`);
-ok('хеш має вигляд 64 hex-символи в нижньому регістрі', /^[0-9a-f]{64}$/.test(browserHash));
+ok('сіль хеша не змінена', params.salt === EXPECTED_SALT, `${params.salt}`);
+ok('кількість повторів PBKDF2 не змінена', params.iter === EXPECTED_ITER, `${params.iter}`);
+ok('нормалізація коду працює (регістр + зайві пробіли)', params.norm === 'два слова', `"${params.norm}"`);
+ok('хеш має вигляд 64 hex-символи в нижньому регістрі', params.hashLooksRight);
 
 await browser.close();
 await stop();

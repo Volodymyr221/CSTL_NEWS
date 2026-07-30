@@ -14866,12 +14866,6 @@ END:VEVENT`
     //   node tests/tools/dev-code-hash.mjs 'новий-довгий-код'
     "d9c968e8a6c7813633ab2bf0f62ebd810a1fb8ccfded51717c318d5df59f8fb3"
   ];
-  var ALLOWED_EMAIL_SHA256 = [
-    "432d8626c4bc43cfa9004246681f3260f0ebca8448313f225238670fd1b69379",
-    // головна пошта Вови
-    "90507d9874c00f2208cbd84bb9391255f1e8ead2c1f6567b6ed8415eadeddece"
-    // другорядна пошта Вови
-  ];
   var DEVICE_KEY = "cstl_dev_ok";
   var TRIES_KEY = "cstl_dev_tries";
   var TRIES_FREE = 5;
@@ -14883,25 +14877,11 @@ END:VEVENT`
     const h = location.hostname;
     return h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "::1";
   }
-  function hex2(buf) {
-    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
-  }
-  async function sha256Hex(str) {
-    if (!crypto || !crypto.subtle)
-      return null;
-    return hex2(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)));
-  }
   async function codeAllowed(raw) {
     if (!normalizeDevCode(raw) || !ALLOWED_CODE_PBKDF2.length)
       return false;
     const h = await devCodeHash(raw);
     return !!h && ALLOWED_CODE_PBKDF2.includes(h);
-  }
-  async function emailAllowed(email) {
-    if (!email)
-      return false;
-    const h = await sha256Hex(String(email).trim().toLowerCase());
-    return !!h && ALLOWED_EMAIL_SHA256.includes(h);
   }
   function triesState() {
     try {
@@ -14941,10 +14921,12 @@ END:VEVENT`
     <div class="dev-lock-in">
       <img class="dev-lock-logo" src="./logo.png" alt="">
       <div class="dev-lock-brand">CSTL LIFE</div>
-      <h1 class="dev-lock-title">\u0419\u0434\u0443\u0442\u044C \u0442\u0435\u0445\u043D\u0456\u0447\u043D\u0456 \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0438</h1>
-      <p class="dev-lock-text">\u041C\u0438 \u0449\u0435 \u0437\u0431\u0438\u0440\u0430\u0454\u043C\u043E \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0434\u043B\u044F \u041E\u043B\u0438\u043A\u0438.
-        \u0421\u043A\u043E\u0440\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454\u043C\u043E \u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u2014 \u0437\u0430\u0432\u0456\u0442\u0430\u0439 \u0442\u0440\u043E\u0445\u0438 \u043F\u0456\u0437\u043D\u0456\u0448\u0435.</p>
-      <form class="dev-lock-form" data-dl-form novalidate>
+      <h1 class="dev-lock-title">\u0423\u043F\u0441. \u041C\u0438 \u0449\u0435 \u0442\u0440\u043E\u0445\u0438 \u0447\u0430\u043A\u043B\u0443\u0454\u043C\u043E \u043D\u0430\u0434 CSTL LIFE</h1>
+      <p class="dev-lock-text">\u041F\u043E\u043A\u0438 \u0449\u043E \u0434\u043E\u0441\u0442\u0443\u043F \u043B\u0438\u0448\u0435 \u0434\u043B\u044F \u043A\u043E\u043C\u0430\u043D\u0434\u0438 \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0438.<br>
+        \u0429\u0435 \u0442\u0440\u043E\u0445\u0438 \u0442\u0435\u0440\u043F\u0456\u043D\u043D\u044F \u2014 \u0456 \u0437\u0443\u0441\u0442\u0440\u0456\u043D\u0435\u043C\u043E\u0441\u044C \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0437\u0430\u0441\u0442\u043E\u0441\u0443\u043D\u043A\u0443.</p>
+      <button class="dev-lock-link" type="button" data-dl-reveal
+              aria-expanded="false" aria-controls="dl-form">\u0412\u0445\u0456\u0434 \u0434\u043B\u044F \u0440\u043E\u0437\u0440\u043E\u0431\u043D\u0438\u043A\u0456\u0432</button>
+      <form class="dev-lock-form" id="dl-form" data-dl-form novalidate hidden>
         <label class="dev-lock-label" for="dl-code">\u041A\u043E\u0434 \u0434\u043B\u044F \u0440\u043E\u0437\u0440\u043E\u0431\u043D\u0438\u043A\u0456\u0432</label>
         <div class="dev-lock-row">
           <input class="dev-lock-input" id="dl-code" name="code" type="text"
@@ -14955,11 +14937,26 @@ END:VEVENT`
         </div>
       </form>
       <p class="dev-lock-note" id="dl-note" data-dl-note role="status" aria-live="polite" hidden></p>
-      <button class="dev-lock-link" type="button" data-dl-login>\u042F \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u2014 \u0443\u0432\u0456\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 Google</button>
     </div>`;
-    el.querySelector("[data-dl-login]").addEventListener("click", () => signInWithGoogle());
+    el.querySelector("[data-dl-reveal]").addEventListener("click", revealForm);
     el.querySelector("[data-dl-form]").addEventListener("submit", onSubmitCode);
     return el;
+  }
+  function revealForm() {
+    if (!_gate)
+      return;
+    const link = _gate.querySelector("[data-dl-reveal]");
+    const form = _gate.querySelector("[data-dl-form]");
+    if (!form)
+      return;
+    form.hidden = false;
+    if (link) {
+      link.setAttribute("aria-expanded", "true");
+      link.hidden = true;
+    }
+    const input = _gate.querySelector(".dev-lock-input");
+    if (input)
+      input.focus();
   }
   function note(text, kind) {
     if (!_gate)
@@ -15040,47 +15037,13 @@ END:VEVENT`
       r(true);
     }
   }
-  function showEmailDenied(email) {
-    if (!_gate)
-      return;
-    note(`${email} \u2014 \u0446\u044F \u043F\u043E\u0448\u0442\u0430 \u043F\u043E\u043A\u0438 \u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443. \u041F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u043A\u043E\u0434 \u0440\u043E\u0437\u0440\u043E\u0431\u043D\u0438\u043A\u0430.`, "bad");
-    const btn = _gate.querySelector("[data-dl-login]");
-    if (!btn)
-      return;
-    btn.textContent = "\u0412\u0438\u0439\u0442\u0438 \u0437 \u0430\u043A\u0430\u0443\u043D\u0442\u0430";
-    btn.replaceWith(btn.cloneNode(true));
-    _gate.querySelector("[data-dl-login]").addEventListener("click", async () => {
-      await signOut();
-      location.reload();
-    });
-  }
   async function passDevLock() {
     if (!DEV_LOCK || isLocalHost())
       return true;
     const door = localStorage.getItem(DEVICE_KEY);
-    if (door === "code" || door === "email" || door === "1") {
-      if (door !== "code") {
-        onAuthChange(async (user) => {
-          if (!user)
-            return;
-          if (!await emailAllowed(user.email))
-            localStorage.removeItem(DEVICE_KEY);
-        });
-      }
+    if (door === "code" || door === "email" || door === "1")
       return true;
-    }
     showGate();
-    const check = async (user) => {
-      const email = user && user.email;
-      if (await emailAllowed(email)) {
-        unlock("email");
-        return;
-      }
-      if (email)
-        showEmailDenied(email);
-    };
-    onAuthChange(check);
-    check(currentUser());
     return new Promise((resolve) => {
       _resolve = resolve;
     });
