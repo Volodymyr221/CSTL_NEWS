@@ -249,6 +249,36 @@ function analyzeFile(filePath) {
   return issues;
 }
 
+// ── Пастка: зворотна лапка в HTML-коментарі всередині шаблонного рядка ────────
+//
+// 🔴 ЧОМУ ЦЯ ПЕРЕВІРКА ІСНУЄ. За одну сесію (30.07) вона спіймала б мене ПʼЯТЬ разів,
+// а один раз через неї в репозиторій потрапила ЗЛАМАНА збірка. Механіка проста і
+// підла: у розмітці всередині шаблонного рядка пишеш коментар з поясненням, у ньому
+// згадуєш селектор у зворотних лапках — і ця лапка ЗАКРИВАЄ сам шаблонний рядок.
+// Далі решта розмітки стає кодом, і esbuild віддає щось на кшталт
+//   "Expected ";" but found "margin""
+// на рядку, який виглядає абсолютно нормальним коментарем. Причина й повідомлення
+// не мають між собою нічого спільного, тому шукати доводиться щоразу заново.
+//
+// Що робимо: у `.js` файлах HTML-коментарі (`<!-- -->`) бувають ЛИШЕ всередині
+// шаблонних рядків (це розмітка). Отже зворотна лапка в такому коментарі — завжди
+// помилка. Кажемо це прямо, з номером рядка, ДО того як esbuild скаже незрозуміле.
+//
+// ⚠️ Свідома межа: перевірка НЕ ловить лапку в звичайному `//`-коментарі всередині
+// шаблонного рядка (буває рідше) і не парсить AST. Вона закриває саме той випадок,
+// який реально стріляв.
+function checkBacktickInHtmlComment(src) {
+  const issues = [];
+  const re = /<!--[\s\S]*?-->/g;
+  let m;
+  while ((m = re.exec(src)) !== null) {
+    if (!m[0].includes('`')) continue;
+    const line = src.slice(0, m.index).split('\n').length;
+    issues.push({ line, snippet: m[0].split('\n')[0].trim().slice(0, 60) });
+  }
+  return issues;
+}
+
 // ── Main ────────────────────────────────────────────────────────────────────
 function main() {
   if (!fs.existsSync(SRC_DIR)) {
@@ -263,14 +293,21 @@ function main() {
   for (const file of files) {
     const rel = path.relative(path.join(__dirname, '..'), file);
     const issues = analyzeFile(file);
+    // Зворотна лапка в HTML-коментарі — окремий клас помилки (див. функцію вище).
+    const ticks = checkBacktickInHtmlComment(fs.readFileSync(file, 'utf8'));
     totalFiles++;
-    if (issues.length === 0) {
+    if (issues.length === 0 && ticks.length === 0) {
       console.log(`✓ ${rel} — clean`);
     } else {
       for (const { name, line } of issues) {
         console.log(`✗ ${rel}:${line} — '${name}' called but not imported/declared`);
       }
-      totalIssues += issues.length;
+      for (const { line, snippet } of ticks) {
+        console.log(`✗ ${rel}:${line} — ЗВОРОТНА ЛАПКА в HTML-коментарі: вона закриє шаблонний рядок`);
+        console.log(`    ${snippet}`);
+        console.log(`    → прибери лапки з коментаря (пиши .board-fab-label без них)`);
+      }
+      totalIssues += issues.length + ticks.length;
     }
   }
 

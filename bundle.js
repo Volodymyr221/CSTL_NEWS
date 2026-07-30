@@ -3438,6 +3438,11 @@
       return `${d.getDate()} ${CHAT_MONTHS_GEN[d.getMonth()]}`;
     return `${String(d.getDate()).padStart(2, "0")}.${String(d.getMonth() + 1).padStart(2, "0")}.${String(d.getFullYear()).slice(-2)}`;
   }
+  function tsMs(v) {
+    if (!v)
+      return 0;
+    return typeof v === "number" ? v : new Date(v).getTime() || 0;
+  }
   function getChatSeen(postId) {
     const m = lsGet(LS_CHAT_SEEN, {});
     return m[String(postId)] || 0;
@@ -3504,7 +3509,7 @@
         html += `<div class="pm-daysep"><span>${day}</span></div>`;
         lastDay = day;
       }
-      const isNew = dividerTs > 0 && t > dividerTs;
+      const isNew = dividerTs > 0 && tsMs(t) > dividerTs;
       if (!isNew)
         hadOld = true;
       if (isNew && hadOld && !dividerPlaced) {
@@ -4060,11 +4065,6 @@
       }
       showToast("\u274C \u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0438\u0434\u0430\u043B\u0438\u0442\u0438: " + (res.error || ""), 4e3, "error");
     }
-  }
-  function tsMs(v) {
-    if (!v)
-      return 0;
-    return typeof v === "number" ? v : new Date(v).getTime() || 0;
   }
   function unseenDiscussionsCount() {
     const posts2 = (_getPosts?.() || []).filter((p) => p && p.type === "chat");

@@ -120,6 +120,18 @@ function chatDayLabel(ts) {
   return `${String(d.getDate()).padStart(2,'0')}.${String(d.getMonth()+1).padStart(2,'0')}.${String(d.getFullYear()).slice(-2)}`;
 }
 
+// 🔴 ЧАС У МІЛІСЕКУНДАХ — обовʼязково перед будь-яким порівнянням.
+// Коментарі приходять із `created_at` як ISO-РЯДОК (`fetchAllComments` у supabase.js),
+// а межа перегляду (`getChatSeen`) — ЧИСЛО. Пряме `рядок > число` у JS дає
+// `Number(ISO)` = NaN, тобто умова ЗАВЖДИ false. Перевірено в node:
+//   '2026-07-30T07:00:00.000Z' > Date.now()  →  false
+// Саме через це роздільник «Нові повідомлення» не зʼявлявся НІКОЛИ (баг, знайдений
+// 30.07 при роботі над крапкою вкладки; виправлено того ж дня за словом Вови «так»).
+function tsMs(v) {
+  if (!v) return 0;
+  return typeof v === 'number' ? v : (new Date(v).getTime() || 0);
+}
+
 // Час останнього перегляду теми (per-device) — для роздільника «Нові повідомлення».
 function getChatSeen(postId) {
   const m = lsGet(LS_CHAT_SEEN, {});
@@ -208,7 +220,7 @@ function chatMessagesHtml(post) {
     const t = postTime(c);
     const day = chatDayLabel(t);
     if (day && day !== lastDay) { flush(); html += `<div class="pm-daysep"><span>${day}</span></div>`; lastDay = day; }
-    const isNew = dividerTs > 0 && t > dividerTs;
+    const isNew = dividerTs > 0 && tsMs(t) > dividerTs;   // 30.07: без tsMs це рядок vs число → NaN → завжди false
     if (!isNew) hadOld = true;
     if (isNew && hadOld && !dividerPlaced) {
       flush();
@@ -760,10 +772,6 @@ async function doDiscDelete(c) {
 // просили), але кажу прямо: це окремий баг, чекає слова Вови.
 //
 // Своє повідомлення новим не рахуємо — інакше крапка горіла б від власного тексту.
-function tsMs(v) {
-  if (!v) return 0;
-  return typeof v === 'number' ? v : (new Date(v).getTime() || 0);
-}
 export function unseenDiscussionsCount() {
   const posts = (_getPosts?.() || []).filter(p => p && p.type === 'chat');
   let n = 0;
