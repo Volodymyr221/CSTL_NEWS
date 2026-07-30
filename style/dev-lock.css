@@ -1,0 +1,88 @@
+/* style/dev-lock.css — ЗАСЛІНКА РОЗРОБКИ (dev lock).
+   Логіка — `src/core/dev-lock.js`, там же причина і межі рішення.
+
+   Вигляд свідомо взято від заставки (`#splash`): бордове тло `--red`, логотип,
+   назва. Причина не косметична — людина, яка не отримала доступ, мусить бачити
+   ЗАВЕРШЕНИЙ брендований екран, а не «застряглу завантажувалку». Якби заслінка
+   виглядала інакше, вона читалась би як помилка застосунку.
+
+   Геометрія: `position: fixed; inset: 0` — фіксована на все вікно, тобто
+   360px×844px на iPhone 13/14 незалежно від висоти вмісту. Вміст центрований
+   по обох осях, ширина обмежена 320px (при 390px екрана лишається по 35px полів),
+   `padding` знизу враховує safe-area (зона під домашню смужку iPhone).
+   Прокрутки немає і бути не може: текст короткий, тому `overflow` не потрібен. */
+
+.dev-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;              /* вище за #splash (9999) — заслінка ніколи не під ним */
+  background: var(--red);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color: transparent;
+}
+.dev-lock-in {
+  width: 100%;
+  max-width: 320px;
+  text-align: center;
+  color: #fff;
+}
+.dev-lock-logo {
+  width: 108px; height: 108px;
+  object-fit: contain;
+  margin-bottom: 10px;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.30));
+}
+.dev-lock-brand {
+  font-size: 26px;
+  font-weight: 900;
+  letter-spacing: 1.5px;
+  margin-bottom: 22px;
+}
+.dev-lock-title {
+  font-size: 19px;
+  font-weight: 800;
+  margin: 0 0 10px;
+}
+.dev-lock-text {
+  font-size: 15px;
+  line-height: 1.5;
+  /* 0.82 непрозорості на бордовому тлі — текст читабельний, але не сперечається
+     із заголовком за увагу. Нижче не опускаю: на сонці почне зникати. */
+  color: rgba(255, 255, 255, 0.82);
+  margin: 0 0 26px;
+}
+/* Кнопка — світла на бордовому (найвищий контраст, який тут можливий).
+   Висота 48px = мінімум 44px за Apple HIG плюс запас; на всю ширину блока,
+   щоб її не треба було вицілювати пальцем. */
+.dev-lock-btn {
+  display: block;
+  width: 100%;
+  min-height: 48px;
+  border: none;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--red);
+  font-size: 16px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+.dev-lock-btn:active {
+  transform: scale(0.97);
+  background: #F1E6E8;
+}
+/* Пояснення «ця пошта без доступу» — дрібним під кнопкою, показується лише
+   після невдалого входу (у розмітці стоїть `hidden`). */
+.dev-lock-note {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.72);
+  margin: 14px 0 0;
+  overflow-wrap: break-word;   /* довга пошта не розпирає блок убік */
+}
+/* Поки заслінка на екрані — сторінка під нею не прокручується.
+   Клас знімається у `hideGate()`. */
+body.dev-locked { overflow: hidden; }

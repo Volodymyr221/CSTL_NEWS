@@ -23,3 +23,4 @@
 @import url('style/sidebar.css');    /* .sidebar-* — бічне меню (бургер) + «Кабінет» для команди + інфо-модалки */
 @import url('style/crop.css');       /* .crop-* — рамка кадрування фото (банер сторінки, аватар) */
 @import url('style/install.css');    /* .pwa-cta — банер «Відкрий/встанови у додатку» (лише в браузері) */
+@import url('style/dev-lock.css');   /* .dev-lock — заслінка «Додаток у розробці» (замок на час доробки) */

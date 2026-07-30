@@ -7,6 +7,7 @@ import { initBuses, initSavedRoutesHeader } from './tabs/buses.js';
 import { initPower } from './tabs/power.js';
 import { initBoard, openBoardItemById } from './tabs/board.js';
 import { initAuth, currentUserId } from './core/auth.js';
+import { passDevLock } from './core/dev-lock.js';   // заслінка «Додаток у розробці» (замок на час доробки)
 import { logEvent, getAnonId } from './core/supabase.js';
 import { initAccountUI } from './core/account-ui.js';
 import { initSidebar } from './core/sidebar.js';
@@ -254,9 +255,19 @@ function handlePostHash() {
 }
 
 // Ініціалізація при завантаженні сторінки
-function init() {
+async function init() {
   bootApp();
   initAuth();   // Фаза Б: відновити сесію входу (гість → no-op). Гейтинг ще вимкнено.
+
+  // 🔴 ЗАСЛІНКА РОЗРОБКИ (Вова 30.07) — стоїть ТУТ і не нижче.
+  // Чому саме після initAuth() і до всього іншого: заслінці потрібна відновлена
+  // сесія входу (щоб знати пошту), але жоден екран застосунку не має встигнути
+  // намалюватись — інакше чужа людина побачила б Громаду під заслінкою у момент
+  // завантаження. Поки доступу немає, `passDevLock()` не завершується взагалі:
+  // ми просто не доходимо до решти init(), а на екрані лишається заслінка.
+  // Знімається одним рядком — `DEV_LOCK = false` у core/dev-lock.js.
+  if (!await passDevLock()) return;
+
   initAccountUI();   // Фаза Б: іконка 👤 в шапці + екрани входу/Кабінету
   initSidebar();     // Бічне меню (бургер зліва) + «Кабінет» лише для команди
   initConsent();     // Банер згоди з Політикою/Правилами (перший вхід)

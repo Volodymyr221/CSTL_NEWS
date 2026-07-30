@@ -50,6 +50,9 @@ const WHITELIST = new Set([
   'matchMedia', 'getComputedStyle', 'AbortController', 'AbortSignal',
   'Notification', 'Worker', 'ServiceWorker', 'BroadcastChannel',
   'Response', 'Request', 'Headers', 'Uint8Array', 'Promise',
+  // TextEncoder/TextDecoder — стандартні браузерні глобали; знадобились для
+  // SHA-256 у core/dev-lock.js (`crypto.subtle.digest` приймає лише байти).
+  'TextEncoder', 'TextDecoder',
 
   // Module globals (CommonJS / Node)
   'require', 'module', 'exports', 'process', 'Buffer', '__dirname',

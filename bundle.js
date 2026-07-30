@@ -14822,6 +14822,124 @@ END:VEVENT`
     });
   }
 
+  // src/core/dev-lock.js
+  var DEV_LOCK = true;
+  var ALLOWED_EMAIL_SHA256 = [
+    // 'a1b2…'  ← головна пошта Вови
+    // 'c3d4…'  ← другорядна пошта Вови
+  ];
+  var DEVICE_KEY = "cstl_dev_ok";
+  var _gate = null;
+  var _resolve = null;
+  function isLocalHost() {
+    const h = location.hostname;
+    return h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "::1";
+  }
+  async function sha256Hex(str) {
+    if (!crypto || !crypto.subtle)
+      return null;
+    const bytes = new TextEncoder().encode(str);
+    const buf = await crypto.subtle.digest("SHA-256", bytes);
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function emailAllowed(email) {
+    if (!email)
+      return false;
+    const hash = await sha256Hex(String(email).trim().toLowerCase());
+    if (!hash)
+      return false;
+    return ALLOWED_EMAIL_SHA256.includes(hash);
+  }
+  function buildGate() {
+    const el = document.createElement("div");
+    el.className = "dev-lock";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "true");
+    el.innerHTML = `
+    <div class="dev-lock-in">
+      <img class="dev-lock-logo" src="logo.png" alt="">
+      <div class="dev-lock-brand">CSTL LIFE</div>
+      <h1 class="dev-lock-title">\u0414\u043E\u0434\u0430\u0442\u043E\u043A \u0443 \u0440\u043E\u0437\u0440\u043E\u0431\u0446\u0456</h1>
+      <p class="dev-lock-text">\u041C\u0438 \u0449\u0435 \u0437\u0431\u0438\u0440\u0430\u0454\u043C\u043E CSTL LIFE \u0434\u043B\u044F \u041E\u043B\u0438\u043A\u0438.
+        \u0421\u043A\u043E\u0440\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454\u043C\u043E \u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u2014 \u0437\u0430\u0432\u0456\u0442\u0430\u0439 \u0442\u0440\u043E\u0445\u0438 \u043F\u0456\u0437\u043D\u0456\u0448\u0435.</p>
+      <div class="dev-lock-actions">
+        <button class="dev-lock-btn" type="button" data-dl-login>\u0423\u0432\u0456\u0439\u0442\u0438</button>
+      </div>
+      <p class="dev-lock-note" data-dl-note hidden></p>
+    </div>`;
+    el.querySelector("[data-dl-login]").addEventListener("click", () => signInWithGoogle());
+    return el;
+  }
+  function showGate() {
+    if (_gate)
+      return;
+    _gate = buildGate();
+    document.body.appendChild(_gate);
+    document.body.classList.add("dev-locked");
+    const splash = document.getElementById("splash");
+    if (splash)
+      splash.remove();
+  }
+  function hideGate() {
+    document.body.classList.remove("dev-locked");
+    if (!_gate)
+      return;
+    _gate.remove();
+    _gate = null;
+  }
+  function showDenied(email) {
+    if (!_gate)
+      return;
+    const note = _gate.querySelector("[data-dl-note]");
+    const btn = _gate.querySelector("[data-dl-login]");
+    if (note) {
+      note.textContent = `${email} \u2014 \u0446\u044F \u043F\u043E\u0448\u0442\u0430 \u043F\u043E\u043A\u0438 \u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443.`;
+      note.hidden = false;
+    }
+    if (btn) {
+      btn.textContent = "\u0412\u0438\u0439\u0442\u0438";
+      btn.replaceWith(btn.cloneNode(true));
+      _gate.querySelector("[data-dl-login]").addEventListener("click", async () => {
+        await signOut();
+        location.reload();
+      });
+    }
+  }
+  async function passDevLock() {
+    if (!DEV_LOCK || isLocalHost())
+      return true;
+    if (localStorage.getItem(DEVICE_KEY) === "1") {
+      onAuthChange(async (user) => {
+        if (!user)
+          return;
+        if (!await emailAllowed(user.email))
+          localStorage.removeItem(DEVICE_KEY);
+      });
+      return true;
+    }
+    showGate();
+    const check = async (user) => {
+      const email = user && user.email;
+      if (await emailAllowed(email)) {
+        localStorage.setItem(DEVICE_KEY, "1");
+        hideGate();
+        if (_resolve) {
+          const r = _resolve;
+          _resolve = null;
+          r(true);
+        }
+        return;
+      }
+      if (email)
+        showDenied(email);
+    };
+    onAuthChange(check);
+    check(currentUser());
+    return new Promise((resolve) => {
+      _resolve = resolve;
+    });
+  }
+
   // src/core/legal.js
   var LEGAL_UPDATED = "07.07.2026";
   var CONTACT = "olykacastle@gmail.com";
@@ -15878,9 +15996,11 @@ END:VEVENT`
     else if (source === "news")
       openArticleById(n);
   }
-  function init() {
+  async function init() {
     bootApp();
     initAuth();
+    if (!await passDevLock())
+      return;
     initAccountUI();
     initSidebar();
     initConsent();
