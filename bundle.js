@@ -3143,7 +3143,7 @@
     document.body.style.right = "0";
     document.body.style.width = "100%";
     document.body.style.overflow = "hidden";
-    const unlock = () => {
+    const unlock2 = () => {
       document.body.style.position = prevBody.position;
       document.body.style.top = prevBody.top;
       document.body.style.left = prevBody.left;
@@ -3153,7 +3153,7 @@
       window.scrollTo(0, scrollY);
     };
     if (!vv)
-      return unlock;
+      return unlock2;
     const input = screen.querySelector(".pm-input");
     let wasOpen = false, focused = false;
     const apply = () => {
@@ -3195,7 +3195,7 @@
       screen.style.height = "";
       screen.style.top = "";
       screen.classList.remove("pm-kb-open");
-      unlock();
+      unlock2();
     };
   }
   var SWIPE_TRIGGER = 45;
@@ -6786,16 +6786,16 @@
     let activeModal = null;
     let isAnimating = false;
     const DURATION = 240;
-    const expand = (note) => {
+    const expand = (note2) => {
       if (isAnimating || activeNote)
         return;
       isAnimating = true;
       const modal = document.createElement("article");
-      modal.className = note.className + " cm-board-modal-note";
-      const post = allPosts.find((x) => String(x.id) === note.dataset.postId);
-      if (note.dataset.postId)
-        modal.dataset.postId = note.dataset.postId;
-      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note.innerHTML}</div></div>`;
+      modal.className = note2.className + " cm-board-modal-note";
+      const post = allPosts.find((x) => String(x.id) === note2.dataset.postId);
+      if (note2.dataset.postId)
+        modal.dataset.postId = note2.dataset.postId;
+      modal.innerHTML = post ? renderAdModal(post) : `<div class="cm-board-modal-scrollarea"><div class="cm-board-modal-content">${note2.innerHTML}</div></div>`;
       document.body.appendChild(modal);
       document.body.classList.add("cm-zoom-open");
       hydrateNames(modal);
@@ -6875,9 +6875,9 @@
         swiping = false;
         canSwipe = false;
       }, { passive: true });
-      activeNote = note;
+      activeNote = note2;
       activeModal = modal;
-      note.classList.add("cm-board-note--hidden");
+      note2.classList.add("cm-board-note--hidden");
       requestAnimationFrame(() => {
         backdrop.classList.add("visible");
         modal.classList.add("visible");
@@ -6890,11 +6890,11 @@
       if (!activeNote || !activeModal || isAnimating)
         return;
       isAnimating = true;
-      const note = activeNote;
+      const note2 = activeNote;
       const modal = activeModal;
       modal.classList.remove("visible");
       backdrop.classList.remove("visible");
-      note.classList.remove("cm-board-note--hidden");
+      note2.classList.remove("cm-board-note--hidden");
       document.body.classList.remove("cm-zoom-open");
       setTimeout(() => {
         modal.remove();
@@ -6903,13 +6903,13 @@
         isAnimating = false;
       }, DURATION);
     };
-    root.querySelectorAll(".cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)").forEach((note) => {
-      note.addEventListener("click", (e) => {
+    root.querySelectorAll(".cm-board-note:not(.cm-board-note--official):not(.cm-board-modal-note)").forEach((note2) => {
+      note2.addEventListener("click", (e) => {
         e.stopPropagation();
         if (isAnimating)
           return;
         if (!activeNote)
-          expand(note);
+          expand(note2);
       });
     });
     backdrop.addEventListener("click", collapse);
@@ -14822,6 +14822,270 @@ END:VEVENT`
     });
   }
 
+  // src/core/dev-code.js
+  var CODE_SALT = "cstl-dev-lock-2026-07";
+  var CODE_ITERATIONS = 2e5;
+  function normalizeDevCode(raw) {
+    return String(raw || "").trim().replace(/\s+/g, " ").toLowerCase();
+  }
+  function hex(buf) {
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function devCodeHash(raw) {
+    if (typeof crypto === "undefined" || !crypto.subtle)
+      return null;
+    const enc = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      "raw",
+      enc.encode(normalizeDevCode(raw)),
+      "PBKDF2",
+      false,
+      ["deriveBits"]
+    );
+    const bits = await crypto.subtle.deriveBits(
+      { name: "PBKDF2", salt: enc.encode(CODE_SALT), iterations: CODE_ITERATIONS, hash: "SHA-256" },
+      key,
+      256
+    );
+    return hex(bits);
+  }
+
+  // src/core/dev-lock.js
+  var DEV_LOCK = true;
+  var ALLOWED_CODE_PBKDF2 = [
+    // Код, який Вова видає розробникам (30.07). Регістр не має значення — нормалізація
+    // зводить усе до нижнього, тож набирати можна як завгодно.
+    // 🛑 САМ КОД ТУТ НЕ ПИШЕТЬСЯ. Ні в коментарі, ні поруч — інакше весь сенс хешування
+    // зникає (репозиторій публічний). Цю помилку я вже зробив один раз у першій версії
+    // цього рядка; сторож `tests/dev-lock.mjs` тепер її ловить механічно.
+    // ⚠️ ЧЕСНО ПРО МІЦНІСТЬ чинного коду: він короткий і словниковий (9 символів після
+    // нормалізації). Хеш лежить у публічному `bundle.js`, а словникові слова є в кожному
+    // списку паролів — охочий із інструментами розробника відкриє його швидко. Для задачі
+    // «щоб жителі не ходили по недоробленому» цього достатньо; Вові сказано прямо,
+    // рішення його. Міцніше — заміна хеша одним рядком:
+    //   node tests/tools/dev-code-hash.mjs 'новий-довгий-код'
+    "d9c968e8a6c7813633ab2bf0f62ebd810a1fb8ccfded51717c318d5df59f8fb3"
+  ];
+  var ALLOWED_EMAIL_SHA256 = [
+    "432d8626c4bc43cfa9004246681f3260f0ebca8448313f225238670fd1b69379",
+    // головна пошта Вови
+    "90507d9874c00f2208cbd84bb9391255f1e8ead2c1f6567b6ed8415eadeddece"
+    // другорядна пошта Вови
+  ];
+  var DEVICE_KEY = "cstl_dev_ok";
+  var TRIES_KEY = "cstl_dev_tries";
+  var TRIES_FREE = 5;
+  var PAUSE_BASE = 3e4;
+  var PAUSE_MAX = 3e5;
+  var _gate = null;
+  var _resolve = null;
+  function isLocalHost() {
+    const h = location.hostname;
+    return h === "localhost" || h === "127.0.0.1" || h === "[::1]" || h === "::1";
+  }
+  function hex2(buf) {
+    return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("");
+  }
+  async function sha256Hex(str) {
+    if (!crypto || !crypto.subtle)
+      return null;
+    return hex2(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(str)));
+  }
+  async function codeAllowed(raw) {
+    if (!normalizeDevCode(raw) || !ALLOWED_CODE_PBKDF2.length)
+      return false;
+    const h = await devCodeHash(raw);
+    return !!h && ALLOWED_CODE_PBKDF2.includes(h);
+  }
+  async function emailAllowed(email) {
+    if (!email)
+      return false;
+    const h = await sha256Hex(String(email).trim().toLowerCase());
+    return !!h && ALLOWED_EMAIL_SHA256.includes(h);
+  }
+  function triesState() {
+    try {
+      return JSON.parse(localStorage.getItem(TRIES_KEY) || "{}") || {};
+    } catch {
+      return {};
+    }
+  }
+  function pauseLeft() {
+    const { until } = triesState();
+    return until && until > Date.now() ? Math.ceil((until - Date.now()) / 1e3) : 0;
+  }
+  function noteWrongTry() {
+    const st = triesState();
+    const n = (st.n || 0) + 1;
+    const over = n - TRIES_FREE;
+    const until = over > 0 ? Date.now() + Math.min(PAUSE_BASE * Math.pow(2, over - 1), PAUSE_MAX) : 0;
+    try {
+      localStorage.setItem(TRIES_KEY, JSON.stringify({ n, until }));
+    } catch (_) {
+    }
+    return pauseLeft();
+  }
+  function clearTries() {
+    try {
+      localStorage.removeItem(TRIES_KEY);
+    } catch (_) {
+    }
+  }
+  function buildGate() {
+    const el = document.createElement("div");
+    el.className = "dev-lock";
+    el.setAttribute("role", "dialog");
+    el.setAttribute("aria-modal", "true");
+    el.innerHTML = `
+    <div class="dev-lock-bg" aria-hidden="true"></div>
+    <div class="dev-lock-in">
+      <img class="dev-lock-logo" src="./logo.png" alt="">
+      <div class="dev-lock-brand">CSTL LIFE</div>
+      <h1 class="dev-lock-title">\u0419\u0434\u0443\u0442\u044C \u0442\u0435\u0445\u043D\u0456\u0447\u043D\u0456 \u0440\u043E\u0437\u0440\u043E\u0431\u043A\u0438</h1>
+      <p class="dev-lock-text">\u041C\u0438 \u0449\u0435 \u0437\u0431\u0438\u0440\u0430\u0454\u043C\u043E \u0434\u043E\u0434\u0430\u0442\u043E\u043A \u0434\u043B\u044F \u041E\u043B\u0438\u043A\u0438.
+        \u0421\u043A\u043E\u0440\u043E \u0432\u0456\u0434\u043A\u0440\u0438\u0454\u043C\u043E \u0434\u043B\u044F \u0432\u0441\u0456\u0445 \u2014 \u0437\u0430\u0432\u0456\u0442\u0430\u0439 \u0442\u0440\u043E\u0445\u0438 \u043F\u0456\u0437\u043D\u0456\u0448\u0435.</p>
+      <form class="dev-lock-form" data-dl-form novalidate>
+        <label class="dev-lock-label" for="dl-code">\u041A\u043E\u0434 \u0434\u043B\u044F \u0440\u043E\u0437\u0440\u043E\u0431\u043D\u0438\u043A\u0456\u0432</label>
+        <div class="dev-lock-row">
+          <input class="dev-lock-input" id="dl-code" name="code" type="text"
+                 inputmode="text" autocomplete="off" autocapitalize="off"
+                 autocorrect="off" spellcheck="false" placeholder="\u0412\u0432\u0435\u0434\u0456\u0442\u044C \u043A\u043E\u0434"
+                 aria-describedby="dl-note">
+          <button class="dev-lock-btn" type="submit" data-dl-submit>\u0423\u0432\u0456\u0439\u0442\u0438</button>
+        </div>
+      </form>
+      <p class="dev-lock-note" id="dl-note" data-dl-note role="status" aria-live="polite" hidden></p>
+      <button class="dev-lock-link" type="button" data-dl-login>\u042F \u0432\u043B\u0430\u0441\u043D\u0438\u043A \u2014 \u0443\u0432\u0456\u0439\u0442\u0438 \u0447\u0435\u0440\u0435\u0437 Google</button>
+    </div>`;
+    el.querySelector("[data-dl-login]").addEventListener("click", () => signInWithGoogle());
+    el.querySelector("[data-dl-form]").addEventListener("submit", onSubmitCode);
+    return el;
+  }
+  function note(text, kind) {
+    if (!_gate)
+      return;
+    const n = _gate.querySelector("[data-dl-note]");
+    if (!n)
+      return;
+    n.textContent = text || "";
+    n.hidden = !text;
+    n.classList.toggle("dev-lock-note--bad", kind === "bad");
+  }
+  async function onSubmitCode(e) {
+    e.preventDefault();
+    if (!_gate)
+      return;
+    const input = _gate.querySelector(".dev-lock-input");
+    const btn = _gate.querySelector("[data-dl-submit]");
+    const left = pauseLeft();
+    if (left) {
+      note(`\u0417\u0430\u043D\u0430\u0434\u0442\u043E \u0431\u0430\u0433\u0430\u0442\u043E \u0441\u043F\u0440\u043E\u0431. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0447\u0435\u0440\u0435\u0437 ${left} \u0441.`, "bad");
+      return;
+    }
+    if (!normalizeDevCode(input && input.value)) {
+      note("\u0412\u0432\u0435\u0434\u0438 \u043A\u043E\u0434.", "bad");
+      return;
+    }
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = "\u041F\u0435\u0440\u0435\u0432\u0456\u0440\u044F\u044E\u2026";
+    }
+    note("");
+    const okCode = await codeAllowed(input.value);
+    if (btn) {
+      btn.disabled = false;
+      btn.textContent = "\u0423\u0432\u0456\u0439\u0442\u0438";
+    }
+    if (okCode) {
+      clearTries();
+      unlock("code");
+      return;
+    }
+    const pause = noteWrongTry();
+    note(pause ? `\u041A\u043E\u0434 \u043D\u0435 \u0442\u043E\u0439. \u0421\u043F\u0440\u043E\u0431\u0443\u0439 \u0447\u0435\u0440\u0435\u0437 ${pause} \u0441.` : "\u041A\u043E\u0434 \u043D\u0435 \u0442\u043E\u0439.", "bad");
+    if (_gate)
+      _gate.querySelector(".dev-lock-in").classList.add("dev-lock-in--shake");
+    setTimeout(() => {
+      const box = _gate && _gate.querySelector(".dev-lock-in");
+      if (box)
+        box.classList.remove("dev-lock-in--shake");
+    }, 420);
+  }
+  function showGate() {
+    if (_gate)
+      return;
+    _gate = buildGate();
+    document.body.appendChild(_gate);
+    document.body.classList.add("dev-locked");
+    const splash = document.getElementById("splash");
+    if (splash)
+      splash.remove();
+  }
+  function hideGate() {
+    document.body.classList.remove("dev-locked");
+    if (!_gate)
+      return;
+    _gate.remove();
+    _gate = null;
+  }
+  function unlock(door) {
+    try {
+      localStorage.setItem(DEVICE_KEY, door);
+    } catch (_) {
+    }
+    hideGate();
+    if (_resolve) {
+      const r = _resolve;
+      _resolve = null;
+      r(true);
+    }
+  }
+  function showEmailDenied(email) {
+    if (!_gate)
+      return;
+    note(`${email} \u2014 \u0446\u044F \u043F\u043E\u0448\u0442\u0430 \u043F\u043E\u043A\u0438 \u0431\u0435\u0437 \u0434\u043E\u0441\u0442\u0443\u043F\u0443. \u041F\u043E\u0442\u0440\u0456\u0431\u0435\u043D \u043A\u043E\u0434 \u0440\u043E\u0437\u0440\u043E\u0431\u043D\u0438\u043A\u0430.`, "bad");
+    const btn = _gate.querySelector("[data-dl-login]");
+    if (!btn)
+      return;
+    btn.textContent = "\u0412\u0438\u0439\u0442\u0438 \u0437 \u0430\u043A\u0430\u0443\u043D\u0442\u0430";
+    btn.replaceWith(btn.cloneNode(true));
+    _gate.querySelector("[data-dl-login]").addEventListener("click", async () => {
+      await signOut();
+      location.reload();
+    });
+  }
+  async function passDevLock() {
+    if (!DEV_LOCK || isLocalHost())
+      return true;
+    const door = localStorage.getItem(DEVICE_KEY);
+    if (door === "code" || door === "email" || door === "1") {
+      if (door !== "code") {
+        onAuthChange(async (user) => {
+          if (!user)
+            return;
+          if (!await emailAllowed(user.email))
+            localStorage.removeItem(DEVICE_KEY);
+        });
+      }
+      return true;
+    }
+    showGate();
+    const check = async (user) => {
+      const email = user && user.email;
+      if (await emailAllowed(email)) {
+        unlock("email");
+        return;
+      }
+      if (email)
+        showEmailDenied(email);
+    };
+    onAuthChange(check);
+    check(currentUser());
+    return new Promise((resolve) => {
+      _resolve = resolve;
+    });
+  }
+
   // src/core/legal.js
   var LEGAL_UPDATED = "07.07.2026";
   var CONTACT = "olykacastle@gmail.com";
@@ -15342,8 +15606,8 @@ END:VEVENT`
         openGrp(g.id);
         return;
       }
-      const note = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
-      if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note}`))
+      const note2 = g.requires_approval ? "\n\n\u041F\u0456\u0441\u043B\u044F \u0432\u0441\u0442\u0443\u043F\u0443 \u0430\u0434\u043C\u0456\u043D \u043C\u0430\u0454 \u0432\u0430\u0441 \u0441\u0445\u0432\u0430\u043B\u0438\u0442\u0438." : "";
+      if (!confirm(`\u041F\u0440\u0438\u0454\u0434\u043D\u0430\u0442\u0438\u0441\u044C \u0434\u043E \xAB${g.name}\xBB? (${g.members} \u0443\u0447\u0430\u0441\u043D.)${note2}`))
         return;
       const r = await joinGroupByToken(token);
       if (r.ok && r.status === "member") {
@@ -15878,9 +16142,11 @@ END:VEVENT`
     else if (source === "news")
       openArticleById(n);
   }
-  function init() {
+  async function init() {
     bootApp();
     initAuth();
+    if (!await passDevLock())
+      return;
     initAccountUI();
     initSidebar();
     initConsent();

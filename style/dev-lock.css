@@ -1,0 +1,186 @@
+/* style/dev-lock.css — ЗАСЛІНКА РОЗРОБКИ (dev lock).
+   Логіка — `src/core/dev-lock.js`, там же причина і межі рішення.
+
+   🆕 30.07, друга версія (Вова): «сторінка буде заблюрена, закрита, буде писати що
+   йдуть технічні розробки. Знизу буде поле, типу коду для розробника.»
+
+   ЩО ІМЕННО РОЗМИТЕ — і чому саме так. Розмите ФОТО ОЛИКИ (те саме, що в шапці
+   Громади), а не справжній застосунок. Причина не косметична: щоб розмити застосунок,
+   його треба спершу ПОБУДУВАТИ і завантажити дані — і тоді замок перетворився б на
+   картинку, яку прибирають одним рядком у devtools, а вміст лежав би готовий під нею.
+   Вигляд «за склом видно, що там щось є» той самий, ціна — нульова.
+
+   ГЕОМЕТРІЯ (iPhone 13/14, 390×844):
+     .dev-lock      — fixed inset:0, тобто рівно 390×844, незалежно від вмісту;
+     .dev-lock-bg   — те саме фото на весь екран, blur(18px) + scale(1.08).
+                      ⚠️ scale ОБОВʼЯЗКОВИЙ: `filter: blur` розмиває і КРАЙ картинки,
+                      тому без збільшення по контуру екрана лягла б світла кайма;
+     .dev-lock-in   — скляна картка: ширина 100% від 390 − 2×20 padding = 350px,
+                      обмежена max-width 340px → фактично 340px, по 25px полів;
+     поле + кнопка  — один рядок flex: кнопка фіксовані 104px, поле забирає решту
+                      340 − 2×18 (padding картки) − 104 − 8 (щілина) = 132px.
+                      Обидва 48px висоти (мінімум Apple HIG 44px + запас). */
+
+.dev-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;              /* вище за #splash (9999) — заслінка ніколи не під ним */
+  background: #3A1A1F;         /* тон, у який іде фото під затемненням — видно до завантаження */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 20px calc(24px + env(safe-area-inset-bottom));
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;            /* обрізає збільшене фото фону */
+}
+
+/* ── Розмитий фон ────────────────────────────────────────────────────────────
+   Затемнення (два градієнти) кладемо ПОВЕРХ фото в тому самому шарі, щоб не
+   плодити ще один вузол: інакше світлі ділянки фото не давали б білому тексту
+   потрібного контрасту. */
+.dev-lock-bg {
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(rgba(32, 14, 18, 0.62), rgba(32, 14, 18, 0.78)),
+    url('../photos/olyka.day-1.jpg') center / cover no-repeat;
+  filter: blur(18px);
+  transform: scale(1.08);      /* див. попередження про кайму в шапці файлу */
+  pointer-events: none;
+}
+
+/* ── Скляна картка ──────────────────────────────────────────────────────────── */
+.dev-lock-in {
+  position: relative;          /* над фоном */
+  width: 100%;
+  max-width: 340px;
+  padding: 26px 18px 20px;
+  border-radius: 22px;
+  text-align: center;
+  color: #fff;
+  background: rgba(20, 9, 11, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.40);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
+  backdrop-filter: blur(10px) saturate(1.1);
+}
+.dev-lock-logo {
+  width: 84px; height: 84px;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 18px rgba(0, 0, 0, 0.45));
+}
+.dev-lock-brand {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: 1.4px;
+  margin: 4px 0 18px;
+}
+.dev-lock-title {
+  font-size: 18px;
+  font-weight: 800;
+  margin: 0 0 8px;
+}
+.dev-lock-text {
+  font-size: 14px;
+  line-height: 1.5;
+  /* 0.80 непрозорості на темному тлі — читабельно, але не сперечається із
+     заголовком. Нижче не опускаю: на сонці почне зникати. */
+  color: rgba(255, 255, 255, 0.80);
+  margin: 0 0 20px;
+}
+
+/* ── Поле коду ─────────────────────────────────────────────────────────────── */
+.dev-lock-form { margin: 0; }
+.dev-lock-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.60);
+  text-align: left;
+  margin-bottom: 7px;
+}
+.dev-lock-row { display: flex; gap: 8px; }
+.dev-lock-input {
+  flex: 1;
+  min-width: 0;                /* без цього flex-елемент з полем не стискається */
+  height: 48px;
+  padding: 0 13px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.26);
+  background: rgba(255, 255, 255, 0.10);
+  color: #fff;
+  /* 16px — не менше: на iOS менший шрифт у полі змушує Safari масштабувати
+     сторінку при фокусі, і екран «стрибає». */
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.4px;
+}
+.dev-lock-input::placeholder { color: rgba(255, 255, 255, 0.42); font-weight: 500; }
+.dev-lock-input:focus {
+  outline: none;
+  border-color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.16);
+}
+.dev-lock-btn {
+  flex: none;
+  width: 104px;
+  height: 48px;
+  border: none;
+  border-radius: 12px;
+  background: #fff;
+  color: var(--red);
+  font-size: 15px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease, opacity 0.15s ease;
+}
+.dev-lock-btn:active { transform: scale(0.96); background: #F1E6E8; }
+.dev-lock-btn:disabled { opacity: 0.55; cursor: default; transform: none; }
+
+/* Повідомлення під полем: підказка або помилка (один вузол, різний колір —
+   як `.toast` / `.toast--error`, щоб не заводити другий компонент). */
+.dev-lock-note {
+  font-size: 13px;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.78);
+  margin: 12px 0 0;
+  overflow-wrap: break-word;   /* довга пошта не розпирає картку вбік */
+}
+.dev-lock-note--bad { color: #FFC9CF; }
+
+/* Запасний шлях для власника — навмисно тихий: це не головна дія екрана. */
+.dev-lock-link {
+  display: block;
+  width: 100%;
+  margin: 16px 0 0;
+  padding: 10px 4px;           /* + рядок 20px = 40px зони тапу */
+  border: none;
+  background: none;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.dev-lock-link:active { color: #fff; }
+
+/* Хибний код — коротке горизонтальне тремтіння (±6px). Не колір і не текст, бо
+   палець у цей момент дивиться на поле, а не читає. */
+@keyframes dev-lock-shake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-6px); }
+  40% { transform: translateX(6px); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+.dev-lock-in--shake { animation: dev-lock-shake 0.4s ease; }
+/* Повага до системного «менше руху» (iOS Налаштування → Доступність). */
+@media (prefers-reduced-motion: reduce) {
+  .dev-lock-in--shake { animation: none; }
+}
+
+/* Поки заслінка на екрані — сторінка під нею не прокручується.
+   Клас знімається у `hideGate()`. */
+body.dev-locked { overflow: hidden; }
