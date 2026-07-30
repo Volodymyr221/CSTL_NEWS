@@ -255,7 +255,28 @@
   }
   function toastShow(item) {
     const t = toastNode();
-    t.textContent = item.msg;
+    const act = item.action;
+    if (act && act.label && typeof act.onClick === "function") {
+      t.textContent = "";
+      const span = document.createElement("span");
+      span.className = "toast-text";
+      span.textContent = item.msg;
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "toast-action";
+      btn.textContent = act.label;
+      btn.addEventListener("click", () => {
+        try {
+          act.onClick();
+        } catch (_) {
+        }
+        toastHide();
+      });
+      t.append(span, btn);
+    } else {
+      t.textContent = item.msg;
+    }
+    t.classList.toggle("toast--action", !!(act && act.label));
     t.classList.toggle("toast--error", item.type === "error");
     toastCurrent = item.msg;
     toastShownAt = Date.now();
@@ -273,11 +294,11 @@
         toastShow(next);
     }, TOAST_FADE);
   }
-  function showToast(msg, duration = 0, type = "") {
+  function showToast(msg, duration = 0, type = "", action = null) {
     const text = String(msg ?? "").trim();
     if (!text)
       return;
-    const item = { msg: text, ms: toastDuration(text, duration), type };
+    const item = { msg: text, ms: toastDuration(text, duration), type, action };
     if (!toastCurrent) {
       toastShow(item);
       return;
@@ -4229,7 +4250,34 @@
         }
         const del = e.target.closest("[data-delete]");
         if (del) {
-          applyConvState(del.dataset.delete, { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+          const key = del.dataset.delete;
+          const conv2 = conversationsAll().find((c) => c.key === key);
+          const ids = conv2 ? conv2.threads.map((t) => t.id) : [];
+          const snap = new Map(ids.map((id) => [id, { ...states.get(id) || {} }]));
+          const name = conv2?.otherName || "";
+          applyConvState(key, { hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+          showToast(`\u0420\u043E\u0437\u043C\u043E\u0432\u0443${name ? " \u0437 " + name : ""} \u0432\u0438\u0434\u0430\u043B\u0435\u043D\u043E`, 6e3, "", {
+            label: "\u0421\u043A\u0430\u0441\u0443\u0432\u0430\u0442\u0438",
+            onClick: async () => {
+              for (const id of ids)
+                states.set(id, snap.get(id) || {});
+              renderThreads();
+              const res = await Promise.all(ids.map((id) => {
+                const m = snap.get(id) || {};
+                return setThreadState(me, id, {
+                  archived: !!m.archived,
+                  hidden: !!m.hidden,
+                  cleared_at: m.cleared_at || null
+                });
+              }));
+              if (res.some((r) => !r.ok)) {
+                for (const id of ids)
+                  states.set(id, { ...snap.get(id) || {}, hidden: true, cleared_at: (/* @__PURE__ */ new Date()).toISOString() });
+                renderThreads();
+                showToast("\u041D\u0435 \u0432\u0434\u0430\u043B\u043E\u0441\u044F \u0432\u0456\u0434\u043D\u043E\u0432\u0438\u0442\u0438 \u0440\u043E\u0437\u043C\u043E\u0432\u0443", 4e3, "error");
+              }
+            }
+          });
           return;
         }
         const btn = e.target.closest("[data-thread]");

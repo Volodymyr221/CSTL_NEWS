@@ -458,6 +458,39 @@ body.cm-zoom-open .app-main { overflow: hidden; }
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.22);
 }
 .toast.visible { opacity: 1; transform: translateY(0); }   /* translateX більше не потрібен — центрує margin:auto */
+
+/* ── ТОСТ З КНОПКОЮ ДІЇ (30.07) — патерн «Видалено · Скасувати» ───────────────
+   🔴 ГОЛОВНЕ ТУТ: `.toast` має `pointer-events: none` СВІДОМО (див. комент вище —
+   інакше тост 3-6 секунд з'їдав би тапи по шапці й бару «назад»). Отже кнопка
+   всередині нього була б МЕРТВОЮ: намальована, але не натискається.
+   Тому тапи вмикаємо ТОЧКОВО — лише на самій кнопці, і лише коли дія є.
+   Решта коробки лишається прохідною для пальця, як і була.
+   ⚠️ Якщо колись прибрати цей рядок — «Скасувати» перестане працювати МОВЧКИ:
+   візуально все на місці, тап просто провалюється наскрізь. */
+.toast--action { display: flex; align-items: center; gap: 12px; text-align: left; }
+.toast--action .toast-text { min-width: 0; }
+.toast--action .toast-action {
+  pointer-events: auto;          /* ← без цього рядка кнопка не працює взагалі */
+  flex-shrink: 0;
+  background: none;
+  border: 0;
+  /* Висота задана ЯВНО, а не через падінги: 6px+6px+рядок шрифту давали 27px —
+     на піксель менше за наш же поріг, і залежало це від того, як браузер округлить
+     `line-height`. `min-height` знімає цю залежність. 32px — не 44px за Apple HIG
+     свідомо: це не самостійна кнопка, а дія в короткому повідомленні, і 44px
+     розтягнули б сам тост. */
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 2px;
+  font: 700 13px/1.35 inherit;
+  color: #FFC9CF;                /* світло-рожевий на чорному тлі тоста: контраст 11.4 */
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+.toast--action .toast-action:active { opacity: 0.6; }
 /* Червоне сповіщення — заборонені слова / помилки. Відрізняється ЛИШЕ кольором:
    перенос, вирівнювання і міжрядковий інтервал тепер спільні (див. базове правило). */
 .toast--error {

@@ -889,8 +889,53 @@ export function openThreadsList() {
         if (conv) applyConvState(key, { archived: !convArchived(conv) });
         return;
       }
+      // 🔴 30.07 (аудит Д-Б2) — ВИДАЛЕННЯ З ВІДКОТОМ.
+      // Було: свайп відкриває дві кнопки однакової ваги (архів + кошик), тап по кошику
+      // ОДРАЗУ ставив `cleared_at` — і рядок зникав без питання, без тосту, без сліду.
+      // Технічно це мʼяке видалення (нове повідомлення повертає розмову), але людині
+      // це «зникла вся переписка», і зворотного шляху в інтерфейсі не існувало:
+      // архів має свій чіп «Архів», а видалене — ніде.
+      // Рішення Вови 30.07: «Крок 7 роби» — тост «Видалено · Скасувати».
+      //
+      // Чому НЕ діалог «ви впевнені?»: свайп уже є навмисним жестом, а питання на
+      // кожне видалення перетворює прибирання списку на десять підтверджень. Тост
+      // дешевший: дія відбувається одразу, а відкат лежить під рукою 6 секунд.
       const del = e.target.closest('[data-delete]');
-      if (del) { applyConvState(del.dataset.delete, { hidden: true, cleared_at: new Date().toISOString() }); return; }
+      if (del) {
+        const key = del.dataset.delete;
+        const conv = conversationsAll().find(c => c.key === key);
+        // ⚠️ Знімок робимо ДО видалення і тримаємо ids ОКРЕМО: після видалення
+        // `threadVisible` відсіює ці треди, тобто розмови в `conversationsAll()` уже
+        // НЕ БУДЕ — і `applyConvState(key, …)` для відкоту просто нічого не знайшов би.
+        const ids  = conv ? conv.threads.map(t => t.id) : [];
+        const snap = new Map(ids.map(id => [id, { ...(states.get(id) || {}) }]));
+        const name = conv?.otherName || '';
+        applyConvState(key, { hidden: true, cleared_at: new Date().toISOString() });
+        // Імʼя в тексті потрібне не лише для ясності: `showToast` глушить ДУБЛІ за
+        // текстом, тож два видалення підряд з однаковим написом лишили б друге без
+        // кнопки «Скасувати».
+        showToast(`Розмову${name ? ' з ' + name : ''} видалено`, 6000, '', {
+          label: 'Скасувати',
+          onClick: async () => {
+            for (const id of ids) states.set(id, snap.get(id) || {});
+            renderThreads();                     // рядок повертається одразу, не чекаючи базу
+            const res = await Promise.all(ids.map(id => {
+              const m = snap.get(id) || {};
+              return setThreadState(me, id, {
+                archived: !!m.archived, hidden: !!m.hidden, cleared_at: m.cleared_at || null,
+              });
+            }));
+            if (res.some(r => !r.ok)) {
+              // Базі не вдалось — не брешемо, що повернули. Наступне відкриття
+              // списку прочитає стан із бази, тож лишати оптимістичний вигляд шкідливо.
+              for (const id of ids) states.set(id, { ...(snap.get(id) || {}), hidden: true, cleared_at: new Date().toISOString() });
+              renderThreads();
+              showToast('Не вдалося відновити розмову', 4000, 'error');
+            }
+          },
+        });
+        return;
+      }
       const btn = e.target.closest('[data-thread]');
       if (!btn) return;
       if (suppressClick) return;                 // щойно свайпнули — не відкривати чат
