@@ -238,7 +238,34 @@ ok('усі записи списку кодів — хеші по 64 hex-сим�
    `записів ${codeQuoted.length}, з них правильних хешів ${codeHashes.length}`);
 if (!codeHashes.length) {
   console.log('⚠️  СПИСОК КОДІВ ПОРОЖНІЙ — двері «код» зачинені, працює лише пошта власника.');
-  console.log('   Порахувати хеш: node tests/tools/dev-code-hash.mjs \'код\'');
+  console.log('   Порадити хеш: node tests/tools/dev-code-hash.mjs \'код\'');
+}
+
+// ── 4.5 🔴 САМ КОД НЕ НАПИСАНИЙ ПОРУЧ ІЗ ВЛАСНИМ ХЕШЕМ ──────────────────────
+// Ця перевірка існує через справжню помилку: разом із хешем я вписав у КОМЕНТАРІЙ і
+// сам код відкритим текстом («регістр не має значення, тож …»). Хешування після цього
+// не означало нічого — репозиторій публічний. Перевірка №4 цього не бачила, бо
+// навмисно ВІДРІЗАЄ коментарі перед підрахунком.
+// Тому: беремо кожне слово з коментарів усередині блоку `ALLOWED_CODE_PBKDF2`,
+// проганяємо через СПРАВЖНІЙ `devCodeHash` і порівнюємо зі списком. Якщо якесь слово
+// дає хеш зі списку — код лежить поруч зі своїм замком, і стенд це кричить.
+// ⚠️ Слів тут одиниці, а PBKDF2 повільний (200 000 повторів ≈ 0.15с на слово) —
+// саме тому перевіряємо ЛИШЕ цей блок, а не весь файл.
+if (codeHashes.length) {
+  const words = [...new Set((rawCodes.match(/[^\s'"\/*,;:()«»]{4,}/g) || [])
+    .filter(w => !/^[0-9a-f]{64}$/.test(w)))];        // самі хеші не перевіряємо
+  const ctx45 = await browser.newContext();
+  const pg45 = await ctx45.newPage();
+  await pg45.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'domcontentloaded' });
+  const leaked = await pg45.evaluate(async ([base, list, cands]) => {
+    const m = await import(base + '/src/core/dev-code.js');
+    const bad = [];
+    for (const w of cands) if (list.includes(await m.devCodeHash(w))) bad.push(w);
+    return bad;
+  }, [url, codeHashes.map(h => h.replace(/'/g, '')), words]);
+  await ctx45.close();
+  ok('сам код НЕ написаний у коментарях поруч із хешем', leaked.length === 0,
+     leaked.length ? `ВІДКРИТИЙ КОД У РЕПОЗИТОРІЇ: ${leaked.join(', ')}` : `перевірено слів: ${words.length}`);
 }
 
 // ── 5. 🔴 БРАУЗЕР І ТЕРМІНАЛ МУСЯТЬ ДАВАТИ ОДИН І ТОЙ САМИЙ ХЕШ ──────────────
