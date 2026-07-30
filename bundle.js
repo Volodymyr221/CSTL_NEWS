@@ -3962,10 +3962,17 @@
           <input class="pm-search-input" id="pm-search" type="search"
                  placeholder="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" aria-label="\u041F\u043E\u0448\u0443\u043A \u043F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u044C" autocomplete="off">
         </div>
-        <div class="pm-chips" id="pm-chips" role="tablist">
-          <button class="pm-chip pm-chip--active" type="button" data-filter="all">\u0423\u0441\u0456</button>
-          <button class="pm-chip" type="button" data-filter="unread">\u041D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0456</button>
-          <button class="pm-chip" type="button" data-filter="archive">\u0410\u0440\u0445\u0456\u0432</button>
+        <!-- 30.07 (\u0430\u0443\u0434\u0438\u0442 \u0414-\u04123): \u0431\u0443\u043B\u043E role=tablist \u0437 \u041D\u0415-\u0442\u0430\u0431\u0430\u043C\u0438. \u0420\u043E\u043B\u044C \u0431\u0435\u0437 \u0432\u0456\u0434\u043F\u043E\u0432\u0456\u0434\u043D\u0438\u0445
+             \u0434\u0456\u0442\u0435\u0439 \u0433\u0456\u0440\u0448\u0430 \u0437\u0430 \u0432\u0456\u0434\u0441\u0443\u0442\u043D\u0456\u0441\u0442\u044C \u0440\u043E\u043B\u0456 \u2014 \u0447\u0438\u0442\u0430\u0447 \u0435\u043A\u0440\u0430\u043D\u0430 \u043E\u0433\u043E\u043B\u043E\u0448\u0443\u0432\u0430\u0432 \xAB\u0441\u043F\u0438\u0441\u043E\u043A \u0432\u043A\u043B\u0430\u0434\u043E\u043A\xBB
+             \u0456 \u043D\u0435 \u0437\u043D\u0430\u0445\u043E\u0434\u0438\u0432 \u0436\u043E\u0434\u043D\u043E\u0457 (\u0434\u0456\u0442\u0438 \u0431\u0443\u043B\u0438 \u0437\u0432\u0438\u0447\u0430\u0439\u043D\u0456 \u043A\u043D\u043E\u043F\u043A\u0438 \u0431\u0435\u0437 role=tab \u0456
+             aria-selected). \u0426\u0435 \u043D\u0435 \u0432\u043A\u043B\u0430\u0434\u043A\u0438, \u0430 \u0424\u0406\u041B\u042C\u0422\u0420\u0418 \u043E\u0434\u043D\u043E\u0433\u043E \u0441\u043F\u0438\u0441\u043A\u0443, \u0442\u043E\u0436 \u043F\u0440\u0430\u0432\u0438\u043B\u044C\u043D\u0430
+             \u043C\u043E\u0434\u0435\u043B\u044C \u2014 \u0433\u0440\u0443\u043F\u0430 \u043A\u043D\u043E\u043F\u043E\u043A-\u043F\u0435\u0440\u0435\u043C\u0438\u043A\u0430\u0447\u0456\u0432 \u0437 aria-pressed.
+             \u26A0\uFE0F \u0417\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0443 \u0446\u044C\u043E\u043C\u0443 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440\u0456 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0442\u0438: \u0432\u0456\u043D \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E
+             \u0440\u044F\u0434\u043A\u0430 \u0456 \u0432\u043E\u043D\u0438 \u0439\u043E\u0433\u043E \u0437\u0430\u043A\u0440\u0438\u0432\u0430\u044E\u0442\u044C (\u0441\u043F\u0456\u0439\u043C\u0430\u0432\u0441\u044F \u043D\u0430 \u0446\u044C\u043E\u043C\u0443 30.07). -->
+        <div class="pm-chips" id="pm-chips" role="group" aria-label="\u0424\u0456\u043B\u044C\u0442\u0440 \u0440\u043E\u0437\u043C\u043E\u0432">
+          <button class="pm-chip pm-chip--active" type="button" data-filter="all" aria-pressed="true">\u0423\u0441\u0456</button>
+          <button class="pm-chip" type="button" data-filter="unread" aria-pressed="false">\u041D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0456</button>
+          <button class="pm-chip" type="button" data-filter="archive" aria-pressed="false">\u0410\u0440\u0445\u0456\u0432</button>
         </div>
         <div class="pm-threads" id="pm-threads"><div class="pm-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div></div>
       </div>
@@ -4081,7 +4088,11 @@
         if (!btn)
           return;
         filter = btn.dataset.filter;
-        chipsEl.querySelectorAll(".pm-chip").forEach((c) => c.classList.toggle("pm-chip--active", c === btn));
+        chipsEl.querySelectorAll(".pm-chip").forEach((c) => {
+          const on = c === btn;
+          c.classList.toggle("pm-chip--active", on);
+          c.setAttribute("aria-pressed", on ? "true" : "false");
+        });
         renderThreads();
       });
       let openRow = null, suppressClick = false;
@@ -6075,16 +6086,16 @@
       return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="disc-create" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
           <span class="board-fab-label">\u0421\u0442\u0432\u043E\u0440\u0438\u0442\u0438 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0431\u0433\u043E\u0432\u043E\u0440\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
@@ -6098,20 +6109,20 @@
     return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="post" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="\u0414\u0456\u0457">
+        <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG2}</span>
         </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">\u041C\u043E\u0457 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="messages" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
           <span class="board-fab-label">\u041F\u043E\u0432\u0456\u0434\u043E\u043C\u043B\u0435\u043D\u043D\u044F<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">${MSG_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">\u0417\u0431\u0435\u0440\u0435\u0436\u0435\u043D\u0456</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
@@ -6459,6 +6470,22 @@
           closeBoardMenus();
       });
       document.querySelector(".app-main")?.addEventListener("scroll", closeBoardMenus, { passive: true });
+      document.addEventListener("keydown", (e) => {
+        if (e.key !== "Escape")
+          return;
+        const f = document.getElementById("board-fab");
+        if (!f?.classList.contains("open"))
+          return;
+        f.classList.remove("open");
+        document.getElementById("board-trigger")?.setAttribute("aria-expanded", "false");
+      });
+      document.querySelector(".app-main")?.addEventListener("scroll", () => {
+        const f = document.getElementById("board-fab");
+        if (!f?.classList.contains("open"))
+          return;
+        f.classList.remove("open");
+        document.getElementById("board-trigger")?.setAttribute("aria-expanded", "false");
+      }, { passive: true });
     }
     el.querySelectorAll(".cm-board-call").forEach((btn) => {
       btn.addEventListener("click", (e) => {

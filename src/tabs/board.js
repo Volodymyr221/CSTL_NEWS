@@ -372,16 +372,16 @@ function renderFab() {
     return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="disc-create" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-create" type="button">
           <span class="board-fab-label">Створити обговорення</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-mine" type="button">
           <span class="board-fab-label">Мої обговорення</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="disc-saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="disc-saved" type="button">
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
@@ -396,20 +396,20 @@ function renderFab() {
   return `
     <div class="board-fab" id="board-fab">
       <div class="board-fab-backdrop" id="board-fab-backdrop" aria-hidden="true"></div>
-      <div class="board-fab-menu" id="board-fab-menu">
-        <button class="board-fab-item" data-fab="post" type="button">
+      <div class="board-fab-menu" id="board-fab-menu" role="menu" aria-label="Дії">
+        <button role="menuitem" class="board-fab-item" data-fab="post" type="button">
           <span class="board-fab-label">Подати оголошення</span>
           <span class="board-fab-ic">${EDIT_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="mine" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="mine" type="button">
           <span class="board-fab-label">Мої оголошення</span>
           <span class="board-fab-ic">${MYADS_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="messages" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="messages" type="button">
           <span class="board-fab-label">Повідомлення<span class="board-fab-msgs-badge" id="board-fab-msgs-badge"></span></span>
           <span class="board-fab-ic">${MSG_ICON_SVG}</span>
         </button>
-        <button class="board-fab-item" data-fab="saved" type="button">
+        <button role="menuitem" class="board-fab-item" data-fab="saved" type="button">
           <span class="board-fab-label">Збережені</span>
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
@@ -858,6 +858,25 @@ function renderAll() {
     });
     document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBoardMenus(); });
     document.querySelector('.app-main')?.addEventListener('scroll', closeBoardMenus, { passive: true });
+    // 🔴 30.07 (аудит Д-В3) — FAB-меню теж закривається по Escape.
+    // Меню фільтрів закривались по кліку повз / Escape / скролу, а FAB-меню — лише
+    // повторним тапом або тапом у затемнення. Нерівність без причини: механіка та сама.
+    // Шукаємо вузол ЩОРАЗУ (`getElementById`), бо `renderAll` перестворює FAB —
+    // збережене посилання вказувало б на викинутий елемент.
+    document.addEventListener('keydown', e => {
+      if (e.key !== 'Escape') return;
+      const f = document.getElementById('board-fab');
+      if (!f?.classList.contains('open')) return;
+      f.classList.remove('open');
+      document.getElementById('board-trigger')?.setAttribute('aria-expanded', 'false');
+    });
+    // Скрол списку закриває FAB-меню — як і меню фільтрів (гортаєш = меню тобі мішає).
+    document.querySelector('.app-main')?.addEventListener('scroll', () => {
+      const f = document.getElementById('board-fab');
+      if (!f?.classList.contains('open')) return;
+      f.classList.remove('open');
+      document.getElementById('board-trigger')?.setAttribute('aria-expanded', 'false');
+    }, { passive: true });
   }
 
   // Кнопки виклика — окремий handler (capture щоб клік не лизнув на стікер)

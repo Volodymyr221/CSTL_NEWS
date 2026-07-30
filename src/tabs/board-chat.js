@@ -650,10 +650,17 @@ export function openThreadsList() {
           <input class="pm-search-input" id="pm-search" type="search"
                  placeholder="Пошук повідомлень" aria-label="Пошук повідомлень" autocomplete="off">
         </div>
-        <div class="pm-chips" id="pm-chips" role="tablist">
-          <button class="pm-chip pm-chip--active" type="button" data-filter="all">Усі</button>
-          <button class="pm-chip" type="button" data-filter="unread">Непрочитані</button>
-          <button class="pm-chip" type="button" data-filter="archive">Архів</button>
+        <!-- 30.07 (аудит Д-В3): було role=tablist з НЕ-табами. Роль без відповідних
+             дітей гірша за відсутність ролі — читач екрана оголошував «список вкладок»
+             і не знаходив жодної (діти були звичайні кнопки без role=tab і
+             aria-selected). Це не вкладки, а ФІЛЬТРИ одного списку, тож правильна
+             модель — група кнопок-перемикачів з aria-pressed.
+             ⚠️ Зворотних лапок у цьому коментарі НЕ ставити: він усередині шаблонного
+             рядка і вони його закривають (спіймався на цьому 30.07). -->
+        <div class="pm-chips" id="pm-chips" role="group" aria-label="Фільтр розмов">
+          <button class="pm-chip pm-chip--active" type="button" data-filter="all" aria-pressed="true">Усі</button>
+          <button class="pm-chip" type="button" data-filter="unread" aria-pressed="false">Непрочитані</button>
+          <button class="pm-chip" type="button" data-filter="archive" aria-pressed="false">Архів</button>
         </div>
         <div class="pm-threads" id="pm-threads"><div class="pm-loading">Завантаження…</div></div>
       </div>
@@ -796,7 +803,11 @@ export function openThreadsList() {
       const btn = e.target.closest('[data-filter]');
       if (!btn) return;
       filter = btn.dataset.filter;
-      chipsEl.querySelectorAll('.pm-chip').forEach(c => c.classList.toggle('pm-chip--active', c === btn));
+      chipsEl.querySelectorAll('.pm-chip').forEach(c => {
+        const on = c === btn;
+        c.classList.toggle('pm-chip--active', on);
+        c.setAttribute('aria-pressed', on ? 'true' : 'false');   // 30.07: стан і для читача екрана
+      });
       renderThreads();
     });
     // Свайп-вліво по картці розмови → виїжджають дві дії (архів + видалити) ззаду.
