@@ -2119,12 +2119,24 @@ textarea.cm-board-input.bm-invalid {
   display: none;
 }
 /* Лічильник непрочитаних у пункті «Повідомлення» FAB-меню (число ставить refreshUnreadBadge) */
+/* 🔴 30.07 — НАКЛАДКА НА КУТОК КРУЖЕЧКА, а не число в плашці.
+   Вова: «коли приходить повідомлення, біля повідомлення вкладки зʼявляється N
+   кількість чатів і розширює кнопку саму, треба зробити як накладку на кут кнопки».
+   Було: бейдж лежав УСЕРЕДИНІ `.board-fab-label` з `margin-left: 6px`, а в плашки
+   `white-space: nowrap` — тобто кожне нове повідомлення робило пункт меню ШИРШИМ,
+   і меню «дихало» від стану. Тепер число висить над кружечком і на розкладку не
+   впливає взагалі.
+   ⚠️ Геометрія дзеркалить `.board-trigger-badge` (головна кнопка FAB) — щоб два
+   бейджі в одному меню виглядали одним прийомом, а не двома різними. Розмір трохи
+   менший (16 проти 18), бо кружечок пункту 46px проти 56px у кнопки. */
 .board-fab-msgs-badge {
   display: none;
-  margin-left: 6px;
+  position: absolute;
+  top: -4px; right: -4px;
   min-width: 16px; height: 16px; padding: 0 4px;
   border-radius: 8px; background: var(--red, #722F37); color: #fff;
   font-size: 10px; font-weight: 700; line-height: 16px; text-align: center;
+  border: 2px solid var(--board-bg);   /* обідок кольором кружечка — відділяє від його рамки */
   box-sizing: content-box;
 }
 
@@ -2208,6 +2220,7 @@ textarea.cm-board-input.bm-invalid {
   white-space: nowrap;
 }
 .board-fab-ic {
+  position: relative;   /* 30.07: система координат для накладки-бейджа (див. `.board-fab-msgs-badge`) */
   width: 46px;
   height: 46px;
   flex-shrink: 0;

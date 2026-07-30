@@ -33,6 +33,8 @@ import {
 import { uploadImageReliable } from '../core/upload.js';   // стиснення+повтор — інакше сире фото падало «Load failed»
 import { COMMUNITY_ALL } from '../core/settlements.js';
 import { openBoardModal } from './community-modal.js';
+// Циклу немає: board-discussions.js НЕ імпортує board-chat.js (звірено 30.07).
+import { unseenDiscussionsCount } from './board-discussions.js';
 import { escapeHtml, showToast, postTime, containsProfanity, openPhotoLightbox } from '../core/utils.js';
 import {
   ACT_ICONS, buildScreen, avatar, clockTime, dayLabel, threadListTime,
@@ -1431,6 +1433,32 @@ const _readThreads = new Set();
 // вхід/вихід, push, realtime, прочитання чату (ці виклики вже були на місці).
 let _unreadChats = 0;
 
+// ── КРАПКА «Є НОВЕ» НА ІКОНЦІ ВКЛАДКИ (30.07) ────────────────────────────────
+// Вова: «треба легеньку позначку біля іконки вкладки, якщо є якесь повідомлення,
+// персональне звернення, відповідь на коментар і тд… бо важко замітити що тобі
+// писали, якщо ти не заходив в дошку».
+//
+// Живе ТУТ, поруч із бейджем, бо джерело для Дошки те саме — `_unreadChats`. Другого
+// місця правди про «є непрочитане» не заводимо.
+// ⚠️ Стрічку свідомо НЕ позначаємо (рішення Вови 30.07: «давай без стрічки»): там
+// дзвіночок це перемикач push-підписки, а не вхідні, тож крапці нікуди вести — вона
+// привчала б себе ігнорувати. Спершу екран «Відповіді», потім позначка.
+function paintTabDot(tab, on) {
+  const dot = document.querySelector(`[data-tab-dot="${tab}"]`);
+  if (!dot) return;
+  if (on) dot.removeAttribute('hidden'); else dot.setAttribute('hidden', '');
+}
+
+// Перемалювати крапки обох вкладок. Без мережі: Дошка — з кешу `_unreadChats`,
+// Обговорення — локальний підрахунок по вже завантажених коментарях.
+export function paintTabDots() {
+  const logged = isLoggedIn();
+  paintTabDot('board', logged && _unreadChats > 0);
+  let disc = 0;
+  try { disc = unseenDiscussionsCount(); } catch (_) { disc = 0; }   // fail-soft: крапка не має валити застосунок
+  paintTabDot('discussions', disc > 0);
+}
+
 // Намалювати бейдж із уже відомого числа. Без мережі. Безпечно кликати на кожен рендер.
 export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
@@ -1442,6 +1470,7 @@ export function paintUnreadBadge() {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
     if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
+    paintTabDots();   // 30.07: і в гілці «нема непрочитаних» — інакше крапка Дошки застигла б
     return;
   }
   const label = chats > 99 ? '99+' : String(chats);
@@ -1456,6 +1485,7 @@ export function paintUnreadBadge() {
   }
   if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
+  paintTabDots();   // 30.07: крапки в таб-барі йдуть тим самим кроком, що й бейджі
 }
 
 // Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
@@ -1554,6 +1584,10 @@ function showChatPushBanner({ title, body, threadId, url }) {
 let _threadsUnsub = null;
 export function initBoardChat() {
   refreshUnreadBadge();
+  // 30.07: крапка вкладки «Обговорення» — джерело подій у board-discussions.js
+  // (прочитали тему / прийшов живий коментар). Слухаємо, бо прямий виклик звідти
+  // дав би коло імпортів.
+  window.addEventListener('cstl-disc-seen', paintTabDots);
   // SW повідомляє про вхідний push (надійніше за realtime, який буває пропускає
   // нові треди між акаунтами): оновлюємо бейдж + сигналимо відкритому списку розмов
   // оновитись наживо (подія 'cstl-chat-refresh') + банер якщо застосунок у фокусі (P-8)

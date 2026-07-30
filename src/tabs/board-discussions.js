@@ -609,7 +609,14 @@ export function closeChatModal(opts = {}) {
   const modal = _chatModalEl;
   const backdrop = document.querySelector('.bd-chat-backdrop');
   // Запам'ятати час перегляду теми → наступного разу роздільник «Нові» стане на цій межі
-  if (_chatOpenPostId != null) setChatSeen(_chatOpenPostId, Date.now());
+  if (_chatOpenPostId != null) {
+    setChatSeen(_chatOpenPostId, Date.now());
+    // 30.07: сказати таб-бару перемалювати крапку — тему прочитано, «нове» зникло.
+    // ПОДІЯ, а не прямий виклик: board-chat.js імпортує цей модуль, тож зворотний
+    // імпорт дав би коло. Той самий патерн, що вже вживають `cstl-posts-changed`
+    // і `cstl-chat-refresh`.
+    window.dispatchEvent(new CustomEvent('cstl-disc-seen'));
+  }
   const bodyEl = modal.querySelector('#bd-chat-modal-body');
   if (bodyEl && _chatScrollHandler) bodyEl.removeEventListener('scroll', _chatScrollHandler);
   _chatScrollHandler = null;
@@ -733,6 +740,40 @@ async function doDiscDelete(c) {
     if (i >= 0 && prev) { l[i] = prev; commentsByPost.set(postId, l); rerenderCommentsBlock(postId); }
     showToast('❌ Не вдалося видалити: ' + (res.error || ''), 4000, 'error');
   }
+}
+
+// ── Скільки обговорень мають НОВЕ для мене (для крапки в таб-барі, 30.07) ─────
+// Вова: «легеньку позначку біля іконки вкладки… бо важко замітити що тобі писали».
+//
+// Рахуємо ЛОКАЛЬНО і без мережі: коментарі всіх тем уже завантажені
+// (`setDiscussionsData` ← `fetchAllComments`), а межа «останній перегляд» лежить у
+// `localStorage` (`getChatSeen`) — той самий механізм, що малює роздільник
+// «Нові повідомлення» в самій темі. Другого джерела правди не заводимо.
+//
+// ⚠️ ЧАС НОРМАЛІЗУЄМО ЯВНО. Коментарі приходять із `created_at` як ISO-РЯДОК
+// (`fetchAllComments` у supabase.js), а `getChatSeen` віддає ЧИСЛО (мс). Пряме
+// `рядок > число` у JS дає `Number(ISO)` = NaN, тобто ЗАВЖДИ false — перевірено:
+//   '2026-07-30T07:00:00.000Z' > Date.now()  →  false
+// 🔴 І це ж порівняння без нормалізації стоїть у `chatMessagesHtml` (рядок ~211,
+// `t > dividerTs`) — тобто роздільник «Нові повідомлення» там, найпевніше, не
+// зʼявляється НІКОЛИ. Я це НЕ чіпаю (HOT_RULES №9 — не лізти в те, про що не
+// просили), але кажу прямо: це окремий баг, чекає слова Вови.
+//
+// Своє повідомлення новим не рахуємо — інакше крапка горіла б від власного тексту.
+function tsMs(v) {
+  if (!v) return 0;
+  return typeof v === 'number' ? v : (new Date(v).getTime() || 0);
+}
+export function unseenDiscussionsCount() {
+  const posts = (_getPosts?.() || []).filter(p => p && p.type === 'chat');
+  let n = 0;
+  for (const p of posts) {
+    const seen = getChatSeen(p.id);
+    if (!seen) continue;   // ніколи не відкривав — не кричимо «нове» про всю історію
+    const fresh = activeComments(p.id).some(c => !isMyComment(c) && tsMs(postTime(c)) > seen);
+    if (fresh) n++;
+  }
+  return n;
 }
 
 // ── Картка теми обговорення ──────────────────────────────────────────────────
@@ -961,7 +1002,11 @@ let _realtimeAttached = false;
 export function attachDiscussionsRealtime() {
   if (_realtimeAttached || !isSupabaseReady()) return;
   _realtimeAttached = true;
-  subscribeComments(onCommentRealtimeEvent);
+  subscribeComments((payload) => {
+    onCommentRealtimeEvent(payload);
+    // 30.07: живий вхідний коментар → перемалювати крапку вкладки (та сама подія).
+    window.dispatchEvent(new CustomEvent('cstl-disc-seen'));
+  });
   subscribeReactions(onReactionRealtimeEvent);
 }
 
