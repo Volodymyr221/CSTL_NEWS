@@ -4052,11 +4052,23 @@
       };
       const autoUnarchiveUnread = async () => {
         const toFix = threads.filter((t) => unread.get(t.id) > 0 && stOf(t.id).archived);
-        for (const t of toFix) {
-          const prev = states.get(t.id) || {};
-          states.set(t.id, { ...prev, archived: false });
-          setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
-        }
+        if (!toFix.length)
+          return;
+        const prevOf = new Map(toFix.map((t) => [t.id, { ...states.get(t.id) || {} }]));
+        for (const t of toFix)
+          states.set(t.id, { ...prevOf.get(t.id), archived: false });
+        const results = await Promise.all(toFix.map((t) => {
+          const prev = prevOf.get(t.id);
+          return setThreadState(me, t.id, {
+            archived: false,
+            hidden: !!prev.hidden,
+            cleared_at: prev.cleared_at || null
+          });
+        }));
+        results.forEach((r, i) => {
+          if (!r.ok)
+            states.set(toFix[i].id, prevOf.get(toFix[i].id));
+        });
       };
       await autoUnarchiveUnread();
       renderThreads();
@@ -4650,11 +4662,13 @@
     });
   }
   var _readThreads = /* @__PURE__ */ new Set();
-  async function refreshUnreadBadge() {
+  var _unreadChats = 0;
+  function paintUnreadBadge() {
     const accBtn = document.getElementById("account-btn");
     const fabBadge = document.getElementById("board-trigger-badge");
     const msgBadge = document.getElementById("board-fab-msgs-badge");
-    const hideAll = () => {
+    const chats = isLoggedIn() ? _unreadChats : 0;
+    if (chats <= 0) {
       accBtn?.querySelector(".account-unread")?.remove();
       if (fabBadge) {
         fabBadge.textContent = "";
@@ -4664,22 +4678,6 @@
         msgBadge.textContent = "";
         msgBadge.style.display = "none";
       }
-    };
-    if (!isLoggedIn()) {
-      hideAll();
-      return;
-    }
-    const uid = currentUserId();
-    const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
-    for (const id of _readThreads)
-      map.delete(id);
-    const keyOf = new Map(pairs.map((p) => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
-    const people = /* @__PURE__ */ new Set();
-    for (const id of map.keys())
-      people.add(keyOf.get(id) || `t:${id}`);
-    const chats = people.size;
-    if (chats <= 0) {
-      hideAll();
       return;
     }
     const label = chats > 99 ? "99+" : String(chats);
@@ -4700,6 +4698,23 @@
       msgBadge.textContent = label;
       msgBadge.style.display = "inline-block";
     }
+  }
+  async function refreshUnreadBadge() {
+    if (!isLoggedIn()) {
+      _unreadChats = 0;
+      paintUnreadBadge();
+      return;
+    }
+    const uid = currentUserId();
+    const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
+    for (const id of _readThreads)
+      map.delete(id);
+    const keyOf = new Map(pairs.map((p) => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+    const people = /* @__PURE__ */ new Set();
+    for (const id of map.keys())
+      people.add(keyOf.get(id) || `t:${id}`);
+    _unreadChats = people.size;
+    paintUnreadBadge();
   }
   async function registerChatPushDevice() {
     try {
@@ -6337,7 +6352,7 @@
     };
     fabBtn?.addEventListener("click", toggleFab);
     fabBack?.addEventListener("click", closeFab);
-    refreshUnreadBadge();
+    paintUnreadBadge();
     fab?.querySelectorAll(".board-fab-item").forEach((item) => {
       item.addEventListener("click", () => {
         const act = item.dataset.fab;
@@ -6397,7 +6412,12 @@
     }
     document.getElementById("bd-search-clear")?.addEventListener("click", () => {
       searchQuery = "";
-      renderAll(el);
+      const input = document.getElementById("bd-search-input");
+      if (input) {
+        input.value = "";
+        input.focus();
+      }
+      renderBodyOnly(el);
     });
     const wireMenuButton = (btnId, menuId, onPick) => {
       const btn = document.getElementById(btnId);

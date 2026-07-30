@@ -15,7 +15,7 @@ import { openBoardModal } from './community-modal.js';
 // Таксономія категорій (колір/іконка/назва) — спільний модуль. CATS — список
 // конкретних категорій для меню фільтра; ALL_ICON — іконка «Всі» (лійка).
 import { catColor, catIcon, catShort, BOARD_CATEGORIES as CATS, ALL_ICON } from '../core/board-categories.js';
-import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, refreshUnreadBadge } from './board-chat.js';
+import { startChatFromPost, openMyAds, openThreadsList, openSavedAds, paintUnreadBadge } from './board-chat.js';
 import { requireAuth, isLoggedIn, currentUserId, onAuthChange } from '../core/auth.js';
 import {
   fetchPublishedPosts, fetchPublishedAnnouncements, isSupabaseReady, subscribePosts,
@@ -757,7 +757,12 @@ function renderAll() {
   };
   fabBtn?.addEventListener('click', toggleFab);
   fabBack?.addEventListener('click', closeFab);
-  refreshUnreadBadge();   // заповнити бейдж непрочитаних на свіжому FAB (після рендеру Дошки)
+  // 🔴 30.07 (аудит Д-Б1) — МАЛЮЄМО з уже відомого числа, а не питаємо базу.
+  // Було `refreshUnreadBadge()` = два запити в Supabase на КОЖЕН renderAll, тобто на
+  // кожен тап по фільтру категорії/НП. Кількість непрочитаних від зміни категорії не
+  // змінюється, тож мережа тут була дарма. Свіжість тримають подієві виклики
+  // `refreshUnreadBadge` (вхід, push, realtime, прочитання чату) у board-chat.js.
+  paintUnreadBadge();     // новий FAB щойно створено рендером — заповнити бейдж
   fab?.querySelectorAll('.board-fab-item').forEach(item => {
     item.addEventListener('click', () => {
       const act = item.dataset.fab;
@@ -804,9 +809,18 @@ function renderAll() {
       debounce = setTimeout(() => renderBodyOnly(el), 180);
     });
   }
+  // 🔴 30.07 (аудит Д-Б3) — ОЧИСТКА ПОШУКУ НЕ ПЕРЕБУДОВУЄ ШАПКУ.
+  // Було `renderAll(el)`, а він робить `el.innerHTML = …` — тобто саме поле пошуку
+  // ПЕРЕСТВОРЮВАЛОСЬ. Фокус зникав, і на iPhone разом із ним згорталась клавіатура:
+  // людина тапнула «×», щоб шукати інакше, і мусила ще раз тапати в поле.
+  // Правильний механізм у файлі вже був — ввід у поле кличе `renderBodyOnly` (шапку не
+  // чіпає); кнопка ним просто не користувалась. Значення чистимо руками, бо без
+  // перебудови шапки поле саме не спорожніє.
   document.getElementById('bd-search-clear')?.addEventListener('click', () => {
     searchQuery = '';
-    renderAll(el);
+    const input = document.getElementById('bd-search-input');
+    if (input) { input.value = ''; input.focus(); }
+    renderBodyOnly(el);
   });
 
 

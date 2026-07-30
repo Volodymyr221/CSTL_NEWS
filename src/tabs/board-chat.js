@@ -765,13 +765,27 @@ export function openThreadsList() {
     // глобальний бейдж рахує це непрочитане (незалежно від архіву), а список
     // ховає архівні з «Усі»/«Непрочитані» → «є непрочитане, але його ніде нема».
     // Нове вхідне повертає розмову в загальний список (як у месенджерах).
+    // 🔴 30.07 (аудит Д-Б4) — З AWAIT І З ВІДКОТОМ.
+    // Було: память міняли одразу, а `setThreadState` кликали БЕЗ await і без перевірки
+    // результату. Провал запису → память каже «розархівовано», база каже «в архіві»;
+    // наступне відкриття списку знову ховає розмову, і людина не розуміє чому.
+    // Поруч, у `applyConvState`, відкат і тост уже зроблені правильно — тут просто
+    // забули. Тихий розсинхрон гірший за видиму помилку.
     const autoUnarchiveUnread = async () => {
       const toFix = threads.filter(t => (unread.get(t.id) > 0) && stOf(t.id).archived);
-      for (const t of toFix) {
-        const prev = states.get(t.id) || {};
-        states.set(t.id, { ...prev, archived: false });
-        setThreadState(me, t.id, { archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null });
-      }
+      if (!toFix.length) return;
+      const prevOf = new Map(toFix.map(t => [t.id, { ...(states.get(t.id) || {}) }]));
+      for (const t of toFix) states.set(t.id, { ...prevOf.get(t.id), archived: false });
+      const results = await Promise.all(toFix.map(t => {
+        const prev = prevOf.get(t.id);
+        return setThreadState(me, t.id, {
+          archived: false, hidden: !!prev.hidden, cleared_at: prev.cleared_at || null,
+        });
+      }));
+      // Відкочуємо ЛИШЕ ті, що не записались — решта розмов лишається правильною.
+      results.forEach((r, i) => {
+        if (!r.ok) states.set(toFix[i].id, prevOf.get(toFix[i].id));
+      });
     };
 
     await autoUnarchiveUnread();
@@ -1349,31 +1363,32 @@ export function startChatFromPost(post) {
 // _readThreads — треди, які ми ЩОЙНО прочитали (відкрили чат). Виключаємо їх з
 // лічильника одразу, не чекаючи поки БД оновить read_at → бейдж зникає надійно.
 const _readThreads = new Set();
-export async function refreshUnreadBadge() {
+// 🔴 30.07 (аудит Д-Б1) — БЕЙДЖ РОЗДІЛЕНО НА «ПОМАЛЮВАТИ» І «ПЕРЕПИТАТИ БАЗУ».
+// Було: `renderAll()` Дошки кликав `refreshUnreadBadge()`, а той робить ДВА запити в
+// Supabase (`fetchUnreadByThread` + `fetchThreadPairs`). А `renderAll()` кличеться на
+// вибір категорії · вибір НП · очистку пошуку · вихід з Обговорень · `setBoardActiveType`.
+// Тобто кожен тап по фільтру = дві мережеві подорожі, хоч кількість непрочитаних від
+// зміни категорії не змінюється. На селищному 3G це затримка, батарея і квота ні за що.
+//
+// Тепер: остання порахована цифра живе в `_unreadChats`, рендер лише МАЛЮЄ її
+// (`paintUnreadBadge`), а в базу ходимо на ПОДІЯХ, які реально можуть її змінити —
+// вхід/вихід, push, realtime, прочитання чату (ці виклики вже були на місці).
+let _unreadChats = 0;
+
+// Намалювати бейдж із уже відомого числа. Без мережі. Безпечно кликати на кожен рендер.
+export function paintUnreadBadge() {
   const accBtn   = document.getElementById('account-btn');
   const fabBadge = document.getElementById('board-trigger-badge');
   const msgBadge = document.getElementById('board-fab-msgs-badge');
 
-  const hideAll = () => {
+  const chats = isLoggedIn() ? _unreadChats : 0;
+  if (chats <= 0) {
     accBtn?.querySelector('.account-unread')?.remove();
     if (fabBadge) { fabBadge.textContent = ''; fabBadge.style.display = 'none'; }
     if (msgBadge) { msgBadge.textContent = ''; msgBadge.style.display = 'none'; }
-  };
-  if (!isLoggedIn()) { hideAll(); return; }
-
-  // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
-  // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
-  // оголошеннями давала два треди. Тепер бейдж і список кажуть одне й те саме.
-  const uid = currentUserId();
-  const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
-  for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
-  const keyOf = new Map(pairs.map(p => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
-  const people = new Set();
-  for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
-  const chats = people.size;
-  if (chats <= 0) { hideAll(); return; }
+    return;
+  }
   const label = chats > 99 ? '99+' : String(chats);
-
   if (accBtn) {
     let badge = accBtn.querySelector('.account-unread');
     if (!badge) {
@@ -1385,6 +1400,23 @@ export async function refreshUnreadBadge() {
   }
   if (fabBadge) { fabBadge.textContent = label; fabBadge.style.display = 'block'; }
   if (msgBadge) { msgBadge.textContent = label; msgBadge.style.display = 'inline-block'; }
+}
+
+// Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
+export async function refreshUnreadBadge() {
+  if (!isLoggedIn()) { _unreadChats = 0; paintUnreadBadge(); return; }
+
+  // 🔴 29.07 — рахуємо РОЗМОВИ (людей), а не треди. До групування «2» на бейджі й
+  // ОДИН рядок у списку були б різними числами про те саме: одна людина з двома
+  // оголошеннями давала два треди. Тепер бейдж і список кажуть одне й те саме.
+  const uid = currentUserId();
+  const [map, pairs] = await Promise.all([fetchUnreadByThread(uid), fetchThreadPairs(uid)]);
+  for (const id of _readThreads) map.delete(id);   // щойно прочитані не рахуємо
+  const keyOf = new Map(pairs.map(p => [p.id, (uid === p.author_uid ? p.buyer_uid : p.author_uid) || `t:${p.id}`]));
+  const people = new Set();
+  for (const id of map.keys()) people.add(keyOf.get(id) || `t:${id}`);
+  _unreadChats = people.size;
+  paintUnreadBadge();
 }
 
 // ── Реєстрація push-пристрою під акаунт (пасивний ресинк, без запиту дозволу) ──
