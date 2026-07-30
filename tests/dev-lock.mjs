@@ -47,8 +47,21 @@ const port = new URL(url).port;
 const executablePath = chromiumPath();
 const browser = await chromium.launch({
   ...(executablePath ? { executablePath } : {}),
-  // Вигадане імʼя → 127.0.0.1. Дає НЕ-localhost хост на тому самому сервері.
-  args: [`--host-resolver-rules=MAP cstl.local 127.0.0.1`],
+  args: [
+    // Вигадане імʼя → 127.0.0.1. Дає НЕ-localhost хост на тому самому сервері.
+    `--host-resolver-rules=MAP cstl.local 127.0.0.1`,
+    // 🔴 БЕЗ ЦЬОГО РЯДКА КОД НЕ ПЕРЕВІРИТИ, і це не дрібниця стенда.
+    // `crypto.subtle` (яким рахується хеш) існує лише у ЗАХИЩЕНОМУ контексті: https
+    // або localhost. `http://cstl.local` — ні те, ні інше, тому там хеш не рахується
+    // взагалі й замок чесно лишається зачиненим (fail-closed). Прод — https, отже
+    // працює; а стенду треба явно сказати вважати цей хост захищеним.
+    // ⚠️ Перша версія стенда цього не мала — і «правильний код» падав, хоча код
+    // правильний. Симптом виглядав як баг продукту, а був умовами вимірювання.
+    // ⚠️ Свого `--user-data-dir` НЕ ставимо: Playwright і так запускає браузер із
+    // тимчасовим профілем, а прибитий шлях у стенді — те, від чого відходили в
+    // `_lib.mjs` (абсолютні шляхи вбивали стенди на іншій машині/сесії).
+    `--unsafely-treat-insecure-origin-as-secure=http://cstl.local:${port}`,
+  ],
 });
 
 // Одна сцена = один чистий контекст (свій localStorage).
@@ -60,7 +73,9 @@ async function visit(host, { deviceFlag = false } = {}) {
   await page.route('**://*.supabase.co/**', r => r.abort());
   await page.route('**://api.open-meteo.com/**', r => r.abort());
   if (deviceFlag) {
-    await page.addInitScript(() => { try { localStorage.setItem('cstl_dev_ok', '1'); } catch (_) {} });
+    await page.addInitScript(door => {
+      try { localStorage.setItem('cstl_dev_ok', door); } catch (_) {}
+    }, deviceFlag);
   }
   await page.goto(`http://${host}:${port}/`, { waitUntil: 'domcontentloaded' });
   await page.waitForTimeout(2500);        // даємо застосунку шанс побудуватись
@@ -69,6 +84,15 @@ async function visit(host, { deviceFlag = false } = {}) {
     bodyClass: document.body.classList.contains('dev-locked'),
     gateText:  (document.querySelector('.dev-lock-title') || {}).textContent || '',
     hasBtn:    !!document.querySelector('.dev-lock-btn'),
+    hasInput:  !!document.querySelector('.dev-lock-input'),
+    hasLabel:  /код/i.test((document.querySelector('.dev-lock-label') || {}).textContent || ''),
+    hasOwnerLink: !!document.querySelector('.dev-lock-link'),
+    blurred:   (() => {
+      const bg = document.querySelector('.dev-lock-bg');
+      if (!bg) return 0;
+      const m = getComputedStyle(bg).filter.match(/blur\(([\d.]+)px\)/);
+      return m ? Number(m[1]) : 0;
+    })(),
     // ⬇️ ГОЛОВНЕ: чи побудований застосунок ПІД заслінкою.
     // Беремо ознаки, які зʼявляються тільки з init(): віджети Громади наповнені,
     // і хоча б один блок перестав бути «Завантаження…».
@@ -85,8 +109,13 @@ async function visit(host, { deviceFlag = false } = {}) {
 const outsider = await visit('cstl.local');
 if (LOCK_ON) {
   ok('чужий хост: заслінка показана', outsider.gate);
-  ok('чужий хост: заголовок «Додаток у розробці»', /розробц/i.test(outsider.gateText), `текст: "${outsider.gateText}"`);
+  ok('чужий хост: заголовок «йдуть технічні розробки»', /розроб/i.test(outsider.gateText), `текст: "${outsider.gateText}"`);
   ok('чужий хост: є кнопка «Увійти»', outsider.hasBtn);
+  ok('чужий хост: є поле коду розробника', outsider.hasInput && outsider.hasLabel);
+  ok('чужий хост: є запасний вхід для власника', outsider.hasOwnerLink);
+  // Фон розмитий — саме те, що просив Вова («сторінка буде заблюрена»).
+  // Міряємо ОБЧИСЛЕНИЙ `filter`, а не наявність класу: клас без blur нічого не дає.
+  ok('чужий хост: фон справді розмитий (blur ≥ 8px)', outsider.blurred >= 8, `blur(${outsider.blurred}px)`);
   ok('чужий хост: сторінка під заслінкою не прокручується', outsider.bodyClass);
   // 🔴 Найважливіша перевірка стенда.
   ok('чужий хост: застосунок ПІД заслінкою НЕ побудований (стрічка новин)', !outsider.newsBuilt);
@@ -103,10 +132,84 @@ ok('КОНТРОЛЬ localhost: застосунок побудований', lo
    'без цього стенд «довів» би замок, навіть якби той просто ламав завантаження всім');
 
 // ── 3. ПІДТВЕРДЖЕНИЙ ПРИСТРІЙ проходить навіть без мережі ───────────────────
-const trusted = await visit('cstl.local', { deviceFlag: true });
-ok('підтверджений пристрій: заслінки нема', !trusted.gate);
-ok('підтверджений пристрій: застосунок побудований', trusted.newsBuilt,
-   'інакше Вова замкнув би сам себе, коли телефон без інтернету');
+// Три значення прапорця: 'code' (зайшли кодом), 'email' (поштою власника) і '1' —
+// прапорець ПЕРШОЇ версії заслінки. Третій перевіряємо навмисно: у Вови на телефоні
+// він уже може лежати, і якби нова версія його не розуміла, вона замкнула б власника.
+for (const door of ['code', 'email', '1']) {
+  const trusted = await visit('cstl.local', { deviceFlag: door });
+  ok(`підтверджений пристрій (${door}): заслінки нема`, !trusted.gate);
+  ok(`підтверджений пристрій (${door}): застосунок побудований`, trusted.newsBuilt,
+     'інакше замок замкнув би своїх — без інтернету або після оновлення версії');
+}
+
+// ── 3.5 КОД РОЗРОБНИКА: хибний не пускає, гальмо підбору працює ──────────────
+// Сцена: чужий хост, вводимо навмисно неправильний код.
+{
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.route('**://*.supabase.co/**', r => r.abort());
+  await page.goto(`http://cstl.local:${port}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.dev-lock-input', { timeout: 10000 });
+
+  const tryCode = async value => {
+    await page.fill('.dev-lock-input', value);
+    await page.click('[data-dl-submit]');
+    // PBKDF2 з 200 000 повторів — це помітний час, чекаємо на відповідь у примітці.
+    await page.waitForFunction(() => {
+      const b = document.querySelector('[data-dl-submit]');
+      return b && !b.disabled;
+    }, { timeout: 15000 }).catch(() => {});
+    return page.evaluate(() => ({
+      note: (document.querySelector('[data-dl-note]') || {}).textContent || '',
+      gate: !!document.querySelector('.dev-lock'),
+      built: !!document.querySelector('.cm-news-feed'),
+      tries: (() => { try { return JSON.parse(localStorage.getItem('cstl_dev_tries') || '{}'); } catch { return {}; } })(),
+    }));
+  };
+
+  const wrong = await tryCode('очевидно-не-той-код');
+  ok('хибний код: заслінка лишається', wrong.gate);
+  ok('хибний код: застосунок так і НЕ побудований', !wrong.built);
+  ok('хибний код: людині сказано, що код не той', /не той/i.test(wrong.note), `"${wrong.note}"`);
+  ok('хибна спроба порахована', (wrong.tries.n || 0) === 1, `n = ${wrong.tries.n}`);
+
+  // Гальмо: після TRIES_FREE=5 хибних спроб мусить зʼявитись пауза.
+  let last = wrong;
+  for (let i = 0; i < 5; i++) last = await tryCode('знову-не-той-' + i);
+  ok('після 6 хибних спроб увімкнулось гальмо (пауза)', (last.tries.until || 0) > Date.now(),
+     `n = ${last.tries.n}, пауза до ${last.tries.until ? new Date(last.tries.until).toISOString().slice(11, 19) : '—'}`);
+  ok('людині сказано, скільки чекати', /через \d+ с/i.test(last.note), `"${last.note}"`);
+  await ctx.close();
+}
+
+// ── 3.6 УСПІШНИЙ ВХІД КОДОМ (лише коли код передано в оточенні) ──────────────
+// Наскрізну перевірку «правильний код відкриває додаток» стенд НЕ може зробити сам:
+// у списку лежить хеш СПРАВЖНЬОГО коду Вови, а самого коду стенд не знає (і не має
+// знати — інакше він лежав би в репозиторії). Тому шлях перевіряється так:
+//   DEV_CODE='код' node tests/dev-lock.mjs
+// Я прогнав це руками з тимчасовим тестовим хешем — доказ у журналі сесії.
+if (process.env.DEV_CODE) {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.route('**://*.supabase.co/**', r => r.abort());
+  await page.goto(`http://cstl.local:${port}/`, { waitUntil: 'domcontentloaded' });
+  await page.waitForSelector('.dev-lock-input', { timeout: 10000 });
+  await page.fill('.dev-lock-input', process.env.DEV_CODE);
+  await page.click('[data-dl-submit]');
+  await page.waitForSelector('.dev-lock', { state: 'detached', timeout: 20000 }).catch(() => {});
+  await page.waitForTimeout(2500);
+  const after = await page.evaluate(() => ({
+    gate: !!document.querySelector('.dev-lock'),
+    built: !!document.querySelector('.cm-news-feed'),
+    door: localStorage.getItem('cstl_dev_ok'),
+  }));
+  ok('правильний код: заслінка зникла', !after.gate);
+  ok('правильний код: застосунок побудований', after.built);
+  ok('правильний код: пристрій позначений саме як «code»', after.door === 'code', `прапорець = ${after.door}`);
+  await ctx.close();
+} else {
+  console.log('ℹ️  Успішний вхід кодом не перевірявся: запусти `DEV_CODE=\'код\' node tests/dev-lock.mjs`');
+}
 
 // ── 4. Список допущених: хеші, а НЕ відкриті пошти ───────────────────────────
 // Репозиторій публічний. Якщо колись хтось впише адресу текстом — стенд упаде.
@@ -124,6 +227,19 @@ ok('усі записи списку — хеші по 64 hex-символи', h
    `записів ${quoted.length}, з них правильних хешів ${hashes.length}`);
 ok('список допущених НЕ порожній', hashes.length > 0,
    hashes.length ? `${hashes.length} допущені пошти` : 'порожній список замкне і Вову теж — деплоїти не можна');
+
+// Той самий контроль для СПИСКУ КОДІВ: у публічному репозиторії мусять лежати
+// лише хеші PBKDF2, і в жодному разі не сам код відкритим текстом.
+const rawCodes = (SRC.match(/ALLOWED_CODE_PBKDF2\s*=\s*\[([\s\S]*?)\]/) || [])[1] || '';
+const codeBlock = rawCodes.split('\n').map(l => l.replace(/\/\/.*$/, '')).join('\n');
+const codeQuoted = codeBlock.match(/'[^']*'/g) || [];
+const codeHashes = codeBlock.match(/'[0-9a-f]{64}'/g) || [];
+ok('усі записи списку кодів — хеші по 64 hex-символи', codeHashes.length === codeQuoted.length,
+   `записів ${codeQuoted.length}, з них правильних хешів ${codeHashes.length}`);
+if (!codeHashes.length) {
+  console.log('⚠️  СПИСОК КОДІВ ПОРОЖНІЙ — двері «код» зачинені, працює лише пошта власника.');
+  console.log('   Порахувати хеш: node tests/tools/dev-code-hash.mjs \'код\'');
+}
 
 // ── 5. 🔴 БРАУЗЕР І ТЕРМІНАЛ МУСЯТЬ ДАВАТИ ОДИН І ТОЙ САМИЙ ХЕШ ──────────────
 // Це остання неперевірена ланка замка. Хеші у списку я порахував у терміналі
