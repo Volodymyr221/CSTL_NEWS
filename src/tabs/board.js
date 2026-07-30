@@ -366,6 +366,41 @@ function renderCard(post) {
 // FAB — ДВІ незалежні кнопки: Дошка (оголошення) і Обговорення (свій набір дій).
 // Спільна лише speed-dial-механіка (id board-fab/board-trigger + клас .open),
 // щоб toggleFab/closeFab працювали. Розмітка/меню/іконка — різні за вкладкою.
+// ── ІКОНКА FAB ЗА СТАНОМ (рішення Вови 30.07) ────────────────────────────────
+// Вова: «поставити замість іконки повідомлення іконку з подати оголошення, а коли
+// користувач має активне 1+ оголошення то міняється на повідомлення».
+//
+// Задум: кнопка показує ту дію, яка людині зараз найімовірніше потрібна. Нема
+// оголошень → ти тут щоб подати. Є оголошення → ти тут щоб глянути відповіді.
+//
+// ⚠️ Я був ПРОТИ і лишаю заперечення в записі, бо воно чинне: іконка, що змінює
+// форму, гірше запамʼятовується рукою, а людина з активним оголошенням — саме та,
+// хто найімовірніше подасть друге, і для неї «створити» стає менш очевидним.
+// Рішення власника переважило (30.07, «Мій давай»).
+// 🔴 Заразом чесно: мій пункт аудиту Д-В1 був ХИБНИЙ. Я писав, що кнопка «бреше
+// текстом», але `.board-trigger--fixed .cm-board-trigger-text { display: none }` —
+// тексту на ній не видно взагалі, тож ні обіцянки, ні провалу WCAG не було. Реальна
+// нестача була саме та, яку назвав Вова: іконка не відповідала головній дії.
+//
+// ⚠️ БЕЗ МЕРЕЖІ: `allPosts` — це вже завантажені ОПУБЛІКОВАНІ пости
+// (`fetchPublishedPosts`), тобто «активне оголошення» = моє серед них. Жодного
+// додаткового запиту; саме тому іконку можна рахувати прямо в рендері.
+function myActiveAdsCount() {
+  const me = currentUserId();
+  if (!me) return 0;
+  return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== 'chat' ? 1 : 0), 0);
+}
+
+// Оновити ІКОНКУ на місці, без перебудови FAB. Потрібно тому, що після публікації
+// оголошення список освіжається через `refreshBoardKeepingPlace()` — а він свідомо
+// перемальовує ЛИШЕ картки (щоб не смикнути прокрутку), тож кнопка лишилась би зі
+// старою іконкою до наступного повного рендеру.
+function syncFabIcon() {
+  const box = document.getElementById('board-trigger-icon');
+  if (!box || discOpen) return;
+  box.innerHTML = myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG;
+}
+
 function renderFab() {
   if (discOpen) {
     // Обговорення: червоний круг з білим плюсом + своє меню.
@@ -414,8 +449,13 @@ function renderFab() {
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG}</span>
         </button>
       </div>
+      <!-- aria-label лишається СТАБІЛЬНИМ («Дії»), хоч іконка й морфиться: кнопка
+           справді відкриває меню дій, і читачу екрана потрібна незмінна назва, а не
+           та, що змінюється сама. Стан він і так почує з бейджа непрочитаних —
+           той лежить текстом усередині кнопки.
+           ⚠️ Зворотних лапок тут НЕ ставити — коментар усередині шаблонного рядка. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="Дії" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-icon" id="board-trigger-icon">${myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG}</span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">Подати оголошення</span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>
@@ -683,6 +723,7 @@ async function refreshBoardKeepingPlace() {
   const ok = await loadBoardData();
   if (!ok || !el || !body) { renderBoard(); return; }   // не змогли мʼяко — звичайним шляхом
   keepScroll(document.querySelector('.app-main'), () => renderBodyOnly(), null, 'data-post-id');
+  syncFabIcon();   // 30.07: опублікував/завершив своє → іконка FAB могла змінитись
 }
 
 export async function renderBoard() {

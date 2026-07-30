@@ -6159,6 +6159,18 @@
       return renderChatCard(post);
     return renderBoardCard(post);
   }
+  function myActiveAdsCount() {
+    const me = currentUserId();
+    if (!me)
+      return 0;
+    return allPosts.reduce((n, p) => n + (p.owner_uid === me && p.type !== "chat" ? 1 : 0), 0);
+  }
+  function syncFabIcon() {
+    const box = document.getElementById("board-trigger-icon");
+    if (!box || discOpen)
+      return;
+    box.innerHTML = myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG2;
+  }
   function renderFab() {
     if (discOpen) {
       return `
@@ -6205,8 +6217,13 @@
           <span class="board-fab-ic">${BOOKMARK_OUTLINE_SVG2}</span>
         </button>
       </div>
+      <!-- aria-label \u043B\u0438\u0448\u0430\u0454\u0442\u044C\u0441\u044F \u0421\u0422\u0410\u0411\u0406\u041B\u042C\u041D\u0418\u041C (\xAB\u0414\u0456\u0457\xBB), \u0445\u043E\u0447 \u0456\u043A\u043E\u043D\u043A\u0430 \u0439 \u043C\u043E\u0440\u0444\u0438\u0442\u044C\u0441\u044F: \u043A\u043D\u043E\u043F\u043A\u0430
+           \u0441\u043F\u0440\u0430\u0432\u0434\u0456 \u0432\u0456\u0434\u043A\u0440\u0438\u0432\u0430\u0454 \u043C\u0435\u043D\u044E \u0434\u0456\u0439, \u0456 \u0447\u0438\u0442\u0430\u0447\u0443 \u0435\u043A\u0440\u0430\u043D\u0430 \u043F\u043E\u0442\u0440\u0456\u0431\u043D\u0430 \u043D\u0435\u0437\u043C\u0456\u043D\u043D\u0430 \u043D\u0430\u0437\u0432\u0430, \u0430 \u043D\u0435
+           \u0442\u0430, \u0449\u043E \u0437\u043C\u0456\u043D\u044E\u0454\u0442\u044C\u0441\u044F \u0441\u0430\u043C\u0430. \u0421\u0442\u0430\u043D \u0432\u0456\u043D \u0456 \u0442\u0430\u043A \u043F\u043E\u0447\u0443\u0454 \u0437 \u0431\u0435\u0439\u0434\u0436\u0430 \u043D\u0435\u043F\u0440\u043E\u0447\u0438\u0442\u0430\u043D\u0438\u0445 \u2014
+           \u0442\u043E\u0439 \u043B\u0435\u0436\u0438\u0442\u044C \u0442\u0435\u043A\u0441\u0442\u043E\u043C \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u043A\u043D\u043E\u043F\u043A\u0438.
+           \u26A0\uFE0F \u0417\u0432\u043E\u0440\u043E\u0442\u043D\u0438\u0445 \u043B\u0430\u043F\u043E\u043A \u0442\u0443\u0442 \u041D\u0415 \u0441\u0442\u0430\u0432\u0438\u0442\u0438 \u2014 \u043A\u043E\u043C\u0435\u043D\u0442\u0430\u0440 \u0443\u0441\u0435\u0440\u0435\u0434\u0438\u043D\u0456 \u0448\u0430\u0431\u043B\u043E\u043D\u043D\u043E\u0433\u043E \u0440\u044F\u0434\u043A\u0430. -->
       <button class="cm-board-trigger board-trigger--fixed" id="board-trigger" type="button" aria-label="\u0414\u0456\u0457" aria-expanded="false">
-        <span class="cm-board-trigger-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></span>
+        <span class="cm-board-trigger-icon" id="board-trigger-icon">${myActiveAdsCount() > 0 ? MSG_ICON_SVG : EDIT_ICON_SVG2}</span>
         <span class="cm-board-trigger-close" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span>
         <span class="cm-board-trigger-text">\u041F\u043E\u0434\u0430\u0442\u0438 \u043E\u0433\u043E\u043B\u043E\u0448\u0435\u043D\u043D\u044F</span>
         <span class="board-trigger-badge" id="board-trigger-badge"></span>
@@ -6380,6 +6397,7 @@
       return;
     }
     keepScroll(document.querySelector(".app-main"), () => renderBodyOnly(), null, "data-post-id");
+    syncFabIcon();
   }
   async function renderBoard() {
     const el = getBoardRoot();
