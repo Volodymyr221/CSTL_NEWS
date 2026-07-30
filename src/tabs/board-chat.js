@@ -1489,6 +1489,7 @@ export function paintUnreadBadge() {
 }
 
 // Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
+// Перепитати базу і перемалювати. Кликати лише на подіях, що змінюють непрочитане.
 export async function refreshUnreadBadge() {
   if (!isLoggedIn()) { _unreadChats = 0; paintUnreadBadge(); return; }
 
