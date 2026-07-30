@@ -55,6 +55,29 @@ function phoneDigits(v) {
   return Math.min(d.length, 9);
 }
 
+// ── Підсвітка невалідного поля (аудит Д-В4, 30.07) ──────────────────────────
+// Що вже було правильно: кожна перевірка при submit кличе `.focus()` на потрібному
+// полі, а для чіпів — `scrollIntoView`. Тобто «фокус не переїжджає» — неправда.
+// Чого бракувало: людина НЕ БАЧИЛА, яке саме поле винне. Тост висить угорі екрана, а
+// у формі сім полів; при відкритій клавіатурі видно два-три з них, і фокус — єдина
+// підказка, яку легко не помітити.
+// Тому: червона рамка на самому полі + докрутити його у видиму зону. Знімається на
+// першому ж вводі — щоб форма не «сварилась» поки людина виправляє.
+function markInvalid(el) {
+  if (!el) return;
+  el.classList.add('bm-invalid');
+  el.setAttribute('aria-invalid', 'true');
+  // `block: 'center'` — у листі подачі поле може бути під липкою шапкою або під
+  // клавіатурою; центр надійніший за `nearest`.
+  try { el.scrollIntoView({ behavior: 'smooth', block: 'center' }); } catch (_) {}
+  el.focus();
+}
+function clearInvalid(el) {
+  if (!el) return;
+  el.classList.remove('bm-invalid');
+  el.removeAttribute('aria-invalid');
+}
+
 // Лише ім'я (перше слово) без прізвища.
 // 'Житель' — службовий дефолт (не справжнє ім'я) → вважаємо порожнім.
 function firstNameOnly(full) {
@@ -158,7 +181,12 @@ export function openBoardModal(opts = {}) {
       </div>
 
       <div class="bm-section">
-        <label class="bm-label" for="bm-title">Заголовок <span class="bm-label-req">*</span></label>
+        <label class="bm-label" for="bm-title">Заголовок <span class="bm-label-req">*</span>
+          <!-- 30.07 (аудит Д-В4): лічильник. Межа 80 символів була, а показника не було —
+               при досягненні межі поле просто «перестає писати», і це читається як
+               поламана клавіатура, а не як обмеження. -->
+          <span class="bm-label-count" id="bm-title-count">${state.title.length}/80</span>
+        </label>
         <input class="cm-board-input cm-board-input--small" id="bm-title" type="text" maxlength="80" required placeholder="Напр. Продам мотоцикл" value="${escapeHtml(state.title)}">
       </div>
 
@@ -223,6 +251,14 @@ export function openBoardModal(opts = {}) {
     // Заголовок
     dynamicEl.querySelector('#bm-title')?.addEventListener('input', e => {
       state.title = e.target.value;
+      // Лічильник 0/80 (аудит Д-В4) — оновлюємо тут, поруч зі станом, щоб не з'явилось
+      // другого місця правди про довжину.
+      const cnt = dynamicEl.querySelector('#bm-title-count');
+      if (cnt) {
+        cnt.textContent = `${state.title.length}/80`;
+        cnt.classList.toggle('bm-label-count--full', state.title.length >= 80);
+      }
+      clearInvalid(e.target);
       renderPreview();
     });
     // Ціна — пускаємо лише цифри і ОДНУ крапку, максимум 2 знаки після неї.
@@ -261,12 +297,14 @@ export function openBoardModal(opts = {}) {
     // Опис
     dynamicEl.querySelector('#bm-text')?.addEventListener('input', e => {
       state.text = e.target.value;
+      clearInvalid(e.target);   // 30.07: форма перестає «сваритись» одразу як почали виправляти
       renderPreview();
     });
     // Контакт (телефон) — маска +380 XX XXX XX XX (Д-24)
     dynamicEl.querySelector('#bm-contact')?.addEventListener('input', e => {
       e.target.value = maskUaPhone(e.target.value);   // форматуємо + обмежуємо к-сть цифр
       state.contact = e.target.value;
+      clearInvalid(e.target);
       renderPreview();
     });
     syncPriceVisibility();
@@ -496,24 +534,24 @@ export function openBoardModal(opts = {}) {
     }
     if (!state.title.trim()) {
       showToast('Додайте заголовок оголошення', 2500);
-      wrap.querySelector('#bm-title')?.focus();
+      markInvalid(wrap.querySelector('#bm-title'));
       return;
     }
     if (!state.text.trim()) {
       showToast('Будь ласка, заповніть текст', 2500);
-      wrap.querySelector('#bm-text')?.focus();
+      markInvalid(wrap.querySelector('#bm-text'));
       return;
     }
     // Д-24: телефон необов'язковий, але якщо почали вводити — має бути повний (9 цифр).
     const pd = phoneDigits(state.contact);
     if (pd > 0 && pd < 9) {
       showToast('Введіть повний номер телефону або залиште порожнім', 3000);
-      wrap.querySelector('#bm-contact')?.focus();
+      markInvalid(wrap.querySelector('#bm-contact'));
       return;
     }
     if (containsProfanity(state.text) || containsProfanity(state.contact)) {
       showToast('🚫 Повідомлення містить заборонені слова і не надіслане', 4500, 'error');
-      wrap.querySelector('#bm-text')?.focus();
+      markInvalid(wrap.querySelector('#bm-text'));
       return;
     }
     if (state.uploadingCount > 0 || state.photos.some(p => p && p.startsWith('blob:'))) {
