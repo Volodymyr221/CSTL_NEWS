@@ -1984,9 +1984,16 @@
 .board-content {
   position: relative;
   z-index: 1;
-  /* .app-main вже додає таб-бар + safe-area знизу — тут лише невеликий відступ під
-     плаваючу кнопку «Подати оголошення», щоб остання картка не зависала високо */
-  padding-bottom: 24px;
+  /* 🔴 30.07 (аудит Д-В2) — ВІДСТУП ПІД ПЛАВАЮЧУ КНОПКУ, порахований, а не на око.
+     `.app-main` уже додає таб-бар + safe-area, тож тут потрібна рівно смуга самої
+     кнопки: зазор (14) + висота (56) + повітря (12) = 82px. Було 24px — тобто кнопка
+     накривала останні 46px списку. Числа беруться з тих самих токенів, що й кнопка
+     (`--fab-size` / `--fab-gap`), щоб вони не могли розійтись: саме через незв'язані
+     числа дефект і зʼявився.
+     ⚠️ Клас носять ОБА кореня (`#board-content` і `#disc-content`, index.html:87/138),
+     і в обох є FAB — тож правка свідомо одна на дві вкладки.
+     Сторож — `tests/board-fab-clearance.mjs`. */
+  padding-bottom: calc(var(--fab-gap) + var(--fab-size) + 12px);
 }
 .board-empty {
   padding: 60px 24px 20px;
@@ -2012,10 +2019,12 @@
 .board-trigger--fixed {
   position: fixed;
   right: 18px;
-  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + 14px);
+  /* Розмір і зазор — із токенів (`base.css`, блок `--fab-size`): той самий джерело
+     правди, з якого `.board-content` рахує свій нижній відступ. 30.07 */
+  bottom: calc(var(--tabbar-h) + env(safe-area-inset-bottom, 0px) + var(--fab-gap));
   left: auto;
-  width: 56px;
-  height: 56px;
+  width: var(--fab-size);
+  height: var(--fab-size);
   border-radius: 50%;
   margin: 0;
   padding: 0;
