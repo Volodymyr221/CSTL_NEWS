@@ -2231,7 +2231,7 @@
     backdrop?.addEventListener("click", close);
     closeBtn?.addEventListener("click", close);
     if (variant === "sheet" && swipeClose && panel) {
-      let startY = 0, dragging = false, dy = 0, travel = 1;
+      let startY = 0, dragging = false, dy = 0, travel = 1, wasScrolling = false;
       const drag = createDragTracker();
       const fade = createBackdropFade(backdrop);
       panel.addEventListener("touchstart", (e) => {
@@ -2242,6 +2242,7 @@
         startY = y;
         dragging = true;
         dy = 0;
+        wasScrolling = false;
         travel = Math.max(panel.offsetHeight || 1, 1);
         drag.start(y);
       }, { passive: true });
@@ -2255,11 +2256,17 @@
           return;
         }
         if (panel.scrollTop > 0) {
+          wasScrolling = true;
           panel.style.transform = "";
           fade?.track(0);
           startY = e.touches[0].clientY;
           drag.start(startY);
           dy = 0;
+          return;
+        }
+        if (wasScrolling) {
+          panel.style.transform = "";
+          fade?.track(0);
           return;
         }
         e.preventDefault();
