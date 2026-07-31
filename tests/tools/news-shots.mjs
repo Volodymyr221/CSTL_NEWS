@@ -34,36 +34,24 @@ const shot = async (name, sel) => {
   console.log('📸', `${OUT}/${name}.png`);
 };
 
-await shot('1-tablo-A-велика-перша', '#cm-news-board');
-
-// Варіант B — та сама збірка, змінений лише варіант першої картки.
-await page.evaluate(() => {
-  const lead = document.querySelector('#cm-news-board .nc--lead');
-  if (lead) lead.classList.replace('nc--lead', 'nc--mini');
-});
-await page.waitForTimeout(300);
-await shot('2-tablo-B-три-однакові', '#cm-news-board');
-
-// Повертаємо як є в коді і знімаємо головний екран цілком — щоб було видно, скільки
-// віджет лишає іншим блокам Громади.
-await page.evaluate(() => {
-  const m = document.querySelector('#cm-news-board .nc--mini');
-  if (m) m.classList.replace('nc--mini', 'nc--lead');
-});
-await page.waitForTimeout(300);
-await shot('3-головний-екран');
+// ⚠️ Знімаємо РЕАЛЬНИЙ стан застосунку, нічого не підмінюючи. 31.07 тут стояла
+// тимчасова підміна класів, щоб порівняти два варіанти табла (велика перша проти
+// трьох однакових) — Вова вибрав три однакові, і підміну прибрано.
+// Скріншот, який показує не те, що в коді, гірший за відсутній.
+await shot('1-табло', '#cm-news-board');
+await shot('2-головний-екран');
 
 await page.locator('.cm-news-board-bar').click();
 await page.waitForTimeout(1200);
-await shot('4-хаб-громада');
+await shot('3-хаб-громада');
 
 await page.locator('.nh-tab', { hasText: 'ВОЛИНЬ' }).click();
 await page.waitForTimeout(1200);
-await shot('5-хаб-волинь');
+await shot('4-хаб-волинь');
 
 await page.locator('.nh-list .nc').first().click();
 await page.waitForTimeout(1200);
-await shot('6-стаття');
+await shot('5-стаття');
 
 await browser.close();
 await stop();
