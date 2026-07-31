@@ -1174,7 +1174,7 @@ function paintCmNews(el, arts) {
   if (!top.length) {
     el.innerHTML = '<div class="cm-block-empty">Новин Громади поки немає</div>';
   } else {
-    // БЕЗ обгортки-скролера — три однакові рядки (`compact: true`).
+    // БЕЗ обгортки-скролера — три однакові рядки (варіант картки `mini`).
     // 🔴 ЧОМУ НЕ «1 hero + 2 рядки», як стояло в плані: заміряв обидва варіанти
     // живцем, і hero програв ДВІЧІ. (1) Віджет виходив **824px = 112.8% видимої
     // зони** — тобто БІЛЬШИЙ за старий скролер (567px), а сенс потоку рівно
@@ -1182,7 +1182,7 @@ function paintCmNews(el, arts) {
     // ~380px, без фото 179px. Віджет, що стрибає на 200px залежно від того, чи
     // редактор доклав картинку, це не макет, а лотерея. Три однакові рядки дають
     // передбачувану висоту незалежно від вмісту.
-    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { compact: true })}</div>`;
+    el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: 'mini' })}</div>`;
   }
   // Нижня панель: замість трьох чіпів — один вхід у хаб.
   const controls = document.getElementById('cm-news-controls');

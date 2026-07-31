@@ -7300,26 +7300,6 @@
   function normCategory(c) {
     return CATEGORY_ALIAS[c] || (CATEGORY_COLORS[c] ? c : "\u0421\u0443\u0441\u043F\u0456\u043B\u044C\u0441\u0442\u0432\u043E");
   }
-  var GEO_COLORS = {
-    "\u0413\u0440\u043E\u043C\u0430\u0434\u0430": "#722F37",
-    // бордо — наш бренд (Олика + села громади)
-    "\u041E\u043B\u0438\u043A\u0430": "#722F37",
-    // стара назва — лишаємо для сумісності
-    "\u0412\u043E\u043B\u0438\u043D\u044C": "#9e7508",
-    // золотий
-    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430": "#0057B7",
-    // синій
-    "\u0421\u0432\u0456\u0442": "#546e7a",
-    // нейтрально-сірий
-    "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442": "#0057B7"
-    // синій — злитий розділ (на випадок майбутнього geo)
-  };
-  function catColor2(c) {
-    return CATEGORY_COLORS[normCategory(c)] || "#546e7a";
-  }
-  function geoColor(g) {
-    return GEO_COLORS[g] || "#546e7a";
-  }
   var NEWS_GEO_GROUPS = ["\u0413\u0440\u043E\u043C\u0430\u0434\u0430", "\u0412\u043E\u043B\u0438\u043D\u044C", "\u0423\u043A\u0440\u0430\u0457\u043D\u0430 \u0442\u0430 \u0421\u0432\u0456\u0442"];
   function matchGeoGroup(a, group) {
     if (group === "\u0413\u0440\u043E\u043C\u0430\u0434\u0430")
@@ -7373,9 +7353,7 @@
     if (!articles || articles.length === 0) {
       return '<div class="empty-state">\u041D\u043E\u0432\u0438\u043D \u0437\u0430 \u0446\u0438\u043C \u0444\u0456\u043B\u044C\u0442\u0440\u043E\u043C \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     }
-    if (opts.compact)
-      return articles.map(renderRow).join("");
-    return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join("");
+    return articles.map((a) => renderCard2(a, opts.variant || "row")).join("");
   }
   async function ensureNewsLoaded() {
     if (!allArticles.length) {
@@ -7401,35 +7379,21 @@
   function badgesHtml(a) {
     const cat = normCategory(a.category);
     return `
-    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
-    ${cat !== CATEGORY_DEFAULT ? `<span class="news-badge news-badge--cat" style="background:${catColor2(cat)}">${escapeHtml(cat)}</span>` : ""}
-    ${a.exclusive ? '<span class="news-badge news-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
-    ${a.imageType === "illustration" ? '<span class="news-badge news-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
+    <span class="nc-badge nc-badge--geo">${escapeHtml(a.geo)}</span>
+    ${cat !== CATEGORY_DEFAULT ? `<span class="nc-badge nc-badge--cat">${escapeHtml(cat)}</span>` : ""}
+    ${a.exclusive ? '<span class="nc-badge nc-badge--excl">\u2B50 \u0415\u043A\u0441\u043A\u043B\u044E\u0437\u0438\u0432</span>' : ""}
+    ${a.imageType === "illustration" ? '<span class="nc-badge nc-badge--illus">\u{1F5BC} \u0406\u043B\u044E\u0441\u0442\u0440\u0430\u0446\u0456\u044F</span>' : ""}
   `;
   }
-  function renderFeatured(a) {
-    const hasImage = !!a.image;
+  function renderCard2(a, variant) {
     return `
-    <article class="news-card-featured ${hasImage ? "" : "no-image"}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
-      <div class="news-card-featured-overlay">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
-        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="news-card-featured-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-  }
-  function renderRow(a) {
-    return `
-    <article class="news-card-row ${a.exclusive ? "exclusive" : ""}" data-article-id="${a.id}">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
-      <div class="news-card-row-body">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
-        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
-        <div class="news-card-row-footer">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
+    <article class="nc nc--${variant}${a.exclusive ? " exclusive" : ""}" data-article-id="${a.id}">
+      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ""}
+      <div class="nc-body">
+        <div class="nc-meta">${badgesHtml(a)}</div>
+        <h2 class="nc-title">${escapeHtml(a.title)}</h2>
+        ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ""}
+        <div class="nc-foot">${escapeHtml(a.source)} \xB7 ${formatTime(a.ts)}</div>
       </div>
     </article>
   `;
@@ -9946,7 +9910,7 @@
     const d = /* @__PURE__ */ new Date(dateStr + "T00:00:00");
     return `${d.getDate()} ${MONTHS_FULL[d.getMonth()]} ${d.getFullYear()}`;
   }
-  function catColor3(category) {
+  function catColor2(category) {
     return CATEGORY_COLORS2[category] || "#722F37";
   }
   function buildIcsContent(ev) {
@@ -9998,7 +9962,7 @@
     const modalMetaTags = document.getElementById("modalMetaTags");
     if (!modal || !modalContent)
       return;
-    const catC = catColor3(ev.category);
+    const catC = catColor2(ev.category);
     if (modalMetaTags) {
       modalMetaTags.innerHTML = `<span class="news-card-category">${escapeHtml(ev.category)}</span>`;
     }
@@ -10164,14 +10128,14 @@ ${ev.description || ""}`
     if (!next.length)
       return false;
     const from = list.children.length;
-    list.insertAdjacentHTML("beforeend", newsCardsHtml(next, { compact: true }));
+    list.insertAdjacentHTML("beforeend", newsCardsHtml(next, { variant: "row" }));
     const fresh = [...list.children].slice(from);
     fresh.forEach((node) => dropRedundantGeo(node, group));
     _shown += next.length;
     return true;
   }
   function dropRedundantGeo(node, group) {
-    const b = node.querySelector && node.querySelector(".news-badge--geo");
+    const b = node.querySelector && node.querySelector(".nc-badge--geo");
     if (!b)
       return;
     const t = b.textContent.trim().toLowerCase();
@@ -10183,7 +10147,7 @@ ${ev.description || ""}`
     if (!first || !all.length)
       return;
     if (all[0].image && first.querySelector("img"))
-      first.classList.add("nh-lead");
+      first.classList.replace("nc--row", "nc--lead");
   }
   function armSentinel(list, all, group) {
     if (_io) {
@@ -11111,7 +11075,7 @@ ${ev.description || ""}`
     if (!top.length) {
       el.innerHTML = '<div class="cm-block-empty">\u041D\u043E\u0432\u0438\u043D \u0413\u0440\u043E\u043C\u0430\u0434\u0438 \u043F\u043E\u043A\u0438 \u043D\u0435\u043C\u0430\u0454</div>';
     } else {
-      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { compact: true })}</div>`;
+      el.innerHTML = `<div class="cm-news-top3">${newsCardsHtml(top, { variant: "mini" })}</div>`;
     }
     const controls = document.getElementById("cm-news-controls");
     if (controls) {

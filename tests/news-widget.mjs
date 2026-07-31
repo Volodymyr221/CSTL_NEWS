@@ -255,10 +255,10 @@ const look = await page.evaluate(() => {
   const hex = n => { const v = cs.getPropertyValue(n).trim(); const m = v.match(/^#(..)(..)(..)$/);
     return m ? [1, 2, 3].map(i => parseInt(m[i], 16)) : null; };
   const screenBg = rgb(getComputedStyle(document.querySelector('.nh-screen')).backgroundColor);
-  const row = document.querySelector('.nh-list .news-card-row:not(.nh-lead)');
-  const title = row.querySelector('.news-card-row-title');
-  const foot = row.querySelector('.news-card-row-footer');
-  const badge = document.querySelector('.nh-list .news-badge');
+  const row = document.querySelector('.nh-list .nc--row');
+  const title = row.querySelector('.nc-title');
+  const foot = row.querySelector('.nc-foot');
+  const badge = document.querySelector('.nh-list .nc-badge');
   const line = hex('--news-line'), press = hex('--news-press');
   return {
     // Поверхня рядка: фону НЕ має бути взагалі — саме так знято питання «кремове».
@@ -272,10 +272,10 @@ const look = await page.evaluate(() => {
     badgeTxt: badge ? badge.textContent.trim() : null,
     titleSize: parseFloat(getComputedStyle(title).fontSize),
     footSize: parseFloat(getComputedStyle(foot).fontSize),
-    lead: !!document.querySelector('.nh-lead'),
-    leadHasPhoto: !!document.querySelector('.nh-lead img, .nh-lead .img-fallback'),
+    lead: !!document.querySelector('.nc--lead'),
+    leadHasPhoto: !!document.querySelector('.nc--lead img, .nc--lead .img-fallback'),
     // Ексклюзив більше не обводимо кільцем (обідок читався як тривога).
-    exclRing: (() => { const e = document.querySelector('.nh-list .news-card-row.exclusive');
+    exclRing: (() => { const e = document.querySelector('.nh-list .nc.exclusive');
       return e ? getComputedStyle(e).boxShadow : 'none'; })(),
   };
 });
@@ -302,11 +302,11 @@ ok('велика перша — саме з фото (інакше це розд
 ok('ексклюзив БЕЗ обідка-кільця', !/0px 0px 0px 1\.5px/.test(look.exclRing), look.exclRing.slice(0, 40));
 
 // Гео-мітка: у «Громаді» це повтор активної вкладки, у «Україна та Світ» — сенс.
-const geoHere = await page.evaluate(() => document.querySelectorAll('.nh-list .news-badge--geo').length);
+const geoHere = await page.evaluate(() => document.querySelectorAll('.nh-list .nc-badge--geo').length);
 ok('🔴 у «Громаді» гео-мітки нема (не дублює вкладку)', geoHere === 0, `${geoHere}`);
 await page.locator('.nh-tab', { hasText: 'Україна та Світ' }).click();
 await page.waitForTimeout(700);
-const geoThere = await page.evaluate(() => document.querySelectorAll('.nh-list .news-badge--geo').length);
+const geoThere = await page.evaluate(() => document.querySelectorAll('.nh-list .nc-badge--geo').length);
 ok('🔴 КОНТРОЛЬ: у «Україна та Світ» гео-мітка ЛИШИЛАСЬ (там вона інформативна)',
    geoThere > 0, `${geoThere}`);
 

@@ -37,18 +37,12 @@ function normCategory(c) {
   return CATEGORY_ALIAS[c] || (CATEGORY_COLORS[c] ? c : 'Суспільство');
 }
 
-// Кольори гео-бейджів — звідки новина (наш бренд Олика — найвиразніший)
-const GEO_COLORS = {
-  'Громада': '#722F37',  // бордо — наш бренд (Олика + села громади)
-  'Олика':   '#722F37',  // стара назва — лишаємо для сумісності
-  'Волинь':  '#9e7508',  // золотий
-  'Україна': '#0057B7',  // синій
-  'Світ':    '#546e7a',  // нейтрально-сірий
-  'Україна та Світ': '#0057B7',  // синій — злитий розділ (на випадок майбутнього geo)
-};
-
-function catColor(c) { return CATEGORY_COLORS[normCategory(c)] || '#546e7a'; }
-function geoColor(g) { return GEO_COLORS[g]      || '#546e7a'; }
+// 🔴 31.07 (крок 2): `GEO_COLORS`, `geoColor()` і `catColor()` ВИДАЛЕНІ разом із
+// заливкою міток. Вони фарбували пігулки бейджів інлайновим `style=`, а обидва
+// екрани цю заливку однаково гасили (`background: none !important` у двох різних
+// файлах) — тобто розмітка щоразу писала фарбу, яку ніхто не показував.
+// Колір міток тепер один і йде токеном `--nc-accent` (`style/news-card.css`).
+// Бордо бренду `#722F37` живе у `--news-accent` (`style/base.css`).
 
 // ── ГЕО-ГРУПИ: ОДНЕ МІСЦЕ ПРАВДИ (31.07) ────────────────────────────────────
 // Три розділи, якими читач ділить новини. Переїхали сюди з `community-blocks.js`,
@@ -144,15 +138,21 @@ export function handleImgError(e) {
   img.replaceWith(ph);
 }
 
-// HTML стрічки: перша картка — featured, решта — рядки. Порожньо → плейсхолдер.
-// Експортовано для перевикористання у блоці новин вкладки «Громада» (05.07).
-// opts.compact = true → усі картки рядками (без великої featured) для блока Громади.
+// HTML стрічки новин. Порожньо → плейсхолдер.
+//
+// 🔴 31.07 (крок 2 потоку /byyou): ОДИН компонент замість двох трактовок.
+// `opts.variant` — 'row' (щільний рядок хаба, за замовчуванням) або 'mini'
+// (компактна картка табла Громади). Форму варіанта задає `style/news-card.css`,
+// екран-господар — лише кольорові токени своєї поверхні.
+// ⚠️ Старе `opts.compact` більше не читається: воно означало «не роби першу
+// картку великою», тобто описувало ВІДСУТНІСТЬ варіанта, а обидва живі виклики
+// однаково передавали `true`. Велику першу тепер вішає хаб класом `.nc--lead`
+// адресно — і лише коли в новини справді є фото.
 export function newsCardsHtml(articles, opts = {}) {
   if (!articles || articles.length === 0) {
     return '<div class="empty-state">Новин за цим фільтром поки немає</div>';
   }
-  if (opts.compact) return articles.map(renderRow).join('');
-  return articles.map((a, i) => i === 0 ? renderFeatured(a) : renderRow(a)).join('');
+  return articles.map(a => renderCard(a, opts.variant || 'row')).join('');
 }
 
 // Завантажує статті раз і віддає масив (для блоку Громади, щоб openArticle їх бачив).
@@ -202,42 +202,51 @@ export async function openArticleById(id) {
 // 🛑 Сам B-28 цим НЕ закритий — це лікування симптому. Корінь у класифікаторі.
 const CATEGORY_DEFAULT = 'Суспільство';
 
+// ⚠️ 31.07: інлайнових `style="background:…"` тут більше НЕМА, і це не косметика.
+// Кольорова заливка міток була скасована на ОБОХ екранах ще 31.07 уранці, але
+// скасована по-різному — двома правилами `background: none !important` у двох
+// файлах. Тобто розмітка щоразу писала фарбу, а два різні CSS її гасили; варто
+// було зʼявитись третьому екрану — і мітки знову стали б «цукерками».
+// Тепер колір міток задає компонент через токен `--nc-accent`.
+// 🛑 Наслідок: у мітки більше НЕМА власного кольору на рівні розмітки — усі три
+// (гео, категорія, ексклюзив) беруть колір з поверхні. Це навмисно: різнокольорові
+// мітки і були тим, що робило список строкатим.
 function badgesHtml(a) {
   const cat = normCategory(a.category);
   return `
-    <span class="news-badge news-badge--geo" style="background:${geoColor(a.geo)}">${escapeHtml(a.geo)}</span>
+    <span class="nc-badge nc-badge--geo">${escapeHtml(a.geo)}</span>
     ${cat !== CATEGORY_DEFAULT
-      ? `<span class="news-badge news-badge--cat" style="background:${catColor(cat)}">${escapeHtml(cat)}</span>`
+      ? `<span class="nc-badge nc-badge--cat">${escapeHtml(cat)}</span>`
       : ''}
-    ${a.exclusive ? '<span class="news-badge news-badge--excl">⭐ Ексклюзив</span>' : ''}
-    ${a.imageType === 'illustration' ? '<span class="news-badge news-badge--illus">🖼 Ілюстрація</span>' : ''}
+    ${a.exclusive ? '<span class="nc-badge nc-badge--excl">⭐ Ексклюзив</span>' : ''}
+    ${a.imageType === 'illustration' ? '<span class="nc-badge nc-badge--illus">🖼 Ілюстрація</span>' : ''}
   `;
 }
 
-function renderFeatured(a) {
-  const hasImage = !!a.image;
+// 🔴 ОДНА КАРТКА НОВИНИ НА ВЕСЬ ЗАСТОСУНОК (31.07, крок 2 потоку /byyou).
+//
+// Було ДВІ функції розмітки (`renderRow` + `renderFeatured`) і ДВА набори чужих
+// перевизначень поверх них — 13 правил у `style/community.css` (табло Громади) і
+// 20 у `style/news-hub.css` (хаб). Тобто одна й та сама новина малювалась різною
+// мовою залежно від того, з якого екрана на неї дивишся. Вова: «карточки новин
+// відображаються по-іншому ніж на сторінці новини… це дуже великий розгардіяш».
+//
+// Стало: одна функція, один набір класів `.nc-*`, варіант передається ЯВНО
+// ('row' | 'mini'; 'lead' вішає хаб класом на першу картку з фото).
+// Форма варіантів — `style/news-card.css`. Екран задає лише кольори поверхні.
+//
+// ⚠️ `data-article-id` НЕ чіпати: за ним відкривають статтю всі три делеговані
+// слухачі (віджет, хаб, deep-link), і за ним же сторож `tests/dev-lock.mjs`
+// визначає, що застосунок узагалі побудований.
+function renderCard(a, variant) {
   return `
-    <article class="news-card-featured ${hasImage ? '' : 'no-image'}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
-      ${hasImage ? `<img class="news-card-featured-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
-      <div class="news-card-featured-overlay">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-featured-title">${escapeHtml(a.title)}</h2>
-        ${!hasImage && a.excerpt ? `<p class="news-card-featured-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
-        <div class="news-card-featured-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
-      </div>
-    </article>
-  `;
-}
-
-function renderRow(a) {
-  return `
-    <article class="news-card-row ${a.exclusive ? 'exclusive' : ''}" data-article-id="${a.id}">
-      ${a.image ? `<img class="news-card-row-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
-      <div class="news-card-row-body">
-        <div class="news-card-meta">${badgesHtml(a)}</div>
-        <h2 class="news-card-row-title">${escapeHtml(a.title)}</h2>
-        ${a.excerpt ? `<p class="news-card-row-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
-        <div class="news-card-row-footer">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
+    <article class="nc nc--${variant}${a.exclusive ? ' exclusive' : ''}" data-article-id="${a.id}">
+      ${a.image ? `<img class="nc-img" src="${escapeHtml(a.image)}" alt="" loading="lazy">` : ''}
+      <div class="nc-body">
+        <div class="nc-meta">${badgesHtml(a)}</div>
+        <h2 class="nc-title">${escapeHtml(a.title)}</h2>
+        ${a.excerpt ? `<p class="nc-excerpt">${escapeHtml(a.excerpt)}</p>` : ''}
+        <div class="nc-foot">${escapeHtml(a.source)} · ${formatTime(a.ts)}</div>
       </div>
     </article>
   `;
