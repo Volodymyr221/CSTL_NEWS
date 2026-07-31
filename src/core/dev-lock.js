@@ -163,7 +163,6 @@ function buildGate() {
     <div class="dev-lock-bg" aria-hidden="true"></div>
     <div class="dev-lock-in">
       <img class="dev-lock-logo" src="./logo.png" alt="">
-      <div class="dev-lock-brand">CSTL LIFE</div>
       <h1 class="dev-lock-title">Упс. Ми ще трохи чаклуємо над CSTL LIFE</h1>
       <p class="dev-lock-text">Поки що доступ лише для команди розробки.<br>
         Ще трохи терпіння — і зустрінемось усередині застосунку.</p>
