@@ -298,3 +298,31 @@ body.nh-open .article-modal {
    людина ніколи не впирається в порожнє місце й індикатор їй не потрібен.
    1px, а не 0: у нульової висоти `IntersectionObserver` не має що перетинати. */
 .nh-more { height: 1px; }
+
+/* ── Скелет на перший показ (крок 10, 31.07) ──────────────────────────────── */
+/* Повторює РЕАЛЬНУ розкладку списку — велика перша + рядки з мініатюрою праворуч.
+   ⚠️ Саме тому, а не абстрактні смужки: коли приходять дані, розкладка не стрибає.
+   Заглушка, схожа на щось інше, лише додає зайвий ривок замість того, щоб його
+   прибрати. `data/articles.json` це 1.31 МБ, тож на слабкому звʼязку ця пауза
+   помітна — раніше на її місці була порожнеча з написом «Завантаження…». */
+.nh-sk { padding-top: 14px; }
+.nh-sk-lead { display: block; margin-bottom: 18px; }
+.nh-sk-row {
+  display: flex; flex-direction: row-reverse; align-items: flex-start;
+  gap: 12px; padding: 14px 0; border-bottom: 1px solid var(--news-line);
+}
+.nh-sk-txt { flex: 1; min-width: 0; }
+.nh-sk-photo, .nh-sk-thumb, .nh-sk-line { display: block; background: var(--news-press); }
+.nh-sk-photo { width: 100%; height: 200px; border-radius: 14px; margin-bottom: 10px; }
+.nh-sk-thumb { width: 84px; height: 84px; flex: none; border-radius: 10px; }
+.nh-sk-line { height: 13px; border-radius: 4px; margin-bottom: 8px; }
+.nh-sk-line--big { height: 19px; }
+.nh-sk-line--short { width: 62%; }
+/* Дихання, а не «біжуча хвиля»: пульсація прозорістю коштує рівно один шар
+   композиції, тоді як градієнт, що їде через блок, змушує браузер перемальовувати
+   кожен кадр — і це на екрані, який щойно відкрився і без того зайнятий читанням
+   1.31 МБ даних. */
+@media (prefers-reduced-motion: no-preference) {
+  .nh-sk-photo, .nh-sk-thumb, .nh-sk-line { animation: nh-sk-pulse 1.4s ease-in-out infinite; }
+}
+@keyframes nh-sk-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }

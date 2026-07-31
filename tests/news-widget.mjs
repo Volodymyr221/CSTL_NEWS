@@ -231,6 +231,85 @@ ok('стаття з віджета — зверху', fromWidget.fromArticle);
 ok('стаття з віджета лишає шапку видимою (top = 56px, як було)',
    fromWidget.top === 56, `top = ${fromWidget.top}px`);
 
+// ── 3.3 🔴 ВИГЛЯД ПІСЛЯ РЕДИЗАЙНУ (31.07) ──────────────────────────────────
+// ⚠️ Чому тут, а не окремим файлом `news-look.mjs`, як стояло в плані: кожен стенд
+// піднімає свій Chromium і свій сервер, а перевіряти треба РІВНО ті самі два
+// екрани, які вже відкриті вище. Другий запуск коштував би ~20с на кожному `npm test`
+// і нічого не додав би. Розділяти є сенс, коли різні стенди міряють різні збірки.
+await page.evaluate(() => {
+  const b = document.querySelector('#article-modal .article-close, #article-modal [class*="close"]');
+  if (b) b.click();
+});
+await page.waitForTimeout(500);
+await page.locator('.cm-news-board-bar').click();
+await page.waitForTimeout(900);
+
+const look = await page.evaluate(() => {
+  const rgb = s => (s.match(/\d+/g) || []).slice(0, 3).map(Number);
+  const lum = ([r, g, b]) => { const f = v => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b); };
+  const ratio = (a, b) => { const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+    return Math.round(((x + 0.05) / (y + 0.05)) * 1000) / 1000; };
+  const warm = c => c[0] - c[2];        // R−B: критерій «теплоти», яким проєкт міряє кремове
+  const cs = getComputedStyle(document.documentElement);
+  const hex = n => { const v = cs.getPropertyValue(n).trim(); const m = v.match(/^#(..)(..)(..)$/);
+    return m ? [1, 2, 3].map(i => parseInt(m[i], 16)) : null; };
+  const screenBg = rgb(getComputedStyle(document.querySelector('.nh-screen')).backgroundColor);
+  const row = document.querySelector('.nh-list .news-card-row:not(.nh-lead)');
+  const title = row.querySelector('.news-card-row-title');
+  const foot = row.querySelector('.news-card-row-footer');
+  const badge = document.querySelector('.nh-list .news-badge');
+  const line = hex('--news-line'), press = hex('--news-press');
+  return {
+    // Поверхня рядка: фону НЕ має бути взагалі — саме так знято питання «кремове».
+    rowBg: getComputedStyle(row).backgroundColor,
+    теплотаЛінії: line ? warm(line) : null,
+    теплотаНатиску: press ? warm(press) : null,
+    контрастЛінії: line ? ratio(line, screenBg) : null,
+    контрастНатиску: press ? ratio(press, screenBg) : null,
+    // Мітки: тихий текст, а не «цукерка» з підкладкою.
+    badgeBg: badge ? getComputedStyle(badge).backgroundColor : null,
+    badgeTxt: badge ? badge.textContent.trim() : null,
+    titleSize: parseFloat(getComputedStyle(title).fontSize),
+    footSize: parseFloat(getComputedStyle(foot).fontSize),
+    lead: !!document.querySelector('.nh-lead'),
+    leadHasPhoto: !!document.querySelector('.nh-lead img, .nh-lead .img-fallback'),
+    // Ексклюзив більше не обводимо кільцем (обідок читався як тривога).
+    exclRing: (() => { const e = document.querySelector('.nh-list .news-card-row.exclusive');
+      return e ? getComputedStyle(e).boxShadow : 'none'; })(),
+  };
+});
+
+ok('рядок списку БЕЗ власної поверхні (питання «кремового» зняте)',
+   /rgba\(0, 0, 0, 0\)|transparent/.test(look.rowBg), look.rowBg);
+// 🔴 Головний критерій: теплота. Проєкт вважає кремовим усе понад 6 (board-cream.mjs),
+// а стара картка новин мала 11. Нові токени мусять бути нейтральні або прохолодні.
+ok('🔴 лінія новин не тепла (R−B ≤ 3)', look.теплотаЛінії <= 3, `R−B = ${look.теплотаЛінії}`);
+ok('🔴 натиск не теплий (R−B ≤ 3)', look.теплотаНатиску <= 3, `R−B = ${look.теплотаНатиску}`);
+// Лінія мусить бути видима, але не жирна: 1.40 — число, яким проєкт міряв обідок
+// картки Дошки 29.07. Вікно ±0.06 — щоб не падати від округлень.
+ok('лінія тримає контраст ≈1.40 до фону',
+   Math.abs(look.контрастЛінії - 1.40) <= 0.06, `${look.контрастЛінії}`);
+ok('натиск відчутний, але не чорнота (1.2…1.4)',
+   look.контрастНатиску > 1.2 && look.контрастНатиску < 1.4, `${look.контрастНатиску}`);
+ok('мітка — тихий текст, а не «цукерка» з підкладкою',
+   /rgba\(0, 0, 0, 0\)|transparent/.test(look.badgeBg || ''), `${look.badgeTxt}: ${look.badgeBg}`);
+ok('заголовок не дрібніший за 15px', look.titleSize >= 15, `${look.titleSize}px`);
+// 11px — нижня межа за Apple HIG, а підпис несе джерело й час.
+ok('підпис не дрібніший за 11.5px', look.footSize >= 11.5, `${look.footSize}px`);
+ok('велика перша картка є', look.lead);
+ok('велика перша — саме з фото (інакше це роздутий текст)', look.leadHasPhoto);
+ok('ексклюзив БЕЗ обідка-кільця', !/0px 0px 0px 1\.5px/.test(look.exclRing), look.exclRing.slice(0, 40));
+
+// Гео-мітка: у «Громаді» це повтор активної вкладки, у «Україна та Світ» — сенс.
+const geoHere = await page.evaluate(() => document.querySelectorAll('.nh-list .news-badge--geo').length);
+ok('🔴 у «Громаді» гео-мітки нема (не дублює вкладку)', geoHere === 0, `${geoHere}`);
+await page.locator('.nh-tab', { hasText: 'Україна та Світ' }).click();
+await page.waitForTimeout(700);
+const geoThere = await page.evaluate(() => document.querySelectorAll('.nh-list .news-badge--geo').length);
+ok('🔴 КОНТРОЛЬ: у «Україна та Світ» гео-мітка ЛИШИЛАСЬ (там вона інформативна)',
+   geoThere > 0, `${geoThere}`);
+
 await ctx.close();
 
 // ── 4. Сторожі присутності (те, що легко прибрати «як зайве») ───────────────

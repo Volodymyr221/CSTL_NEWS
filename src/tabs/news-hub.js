@@ -34,6 +34,27 @@ let _lastGroup = NEWS_GEO_GROUPS[0];
 
 export function isNewsHubOpen() { return !!_hub; }
 
+// Скелет на перший показ (крок 10). До цього екран відкривався з написом
+// «Завантаження…» посеред порожнечі — а `data/articles.json` це 1.31 МБ, тобто на
+// слабкому звʼязку порожнеча тримається помітно довго.
+// ⚠️ Скелет повторює РЕАЛЬНУ розкладку списку (велика перша + рядки з мініатюрою
+// праворуч), а не абстрактні смужки: сенс у тому, щоб при появі даних нічого не
+// стрибнуло. Заглушка, схожа на щось інше, лише додає ривок.
+// `aria-hidden` — читачу екрана ці порожні блоки не потрібні, для нього є
+// `nh-loading` з текстом.
+function skeletonHtml() {
+  const row = `<div class="nh-sk-row"><div class="nh-sk-txt">
+      <span class="nh-sk-line"></span><span class="nh-sk-line nh-sk-line--short"></span>
+    </div><span class="nh-sk-thumb"></span></div>`;
+  return `<div class="nh-sk" aria-hidden="true">
+      <div class="nh-sk-lead"><span class="nh-sk-photo"></span>
+        <span class="nh-sk-line nh-sk-line--big"></span>
+        <span class="nh-sk-line nh-sk-line--big nh-sk-line--short"></span></div>
+      ${row.repeat(4)}
+    </div>
+    <div class="nh-loading sr-only" role="status">Завантаження новин…</div>`;
+}
+
 // Відкрити хаб. group — з якої категорії почати (за замовчуванням остання відкрита).
 export async function openNewsHub(group) {
   if (_hub) return;                                  // вже відкритий — другий не потрібен
@@ -60,9 +81,7 @@ export async function openNewsHub(group) {
                 aria-selected="${g === active}" data-nh-group="${escapeHtml(g)}">${escapeHtml(g)}</button>
       `).join('')}
     </div>
-    <div class="nh-list" data-nh-list>
-      <div class="nh-loading">Завантаження…</div>
-    </div>`;
+    <div class="nh-list" data-nh-list>${skeletonHtml()}</div>`;
   document.body.appendChild(screen);
   // Биті чужі фото → брендовий плейсхолдер 🏰 замість системної іконки «зламане
   // зображення». ⚠️ `error` НЕ спливає, тому слухаємо у фазі ЗАХОПЛЕННЯ (третій

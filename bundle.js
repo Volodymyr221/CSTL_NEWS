@@ -10052,6 +10052,18 @@ ${ev.description || ""}`
   var IC_BACK = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6l6 6"/></svg>';
   var _hub = null;
   var _lastGroup = NEWS_GEO_GROUPS[0];
+  function skeletonHtml() {
+    const row = `<div class="nh-sk-row"><div class="nh-sk-txt">
+      <span class="nh-sk-line"></span><span class="nh-sk-line nh-sk-line--short"></span>
+    </div><span class="nh-sk-thumb"></span></div>`;
+    return `<div class="nh-sk" aria-hidden="true">
+      <div class="nh-sk-lead"><span class="nh-sk-photo"></span>
+        <span class="nh-sk-line nh-sk-line--big"></span>
+        <span class="nh-sk-line nh-sk-line--big nh-sk-line--short"></span></div>
+      ${row.repeat(4)}
+    </div>
+    <div class="nh-loading sr-only" role="status">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F \u043D\u043E\u0432\u0438\u043D\u2026</div>`;
+  }
   async function openNewsHub(group) {
     if (_hub)
       return;
@@ -10072,9 +10084,7 @@ ${ev.description || ""}`
                 aria-selected="${g === active}" data-nh-group="${escapeHtml(g)}">${escapeHtml(g)}</button>
       `).join("")}
     </div>
-    <div class="nh-list" data-nh-list>
-      <div class="nh-loading">\u0417\u0430\u0432\u0430\u043D\u0442\u0430\u0436\u0435\u043D\u043D\u044F\u2026</div>
-    </div>`;
+    <div class="nh-list" data-nh-list>${skeletonHtml()}</div>`;
     document.body.appendChild(screen);
     screen.addEventListener("error", handleImgError, true);
     document.body.classList.add("nh-open");
